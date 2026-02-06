@@ -59,6 +59,7 @@ import Inventory from './pages/Inventory';
 import Staff from './pages/Staff';
 import TenantSettings from './pages/TenantSettings';
 import CustomerMenu from './pages/CustomerMenu';
+import RoleManagement from './pages/RoleManagement';
 import __Layout from './Layout.jsx';
 
 
@@ -75,6 +76,7 @@ export const PAGES = {
     "Staff": Staff,
     "TenantSettings": TenantSettings,
     "CustomerMenu": CustomerMenu,
+    "RoleManagement": RoleManagement,
 }
 
 export const pagesConfig = {

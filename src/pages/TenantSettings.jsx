@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useTenant } from '../components/tenant/TenantContext';
 import PermissionGate from '../components/tenant/PermissionGate';
-import { ALL_PERMISSIONS } from '../components/tenant/TenantContext';
+import { ALL_PERMISSIONS, PERMISSION_GROUPS, ROLE_TEMPLATES } from '../components/tenant/TenantContext';
 import PageHeader from '../components/ui-custom/PageHeader';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -70,12 +70,17 @@ export default function TenantSettings() {
     }));
   };
 
-  const permGroups = {};
-  Object.entries(ALL_PERMISSIONS).forEach(([key, label]) => {
-    const [group] = key.split('.');
-    if (!permGroups[group]) permGroups[group] = [];
-    permGroups[group].push({ key, label });
-  });
+  const applyTemplate = (templateKey) => {
+    const template = ROLE_TEMPLATES[templateKey];
+    if (template) {
+      setRoleForm({
+        ...roleForm,
+        name: roleForm.name || template.name,
+        description: roleForm.description || template.description,
+        permissions: template.permissions,
+      });
+    }
+  };
 
   return (
     <PermissionGate permission="settings.read">
@@ -149,21 +154,64 @@ export default function TenantSettings() {
             <div><Label>Name</Label><Input value={roleForm.name} onChange={e => setRoleForm({ ...roleForm, name: e.target.value })} /></div>
             <div><Label>Description</Label><Input value={roleForm.description} onChange={e => setRoleForm({ ...roleForm, description: e.target.value })} /></div>
             <div>
-              <Label className="mb-3 block">Permissions</Label>
-              <div className="space-y-4">
-                {Object.entries(permGroups).map(([group, perms]) => (
-                  <div key={group}>
-                    <h5 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 capitalize">{group}</h5>
-                    <div className="grid grid-cols-2 gap-2">
-                      {perms.map(p => (
-                        <label key={p.key} className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox checked={roleForm.permissions.includes(p.key)} onCheckedChange={() => togglePermission(p.key)} />
-                          <span className="text-xs text-slate-600">{p.label}</span>
+              <div className="flex items-center justify-between mb-3">
+                <Label>Permissions</Label>
+                <Select onValueChange={applyTemplate}>
+                  <SelectTrigger className="w-40 h-8 text-xs">
+                    <SelectValue placeholder="Use template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(ROLE_TEMPLATES).map(([key, template]) => (
+                      <SelectItem key={key} value={key} className="text-xs">
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-4 max-h-96 overflow-y-auto border border-slate-100 rounded-xl p-4">
+                {Object.entries(PERMISSION_GROUPS).map(([groupKey, group]) => (
+                  <div key={groupKey} className="space-y-2">
+                    <div className="flex items-center justify-between sticky top-0 bg-white py-1">
+                      <h5 className="text-xs font-semibold uppercase tracking-wider text-slate-700">{group.label}</h5>
+                      <div className="flex gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-xs"
+                          onClick={() => {
+                            const allSelected = group.permissions.every(p => roleForm.permissions.includes(p));
+                            setRoleForm(prev => ({
+                              ...prev,
+                              permissions: allSelected
+                                ? prev.permissions.filter(p => !group.permissions.includes(p))
+                                : [...new Set([...prev.permissions, ...group.permissions])]
+                            }));
+                          }}
+                        >
+                          {group.permissions.every(p => roleForm.permissions.includes(p)) ? 'Deselect All' : 'Select All'}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pl-2">
+                      {group.permissions.map(permKey => (
+                        <label key={permKey} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1.5 rounded">
+                          <Checkbox 
+                            checked={roleForm.permissions.includes(permKey)} 
+                            onCheckedChange={() => togglePermission(permKey)} 
+                          />
+                          <span className="text-xs text-slate-600">{ALL_PERMISSIONS[permKey]}</span>
                         </label>
                       ))}
                     </div>
                   </div>
                 ))}
+              </div>
+              
+              <div className="mt-3 text-xs text-slate-400">
+                {roleForm.permissions.length} permission{roleForm.permissions.length !== 1 ? 's' : ''} selected
               </div>
             </div>
           </div>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useTenant } from '../components/tenant/TenantContext';
-import PermissionGate from '../components/tenant/PermissionGate';
+import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
 import StatusBadge from '../components/ui-custom/StatusBadge';
 import EmptyState from '../components/ui-custom/EmptyState';
@@ -60,16 +60,16 @@ export default function Products() {
   const filtered = products.filter(p => p.name?.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <PermissionGate permission="products.read">
+    <RequirePermission permission="products.view">
       <PageHeader
         title="Products"
         description="Manage your menu items and products"
         actions={
-          <PermissionGate permission="products.create" fallback={null}>
+          <RequirePermission permission="products.create" silent>
             <Button onClick={openCreate} className="bg-slate-900 hover:bg-slate-800 gap-2">
               <Plus className="w-4 h-4" /> Add Product
             </Button>
-          </PermissionGate>
+          </RequirePermission>
         }
       />
 
