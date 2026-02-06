@@ -71,6 +71,7 @@ import SuperAdminTests from './pages/SuperAdminTests';
 import Tables from './pages/Tables';
 import TenantSettings from './pages/TenantSettings';
 import ThemeSettings from './pages/ThemeSettings';
+import TenantDashboardTests from './pages/TenantDashboardTests';
 import __Layout from './Layout.jsx';
 
 
@@ -99,6 +100,7 @@ export const PAGES = {
     "Tables": Tables,
     "TenantSettings": TenantSettings,
     "ThemeSettings": ThemeSettings,
+    "TenantDashboardTests": TenantDashboardTests,
 }
 
 export const pagesConfig = {

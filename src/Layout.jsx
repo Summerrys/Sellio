@@ -38,6 +38,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
             { label: 'Analytics', icon: BarChart3, page: 'SuperAdminAnalytics' },
             { label: 'Security Tests', icon: Shield, page: 'SecurityTests' },
             { label: 'Admin Tests', icon: Shield, page: 'SuperAdminTests' },
+            { label: 'Dashboard Tests', icon: Shield, page: 'TenantDashboardTests' },
             { type: 'divider' },
         { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
         { label: 'Orders', icon: ClipboardList, page: 'Orders' },
