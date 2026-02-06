@@ -33,6 +33,16 @@ export default function SecurityTests() {
     },
   });
 
+  const runAuthRBACTest = useMutation({
+    mutationFn: async () => {
+      const response = await base44.functions.invoke('testAuthRBAC', {});
+      return response.data;
+    },
+    onSuccess: (data) => {
+      setTestReport({ type: 'auth', data });
+    },
+  });
+
   if (!isSuperAdmin) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -73,7 +83,7 @@ export default function SecurityTests() {
       />
 
       {/* Test Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -130,6 +140,37 @@ export default function SecurityTests() {
                 <>
                   <Play className="w-4 h-4 mr-2" />
                   Run Isolation Test
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-orange-600" />
+              Auth & RBAC Test
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-slate-600 mb-4">
+              <strong>CRITICAL:</strong> Validates authentication and role-based access control.
+            </p>
+            <Button 
+              onClick={() => runAuthRBACTest.mutate()} 
+              disabled={runAuthRBACTest.isPending}
+              className="w-full bg-orange-600 hover:bg-orange-700"
+            >
+              {runAuthRBACTest.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Running...
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 mr-2" />
+                  Run Auth Test
                 </>
               )}
             </Button>
@@ -212,8 +253,8 @@ export default function SecurityTests() {
               </>
             )}
 
-            {/* Tenant Isolation Report */}
-            {testReport.type === 'isolation' && (
+            {/* Auth & RBAC Report */}
+            {(testReport.type === 'auth' || testReport.type === 'isolation') && (
               <>
                 {/* Verdict */}
                 <Alert className={testReport.data.verdict.secure ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}>
