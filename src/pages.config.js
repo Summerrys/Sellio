@@ -69,9 +69,10 @@ import SuperAdminTenantDetail from './pages/SuperAdminTenantDetail';
 import SuperAdminTenants from './pages/SuperAdminTenants';
 import SuperAdminTests from './pages/SuperAdminTests';
 import Tables from './pages/Tables';
+import TenantDashboardTests from './pages/TenantDashboardTests';
 import TenantSettings from './pages/TenantSettings';
 import ThemeSettings from './pages/ThemeSettings';
-import TenantDashboardTests from './pages/TenantDashboardTests';
+import ThemeIntegrityTests from './pages/ThemeIntegrityTests';
 import __Layout from './Layout.jsx';
 
 
@@ -98,9 +99,10 @@ export const PAGES = {
     "SuperAdminTenants": SuperAdminTenants,
     "SuperAdminTests": SuperAdminTests,
     "Tables": Tables,
+    "TenantDashboardTests": TenantDashboardTests,
     "TenantSettings": TenantSettings,
     "ThemeSettings": ThemeSettings,
-    "TenantDashboardTests": TenantDashboardTests,
+    "ThemeIntegrityTests": ThemeIntegrityTests,
 }
 
 export const pagesConfig = {
