@@ -19,6 +19,7 @@ import { ShoppingBag, Plus, Search, Pencil, Trash2, DollarSign, Package } from '
 const defaultProduct = { name: '', description: '', price: 0, cost_price: 0, sku: '', stock_quantity: 0, low_stock_threshold: 5, category_id: '', is_active: true, is_featured: false, image_url: '' };
 
 export default function Products() {
+  // Products management page
   const { tenantId } = useTenant();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
