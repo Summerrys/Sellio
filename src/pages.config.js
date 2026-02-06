@@ -62,6 +62,7 @@ import CustomerMenu from './pages/CustomerMenu';
 import RoleManagement from './pages/RoleManagement';
 import ThemeSettings from './pages/ThemeSettings';
 import Onboarding from './pages/Onboarding';
+import CustomerOrder from './pages/CustomerOrder';
 import __Layout from './Layout.jsx';
 
 
@@ -81,6 +82,7 @@ export const PAGES = {
     "RoleManagement": RoleManagement,
     "ThemeSettings": ThemeSettings,
     "Onboarding": Onboarding,
+    "CustomerOrder": CustomerOrder,
 }
 
 export const pagesConfig = {
