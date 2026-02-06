@@ -41,6 +41,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
         { label: 'Tables & QR', icon: QrCode, page: 'Tables' },
         { label: 'Inventory', icon: Package, page: 'Inventory' },
         { label: 'Staff', icon: Users, page: 'Staff' },
+        { label: 'Roles', icon: Shield, page: 'RoleManagement' },
         { label: 'Settings', icon: Settings, page: 'TenantSettings' },
       ]
     : [
@@ -51,6 +52,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
         { label: 'Tables & QR', icon: QrCode, page: 'Tables' },
         { label: 'Inventory', icon: Package, page: 'Inventory' },
         { label: 'Staff', icon: Users, page: 'Staff' },
+        { label: 'Roles', icon: Shield, page: 'RoleManagement' },
         { label: 'Settings', icon: Settings, page: 'TenantSettings' },
       ];
 
