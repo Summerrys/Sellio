@@ -68,6 +68,7 @@ import TenantSettings from './pages/TenantSettings';
 import ThemeSettings from './pages/ThemeSettings';
 import Settings from './pages/Settings';
 import Notifications from './pages/Notifications';
+import SuperAdminTenantDetail from './pages/SuperAdminTenantDetail';
 import __Layout from './Layout.jsx';
 
 
@@ -93,6 +94,7 @@ export const PAGES = {
     "ThemeSettings": ThemeSettings,
     "Settings": Settings,
     "Notifications": Notifications,
+    "SuperAdminTenantDetail": SuperAdminTenantDetail,
 }
 
 export const pagesConfig = {
