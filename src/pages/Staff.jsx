@@ -1,27 +1,30 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useTenant } from '../components/tenant/TenantContext';
-import PermissionGate from '../components/tenant/PermissionGate';
+import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
-import StatusBadge from '../components/ui-custom/StatusBadge';
 import EmptyState from '../components/ui-custom/EmptyState';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Users, Plus, Trash2, Crown } from 'lucide-react';
+import InviteStaffDialog from '../components/staff/InviteStaffDialog';
+import EditStaffDialog from '../components/staff/EditStaffDialog';
+import StaffTable from '../components/staff/StaffTable';
+import StaffCards from '../components/staff/StaffCards';
+import { UserPlus, Search, LayoutGrid, List, Users } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function Staff() {
   const { tenantId } = useTenant();
-  const queryClient = useQueryClient();
-  const [showInvite, setShowInvite] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ email: '', role_id: '' });
+  const [viewMode, setViewMode] = useState('table'); // 'table' or 'cards'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState(null);
 
-  const { data: staffList = [] } = useQuery({
+  const { data: staff = [], isLoading } = useQuery({
     queryKey: ['staff', tenantId],
     queryFn: () => base44.entities.TenantUser.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
@@ -33,96 +36,142 @@ export default function Staff() {
     enabled: !!tenantId,
   });
 
-  const inviteMutation = useMutation({
-    mutationFn: async (data) => {
-      const role = roles.find(r => r.id === data.role_id);
-      await base44.entities.TenantUser.create({
-        tenant_id: tenantId,
-        user_email: data.email,
-        role_id: data.role_id,
-        role_name: role?.name || '',
-        status: 'invited',
-        is_owner: false,
-      });
-      await base44.users.inviteUser(data.email, 'user');
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['staff'] });
-      setShowInvite(false);
-      setInviteForm({ email: '', role_id: '' });
-    },
-  });
+  // Filter staff
+  const filteredStaff = staff.filter(member => {
+    const matchesSearch = !searchQuery || 
+      member.user_email?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || member.status === statusFilter;
+    
+    const matchesRole = roleFilter === 'all' || member.role_id === roleFilter;
 
-  const removeMutation = useMutation({
-    mutationFn: (id) => base44.entities.TenantUser.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['staff'] }),
+    return matchesSearch && matchesStatus && matchesRole;
   });
 
   return (
-    <PermissionGate permission="staff.read">
-      <PageHeader title="Staff" description="Manage your team members and their access"
-        actions={
-          <PermissionGate permission="staff.create" fallback={null}>
-            <Button onClick={() => setShowInvite(true)} className="bg-slate-900 hover:bg-slate-800 gap-2"><Plus className="w-4 h-4" /> Invite Staff</Button>
-          </PermissionGate>
-        }
-      />
+    <RequirePermission permission="staff.view">
+      <div className="space-y-6">
+        <PageHeader
+          title="Staff Management"
+          description="Manage your team members and their roles"
+          actions={
+            <RequirePermission permission="staff.create" silent>
+              <Button
+                onClick={() => setInviteDialogOpen(true)}
+                className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-2"
+              >
+                <UserPlus className="w-4 h-4" />
+                Invite Staff
+              </Button>
+            </RequirePermission>
+          }
+        />
 
-      {staffList.length === 0 ? (
-        <Card className="border-0 shadow-sm"><EmptyState icon={Users} title="No staff members" description="Invite team members to help manage your business." actionLabel="Invite Staff" onAction={() => setShowInvite(true)} /></Card>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {staffList.map(s => (
-            <Card key={s.id} className="border-0 shadow-sm p-5 group">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar className="w-10 h-10">
-                    <AvatarFallback className="bg-slate-100 text-slate-600 text-sm font-medium">
-                      {s.user_email?.charAt(0)?.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-medium text-slate-900">{s.user_email}</p>
-                      {s.is_owner && <Crown className="w-3.5 h-3.5 text-amber-500" />}
-                    </div>
-                    <p className="text-xs text-slate-400">{s.role_name || 'No role'}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={s.status} />
-                  {!s.is_owner && (
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500 opacity-0 group-hover:opacity-100" onClick={() => removeMutation.mutate(s.id)}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      <Dialog open={showInvite} onOpenChange={setShowInvite}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Invite Staff Member</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div><Label>Email</Label><Input type="email" value={inviteForm.email} onChange={e => setInviteForm({ ...inviteForm, email: e.target.value })} placeholder="staff@example.com" /></div>
-            <div><Label>Role</Label>
-              <Select value={inviteForm.role_id} onValueChange={v => setInviteForm({ ...inviteForm, role_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
-                <SelectContent>{roles.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
-              </Select>
+        {/* Filters and View Toggle */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto">
+            {/* Search */}
+            <div className="relative flex-1 sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                placeholder="Search staff..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
             </div>
+
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="invited">Invited</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Role Filter */}
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                {roles.map(role => (
+                  <SelectItem key={role.id} value={role.id}>
+                    {role.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowInvite(false)}>Cancel</Button>
-            <Button onClick={() => inviteMutation.mutate(inviteForm)} disabled={!inviteForm.email || !inviteForm.role_id || inviteMutation.isPending} className="bg-slate-900 hover:bg-slate-800">
-              {inviteMutation.isPending ? 'Inviting...' : 'Send Invite'}
+
+          {/* View Toggle */}
+          <div className="flex gap-1 p-1 bg-slate-100 rounded-lg">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className={cn(
+                "h-8 px-3",
+                viewMode === 'table' && "bg-white shadow-sm"
+              )}
+            >
+              <List className="w-4 h-4" />
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </PermissionGate>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode('cards')}
+              className={cn(
+                "h-8 px-3",
+                viewMode === 'cards' && "bg-white shadow-sm"
+              )}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Staff List */}
+        {isLoading ? (
+          <div className="text-center py-12 text-slate-400">Loading staff...</div>
+        ) : filteredStaff.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title={searchQuery || statusFilter !== 'all' || roleFilter !== 'all' 
+              ? "No staff found" 
+              : "No staff members yet"}
+            description={searchQuery || statusFilter !== 'all' || roleFilter !== 'all'
+              ? "Try adjusting your filters"
+              : "Invite your first team member to get started"}
+            actionLabel="Invite Staff"
+            onAction={() => setInviteDialogOpen(true)}
+          />
+        ) : viewMode === 'table' ? (
+          <StaffTable staff={filteredStaff} onEdit={setEditingStaff} />
+        ) : (
+          <StaffCards staff={filteredStaff} onEdit={setEditingStaff} />
+        )}
+
+        {/* Dialogs */}
+        <InviteStaffDialog
+          open={inviteDialogOpen}
+          onOpenChange={setInviteDialogOpen}
+          tenantId={tenantId}
+        />
+
+        <EditStaffDialog
+          open={!!editingStaff}
+          onOpenChange={(open) => !open && setEditingStaff(null)}
+          staff={editingStaff}
+          tenantId={tenantId}
+        />
+      </div>
+    </RequirePermission>
   );
 }
