@@ -12,9 +12,9 @@ import { ArrowRight, ArrowLeft, Settings } from 'lucide-react';
 
 const schema = z.object({
   currency: z.string(),
-  taxRate: z.number().min(0).max(100),
+  taxRate: z.number().min(0, 'Tax rate cannot be negative').max(100, 'Tax rate cannot exceed 100%'),
   taxInclusive: z.boolean(),
-  tableCount: z.number().min(0).max(200),
+  tableCount: z.number().int('Table count must be a whole number').min(0, 'Table count cannot be negative').max(200, 'Maximum 200 tables allowed'),
 });
 
 const currencies = ['SGD', 'USD', 'EUR', 'GBP', 'MYR', 'THB', 'IDR', 'PHP', 'VND'];

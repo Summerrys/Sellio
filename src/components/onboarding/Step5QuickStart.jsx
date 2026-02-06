@@ -4,22 +4,65 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowRight, ArrowLeft, Package, Plus, X } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Package, Plus, X, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { base44 } from '@/api/base44Client';
 
 export default function Step5QuickStart({ formData, updateFormData, nextStep, prevStep }) {
   const [addProduct, setAddProduct] = useState(false);
   const [products, setProducts] = useState(formData.products || []);
-  const { register, handleSubmit, reset } = useForm();
+  const [productImage, setProductImage] = useState(null);
+  const [productPreview, setProductPreview] = useState(null);
+  const fileInputRef = React.useRef(null);
+  const { register, handleSubmit, reset, formState: { errors }, watch } = useForm();
 
-  const handleAddProduct = (data) => {
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      alert('Please upload JPG, PNG, or WEBP files only');
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert('File size must be under 5MB');
+      return;
+    }
+
+    setProductImage(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setProductPreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleAddProduct = async (data) => {
+    if (!data.productName || !data.productPrice) {
+      return;
+    }
+
+    let imageUrl = null;
+    if (productImage) {
+      try {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file: productImage });
+        imageUrl = file_url;
+      } catch (error) {
+        console.error('Image upload failed:', error);
+      }
+    }
+
     const newProduct = {
       name: data.productName,
       price: parseFloat(data.productPrice),
       category: data.productCategory || 'General',
+      image_url: imageUrl,
     };
     setProducts([...products, newProduct]);
     reset();
+    setProductImage(null);
+    setProductPreview(null);
   };
 
   const handleRemoveProduct = (index) => {
@@ -100,23 +143,33 @@ export default function Step5QuickStart({ formData, updateFormData, nextStep, pr
             <form onSubmit={handleSubmit(handleAddProduct)} className="space-y-4 border-t border-slate-200 pt-4">
               <h3 className="text-sm font-semibold text-slate-700">Add Another Product</h3>
               <div>
-                <Label className="text-sm">Product Name</Label>
+                <Label className="text-sm">Product Name *</Label>
                 <Input
-                  {...register('productName', { required: true })}
+                  {...register('productName', { required: 'Product name is required' })}
                   placeholder="e.g., Cappuccino"
                   className="mt-1.5 h-10"
                 />
+                {errors.productName && (
+                  <p className="text-xs text-red-500 mt-1">{errors.productName.message}</p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-sm">Price</Label>
+                  <Label className="text-sm">Price *</Label>
                   <Input
                     type="number"
                     step="0.01"
-                    {...register('productPrice', { required: true })}
+                    min="0"
+                    {...register('productPrice', { 
+                      required: 'Price is required',
+                      min: { value: 0, message: 'Price cannot be negative' }
+                    })}
                     placeholder="5.50"
                     className="mt-1.5 h-10"
                   />
+                  {errors.productPrice && (
+                    <p className="text-xs text-red-500 mt-1">{errors.productPrice.message}</p>
+                  )}
                 </div>
                 <div>
                   <Label className="text-sm">Category</Label>
@@ -127,6 +180,49 @@ export default function Step5QuickStart({ formData, updateFormData, nextStep, pr
                   />
                 </div>
               </div>
+              <div>
+                <Label className="text-sm">Product Image (Optional)</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                {productPreview ? (
+                  <div className="mt-1.5 border border-slate-200 rounded-lg p-2 flex items-center gap-3">
+                    <img src={productPreview} alt="Product" className="w-12 h-12 object-cover rounded" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Change
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="mt-1.5 border-2 border-dashed border-slate-200 rounded-lg p-4 text-center hover:border-slate-300 transition-colors cursor-pointer"
+                  >
+                    <Upload className="w-5 h-5 text-slate-400 mx-auto mb-1" />
+                    <p className="text-xs text-slate-500">Click to upload</p>
+                  </div>
+                )}
+              </div>
+              {products.length === 0 && productPreview && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs text-blue-700">Preview with {formData.theme} theme</p>
+                  <div className="mt-2 bg-white rounded-lg p-3 border border-slate-200">
+                    <img src={productPreview} alt="Preview" className="w-full h-24 object-cover rounded mb-2" />
+                    <p className="font-medium text-sm text-slate-900">{watch('productName') || 'Product Name'}</p>
+                    <p className="text-sm text-[rgb(var(--color-primary))]">
+                      {formData.currency} {watch('productPrice') || '0.00'}
+                    </p>
+                  </div>
+                </div>
+              )}
               <div className="flex gap-2">
                 <Button
                   type="submit"

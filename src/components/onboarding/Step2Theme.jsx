@@ -21,6 +21,10 @@ export default function Step2Theme({ formData, updateFormData, nextStep, prevSte
   };
 
   const handleContinue = () => {
+    if (!selectedTheme) {
+      alert('Please select a theme to continue');
+      return;
+    }
     updateFormData({ theme: selectedTheme });
     nextStep();
   };
@@ -35,8 +39,8 @@ export default function Step2Theme({ formData, updateFormData, nextStep, prevSte
         <p className="text-slate-500">Pick a theme that represents your business</p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        {COLOR_SETS.map((colorSet) => (
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {COLOR_SETS.slice(0, 8).map((colorSet) => (
           <button
             key={colorSet.name}
             onClick={() => handleThemeSelect(colorSet.name)}

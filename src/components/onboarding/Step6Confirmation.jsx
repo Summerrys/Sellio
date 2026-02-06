@@ -9,6 +9,7 @@ export default function Step6Confirmation({ formData, prevStep, onComplete }) {
   const [isLaunching, setIsLaunching] = useState(false);
 
   const handleLaunch = async () => {
+    if (isLaunching) return; // Prevent double submission
     setIsLaunching(true);
     
     try {
@@ -128,17 +129,31 @@ export default function Step6Confirmation({ formData, prevStep, onComplete }) {
         <p className="text-slate-500">Review your setup and launch your business</p>
       </div>
 
-      <div className="space-y-4 mb-8">
+      <div className="space-y-4 mb-8 max-h-[400px] overflow-y-auto">
         <SummaryItem icon={Check} label="Business" value={formData.businessName} />
-        <SummaryItem icon={Check} label="Type" value={formData.businessType} />
-        <SummaryItem icon={Check} label="Theme" value={formData.theme} />
-        <SummaryItem icon={Check} label="Admin" value={formData.adminEmail} />
+        <SummaryItem icon={Check} label="Type" value={formData.businessType?.charAt(0).toUpperCase() + formData.businessType?.slice(1) || 'N/A'} />
+        <SummaryItem 
+          icon={Check} 
+          label="Theme" 
+          value={
+            <div className="flex items-center gap-2">
+              <span>{formData.theme}</span>
+              <div className="flex gap-1">
+                <div className="w-4 h-4 rounded" style={{ backgroundColor: formData.themeColors?.dark || '#000' }} />
+                <div className="w-4 h-4 rounded" style={{ backgroundColor: formData.themeColors?.light || '#ccc' }} />
+              </div>
+            </div>
+          } 
+        />
+        <SummaryItem icon={Check} label="Admin" value={formData.adminName || formData.adminEmail} />
+        <SummaryItem icon={Check} label="Email" value={formData.adminEmail} />
         <SummaryItem icon={Check} label="Currency" value={formData.currency} />
+        <SummaryItem icon={Check} label="Tax" value={`${formData.taxRate}% (${formData.taxInclusive ? 'Inclusive' : 'Exclusive'})`} />
         {formData.tableCount > 0 && (
           <SummaryItem icon={Check} label="Tables" value={`${formData.tableCount} tables`} />
         )}
         {formData.products?.length > 0 && (
-          <SummaryItem icon={Check} label="Products" value={`${formData.products.length} products added`} />
+          <SummaryItem icon={Check} label="Products" value={`${formData.products.length} product${formData.products.length > 1 ? 's' : ''} added`} />
         )}
       </div>
 
@@ -179,9 +194,11 @@ function SummaryItem({ icon: Icon, label, value }) {
       <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
         <Icon className="w-4 h-4 text-green-600" />
       </div>
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <p className="text-xs text-slate-500">{label}</p>
-        <p className="text-sm font-medium text-slate-900">{value}</p>
+        <div className="text-sm font-medium text-slate-900 truncate">
+          {typeof value === 'string' ? value : value}
+        </div>
       </div>
     </div>
   );

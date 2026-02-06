@@ -14,10 +14,15 @@ const schema = z.object({
   adminEmail: z.string().email('Valid email is required'),
   adminPhone: z.string().min(8, 'Phone number is required'),
   adminPassword: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string().min(8, 'Please confirm your password'),
+}).refine((data) => data.adminPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
 });
 
 export default function Step3Admin({ formData, updateFormData, nextStep, prevStep }) {
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { register, handleSubmit, formState: { errors }, watch } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -25,6 +30,7 @@ export default function Step3Admin({ formData, updateFormData, nextStep, prevSte
       adminEmail: formData.adminEmail,
       adminPhone: formData.adminPhone,
       adminPassword: formData.adminPassword,
+      confirmPassword: '',
     },
   });
 
@@ -135,6 +141,28 @@ export default function Step3Admin({ formData, updateFormData, nextStep, prevSte
                 />
               </div>
             </div>
+          )}
+        </div>
+
+        <div>
+          <Label className="text-sm font-medium text-slate-700">Confirm Password *</Label>
+          <div className="relative">
+            <Input
+              {...register('confirmPassword')}
+              type={showConfirmPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              className="mt-1.5 h-11 pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 mt-0.75"
+            >
+              {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          {errors.confirmPassword && (
+            <p className="text-xs text-red-500 mt-1">{errors.confirmPassword.message}</p>
           )}
         </div>
 
