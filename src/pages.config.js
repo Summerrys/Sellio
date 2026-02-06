@@ -65,6 +65,7 @@ import Onboarding from './pages/Onboarding';
 import CustomerOrder from './pages/CustomerOrder';
 import KitchenDisplay from './pages/KitchenDisplay';
 import OrderTracking from './pages/OrderTracking';
+import Reports from './pages/Reports';
 import __Layout from './Layout.jsx';
 
 
@@ -87,6 +88,7 @@ export const PAGES = {
     "CustomerOrder": CustomerOrder,
     "KitchenDisplay": KitchenDisplay,
     "OrderTracking": OrderTracking,
+    "Reports": Reports,
 }
 
 export const pagesConfig = {
