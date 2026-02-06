@@ -1,149 +1,267 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useTenant } from '../components/tenant/TenantContext';
-import PermissionGate from '../components/tenant/PermissionGate';
+import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
-import StatusBadge from '../components/ui-custom/StatusBadge';
-import EmptyState from '../components/ui-custom/EmptyState';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ClipboardList, Eye, Clock, DollarSign } from 'lucide-react';
-import { format } from 'date-fns';
-
-const ORDER_STATUSES = ['pending', 'confirmed', 'preparing', 'ready', 'served', 'completed', 'cancelled'];
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import OrderKanban from '../components/orders/OrderKanban';
+import OrderDetailDialog from '../components/orders/OrderDetailDialog';
+import { ClipboardList, Volume2, VolumeX, Monitor } from 'lucide-react';
+import { toast } from 'sonner';
+import { createPageUrl } from '../utils';
+import { useNavigate } from 'react-router-dom';
 
 export default function Orders() {
-  const { tenantId } = useTenant();
+  const { tenantId, tenant } = useTenant();
   const queryClient = useQueryClient();
-  const [statusFilter, setStatusFilter] = useState('all');
+  const navigate = useNavigate();
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('active');
+  const audioRef = useRef(null);
+  const previousOrderCountRef = useRef(0);
 
-  const { data: orders = [] } = useQuery({
-    queryKey: ['orders', tenantId],
-    queryFn: () => base44.entities.Order.filter({ tenant_id: tenantId }, '-created_date', 100),
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: ['orders', tenantId, statusFilter],
+    queryFn: async () => {
+      const query = { tenant_id: tenantId };
+      if (statusFilter === 'active') {
+        // Get orders that are not completed or cancelled
+        const allOrders = await base44.entities.Order.filter(query, '-created_date', 100);
+        return allOrders.filter(o => 
+          !['completed', 'served', 'cancelled'].includes(o.status)
+        );
+      } else if (statusFilter === 'all') {
+        return base44.entities.Order.filter(query, '-created_date', 100);
+      } else {
+        query.status = statusFilter;
+        return base44.entities.Order.filter(query, '-created_date', 50);
+      }
+    },
     enabled: !!tenantId,
+    refetchInterval: 5000, // Poll every 5 seconds as backup
   });
 
+  // Real-time subscription
+  useEffect(() => {
+    if (!tenantId) return;
+
+    const unsubscribe = base44.entities.Order.subscribe((event) => {
+      if (event.data?.tenant_id === tenantId) {
+        queryClient.invalidateQueries({ queryKey: ['orders', tenantId] });
+        
+        // Play sound for new orders
+        if (event.type === 'create' && soundEnabled && audioRef.current) {
+          audioRef.current.play().catch(e => console.log('Audio play failed:', e));
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [tenantId, soundEnabled, queryClient]);
+
+  // Check for new orders to play sound
+  useEffect(() => {
+    const pendingOrders = orders.filter(o => o.status === 'pending').length;
+    if (pendingOrders > previousOrderCountRef.current && soundEnabled && audioRef.current) {
+      audioRef.current.play().catch(e => console.log('Audio play failed:', e));
+    }
+    previousOrderCountRef.current = pendingOrders;
+  }, [orders, soundEnabled]);
+
   const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }) => base44.entities.Order.update(id, { status }),
+    mutationFn: async ({ orderId, status }) => {
+      return base44.entities.Order.update(orderId, { status });
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders', tenantId] });
+      toast.success('Order status updated');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update order');
     },
   });
 
-  const filtered = statusFilter === 'all' ? orders : orders.filter(o => o.status === statusFilter);
+  const cancelOrderMutation = useMutation({
+    mutationFn: async (orderId) => {
+      return base44.entities.Order.update(orderId, { status: 'cancelled' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders', tenantId] });
+      toast.success('Order cancelled');
+      setSelectedOrder(null);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to cancel order');
+    },
+  });
+
+  const handleStatusChange = (orderId, newStatus) => {
+    updateStatusMutation.mutate({ orderId, newStatus });
+  };
+
+  const handlePrintReceipt = (order) => {
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Receipt - ${order.order_number}</title>
+          <style>
+            body { font-family: 'Courier New', monospace; width: 80mm; margin: 0 auto; padding: 10mm; }
+            h1 { font-size: 18pt; text-align: center; margin-bottom: 5mm; }
+            .header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 5mm; margin-bottom: 5mm; }
+            .item { display: flex; justify-content: space-between; margin: 2mm 0; }
+            .total { border-top: 1px dashed #000; padding-top: 5mm; margin-top: 5mm; font-weight: bold; }
+            .footer { text-align: center; margin-top: 10mm; font-size: 10pt; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>${tenant.name}</h1>
+            <p>Order: ${order.order_number}</p>
+            <p>${new Date(order.created_date).toLocaleString()}</p>
+            ${order.table_name ? `<p>Table: ${order.table_name}</p>` : ''}
+          </div>
+          ${order.items.map(item => `
+            <div class="item">
+              <span>${item.quantity}x ${item.product_name}${item.variant ? ` (${item.variant})` : ''}</span>
+              <span>${tenant.currency} ${item.total.toFixed(2)}</span>
+            </div>
+          `).join('')}
+          <div class="total">
+            <div class="item">
+              <span>Subtotal</span>
+              <span>${tenant.currency} ${order.subtotal.toFixed(2)}</span>
+            </div>
+            <div class="item">
+              <span>Tax</span>
+              <span>${tenant.currency} ${order.tax_amount.toFixed(2)}</span>
+            </div>
+            <div class="item">
+              <span>Total</span>
+              <span>${tenant.currency} ${order.total_amount.toFixed(2)}</span>
+            </div>
+          </div>
+          <div class="footer">
+            <p>Thank you for your order!</p>
+            <p>Powered by Apptelier</p>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 250);
+  };
+
+  const pendingCount = orders.filter(o => o.status === 'pending').length;
+  const preparingCount = orders.filter(o => o.status === 'preparing').length;
 
   return (
-    <PermissionGate permission="orders.read">
-      <PageHeader title="Orders" description="View and manage incoming orders" />
-
-      <div className="mb-6">
-        <Tabs value={statusFilter} onValueChange={setStatusFilter}>
-          <TabsList className="bg-white border border-slate-100 shadow-sm p-1 h-auto flex-wrap">
-            <TabsTrigger value="all" className="data-[state=active]:bg-slate-900 data-[state=active]:text-white rounded-lg text-xs">All ({orders.length})</TabsTrigger>
-            {ORDER_STATUSES.filter(s => s !== 'cancelled').map(s => {
-              const count = orders.filter(o => o.status === s).length;
-              return (
-                <TabsTrigger key={s} value={s} className="data-[state=active]:bg-slate-900 data-[state=active]:text-white rounded-lg text-xs capitalize">
-                  {s.replace(/_/g, ' ')} ({count})
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-        </Tabs>
-      </div>
-
-      {filtered.length === 0 ? (
-        <Card className="border-0 shadow-sm">
-          <EmptyState icon={ClipboardList} title="No orders found" description="Orders will appear here when customers place them." />
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map(order => (
-            <Card key={order.id} className="border-0 shadow-sm p-5 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedOrder(order)}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-slate-900">#{order.order_number}</span>
-                  <StatusBadge status={order.status} />
-                </div>
-                <span className="text-lg font-bold text-slate-900">${(order.total_amount || 0).toFixed(2)}</span>
-              </div>
-              <div className="flex items-center gap-4 text-xs text-slate-400 mb-3">
-                {order.table_name && <span>{order.table_name}</span>}
-                <span className="capitalize">{order.type?.replace(/_/g, ' ')}</span>
-                <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{order.created_date ? format(new Date(order.created_date), 'h:mm a') : ''}</span>
-              </div>
-              <div className="space-y-1">
-                {order.items?.slice(0, 3).map((item, i) => (
-                  <div key={i} className="flex justify-between text-xs">
-                    <span className="text-slate-600">{item.quantity}x {item.product_name}</span>
-                    <span className="text-slate-400">${(item.total || 0).toFixed(2)}</span>
-                  </div>
-                ))}
-                {(order.items?.length || 0) > 3 && <p className="text-xs text-slate-400">+{order.items.length - 3} more items</p>}
-              </div>
-              <div className="mt-4 flex items-center gap-2">
-                <Select
-                  value={order.status}
-                  onValueChange={(v) => { updateStatusMutation.mutate({ id: order.id, status: v }); }}
-                >
-                  <SelectTrigger className="h-8 text-xs flex-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {ORDER_STATUSES.map(s => (
-                      <SelectItem key={s} value={s} className="text-xs capitalize">{s.replace(/_/g, ' ')}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Order Detail Dialog */}
-      <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Order #{selectedOrder?.order_number}</DialogTitle>
-          </DialogHeader>
-          {selectedOrder && (
-            <div className="space-y-4">
-              <div className="flex gap-3 flex-wrap">
-                <StatusBadge status={selectedOrder.status} />
-                <StatusBadge status={selectedOrder.payment_status || 'unpaid'} />
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="text-slate-400 block text-xs">Type</span><span className="capitalize">{selectedOrder.type?.replace(/_/g, ' ')}</span></div>
-                <div><span className="text-slate-400 block text-xs">Table</span>{selectedOrder.table_name || '-'}</div>
-                <div><span className="text-slate-400 block text-xs">Customer</span>{selectedOrder.customer_name || '-'}</div>
-                <div><span className="text-slate-400 block text-xs">Date</span>{selectedOrder.created_date ? format(new Date(selectedOrder.created_date), 'MMM d, h:mm a') : '-'}</div>
-              </div>
-              <div className="border-t pt-4">
-                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Items</h4>
-                <div className="space-y-2">
-                  {selectedOrder.items?.map((item, i) => (
-                    <div key={i} className="flex justify-between text-sm">
-                      <span className="text-slate-700">{item.quantity}x {item.product_name} {item.variant ? `(${item.variant})` : ''}</span>
-                      <span className="font-medium">${(item.total || 0).toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="border-t pt-3 space-y-1 text-sm">
-                <div className="flex justify-between text-slate-500"><span>Subtotal</span><span>${(selectedOrder.subtotal || selectedOrder.total_amount || 0).toFixed(2)}</span></div>
-                {selectedOrder.tax_amount > 0 && <div className="flex justify-between text-slate-500"><span>Tax</span><span>${selectedOrder.tax_amount.toFixed(2)}</span></div>}
-                {selectedOrder.discount_amount > 0 && <div className="flex justify-between text-slate-500"><span>Discount</span><span>-${selectedOrder.discount_amount.toFixed(2)}</span></div>}
-                <div className="flex justify-between font-bold text-base pt-1"><span>Total</span><span>${(selectedOrder.total_amount || 0).toFixed(2)}</span></div>
-              </div>
-              {selectedOrder.notes && <div className="bg-slate-50 p-3 rounded-xl text-sm text-slate-600">{selectedOrder.notes}</div>}
+    <RequirePermission permission="orders.view">
+      <div className="space-y-6">
+        <PageHeader
+          title="Orders"
+          description="Manage incoming and active orders"
+          actions={
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => navigate(createPageUrl('KitchenDisplay'))}
+                className="gap-2"
+              >
+                <Monitor className="w-4 h-4" />
+                Kitchen Display
+              </Button>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </PermissionGate>
+          }
+        />
+
+        {/* Controls */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div className="flex gap-4">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active Orders</SelectItem>
+                <SelectItem value="pending">New</SelectItem>
+                <SelectItem value="preparing">Preparing</SelectItem>
+                <SelectItem value="ready">Ready</SelectItem>
+                <SelectItem value="all">All Orders</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Switch
+              id="sound"
+              checked={soundEnabled}
+              onCheckedChange={setSoundEnabled}
+            />
+            <Label htmlFor="sound" className="flex items-center gap-2 cursor-pointer">
+              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              Sound Alerts
+            </Label>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <p className="text-sm text-amber-700 mb-1">New Orders</p>
+            <p className="text-3xl font-bold text-amber-900">{pendingCount}</p>
+          </div>
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <p className="text-sm text-purple-700 mb-1">Preparing</p>
+            <p className="text-3xl font-bold text-purple-900">{preparingCount}</p>
+          </div>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <p className="text-sm text-green-700 mb-1">Ready</p>
+            <p className="text-3xl font-bold text-green-900">
+              {orders.filter(o => o.status === 'ready').length}
+            </p>
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+            <p className="text-sm text-slate-700 mb-1">Total Active</p>
+            <p className="text-3xl font-bold text-slate-900">{orders.length}</p>
+          </div>
+        </div>
+
+        {/* Kanban Board */}
+        {isLoading ? (
+          <div className="text-center py-12 text-slate-400">Loading orders...</div>
+        ) : orders.length === 0 ? (
+          <div className="text-center py-12">
+            <ClipboardList className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-500 text-lg">No orders yet</p>
+          </div>
+        ) : (
+          <OrderKanban
+            orders={orders}
+            onStatusChange={handleStatusChange}
+            onOrderClick={setSelectedOrder}
+            currency={tenant?.currency || 'SGD'}
+          />
+        )}
+
+        {/* Order Detail Dialog */}
+        <OrderDetailDialog
+          open={!!selectedOrder}
+          onOpenChange={(open) => !open && setSelectedOrder(null)}
+          order={selectedOrder}
+          onPrint={handlePrintReceipt}
+          onCancel={(order) => cancelOrderMutation.mutate(order.id)}
+          currency={tenant?.currency || 'SGD'}
+        />
+
+        {/* Hidden audio element for notifications */}
+        <audio ref={audioRef} src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZSBQMS6Ln77BcGwU+ltTy0H4qBSh+zPDajzoJE1yy6+SfUBMJS6Lg8rllIQU2j9Ty0oIuBSV4yPDbki4HGWu/7OKXRxILT6jk8bJeHQU7mtXx0H8pBCuCzvDakTsJElyw6+GdTxkKSZ7h8rllHwU2kdPx1IIvBSp4yO/bkz0KFl2w6+KdUhIMT6fn8LRfHQU7nNXy0IAqBS2Bze/aj0IJEV6w6+SfVBUJSaDg8bViIAU3kdTy1IQxBSh4x+/ckT4KFl6x6+KeUhMLUanl8bNgHgVEnNTy0H8pBSt/yPDbkDwJFF+x6uKeTBYKSaHg8bllIAU5k9Tx1IMyBSh5ye/dlEEKFGCy6uOfUhQMUavm8bRiHwVFntXx0H4pBSh/ye7ckUILFWGz6+OgVBYLS6Ph8r" />
+      </div>
+    </RequirePermission>
   );
 }

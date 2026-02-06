@@ -63,6 +63,7 @@ import RoleManagement from './pages/RoleManagement';
 import ThemeSettings from './pages/ThemeSettings';
 import Onboarding from './pages/Onboarding';
 import CustomerOrder from './pages/CustomerOrder';
+import KitchenDisplay from './pages/KitchenDisplay';
 import __Layout from './Layout.jsx';
 
 
@@ -83,6 +84,7 @@ export const PAGES = {
     "ThemeSettings": ThemeSettings,
     "Onboarding": Onboarding,
     "CustomerOrder": CustomerOrder,
+    "KitchenDisplay": KitchenDisplay,
 }
 
 export const pagesConfig = {
