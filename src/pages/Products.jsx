@@ -1,33 +1,28 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
-import StatusBadge from '../components/ui-custom/StatusBadge';
 import EmptyState from '../components/ui-custom/EmptyState';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { ShoppingBag, Plus, Search, Pencil, Trash2, DollarSign, Package } from 'lucide-react';
-
-const defaultProduct = { name: '', description: '', price: 0, cost_price: 0, sku: '', stock_quantity: 0, low_stock_threshold: 5, category_id: '', is_active: true, is_featured: false, image_url: '' };
+import ProductGrid from '../components/products/ProductGrid';
+import ProductFormDialog from '../components/products/ProductFormDialog';
+import { ShoppingBag, Plus, Search, LayoutGrid, List } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function Products() {
-  // Products management page
-  const { tenantId } = useTenant();
-  const queryClient = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [search, setSearch] = useState('');
-  const [form, setForm] = useState(defaultProduct);
+  const { tenantId, tenant } = useTenant();
+  const [viewMode, setViewMode] = useState('grid');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [showDialog, setShowDialog] = useState(false);
 
-  const { data: products = [] } = useQuery({
+  const { data: products = [], isLoading } = useQuery({
     queryKey: ['products', tenantId],
     queryFn: () => base44.entities.Product.filter({ tenant_id: tenantId }, '-created_date'),
     enabled: !!tenantId,
@@ -39,133 +34,145 @@ export default function Products() {
     enabled: !!tenantId,
   });
 
-  const saveMutation = useMutation({
-    mutationFn: (data) => editing
-      ? base44.entities.Product.update(editing.id, data)
-      : base44.entities.Product.create({ ...data, tenant_id: tenantId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      closeForm();
-    },
+  // Filter products
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = !searchQuery || 
+      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesCategory = categoryFilter === 'all' || product.category_id === categoryFilter;
+    
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'active' && product.is_active) ||
+      (statusFilter === 'inactive' && !product.is_active) ||
+      (statusFilter === 'low_stock' && product.stock_quantity <= (product.low_stock_threshold || 5));
+
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Product.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
-  });
+  const handleEdit = (product) => {
+    setEditingProduct(product);
+    setShowDialog(true);
+  };
 
-  const openCreate = () => { setEditing(null); setForm(defaultProduct); setShowForm(true); };
-  const openEdit = (p) => { setEditing(p); setForm({ name: p.name, description: p.description || '', price: p.price, cost_price: p.cost_price || 0, sku: p.sku || '', stock_quantity: p.stock_quantity || 0, low_stock_threshold: p.low_stock_threshold || 5, category_id: p.category_id || '', is_active: p.is_active !== false, is_featured: p.is_featured || false, image_url: p.image_url || '' }); setShowForm(true); };
-  const closeForm = () => { setShowForm(false); setEditing(null); setForm(defaultProduct); };
-
-  const filtered = products.filter(p => p.name?.toLowerCase().includes(search.toLowerCase()));
+  const handleAdd = () => {
+    setEditingProduct(null);
+    setShowDialog(true);
+  };
 
   return (
     <RequirePermission permission="products.view">
-      <PageHeader
-        title="Products"
-        description="Manage your menu items and products"
-        actions={
-          <RequirePermission permission="products.create" silent>
-            <Button onClick={openCreate} className="bg-slate-900 hover:bg-slate-800 gap-2">
-              <Plus className="w-4 h-4" /> Add Product
-            </Button>
-          </RequirePermission>
-        }
-      />
+      <div className="space-y-6">
+        <PageHeader
+          title="Products"
+          description="Manage your product catalog"
+          actions={
+            <RequirePermission permission="products.create" silent>
+              <Button
+                onClick={handleAdd}
+                className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-2"
+              >
+                <Plus className="w-4 h-4" /> Add Product
+              </Button>
+            </RequirePermission>
+          }
+        />
 
-      <Card className="border-0 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-50">
-          <div className="relative max-w-sm">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+        {/* Filters and View Toggle */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto">
+            {/* Search */}
+            <div className="relative flex-1 sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            {/* Category Filter */}
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map(cat => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="low_stock">Low Stock</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* View Toggle */}
+          <div className="flex gap-1 p-1 bg-slate-100 rounded-lg">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              className={cn("h-8 px-3", viewMode === 'grid' && "bg-white shadow-sm")}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className={cn("h-8 px-3", viewMode === 'list' && "bg-white shadow-sm")}
+            >
+              <List className="w-4 h-4" />
+            </Button>
           </div>
         </div>
 
-        {filtered.length === 0 ? (
-          <EmptyState icon={ShoppingBag} title="No products yet" description="Add your first product to start selling." actionLabel="Add Product" onAction={openCreate} />
+        {/* Products Display */}
+        {isLoading ? (
+          <div className="text-center py-12 text-slate-400">Loading products...</div>
+        ) : filteredProducts.length === 0 ? (
+          <EmptyState
+            icon={ShoppingBag}
+            title={searchQuery || categoryFilter !== 'all' || statusFilter !== 'all' 
+              ? "No products found" 
+              : "No products yet"}
+            description={searchQuery || categoryFilter !== 'all' || statusFilter !== 'all'
+              ? "Try adjusting your filters"
+              : "Start building your catalog by adding your first product"}
+            actionLabel="Add Product"
+            onAction={handleAdd}
+          />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-6">
-            {filtered.map(p => {
-              const cat = categories.find(c => c.id === p.category_id);
-              return (
-                <div key={p.id} className="group bg-white border border-slate-100 rounded-2xl overflow-hidden hover:shadow-md transition-all duration-200">
-                  <div className="aspect-[4/3] bg-slate-50 relative overflow-hidden">
-                    {p.image_url ? (
-                      <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ShoppingBag className="w-8 h-8 text-slate-200" />
-                      </div>
-                    )}
-                    {!p.is_active && (
-                      <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
-                        <span className="text-xs font-medium text-slate-500 bg-white px-2 py-1 rounded-full">Inactive</span>
-                      </div>
-                    )}
-                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button size="icon" variant="secondary" className="h-7 w-7 rounded-lg" onClick={() => openEdit(p)}>
-                        <Pencil className="w-3 h-3" />
-                      </Button>
-                      <Button size="icon" variant="secondary" className="h-7 w-7 rounded-lg text-red-500 hover:text-red-600" onClick={() => deleteMutation.mutate(p.id)}>
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    {cat && <p className="text-xs font-medium text-slate-400 mb-1">{cat.name}</p>}
-                    <h3 className="text-sm font-semibold text-slate-900 mb-1 truncate">{p.name}</h3>
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold text-slate-900">${p.price?.toFixed(2)}</span>
-                      <span className={`text-xs font-medium ${(p.stock_quantity || 0) <= (p.low_stock_threshold || 5) ? 'text-amber-600' : 'text-slate-400'}`}>
-                        {p.stock_quantity || 0} in stock
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <ProductGrid 
+            products={filteredProducts} 
+            onEdit={handleEdit}
+            currency={tenant?.currency || 'SGD'}
+          />
         )}
-      </Card>
 
-      {/* Product Form Dialog */}
-      <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editing ? 'Edit Product' : 'New Product'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div><Label>Name</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
-            <div><Label>Description</Label><Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><Label>Price</Label><Input type="number" step="0.01" value={form.price} onChange={e => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} /></div>
-              <div><Label>Cost Price</Label><Input type="number" step="0.01" value={form.cost_price} onChange={e => setForm({ ...form, cost_price: parseFloat(e.target.value) || 0 })} /></div>
-            </div>
-            <div><Label>Category</Label>
-              <Select value={form.category_id} onValueChange={v => setForm({ ...form, category_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><Label>SKU</Label><Input value={form.sku} onChange={e => setForm({ ...form, sku: e.target.value })} /></div>
-              <div><Label>Stock Qty</Label><Input type="number" value={form.stock_quantity} onChange={e => setForm({ ...form, stock_quantity: parseInt(e.target.value) || 0 })} /></div>
-            </div>
-            <div><Label>Image URL</Label><Input value={form.image_url} onChange={e => setForm({ ...form, image_url: e.target.value })} /></div>
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2"><Switch checked={form.is_active} onCheckedChange={v => setForm({ ...form, is_active: v })} /><Label>Active</Label></div>
-              <div className="flex items-center gap-2"><Switch checked={form.is_featured} onCheckedChange={v => setForm({ ...form, is_featured: v })} /><Label>Featured</Label></div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeForm}>Cancel</Button>
-            <Button onClick={() => saveMutation.mutate(form)} disabled={!form.name || saveMutation.isPending} className="bg-slate-900 hover:bg-slate-800">
-              {saveMutation.isPending ? 'Saving...' : editing ? 'Update' : 'Create'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {/* Product Form Dialog */}
+        <ProductFormDialog
+          open={showDialog}
+          onOpenChange={setShowDialog}
+          product={editingProduct}
+          tenantId={tenantId}
+        />
+      </div>
     </RequirePermission>
   );
 }
