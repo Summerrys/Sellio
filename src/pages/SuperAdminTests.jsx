@@ -22,7 +22,6 @@ import { toast } from 'sonner';
 export default function SuperAdminTests() {
   const [testResults, setTestResults] = useState({});
   const [runningTests, setRunningTests] = useState({});
-  const queryClient = useQueryClient();
 
   // Fetch current user to verify super admin status
   const { data: currentUser } = useQuery({
@@ -430,12 +429,17 @@ export default function SuperAdminTests() {
   ];
 
   const runAllTests = async () => {
-    for (const suite of testSuites) {
-      setRunningTests(prev => ({ ...prev, [suite.id]: true }));
-      await suite.mutation.mutateAsync();
-      setRunningTests(prev => ({ ...prev, [suite.id]: false }));
+    try {
+      for (const suite of testSuites) {
+        setRunningTests(prev => ({ ...prev, [suite.id]: true }));
+        await suite.mutation.mutateAsync();
+        setRunningTests(prev => ({ ...prev, [suite.id]: false }));
+      }
+      toast.success('All test suites completed');
+    } catch (error) {
+      toast.error(`Test failed: ${error.message}`);
+      setRunningTests({});
     }
-    toast.success('All test suites completed');
   };
 
   const getStatusIcon = (passed, critical) => {
