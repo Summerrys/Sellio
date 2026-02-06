@@ -47,8 +47,38 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
+import Dashboard from './pages/Dashboard';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import SuperAdminTenants from './pages/SuperAdminTenants';
+import SuperAdminAnalytics from './pages/SuperAdminAnalytics';
+import Products from './pages/Products';
+import Orders from './pages/Orders';
+import Categories from './pages/Categories';
+import Tables from './pages/Tables';
+import Inventory from './pages/Inventory';
+import Staff from './pages/Staff';
+import TenantSettings from './pages/TenantSettings';
+import CustomerMenu from './pages/CustomerMenu';
+import __Layout from './Layout.jsx';
 
-export const pagesConfig = {
-	Pages: {}
+
+export const PAGES = {
+    "Dashboard": Dashboard,
+    "SuperAdminDashboard": SuperAdminDashboard,
+    "SuperAdminTenants": SuperAdminTenants,
+    "SuperAdminAnalytics": SuperAdminAnalytics,
+    "Products": Products,
+    "Orders": Orders,
+    "Categories": Categories,
+    "Tables": Tables,
+    "Inventory": Inventory,
+    "Staff": Staff,
+    "TenantSettings": TenantSettings,
+    "CustomerMenu": CustomerMenu,
 }
 
+export const pagesConfig = {
+    mainPage: "Dashboard",
+    Pages: PAGES,
+    Layout: __Layout,
+};
