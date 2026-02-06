@@ -1,0 +1,188 @@
+import React, { useState } from 'react';
+import { base44 } from '@/api/base44Client';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, Check, Rocket, Loader2 } from 'lucide-react';
+import confetti from 'canvas-confetti';
+
+export default function Step6Confirmation({ formData, prevStep, onComplete }) {
+  const [isLaunching, setIsLaunching] = useState(false);
+
+  const handleLaunch = async () => {
+    setIsLaunching(true);
+    
+    try {
+      // Create tenant
+      const slug = formData.businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const tenant = await base44.entities.Tenant.create({
+        name: formData.businessName,
+        slug,
+        industry: formData.businessType,
+        owner_email: formData.adminEmail,
+        country: formData.country,
+        currency: formData.currency,
+        status: 'trial',
+        plan: 'free',
+      });
+
+      // Create theme config
+      const colorSet = await import('../theme/themeUtils').then(m => 
+        m.COLOR_SETS.find(s => s.name === formData.theme)
+      );
+      
+      if (colorSet) {
+        await base44.entities.ThemeConfig.create({
+          tenant_id: tenant.id,
+          color_set_name: formData.theme,
+          primary_color: colorSet.dark,
+          accent_color: colorSet.light,
+        });
+      }
+
+      // Create admin role
+      const adminRole = await base44.entities.Role.create({
+        tenant_id: tenant.id,
+        name: 'Admin',
+        slug: 'admin',
+        permissions: ['*'], // All permissions
+        is_system: true,
+      });
+
+      // Create tenant user (admin)
+      await base44.entities.TenantUser.create({
+        tenant_id: tenant.id,
+        user_email: formData.adminEmail,
+        role_id: adminRole.id,
+        role_name: 'Admin',
+        is_owner: true,
+        status: 'active',
+      });
+
+      // Create tables if F&B business
+      if (formData.tableCount > 0) {
+        const tables = Array.from({ length: formData.tableCount }, (_, i) => ({
+          tenant_id: tenant.id,
+          name: `T${i + 1}`,
+          capacity: 4,
+          status: 'available',
+          sort_order: i,
+        }));
+        await Promise.all(tables.map(t => base44.entities.TableEntity.create(t)));
+      }
+
+      // Create products
+      if (formData.products?.length > 0) {
+        const categoryMap = {};
+        
+        for (const product of formData.products) {
+          let categoryId = categoryMap[product.category];
+          
+          if (!categoryId) {
+            const category = await base44.entities.Category.create({
+              tenant_id: tenant.id,
+              name: product.category,
+              slug: product.category.toLowerCase().replace(/\s+/g, '-'),
+              is_active: true,
+            });
+            categoryId = category.id;
+            categoryMap[product.category] = categoryId;
+          }
+
+          await base44.entities.Product.create({
+            tenant_id: tenant.id,
+            category_id: categoryId,
+            name: product.name,
+            slug: product.name.toLowerCase().replace(/\s+/g, '-'),
+            price: product.price,
+            is_active: true,
+          });
+        }
+      }
+
+      // Launch confetti
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+
+      // Wait a moment for effect
+      setTimeout(() => {
+        onComplete();
+      }, 1500);
+
+    } catch (error) {
+      console.error('Onboarding error:', error);
+      alert('Something went wrong. Please try again.');
+      setIsLaunching(false);
+    }
+  };
+
+  return (
+    <Card className="p-8 sm:p-10 bg-white/80 backdrop-blur border-0 shadow-xl">
+      <div className="text-center mb-8">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgb(var(--color-primary))] to-[rgb(var(--color-primary-light))] flex items-center justify-center mx-auto mb-4">
+          <Rocket className="w-8 h-8 text-white" />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Ready to Launch! 🎉</h2>
+        <p className="text-slate-500">Review your setup and launch your business</p>
+      </div>
+
+      <div className="space-y-4 mb-8">
+        <SummaryItem icon={Check} label="Business" value={formData.businessName} />
+        <SummaryItem icon={Check} label="Type" value={formData.businessType} />
+        <SummaryItem icon={Check} label="Theme" value={formData.theme} />
+        <SummaryItem icon={Check} label="Admin" value={formData.adminEmail} />
+        <SummaryItem icon={Check} label="Currency" value={formData.currency} />
+        {formData.tableCount > 0 && (
+          <SummaryItem icon={Check} label="Tables" value={`${formData.tableCount} tables`} />
+        )}
+        {formData.products?.length > 0 && (
+          <SummaryItem icon={Check} label="Products" value={`${formData.products.length} products added`} />
+        )}
+      </div>
+
+      <div className="flex gap-3">
+        <Button
+          onClick={prevStep}
+          variant="outline"
+          className="flex-1 h-12"
+          disabled={isLaunching}
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" /> Back
+        </Button>
+        <Button
+          onClick={handleLaunch}
+          disabled={isLaunching}
+          className="flex-1 h-12 bg-gradient-to-r from-[rgb(var(--color-primary))] to-[rgb(var(--color-primary-light))] hover:opacity-90 text-base font-medium gap-2"
+        >
+          {isLaunching ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Launching...
+            </>
+          ) : (
+            <>
+              <Rocket className="w-5 h-5" />
+              Launch Your Business
+            </>
+          )}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+function SummaryItem({ icon: Icon, label, value }) {
+  return (
+    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+      <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+        <Icon className="w-4 h-4 text-green-600" />
+      </div>
+      <div className="flex-1">
+        <p className="text-xs text-slate-500">{label}</p>
+        <p className="text-sm font-medium text-slate-900">{value}</p>
+      </div>
+    </div>
+  );
+}
