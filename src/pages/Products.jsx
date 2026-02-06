@@ -10,7 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ProductGrid from '../components/products/ProductGrid';
 import ProductFormDialog from '../components/products/ProductFormDialog';
-import { ShoppingBag, Plus, Search, LayoutGrid, List } from 'lucide-react';
+import ProductImportDialog from '../components/products/ProductImportDialog';
+import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Products() {
@@ -21,6 +22,7 @@ export default function Products() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [editingProduct, setEditingProduct] = useState(null);
   const [showDialog, setShowDialog] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products', tenantId],
@@ -60,6 +62,32 @@ export default function Products() {
     setShowDialog(true);
   };
 
+  const handleExport = () => {
+    const csv = [
+      ['Name', 'SKU', 'Description', 'Category', 'Price', 'Cost Price', 'Stock', 'Low Stock Threshold', 'Active', 'Image URL'].join(','),
+      ...filteredProducts.map(p => [
+        p.name,
+        p.sku || '',
+        p.description || '',
+        categories.find(c => c.id === p.category_id)?.name || '',
+        p.price,
+        p.cost_price || '',
+        p.stock_quantity || 0,
+        p.low_stock_threshold || 5,
+        p.is_active,
+        p.image_url || ''
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `products_export_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <RequirePermission permission="products.view">
       <div className="space-y-6">
@@ -67,14 +95,24 @@ export default function Products() {
           title="Products"
           description="Manage your product catalog"
           actions={
-            <RequirePermission permission="products.create" silent>
-              <Button
-                onClick={handleAdd}
-                className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-2"
-              >
-                <Plus className="w-4 h-4" /> Add Product
+            <div className="flex gap-2">
+              <Button onClick={handleExport} variant="outline">
+                <Download className="w-4 h-4 mr-2" />
+                Export
               </Button>
-            </RequirePermission>
+              <RequirePermission permission="products.create" silent>
+                <Button onClick={() => setImportDialogOpen(true)} variant="outline">
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import
+                </Button>
+                <Button
+                  onClick={handleAdd}
+                  className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-2"
+                >
+                  <Plus className="w-4 h-4" /> Add Product
+                </Button>
+              </RequirePermission>
+            </div>
           }
         />
 
@@ -171,6 +209,14 @@ export default function Products() {
           onOpenChange={setShowDialog}
           product={editingProduct}
           tenantId={tenantId}
+        />
+
+        {/* Product Import Dialog */}
+        <ProductImportDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          tenantId={tenantId}
+          categories={categories}
         />
       </div>
     </RequirePermission>
