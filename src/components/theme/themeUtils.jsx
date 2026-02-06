@@ -1,13 +1,26 @@
-// Color theme sets with light and dark anchor colors
+// Color theme sets with primary (dark) and light anchor colors
 export const COLOR_SETS = [
-  { name: 'Indigo', light: '#a8c8fb', dark: '#0941a2' },
-  { name: 'Forest Green', light: '#6bd68a', dark: '#1a5119' },
-  { name: 'Sky Blue', light: '#7ed0ff', dark: '#005585' },
-  { name: 'Purple', light: '#d9bafc', dark: '#5628a4' },
-  { name: 'Pink Rose', light: '#ffaee3', dark: '#8c0156' },
-  { name: 'Pink Magenta', light: '#ffade3', dark: '#8b0356' },
-  { name: 'Orange Warm', light: '#feb688', dark: '#763301' },
-  { name: 'Orange Amber', light: '#ffb57d', dark: '#763301' },
+  // Original 8 themes (inverted)
+  { name: 'Indigo', light: '#0941a2', dark: '#a8c8fb' },
+  { name: 'Forest Green', light: '#1a5119', dark: '#6bd68a' },
+  { name: 'Sky Blue', light: '#005585', dark: '#7ed0ff' },
+  { name: 'Purple', light: '#5628a4', dark: '#d9bafc' },
+  { name: 'Pink Rose', light: '#8c0156', dark: '#ffaee3' },
+  { name: 'Pink Magenta', light: '#8b0356', dark: '#ffade3' },
+  { name: 'Orange Warm', light: '#763301', dark: '#feb688' },
+  { name: 'Orange Amber', light: '#763301', dark: '#ffb57d' },
+  
+  // Minimalist tones (4)
+  { name: 'Sage Mint', light: '#2d5016', dark: '#b8d4a8' },
+  { name: 'Lavender Mist', light: '#4a3563', dark: '#d4c5e8' },
+  { name: 'Soft Peach', light: '#8b4513', dark: '#ffd4b3' },
+  { name: 'Dusty Blue', light: '#2c4a5e', dark: '#a8c5d9' },
+  
+  // Candy tones (4)
+  { name: 'Bubblegum', light: '#c7016d', dark: '#ffb3e0' },
+  { name: 'Lemon Drop', light: '#957000', dark: '#ffe680' },
+  { name: 'Mint Candy', light: '#00a86b', dark: '#8effd1' },
+  { name: 'Cotton Candy', light: '#6b5b95', dark: '#dbc4ff' },
 ];
 
 // Convert hex to RGB
