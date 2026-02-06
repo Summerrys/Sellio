@@ -1,26 +1,32 @@
 // Color theme sets with primary (dark) and light anchor colors
 export const COLOR_SETS = [
-  // Original 8 themes (inverted)
+  // Core themes
   { name: 'Indigo', light: '#0941a2', dark: '#a8c8fb' },
   { name: 'Forest Green', light: '#1a5119', dark: '#6bd68a' },
   { name: 'Sky Blue', light: '#005585', dark: '#7ed0ff' },
   { name: 'Purple', light: '#5628a4', dark: '#d9bafc' },
-  { name: 'Pink Rose', light: '#8c0156', dark: '#ffaee3' },
   { name: 'Pink Magenta', light: '#8b0356', dark: '#ffade3' },
-  { name: 'Orange Warm', light: '#763301', dark: '#feb688' },
   { name: 'Orange Amber', light: '#763301', dark: '#ffb57d' },
   
-  // Minimalist tones (4)
+  // Minimalist tones
   { name: 'Sage Mint', light: '#2d5016', dark: '#b8d4a8' },
   { name: 'Lavender Mist', light: '#4a3563', dark: '#d4c5e8' },
   { name: 'Soft Peach', light: '#8b4513', dark: '#ffd4b3' },
   { name: 'Dusty Blue', light: '#2c4a5e', dark: '#a8c5d9' },
+  { name: 'Stone Gray', light: '#3d4451', dark: '#b8bdc9' },
+  { name: 'Moss Green', light: '#3a5a40', dark: '#a3c4a8' },
+  { name: 'Warm Taupe', light: '#6d5d4b', dark: '#d4c4b3' },
+  { name: 'Slate Blue', light: '#3f4f6b', dark: '#b0c4de' },
   
-  // Candy tones (4)
+  // Candy & Marshmallow tones
   { name: 'Bubblegum', light: '#c7016d', dark: '#ffb3e0' },
   { name: 'Lemon Drop', light: '#957000', dark: '#ffe680' },
   { name: 'Mint Candy', light: '#00a86b', dark: '#8effd1' },
   { name: 'Cotton Candy', light: '#6b5b95', dark: '#dbc4ff' },
+  { name: 'Vanilla Cream', light: '#8b7355', dark: '#f5e6d3' },
+  { name: 'Strawberry', light: '#c41e3a', dark: '#ffccdb' },
+  { name: 'Pistachio', light: '#5a7247', dark: '#d4e8c1' },
+  { name: 'Blueberry', light: '#4a5a8a', dark: '#c8d5f0' },
 ];
 
 // Convert hex to RGB
