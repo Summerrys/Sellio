@@ -1,176 +1,292 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useTenant } from '../components/tenant/TenantContext';
-import PermissionGate from '../components/tenant/PermissionGate';
+import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Package, Plus, AlertTriangle, Search } from 'lucide-react';
-import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import StockAdjustmentPanel from '../components/inventory/StockAdjustmentPanel';
+import InventoryLogTable from '../components/inventory/InventoryLogTable';
+import StockTakeDialog from '../components/inventory/StockTakeDialog';
+import { Package, AlertTriangle, CheckCircle, XCircle, Search, ClipboardCheck } from 'lucide-react';
 
 export default function Inventory() {
-  const { tenantId, user } = useTenant();
-  const queryClient = useQueryClient();
-  const [showAdjust, setShowAdjust] = useState(false);
+  const { tenantId } = useTenant();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [adjustForm, setAdjustForm] = useState({ type: 'restock', quantity_change: 0, notes: '' });
-  const [search, setSearch] = useState('');
+  const [showStockTake, setShowStockTake] = useState(false);
 
-  const { data: products = [] } = useQuery({
-    queryKey: ['inventoryProducts', tenantId],
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['products', tenantId],
     queryFn: () => base44.entities.Product.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
   });
 
-  const { data: logs = [] } = useQuery({
-    queryKey: ['inventoryLogs', tenantId],
-    queryFn: () => base44.entities.InventoryLog.filter({ tenant_id: tenantId }, '-created_date', 50),
-    enabled: !!tenantId,
+  // Filter tracked products only
+  const trackedProducts = products.filter(p => 
+    p.stock_quantity !== undefined && p.stock_quantity !== null
+  );
+
+  // Calculate summary stats
+  const totalTracked = trackedProducts.length;
+  const inStock = trackedProducts.filter(p => p.stock_quantity > (p.low_stock_threshold || 5)).length;
+  const lowStock = trackedProducts.filter(p => 
+    p.stock_quantity > 0 && p.stock_quantity <= (p.low_stock_threshold || 5)
+  ).length;
+  const outOfStock = trackedProducts.filter(p => p.stock_quantity === 0).length;
+
+  // Filter products
+  const filteredProducts = trackedProducts.filter(product => {
+    const matchesSearch = !searchQuery || 
+      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.sku?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'in_stock' && product.stock_quantity > (product.low_stock_threshold || 5)) ||
+      (statusFilter === 'low_stock' && product.stock_quantity > 0 && product.stock_quantity <= (product.low_stock_threshold || 5)) ||
+      (statusFilter === 'out_of_stock' && product.stock_quantity === 0);
+
+    return matchesSearch && matchesStatus;
   });
 
-  const adjustMutation = useMutation({
-    mutationFn: async (data) => {
-      const product = selectedProduct;
-      const before = product.stock_quantity || 0;
-      const change = data.type === 'restock' || data.type === 'return' ? Math.abs(data.quantity_change) : -Math.abs(data.quantity_change);
-      const after = before + change;
-      await base44.entities.Product.update(product.id, { stock_quantity: Math.max(0, after) });
-      await base44.entities.InventoryLog.create({
-        tenant_id: tenantId,
-        product_id: product.id,
-        product_name: product.name,
-        type: data.type,
-        quantity_change: change,
-        quantity_before: before,
-        quantity_after: Math.max(0, after),
-        notes: data.notes,
-        performed_by: user?.email,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['inventoryProducts'] });
-      queryClient.invalidateQueries({ queryKey: ['inventoryLogs'] });
-      setShowAdjust(false);
-      setSelectedProduct(null);
-    },
-  });
+  // Sort by stock level (ascending)
+  const sortedProducts = [...filteredProducts].sort((a, b) => 
+    (a.stock_quantity || 0) - (b.stock_quantity || 0)
+  );
 
-  const openAdjust = (product) => { setSelectedProduct(product); setAdjustForm({ type: 'restock', quantity_change: 0, notes: '' }); setShowAdjust(true); };
-
-  const filtered = products.filter(p => p.name?.toLowerCase().includes(search.toLowerCase()));
+  const getStatusBadge = (product) => {
+    if (product.stock_quantity === 0) {
+      return <Badge className="bg-red-100 text-red-700 border-red-300">Out of Stock</Badge>;
+    }
+    if (product.stock_quantity <= (product.low_stock_threshold || 5)) {
+      return <Badge className="bg-amber-100 text-amber-700 border-amber-300">Low Stock</Badge>;
+    }
+    return <Badge className="bg-green-100 text-green-700 border-green-300">In Stock</Badge>;
+  };
 
   return (
-    <PermissionGate permission="inventory.read">
-      <PageHeader title="Inventory" description="Track stock levels and adjustments" />
+    <RequirePermission permission="inventory.view">
+      <div className="space-y-6">
+        <PageHeader
+          title="Inventory Management"
+          description="Track and manage your stock levels"
+          actions={
+            <Button
+              onClick={() => setShowStockTake(true)}
+              className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-2"
+              disabled={trackedProducts.length === 0}
+            >
+              <ClipboardCheck className="w-4 h-4" />
+              Start Stock Take
+            </Button>
+          }
+        />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 border-0 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-900">Stock Levels</h2>
-            <div className="relative max-w-xs">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <Input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-8 text-xs" />
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="p-6 border-0 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-500 mb-1">Total Tracked</p>
+                <p className="text-3xl font-bold text-slate-900">{totalTracked}</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
+                <Package className="w-6 h-6 text-slate-600" />
+              </div>
             </div>
-          </div>
-          {filtered.length === 0 ? (
-            <EmptyState icon={Package} title="No products" description="Add products first to manage inventory." />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50/50">
-                  <TableHead className="text-xs uppercase tracking-wider font-semibold text-slate-500">Product</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wider font-semibold text-slate-500">Stock</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wider font-semibold text-slate-500">Threshold</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wider font-semibold text-slate-500">Status</TableHead>
-                  <TableHead className="w-20" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map(p => {
-                  const isLow = (p.stock_quantity || 0) <= (p.low_stock_threshold || 5);
-                  const isOut = (p.stock_quantity || 0) === 0;
-                  return (
-                    <TableRow key={p.id}>
-                      <TableCell className="text-sm font-medium text-slate-900">{p.name}</TableCell>
-                      <TableCell className={`text-sm font-semibold ${isOut ? 'text-red-600' : isLow ? 'text-amber-600' : 'text-slate-900'}`}>{p.stock_quantity || 0}</TableCell>
-                      <TableCell className="text-sm text-slate-400">{p.low_stock_threshold || 5}</TableCell>
-                      <TableCell>
-                        {isOut ? (
-                          <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit"><AlertTriangle className="w-3 h-3" /> Out of stock</span>
-                        ) : isLow ? (
-                          <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Low stock</span>
-                        ) : (
-                          <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">In stock</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => openAdjust(p)}>Adjust</Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </Card>
+          </Card>
 
-        {/* Recent Activity */}
-        <Card className="border-0 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-50">
-            <h2 className="text-sm font-semibold text-slate-900">Recent Activity</h2>
-          </div>
-          {logs.length === 0 ? (
-            <div className="p-8 text-center text-xs text-slate-400">No activity yet</div>
-          ) : (
-            <div className="divide-y divide-slate-50 max-h-[500px] overflow-y-auto">
-              {logs.slice(0, 20).map(log => (
-                <div key={log.id} className="px-6 py-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-900">{log.product_name}</span>
-                    <span className={`text-xs font-semibold ${log.quantity_change >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                      {log.quantity_change >= 0 ? '+' : ''}{log.quantity_change}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400 capitalize">{log.type} · {log.created_date ? format(new Date(log.created_date), 'MMM d, h:mm a') : ''}</p>
-                </div>
-              ))}
+          <Card className="p-6 border-0 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-500 mb-1">In Stock</p>
+                <p className="text-3xl font-bold text-green-600">{inStock}</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
             </div>
-          )}
-        </Card>
-      </div>
+          </Card>
 
-      {/* Adjust Dialog */}
-      <Dialog open={showAdjust} onOpenChange={setShowAdjust}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Adjust Stock — {selectedProduct?.name}</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="text-center text-3xl font-bold text-slate-900">{selectedProduct?.stock_quantity || 0} <span className="text-sm font-normal text-slate-400">current</span></div>
-            <div><Label>Type</Label>
-              <Select value={adjustForm.type} onValueChange={v => setAdjustForm({ ...adjustForm, type: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+          <Card className="p-6 border-0 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-500 mb-1">Low Stock</p>
+                <p className="text-3xl font-bold text-amber-600">{lowStock}</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-amber-600" />
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6 border-0 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-500 mb-1">Out of Stock</p>
+                <p className="text-3xl font-bold text-red-600">{outOfStock}</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
+                <XCircle className="w-6 h-6 text-red-600" />
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Tabs */}
+        <Tabs defaultValue="inventory" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="inventory">Current Stock</TabsTrigger>
+            <TabsTrigger value="logs">History</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="inventory" className="space-y-4">
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1 sm:max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {['restock', 'sale', 'adjustment', 'waste', 'return'].map(t => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="in_stock">In Stock</SelectItem>
+                  <SelectItem value="low_stock">Low Stock</SelectItem>
+                  <SelectItem value="out_of_stock">Out of Stock</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>Quantity</Label><Input type="number" min="0" value={adjustForm.quantity_change} onChange={e => setAdjustForm({ ...adjustForm, quantity_change: parseInt(e.target.value) || 0 })} /></div>
-            <div><Label>Notes (optional)</Label><Input value={adjustForm.notes} onChange={e => setAdjustForm({ ...adjustForm, notes: e.target.value })} /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAdjust(false)}>Cancel</Button>
-            <Button onClick={() => adjustMutation.mutate(adjustForm)} disabled={adjustForm.quantity_change === 0 || adjustMutation.isPending} className="bg-slate-900 hover:bg-slate-800">
-              {adjustMutation.isPending ? 'Saving...' : 'Confirm'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </PermissionGate>
+
+            {/* Inventory Table */}
+            {isLoading ? (
+              <div className="text-center py-12 text-slate-400">Loading inventory...</div>
+            ) : sortedProducts.length === 0 ? (
+              <EmptyState
+                icon={Package}
+                title={searchQuery || statusFilter !== 'all' ? "No products found" : "No inventory tracked"}
+                description={searchQuery || statusFilter !== 'all' ? "Try adjusting your filters" : "Enable inventory tracking on products to see them here"}
+              />
+            ) : (
+              <Card className="border-0 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-slate-50 border-b border-slate-200">
+                      <tr>
+                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
+                          Product
+                        </th>
+                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
+                          SKU
+                        </th>
+                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
+                          Stock
+                        </th>
+                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
+                          Threshold
+                        </th>
+                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
+                          Status
+                        </th>
+                        <th className="text-right text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {sortedProducts.map((product) => (
+                        <tr 
+                          key={product.id} 
+                          className="hover:bg-slate-25 transition-colors cursor-pointer"
+                          onClick={() => setSelectedProduct(product)}
+                        >
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              {product.image_url ? (
+                                <img
+                                  src={product.image_url}
+                                  alt={product.name}
+                                  className="w-10 h-10 rounded-lg object-cover"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                                  <Package className="w-5 h-5 text-slate-400" />
+                                </div>
+                              )}
+                              <p className="font-medium text-slate-900">{product.name}</p>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-slate-600">
+                            {product.sku || '-'}
+                          </td>
+                          <td className="px-6 py-4">
+                            <p className="text-lg font-bold text-slate-900">
+                              {product.stock_quantity || 0}
+                            </p>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-slate-600">
+                            {product.low_stock_threshold || 5}
+                          </td>
+                          <td className="px-6 py-4">
+                            {getStatusBadge(product)}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedProduct(product);
+                              }}
+                            >
+                              Adjust
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="logs">
+            <InventoryLogTable tenantId={tenantId} />
+          </TabsContent>
+        </Tabs>
+
+        {/* Stock Adjustment Panel */}
+        <StockAdjustmentPanel
+          open={!!selectedProduct}
+          onOpenChange={(open) => !open && setSelectedProduct(null)}
+          product={selectedProduct}
+          tenantId={tenantId}
+        />
+
+        {/* Stock Take Dialog */}
+        <StockTakeDialog
+          open={showStockTake}
+          onOpenChange={setShowStockTake}
+          products={trackedProducts}
+          tenantId={tenantId}
+        />
+      </div>
+    </RequirePermission>
   );
 }
