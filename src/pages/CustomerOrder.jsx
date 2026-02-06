@@ -206,11 +206,14 @@ export default function CustomerOrder() {
         {/* Action Buttons */}
         <div className="space-y-3">
           <Button
-            onClick={() => navigate(createPageUrl(`CustomerMenu?table=${order.table_id}`))}
+            onClick={() => {
+              const trackingUrl = createPageUrl('OrderTracking') + `?orderId=${order.id}`;
+              navigate(trackingUrl);
+            }}
             className="w-full h-12"
             style={{ backgroundColor: 'var(--primary)' }}
           >
-            Order More Items
+            Track Order & Manage Session
           </Button>
           <Button
             variant="outline"
