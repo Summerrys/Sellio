@@ -47,48 +47,50 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
+import Categories from './pages/Categories';
+import CustomerMenu from './pages/CustomerMenu';
+import CustomerOrder from './pages/CustomerOrder';
 import Dashboard from './pages/Dashboard';
+import Inventory from './pages/Inventory';
+import KitchenDisplay from './pages/KitchenDisplay';
+import Onboarding from './pages/Onboarding';
+import OrderTracking from './pages/OrderTracking';
+import Orders from './pages/Orders';
+import Products from './pages/Products';
+import Reports from './pages/Reports';
+import RoleManagement from './pages/RoleManagement';
+import Staff from './pages/Staff';
+import SuperAdminAnalytics from './pages/SuperAdminAnalytics';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import SuperAdminTenants from './pages/SuperAdminTenants';
-import SuperAdminAnalytics from './pages/SuperAdminAnalytics';
-import Products from './pages/Products';
-import Orders from './pages/Orders';
-import Categories from './pages/Categories';
 import Tables from './pages/Tables';
-import Inventory from './pages/Inventory';
-import Staff from './pages/Staff';
 import TenantSettings from './pages/TenantSettings';
-import CustomerMenu from './pages/CustomerMenu';
-import RoleManagement from './pages/RoleManagement';
 import ThemeSettings from './pages/ThemeSettings';
-import Onboarding from './pages/Onboarding';
-import CustomerOrder from './pages/CustomerOrder';
-import KitchenDisplay from './pages/KitchenDisplay';
-import OrderTracking from './pages/OrderTracking';
-import Reports from './pages/Reports';
+import Settings from './pages/Settings';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "Categories": Categories,
+    "CustomerMenu": CustomerMenu,
+    "CustomerOrder": CustomerOrder,
     "Dashboard": Dashboard,
+    "Inventory": Inventory,
+    "KitchenDisplay": KitchenDisplay,
+    "Onboarding": Onboarding,
+    "OrderTracking": OrderTracking,
+    "Orders": Orders,
+    "Products": Products,
+    "Reports": Reports,
+    "RoleManagement": RoleManagement,
+    "Staff": Staff,
+    "SuperAdminAnalytics": SuperAdminAnalytics,
     "SuperAdminDashboard": SuperAdminDashboard,
     "SuperAdminTenants": SuperAdminTenants,
-    "SuperAdminAnalytics": SuperAdminAnalytics,
-    "Products": Products,
-    "Orders": Orders,
-    "Categories": Categories,
     "Tables": Tables,
-    "Inventory": Inventory,
-    "Staff": Staff,
     "TenantSettings": TenantSettings,
-    "CustomerMenu": CustomerMenu,
-    "RoleManagement": RoleManagement,
     "ThemeSettings": ThemeSettings,
-    "Onboarding": Onboarding,
-    "CustomerOrder": CustomerOrder,
-    "KitchenDisplay": KitchenDisplay,
-    "OrderTracking": OrderTracking,
-    "Reports": Reports,
+    "Settings": Settings,
 }
 
 export const pagesConfig = {
