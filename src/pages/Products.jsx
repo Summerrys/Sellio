@@ -165,6 +165,6 @@ export default function Products() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </PermissionGate>
+    </RequirePermission>
   );
 }
