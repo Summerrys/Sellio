@@ -1,4 +1,5 @@
 import React from 'react';
+import { base44 } from '@/api/base44Client';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
@@ -9,11 +10,26 @@ import OperatingHours from '../components/settings/OperatingHours';
 import TaxCurrency from '../components/settings/TaxCurrency';
 import OrderingSettings from '../components/settings/OrderingSettings';
 import NotificationSettings from '../components/settings/NotificationSettings';
+import NotificationPreferences from '../components/settings/NotificationPreferences';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Settings as SettingsIcon, Building2, Palette, Clock, DollarSign, ShoppingBag, Bell, Receipt, Shield, CreditCard } from 'lucide-react';
 
 export default function Settings() {
   const { tenant, tenantId, hasPermission } = useTenant();
+  const [user, setUser] = React.useState(null);
+
+  React.useEffect(() => {
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    try {
+      const currentUser = await base44.auth.me();
+      setUser(currentUser);
+    } catch (error) {
+      console.error('Failed to load user:', error);
+    }
+  };
 
   if (!tenant) {
     return (
@@ -116,7 +132,10 @@ export default function Settings() {
 
           {/* Notifications */}
           <TabsContent value="notifications">
-            <NotificationSettings tenant={tenant} />
+            <div className="space-y-6">
+              <NotificationSettings tenant={tenant} />
+              {user && <NotificationPreferences userEmail={user.email} tenantId={tenantId} />}
+            </div>
           </TabsContent>
 
           {/* Receipt */}

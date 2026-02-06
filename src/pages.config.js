@@ -67,6 +67,7 @@ import Tables from './pages/Tables';
 import TenantSettings from './pages/TenantSettings';
 import ThemeSettings from './pages/ThemeSettings';
 import Settings from './pages/Settings';
+import Notifications from './pages/Notifications';
 import __Layout from './Layout.jsx';
 
 
@@ -91,6 +92,7 @@ export const PAGES = {
     "TenantSettings": TenantSettings,
     "ThemeSettings": ThemeSettings,
     "Settings": Settings,
+    "Notifications": Notifications,
 }
 
 export const pagesConfig = {
