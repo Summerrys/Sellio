@@ -69,6 +69,7 @@ import ThemeSettings from './pages/ThemeSettings';
 import Settings from './pages/Settings';
 import Notifications from './pages/Notifications';
 import SuperAdminTenantDetail from './pages/SuperAdminTenantDetail';
+import SecurityTests from './pages/SecurityTests';
 import __Layout from './Layout.jsx';
 
 
@@ -95,6 +96,7 @@ export const PAGES = {
     "Settings": Settings,
     "Notifications": Notifications,
     "SuperAdminTenantDetail": SuperAdminTenantDetail,
+    "SecurityTests": SecurityTests,
 }
 
 export const pagesConfig = {

@@ -32,11 +32,12 @@ const publicPages = ['CustomerMenu', 'CustomerOrder'];
 
 function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin }) {
   const navItems = isSuperAdmin
-    ? [
-        { label: 'God View', icon: Shield, page: 'SuperAdminDashboard' },
-        { label: 'All Tenants', icon: Building2, page: 'SuperAdminTenants' },
-        { label: 'Analytics', icon: BarChart3, page: 'SuperAdminAnalytics' },
-        { type: 'divider' },
+          ? [
+              { label: 'God View', icon: Shield, page: 'SuperAdminDashboard' },
+              { label: 'All Tenants', icon: Building2, page: 'SuperAdminTenants' },
+              { label: 'Analytics', icon: BarChart3, page: 'SuperAdminAnalytics' },
+              { label: 'Security Tests', icon: Shield, page: 'SecurityTests' },
+              { type: 'divider' },
         { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
         { label: 'Orders', icon: ClipboardList, page: 'Orders' },
         { label: 'Products', icon: ShoppingBag, page: 'Products' },
