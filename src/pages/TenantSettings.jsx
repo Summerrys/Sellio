@@ -11,9 +11,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import ThemeSelector from '../components/theme/ThemeSelector';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Building2, Shield, Plus, Pencil, Trash2, Save } from 'lucide-react';
+import { Building2, Shield, Plus, Pencil, Trash2, Save, Palette } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function TenantSettings() {
@@ -88,10 +89,13 @@ export default function TenantSettings() {
 
       <Tabs defaultValue="business">
         <TabsList className="bg-white border border-slate-100 shadow-sm mb-6">
-          <TabsTrigger value="business" className="data-[state=active]:bg-slate-900 data-[state=active]:text-white rounded-lg gap-2">
+          <TabsTrigger value="business" className="data-[state=active]:bg-[rgb(var(--color-primary))] data-[state=active]:text-white rounded-lg gap-2">
             <Building2 className="w-4 h-4" /> Business
           </TabsTrigger>
-          <TabsTrigger value="roles" className="data-[state=active]:bg-slate-900 data-[state=active]:text-white rounded-lg gap-2">
+          <TabsTrigger value="theme" className="data-[state=active]:bg-[rgb(var(--color-primary))] data-[state=active]:text-white rounded-lg gap-2">
+            <Palette className="w-4 h-4" /> Theme
+          </TabsTrigger>
+          <TabsTrigger value="roles" className="data-[state=active]:bg-[rgb(var(--color-primary))] data-[state=active]:text-white rounded-lg gap-2">
             <Shield className="w-4 h-4" /> Roles & Permissions
           </TabsTrigger>
         </TabsList>
@@ -112,17 +116,23 @@ export default function TenantSettings() {
                 </div>
               </div>
               <div><Label>Address</Label><Input value={businessForm.address} onChange={e => setBusinessForm({ ...businessForm, address: e.target.value })} /></div>
-              <Button onClick={() => updateBusinessMutation.mutate()} disabled={updateBusinessMutation.isPending} className="bg-slate-900 hover:bg-slate-800 gap-2">
+              <Button onClick={() => updateBusinessMutation.mutate()} disabled={updateBusinessMutation.isPending} className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-2">
                 <Save className="w-4 h-4" /> {updateBusinessMutation.isPending ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
           </Card>
         </TabsContent>
 
+        <TabsContent value="theme">
+          <div className="max-w-3xl">
+            <ThemeSelector variant="full" />
+          </div>
+        </TabsContent>
+
         <TabsContent value="roles">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-slate-900">Roles</h3>
-            <Button onClick={() => openRoleForm(null)} size="sm" className="bg-slate-900 hover:bg-slate-800 gap-1"><Plus className="w-3.5 h-3.5" /> New Role</Button>
+            <Button onClick={() => openRoleForm(null)} size="sm" className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-1"><Plus className="w-3.5 h-3.5" /> New Role</Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {roles.map(role => (
@@ -217,7 +227,7 @@ export default function TenantSettings() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeRoleForm}>Cancel</Button>
-            <Button onClick={() => saveRoleMutation.mutate(roleForm)} disabled={!roleForm.name || saveRoleMutation.isPending} className="bg-slate-900 hover:bg-slate-800">
+            <Button onClick={() => saveRoleMutation.mutate(roleForm)} disabled={!roleForm.name || saveRoleMutation.isPending} className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))]">
               {saveRoleMutation.isPending ? 'Saving...' : editingRole ? 'Update' : 'Create'}
             </Button>
           </DialogFooter>

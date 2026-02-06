@@ -246,7 +246,11 @@ export function TenantProvider({ children }) {
     isLoading: tenantUserLoading || tenantLoading,
   };
 
-  return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
+  return (
+    <TenantContext.Provider value={value}>
+      {typeof children === 'function' ? children(value) : children}
+    </TenantContext.Provider>
+  );
 }
 
 export function useTenant() {
