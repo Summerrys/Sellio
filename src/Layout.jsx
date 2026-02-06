@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { TenantProvider, useTenant } from './components/tenant/TenantContext';
 import { ThemeProvider } from './components/theme/ThemeProvider';
+import { NotificationProvider } from './components/notifications/NotificationProvider';
+import NotificationBell from './components/notifications/NotificationBell';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -202,9 +204,12 @@ function AppLayout({ children, currentPageName }) {
           </div>
           <span className="font-bold text-sm text-slate-900">Apptelier</span>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)}>
-          <Menu className="w-5 h-5" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {user && <NotificationBell />}
+          <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)}>
+            <Menu className="w-5 h-5" />
+          </Button>
+        </div>
       </div>
 
       {/* Mobile Sidebar Overlay */}
@@ -243,7 +248,9 @@ export default function Layout({ children, currentPageName }) {
     <TenantProvider>
       {(tenantContext) => (
         <ThemeProvider tenantId={tenantContext.tenantId}>
-          <AppLayout currentPageName={currentPageName}>{children}</AppLayout>
+          <NotificationProvider>
+            <AppLayout currentPageName={currentPageName}>{children}</AppLayout>
+          </NotificationProvider>
         </ThemeProvider>
       )}
     </TenantProvider>
