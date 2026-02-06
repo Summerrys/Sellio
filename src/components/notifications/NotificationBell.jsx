@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bell, Check, ShoppingBag, AlertTriangle, Users, TrendingUp } from 'lucide-react';
+import { Bell, Check, ShoppingBag, AlertTriangle, Users, TrendingUp, Building2 } from 'lucide-react';
 import { useNotifications } from './NotificationProvider';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
