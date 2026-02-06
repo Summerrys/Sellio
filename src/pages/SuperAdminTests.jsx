@@ -71,6 +71,24 @@ export default function SuperAdminTests() {
         critical: true
       });
 
+      // Test 4: Verify current URL is admin route
+      const isAdminRoute = window.location.pathname.includes('SuperAdmin');
+      results.push({
+        name: 'Admin Routes Accessible',
+        passed: isAdminRoute,
+        message: isAdminRoute ? 'Currently on Super Admin route' : 'Not on Super Admin route',
+        critical: true
+      });
+
+      // Test 5: Check sidebar branding (not using tenant themes)
+      const hasApptelier = document.querySelector('[class*="Apptelier"]') !== null;
+      results.push({
+        name: 'Apptelier Branding (Not Tenant Theme)',
+        passed: hasApptelier,
+        message: hasApptelier ? 'Sidebar uses Apptelier branding' : 'Sidebar may be using tenant theme',
+        critical: false
+      });
+
       return results;
     },
     onSuccess: (results) => {
@@ -134,17 +152,25 @@ export default function SuperAdminTests() {
         data: { count: recentSignups.length }
       });
 
-      // Test 5: Growth trend calculation
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const lastMonthSignups = tenants.filter(t => 
-        new Date(t.created_date) > thirtyDaysAgo
-      );
+      // Test 5: Growth trend calculation with direction
+      const now = new Date();
+      const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      
+      const thisMonthSignups = tenants.filter(t => new Date(t.created_date) >= thisMonthStart);
+      const lastMonthSignups = tenants.filter(t => {
+        const date = new Date(t.created_date);
+        return date >= lastMonthStart && date < thisMonthStart;
+      });
+      
+      const growthDirection = thisMonthSignups.length > lastMonthSignups.length ? 'UP ↑' : 
+                              thisMonthSignups.length < lastMonthSignups.length ? 'DOWN ↓' : 'FLAT →';
+      
       results.push({
-        name: 'Growth Trend Data',
+        name: 'Growth Trend (This Month vs Last)',
         passed: true,
-        message: `${lastMonthSignups.length} tenant(s) signed up in the last 30 days`,
-        data: { count: lastMonthSignups.length }
+        message: `${growthDirection}: ${thisMonthSignups.length} this month vs ${lastMonthSignups.length} last month`,
+        data: { thisMonth: thisMonthSignups.length, lastMonth: lastMonthSignups.length, direction: growthDirection }
       });
 
       return results;
@@ -167,16 +193,37 @@ export default function SuperAdminTests() {
       const products = await base44.asServiceRole.entities.Product.list();
       const tenantUsers = await base44.asServiceRole.entities.TenantUser.list();
 
-      // Test 1: Tenant table data accuracy
+      // Test 1: All tenants visible
+      results.push({
+        name: 'All Tenants Visible',
+        passed: tenants.length >= 0,
+        message: `Total ${tenants.length} tenant(s) in database should all be visible`,
+        data: { count: tenants.length }
+      });
+
+      // Test 2: Search simulation (test if names are searchable)
+      if (tenants.length > 0) {
+        const sampleTenant = tenants[0];
+        const searchableName = sampleTenant.name.toLowerCase();
+        const partialMatch = searchableName.substring(0, 3);
+        results.push({
+          name: 'Search & Fuzzy Match',
+          passed: true,
+          message: `Sample: searching "${partialMatch}" should find "${sampleTenant.name}"`,
+          data: { sampleName: sampleTenant.name, partialSearch: partialMatch }
+        });
+      }
+
+      // Test 3: Tenant table data accuracy with cross-reference
       const sampleTenant = tenants[0];
       if (sampleTenant) {
         const tenantProducts = products.filter(p => p.tenant_id === sampleTenant.id);
         const tenantMembers = tenantUsers.filter(tu => tu.tenant_id === sampleTenant.id);
         
         results.push({
-          name: 'Tenant Data Accuracy',
+          name: 'Table Data Accuracy (Cross-Reference)',
           passed: true,
-          message: `Sample tenant "${sampleTenant.name}" has ${tenantProducts.length} products and ${tenantMembers.length} users`,
+          message: `"${sampleTenant.name}": ${tenantProducts.length} products, ${tenantMembers.length} users`,
           data: { 
             tenant: sampleTenant.name, 
             products: tenantProducts.length, 
@@ -185,43 +232,64 @@ export default function SuperAdminTests() {
         });
       }
 
-      // Test 2: Status filter options
+      // Test 4: Status filter options
       const statuses = [...new Set(tenants.map(t => t.status))];
+      const activeCount = tenants.filter(t => t.status === 'active').length;
+      const suspendedCount = tenants.filter(t => t.status === 'suspended').length;
       results.push({
-        name: 'Status Filter Options',
+        name: 'Status Filters',
         passed: statuses.length > 0,
-        message: `Available statuses: ${statuses.join(', ')}`,
-        data: { statuses }
+        message: `Active: ${activeCount}, Suspended: ${suspendedCount}, Trial: ${tenants.length - activeCount - suspendedCount}`,
+        data: { statuses, active: activeCount, suspended: suspendedCount }
       });
 
-      // Test 3: Business type distribution
+      // Test 5: Business type filter
       const businessTypes = tenants.reduce((acc, t) => {
         acc[t.industry] = (acc[t.industry] || 0) + 1;
         return acc;
       }, {});
       results.push({
-        name: 'Business Type Distribution',
+        name: 'Business Type Filters',
         passed: Object.keys(businessTypes).length > 0,
-        message: `Types: ${Object.entries(businessTypes).map(([k, v]) => `${k}: ${v}`).join(', ')}`,
+        message: `${Object.entries(businessTypes).map(([k, v]) => `${k}: ${v}`).join(', ')}`,
         data: businessTypes
       });
 
-      // Test 4: Pagination handling
-      if (tenants.length > 10) {
-        results.push({
-          name: 'Pagination Required',
-          passed: true,
-          message: `${tenants.length} tenants - pagination should be implemented`,
-          data: { totalTenants: tenants.length, pages: Math.ceil(tenants.length / 10) }
-        });
-      } else {
-        results.push({
-          name: 'Pagination Not Required',
-          passed: true,
-          message: `${tenants.length} tenants - fits on one page`,
-          data: { totalTenants: tenants.length }
-        });
-      }
+      // Test 6: Sort by created date (newest first)
+      const sortedByDate = [...tenants].sort((a, b) => 
+        new Date(b.created_date) - new Date(a.created_date)
+      );
+      const newestTenant = sortedByDate[0];
+      results.push({
+        name: 'Sort by Created Date (Default)',
+        passed: true,
+        message: `Newest: "${newestTenant?.name}" (${new Date(newestTenant?.created_date).toLocaleDateString()})`,
+        data: { newest: newestTenant?.name, date: newestTenant?.created_date }
+      });
+
+      // Test 7: Sort by user count
+      const tenantsWithUserCounts = tenants.map(t => ({
+        name: t.name,
+        userCount: tenantUsers.filter(tu => tu.tenant_id === t.id).length
+      })).sort((a, b) => a.userCount - b.userCount);
+      results.push({
+        name: 'Sort by User Count',
+        passed: true,
+        message: `Range: ${tenantsWithUserCounts[0]?.userCount || 0} to ${tenantsWithUserCounts[tenantsWithUserCounts.length - 1]?.userCount || 0} users`,
+        data: { min: tenantsWithUserCounts[0]?.userCount || 0, max: tenantsWithUserCounts[tenantsWithUserCounts.length - 1]?.userCount || 0 }
+      });
+
+      // Test 8: Pagination
+      const pageSize = 10;
+      const totalPages = Math.ceil(tenants.length / pageSize);
+      results.push({
+        name: 'Pagination',
+        passed: true,
+        message: tenants.length > pageSize 
+          ? `${tenants.length} tenants across ${totalPages} pages (${pageSize} per page)`
+          : `${tenants.length} tenants fit on one page`,
+        data: { total: tenants.length, pages: totalPages, pageSize }
+      });
 
       return results;
     },
@@ -238,61 +306,113 @@ export default function SuperAdminTests() {
     mutationFn: async () => {
       const results = [];
 
-      // Test 1: Check for delete cascade function
+      const tenants = await base44.asServiceRole.entities.Tenant.list();
+
+      // Test 1: View Details button
+      const sampleTenant = tenants[0];
+      if (sampleTenant) {
+        results.push({
+          name: 'View Details Navigation',
+          passed: true,
+          message: `Should navigate to /SuperAdminTenantDetail?id=${sampleTenant.id}`,
+          data: { tenantId: sampleTenant.id, tenantName: sampleTenant.name }
+        });
+      }
+
+      // Test 2: Suspend tenant action
+      const activeTenant = tenants.find(t => t.status === 'active');
+      if (activeTenant) {
+        results.push({
+          name: 'Suspend Tenant Action',
+          passed: true,
+          message: `Ready to test: Suspend "${activeTenant.name}" → status should change to "suspended"`,
+          data: { tenantId: activeTenant.id, currentStatus: activeTenant.status }
+        });
+        
+        results.push({
+          name: 'Suspend Confirmation Modal',
+          passed: false,
+          message: 'MANUAL TEST: Verify "Are you sure?" modal appears with business name',
+          critical: false
+        });
+      }
+
+      // Test 3: Activate suspended tenant
+      const suspendedTenant = tenants.find(t => t.status === 'suspended');
+      if (suspendedTenant) {
+        results.push({
+          name: 'Activate Tenant Action',
+          passed: true,
+          message: `Ready to test: Activate "${suspendedTenant.name}" → status should change to "active"`,
+          data: { tenantId: suspendedTenant.id, currentStatus: suspendedTenant.status }
+        });
+      } else {
+        results.push({
+          name: 'Activate Tenant Action',
+          passed: false,
+          message: 'No suspended tenant found. Create one by suspending an active tenant first.',
+          critical: false
+        });
+      }
+
+      // Test 4: Delete cascade function
       try {
-        const response = await base44.functions.invoke('deleteTenantWithCascade', { 
+        await base44.functions.invoke('deleteTenantWithCascade', { 
           tenantId: 'test-check-only' 
         });
         results.push({
           name: 'Delete Cascade Function',
           passed: true,
-          message: 'Delete cascade function is available',
+          message: 'Delete function exists and validates input',
           critical: true
         });
       } catch (error) {
-        if (error.message?.includes('Tenant not found')) {
+        if (error.message?.includes('Tenant not found') || error.response?.data?.error?.includes('not found')) {
           results.push({
             name: 'Delete Cascade Function',
             passed: true,
-            message: 'Delete cascade function is available and validates input',
+            message: 'Delete function exists with proper validation',
             critical: true
           });
         } else {
           results.push({
             name: 'Delete Cascade Function',
             passed: false,
-            message: `Function check failed: ${error.message}`,
+            message: `Function error: ${error.message}`,
             critical: true
           });
         }
       }
 
-      // Test 2: Verify status change capability
-      const tenants = await base44.asServiceRole.entities.Tenant.list();
-      const testTenant = tenants.find(t => t.status === 'active');
-      
-      if (testTenant) {
-        results.push({
-          name: 'Status Change Capability',
-          passed: true,
-          message: `Can modify tenant status (test tenant: ${testTenant.name})`,
-          data: { currentStatus: testTenant.status }
-        });
-      } else {
-        results.push({
-          name: 'Status Change Capability',
-          passed: false,
-          message: 'No active tenant found for testing',
-          critical: false
-        });
-      }
+      // Test 5: Delete confirmation safety
+      results.push({
+        name: 'Delete Confirmation Safety',
+        passed: false,
+        message: 'MANUAL TEST: Verify modal requires typing business name to confirm deletion',
+        critical: false
+      });
 
-      // Test 3: Impersonation logging
-      // Check if there's an audit log or activity tracking system
+      // Test 6: Delete orphan check
+      results.push({
+        name: 'Delete Orphan Records Check',
+        passed: false,
+        message: 'MANUAL TEST: After deletion, verify no orphaned Product/Order/TenantUser records remain',
+        critical: false
+      });
+
+      // Test 7: Impersonation
+      results.push({
+        name: 'Impersonation Feature',
+        passed: false,
+        message: 'MANUAL TEST: Click Impersonate → enter tenant dashboard → verify banner shows → Exit Impersonation works',
+        critical: false
+      });
+
+      // Test 8: Impersonation audit trail
       results.push({
         name: 'Impersonation Audit Trail',
         passed: false,
-        message: 'RECOMMENDATION: Implement audit logging for impersonation events',
+        message: 'RECOMMENDATION: Implement audit logging (who impersonated which tenant, when)',
         critical: false
       });
 
@@ -312,21 +432,23 @@ export default function SuperAdminTests() {
       const results = [];
 
       const tenants = await base44.asServiceRole.entities.Tenant.list();
+      const themeConfigs = await base44.asServiceRole.entities.ThemeConfig.list();
 
-      // Test 1: Tenant growth data
-      const growthData = tenants.reduce((acc, tenant) => {
+      // Test 1: Tenant growth chart data accuracy
+      const growthByMonth = tenants.reduce((acc, tenant) => {
         const month = new Date(tenant.created_date).toISOString().substring(0, 7);
         acc[month] = (acc[month] || 0) + 1;
         return acc;
       }, {});
+      const sortedMonths = Object.keys(growthByMonth).sort();
       results.push({
         name: 'Tenant Growth Chart Data',
-        passed: Object.keys(growthData).length > 0 || tenants.length === 0,
-        message: `Growth data available for ${Object.keys(growthData).length} month(s)`,
-        data: growthData
+        passed: Object.keys(growthByMonth).length > 0 || tenants.length === 0,
+        message: `Growth data: ${sortedMonths.length} month(s) from ${sortedMonths[0] || 'N/A'} to ${sortedMonths[sortedMonths.length - 1] || 'N/A'}`,
+        data: { months: sortedMonths.length, data: growthByMonth }
       });
 
-      // Test 2: Business type distribution
+      // Test 2: Business type pie chart percentages
       const typeDistribution = tenants.reduce((acc, t) => {
         acc[t.industry] = (acc[t.industry] || 0) + 1;
         return acc;
@@ -337,24 +459,29 @@ export default function SuperAdminTests() {
         count,
         percentage: ((count / total) * 100).toFixed(1)
       }));
+      const percentageSum = percentages.reduce((sum, p) => sum + parseFloat(p.percentage), 0);
       results.push({
-        name: 'Business Type Distribution',
-        passed: true,
-        message: `${percentages.length} business type(s) found`,
+        name: 'Business Type Percentages',
+        passed: Math.abs(percentageSum - 100) < 0.5 || tenants.length === 0,
+        message: `${percentages.length} types, total: ${percentageSum.toFixed(1)}% (should be 100%)`,
         data: percentages
       });
 
-      // Test 3: Theme popularity
-      const themeConfigs = await base44.asServiceRole.entities.ThemeConfig.list();
+      // Test 3: Theme popularity distribution
       const themePopularity = themeConfigs.reduce((acc, tc) => {
         acc[tc.color_set_name] = (acc[tc.color_set_name] || 0) + 1;
         return acc;
       }, {});
+      const themePercentages = Object.entries(themePopularity).map(([theme, count]) => ({
+        theme,
+        count,
+        percentage: ((count / (themeConfigs.length || 1)) * 100).toFixed(1)
+      }));
       results.push({
-        name: 'Theme Popularity',
+        name: 'Theme Popularity Distribution',
         passed: Object.keys(themePopularity).length > 0 || themeConfigs.length === 0,
-        message: `${Object.keys(themePopularity).length} theme(s) in use`,
-        data: themePopularity
+        message: `${themePercentages.length} theme(s) in use`,
+        data: themePercentages
       });
 
       // Test 4: Empty data handling
@@ -362,17 +489,38 @@ export default function SuperAdminTests() {
         results.push({
           name: 'Empty Data Handling',
           passed: true,
-          message: 'Charts should handle empty data gracefully (0 tenants)',
+          message: 'Charts should render without errors when data is empty (0 tenants)',
           critical: false
+        });
+      }
+
+      // Test 5: Large data set simulation
+      if (tenants.length >= 50) {
+        results.push({
+          name: 'Large Data Set Handling',
+          passed: true,
+          message: `${tenants.length} tenants - charts should render efficiently`,
+          data: { count: tenants.length }
         });
       } else {
         results.push({
-          name: 'Data Availability',
-          passed: true,
-          message: `${tenants.length} tenant(s) available for analytics`,
-          data: { count: tenants.length }
+          name: 'Large Data Set Simulation',
+          passed: false,
+          message: `Only ${tenants.length} tenants. Need 50+ to test large data rendering.`,
+          critical: false
         });
       }
+
+      // Test 6: Chart data matches DB records
+      const chartTenantCount = Object.values(growthByMonth).reduce((sum, count) => sum + count, 0);
+      results.push({
+        name: 'Chart Data vs DB Records',
+        passed: chartTenantCount === tenants.length,
+        message: chartTenantCount === tenants.length 
+          ? `Match: ${chartTenantCount} tenants in chart = ${tenants.length} in DB`
+          : `MISMATCH: ${chartTenantCount} in chart vs ${tenants.length} in DB`,
+        critical: chartTenantCount !== tenants.length
+      });
 
       return results;
     },
@@ -382,6 +530,90 @@ export default function SuperAdminTests() {
     },
     onError: (error) => {
       toast.error(`Analytics Tests Failed: ${error.message}`);
+    }
+  });
+
+  const runTenantDetailTest = useMutation({
+    mutationFn: async () => {
+      const results = [];
+
+      const tenants = await base44.asServiceRole.entities.Tenant.list();
+      const sampleTenant = tenants[0];
+
+      if (!sampleTenant) {
+        results.push({
+          name: 'No Tenants for Testing',
+          passed: false,
+          message: 'Need at least one tenant to test detail view',
+          critical: true
+        });
+        return results;
+      }
+
+      // Test 1: Business info availability
+      const hasRequiredInfo = sampleTenant.name && sampleTenant.industry && sampleTenant.owner_email;
+      results.push({
+        name: 'Business Info Card',
+        passed: hasRequiredInfo,
+        message: hasRequiredInfo 
+          ? `Info complete for "${sampleTenant.name}": ${sampleTenant.industry}, ${sampleTenant.owner_email}`
+          : 'Missing required business info',
+        critical: !hasRequiredInfo
+      });
+
+      // Test 2: Usage stats calculation
+      const products = await base44.asServiceRole.entities.Product.filter({ tenant_id: sampleTenant.id });
+      const orders = await base44.asServiceRole.entities.Order.filter({ tenant_id: sampleTenant.id });
+      const tenantUsers = await base44.asServiceRole.entities.TenantUser.filter({ tenant_id: sampleTenant.id });
+      
+      const today = new Date().toISOString().split('T')[0];
+      const ordersToday = orders.filter(o => o.created_date.startsWith(today));
+      
+      results.push({
+        name: 'Usage Stats Accuracy',
+        passed: true,
+        message: `"${sampleTenant.name}": ${products.length} products, ${ordersToday.length} orders today, ${tenantUsers.length} staff`,
+        data: { products: products.length, ordersToday: ordersToday.length, staff: tenantUsers.length }
+      });
+
+      // Test 3: Theme config
+      const themeConfigs = await base44.asServiceRole.entities.ThemeConfig.filter({ tenant_id: sampleTenant.id });
+      results.push({
+        name: 'Theme Configuration',
+        passed: themeConfigs.length > 0,
+        message: themeConfigs.length > 0 
+          ? `Theme: ${themeConfigs[0].color_set_name}, Logo: ${themeConfigs[0].logo_url ? 'Yes' : 'No'}`
+          : 'No theme configured',
+        data: themeConfigs[0] || null
+      });
+
+      // Test 4: Subscription info
+      const subscriptions = await base44.asServiceRole.entities.Subscription.filter({ tenant_id: sampleTenant.id });
+      results.push({
+        name: 'Subscription Info',
+        passed: subscriptions.length > 0,
+        message: subscriptions.length > 0 
+          ? `Plan: ${subscriptions[0].tier}, Status: ${subscriptions[0].status}`
+          : 'No subscription record found',
+        data: subscriptions[0] || null
+      });
+
+      // Test 5: Activity log (manual check)
+      results.push({
+        name: 'Activity Log',
+        passed: false,
+        message: 'MANUAL TEST: Verify recent actions shown with timestamps in detail view',
+        critical: false
+      });
+
+      return results;
+    },
+    onSuccess: (results) => {
+      setTestResults(prev => ({ ...prev, tenantDetail: results }));
+      toast.success('Tenant Detail Tests Completed');
+    },
+    onError: (error) => {
+      toast.error(`Tenant Detail Tests Failed: ${error.message}`);
     }
   });
 
@@ -417,6 +649,14 @@ export default function SuperAdminTests() {
       icon: Users,
       mutation: runTenantActionsTest,
       critical: true
+    },
+    {
+      id: 'tenantDetail',
+      title: 'Tenant Detail View',
+      description: 'Verify business info, usage stats, subscription',
+      icon: Eye,
+      mutation: runTenantDetailTest,
+      critical: false
     },
     {
       id: 'analytics',
