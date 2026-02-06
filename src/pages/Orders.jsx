@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import OrderKanban from '../components/orders/OrderKanban';
 import OrderDetailDialog from '../components/orders/OrderDetailDialog';
+import TableCallAlerts from '../components/orders/TableCallAlerts';
 import { ClipboardList, Volume2, VolumeX, Monitor } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPageUrl } from '../utils';
@@ -209,6 +210,9 @@ export default function Orders() {
             </Label>
           </div>
         </div>
+
+        {/* Table Call Alerts */}
+        <TableCallAlerts tenantId={tenantId} />
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
