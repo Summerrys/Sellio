@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { TenantProvider, useTenant } from './components/tenant/TenantContext';
+import { ThemeProvider } from './components/theme/ThemeProvider';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -61,7 +62,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
       {/* Logo */}
       <div className={cn("flex items-center h-16 px-4 border-b border-slate-100", collapsed && "justify-center")}>
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-[rgb(var(--color-primary))] flex items-center justify-center">
             <span className="text-white font-bold text-sm">A</span>
           </div>
           {!collapsed && (
@@ -96,8 +97,8 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
                 isActive
-                  ? "bg-slate-900 text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-900 hover:bg-slate-50",
+                  ? "bg-[rgb(var(--color-primary))] text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-900 hover:bg-[rgb(var(--color-primary-100))]",
                 collapsed && "justify-center px-2"
               )}
               title={collapsed ? item.label : undefined}
@@ -159,7 +160,7 @@ function AppLayout({ children, currentPageName }) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center animate-pulse">
+          <div className="w-10 h-10 rounded-xl bg-[rgb(var(--color-primary))] flex items-center justify-center animate-pulse">
             <span className="text-white font-bold text-sm">A</span>
           </div>
           <p className="text-sm text-slate-400">Loading...</p>
@@ -196,7 +197,7 @@ function AppLayout({ children, currentPageName }) {
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-slate-100 z-30 flex items-center px-4 justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-[rgb(var(--color-primary))] flex items-center justify-center">
             <span className="text-white font-bold text-xs">A</span>
           </div>
           <span className="font-bold text-sm text-slate-900">Apptelier</span>
@@ -240,7 +241,11 @@ function AppLayout({ children, currentPageName }) {
 export default function Layout({ children, currentPageName }) {
   return (
     <TenantProvider>
-      <AppLayout currentPageName={currentPageName}>{children}</AppLayout>
+      {(tenantContext) => (
+        <ThemeProvider tenantId={tenantContext.tenantId}>
+          <AppLayout currentPageName={currentPageName}>{children}</AppLayout>
+        </ThemeProvider>
+      )}
     </TenantProvider>
   );
 }

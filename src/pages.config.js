@@ -60,6 +60,7 @@ import Staff from './pages/Staff';
 import TenantSettings from './pages/TenantSettings';
 import CustomerMenu from './pages/CustomerMenu';
 import RoleManagement from './pages/RoleManagement';
+import ThemeSettings from './pages/ThemeSettings';
 import __Layout from './Layout.jsx';
 
 
@@ -77,6 +78,7 @@ export const PAGES = {
     "TenantSettings": TenantSettings,
     "CustomerMenu": CustomerMenu,
     "RoleManagement": RoleManagement,
+    "ThemeSettings": ThemeSettings,
 }
 
 export const pagesConfig = {
