@@ -43,6 +43,16 @@ export default function SecurityTests() {
     },
   });
 
+  const runThemeTest = useMutation({
+    mutationFn: async () => {
+      const response = await base44.functions.invoke('testThemeIntegrity', {});
+      return response.data;
+    },
+    onSuccess: (data) => {
+      setTestReport({ type: 'theme', data });
+    },
+  });
+
   if (!isSuperAdmin) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -83,7 +93,7 @@ export default function SecurityTests() {
       />
 
       {/* Test Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -253,8 +263,8 @@ export default function SecurityTests() {
               </>
             )}
 
-            {/* Auth & RBAC Report */}
-            {(testReport.type === 'auth' || testReport.type === 'isolation') && (
+            {/* Auth & RBAC Report + Theme Report */}
+            {(testReport.type === 'auth' || testReport.type === 'isolation' || testReport.type === 'theme') && (
               <>
                 {/* Verdict */}
                 <Alert className={testReport.data.verdict.secure ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}>

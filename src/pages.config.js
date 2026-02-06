@@ -53,23 +53,23 @@ import CustomerOrder from './pages/CustomerOrder';
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
 import KitchenDisplay from './pages/KitchenDisplay';
+import Notifications from './pages/Notifications';
 import Onboarding from './pages/Onboarding';
 import OrderTracking from './pages/OrderTracking';
 import Orders from './pages/Orders';
 import Products from './pages/Products';
 import Reports from './pages/Reports';
 import RoleManagement from './pages/RoleManagement';
+import SecurityTests from './pages/SecurityTests';
+import Settings from './pages/Settings';
 import Staff from './pages/Staff';
 import SuperAdminAnalytics from './pages/SuperAdminAnalytics';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import SuperAdminTenantDetail from './pages/SuperAdminTenantDetail';
 import SuperAdminTenants from './pages/SuperAdminTenants';
 import Tables from './pages/Tables';
 import TenantSettings from './pages/TenantSettings';
 import ThemeSettings from './pages/ThemeSettings';
-import Settings from './pages/Settings';
-import Notifications from './pages/Notifications';
-import SuperAdminTenantDetail from './pages/SuperAdminTenantDetail';
-import SecurityTests from './pages/SecurityTests';
 import __Layout from './Layout.jsx';
 
 
@@ -80,23 +80,23 @@ export const PAGES = {
     "Dashboard": Dashboard,
     "Inventory": Inventory,
     "KitchenDisplay": KitchenDisplay,
+    "Notifications": Notifications,
     "Onboarding": Onboarding,
     "OrderTracking": OrderTracking,
     "Orders": Orders,
     "Products": Products,
     "Reports": Reports,
     "RoleManagement": RoleManagement,
+    "SecurityTests": SecurityTests,
+    "Settings": Settings,
     "Staff": Staff,
     "SuperAdminAnalytics": SuperAdminAnalytics,
     "SuperAdminDashboard": SuperAdminDashboard,
+    "SuperAdminTenantDetail": SuperAdminTenantDetail,
     "SuperAdminTenants": SuperAdminTenants,
     "Tables": Tables,
     "TenantSettings": TenantSettings,
     "ThemeSettings": ThemeSettings,
-    "Settings": Settings,
-    "Notifications": Notifications,
-    "SuperAdminTenantDetail": SuperAdminTenantDetail,
-    "SecurityTests": SecurityTests,
 }
 
 export const pagesConfig = {
