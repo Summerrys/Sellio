@@ -71,8 +71,9 @@ import SuperAdminTests from './pages/SuperAdminTests';
 import Tables from './pages/Tables';
 import TenantDashboardTests from './pages/TenantDashboardTests';
 import TenantSettings from './pages/TenantSettings';
-import ThemeSettings from './pages/ThemeSettings';
 import ThemeIntegrityTests from './pages/ThemeIntegrityTests';
+import ThemeSettings from './pages/ThemeSettings';
+import DataLayerTest from './pages/DataLayerTest';
 import __Layout from './Layout.jsx';
 
 
@@ -101,12 +102,13 @@ export const PAGES = {
     "Tables": Tables,
     "TenantDashboardTests": TenantDashboardTests,
     "TenantSettings": TenantSettings,
-    "ThemeSettings": ThemeSettings,
     "ThemeIntegrityTests": ThemeIntegrityTests,
+    "ThemeSettings": ThemeSettings,
+    "DataLayerTest": DataLayerTest,
 }
 
 export const pagesConfig = {
-    mainPage: "Dashboard",
+    mainPage: "Onboarding",
     Pages: PAGES,
     Layout: __Layout,
 };
