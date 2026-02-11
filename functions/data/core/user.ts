@@ -5,6 +5,11 @@ const DATA_FILE = `${DATA_DIR}/user.json`;
 
 async function initFile() {
   try {
+    await Deno.mkdir(DATA_DIR, { recursive: true });
+  } catch {
+    // Directory exists
+  }
+  try {
     await Deno.readTextFile(DATA_FILE);
   } catch {
     await Deno.writeTextFile(DATA_FILE, JSON.stringify([]));

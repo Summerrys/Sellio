@@ -1,8 +1,14 @@
 import { v4 as uuidv4 } from 'npm:uuid@9.0.0';
 
-const DATA_FILE = '/tmp/data_core_tenant_user.json';
+const DATA_DIR = '/tmp/data/core';
+const DATA_FILE = `${DATA_DIR}/tenantUser.json`;
 
 async function initFile() {
+  try {
+    await Deno.mkdir(DATA_DIR, { recursive: true });
+  } catch {
+    // Directory exists
+  }
   try {
     await Deno.readTextFile(DATA_FILE);
   } catch {
