@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'npm:uuid@9.0.0';
 
-const DATA_FILE = '/tmp/data_core_tenant.json';
+const DATA_DIR = '/tmp/data/core';
+const DATA_FILE = `${DATA_DIR}/tenant.json`;
 
 // Initialize file if not exists
 async function initFile() {

@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'npm:uuid@9.0.0';
 
-const DATA_FILE = '/tmp/data_core_user.json';
+const DATA_DIR = '/tmp/data/core';
+const DATA_FILE = `${DATA_DIR}/user.json`;
 
 async function initFile() {
   try {
