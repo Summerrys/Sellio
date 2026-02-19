@@ -209,10 +209,12 @@ export function TenantProvider({ children }) {
   });
 
   useEffect(() => {
-    if (user?.role === 'admin') {
+    if (devRoleOverride === 'superadmin' || user?.role === 'admin') {
       setIsSuperAdmin(true);
+    } else {
+      setIsSuperAdmin(false);
     }
-  }, [user]);
+  }, [user, devRoleOverride]);
 
   useEffect(() => {
     if (tenantUser?.length > 0) {
@@ -221,13 +223,22 @@ export function TenantProvider({ children }) {
   }, [tenantUser]);
 
   useEffect(() => {
+    // Dev role override
+    if (devRoleOverride) {
+      const template = ROLE_TEMPLATES[devRoleOverride];
+      if (template) {
+        setUserPermissions(template.permissions);
+        return;
+      }
+    }
+
     if (role?.[0]?.permissions) {
       setUserPermissions(role[0].permissions);
     }
     if (tenantUser?.[0]?.is_owner) {
       setUserPermissions(Object.keys(PERMISSIONS));
     }
-  }, [role, tenantUser]);
+  }, [role, tenantUser, devRoleOverride]);
 
   const hasPermission = (permission) => {
     if (isSuperAdmin) return true;
@@ -245,7 +256,7 @@ export function TenantProvider({ children }) {
     tenantId: currentTenantId,
     tenantUser: tenantUser?.[0] || null,
     isSuperAdmin,
-    isOwner: tenantUser?.[0]?.is_owner || false,
+    isOwner: devRoleOverride === 'owner' || tenantUser?.[0]?.is_owner || false,
     permissions: userPermissions,
     hasPermission,
     hasAnyPermission,
