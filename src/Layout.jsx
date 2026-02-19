@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { TenantProvider, useTenant } from './components/tenant/TenantContext';
 import { ThemeProvider } from './components/theme/ThemeProvider';
@@ -29,7 +29,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
 
-const publicPages = ['CustomerMenu', 'CustomerOrder'];
+const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth'];
 
 function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission }) {
   // SuperAdmin menu - show god view pages ONLY for real SuperAdmins
@@ -130,7 +130,10 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-slate-400 hover:text-slate-600"
-              onClick={() => base44.auth.logout()}
+              onClick={() => {
+                localStorage.removeItem('app_user');
+                window.location.href = createPageUrl('Auth');
+              }}
             >
               <LogOut className="w-4 h-4" />
             </Button>
@@ -140,7 +143,10 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-slate-400 hover:text-slate-600"
-            onClick={() => base44.auth.logout()}
+            onClick={() => {
+              localStorage.removeItem('app_user');
+              window.location.href = createPageUrl('Auth');
+            }}
           >
             <LogOut className="w-4 h-4" />
           </Button>
@@ -154,10 +160,21 @@ function AppLayout({ children, currentPageName }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, tenant, isSuperAdmin, isLoading, hasPermission } = useTenant();
+  const navigate = useNavigate();
   
   // Check if this is a REAL SuperAdmin OR dev role is set to superadmin
   const devRoleOverride = localStorage.getItem('dev_role_override');
   const isRealSuperAdmin = (!devRoleOverride && user?.role === 'admin') || devRoleOverride === 'superadmin';
+
+  // Check custom auth
+  useEffect(() => {
+    if (!publicPages.includes(currentPageName)) {
+      const appUser = localStorage.getItem('app_user');
+      if (!appUser) {
+        window.location.href = createPageUrl('Auth');
+      }
+    }
+  }, [currentPageName]);
 
   if (publicPages.includes(currentPageName)) {
     return <>{children}</>;
