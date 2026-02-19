@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
@@ -18,11 +18,13 @@ import { cn } from '@/lib/utils';
 
 export default function Staff() {
   const { tenantId } = useTenant();
+  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'cards'
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
 
   const { data: staff = [], isLoading } = useQuery({
@@ -62,7 +64,7 @@ export default function Staff() {
                 className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-2"
               >
                 <UserPlus className="w-4 h-4" />
-                Invite Staff
+                Add Staff
               </Button>
             </RequirePermission>
           }
@@ -150,7 +152,7 @@ export default function Staff() {
             description={searchQuery || statusFilter !== 'all' || roleFilter !== 'all'
               ? "Try adjusting your filters"
               : "Invite your first team member to get started"}
-            actionLabel="Invite Staff"
+            actionLabel="Add Staff"
             onAction={() => setInviteDialogOpen(true)}
           />
         ) : viewMode === 'table' ? (
@@ -160,6 +162,15 @@ export default function Staff() {
         )}
 
         {/* Dialogs */}
+        <CreateStaffDialog
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          onSuccess={() => {
+            setCreateOpen(false);
+            queryClient.invalidateQueries({ queryKey: ['staff'] });
+          }}
+        />
+
         <InviteStaffDialog
           open={inviteDialogOpen}
           onOpenChange={setInviteDialogOpen}

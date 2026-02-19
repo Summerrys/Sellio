@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { useTenant, ALL_PERMISSIONS, PERMISSION_GROUPS, ROLE_TEMPLATES } from '../components/tenant/TenantContext';
+import { useTenant, ALL_PERMISSIONS, PERMISSION_GROUPS, ROLE_TEMPLATES, INDUSTRY_ROLES } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
 import { Card } from '@/components/ui/card';
@@ -17,7 +17,7 @@ import { Shield, Plus, Pencil, Trash2, Copy, Users, CheckCircle2 } from 'lucide-
 import { toast } from 'sonner';
 
 export default function RoleManagement() {
-  const { tenantId, isSuperAdmin, isOwner } = useTenant();
+  const { tenantId, tenant, isSuperAdmin, isOwner } = useTenant();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -231,9 +231,15 @@ export default function RoleManagement() {
                     <SelectValue placeholder="Start from template" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(ROLE_TEMPLATES).map(([key, template]) => (
-                      <SelectItem key={key} value={key}>{template.name}</SelectItem>
-                    ))}
+                    {Object.entries(ROLE_TEMPLATES)
+                      .filter(([key]) => {
+                        const industry = tenant?.industry || 'other';
+                        const availableRoles = INDUSTRY_ROLES[industry] || INDUSTRY_ROLES.other;
+                        return key !== 'superadmin' && availableRoles.includes(key);
+                      })
+                      .map(([key, template]) => (
+                        <SelectItem key={key} value={key}>{template.name}</SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
