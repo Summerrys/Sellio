@@ -9,10 +9,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Email and password required' }, { status: 400 });
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
     const base44 = createClientFromRequest(req);
 
     // Find user
-    const users = await base44.asServiceRole.entities.AppUser.filter({ email });
+    const users = await base44.asServiceRole.entities.AppUser.filter({ email: normalizedEmail });
     if (users.length === 0) {
       return Response.json({ error: 'Invalid credentials' }, { status: 401 });
     }

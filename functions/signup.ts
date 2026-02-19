@@ -9,10 +9,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Email and password required' }, { status: 400 });
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
     const base44 = createClientFromRequest(req);
 
     // Check if user exists
-    const existingUsers = await base44.asServiceRole.entities.AppUser.filter({ email });
+    const existingUsers = await base44.asServiceRole.entities.AppUser.filter({ email: normalizedEmail });
     if (existingUsers.length > 0) {
       return Response.json({ error: 'Email already registered' }, { status: 400 });
     }
@@ -22,9 +23,9 @@ Deno.serve(async (req) => {
 
     // Create user
     const newUser = await base44.asServiceRole.entities.AppUser.create({
-      email,
+      email: normalizedEmail,
       password_hash,
-      full_name: full_name || email.split('@')[0],
+      full_name: full_name || normalizedEmail.split('@')[0],
       role: 'admin'
     });
 
