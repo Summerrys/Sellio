@@ -65,7 +65,31 @@ export default function QRCodeGenerator({ open, onOpenChange, table, tenant }) {
 
   const regenerateMutation = useMutation({
     mutationFn: async () => {
-      await generateQR();
+      if (!table || !tenant) return;
+      
+      setIsGenerating(true);
+      try {
+        const tableUrl = `https://${tenant.slug}.apptelier.sg/order?table=${table.id}`;
+        
+        await QRCode.toCanvas(canvasRef.current, tableUrl, {
+          width: 400,
+          margin: 2,
+          color: {
+            dark: '#0f172a',
+            light: '#ffffff',
+          },
+        });
+
+        const dataUrl = canvasRef.current.toDataURL('image/png');
+        setQrUrl(dataUrl);
+
+        await base44.entities.TableEntity.update(table.id, {
+          qr_code_url: dataUrl,
+        });
+        queryClient.invalidateQueries({ queryKey: ['tables', tenant.id] });
+      } finally {
+        setIsGenerating(false);
+      }
     },
     onSuccess: () => {
       toast.success('QR code regenerated');
