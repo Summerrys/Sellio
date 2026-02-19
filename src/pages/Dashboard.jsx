@@ -13,7 +13,7 @@ import { DollarSign, ShoppingCart, Package, Users } from 'lucide-react';
 import { startOfDay, endOfDay } from 'date-fns';
 
 export default function Dashboard() {
-  const { tenantId, tenant } = useTenant();
+  const { tenantId, tenant, hasPermission } = useTenant();
 
   // Fetch today's orders
   const { data: todayOrders = [] } = useQuery({

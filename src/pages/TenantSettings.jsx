@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useTenant } from '../components/tenant/TenantContext';
+import RequirePermission from '../components/auth/RequirePermission';
 import PermissionGate from '../components/tenant/PermissionGate';
 import { ALL_PERMISSIONS, PERMISSION_GROUPS, ROLE_TEMPLATES } from '../components/tenant/TenantContext';
 import PageHeader from '../components/ui-custom/PageHeader';
@@ -18,6 +19,14 @@ import { Building2, Shield, Plus, Pencil, Trash2, Save, Palette } from 'lucide-r
 import { toast } from 'sonner';
 
 export default function TenantSettings() {
+  return (
+    <RequirePermission permission="settings.view">
+      <TenantSettingsContent />
+    </RequirePermission>
+  );
+}
+
+function TenantSettingsContent() {
   const { tenantId, tenant } = useTenant();
   const queryClient = useQueryClient();
 

@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils';
 
 const publicPages = ['CustomerMenu', 'CustomerOrder'];
 
-function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin }) {
+function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission }) {
   // SuperAdmin menu - show god view pages ONLY for real SuperAdmins
   const superAdminItems = isRealSuperAdmin ? [
     { label: 'God View', icon: Shield, page: 'SuperAdminDashboard' },
@@ -40,18 +40,23 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
     { type: 'divider' },
   ] : [];
 
-  // Tenant menu - shown to SuperAdmin viewing tenant + Owner/Admin/Staff
-  const tenantItems = [
-    { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
-    { label: 'Orders', icon: ClipboardList, page: 'Orders' },
-    { label: 'Products', icon: ShoppingBag, page: 'Products' },
-    { label: 'Categories', icon: Grid3X3, page: 'Categories' },
-    { label: 'Tables & QR', icon: QrCode, page: 'Tables' },
-    { label: 'Inventory', icon: Package, page: 'Inventory' },
-    { label: 'Staff', icon: Users, page: 'Staff' },
-    { label: 'Roles', icon: Shield, page: 'RoleManagement' },
-    { label: 'Settings', icon: Settings, page: 'TenantSettings' },
+  // Tenant menu with permission requirements
+  const allTenantItems = [
+    { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard', permission: null }, // Always show
+    { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view' },
+    { label: 'Products', icon: ShoppingBag, page: 'Products', permission: 'products.view' },
+    { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view' },
+    { label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view' },
+    { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view' },
+    { label: 'Staff', icon: Users, page: 'Staff', permission: 'staff.view' },
+    { label: 'Roles', icon: Shield, page: 'RoleManagement', permission: 'roles.view' },
+    { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view' },
   ];
+
+  // Filter tenant items based on permissions
+  const tenantItems = allTenantItems.filter(item => 
+    item.permission === null || hasPermission?.(item.permission)
+  );
 
   const navItems = [...superAdminItems, ...tenantItems];
 
@@ -148,7 +153,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
 function AppLayout({ children, currentPageName }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, tenant, isSuperAdmin, isLoading } = useTenant();
+  const { user, tenant, isSuperAdmin, isLoading, hasPermission } = useTenant();
   
   // Check if this is a REAL SuperAdmin (not dev override)
   const devRoleOverride = localStorage.getItem('dev_role_override');
@@ -187,7 +192,7 @@ function AppLayout({ children, currentPageName }) {
           collapsed ? "w-[72px]" : "w-[260px]"
         )}
       >
-        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={user} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} />
+        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={user} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} />
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 transition-colors"
@@ -222,7 +227,7 @@ function AppLayout({ children, currentPageName }) {
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={user} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} />
+            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={user} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} />
           </aside>
         </div>
       )}

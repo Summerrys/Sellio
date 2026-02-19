@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
+import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
 import { Card } from '@/components/ui/card';
@@ -17,6 +18,14 @@ import StockTakeDialog from '../components/inventory/StockTakeDialog';
 import { Package, AlertTriangle, CheckCircle, XCircle, Search, ClipboardCheck } from 'lucide-react';
 
 export default function Inventory() {
+  return (
+    <RequirePermission permission="inventory.view">
+      <InventoryContent />
+    </RequirePermission>
+  );
+}
+
+function InventoryContent() {
   const { tenantId } = useTenant();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');

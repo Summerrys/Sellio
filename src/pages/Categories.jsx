@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useTenant } from '../components/tenant/TenantContext';
+import RequirePermission from '../components/auth/RequirePermission';
 import PermissionGate from '../components/tenant/PermissionGate';
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
@@ -15,6 +16,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Grid3X3, Plus, Pencil, Trash2 } from 'lucide-react';
 
 export default function Categories() {
+  return (
+    <RequirePermission permission="categories.view">
+      <CategoriesContent />
+    </RequirePermission>
+  );
+}
+
+function CategoriesContent() {
   const { tenantId } = useTenant();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
