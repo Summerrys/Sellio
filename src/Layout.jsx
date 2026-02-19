@@ -31,34 +31,33 @@ import { cn } from '@/lib/utils';
 
 const publicPages = ['CustomerMenu', 'CustomerOrder'];
 
-function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin }) {
-  const navItems = isSuperAdmin
-        ? [
-            { label: 'God View', icon: Shield, page: 'SuperAdminDashboard' },
-            { label: 'All Tenants', icon: Building2, page: 'SuperAdminTenants' },
-            { label: 'Analytics', icon: BarChart3, page: 'SuperAdminAnalytics' },
-            { type: 'divider' },
-        { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
-        { label: 'Orders', icon: ClipboardList, page: 'Orders' },
-        { label: 'Products', icon: ShoppingBag, page: 'Products' },
-        { label: 'Categories', icon: Grid3X3, page: 'Categories' },
-        { label: 'Tables & QR', icon: QrCode, page: 'Tables' },
-        { label: 'Inventory', icon: Package, page: 'Inventory' },
-        { label: 'Staff', icon: Users, page: 'Staff' },
-        { label: 'Roles', icon: Shield, page: 'RoleManagement' },
-        { label: 'Settings', icon: Settings, page: 'TenantSettings' },
-      ]
-      : [
-          { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
-          { label: 'Orders', icon: ClipboardList, page: 'Orders' },
-          { label: 'Products', icon: ShoppingBag, page: 'Products' },
-          { label: 'Categories', icon: Grid3X3, page: 'Categories' },
-          { label: 'Tables & QR', icon: QrCode, page: 'Tables' },
-          { label: 'Inventory', icon: Package, page: 'Inventory' },
-          { label: 'Staff', icon: Users, page: 'Staff' },
-          { label: 'Roles', icon: Shield, page: 'RoleManagement' },
-          { label: 'Settings', icon: Settings, page: 'TenantSettings' },
-        ];
+function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isViewingTenant }) {
+  // SuperAdmin God View - only show tenant management
+  const superAdminNavItems = [
+    { label: 'God View', icon: Shield, page: 'SuperAdminDashboard' },
+    { label: 'All Tenants', icon: Building2, page: 'SuperAdminTenants' },
+    { label: 'Analytics', icon: BarChart3, page: 'SuperAdminAnalytics' },
+  ];
+
+  // Tenant-level navigation (for Admin, Owner, Manager, etc.)
+  const tenantNavItems = [
+    { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
+    { label: 'Orders', icon: ClipboardList, page: 'Orders' },
+    { label: 'Products', icon: ShoppingBag, page: 'Products' },
+    { label: 'Categories', icon: Grid3X3, page: 'Categories' },
+    { label: 'Tables & QR', icon: QrCode, page: 'Tables' },
+    { label: 'Inventory', icon: Package, page: 'Inventory' },
+    { label: 'Staff', icon: Users, page: 'Staff' },
+    { label: 'Roles', icon: Shield, page: 'RoleManagement' },
+    { label: 'Settings', icon: Settings, page: 'TenantSettings' },
+  ];
+
+  // SuperAdmin viewing as tenant gets both views with divider
+  const navItems = isSuperAdmin && isViewingTenant
+    ? [...superAdminNavItems, { type: 'divider' }, ...tenantNavItems]
+    : isSuperAdmin
+    ? superAdminNavItems
+    : tenantNavItems;
 
   return (
     <div className="flex flex-col h-full">
@@ -153,7 +152,10 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
 function AppLayout({ children, currentPageName }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, tenant, isSuperAdmin, isLoading } = useTenant();
+  const { user, tenant, isSuperAdmin, isLoading, tenantUser } = useTenant();
+
+  // SuperAdmin is "viewing tenant" if they have an active tenant context
+  const isViewingTenant = isSuperAdmin && !!tenant;
 
   if (publicPages.includes(currentPageName)) {
     return <>{children}</>;
@@ -188,7 +190,7 @@ function AppLayout({ children, currentPageName }) {
           collapsed ? "w-[72px]" : "w-[260px]"
         )}
       >
-        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={user} isSuperAdmin={isSuperAdmin} />
+        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={user} isSuperAdmin={isSuperAdmin} isViewingTenant={isViewingTenant} />
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 transition-colors"

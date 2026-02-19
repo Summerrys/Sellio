@@ -190,15 +190,30 @@ export function TenantProvider({ children }) {
     queryFn: () => base44.auth.me(),
   });
 
+  // Check if user is SuperAdmin first
+  const { data: superAdmins } = useQuery({
+    queryKey: ['superAdmins'],
+    queryFn: () => base44.functions.invoke('data/core/superAdmin', { operation: 'list' }),
+    select: (response) => response.data || [],
+  });
+
   const { data: tenantUser, isLoading: tenantUserLoading } = useQuery({
     queryKey: ['tenantUser', user?.email],
-    queryFn: () => base44.entities.TenantUser.filter({ user_email: user.email, status: 'active' }),
-    enabled: !!user?.email,
+    queryFn: () => base44.functions.invoke('data/core/tenantUser', { 
+      operation: 'list', 
+      filter: { user_email: user.email, status: 'active' } 
+    }),
+    select: (response) => response.data || [],
+    enabled: !!user?.email && !isSuperAdmin, // Only fetch if not superadmin
   });
 
   const { data: tenant, isLoading: tenantLoading } = useQuery({
     queryKey: ['currentTenant', currentTenantId],
-    queryFn: () => base44.entities.Tenant.filter({ id: currentTenantId }),
+    queryFn: () => base44.functions.invoke('data/core/tenant', { 
+      operation: 'read', 
+      id: currentTenantId 
+    }),
+    select: (response) => response.data,
     enabled: !!currentTenantId,
   });
 
@@ -209,18 +224,23 @@ export function TenantProvider({ children }) {
   });
 
   useEffect(() => {
-    if (devRoleOverride === 'superadmin' || user?.role === 'admin') {
+    // Check if dev override or actual SuperAdmin
+    const isActualSuperAdmin = superAdmins?.some(sa => sa.email === user?.email && sa.is_active);
+    if (devRoleOverride === 'superadmin' || isActualSuperAdmin) {
       setIsSuperAdmin(true);
     } else {
       setIsSuperAdmin(false);
     }
-  }, [user, devRoleOverride]);
+  }, [user, devRoleOverride, superAdmins]);
 
   useEffect(() => {
+    // SuperAdmins don't auto-select a tenant - they choose from God view
+    if (isSuperAdmin) return;
+    
     if (tenantUser?.length > 0) {
       setCurrentTenantId(tenantUser[0].tenant_id);
     }
-  }, [tenantUser]);
+  }, [tenantUser, isSuperAdmin]);
 
   useEffect(() => {
     // Dev role override
@@ -252,7 +272,7 @@ export function TenantProvider({ children }) {
 
   const value = {
     user,
-    tenant: tenant?.[0] || null,
+    tenant: tenant || null,
     tenantId: currentTenantId,
     tenantUser: tenantUser?.[0] || null,
     isSuperAdmin,
