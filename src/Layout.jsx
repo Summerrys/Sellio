@@ -31,34 +31,29 @@ import { cn } from '@/lib/utils';
 
 const publicPages = ['CustomerMenu', 'CustomerOrder'];
 
-function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin }) {
-  const navItems = isSuperAdmin
-        ? [
-            { label: 'God View', icon: Shield, page: 'SuperAdminDashboard' },
-            { label: 'All Tenants', icon: Building2, page: 'SuperAdminTenants' },
-            { label: 'Analytics', icon: BarChart3, page: 'SuperAdminAnalytics' },
-            { type: 'divider' },
-        { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
-        { label: 'Orders', icon: ClipboardList, page: 'Orders' },
-        { label: 'Products', icon: ShoppingBag, page: 'Products' },
-        { label: 'Categories', icon: Grid3X3, page: 'Categories' },
-        { label: 'Tables & QR', icon: QrCode, page: 'Tables' },
-        { label: 'Inventory', icon: Package, page: 'Inventory' },
-        { label: 'Staff', icon: Users, page: 'Staff' },
-        { label: 'Roles', icon: Shield, page: 'RoleManagement' },
-        { label: 'Settings', icon: Settings, page: 'TenantSettings' },
-      ]
-      : [
-          { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
-          { label: 'Orders', icon: ClipboardList, page: 'Orders' },
-          { label: 'Products', icon: ShoppingBag, page: 'Products' },
-          { label: 'Categories', icon: Grid3X3, page: 'Categories' },
-          { label: 'Tables & QR', icon: QrCode, page: 'Tables' },
-          { label: 'Inventory', icon: Package, page: 'Inventory' },
-          { label: 'Staff', icon: Users, page: 'Staff' },
-          { label: 'Roles', icon: Shield, page: 'RoleManagement' },
-          { label: 'Settings', icon: Settings, page: 'TenantSettings' },
-        ];
+function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin }) {
+  // SuperAdmin menu - show god view pages ONLY for real SuperAdmins
+  const superAdminItems = isRealSuperAdmin ? [
+    { label: 'God View', icon: Shield, page: 'SuperAdminDashboard' },
+    { label: 'All Tenants', icon: Building2, page: 'SuperAdminTenants' },
+    { label: 'Analytics', icon: BarChart3, page: 'SuperAdminAnalytics' },
+    { type: 'divider' },
+  ] : [];
+
+  // Tenant menu - shown to SuperAdmin viewing tenant + Owner/Admin/Staff
+  const tenantItems = [
+    { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
+    { label: 'Orders', icon: ClipboardList, page: 'Orders' },
+    { label: 'Products', icon: ShoppingBag, page: 'Products' },
+    { label: 'Categories', icon: Grid3X3, page: 'Categories' },
+    { label: 'Tables & QR', icon: QrCode, page: 'Tables' },
+    { label: 'Inventory', icon: Package, page: 'Inventory' },
+    { label: 'Staff', icon: Users, page: 'Staff' },
+    { label: 'Roles', icon: Shield, page: 'RoleManagement' },
+    { label: 'Settings', icon: Settings, page: 'TenantSettings' },
+  ];
+
+  const navItems = [...superAdminItems, ...tenantItems];
 
   return (
     <div className="flex flex-col h-full">
@@ -154,6 +149,10 @@ function AppLayout({ children, currentPageName }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, tenant, isSuperAdmin, isLoading } = useTenant();
+  
+  // Check if this is a REAL SuperAdmin (not dev override)
+  const devRoleOverride = localStorage.getItem('dev_role_override');
+  const isRealSuperAdmin = !devRoleOverride && user?.role === 'admin';
 
   if (publicPages.includes(currentPageName)) {
     return <>{children}</>;
@@ -188,7 +187,7 @@ function AppLayout({ children, currentPageName }) {
           collapsed ? "w-[72px]" : "w-[260px]"
         )}
       >
-        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={user} isSuperAdmin={isSuperAdmin} />
+        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={user} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} />
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 transition-colors"
@@ -223,7 +222,7 @@ function AppLayout({ children, currentPageName }) {
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={user} isSuperAdmin={isSuperAdmin} />
+            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={user} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} />
           </aside>
         </div>
       )}

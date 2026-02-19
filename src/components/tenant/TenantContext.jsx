@@ -105,26 +105,20 @@ export const PERMISSION_GROUPS = {
 
 // Predefined role templates
 export const ROLE_TEMPLATES = {
-  admin: {
-    name: 'Admin',
-    description: 'Full control within the tenant',
+  superadmin: {
+    name: 'SuperAdmin',
+    description: 'Apptelier admin with god view',
     permissions: Object.keys(PERMISSIONS),
   },
   owner: {
     name: 'Owner',
-    description: 'Near-admin access, manage operations',
-    permissions: [
-      'staff.view', 'staff.create', 'staff.edit', 'staff.delete',
-      'products.view', 'products.create', 'products.edit', 'products.delete',
-      'categories.view', 'categories.create', 'categories.edit', 'categories.delete',
-      'inventory.view', 'inventory.adjust', 'inventory.restock',
-      'orders.view', 'orders.create', 'orders.update', 'orders.cancel',
-      'tables.view', 'tables.manage',
-      'payments.view', 'payments.process',
-      'reports.view', 'reports.export',
-      'settings.view',
-      'suppliers.view', 'suppliers.manage',
-    ],
+    description: 'Tenant owner with full control',
+    permissions: Object.keys(PERMISSIONS),
+  },
+  admin: {
+    name: 'Admin',
+    description: 'Full control within the tenant',
+    permissions: Object.keys(PERMISSIONS),
   },
   manager: {
     name: 'Manager',
@@ -171,6 +165,25 @@ export const ROLE_TEMPLATES = {
       'inventory.view',
     ],
   },
+  staff: {
+    name: 'Staff',
+    description: 'Basic staff access',
+    permissions: [
+      'products.view',
+      'orders.view', 'orders.create',
+      'tables.view',
+    ],
+  },
+};
+
+// Industry-specific role visibility
+export const INDUSTRY_ROLES = {
+  restaurant: ['owner', 'admin', 'manager', 'cashier', 'waiter', 'chef', 'staff'],
+  cafe: ['owner', 'admin', 'manager', 'cashier', 'waiter', 'chef', 'staff'],
+  bar: ['owner', 'admin', 'manager', 'cashier', 'waiter', 'chef', 'staff'],
+  retail: ['owner', 'admin', 'manager', 'cashier', 'staff'],
+  salon: ['owner', 'admin', 'manager', 'staff'],
+  other: ['owner', 'admin', 'manager', 'staff'],
 };
 
 export function TenantProvider({ children }) {

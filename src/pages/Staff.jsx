@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InviteStaffDialog from '../components/staff/InviteStaffDialog';
+import CreateStaffDialog from '../components/staff/CreateStaffDialog';
 import EditStaffDialog from '../components/staff/EditStaffDialog';
 import StaffTable from '../components/staff/StaffTable';
 import StaffCards from '../components/staff/StaffCards';
