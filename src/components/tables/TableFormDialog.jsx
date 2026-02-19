@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import QRCode from 'qrcode';
 import {
   Dialog,
   DialogContent,
@@ -15,11 +16,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTenant } from '../tenant/TenantContext';
 
 const ZONES = ['Indoor', 'Outdoor', 'Private Room', 'Bar Area', 'Patio', 'VIP Section'];
 
 export default function TableFormDialog({ open, onOpenChange, table, tenantId }) {
   const queryClient = useQueryClient();
+  const { tenant } = useTenant();
+  const canvasRef = useRef(null);
   const [formData, setFormData] = useState({
     name: '',
     zone: 'Indoor',
@@ -55,15 +59,42 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId })
         tenant_id: tenantId,
       };
 
+      let createdTable;
       if (table) {
-        return base44.entities.TableEntity.update(table.id, data);
+        createdTable = await base44.entities.TableEntity.update(table.id, data);
       } else {
-        return base44.entities.TableEntity.create(data);
+        createdTable = await base44.entities.TableEntity.create(data);
       }
+
+      // Generate QR code for new tables
+      if (!table && tenant && canvasRef.current) {
+        try {
+          const tableUrl = `https://${tenant.slug}.apptelier.sg/order?table=${createdTable.id}`;
+          
+          await QRCode.toCanvas(canvasRef.current, tableUrl, {
+            width: 400,
+            margin: 2,
+            color: {
+              dark: '#0f172a',
+              light: '#ffffff',
+            },
+          });
+
+          const dataUrl = canvasRef.current.toDataURL('image/png');
+          
+          await base44.entities.TableEntity.update(createdTable.id, {
+            qr_code_url: dataUrl,
+          });
+        } catch (error) {
+          console.error('QR generation error:', error);
+        }
+      }
+
+      return createdTable;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tables', tenantId] });
-      toast.success(table ? 'Table updated' : 'Table created');
+      toast.success(table ? 'Table updated' : 'Table created with QR code');
       onOpenChange(false);
     },
     onError: (error) => {
@@ -74,6 +105,7 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId })
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
+        <canvas ref={canvasRef} style={{ display: 'none' }} />
         <DialogHeader>
           <DialogTitle>{table ? 'Edit Table' : 'Add Table'}</DialogTitle>
         </DialogHeader>
