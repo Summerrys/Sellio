@@ -60,7 +60,6 @@ import Orders from './pages/Orders';
 import Products from './pages/Products';
 import Reports from './pages/Reports';
 import RoleManagement from './pages/RoleManagement';
-import Settings from './pages/Settings';
 import Staff from './pages/Staff';
 import SuperAdminAnalytics from './pages/SuperAdminAnalytics';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
@@ -68,7 +67,6 @@ import SuperAdminTenantDetail from './pages/SuperAdminTenantDetail';
 import SuperAdminTenants from './pages/SuperAdminTenants';
 import Tables from './pages/Tables';
 import TenantSettings from './pages/TenantSettings';
-import ThemeSettings from './pages/ThemeSettings';
 import __Layout from './Layout.jsx';
 
 
@@ -86,7 +84,6 @@ export const PAGES = {
     "Products": Products,
     "Reports": Reports,
     "RoleManagement": RoleManagement,
-    "Settings": Settings,
     "Staff": Staff,
     "SuperAdminAnalytics": SuperAdminAnalytics,
     "SuperAdminDashboard": SuperAdminDashboard,
@@ -94,7 +91,6 @@ export const PAGES = {
     "SuperAdminTenants": SuperAdminTenants,
     "Tables": Tables,
     "TenantSettings": TenantSettings,
-    "ThemeSettings": ThemeSettings,
 }
 
 export const pagesConfig = {

@@ -5,6 +5,7 @@ import { TenantProvider, useTenant } from './components/tenant/TenantContext';
 import { ThemeProvider } from './components/theme/ThemeProvider';
 import { NotificationProvider } from './components/notifications/NotificationProvider';
 import NotificationBell from './components/notifications/NotificationBell';
+import RoleSwitcher from './components/dev/RoleSwitcher';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -239,13 +240,14 @@ function AppLayout({ children, currentPageName }) {
           {children}
         </div>
       </main>
-    </div>
-  );
-}
+      <RoleSwitcher />
+      </div>
+      );
+      }
 
-export default function Layout({ children, currentPageName }) {
-  return (
-    <TenantProvider>
+      export default function Layout({ children, currentPageName }) {
+      return (
+      <TenantProvider>
       {(tenantContext) => (
         <ThemeProvider tenantId={tenantContext.tenantId}>
           <NotificationProvider>
@@ -253,6 +255,6 @@ export default function Layout({ children, currentPageName }) {
           </NotificationProvider>
         </ThemeProvider>
       )}
-    </TenantProvider>
-  );
-}
+      </TenantProvider>
+      );
+      }

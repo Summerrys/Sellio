@@ -175,6 +175,13 @@ export const ROLE_TEMPLATES = {
 
 export function TenantProvider({ children }) {
   const [currentTenantId, setCurrentTenantId] = useState(null);
+  const [devRoleOverride, setDevRoleOverride] = useState(null);
+
+  // Check for dev role override
+  useEffect(() => {
+    const override = localStorage.getItem('dev_role_override');
+    if (override) setDevRoleOverride(override);
+  }, []);
   const [userPermissions, setUserPermissions] = useState([]);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
