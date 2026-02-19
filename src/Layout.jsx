@@ -253,10 +253,11 @@ function AppLayout({ children, currentPageName }) {
         return (
           <TenantProvider>
             {(tenantContext) => {
-              // Only REAL SuperAdmins (without dev override) get separate theme scope
+              // Check if dev role override is set to superadmin, or if user is real superadmin
               const devRoleOverride = localStorage.getItem('dev_role_override');
+              const isDevSuperAdmin = devRoleOverride === 'superadmin';
               const isRealSuperAdmin = !devRoleOverride && tenantContext.user?.role === 'admin';
-              const themeScope = isRealSuperAdmin ? 'superadmin' : tenantContext.tenantId;
+              const themeScope = (isRealSuperAdmin || isDevSuperAdmin) ? 'superadmin' : tenantContext.tenantId;
 
               return (
                 <ThemeProvider tenantId={themeScope}>
