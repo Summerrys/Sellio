@@ -225,7 +225,7 @@ function AppLayout({ children, currentPageName }) {
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={user} isSuperAdmin={isSuperAdmin} />
+            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={user} isSuperAdmin={isSuperAdmin} isViewingTenant={isViewingTenant} />
           </aside>
         </div>
       )}
