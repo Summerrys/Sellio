@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { HiMail, HiLockClosed, HiUser, HiEye, HiEyeOff } from 'react-icons/hi';
 import { toast } from 'sonner';
+import { createPageUrl } from './utils';
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -30,7 +31,7 @@ export default function Auth() {
 
         if (data.success) {
           localStorage.setItem('app_user', JSON.stringify(data.user));
-          window.location.href = '/pages/Dashboard';
+          window.location.href = createPageUrl('Dashboard');
         } else {
           toast.error(data.error || 'Login failed');
         }
@@ -44,7 +45,7 @@ export default function Auth() {
 
         if (data.success) {
           localStorage.setItem('app_user', JSON.stringify(data.user));
-          window.location.href = '/pages/Onboarding';
+          window.location.href = createPageUrl('Onboarding');
         } else {
           toast.error(data.error || 'Signup failed');
         }
