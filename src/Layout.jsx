@@ -155,9 +155,9 @@ function AppLayout({ children, currentPageName }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, tenant, isSuperAdmin, isLoading, hasPermission } = useTenant();
   
-  // Check if this is a REAL SuperAdmin (not dev override)
+  // Check if this is a REAL SuperAdmin OR dev role is set to superadmin
   const devRoleOverride = localStorage.getItem('dev_role_override');
-  const isRealSuperAdmin = !devRoleOverride && user?.role === 'admin';
+  const isRealSuperAdmin = (!devRoleOverride && user?.role === 'admin') || devRoleOverride === 'superadmin';
 
   if (publicPages.includes(currentPageName)) {
     return <>{children}</>;
