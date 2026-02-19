@@ -54,8 +54,14 @@ export default function QRCodeGenerator({ open, onOpenChange, table, tenant }) {
   };
 
   useEffect(() => {
-    if (open && table && tenant && canvasRef.current) {
-      generateQR();
+    if (open && table && tenant) {
+      // Small delay to ensure canvas is ready
+      const timer = setTimeout(() => {
+        if (canvasRef.current) {
+          generateQR();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [open, table?.id, tenant?.slug]);
 
