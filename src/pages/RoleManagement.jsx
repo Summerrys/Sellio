@@ -151,7 +151,7 @@ export default function RoleManagement() {
                       </div>
                     </div>
                     {role.description && <p className="text-xs text-slate-500 ml-13">{role.description}</p>}
-                    {role.is_system && <Badge className="mt-2 text-xs bg-blue-50 text-blue-700 border-blue-200">System Role</Badge>}
+                    {role.is_system && <Badge className="mt-2 text-xs bg-blue-50 text-blue-700 border-blue-200">Default Role</Badge>}
                   </div>
                   <div className="flex gap-1">
                     <RequirePermission permission="roles.create" silent>
@@ -159,19 +159,17 @@ export default function RoleManagement() {
                         <Copy className="w-3.5 h-3.5" />
                       </Button>
                     </RequirePermission>
+                    <RequirePermission permission="roles.edit" silent>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); open(role); }}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                    </RequirePermission>
                     {!role.is_system && (
-                      <>
-                        <RequirePermission permission="roles.edit" silent>
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); open(role); }}>
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
-                        </RequirePermission>
-                        <RequirePermission permission="roles.delete" silent>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this role?')) deleteMutation.mutate(role.id); }}>
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </RequirePermission>
-                      </>
+                      <RequirePermission permission="roles.delete" silent>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this role?')) deleteMutation.mutate(role.id); }}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </RequirePermission>
                     )}
                   </div>
                 </div>
