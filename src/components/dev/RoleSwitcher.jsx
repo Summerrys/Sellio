@@ -4,13 +4,13 @@ import { Shield, User, Settings, ChefHat, Users, Eye, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const ROLES = [
-  { id: 'superadmin', label: 'SuperAdmin', subtitle: 'God View', icon: Shield, color: 'bg-purple-500' },
-  { id: 'admin', label: 'Admin', subtitle: 'Tenant Admin', icon: User, color: 'bg-green-500' },
-  { id: 'owner', label: 'Owner', subtitle: 'Tenant Owner', icon: Settings, color: 'bg-blue-500' },
-  { id: 'manager', label: 'Manager', subtitle: 'Limited Access', icon: Users, color: 'bg-amber-500' },
-  { id: 'cashier', label: 'Cashier', subtitle: 'POS Only', icon: User, color: 'bg-teal-500' },
-  { id: 'waiter', label: 'Waiter', subtitle: 'Orders & Tables', icon: User, color: 'bg-pink-500' },
-  { id: 'chef', label: 'Chef', subtitle: 'Kitchen View', icon: ChefHat, color: 'bg-red-500' },
+  { id: 'superadmin', label: 'SuperAdmin', icon: Shield, color: 'bg-purple-500' },
+  { id: 'owner', label: 'Owner', icon: Settings, color: 'bg-blue-500' },
+  { id: 'admin', label: 'Admin', icon: User, color: 'bg-green-500' },
+  { id: 'manager', label: 'Manager', icon: Users, color: 'bg-amber-500' },
+  { id: 'cashier', label: 'Cashier', icon: User, color: 'bg-teal-500' },
+  { id: 'waiter', label: 'Waiter', icon: User, color: 'bg-pink-500' },
+  { id: 'chef', label: 'Chef', icon: ChefHat, color: 'bg-red-500' },
 ];
 
 export default function RoleSwitcher() {
@@ -68,10 +68,7 @@ export default function RoleSwitcher() {
                   <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center", isActive ? "bg-white/20" : role.color)}>
                     <Icon className={cn("w-4 h-4", isActive ? "text-white" : "text-white")} />
                   </div>
-                  <div className="flex-1">
-                    <div>{role.label}</div>
-                    {role.subtitle && <div className="text-xs opacity-70">{role.subtitle}</div>}
-                  </div>
+                  <span>{role.label}</span>
                   {isActive && (
                     <span className="ml-auto text-xs bg-white/20 px-2 py-0.5 rounded-full">Active</span>
                   )}
