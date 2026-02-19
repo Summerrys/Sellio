@@ -67,37 +67,34 @@ export default function QRCodeGenerator({ open, onOpenChange, table, tenant }) {
 
   const regenerateMutation = useMutation({
     mutationFn: async () => {
-      if (!table || !tenant) return;
+      if (!table || !tenant || !canvasRef.current) return;
       
-      setIsGenerating(true);
-      try {
-        const tableUrl = `https://${tenant.slug}.apptelier.sg/order?table=${table.id}`;
-        
-        await QRCode.toCanvas(canvasRef.current, tableUrl, {
-          width: 400,
-          margin: 2,
-          color: {
-            dark: '#0f172a',
-            light: '#ffffff',
-          },
-        });
+      const tableUrl = `https://${tenant.slug}.apptelier.sg/order?table=${table.id}`;
+      
+      await QRCode.toCanvas(canvasRef.current, tableUrl, {
+        width: 400,
+        margin: 2,
+        color: {
+          dark: '#0f172a',
+          light: '#ffffff',
+        },
+      });
 
-        const dataUrl = canvasRef.current.toDataURL('image/png');
-        setQrUrl(dataUrl);
+      const dataUrl = canvasRef.current.toDataURL('image/png');
+      setQrUrl(dataUrl);
 
-        await base44.entities.TableEntity.update(table.id, {
-          qr_code_url: dataUrl,
-        });
-        queryClient.invalidateQueries({ queryKey: ['tables', tenant.id] });
-      } finally {
-        setIsGenerating(false);
-      }
+      await base44.entities.TableEntity.update(table.id, {
+        qr_code_url: dataUrl,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['tables', tenant.id] });
     },
     onSuccess: () => {
       toast.success('QR code regenerated');
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to regenerate QR code');
+      setIsGenerating(false);
     },
   });
 
@@ -260,11 +257,14 @@ export default function QRCodeGenerator({ open, onOpenChange, table, tenant }) {
             </Button>
             <Button
               variant="outline"
-              onClick={() => regenerateMutation.mutate()}
+              onClick={() => {
+                setIsGenerating(true);
+                regenerateMutation.mutate();
+              }}
               disabled={isGenerating || regenerateMutation.isPending}
               className="gap-2"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className={`w-4 h-4 ${(isGenerating || regenerateMutation.isPending) ? 'animate-spin' : ''}`} />
               Regenerate
             </Button>
           </div>
