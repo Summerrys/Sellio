@@ -159,6 +159,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
 function AppLayout({ children, currentPageName }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [customUser, setCustomUser] = useState(null);
   const { user, tenant, isSuperAdmin, isLoading, hasPermission } = useTenant();
   const navigate = useNavigate();
   
@@ -169,12 +170,16 @@ function AppLayout({ children, currentPageName }) {
   // Check custom auth
   useEffect(() => {
     if (!publicPages.includes(currentPageName)) {
-      const appUser = localStorage.getItem('app_user');
-      if (!appUser) {
+      const appUserData = localStorage.getItem('app_user');
+      if (!appUserData) {
         window.location.href = createPageUrl('Auth');
+      } else {
+        setCustomUser(JSON.parse(appUserData));
       }
     }
   }, [currentPageName]);
+
+  const displayUser = customUser || user;
 
   if (publicPages.includes(currentPageName)) {
     return <>{children}</>;
@@ -209,7 +214,7 @@ function AppLayout({ children, currentPageName }) {
           collapsed ? "w-[72px]" : "w-[260px]"
         )}
       >
-        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={user} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} />
+        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} />
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 transition-colors"
@@ -227,7 +232,7 @@ function AppLayout({ children, currentPageName }) {
           <span className="font-bold text-sm text-slate-900">Apptelier</span>
         </div>
         <div className="flex items-center gap-2">
-          {user && <NotificationBell />}
+          {displayUser && <NotificationBell />}
           <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)}>
             <Menu className="w-5 h-5" />
           </Button>
@@ -244,7 +249,7 @@ function AppLayout({ children, currentPageName }) {
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={user} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} />
+            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} />
           </aside>
         </div>
       )}
