@@ -36,11 +36,6 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
             { label: 'God View', icon: Shield, page: 'SuperAdminDashboard' },
             { label: 'All Tenants', icon: Building2, page: 'SuperAdminTenants' },
             { label: 'Analytics', icon: BarChart3, page: 'SuperAdminAnalytics' },
-            { label: 'Security Tests', icon: Shield, page: 'SecurityTests' },
-            { label: 'Admin Tests', icon: Shield, page: 'SuperAdminTests' },
-            { label: 'Dashboard Tests', icon: Shield, page: 'TenantDashboardTests' },
-            { label: 'Theme Tests', icon: Shield, page: 'ThemeIntegrityTests' },
-            { label: 'Data Layer Test', icon: Shield, page: 'DataLayerTest' },
             { type: 'divider' },
         { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
         { label: 'Orders', icon: ClipboardList, page: 'Orders' },
@@ -52,17 +47,17 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
         { label: 'Roles', icon: Shield, page: 'RoleManagement' },
         { label: 'Settings', icon: Settings, page: 'TenantSettings' },
       ]
-    : [
-        { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
-        { label: 'Orders', icon: ClipboardList, page: 'Orders' },
-        { label: 'Products', icon: ShoppingBag, page: 'Products' },
-        { label: 'Categories', icon: Grid3X3, page: 'Categories' },
-        { label: 'Tables & QR', icon: QrCode, page: 'Tables' },
-        { label: 'Inventory', icon: Package, page: 'Inventory' },
-        { label: 'Staff', icon: Users, page: 'Staff' },
-        { label: 'Roles', icon: Shield, page: 'RoleManagement' },
-        { label: 'Settings', icon: Settings, page: 'TenantSettings' },
-      ];
+      : [
+          { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
+          { label: 'Orders', icon: ClipboardList, page: 'Orders' },
+          { label: 'Products', icon: ShoppingBag, page: 'Products' },
+          { label: 'Categories', icon: Grid3X3, page: 'Categories' },
+          { label: 'Tables & QR', icon: QrCode, page: 'Tables' },
+          { label: 'Inventory', icon: Package, page: 'Inventory' },
+          { label: 'Staff', icon: Users, page: 'Staff' },
+          { label: 'Roles', icon: Shield, page: 'RoleManagement' },
+          { label: 'Settings', icon: Settings, page: 'TenantSettings' },
+        ];
 
   return (
     <div className="flex flex-col h-full">
