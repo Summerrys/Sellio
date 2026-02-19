@@ -250,15 +250,20 @@ function AppLayout({ children, currentPageName }) {
       }
 
       export default function Layout({ children, currentPageName }) {
-      return (
-      <TenantProvider>
-      {(tenantContext) => (
-        <ThemeProvider tenantId={tenantContext.tenantId}>
-          <NotificationProvider>
-            <AppLayout currentPageName={currentPageName}>{children}</AppLayout>
-          </NotificationProvider>
-        </ThemeProvider>
-      )}
-      </TenantProvider>
-      );
+        return (
+          <TenantProvider>
+            {(tenantContext) => {
+              // SuperAdmin uses a separate theme context (no tenantId), Tenant users share tenant theme
+              const themeScope = tenantContext.isSuperAdmin ? 'superadmin' : tenantContext.tenantId;
+
+              return (
+                <ThemeProvider tenantId={themeScope}>
+                  <NotificationProvider>
+                    <AppLayout currentPageName={currentPageName}>{children}</AppLayout>
+                  </NotificationProvider>
+                </ThemeProvider>
+              );
+            }}
+          </TenantProvider>
+        );
       }

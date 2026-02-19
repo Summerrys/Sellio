@@ -13,6 +13,11 @@ export function ThemeProvider({ children, tenantId }) {
   const { data: themeConfig } = useQuery({
     queryKey: ['themeConfig', tenantId],
     queryFn: async () => {
+      if (tenantId === 'superadmin') {
+        // SuperAdmin theme stored separately
+        const configs = await base44.entities.ThemeConfig.filter({ tenant_id: 'superadmin' });
+        return configs[0] || null;
+      }
       const configs = await base44.entities.ThemeConfig.filter({ tenant_id: tenantId });
       return configs[0] || null;
     },
