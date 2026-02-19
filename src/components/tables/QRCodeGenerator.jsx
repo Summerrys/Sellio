@@ -20,35 +20,25 @@ export default function QRCodeGenerator({ open, onOpenChange, table, tenant }) {
   const [qrUrl, setQrUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  useEffect(() => {
-    if (open && table && tenant) {
-      generateQR();
-    }
-  }, [open, table, tenant]);
-
   const generateQR = async () => {
-    if (!table || !tenant) return;
+    if (!table || !tenant || !canvasRef.current) return;
     
     setIsGenerating(true);
     try {
-      // Generate QR code URL
       const tableUrl = `https://${tenant.slug}.apptelier.sg/order?table=${table.id}`;
       
-      // Generate QR code on canvas
       await QRCode.toCanvas(canvasRef.current, tableUrl, {
         width: 400,
         margin: 2,
         color: {
-          dark: '#0f172a', // Using primary dark color
+          dark: '#0f172a',
           light: '#ffffff',
         },
       });
 
-      // Store generated URL
       const dataUrl = canvasRef.current.toDataURL('image/png');
       setQrUrl(dataUrl);
 
-      // Update table with QR code URL (optional: save to database)
       if (!table.qr_code_url) {
         await base44.entities.TableEntity.update(table.id, {
           qr_code_url: dataUrl,
@@ -62,6 +52,12 @@ export default function QRCodeGenerator({ open, onOpenChange, table, tenant }) {
       setIsGenerating(false);
     }
   };
+
+  useEffect(() => {
+    if (open && table && tenant && canvasRef.current) {
+      generateQR();
+    }
+  }, [open, table?.id, tenant?.slug]);
 
   const regenerateMutation = useMutation({
     mutationFn: async () => {
