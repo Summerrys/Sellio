@@ -44,7 +44,7 @@ export default function Auth() {
 
         if (data.success) {
           localStorage.setItem('app_user', JSON.stringify(data.user));
-          window.location.href = '/pages/Dashboard';
+          window.location.href = '/pages/Onboarding';
         } else {
           toast.error(data.error || 'Signup failed');
         }
