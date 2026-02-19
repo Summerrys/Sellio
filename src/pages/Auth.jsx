@@ -30,7 +30,7 @@ export default function Auth() {
 
         if (data.success) {
           localStorage.setItem('app_user', JSON.stringify(data.user));
-          window.location.reload();
+          window.location.href = '/pages/Dashboard';
         } else {
           toast.error(data.error || 'Login failed');
         }
@@ -44,7 +44,7 @@ export default function Auth() {
 
         if (data.success) {
           localStorage.setItem('app_user', JSON.stringify(data.user));
-          window.location.reload();
+          window.location.href = '/pages/Dashboard';
         } else {
           toast.error(data.error || 'Signup failed');
         }
