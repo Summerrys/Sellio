@@ -47,6 +47,7 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
+import Auth from './pages/Auth';
 import Categories from './pages/Categories';
 import CustomerMenu from './pages/CustomerMenu';
 import CustomerOrder from './pages/CustomerOrder';
@@ -67,11 +68,11 @@ import SuperAdminTenantDetail from './pages/SuperAdminTenantDetail';
 import SuperAdminTenants from './pages/SuperAdminTenants';
 import Tables from './pages/Tables';
 import TenantSettings from './pages/TenantSettings';
-import Auth from './pages/Auth';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "Auth": Auth,
     "Categories": Categories,
     "CustomerMenu": CustomerMenu,
     "CustomerOrder": CustomerOrder,
@@ -92,7 +93,6 @@ export const PAGES = {
     "SuperAdminTenants": SuperAdminTenants,
     "Tables": Tables,
     "TenantSettings": TenantSettings,
-    "Auth": Auth,
 }
 
 export const pagesConfig = {

@@ -24,30 +24,36 @@ export default function Auth() {
     try {
       if (isLogin) {
         // Login
-        const { data } = await base44.functions.invoke('login', {
+        const response = await base44.functions.invoke('login', {
           email: formData.email,
           password: formData.password
         });
 
-        if (data.success) {
-          localStorage.setItem('app_user', JSON.stringify(data.user));
-          window.location.href = createPageUrl('Dashboard');
+        if (response.data.success) {
+          localStorage.setItem('app_user', JSON.stringify(response.data.user));
+          toast.success('Login successful!');
+          setTimeout(() => {
+            window.location.href = createPageUrl('Dashboard');
+          }, 500);
         } else {
-          toast.error(data.error || 'Login failed');
+          toast.error(response.data.error || 'Login failed');
         }
       } else {
         // Signup
-        const { data } = await base44.functions.invoke('signup', {
+        const response = await base44.functions.invoke('signup', {
           email: formData.email,
           password: formData.password,
           full_name: formData.full_name
         });
 
-        if (data.success) {
-          localStorage.setItem('app_user', JSON.stringify(data.user));
-          window.location.href = createPageUrl('Onboarding');
+        if (response.data.success) {
+          localStorage.setItem('app_user', JSON.stringify(response.data.user));
+          toast.success('Account created successfully!');
+          setTimeout(() => {
+            window.location.href = createPageUrl('Onboarding');
+          }, 500);
         } else {
-          toast.error(data.error || 'Signup failed');
+          toast.error(response.data.error || 'Signup failed');
         }
       }
     } catch (error) {
