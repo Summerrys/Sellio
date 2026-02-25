@@ -22,43 +22,30 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      if (isLogin) {
-        // Login
-        const response = await base44.functions.invoke('login', {
-          email: formData.email,
-          password: formData.password
-        });
+      const endpoint = isLogin ? 'login' : 'signup';
+      const body = isLogin 
+        ? { email: formData.email, password: formData.password }
+        : { email: formData.email, password: formData.password, full_name: formData.full_name };
 
-        console.log('Login response:', response);
+      // Call function directly without authentication
+      const functionUrl = `${window.location.origin}/api/functions/${endpoint}`;
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
 
-        if (response.data?.success) {
-          localStorage.setItem('app_user', JSON.stringify(response.data.user));
-          toast.success('Login successful!');
-          setTimeout(() => {
-            window.location.href = createPageUrl('Dashboard');
-          }, 500);
-        } else {
-          toast.error(response.data?.error || 'Invalid credentials');
-        }
+      const data = await response.json();
+      console.log('Auth response:', data);
+
+      if (data.success) {
+        localStorage.setItem('app_user', JSON.stringify(data.user));
+        toast.success(isLogin ? 'Login successful!' : 'Account created successfully!');
+        setTimeout(() => {
+          window.location.href = createPageUrl(isLogin ? 'Dashboard' : 'Onboarding');
+        }, 500);
       } else {
-        // Signup
-        const response = await base44.functions.invoke('signup', {
-          email: formData.email,
-          password: formData.password,
-          full_name: formData.full_name
-        });
-
-        console.log('Signup response:', response);
-
-        if (response.data?.success) {
-          localStorage.setItem('app_user', JSON.stringify(response.data.user));
-          toast.success('Account created successfully!');
-          setTimeout(() => {
-            window.location.href = createPageUrl('Onboarding');
-          }, 500);
-        } else {
-          toast.error(response.data?.error || 'Signup failed');
-        }
+        toast.error(data.error || (isLogin ? 'Invalid credentials' : 'Signup failed'));
       }
     } catch (error) {
       console.error('Auth error:', error);
