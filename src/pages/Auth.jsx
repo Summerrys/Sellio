@@ -29,14 +29,16 @@ export default function Auth() {
           password: formData.password
         });
 
-        if (response.data.success) {
+        console.log('Login response:', response);
+
+        if (response.data?.success) {
           localStorage.setItem('app_user', JSON.stringify(response.data.user));
           toast.success('Login successful!');
           setTimeout(() => {
             window.location.href = createPageUrl('Dashboard');
           }, 500);
         } else {
-          toast.error(response.data.error || 'Login failed');
+          toast.error(response.data?.error || 'Invalid credentials');
         }
       } else {
         // Signup
@@ -46,17 +48,20 @@ export default function Auth() {
           full_name: formData.full_name
         });
 
-        if (response.data.success) {
+        console.log('Signup response:', response);
+
+        if (response.data?.success) {
           localStorage.setItem('app_user', JSON.stringify(response.data.user));
           toast.success('Account created successfully!');
           setTimeout(() => {
             window.location.href = createPageUrl('Onboarding');
           }, 500);
         } else {
-          toast.error(response.data.error || 'Signup failed');
+          toast.error(response.data?.error || 'Signup failed');
         }
       }
     } catch (error) {
+      console.error('Auth error:', error);
       toast.error(error.message || 'An error occurred');
     } finally {
       setLoading(false);
