@@ -68,6 +68,7 @@ import SuperAdminTenantDetail from './pages/SuperAdminTenantDetail';
 import SuperAdminTenants from './pages/SuperAdminTenants';
 import Tables from './pages/Tables';
 import TenantSettings from './pages/TenantSettings';
+import UserManagement from './pages/UserManagement';
 import __Layout from './Layout.jsx';
 
 
@@ -93,6 +94,7 @@ export const PAGES = {
     "SuperAdminTenants": SuperAdminTenants,
     "Tables": Tables,
     "TenantSettings": TenantSettings,
+    "UserManagement": UserManagement,
 }
 
 export const pagesConfig = {

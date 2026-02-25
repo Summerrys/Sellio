@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
       email: normalizedEmail,
       password_hash,
       full_name: full_name || normalizedEmail.split('@')[0],
-      role: 'admin'
+      role: 'user'
     });
 
     return Response.json({

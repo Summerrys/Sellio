@@ -40,6 +40,9 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
     { type: 'divider' },
   ] : [];
 
+  // Check if user is admin from customUser or regular user
+  const isAdmin = displayUser?.role === 'admin';
+
   // Tenant menu with permission requirements
   const allTenantItems = [
     { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard', permission: null }, // Always show
@@ -51,6 +54,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
     { label: 'Staff', icon: Users, page: 'Staff', permission: 'staff.view' },
     { label: 'Roles', icon: Shield, page: 'RoleManagement', permission: 'roles.view' },
     { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view' },
+    ...(isAdmin ? [{ label: 'User Management', icon: Users, page: 'UserManagement', permission: null }] : []),
   ];
 
   // Filter tenant items based on permissions
