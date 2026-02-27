@@ -40,8 +40,8 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
     { type: 'divider' },
   ] : [];
 
-  // Check if user is admin from customUser or regular user
-  const isAdmin = displayUser?.role === 'admin';
+  // Check if user is admin
+  const isAdmin = user?.role === 'admin';
 
   // Tenant menu with permission requirements
   const allTenantItems = [
