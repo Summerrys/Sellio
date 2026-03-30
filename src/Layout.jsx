@@ -171,14 +171,15 @@ function AppLayout({ children, currentPageName }) {
   const devRoleOverride = localStorage.getItem('dev_role_override');
   const isRealSuperAdmin = (!devRoleOverride && user?.role === 'admin') || devRoleOverride === 'superadmin';
 
-  // Check custom auth
+  // Check custom auth — skip redirect to allow testing without login
   useEffect(() => {
     if (!publicPages.includes(currentPageName)) {
       const appUserData = localStorage.getItem('app_user');
-      if (!appUserData) {
-        window.location.href = createPageUrl('Auth');
-      } else {
+      if (appUserData) {
         setCustomUser(JSON.parse(appUserData));
+      } else {
+        // Set a demo/guest user so all pages are accessible without login
+        setCustomUser({ full_name: 'Demo User', email: 'demo@test.com', role: 'admin' });
       }
     }
   }, [currentPageName]);
