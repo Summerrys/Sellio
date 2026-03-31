@@ -81,7 +81,8 @@ export default function Auth() {
                 <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className="h-28 w-auto object-contain" />
               </div>
               <div className="text-center">
-                <p className="text-xl text-slate-700 font-light tracking-tight leading-relaxed">Serve <span className="bg-gradient-to-r from-amber-500 via-orange-400 to-rose-300 bg-clip-text text-transparent font-normal">joy</span>, online</p>
+                <p className="text-lg text-slate-600 font-normal tracking-tight leading-relaxed">Bring your <span className="bg-gradient-to-r from-amber-500 to-orange-400 bg-clip-text text-transparent font-medium">warmth</span> and flavours</p>
+                <p className="text-lg text-slate-600 font-normal tracking-tight leading-relaxed mt-0.5">to the digital world</p>
               </div>
             </div>
 
