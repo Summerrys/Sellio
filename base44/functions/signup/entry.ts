@@ -1,33 +1,48 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import bcrypt from 'npm:bcryptjs@2.4.3';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 Deno.serve(async (req) => {
   try {
-    const { email, password, full_name } = await req.json();
+    const { phone, password, full_name, email } = await req.json();
 
-    if (!email || !password) {
-      return Response.json({ error: 'Email and password required' }, { status: 400 });
+    if (!phone || !password || !full_name) {
+      return Response.json({ error: 'Name, phone and password are required' }, { status: 400 });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
-    const base44 = createClientFromRequest(req);
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL'),
+      Deno.env.get('SUPABASE_ANON_KEY')
+    );
 
-    // Check if user exists
-    const existingUsers = await base44.asServiceRole.entities.AppUser.filter({ email: normalizedEmail });
-    if (existingUsers.length > 0) {
-      return Response.json({ error: 'Email already registered' }, { status: 400 });
+    // Check if phone already exists
+    const { data: existing } = await supabase
+      .from('app_users')
+      .select('id')
+      .eq('phone', phone.trim());
+
+    if (existing && existing.length > 0) {
+      return Response.json({ error: 'Phone number already registered' }, { status: 400 });
     }
 
     // Hash password
     const password_hash = await bcrypt.hash(password, 10);
 
-    // Create user
-    const newUser = await base44.asServiceRole.entities.AppUser.create({
-      email: normalizedEmail,
-      password_hash,
-      full_name: full_name || normalizedEmail.split('@')[0],
-      role: 'user'
-    });
+    // Create user — new sign-ups are 'admin' role (tenant owners)
+    const { data: newUser, error } = await supabase
+      .from('app_users')
+      .insert({
+        phone: phone.trim(),
+        email: email ? email.toLowerCase().trim() : null,
+        full_name: full_name.trim(),
+        password_hash,
+        role: 'admin',
+        is_active: true,
+        onboarding_completed: false,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
 
     return Response.json({
       success: true,
@@ -35,7 +50,9 @@ Deno.serve(async (req) => {
         id: newUser.id,
         email: newUser.email,
         full_name: newUser.full_name,
-        role: newUser.role
+        phone: newUser.phone,
+        role: newUser.role,
+        onboarding_completed: newUser.onboarding_completed,
       }
     });
   } catch (error) {

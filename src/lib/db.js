@@ -169,12 +169,12 @@ export const db = {
       return appUser ? JSON.parse(appUser) : null;
     },
     
-    async login(email, password) {
+    async login(phone, password) {
       const supabase = await getSupabase();
       const { data, error } = await supabase
         .from('app_users')
         .select('*')
-        .eq('email', email.toLowerCase())
+        .eq('phone', phone.trim())
         .single();
       if (error || !data) throw new Error('Invalid credentials');
       if (!data.is_active) throw new Error('Account is inactive');

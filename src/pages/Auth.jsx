@@ -1,20 +1,31 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { HiMail, HiLockClosed, HiUser, HiEye, HiEyeOff } from 'react-icons/hi';
+import { Sparkles, Phone, Lock, User, Mail, ChevronDown } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { createPageUrl } from '../utils';
 
+const COUNTRY_CODES = [
+  { code: '+65', flag: '🇸🇬', name: 'SG' },
+  { code: '+60', flag: '🇲🇾', name: 'MY' },
+  { code: '+62', flag: '🇮🇩', name: 'ID' },
+  { code: '+66', flag: '🇹🇭', name: 'TH' },
+  { code: '+63', flag: '🇵🇭', name: 'PH' },
+  { code: '+84', flag: '🇻🇳', name: 'VN' },
+  { code: '+1',  flag: '🇺🇸', name: 'US' },
+  { code: '+44', flag: '🇬🇧', name: 'GB' },
+  { code: '+61', flag: '🇦🇺', name: 'AU' },
+  { code: '+91', flag: '🇮🇳', name: 'IN' },
+];
+
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);
   const [formData, setFormData] = useState({
+    full_name: '',
     email: '',
+    phone: '',
     password: '',
-    full_name: ''
   });
 
   const handleSubmit = async (e) => {
@@ -23,32 +34,31 @@ export default function Auth() {
 
     try {
       const endpoint = isLogin ? 'login' : 'signup';
-      const body = isLogin 
-        ? { email: formData.email, password: formData.password }
-        : { email: formData.email, password: formData.password, full_name: formData.full_name };
+      const fullPhone = selectedCountry.code + formData.phone.replace(/^0+/, '');
+      
+      const body = isLogin
+        ? { phone: fullPhone, password: formData.password }
+        : { phone: fullPhone, password: formData.password, full_name: formData.full_name, email: formData.email };
 
-      // Call function directly without authentication
       const functionUrl = `${window.location.origin}/api/functions/${endpoint}`;
       const response = await fetch(functionUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
       });
 
       const data = await response.json();
-      console.log('Auth response:', data);
 
       if (data.success) {
         localStorage.setItem('app_user', JSON.stringify(data.user));
-        toast.success(isLogin ? 'Login successful!' : 'Account created successfully!');
+        toast.success(isLogin ? 'Login successful!' : 'Account created!');
         setTimeout(() => {
-          window.location.href = createPageUrl(isLogin ? 'Dashboard' : 'Onboarding');
+          window.location.href = createPageUrl(data.user?.onboarding_completed ? 'Dashboard' : 'Onboarding');
         }, 500);
       } else {
-        toast.error(data.error || (isLogin ? 'Invalid credentials' : 'Signup failed'));
+        toast.error(data.error || 'Something went wrong');
       }
     } catch (error) {
-      console.error('Auth error:', error);
       toast.error(error.message || 'An error occurred');
     } finally {
       setLoading(false);
@@ -58,126 +68,156 @@ export default function Auth() {
   return (
     <>
       <Toaster position="top-center" richColors />
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-      {/* Animated background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-96 h-96 bg-purple-500/20 rounded-full blur-3xl -top-48 -left-48 animate-pulse" />
-        <div className="absolute w-96 h-96 bg-blue-500/20 rounded-full blur-3xl -bottom-48 -right-48 animate-pulse delay-1000" />
-      </div>
+      <div
+        className="min-h-screen flex items-center justify-center p-4"
+        style={{ background: 'linear-gradient(135deg, #f0e6ff 0%, #fce4ec 50%, #e8eaf6 100%)' }}
+        onClick={() => setShowCountryDropdown(false)}
+      >
+        <div className="w-full max-w-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            {/* Header */}
+            <div className="text-center mb-6">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Sparkles className="w-7 h-7 text-purple-600" />
+                <span className="text-2xl font-bold text-purple-600">Apptelier</span>
+              </div>
+              <p className="text-slate-500 text-sm">Welcome! Let's get you started</p>
+            </div>
 
-      <div className="relative w-full max-w-md">
-        {/* Logo/Brand */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-600 shadow-2xl mb-4">
-            <span className="text-white font-bold text-2xl">A</span>
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Apptelier Suite</h1>
-          <p className="text-slate-400">Premium Restaurant Management</p>
-        </div>
+            {/* Tab Toggle */}
+            <div className="flex bg-slate-100 rounded-xl p-1 mb-6">
+              <button
+                type="button"
+                onClick={() => setIsLogin(true)}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
+                  isLogin ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+                }`}
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsLogin(false)}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
+                  !isLogin ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+                }`}
+              >
+                Sign Up
+              </button>
+            </div>
 
-        {/* Login/Signup Card */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8">
-          <div className="flex gap-2 mb-6">
-            <button
-              onClick={() => setIsLogin(true)}
-              className={`flex-1 py-2.5 rounded-xl font-medium transition-all ${
-                isLogin
-                  ? 'bg-white text-slate-900 shadow-lg'
-                  : 'text-white hover:bg-white/10'
-              }`}
-            >
-              Login
-            </button>
-            <button
-              onClick={() => setIsLogin(false)}
-              className={`flex-1 py-2.5 rounded-xl font-medium transition-all ${
-                !isLogin
-                  ? 'bg-white text-slate-900 shadow-lg'
-                  : 'text-white hover:bg-white/10'
-              }`}
-            >
-              Sign Up
-            </button>
-          </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Name - Sign Up only */}
+              {!isLogin && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="John Doe"
+                      value={formData.full_name}
+                      onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                      required
+                      className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400"
+                    />
+                  </div>
+                </div>
+              )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {!isLogin && (
+              {/* Email - Sign Up only */}
+              {!isLogin && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="email"
+                      placeholder="john@example.com"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Phone Number */}
               <div>
-                <Label className="text-white mb-2 block">Full Name</Label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number *</label>
+                <div className="flex gap-2">
+                  {/* Country code picker */}
+                  <div className="relative" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => setShowCountryDropdown(!showCountryDropdown)}
+                      className="flex items-center gap-1.5 px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white hover:bg-slate-50 transition-colors whitespace-nowrap"
+                    >
+                      <span>{selectedCountry.flag}</span>
+                      <span className="text-slate-700">{selectedCountry.code}</span>
+                      <ChevronDown className="w-3 h-3 text-slate-400" />
+                    </button>
+                    {showCountryDropdown && (
+                      <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto min-w-[130px]">
+                        {COUNTRY_CODES.map((c) => (
+                          <button
+                            key={c.code}
+                            type="button"
+                            onClick={() => { setSelectedCountry(c); setShowCountryDropdown(false); }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-slate-50 transition-colors text-left"
+                          >
+                            <span>{c.flag}</span>
+                            <span className="text-slate-600">{c.name}</span>
+                            <span className="text-slate-400 ml-auto">{c.code}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Phone input */}
+                  <div className="relative flex-1">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="tel"
+                      placeholder="91234567"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      required
+                      className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Password *</label>
                 <div className="relative">
-                  <HiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl" />
-                  <Input
-                    type="text"
-                    placeholder="John Doe"
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-slate-400 h-12 rounded-xl"
-                    required={!isLogin}
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="password"
+                    placeholder="Enter password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    required
+                    className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400"
                   />
                 </div>
               </div>
-            )}
 
-            <div>
-              <Label className="text-white mb-2 block">Email</Label>
-              <div className="relative">
-                <HiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl" />
-                <Input
-                  type="email"
-                  placeholder="you@example.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-slate-400 h-12 rounded-xl"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-white mb-2 block">Password</Label>
-              <div className="relative">
-                <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl" />
-                <Input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-slate-400 h-12 rounded-xl"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
-                >
-                  {showPassword ? <HiEyeOff className="text-xl" /> : <HiEye className="text-xl" />}
-                </button>
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full h-12 bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg transition-all"
-            >
-              {loading ? 'Please wait...' : isLogin ? 'Sign In' : 'Create Account'}
-            </Button>
-          </form>
-
-          {isLogin && (
-            <div className="mt-6 text-center">
-              <a href="#" className="text-sm text-slate-400 hover:text-white transition-colors">
-                Forgot password?
-              </a>
-            </div>
-          )}
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70"
+                style={{ background: 'linear-gradient(90deg, #7c3aed, #ec4899)' }}
+              >
+                {loading ? 'Please wait...' : isLogin ? 'Login' : 'Sign Up'}
+              </button>
+            </form>
+          </div>
         </div>
-
-        <p className="text-center text-slate-400 text-sm mt-6">
-          © 2026 Apptelier Suite. All rights reserved.
-        </p>
       </div>
-    </div>
     </>
   );
 }
