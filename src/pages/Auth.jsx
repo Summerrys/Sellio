@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Phone, Lock, User, Mail, ChevronDown } from 'lucide-react';
+import { Phone, Lock, User, Mail, ChevronDown } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { createPageUrl } from '../utils';
 
@@ -77,9 +77,8 @@ export default function Auth() {
           <div className="bg-white rounded-2xl shadow-xl p-8">
             {/* Header */}
             <div className="text-center mb-6">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Sparkles className="w-7 h-7 text-purple-600" />
-                <span className="text-2xl font-bold text-purple-600">Apptelier</span>
+              <div className="flex items-center justify-center mb-2">
+                <img src="/assets/Logo_Sellio.png" alt="Sellio" className="h-10 object-contain" />
               </div>
               <p className="text-slate-500 text-sm">Welcome! Let's get you started</p>
             </div>
