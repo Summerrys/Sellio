@@ -80,10 +80,9 @@ export default function Auth() {
               <div className="flex items-center justify-center mb-2">
                 <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className="h-28 w-auto object-contain" />
               </div>
-              <div className="relative inline-block">
-                <p className="text-2xl font-semibold text-slate-900 tracking-tight">Your business,</p>
-                <p className="text-2xl font-semibold text-slate-900 tracking-tight mt-1">beautifully <span className="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 bg-clip-text text-transparent">online</span>.</p>
-                <div className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-purple-600 to-pink-500 rounded-full" style={{width: '120px'}}></div>
+              <div className="text-center">
+                <p className="text-lg text-slate-600 font-normal tracking-tight leading-relaxed">Bring your <span className="bg-gradient-to-r from-amber-500 to-orange-400 bg-clip-text text-transparent font-medium">warmth</span> and flavours</p>
+                <p className="text-lg text-slate-600 font-normal tracking-tight leading-relaxed mt-0.5">to the digital world</p>
               </div>
             </div>
 
