@@ -54,7 +54,7 @@ export default function DataMigration() {
 
       // Clean records: remove Base44-internal fields that conflict with Supabase schema
       const cleaned = records.map(r => {
-        const { __v, _id, created_by, created_by_id, ...rest } = r;
+        const { __v, _id, ...rest } = r;
         return rest;
       });
 
