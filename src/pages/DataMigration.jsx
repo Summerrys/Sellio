@@ -52,10 +52,12 @@ export default function DataMigration() {
         return { success: true, count: 0 };
       }
 
-      // Clean records: remove Base44-internal fields that conflict with Supabase schema
+      // Strip all Base44-internal fields not present in Supabase schema
+      const BASE44_INTERNAL_FIELDS = ['__v', '_id', 'is_sample'];
       const cleaned = records.map(r => {
-        const { __v, _id, ...rest } = r;
-        return rest;
+        const result = { ...r };
+        BASE44_INTERNAL_FIELDS.forEach(f => delete result[f]);
+        return result;
       });
 
       // Upsert to Supabase (by id to avoid duplicates on re-run)
