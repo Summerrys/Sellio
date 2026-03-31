@@ -69,10 +69,20 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
       {/* Logo */}
       <div className={cn("flex items-center h-16 px-4 border-b border-slate-100", collapsed && "justify-center")}>
         <div className="flex items-center gap-2.5">
-          {collapsed ? (
-            <img src="/assets/Logo_Sellio.png" alt="Sellio" className="h-7 w-7 object-contain" />
+          {tenant?.logo_url ? (
+            <img src={tenant.logo_url} alt={tenant.name} className={collapsed ? 'h-7 w-7 object-contain rounded' : 'h-8 object-contain'} />
           ) : (
-            <img src="/assets/Logo_Sellio.png" alt="Sellio" className="h-8 object-contain" />
+            <>
+              <div className="w-8 h-8 rounded-lg bg-[rgb(var(--color-primary))] flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-bold text-sm">{tenant?.name?.charAt(0) || 'S'}</span>
+              </div>
+              {!collapsed && (
+                <div>
+                  <span className="font-bold text-sm text-slate-900 tracking-tight">{tenant?.name || 'Sellio'}</span>
+                  <span className="text-xs text-slate-400 block -mt-0.5">Suite</span>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

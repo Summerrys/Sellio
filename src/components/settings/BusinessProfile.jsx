@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import db from '@/lib/db';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,7 +23,7 @@ export default function BusinessProfile({ tenant }) {
 
   const updateMutation = useMutation({
     mutationFn: async (data) => {
-      return base44.entities.Tenant.update(tenant.id, data);
+      return db.entities.Tenant.update(tenant.id, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenant'] });
