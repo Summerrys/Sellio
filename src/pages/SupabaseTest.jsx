@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { db } from '@/lib/db';
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, XCircle, Loader2, Database, Play } from 'lucide-react';
@@ -20,6 +20,7 @@ export default function SupabaseTest() {
   const testConnection = async () => {
     setConnectionStatus('testing');
     try {
+      const supabase = await getSupabase();
       const { data, error } = await supabase.from('app_users').select('count').limit(1);
       if (error) throw error;
       setConnectionStatus('connected');

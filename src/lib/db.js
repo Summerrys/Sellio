@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { getSupabase } from './supabaseClient';
 
 // Entity to table name mapping
 const tableMap = {
@@ -38,6 +38,7 @@ function createEntityHandler(tableName) {
   return {
     // List all records with optional sort and limit
     async list(sort, limit = 50) {
+      const supabase = await getSupabase();
       let query = supabase.from(tableName).select('*');
       const sortConfig = parseSort(sort);
       if (sortConfig) {
@@ -51,21 +52,18 @@ function createEntityHandler(tableName) {
 
     // Filter records with query object
     async filter(filters = {}, sort, limit = 50) {
+      const supabase = await getSupabase();
       let query = supabase.from(tableName).select('*');
-      
-      // Apply filters
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           query = query.eq(key, value);
         }
       });
-
       const sortConfig = parseSort(sort);
       if (sortConfig) {
         query = query.order(sortConfig.column, { ascending: sortConfig.ascending });
       }
       query = query.limit(limit);
-
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
@@ -73,6 +71,7 @@ function createEntityHandler(tableName) {
 
     // Get single record by ID
     async get(id) {
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from(tableName)
         .select('*')
@@ -84,6 +83,7 @@ function createEntityHandler(tableName) {
 
     // Create a new record
     async create(record) {
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from(tableName)
         .insert(record)
@@ -95,6 +95,7 @@ function createEntityHandler(tableName) {
 
     // Bulk create records
     async bulkCreate(records) {
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from(tableName)
         .insert(records)
@@ -105,6 +106,7 @@ function createEntityHandler(tableName) {
 
     // Update a record
     async update(id, updates) {
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from(tableName)
         .update(updates)
@@ -117,6 +119,7 @@ function createEntityHandler(tableName) {
 
     // Delete a record
     async delete(id) {
+      const supabase = await getSupabase();
       const { error } = await supabase
         .from(tableName)
         .delete()
@@ -126,10 +129,11 @@ function createEntityHandler(tableName) {
     },
 
     // Subscribe to real-time changes
-    subscribe(callback) {
+    async subscribe(callback) {
+      const supabase = await getSupabase();
       const channel = supabase
         .channel(`${tableName}_changes`)
-        .on('postgres_changes', 
+        .on('postgres_changes',
           { event: '*', schema: 'public', table: tableName },
           (payload) => {
             callback({
@@ -141,17 +145,10 @@ function createEntityHandler(tableName) {
           }
         )
         .subscribe();
-
-      // Return unsubscribe function
-      return () => {
-        supabase.removeChannel(channel);
-      };
+      return () => supabase.removeChannel(channel);
     },
 
-    // Return empty schema (for compatibility)
-    schema() {
-      return {};
-    }
+    schema() { return {}; }
   };
 }
 
@@ -162,7 +159,7 @@ export const db = {
   ),
   
   // Direct supabase access for custom queries
-  supabase,
+  getSupabase,
   
   // Auth helpers (for custom auth system)
   auth: {
@@ -172,17 +169,14 @@ export const db = {
     },
     
     async login(email, password) {
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from('app_users')
         .select('*')
         .eq('email', email.toLowerCase())
         .single();
-      
       if (error || !data) throw new Error('Invalid credentials');
       if (!data.is_active) throw new Error('Account is inactive');
-      
-      // Note: In production, verify password hash here
-      // For now, we trust the backend login function
       return data;
     },
     
@@ -198,14 +192,13 @@ export const db = {
     async updateMe(updates) {
       const user = await this.me();
       if (!user) throw new Error('Not authenticated');
-      
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from('app_users')
         .update(updates)
         .eq('id', user.id)
         .select()
         .single();
-      
       if (error) throw error;
       localStorage.setItem('app_user', JSON.stringify(data));
       return data;
