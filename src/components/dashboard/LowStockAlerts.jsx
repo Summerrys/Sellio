@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import db from '@/lib/db';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Package } from 'lucide-react';
@@ -8,7 +8,7 @@ import { AlertTriangle, Package } from 'lucide-react';
 export default function LowStockAlerts({ tenantId }) {
   const { data: products = [] } = useQuery({
     queryKey: ['lowStockProducts', tenantId],
-    queryFn: () => base44.entities.Product.filter({ tenant_id: tenantId }),
+    queryFn: () => db.entities.Product.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
   });
 

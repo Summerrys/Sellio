@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import db from '@/lib/db';
 import { base44 } from '@/api/base44Client';
 import {
   Dialog,
@@ -33,7 +34,7 @@ export default function InviteStaffDialog({ open, onOpenChange, tenantId }) {
 
   const { data: roles = [] } = useQuery({
     queryKey: ['roles', tenantId],
-    queryFn: () => base44.entities.Role.filter({ tenant_id: tenantId }),
+    queryFn: () => db.entities.Role.filter({ tenant_id: tenantId }),
     enabled: !!tenantId && open,
   });
 
@@ -46,7 +47,7 @@ export default function InviteStaffDialog({ open, onOpenChange, tenantId }) {
       const role = roles.find(r => r.id === data.role_id);
 
       // Create tenant user record
-      return base44.entities.TenantUser.create({
+      return db.entities.TenantUser.create({
         tenant_id: tenantId,
         user_email: data.email,
         role_id: data.role_id,

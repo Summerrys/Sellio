@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
+import db from '@/lib/db';
 
 const TenantContext = createContext(null);
 
@@ -200,24 +200,24 @@ export function TenantProvider({ children }) {
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
+    queryFn: () => db.auth.me(),
   });
 
   const { data: tenantUser, isLoading: tenantUserLoading } = useQuery({
     queryKey: ['tenantUser', user?.email],
-    queryFn: () => base44.entities.TenantUser.filter({ user_email: user.email, status: 'active' }),
+    queryFn: () => db.entities.TenantUser.filter({ user_email: user.email, status: 'active' }),
     enabled: !!user?.email,
   });
 
   const { data: tenant, isLoading: tenantLoading } = useQuery({
     queryKey: ['currentTenant', currentTenantId],
-    queryFn: () => base44.entities.Tenant.filter({ id: currentTenantId }),
+    queryFn: () => db.entities.Tenant.filter({ id: currentTenantId }),
     enabled: !!currentTenantId,
   });
 
   const { data: role } = useQuery({
     queryKey: ['userRole', tenantUser?.[0]?.role_id],
-    queryFn: () => base44.entities.Role.filter({ id: tenantUser[0].role_id }),
+    queryFn: () => db.entities.Role.filter({ id: tenantUser[0].role_id }),
     enabled: !!tenantUser?.[0]?.role_id,
   });
 

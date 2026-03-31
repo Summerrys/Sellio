@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import db from '@/lib/db';
 import { toast } from 'sonner';
 
 const NotificationContext = createContext();
@@ -16,7 +16,7 @@ export function NotificationProvider({ children }) {
 
   const loadUser = async () => {
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await db.auth.me();
       setUser(currentUser);
     } catch (error) {
       console.error('Failed to load user:', error);
@@ -28,7 +28,7 @@ export function NotificationProvider({ children }) {
     queryKey: ['notifications', user?.email],
     queryFn: async () => {
       if (!user) return [];
-      return base44.entities.Notification.filter(
+      return db.entities.Notification.filter(
         { user_email: user.email },
         '-created_date',
         50
@@ -42,24 +42,21 @@ export function NotificationProvider({ children }) {
   useEffect(() => {
     if (!user) return;
 
-    const unsubscribe = base44.entities.Notification.subscribe((event) => {
+    let unsubscribeFn;
+    db.entities.Notification.subscribe((event) => {
       if (event.type === 'create' && event.data?.user_email === user.email) {
         queryClient.invalidateQueries({ queryKey: ['notifications'] });
-        
-        // Show toast
         toast.info(event.data.title, {
           description: event.data.message,
           duration: 5000,
         });
-
-        // Play sound for high priority
         if (event.data.priority === 'high' || event.data.priority === 'critical') {
           playNotificationSound();
         }
       }
-    });
+    }).then(fn => { unsubscribeFn = fn; });
 
-    return unsubscribe;
+    return () => { if (unsubscribeFn) unsubscribeFn(); };
   }, [user, queryClient]);
 
   const playNotificationSound = () => {
@@ -70,7 +67,7 @@ export function NotificationProvider({ children }) {
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId) => {
-      return base44.entities.Notification.update(notificationId, {
+      return db.entities.Notification.update(notificationId, {
         is_read: true,
         read_at: new Date().toISOString(),
       });
@@ -85,7 +82,7 @@ export function NotificationProvider({ children }) {
       const unreadNotifications = notifications.filter(n => !n.is_read);
       return Promise.all(
         unreadNotifications.map(n =>
-          base44.entities.Notification.update(n.id, {
+          db.entities.Notification.update(n.id, {
             is_read: true,
             read_at: new Date().toISOString(),
           })

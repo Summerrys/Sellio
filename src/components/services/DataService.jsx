@@ -1,82 +1,22 @@
-import { base44 } from '@/api/base44Client';
+import db from '@/lib/db';
 
-/**
- * Generic Data Service for JSON file-based CRUD operations
- * Each entity has a backend function that handles file I/O
- */
+// Thin wrapper around db.entities for compatibility
 class DataService {
-  constructor(entityName, functionPath) {
-    this.entityName = entityName;
-    this.functionPath = functionPath;
+  constructor(entityName) {
+    this.entity = db.entities[entityName];
   }
 
-  async create(data) {
-    try {
-      const response = await base44.functions.invoke(this.functionPath, {
-        operation: 'create',
-        data
-      });
-      return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.error || error.message);
-    }
+  async create(data) { return this.entity.create(data); }
+  async read(id) { return this.entity.get(id); }
+  async list(filters = {}, sort = null, limit = 50) {
+    if (Object.keys(filters).length > 0) return this.entity.filter(filters, sort, limit);
+    return this.entity.list(sort, limit);
   }
-
-  async read(id) {
-    try {
-      const response = await base44.functions.invoke(this.functionPath, {
-        operation: 'read',
-        id
-      });
-      return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.error || error.message);
-    }
-  }
-
-  async list(filters = {}, sort = null, limit = null, offset = 0) {
-    try {
-      const response = await base44.functions.invoke(this.functionPath, {
-        operation: 'list',
-        filters,
-        sort,
-        limit,
-        offset
-      });
-      return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.error || error.message);
-    }
-  }
-
-  async update(id, data) {
-    try {
-      const response = await base44.functions.invoke(this.functionPath, {
-        operation: 'update',
-        id,
-        data
-      });
-      return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.error || error.message);
-    }
-  }
-
-  async delete(id) {
-    try {
-      const response = await base44.functions.invoke(this.functionPath, {
-        operation: 'delete',
-        id
-      });
-      return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.error || error.message);
-    }
-  }
+  async update(id, data) { return this.entity.update(id, data); }
+  async delete(id) { return this.entity.delete(id); }
 }
 
-// Core Entities
-export const TenantService = new DataService('Tenant', 'data/core/tenant');
-export const UserService = new DataService('User', 'data/core/user');
-export const TenantUserService = new DataService('TenantUser', 'data/core/tenantUser');
-export const SuperAdminService = new DataService('SuperAdmin', 'data/core/superAdmin');
+export const TenantService = new DataService('Tenant');
+export const UserService = new DataService('AppUser');
+export const TenantUserService = new DataService('TenantUser');
+export const SuperAdminService = new DataService('SuperAdmin');

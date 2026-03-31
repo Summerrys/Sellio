@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import db from '@/lib/db';
 import QRCode from 'qrcode';
 import {
   Dialog,
@@ -61,9 +61,9 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId })
 
       let createdTable;
       if (table) {
-        createdTable = await base44.entities.TableEntity.update(table.id, data);
+        createdTable = await db.entities.TableEntity.update(table.id, data);
       } else {
-        createdTable = await base44.entities.TableEntity.create(data);
+        createdTable = await db.entities.TableEntity.create(data);
       }
 
       // Generate QR code for new tables
@@ -82,7 +82,7 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId })
 
           const dataUrl = canvasRef.current.toDataURL('image/png');
           
-          await base44.entities.TableEntity.update(createdTable.id, {
+          await db.entities.TableEntity.update(createdTable.id, {
             qr_code_url: dataUrl,
           });
         } catch (error) {

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import db from '@/lib/db';
 import { COLOR_SETS, generateThemeVariables } from './themeUtils';
 
 const ThemeContext = createContext({});
@@ -14,11 +14,10 @@ export function ThemeProvider({ children, tenantId }) {
     queryKey: ['themeConfig', tenantId],
     queryFn: async () => {
       if (tenantId === 'superadmin') {
-        // SuperAdmin theme stored separately
-        const configs = await base44.entities.ThemeConfig.filter({ tenant_id: 'superadmin' });
+        const configs = await db.entities.ThemeConfig.filter({ tenant_id: 'superadmin' });
         return configs[0] || null;
       }
-      const configs = await base44.entities.ThemeConfig.filter({ tenant_id: tenantId });
+      const configs = await db.entities.ThemeConfig.filter({ tenant_id: tenantId });
       return configs[0] || null;
     },
     enabled: !!tenantId,
@@ -31,13 +30,13 @@ export function ThemeProvider({ children, tenantId }) {
       if (!colorSet) return;
 
       if (themeConfig?.id) {
-        return base44.entities.ThemeConfig.update(themeConfig.id, {
+        return db.entities.ThemeConfig.update(themeConfig.id, {
           color_set_name: colorSetName,
           primary_color: colorSet.dark,
           accent_color: colorSet.light,
         });
       } else {
-        return base44.entities.ThemeConfig.create({
+        return db.entities.ThemeConfig.create({
           tenant_id: tenantId,
           color_set_name: colorSetName,
           primary_color: colorSet.dark,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import db from '@/lib/db';
 import {
   Dialog,
   DialogContent,
@@ -39,7 +39,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', tenantId],
-    queryFn: () => base44.entities.Category.filter({ tenant_id: tenantId }),
+    queryFn: () => db.entities.Category.filter({ tenant_id: tenantId }),
     enabled: !!tenantId && open,
   });
 
@@ -88,9 +88,9 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
       };
 
       if (product) {
-        return base44.entities.Product.update(product.id, productData);
+        return db.entities.Product.update(product.id, productData);
       } else {
-        return base44.entities.Product.create(productData);
+        return db.entities.Product.create(productData);
       }
     },
     onSuccess: () => {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import db from '@/lib/db';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
@@ -26,13 +26,13 @@ export default function Products() {
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products', tenantId],
-    queryFn: () => base44.entities.Product.filter({ tenant_id: tenantId }, '-created_date'),
+    queryFn: () => db.entities.Product.filter({ tenant_id: tenantId }, '-created_date'),
     enabled: !!tenantId,
   });
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', tenantId],
-    queryFn: () => base44.entities.Category.filter({ tenant_id: tenantId }),
+    queryFn: () => db.entities.Category.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
   });
 

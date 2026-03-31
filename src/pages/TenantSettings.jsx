@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import db from '@/lib/db';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PermissionGate from '../components/tenant/PermissionGate';
@@ -43,24 +43,24 @@ function TenantSettingsContent() {
 
   const { data: roles = [] } = useQuery({
     queryKey: ['settingsRoles', tenantId],
-    queryFn: () => base44.entities.Role.filter({ tenant_id: tenantId }),
+    queryFn: () => db.entities.Role.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
   });
 
   const updateBusinessMutation = useMutation({
-    mutationFn: () => base44.entities.Tenant.update(tenantId, businessForm),
+    mutationFn: () => db.entities.Tenant.update(tenantId, businessForm),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['currentTenant'] }); toast.success('Settings saved'); },
   });
 
   const saveRoleMutation = useMutation({
     mutationFn: (data) => editingRole
-      ? base44.entities.Role.update(editingRole.id, data)
-      : base44.entities.Role.create({ ...data, tenant_id: tenantId, slug: data.name.toLowerCase().replace(/\s+/g, '-') }),
+      ? db.entities.Role.update(editingRole.id, data)
+      : db.entities.Role.create({ ...data, tenant_id: tenantId, slug: data.name.toLowerCase().replace(/\s+/g, '-') }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['settingsRoles'] }); closeRoleForm(); },
   });
 
   const deleteRoleMutation = useMutation({
-    mutationFn: (id) => base44.entities.Role.delete(id),
+    mutationFn: (id) => db.entities.Role.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settingsRoles'] }),
   });
 

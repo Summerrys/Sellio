@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import db from '@/lib/db';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
@@ -29,13 +29,13 @@ export default function Staff() {
 
   const { data: staff = [], isLoading } = useQuery({
     queryKey: ['staff', tenantId],
-    queryFn: () => base44.entities.TenantUser.filter({ tenant_id: tenantId }),
+    queryFn: () => db.entities.TenantUser.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
   });
 
   const { data: roles = [] } = useQuery({
     queryKey: ['roles', tenantId],
-    queryFn: () => base44.entities.Role.filter({ tenant_id: tenantId }),
+    queryFn: () => db.entities.Role.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
   });
 

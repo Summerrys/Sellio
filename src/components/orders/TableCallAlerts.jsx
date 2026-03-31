@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import db from '@/lib/db';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +14,7 @@ export default function TableCallAlerts({ tenantId }) {
   const { data: calls = [] } = useQuery({
     queryKey: ['table-calls', tenantId],
     queryFn: async () => {
-      return base44.entities.TableCall.filter(
+      return db.entities.TableCall.filter(
         { tenant_id: tenantId, status: 'pending' },
         '-created_date',
         20
@@ -28,24 +28,22 @@ export default function TableCallAlerts({ tenantId }) {
   useEffect(() => {
     if (!tenantId) return;
 
-    const unsubscribe = base44.entities.TableCall.subscribe((event) => {
+    let unsubFn;
+    db.entities.TableCall.subscribe((event) => {
       if (event.data?.tenant_id === tenantId) {
         queryClient.invalidateQueries({ queryKey: ['table-calls', tenantId] });
-        
         if (event.type === 'create') {
-          toast.info(`Table ${event.data.table_name} is calling!`, {
-            duration: 5000,
-          });
+          toast.info(`Table ${event.data.table_name} is calling!`, { duration: 5000 });
         }
       }
-    });
+    }).then(fn => { unsubFn = fn; });
 
-    return unsubscribe;
+    return () => { if (unsubFn) unsubFn(); };
   }, [tenantId, queryClient]);
 
   const acknowledgeMutation = useMutation({
     mutationFn: async (callId) => {
-      return base44.entities.TableCall.update(callId, {
+      return db.entities.TableCall.update(callId, {
         status: 'acknowledged',
         acknowledged_at: new Date().toISOString(),
       });

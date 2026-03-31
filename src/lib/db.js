@@ -136,8 +136,9 @@ function createEntityHandler(tableName) {
         .on('postgres_changes',
           { event: '*', schema: 'public', table: tableName },
           (payload) => {
+            const typeMap = { INSERT: 'create', UPDATE: 'update', DELETE: 'delete' };
             callback({
-              type: payload.eventType,
+              type: typeMap[payload.eventType] || payload.eventType,
               id: payload.new?.id || payload.old?.id,
               data: payload.new,
               old_data: payload.old

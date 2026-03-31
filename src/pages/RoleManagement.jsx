@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import db from '@/lib/db';
 import { useTenant, ALL_PERMISSIONS, PERMISSION_GROUPS, ROLE_TEMPLATES, INDUSTRY_ROLES } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
@@ -26,20 +26,20 @@ export default function RoleManagement() {
 
   const { data: roles = [] } = useQuery({
     queryKey: ['allRoles', tenantId],
-    queryFn: () => base44.entities.Role.filter({ tenant_id: tenantId }),
+    queryFn: () => db.entities.Role.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
   });
 
   const { data: tenantUsers = [] } = useQuery({
     queryKey: ['roleUsers', tenantId],
-    queryFn: () => base44.entities.TenantUser.filter({ tenant_id: tenantId }),
+    queryFn: () => db.entities.TenantUser.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
   });
 
   const saveMutation = useMutation({
     mutationFn: (data) => editing
-      ? base44.entities.Role.update(editing.id, data)
-      : base44.entities.Role.create({ ...data, tenant_id: tenantId, slug: data.name.toLowerCase().replace(/\s+/g, '-') }),
+      ? db.entities.Role.update(editing.id, data)
+      : db.entities.Role.create({ ...data, tenant_id: tenantId, slug: data.name.toLowerCase().replace(/\s+/g, '-') }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allRoles'] });
       close();
@@ -48,7 +48,7 @@ export default function RoleManagement() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Role.delete(id),
+    mutationFn: (id) => db.entities.Role.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allRoles'] });
       toast.success('Role deleted');
@@ -56,7 +56,7 @@ export default function RoleManagement() {
   });
 
   const duplicateMutation = useMutation({
-    mutationFn: (role) => base44.entities.Role.create({
+    mutationFn: (role) => db.entities.Role.create({
       tenant_id: tenantId,
       name: `${role.name} (Copy)`,
       slug: `${role.slug}-copy-${Date.now()}`,

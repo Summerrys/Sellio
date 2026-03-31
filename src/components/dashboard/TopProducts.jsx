@@ -1,13 +1,13 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import db from '@/lib/db';
 import { Card } from '@/components/ui/card';
 import { Trophy, ShoppingBag } from 'lucide-react';
 
 export default function TopProducts({ tenantId }) {
   const { data: orders = [] } = useQuery({
     queryKey: ['topProductsOrders', tenantId],
-    queryFn: () => base44.entities.Order.filter({ tenant_id: tenantId }),
+    queryFn: () => db.entities.Order.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
   });
 

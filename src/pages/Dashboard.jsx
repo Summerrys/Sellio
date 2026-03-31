@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import db from '@/lib/db';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import TodayCard from '../components/dashboard/TodayCard';
@@ -18,7 +18,7 @@ export default function Dashboard() {
   // Fetch today's orders
   const { data: todayOrders = [] } = useQuery({
     queryKey: ['todayOrders', tenantId],
-    queryFn: () => base44.entities.Order.filter({ tenant_id: tenantId }),
+    queryFn: () => db.entities.Order.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
   });
 
@@ -37,7 +37,7 @@ export default function Dashboard() {
   // Fetch products for low stock count
   const { data: products = [] } = useQuery({
     queryKey: ['dashboardProducts', tenantId],
-    queryFn: () => base44.entities.Product.filter({ tenant_id: tenantId }),
+    queryFn: () => db.entities.Product.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
   });
 
@@ -48,7 +48,7 @@ export default function Dashboard() {
   // Fetch staff count
   const { data: staff = [] } = useQuery({
     queryKey: ['dashboardStaff', tenantId],
-    queryFn: () => base44.entities.TenantUser.filter({ tenant_id: tenantId, status: 'active' }),
+    queryFn: () => db.entities.TenantUser.filter({ tenant_id: tenantId, status: 'active' }),
     enabled: !!tenantId,
   });
 

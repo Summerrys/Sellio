@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import db from '@/lib/db';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PermissionGate from '../components/tenant/PermissionGate';
@@ -32,25 +32,25 @@ function CategoriesContent() {
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', tenantId],
-    queryFn: () => base44.entities.Category.filter({ tenant_id: tenantId }),
+    queryFn: () => db.entities.Category.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
   });
 
   const { data: products = [] } = useQuery({
     queryKey: ['products', tenantId],
-    queryFn: () => base44.entities.Product.filter({ tenant_id: tenantId }),
+    queryFn: () => db.entities.Product.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
   });
 
   const saveMutation = useMutation({
     mutationFn: (data) => editing
-      ? base44.entities.Category.update(editing.id, data)
-      : base44.entities.Category.create({ ...data, tenant_id: tenantId, slug: data.name.toLowerCase().replace(/\s+/g, '-') }),
+      ? db.entities.Category.update(editing.id, data)
+      : db.entities.Category.create({ ...data, tenant_id: tenantId, slug: data.name.toLowerCase().replace(/\s+/g, '-') }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['categories'] }); close(); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Category.delete(id),
+    mutationFn: (id) => db.entities.Category.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
   });
 

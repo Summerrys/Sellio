@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import db from '@/lib/db';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
@@ -32,15 +32,15 @@ export default function Orders() {
       const query = { tenant_id: tenantId };
       if (statusFilter === 'active') {
         // Get orders that are not completed or cancelled
-        const allOrders = await base44.entities.Order.filter(query, '-created_date', 100);
+        const allOrders = await db.entities.Order.filter(query, '-created_date', 100);
         return allOrders.filter(o => 
           !['completed', 'served', 'cancelled'].includes(o.status)
         );
       } else if (statusFilter === 'all') {
-        return base44.entities.Order.filter(query, '-created_date', 100);
+        return db.entities.Order.filter(query, '-created_date', 100);
       } else {
         query.status = statusFilter;
-        return base44.entities.Order.filter(query, '-created_date', 50);
+        return db.entities.Order.filter(query, '-created_date', 50);
       }
     },
     enabled: !!tenantId,
@@ -51,18 +51,17 @@ export default function Orders() {
   useEffect(() => {
     if (!tenantId) return;
 
-    const unsubscribe = base44.entities.Order.subscribe((event) => {
+    let unsubFn;
+    db.entities.Order.subscribe((event) => {
       if (event.data?.tenant_id === tenantId) {
         queryClient.invalidateQueries({ queryKey: ['orders', tenantId] });
-        
-        // Play sound for new orders
         if (event.type === 'create' && soundEnabled && audioRef.current) {
           audioRef.current.play().catch(e => console.log('Audio play failed:', e));
         }
       }
-    });
+    }).then(fn => { unsubFn = fn; });
 
-    return unsubscribe;
+    return () => { if (unsubFn) unsubFn(); };
   }, [tenantId, soundEnabled, queryClient]);
 
   // Check for new orders to play sound
@@ -76,7 +75,7 @@ export default function Orders() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }) => {
-      return base44.entities.Order.update(orderId, { status });
+      return db.entities.Order.update(orderId, { status });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders', tenantId] });
@@ -89,7 +88,7 @@ export default function Orders() {
 
   const cancelOrderMutation = useMutation({
     mutationFn: async (orderId) => {
-      return base44.entities.Order.update(orderId, { status: 'cancelled' });
+      return db.entities.Order.update(orderId, { status: 'cancelled' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders', tenantId] });

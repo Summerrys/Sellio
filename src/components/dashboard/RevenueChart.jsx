@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import db from '@/lib/db';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -12,7 +12,7 @@ export default function RevenueChart({ tenantId }) {
 
   const { data: orders = [] } = useQuery({
     queryKey: ['revenueOrders', tenantId],
-    queryFn: () => base44.entities.Order.filter({ 
+    queryFn: () => db.entities.Order.filter({ 
       tenant_id: tenantId,
       payment_status: 'paid'
     }),

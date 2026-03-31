@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import db from '@/lib/db';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import StatusBadge from '../ui-custom/StatusBadge';
@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 export default function RecentOrders({ tenantId }) {
   const { data: orders = [] } = useQuery({
     queryKey: ['recentOrders', tenantId],
-    queryFn: () => base44.entities.Order.filter({ tenant_id: tenantId }, '-created_date', 10),
+    queryFn: () => db.entities.Order.filter({ tenant_id: tenantId }, '-created_date', 10),
     enabled: !!tenantId,
     refetchInterval: 5000, // Live updates every 5s
   });
