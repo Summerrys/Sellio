@@ -81,9 +81,9 @@ export default function Auth() {
                 <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className="h-28 w-auto object-contain" />
               </div>
               <div className="relative inline-block">
-                <p className="text-2xl font-regular tracking-tight"><span className="bg-gradient-to-r from-orange-400 via-rose-300 to-pink-300 bg-clip-text text-transparent">Your business,</span></p>
-                <p className="text-2xl font-regular text-slate-700 tracking-tight mt-0.5"><span className="bg-gradient-to-r from-orange-400 via-rose-300 to-pink-300 bg-clip-text text-transparent">beautifully</span> <span className="bg-gradient-to-r from-orange-400 via-rose-300 to-pink-300 bg-clip-text text-transparent">online</span>.</p>
-                <div className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-orange-300 to-rose-200 rounded-full opacity-60" style={{width: '100px'}}></div>
+                <p className="text-2xl font-semibold text-slate-900 tracking-tight">Your business,</p>
+                <p className="text-2xl font-semibold text-slate-900 tracking-tight mt-1">beautifully <span className="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 bg-clip-text text-transparent">online</span>.</p>
+                <div className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-purple-600 to-pink-500 rounded-full" style={{width: '120px'}}></div>
               </div>
             </div>
 
