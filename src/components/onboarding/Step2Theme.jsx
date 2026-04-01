@@ -1,12 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, ArrowLeft, Check, Palette } from 'lucide-react';
 import { COLOR_SETS, generateThemeVariables } from '../theme/themeUtils';
 import { cn } from '@/lib/utils';
-
-// Set default theme to blue/purple gradient on first load
-const DEFAULT_THEME = { name: 'Indigo Sky', dark: '#4F46E5', light: '#E0E7FF' };
 
 // Popular color palettes
 const POPULAR_PALETTES = [
@@ -21,17 +18,7 @@ const POPULAR_PALETTES = [
 ];
 
 export default function Step2Theme({ formData, updateFormData, nextStep, prevStep }) {
-  const [selectedTheme, setSelectedTheme] = useState(formData.theme || DEFAULT_THEME.name);
-
-  // Apply default theme on mount
-  useEffect(() => {
-    if (!formData.theme) {
-      const defaultPalette = POPULAR_PALETTES.find(p => p.name === DEFAULT_THEME.name);
-      if (defaultPalette) {
-        handleThemeSelect(defaultPalette);
-      }
-    }
-  }, []);
+  const [selectedTheme, setSelectedTheme] = useState(formData.theme || 'Ocean Blue');
 
   const handleThemeSelect = (palette) => {
     setSelectedTheme(palette.name);
@@ -41,8 +28,6 @@ export default function Step2Theme({ formData, updateFormData, nextStep, prevSte
       root.style.setProperty(key, value);
     });
   };
-
-
 
   const handleContinue = () => {
     if (!selectedTheme) {
@@ -56,8 +41,8 @@ export default function Step2Theme({ formData, updateFormData, nextStep, prevSte
   return (
     <Card className="p-8 sm:p-10 bg-white/80 backdrop-blur border-0 shadow-xl">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 via-purple-600 to-pink-500 flex items-center justify-center mx-auto mb-4">
-          <span className="text-white font-bold text-lg">S</span>
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgb(var(--color-primary))] to-[rgb(var(--color-primary-light))] flex items-center justify-center mx-auto mb-4">
+          <Palette className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Choose Your Brand Colors</h2>
         <p className="text-slate-500">Pick a theme that represents your business</p>
