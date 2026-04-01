@@ -4,10 +4,9 @@ import { motion } from 'framer-motion';
 
 const steps = [
   { number: 1, label: 'Business\n& Theme' },
-  { number: 2, label: 'Admin\nAccount' },
-  { number: 3, label: 'Business\nSetup' },
-  { number: 4, label: 'Quick\nStart' },
-  { number: 5, label: 'Review\n& Go Live' },
+  { number: 2, label: 'Branch\nSetup' },
+  { number: 3, label: 'Quick\nStart' },
+  { number: 4, label: 'Launch' },
 ];
 
 export default function OnboardingProgress({ currentStep = 1, completedSteps = [] }) {
