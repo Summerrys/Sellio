@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import Step1Welcome from '../components/onboarding/Step1Welcome';
+import Step2Theme from '../components/onboarding/Step2Theme';
 import Step3Admin from '../components/onboarding/Step3Admin';
 import Step4Business from '../components/onboarding/Step4Business';
 import Step5QuickStart from '../components/onboarding/Step5QuickStart';
@@ -59,7 +60,7 @@ export default function Onboarding() {
   const nextStep = () => {
     if (currentStep < 5) {
       setCompletedSteps([...completedSteps, currentStep]);
-      setCurrentStep(currentStep + 2); // Skip old Step 2 since it's merged into Step 1
+      setCurrentStep(currentStep + 1);
     }
   };
 
@@ -74,7 +75,7 @@ export default function Onboarding() {
 
   const steps = [
     { component: Step1Welcome, title: 'Welcome' },
-    { component: Step3Admin, title: 'Admin Setup' },
+    { component: Step2Theme, title: 'Choose Theme' },
     { component: Step4Business, title: 'Business Setup' },
     { component: Step5QuickStart, title: 'Quick Start' },
     { component: Step6Confirmation, title: 'Launch' },
