@@ -10,11 +10,11 @@ export default function Splash() {
     // Fade in
     setTimeout(() => setVisible(true), 100);
 
-    // After 2.5s, fade out then navigate
+    // After 4s, fade out then navigate
     const timer = setTimeout(() => {
       setFadeOut(true);
       setTimeout(() => navigate('/Auth'), 600);
-    }, 2500);
+    }, 4000);
 
     return () => clearTimeout(timer);
   }, [navigate]);

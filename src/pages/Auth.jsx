@@ -77,7 +77,8 @@ export default function Auth() {
           <div className="bg-white rounded-2xl shadow-xl p-8">
             {/* Header */}
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-semibold text-slate-900 mb-1">Welcome!</h1>
+              <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className="h-20 w-auto object-contain mx-auto mb-3" />
+              <h1 className="text-xl font-semibold text-slate-900 mb-1">Welcome!</h1>
               <p className="text-sm text-slate-500">Let's get you started</p>
             </div>
 
