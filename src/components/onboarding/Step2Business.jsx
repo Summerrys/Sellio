@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowRight, ArrowLeft, MapPin, Clock } from 'lucide-react';
 import { generateThemeVariables } from '../theme/themeUtils';
+import TimePicker from './TimePicker';
 
 const schema = z.object({
   branchName: z.string().min(1, 'Branch name is required').max(100),
@@ -183,24 +184,22 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
                 </div>
                 {operatingHours[day].enabled && (
                   <div className="flex items-center gap-1 w-full sm:w-auto sm:flex-1">
-                    <input
-                      type="time"
+                    <TimePicker
                       value={operatingHours[day].start}
-                      onChange={(e) => setOperatingHours({
+                      onChange={(value) => setOperatingHours({
                         ...operatingHours,
-                        [day]: { ...operatingHours[day], start: e.target.value }
+                        [day]: { ...operatingHours[day], start: value }
                       })}
-                      className="flex-1 px-2 py-1 border border-slate-300 rounded text-xs min-w-0"
-                      />
-                      <span className="text-slate-400 text-xs flex-shrink-0">-</span>
-                      <input
-                      type="time"
+                      formData={formData}
+                    />
+                    <span className="text-slate-400 text-xs flex-shrink-0">-</span>
+                    <TimePicker
                       value={operatingHours[day].end}
-                      onChange={(e) => setOperatingHours({
+                      onChange={(value) => setOperatingHours({
                         ...operatingHours,
-                        [day]: { ...operatingHours[day], end: e.target.value }
+                        [day]: { ...operatingHours[day], end: value }
                       })}
-                      className="flex-1 px-2 py-1 border border-slate-300 rounded text-xs min-w-0"
+                      formData={formData}
                     />
                   </div>
                 )}
