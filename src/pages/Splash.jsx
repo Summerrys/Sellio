@@ -11,7 +11,7 @@ export default function Splash() {
     const t2 = setTimeout(() => {
       setLeaving(true);
       setTimeout(() => navigate('/Auth'), 600);
-    }, 3200);
+    }, 5000);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
