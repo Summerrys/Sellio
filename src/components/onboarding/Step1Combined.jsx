@@ -266,20 +266,23 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
 
         {/* Theme Selection - Grid Layout */}
         <div className="border-t pt-6">
-          <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-4">
-            <Palette className="w-4 h-4 text-purple-500" /> Choose Your Brand Colors
-          </Label>
+          <div className="mb-6">
+            <Label className="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-2">
+              <Palette className="w-5 h-5 text-purple-500" /> Choose Your Brand Colors
+            </Label>
+            <p className="text-xs text-slate-500">Select a premium palette that reflects your brand identity</p>
+          </div>
           
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {POPULAR_PALETTES.map((palette) => (
               <button
                 key={palette.name}
                 type="button"
                 onClick={() => handleThemeSelect(palette)}
                 className={cn(
-                  "relative rounded-lg overflow-hidden border-2 transition-all aspect-square",
+                  "relative rounded-xl overflow-hidden border-2 transition-all aspect-square shadow-sm hover:shadow-md",
                   selectedTheme === palette.name
-                    ? "border-slate-900 ring-2 ring-slate-900 ring-offset-2"
+                    ? "border-slate-900 ring-2 ring-slate-900 ring-offset-2 shadow-lg"
                     : "border-slate-200 hover:border-slate-300"
                 )}
                 title={palette.name}
@@ -290,13 +293,13 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                 </div>
                 {selectedTheme === palette.name && (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="bg-white rounded-full p-2 shadow-lg">
+                    <div className="bg-white rounded-full p-2 shadow-xl">
                       <Check className="w-5 h-5 text-slate-900" />
                     </div>
                   </div>
                 )}
-                <div className="absolute bottom-2 left-2 right-2">
-                  <span className="text-xs font-medium text-white bg-black/50 px-2 py-1 rounded-full backdrop-blur-sm block text-center truncate">
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+                  <span className="text-xs font-semibold text-white block text-center">
                     {palette.name}
                   </span>
                 </div>
