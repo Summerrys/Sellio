@@ -9,14 +9,12 @@ import Step4Business from '../components/onboarding/Step4Business';
 import Step5QuickStart from '../components/onboarding/Step5QuickStart';
 import Step6Confirmation from '../components/onboarding/Step6Confirmation';
 import OnboardingProgress from '../components/onboarding/OnboardingProgress';
-import GamificationBadge from '../components/onboarding/GamificationBadge';
 
 const STORAGE_KEY = 'apptelier_onboarding_state';
 
 export default function Onboarding() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
-  const [showBadge, setShowBadge] = useState(null);
   const [formData, setFormData] = useState({
     // Step 1
     businessName: '',
@@ -59,14 +57,7 @@ export default function Onboarding() {
   };
 
   const nextStep = () => {
-    if (currentStep < 5) {
-      const newStep = currentStep + 1;
-      setCurrentStep(newStep);
-      // Show badge at specific milestones
-      if (newStep === 1) setShowBadge('first_step');
-      if (newStep === 3) setShowBadge('halfway');
-      setTimeout(() => setShowBadge(null), 2000);
-    }
+    if (currentStep < 5) setCurrentStep(currentStep + 1);
   };
 
   const prevStep = () => {
@@ -90,8 +81,6 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
-      <GamificationBadge badge={showBadge} show={!!showBadge} />
-      
       {/* Header with Compact Progress */}
       <div className="bg-white border-b border-slate-100 px-4 py-4">
         <div className="max-w-4xl mx-auto">
