@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { getSupabase } from '@/lib/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Check, Rocket, Loader2 } from 'lucide-react';
@@ -9,26 +9,34 @@ export default function Step6Confirmation({ formData, prevStep, onComplete }) {
   const [isLaunching, setIsLaunching] = useState(false);
 
   const handleLaunch = async () => {
-    if (isLaunching) return; // Prevent double submission
+    if (isLaunching) return;
     setIsLaunching(true);
     
     try {
-      // Create tenant
+      const supabase = await getSupabase();
       const slug = formData.businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      const tenant = await base44.entities.Tenant.create({
-        name: formData.businessName,
-        slug,
-        industry: formData.businessType,
-        owner_email: formData.adminEmail,
-        country: formData.country,
-        currency: formData.currency,
-        status: 'trial',
-        plan: 'free',
-      });
+      
+      // Create tenant
+      const { data: tenant, error: tenantError } = await supabase
+        .from('tenants')
+        .insert({
+          name: formData.businessName,
+          slug,
+          industry: formData.businessType,
+          owner_email: formData.adminEmail,
+          country: formData.country,
+          currency: formData.currency,
+          status: 'trial',
+          plan: 'free',
+        })
+        .select()
+        .single();
+      
+      if (tenantError) throw tenantError;
 
       // Create theme config
       if (formData.customPrimary && formData.customSecondary) {
-        await base44.entities.ThemeConfig.create({
+        await supabase.from('theme_configs').insert({
           tenant_id: tenant.id,
           color_set_name: formData.theme || 'Custom',
           primary_color: formData.customPrimary,
@@ -38,7 +46,7 @@ export default function Step6Confirmation({ formData, prevStep, onComplete }) {
 
       // Create asset if logo was uploaded
       if (formData.logoUrl) {
-        await base44.entities.Asset.create({
+        await supabase.from('assets').insert({
           tenant_id: tenant.id,
           name: 'business_logo',
           type: 'logo',
@@ -48,16 +56,22 @@ export default function Step6Confirmation({ formData, prevStep, onComplete }) {
       }
 
       // Create admin role
-      const adminRole = await base44.entities.Role.create({
-        tenant_id: tenant.id,
-        name: 'Admin',
-        slug: 'admin',
-        permissions: ['*'], // All permissions
-        is_system: true,
-      });
+      const { data: adminRole, error: roleError } = await supabase
+        .from('roles')
+        .insert({
+          tenant_id: tenant.id,
+          name: 'Admin',
+          slug: 'admin',
+          permissions: ['*'],
+          is_system: true,
+        })
+        .select()
+        .single();
+      
+      if (roleError) throw roleError;
 
       // Create tenant user (admin)
-      await base44.entities.TenantUser.create({
+      await supabase.from('tenant_users').insert({
         tenant_id: tenant.id,
         user_email: formData.adminEmail,
         role_id: adminRole.id,
@@ -75,7 +89,7 @@ export default function Step6Confirmation({ formData, prevStep, onComplete }) {
           status: 'available',
           sort_order: i,
         }));
-        await Promise.all(tables.map(t => base44.entities.TableEntity.create(t)));
+        await supabase.from('tables').insert(tables);
       }
 
       // Create products
@@ -86,17 +100,23 @@ export default function Step6Confirmation({ formData, prevStep, onComplete }) {
           let categoryId = categoryMap[product.category];
           
           if (!categoryId) {
-            const category = await base44.entities.Category.create({
-              tenant_id: tenant.id,
-              name: product.category,
-              slug: product.category.toLowerCase().replace(/\s+/g, '-'),
-              is_active: true,
-            });
+            const { data: category, error: catError } = await supabase
+              .from('categories')
+              .insert({
+                tenant_id: tenant.id,
+                name: product.category,
+                slug: product.category.toLowerCase().replace(/\s+/g, '-'),
+                is_active: true,
+              })
+              .select()
+              .single();
+            
+            if (catError) throw catError;
             categoryId = category.id;
             categoryMap[product.category] = categoryId;
           }
 
-          await base44.entities.Product.create({
+          await supabase.from('products').insert({
             tenant_id: tenant.id,
             category_id: categoryId,
             name: product.name,
