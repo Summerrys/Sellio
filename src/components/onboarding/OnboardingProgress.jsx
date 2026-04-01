@@ -3,11 +3,11 @@ import { Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const steps = [
-  { number: 1, label: 'Business\nSetup', shortLabel: 'Biz' },
-  { number: 2, label: 'Branch\nSetup', shortLabel: 'Br' },
-  { number: 3, label: 'Menu/\nServices', shortLabel: 'M' },
-  { number: 4, label: 'Tables\n& QR', shortLabel: 'T' },
-  { number: 5, label: 'Review\n& Go Live', shortLabel: 'R' },
+  { number: 1, label: 'Business\nSetup' },
+  { number: 2, label: 'Branch\nSetup' },
+  { number: 3, label: 'Menu/\nServices' },
+  { number: 4, label: 'Tables\n& QR' },
+  { number: 5, label: 'Review\n& Go Live' },
 ];
 
 export default function OnboardingProgress({ currentStep = 1 }) {
@@ -44,11 +44,8 @@ export default function OnboardingProgress({ currentStep = 1 }) {
             >
               {step.number}
             </motion.div>
-            <p className="text-xs text-center font-medium text-slate-600 leading-tight max-w-12 hidden sm:block">
+            <p className="text-[10px] sm:text-xs text-center font-medium text-slate-600 leading-tight max-w-14 whitespace-pre-line">
               {step.label}
-            </p>
-            <p className="text-xs text-center font-medium text-slate-600 leading-tight sm:hidden">
-              {step.shortLabel}
             </p>
           </div>
         ))}
