@@ -15,7 +15,7 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
   const percentage = Math.round((currentStep / totalSteps) * 100);
 
   return (
-    <div className="w-full bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-100">
+    <div className="w-full">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
