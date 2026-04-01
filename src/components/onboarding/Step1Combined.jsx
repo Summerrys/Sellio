@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, UtensilsCrossed, ShoppingBag, Wrench, X, Edit3, Check, Palette } from 'lucide-react';
+import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, UtensilsCrossed, ShoppingBag, Wrench, X, Edit3, Check, Palette, Pipette } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { getSupabase } from '@/lib/supabaseClient';
 import { generateThemeVariables } from '../theme/themeUtils';
@@ -45,6 +45,9 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
   const fileInputRef = React.useRef(null);
   const [selectedTheme, setSelectedTheme] = useState(formData.theme || 'Ocean Blue');
   const [gradientEnabled, setGradientEnabled] = useState(formData.gradientEnabled || false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [customPrimary, setCustomPrimary] = useState(formData.customPrimary || '#0369A1');
+  const [customSecondary, setCustomSecondary] = useState(formData.customSecondary || '#E0F2FE');
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
     resolver: zodResolver(schema),
@@ -126,11 +129,13 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
       }
     }
 
-    updateFormData({ ...data, logoUrl, theme: selectedTheme, gradientEnabled });
+    updateFormData({ ...data, logoUrl, theme: selectedTheme, gradientEnabled, customPrimary: selectedTheme === 'Custom' ? customPrimary : null, customSecondary: selectedTheme === 'Custom' ? customSecondary : null });
     nextStep();
   };
 
-  const selectedPalette = selectedTheme ? POPULAR_PALETTES.find(p => p.name === selectedTheme) : null;
+  const selectedPalette = selectedTheme === 'Custom' 
+    ? { dark: customPrimary, light: customSecondary }
+    : (selectedTheme ? POPULAR_PALETTES.find(p => p.name === selectedTheme) : null);
   
   const getCardBackground = () => {
     if (!selectedPalette) return '#FFFFFF';
@@ -271,6 +276,19 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
           </Label>
           
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+            {/* Color Picker Button */}
+            <button
+              type="button"
+              onClick={() => setShowColorPicker(true)}
+              className="relative rounded-lg overflow-hidden border-2 border-dashed border-slate-300 hover:border-slate-400 transition-all aspect-square flex items-center justify-center group"
+              title="Custom Colors"
+            >
+              <div className="flex flex-col items-center gap-2">
+                <Pipette className="w-6 h-6 text-slate-400 group-hover:text-slate-600" />
+                <span className="text-xs text-slate-400 group-hover:text-slate-600 font-medium">Custom</span>
+              </div>
+            </button>
+
             {POPULAR_PALETTES.map((palette) => (
               <button
                 key={palette.name}
@@ -303,6 +321,69 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
               </button>
             ))}
           </div>
+
+          {/* Color Picker Modal */}
+          {showColorPicker && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
+                <h3 className="text-lg font-bold text-slate-900 mb-4">Choose Custom Colors</h3>
+                
+                <div className="space-y-4 mb-6">
+                  <div>
+                    <Label className="text-sm font-medium text-slate-700 mb-2 block">Primary Color</Label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={customPrimary}
+                        onChange={(e) => setCustomPrimary(e.target.value)}
+                        className="w-16 h-10 rounded cursor-pointer"
+                      />
+                      <span className="text-sm text-slate-600 font-mono">{customPrimary}</span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm font-medium text-slate-700 mb-2 block">Secondary Color</Label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={customSecondary}
+                        onChange={(e) => setCustomSecondary(e.target.value)}
+                        className="w-16 h-10 rounded cursor-pointer"
+                      />
+                      <span className="text-sm text-slate-600 font-mono">{customSecondary}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowColorPicker(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setSelectedTheme('Custom');
+                      const variables = generateThemeVariables(customPrimary, customSecondary);
+                      const root = document.documentElement;
+                      Object.entries(variables).forEach(([key, value]) => {
+                        root.style.setProperty(key, value);
+                      });
+                      setShowColorPicker(false);
+                    }}
+                    className="flex-1 bg-slate-900 hover:bg-slate-800 text-white"
+                  >
+                    Apply
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <p className="text-xs text-slate-500 mt-4">
             ✨ Your theme updates live as you select colors
