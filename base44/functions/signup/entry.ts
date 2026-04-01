@@ -37,6 +37,7 @@ Deno.serve(async (req) => {
         password_hash,
         role: 'admin',
         is_active: true,
+        onboarding_completed: false,
       })
       .select()
       .single();
@@ -51,6 +52,7 @@ Deno.serve(async (req) => {
         full_name: newUser.full_name,
         phone: newUser.phone,
         role: newUser.role,
+        onboarding_completed: newUser.onboarding_completed,
       }
     });
   } catch (error) {
