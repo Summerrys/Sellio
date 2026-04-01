@@ -74,7 +74,7 @@ export default function Auth() {
         onClick={() => setShowCountryDropdown(false)}
       >
         <div className="w-full max-w-sm">
-          <div className="rounded-2xl shadow-xl p-8" style={{ background: '#fffaf7' }}>
+          <div className="bg-white rounded-2xl shadow-xl p-8">
             {/* Header */}
             <div className="text-center mb-6">
               <div className="flex items-center justify-center mb-3">
@@ -85,7 +85,7 @@ export default function Auth() {
             </div>
 
             {/* Tab Toggle */}
-            <div className="flex bg-slate-100 rounded-xl p-1 mb-6">
+            <div className="flex rounded-xl p-1 mb-6" style={{ background: '#fde8d8' }}>
               <button
                 type="button"
                 onClick={() => setIsLogin(true)}
