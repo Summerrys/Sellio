@@ -4,8 +4,8 @@ import { toast, Toaster } from 'sonner';
 import { createPageUrl } from '../utils';
 
 const COUNTRY_CODES = [
-  { code: '+65', flag: '🇸🇬', name: 'SG' },
-  { code: '+60', flag: '🇲🇾', name: 'MY' },
+  { code: '+65', flag: '🇸🇬', name: 'SG', placeholder: '91234567' },
+  { code: '+60', flag: '🇲🇾', name: 'MY', placeholder: '112345678' },
 ];
 
 export default function Auth() {
@@ -175,12 +175,12 @@ export default function Auth() {
                   <div className="relative flex-1">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
-                      type="tel"
-                      placeholder="91234567"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      required
-                      className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400"
+                     type="tel"
+                     placeholder={selectedCountry.placeholder}
+                     value={formData.phone}
+                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                     required
+                     className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400"
                     />
                   </div>
                 </div>
