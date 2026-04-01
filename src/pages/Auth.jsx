@@ -4,8 +4,8 @@ import { toast, Toaster } from 'sonner';
 import { createPageUrl } from '../utils';
 
 const COUNTRY_CODES = [
-  { code: '+65', flag: '🇸🇬', name: 'SG', placeholder: '91234567' },
-  { code: '+60', flag: '🇲🇾', name: 'MY', placeholder: '112345678' },
+  { code: '+65', flag: '🇸🇬', name: 'SG', placeholder: '91234567', validate: (p) => /^[89]\d{7}$/.test(p), hint: '8 digits, starting with 8 or 9' },
+  { code: '+60', flag: '🇲🇾', name: 'MY', placeholder: '112345678', validate: (p) => /^1\d{8,9}$/.test(p), hint: '9–10 digits, starting with 1' },
 ];
 
 export default function Auth() {
@@ -22,8 +22,12 @@ export default function Auth() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const cleanPhone = formData.phone.replace(/^0+/, '');
+    if (!selectedCountry.validate(cleanPhone)) {
+      toast.error(`Invalid phone number for ${selectedCountry.name}. Expected: ${selectedCountry.hint}`);
+      return;
+    }
     setLoading(true);
-
     try {
       const endpoint = isLogin ? 'login' : 'signup';
       const fullPhone = selectedCountry.code + formData.phone.replace(/^0+/, '');
