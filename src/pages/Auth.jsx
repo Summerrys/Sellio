@@ -6,14 +6,6 @@ import { createPageUrl } from '../utils';
 const COUNTRY_CODES = [
   { code: '+65', flag: '🇸🇬', name: 'SG' },
   { code: '+60', flag: '🇲🇾', name: 'MY' },
-  { code: '+62', flag: '🇮🇩', name: 'ID' },
-  { code: '+66', flag: '🇹🇭', name: 'TH' },
-  { code: '+63', flag: '🇵🇭', name: 'PH' },
-  { code: '+84', flag: '🇻🇳', name: 'VN' },
-  { code: '+1',  flag: '🇺🇸', name: 'US' },
-  { code: '+44', flag: '🇬🇧', name: 'GB' },
-  { code: '+61', flag: '🇦🇺', name: 'AU' },
-  { code: '+91', flag: '🇮🇳', name: 'IN' },
 ];
 
 export default function Auth() {
