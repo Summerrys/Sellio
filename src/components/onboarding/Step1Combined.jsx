@@ -384,10 +384,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
             </div>
           )}
 
-          <p className="text-xs text-slate-500 mt-4">
-            ✨ Your theme updates live as you select colors
-          </p>
-          
+
 
         </div>
 
