@@ -37,7 +37,7 @@ export default function TimePicker({ value = '00:00', onChange, formData }) {
 
       {isOpen && (
         <div
-          className="absolute bottom-full left-0 right-0 mb-2 p-3 border rounded-lg shadow-lg z-50 bg-white"
+          className="absolute top-full left-0 right-0 mt-2 p-3 border rounded-lg shadow-lg z-50 bg-white"
           style={{ borderColor: primaryColor, backgroundColor: 'white' }}
         >
           <div className="flex gap-3 items-center justify-center">
