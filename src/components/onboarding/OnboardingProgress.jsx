@@ -2,21 +2,13 @@ import React from 'react';
 import { CheckCircle2, Rocket } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export default function OnboardingProgress({ currentStep = 1, totalSteps = 4, completedSteps = [] }) {
-  const stepLabels = [
-    'Business\n& Theme',
-    'Branch\nSetup',
-    'Menu\nSetup',
-    'Tables\n& QR',
-    'Launch',
-  ];
-  
-  const steps = Array.from({ length: totalSteps }, (_, i) => ({
+export default function OnboardingProgress({ currentStep = 1, completedSteps = [], steps = [] }) {
+  const displaySteps = steps.length > 0 ? steps.map((s, i) => ({
     number: i + 1,
-    label: stepLabels[i] || `Step ${i + 1}`,
-  }));
+    label: s.title.replace(/ /g, '\n'),
+  })) : [];
   
-  const percentage = Math.round((currentStep / totalSteps) * 100);
+  const percentage = displaySteps.length > 0 ? Math.round((currentStep / displaySteps.length) * 100) : 0;
 
   return (
     <div className="w-full">
@@ -27,13 +19,13 @@ export default function OnboardingProgress({ currentStep = 1, totalSteps = 4, co
           <h3 className="text-sm sm:text-base font-bold text-slate-900">Your Progress</h3>
         </div>
         <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-semibold">
-                  {Math.min(completedSteps.length, totalSteps)} / {totalSteps} Complete
-                </div>
+          {Math.min(completedSteps.length, displaySteps.length)} / {displaySteps.length} Complete
+        </div>
       </div>
 
       {/* Step Indicators */}
       <div className="flex justify-between mb-4 gap-1">
-        {steps.map((step, index) => (
+        {displaySteps.map((step, index) => (
           <div key={step.number} className="flex items-center flex-1">
             <motion.div
               initial={{ scale: 0 }}
@@ -64,7 +56,7 @@ export default function OnboardingProgress({ currentStep = 1, totalSteps = 4, co
                 {step.label}
               </span>
             </motion.div>
-            {index < steps.length - 1 && (
+            {index < displaySteps.length - 1 && (
               <div className={`flex-1 h-1 mx-0.5 sm:mx-2 rounded transition-all ${
                 completedSteps.includes(step.number)
                   ? 'bg-gradient-to-r from-purple-500 to-pink-500'
