@@ -48,6 +48,24 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
   const [customPrimary, setCustomPrimary] = useState(formData.customPrimary || '#0369A1');
   const [customSecondary, setCustomSecondary] = useState(formData.customSecondary || '#E0F2FE');
 
+  // Apply theme on mount
+  React.useEffect(() => {
+    if (formData.customPrimary && formData.customSecondary) {
+      const variables = generateThemeVariables(formData.customPrimary, formData.customSecondary);
+      const root = document.documentElement;
+      Object.entries(variables).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
+    } else {
+      // Apply default theme
+      const variables = generateThemeVariables('#9333ea', '#ec4899');
+      const root = document.documentElement;
+      Object.entries(variables).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
+    }
+  }, [formData.customPrimary, formData.customSecondary]);
+
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -128,20 +146,34 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
       }
     }
 
-    const themeData = {
+    let themeData = {
       theme: selectedTheme,
       logoUrl,
     };
-    if (selectedTheme === 'Custom') {
-      themeData.customPrimary = customPrimary;
-      themeData.customSecondary = customSecondary;
-    } else {
-      const palette = POPULAR_PALETTES.find(p => p.name === selectedTheme);
-      if (palette) {
-        themeData.customPrimary = palette.dark;
-        themeData.customSecondary = palette.light;
+
+    if (selectedTheme) {
+      // Apply selected theme
+      if (selectedTheme === 'Custom') {
+        themeData.customPrimary = customPrimary;
+        themeData.customSecondary = customSecondary;
+      } else {
+        const palette = POPULAR_PALETTES.find(p => p.name === selectedTheme);
+        if (palette) {
+          themeData.customPrimary = palette.dark;
+          themeData.customSecondary = palette.light;
+        }
       }
+    } else {
+      // Use default purple-pink gradient
+      themeData.customPrimary = '#9333ea';
+      themeData.customSecondary = '#ec4899';
+      const variables = generateThemeVariables(themeData.customPrimary, themeData.customSecondary);
+      const root = document.documentElement;
+      Object.entries(variables).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
     }
+    
     updateFormData({ ...data, ...themeData });
     nextStep();
   };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,8 +6,27 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowRight, ArrowLeft, Package, Plus, X, Upload } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
+import { generateThemeVariables } from '../theme/themeUtils';
 
 export default function Step5QuickStart({ formData, updateFormData, nextStep, prevStep }) {
+  // Apply theme from Step 1
+  useEffect(() => {
+    if (formData.customPrimary && formData.customSecondary) {
+      const variables = generateThemeVariables(formData.customPrimary, formData.customSecondary);
+      const root = document.documentElement;
+      Object.entries(variables).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
+    } else {
+      // Apply default theme
+      const variables = generateThemeVariables('#9333ea', '#ec4899');
+      const root = document.documentElement;
+      Object.entries(variables).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
+    }
+  }, [formData.customPrimary, formData.customSecondary]);
+
   const [addProduct, setAddProduct] = useState(false);
   const [products, setProducts] = useState(formData.products || []);
   const [productImage, setProductImage] = useState(null);
@@ -106,7 +125,8 @@ export default function Step5QuickStart({ formData, updateFormData, nextStep, pr
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 onClick={() => setAddProduct(true)}
-                className="flex-1 h-11 bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-2"
+                style={{ backgroundColor: `rgb(var(--color-primary, 147 51 234))` }}
+              className="flex-1 h-11 hover:opacity-90 gap-2"
               >
                 <Plus className="w-4 h-4" /> Add First Product
               </Button>
@@ -273,7 +293,8 @@ export default function Step5QuickStart({ formData, updateFormData, nextStep, pr
             </Button>
             <Button
               onClick={handleContinue}
-              className="flex-1 h-11 bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-2"
+              style={{ backgroundColor: `rgb(var(--color-primary, 147 51 234))` }}
+              className="flex-1 h-11 hover:opacity-90 gap-2"
             >
               Continue <ArrowRight className="w-4 h-4" />
             </Button>

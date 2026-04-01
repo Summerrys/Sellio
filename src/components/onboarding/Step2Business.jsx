@@ -20,6 +20,24 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 
 
 export default function Step2Business({ formData, updateFormData, nextStep, prevStep }) {
+  // Apply theme from Step 1
+  useEffect(() => {
+    if (formData.customPrimary && formData.customSecondary) {
+      const variables = generateThemeVariables(formData.customPrimary, formData.customSecondary);
+      const root = document.documentElement;
+      Object.entries(variables).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
+    } else {
+      // Apply default theme
+      const variables = generateThemeVariables('#9333ea', '#ec4899');
+      const root = document.documentElement;
+      Object.entries(variables).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
+    }
+  }, [formData.customPrimary, formData.customSecondary]);
+
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -204,7 +222,8 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
           </Button>
           <Button
             type="submit"
-            className="flex-1 h-10 sm:h-11 bg-green-600 hover:bg-green-700 text-white gap-1 sm:gap-2 text-sm"
+            className="flex-1 h-10 sm:h-11 text-white gap-1 sm:gap-2 text-sm"
+            style={{ backgroundColor: `rgb(${formData.customPrimary ? `var(--color-primary)` : '147 51 234'})` }}
           >
             <span className="hidden sm:inline">Continue</span> <span className="sm:hidden">Next</span> <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>

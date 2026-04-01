@@ -1,9 +1,28 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, ArrowLeft, QrCode } from 'lucide-react';
+import { generateThemeVariables } from '../theme/themeUtils';
 
 export default function Step4TablesQR({ formData, updateFormData, nextStep, prevStep }) {
+  // Apply theme from Step 1
+  useEffect(() => {
+    if (formData.customPrimary && formData.customSecondary) {
+      const variables = generateThemeVariables(formData.customPrimary, formData.customSecondary);
+      const root = document.documentElement;
+      Object.entries(variables).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
+    } else {
+      // Apply default theme
+      const variables = generateThemeVariables('#9333ea', '#ec4899');
+      const root = document.documentElement;
+      Object.entries(variables).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
+    }
+  }, [formData.customPrimary, formData.customSecondary]);
+
   const handleSubmit = () => {
     nextStep();
   };
@@ -36,7 +55,8 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
         <Button
           type="button"
           onClick={handleSubmit}
-          className="flex-1 h-10 sm:h-11 bg-purple-600 hover:bg-purple-700 text-white gap-1 sm:gap-2 text-sm"
+          className="flex-1 h-10 sm:h-11 text-white gap-1 sm:gap-2 text-sm"
+          style={{ backgroundColor: `rgb(var(--color-primary, 147 51 234))` }}
         >
           <span className="hidden sm:inline">Continue</span> <span className="sm:hidden">Next</span> <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
         </Button>
