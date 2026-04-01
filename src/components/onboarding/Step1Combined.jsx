@@ -389,9 +389,8 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
         </div>
 
         {(() => {
-          const defaultPalette = POPULAR_PALETTES[0];
           const buttonStyle = {
-            backgroundColor: selectedPalette?.dark || defaultPalette.dark
+            backgroundColor: selectedPalette?.dark || '#0369A1'
           };
           return (
             <Button
