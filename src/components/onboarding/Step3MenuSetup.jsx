@@ -30,7 +30,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   return (
     <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg max-h-screen overflow-y-auto">
       <div className="text-center mb-6 sm:mb-8">
-        <div className="w-16 h-16 rounded-2xl bg-orange-500 flex items-center justify-center mx-auto mb-4">
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={formData.theme ? { backgroundColor: 'rgb(var(--color-primary))' } : { background: 'linear-gradient(135deg, #0369A1, #7E22CE)' }}>
           <Utensils className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1 sm:mb-2">Menu Setup</h2>
