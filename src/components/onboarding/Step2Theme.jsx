@@ -5,19 +5,28 @@ import { ArrowRight, ArrowLeft, Check, Palette } from 'lucide-react';
 import { COLOR_SETS, generateThemeVariables } from '../theme/themeUtils';
 import { cn } from '@/lib/utils';
 
-export default function Step2Theme({ formData, updateFormData, nextStep, prevStep }) {
-  const [selectedTheme, setSelectedTheme] = useState(formData.theme || 'Indigo');
+// Popular color palettes
+const POPULAR_PALETTES = [
+  { name: 'Ocean Blue', dark: '#0369A1', light: '#E0F2FE' },
+  { name: 'Forest Green', dark: '#15803D', light: '#DCFCE7' },
+  { name: 'Sunset Orange', dark: '#EA580C', light: '#FFEDD5' },
+  { name: 'Royal Purple', dark: '#7E22CE', light: '#F3E8FF' },
+  { name: 'Berry Red', dark: '#DC2626', light: '#FEE2E2' },
+  { name: 'Teal Breeze', dark: '#0891B2', light: '#CFFAFE' },
+  { name: 'Indigo Sky', dark: '#4F46E5', light: '#E0E7FF' },
+  { name: 'Rose Garden', dark: '#BE185D', light: '#FFE4E6' },
+];
 
-  const handleThemeSelect = (themeName) => {
-    setSelectedTheme(themeName);
-    const colorSet = COLOR_SETS.find(s => s.name === themeName);
-    if (colorSet) {
-      const variables = generateThemeVariables(colorSet.dark, colorSet.light);
-      const root = document.documentElement;
-      Object.entries(variables).forEach(([key, value]) => {
-        root.style.setProperty(key, value);
-      });
-    }
+export default function Step2Theme({ formData, updateFormData, nextStep, prevStep }) {
+  const [selectedTheme, setSelectedTheme] = useState(formData.theme || 'Ocean Blue');
+
+  const handleThemeSelect = (palette) => {
+    setSelectedTheme(palette.name);
+    const variables = generateThemeVariables(palette.dark, palette.light);
+    const root = document.documentElement;
+    Object.entries(variables).forEach(([key, value]) => {
+      root.style.setProperty(key, value);
+    });
   };
 
   const handleContinue = () => {
@@ -40,31 +49,31 @@ export default function Step2Theme({ formData, updateFormData, nextStep, prevSte
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {COLOR_SETS.slice(0, 8).map((colorSet) => (
+        {POPULAR_PALETTES.map((palette) => (
           <button
-            key={colorSet.name}
-            onClick={() => handleThemeSelect(colorSet.name)}
+            key={palette.name}
+            onClick={() => handleThemeSelect(palette)}
             className={cn(
               "relative rounded-xl overflow-hidden border-2 transition-all group",
-              selectedTheme === colorSet.name
-                ? "border-[rgb(var(--color-primary))] ring-2 ring-[rgb(var(--color-primary))] ring-offset-2"
+              selectedTheme === palette.name
+                ? "border-slate-900 ring-2 ring-slate-900 ring-offset-2"
                 : "border-slate-200 hover:border-slate-300"
             )}
           >
-            <div className="aspect-[4/3] flex flex-col">
-              <div className="flex-[2]" style={{ backgroundColor: colorSet.dark }} />
-              <div className="flex-1" style={{ backgroundColor: colorSet.light }} />
+            <div className="aspect-square flex flex-col">
+              <div className="flex-1" style={{ backgroundColor: palette.dark }} />
+              <div className="flex-1" style={{ backgroundColor: palette.light }} />
             </div>
-            {selectedTheme === colorSet.name && (
-              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+            {selectedTheme === palette.name && (
+              <div className="absolute inset-0 flex items-center justify-center">
                 <div className="bg-white rounded-full p-2 shadow-lg">
-                  <Check className="w-5 h-5 text-[rgb(var(--color-primary))]" />
+                  <Check className="w-5 h-5 text-slate-900" />
                 </div>
               </div>
             )}
             <div className="absolute bottom-2 left-2 right-2">
-              <span className="text-xs font-medium text-white bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm block text-center">
-                {colorSet.name}
+              <span className="text-xs font-medium text-white bg-black/50 px-2 py-1 rounded-full backdrop-blur-sm block text-center">
+                {palette.name}
               </span>
             </div>
           </button>

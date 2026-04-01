@@ -22,19 +22,14 @@ export default function Onboarding() {
     country: 'Singapore',
     logoUrl: '',
     // Step 2
-    theme: 'Indigo',
-    // Step 3
-    adminName: '',
-    adminEmail: '',
-    adminPhone: '',
-    adminPassword: '',
-    // Step 4
+    theme: 'Ocean Blue',
+    // Step 3 (formerly Step 4)
     currency: 'SGD',
     taxRate: 9,
     taxInclusive: false,
     businessHours: {},
     tableCount: 0,
-    // Step 5
+    // Step 4 (formerly Step 5)
     products: [],
   });
 
@@ -62,7 +57,7 @@ export default function Onboarding() {
   };
 
   const nextStep = () => {
-    if (currentStep < 6) setCurrentStep(currentStep + 1);
+    if (currentStep < 5) setCurrentStep(currentStep + 1);
   };
 
   const prevStep = () => {
@@ -77,7 +72,6 @@ export default function Onboarding() {
   const steps = [
     { component: Step1Welcome, title: 'Welcome' },
     { component: Step2Theme, title: 'Choose Theme' },
-    { component: Step3Admin, title: 'Admin Account' },
     { component: Step4Business, title: 'Business Setup' },
     { component: Step5QuickStart, title: 'Quick Start' },
     { component: Step6Confirmation, title: 'Launch' },

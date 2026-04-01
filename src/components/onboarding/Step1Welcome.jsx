@@ -87,69 +87,21 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
   };
 
   return (
-    <Card className="p-8 sm:p-10 bg-white/80 backdrop-blur border-0 shadow-xl">
+    <Card className="p-8 sm:p-10 bg-white border-0 shadow-lg">
       <div className="text-center mb-8">
-        <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className="h-12 object-contain mx-auto mb-4" />
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome to Sellio</h1>
-        <p className="text-slate-500">Let's customise your business in just a few minutes</p>
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mx-auto mb-4">
+          <Building2 className="w-8 h-8 text-white" />
+        </div>
+        <h2 className="text-3xl font-bold text-slate-900 mb-2">Let's set up your business</h2>
+        <p className="text-slate-600">Tell us about your company to get started</p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Logo Upload */}
         <div>
-          <Label className="text-sm font-medium text-slate-700">Business Name *</Label>
-          <Input
-            {...register('businessName')}
-            placeholder="e.g., Bella's Coffee House"
-            className="mt-1.5 h-11"
-          />
-          {errors.businessName && (
-            <p className="text-xs text-red-500 mt-1">{errors.businessName.message}</p>
-          )}
-        </div>
-
-        <div>
-          <Label className="text-sm font-medium text-slate-700">Business Type *</Label>
-          <Select
-            value={watch('businessType')}
-            onValueChange={(v) => setValue('businessType', v)}
-          >
-            <SelectTrigger className="mt-1.5 h-11">
-              <SelectValue placeholder="Select your business type" />
-            </SelectTrigger>
-            <SelectContent>
-              {businessTypes.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors.businessType && (
-            <p className="text-xs text-red-500 mt-1">{errors.businessType.message}</p>
-          )}
-        </div>
-
-        <div>
-          <Label className="text-sm font-medium text-slate-700">Country/Region *</Label>
-          <Select
-            value={watch('country')}
-            onValueChange={(v) => setValue('country', v)}
-          >
-            <SelectTrigger className="mt-1.5 h-11">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {countries.map((country) => (
-                <SelectItem key={country} value={country}>
-                  {country}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <Label className="text-sm font-medium text-slate-700">Business Logo (Optional)</Label>
+          <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-3">
+            <span>✨</span> Business Logo (optional)
+          </Label>
           <input
             ref={fileInputRef}
             type="file"
@@ -158,7 +110,7 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
             className="hidden"
           />
           {logoPreview ? (
-            <div className="mt-1.5 border-2 border-slate-200 rounded-xl p-4 flex items-center gap-4">
+            <div className="mt-2 border-2 border-slate-200 rounded-xl p-4 flex items-center gap-4">
               <img src={logoPreview} alt="Logo preview" className="w-16 h-16 object-cover rounded-lg" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-slate-700">Logo uploaded</p>
@@ -176,21 +128,77 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
           ) : (
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="mt-1.5 border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-slate-300 transition-colors cursor-pointer"
+              className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-slate-400 hover:bg-slate-50 transition-all cursor-pointer"
             >
-              <Upload className="w-6 h-6 text-slate-400 mx-auto mb-2" />
-              <p className="text-xs text-slate-500">Click to upload or drag & drop</p>
-              <p className="text-xs text-slate-400 mt-1">JPG, PNG, WEBP up to 5MB</p>
+              <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+              <p className="text-sm text-slate-600 font-medium">Upload your logo</p>
+              <p className="text-xs text-slate-500 mt-1">JPG, PNG, WEBP up to 5MB</p>
             </div>
           )}
           {logoError && (
-            <p className="text-xs text-red-500 mt-1">{logoError}</p>
+            <p className="text-xs text-red-500 mt-2">{logoError}</p>
           )}
+        </div>
+
+        {/* Two-column layout for name and type */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">🏢 Business Name</Label>
+            <Input
+              {...register('businessName')}
+              placeholder="Acme Restaurant"
+              className="mt-2 h-11"
+            />
+            {errors.businessName && (
+              <p className="text-xs text-red-500 mt-1">{errors.businessName.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">🎯 Industry Type</Label>
+            <Select
+              value={watch('businessType')}
+              onValueChange={(v) => setValue('businessType', v)}
+            >
+              <SelectTrigger className="mt-2 h-11">
+                <SelectValue placeholder="Select industry" />
+              </SelectTrigger>
+              <SelectContent>
+                {businessTypes.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.businessType && (
+              <p className="text-xs text-red-500 mt-1">{errors.businessType.message}</p>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">🌍 Country</Label>
+          <Select
+            value={watch('country')}
+            onValueChange={(v) => setValue('country', v)}
+          >
+            <SelectTrigger className="mt-2 h-11">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {countries.map((country) => (
+                <SelectItem key={country} value={country}>
+                  {country}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <Button
           type="submit"
-          className="w-full h-12 bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] text-base font-medium gap-2"
+          className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white text-base font-medium gap-2 mt-8"
         >
           Continue <ArrowRight className="w-4 h-4" />
         </Button>
