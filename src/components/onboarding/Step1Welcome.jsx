@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Upload, ArrowRight } from 'lucide-react';
+import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const schema = z.object({
@@ -100,7 +100,7 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
         {/* Logo Upload */}
         <div>
           <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-3">
-            <span>✨</span> Business Logo (optional)
+            <Sparkles className="w-4 h-4" /> Business Logo (optional)
           </Label>
           <input
             ref={fileInputRef}
@@ -143,7 +143,7 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
         {/* Two-column layout for name and type */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">🏢 Business Name</Label>
+            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Building2 className="w-4 h-4" /> Business Name</Label>
             <Input
               {...register('businessName')}
               placeholder="Acme Restaurant"
@@ -155,7 +155,7 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
           </div>
 
           <div>
-            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">🎯 Industry Type</Label>
+            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Briefcase className="w-4 h-4" /> Industry Type</Label>
             <Select
               value={watch('businessType')}
               onValueChange={(v) => setValue('businessType', v)}
@@ -178,7 +178,7 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
         </div>
 
         <div>
-          <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">🌍 Country</Label>
+          <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Globe className="w-4 h-4" /> Country</Label>
           <Select
             value={watch('country')}
             onValueChange={(v) => setValue('country', v)}
