@@ -270,7 +270,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
             <Palette className="w-4 h-4 text-purple-500" /> Choose Your Brand Colors
           </Label>
           
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {POPULAR_PALETTES.map((palette) => (
               <button
                 key={palette.name}
