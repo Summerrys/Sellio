@@ -136,8 +136,8 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
   };
 
   return (
-    <Card className="p-4 sm:p-8 md:p-10 bg-white border-0 shadow-lg">
-      <div className="text-center mb-6 sm:mb-8">
+    <Card className="p-3 sm:p-8 md:p-10 bg-white border-0 shadow-lg min-h-screen sm:min-h-auto flex flex-col sm:block">
+      <div className="text-center mb-4 sm:mb-8">
         <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-3 sm:mb-4">
           <Building2 className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
         </div>
@@ -186,11 +186,11 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
           ) : (
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-slate-400 hover:bg-slate-50 transition-all cursor-pointer"
+              className="border-2 border-dashed border-slate-300 rounded-xl p-4 sm:p-8 text-center hover:border-slate-400 hover:bg-slate-50 transition-all cursor-pointer"
             >
-              <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-              <p className="text-sm text-slate-600 font-medium">Upload your logo</p>
-              <p className="text-xs text-slate-500 mt-1">JPG, PNG, WEBP up to 5MB</p>
+              <Upload className="w-6 h-6 sm:w-8 sm:h-8 text-slate-400 mx-auto mb-1 sm:mb-2" />
+              <p className="text-xs sm:text-sm text-slate-600 font-medium">Upload your logo</p>
+              <p className="text-xs text-slate-500 mt-0.5 sm:mt-1">JPG, PNG, WEBP up to 5MB</p>
             </div>
           )}
           {logoError && (
@@ -198,8 +198,8 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
           )}
         </div>
 
-        {/* Two-column layout for name and type */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        {/* Two-column layout for name and type - single on mobile */}
+        <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-4">
           <div>
             <Label className="text-xs sm:text-sm font-medium text-slate-700 flex items-center gap-2"><Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500" /> Business Name</Label>
             <Input
@@ -318,7 +318,7 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
 
         <Button
           type="submit"
-          className="w-full h-10 sm:h-12 bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base font-medium gap-2 mt-6 sm:mt-8"
+          className="w-full h-10 sm:h-12 bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base font-medium gap-2 mt-6 sm:mt-8 mb-4 sm:mb-0"
         >
           Continue <ArrowRight className="w-4 h-4" />
         </Button>
