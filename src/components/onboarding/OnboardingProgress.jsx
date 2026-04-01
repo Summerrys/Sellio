@@ -2,15 +2,20 @@ import React from 'react';
 import { CheckCircle2, Rocket } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const steps = [
-  { number: 1, label: 'Business\n& Theme' },
-  { number: 2, label: 'Branch\nSetup' },
-  { number: 3, label: 'Quick\nStart' },
-  { number: 4, label: 'Launch' },
-];
-
-export default function OnboardingProgress({ currentStep = 1, completedSteps = [] }) {
-  const totalSteps = steps.length;
+export default function OnboardingProgress({ currentStep = 1, totalSteps = 4, completedSteps = [] }) {
+  const stepLabels = [
+    'Business\n& Theme',
+    'Branch\nSetup',
+    'Menu\nSetup',
+    'Tables\n& QR',
+    'Launch',
+  ];
+  
+  const steps = Array.from({ length: totalSteps }, (_, i) => ({
+    number: i + 1,
+    label: stepLabels[i] || `Step ${i + 1}`,
+  }));
+  
   const percentage = Math.round((currentStep / totalSteps) * 100);
 
   return (
