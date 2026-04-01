@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { Phone, Lock, User, Mail, ChevronDown } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { createPageUrl } from '../utils';
-
-const BACKEND_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1';
+import { base44 } from '@/api/base44Client';
 
 const COUNTRY_CODES = [
   { code: '+65', flag: '🇸🇬', name: 'SG', placeholder: '91234567', validate: (p) => /^[89]\d{7}$/.test(p), hint: '8 digits, starting with 8 or 9' },
@@ -31,33 +30,14 @@ export default function Auth() {
     }
     setLoading(true);
     try {
-      const endpoint = isLogin ? 'login' : 'signup';
       const fullPhone = selectedCountry.code + formData.phone.replace(/^0+/, '');
       
-      const body = isLogin
-        ? { phone: fullPhone, password: formData.password }
-        : { phone: fullPhone, password: formData.password, full_name: formData.full_name, email: formData.email };
+      const payload = isLogin
+        ? { action: 'login', phone: fullPhone, password: formData.password }
+        : { action: 'signup', phone: fullPhone, password: formData.password, full_name: formData.full_name, email: formData.email };
 
-      const functionUrl = `${BACKEND_URL}/${endpoint}`;
-      console.log('Calling endpoint:', functionUrl, 'with body:', body);
-      
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      console.log('Response status:', response.status, response.statusText);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Fetch error:', errorText);
-        toast.error(`Server error: ${response.status} ${response.statusText}`);
-        return;
-      }
-
-      const data = await response.json();
-      console.log('Response data:', data);
+      const response = await base44.functions.invoke('authProxy', payload);
+      const data = response.data;
 
       if (data.success) {
         localStorage.setItem('app_user', JSON.stringify(data.user));
@@ -69,7 +49,7 @@ export default function Auth() {
         toast.error(data.error || 'Something went wrong');
       }
     } catch (error) {
-      console.error('Fetch error:', error);
+      console.error('Auth error:', error);
       toast.error(error.message || 'An error occurred');
     } finally {
       setLoading(false);
