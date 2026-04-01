@@ -82,12 +82,9 @@ export default function Onboarding() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
       {/* Header with Compact Progress */}
-      <div className="bg-white border-b border-slate-100 px-4 py-3">
+      <div className="bg-white border-b border-slate-100 px-4 py-4">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-3 gap-3">
-            <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className="h-7 object-contain flex-shrink-0" />
-            <OnboardingProgress currentStep={currentStep} />
-          </div>
+          <OnboardingProgress currentStep={currentStep} />
         </div>
       </div>
 

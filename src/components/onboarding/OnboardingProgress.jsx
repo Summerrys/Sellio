@@ -44,6 +44,9 @@ export default function OnboardingProgress({ currentStep = 1 }) {
             >
               {step.number}
             </motion.div>
+            <p className="text-xs text-center font-medium text-slate-600 whitespace-pre-line leading-tight min-w-16">
+              {step.label}
+            </p>
           </div>
         ))}
       </div>
