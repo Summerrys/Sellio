@@ -11,6 +11,7 @@ import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, UtensilsCros
 import { base44 } from '@/api/base44Client';
 import { getSupabase } from '@/lib/supabaseClient';
 import { generateThemeVariables } from '../theme/themeUtils';
+import { DEFAULT_COLORS } from '@/lib/themeConstants';
 import { cn } from '@/lib/utils';
 
 const schema = z.object({
