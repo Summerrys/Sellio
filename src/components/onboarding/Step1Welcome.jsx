@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe } from 'lucide-react';
+import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, UtensilsCrossed, ShoppingBag, Wrench } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const schema = z.object({
@@ -17,10 +17,9 @@ const schema = z.object({
 });
 
 const businessTypes = [
-  { value: 'restaurant', label: '🍽️ Restaurant/Café' },
-  { value: 'retail', label: '🛍️ Retail' },
-  { value: 'salon', label: '💇 Service' },
-  { value: 'other', label: '📦 Other' },
+  { value: 'food', label: 'F&B/Cafe/Restaurant', Icon: UtensilsCrossed, color: 'text-orange-500' },
+  { value: 'retail', label: 'Retail', Icon: ShoppingBag, color: 'text-blue-500' },
+  { value: 'service', label: 'Service', Icon: Wrench, color: 'text-green-500' },
 ];
 
 const countries = ['Singapore', 'Malaysia'];
@@ -146,7 +145,7 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
             <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Building2 className="w-4 h-4 text-blue-500" /> Business Name</Label>
             <Input
               {...register('businessName')}
-              placeholder="Acme Restaurant"
+              placeholder="eg. Xin Fu Ji Local Delights"
               className="mt-2 h-11"
             />
             {errors.businessName && (
@@ -166,8 +165,11 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
               <SelectContent>
                 {businessTypes.map((type) => (
                   <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
+                       <div className="flex items-center gap-2">
+                         <type.Icon className={`w-4 h-4 ${type.color}`} />
+                         {type.label}
+                       </div>
+                      </SelectItem>
                 ))}
               </SelectContent>
             </Select>
