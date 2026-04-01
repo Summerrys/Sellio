@@ -23,24 +23,16 @@ export default function Step2Theme({ formData, updateFormData, nextStep, prevSte
   const [customPrimary] = useState(formData.customPrimary || null);
   const [customSecondary] = useState(formData.customSecondary || null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     // Apply saved theme on component mount
-    if (formData.theme) {
-      let themeToApply = null;
-      if (formData.theme === 'Custom' && formData.customPrimary && formData.customSecondary) {
-        themeToApply = { dark: formData.customPrimary, light: formData.customSecondary };
-      } else {
-        themeToApply = POPULAR_PALETTES.find(p => p.name === formData.theme);
-      }
-      if (themeToApply) {
-        const variables = generateThemeVariables(themeToApply.dark, themeToApply.light);
-        const root = document.documentElement;
-        Object.entries(variables).forEach(([key, value]) => {
-          root.style.setProperty(key, value);
-        });
-      }
+    if (formData.customPrimary && formData.customSecondary) {
+      const variables = generateThemeVariables(formData.customPrimary, formData.customSecondary);
+      const root = document.documentElement;
+      Object.entries(variables).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
     } else {
-      // Default to Ocean Blue
+      // Default to Brand Default
       const defaultPalette = POPULAR_PALETTES[0];
       const variables = generateThemeVariables(defaultPalette.dark, defaultPalette.light);
       const root = document.documentElement;
@@ -48,7 +40,7 @@ export default function Step2Theme({ formData, updateFormData, nextStep, prevSte
         root.style.setProperty(key, value);
       });
     }
-  }, [formData]);
+  }, [formData.customPrimary, formData.customSecondary]);
 
   const handleThemeSelect = (palette) => {
     setSelectedTheme(palette.name);
@@ -64,7 +56,18 @@ export default function Step2Theme({ formData, updateFormData, nextStep, prevSte
       alert('Please select a theme to continue');
       return;
     }
-    updateFormData({ theme: selectedTheme });
+    const themeData = { theme: selectedTheme };
+    if (selectedTheme === 'Custom') {
+      themeData.customPrimary = customPrimary;
+      themeData.customSecondary = customSecondary;
+    } else {
+      const palette = POPULAR_PALETTES.find(p => p.name === selectedTheme);
+      if (palette) {
+        themeData.customPrimary = palette.dark;
+        themeData.customSecondary = palette.light;
+      }
+    }
+    updateFormData(themeData);
     nextStep();
   };
 

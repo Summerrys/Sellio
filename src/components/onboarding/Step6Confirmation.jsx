@@ -27,16 +27,23 @@ export default function Step6Confirmation({ formData, prevStep, onComplete }) {
       });
 
       // Create theme config
-      const colorSet = await import('../theme/themeUtils').then(m => 
-        m.COLOR_SETS.find(s => s.name === formData.theme)
-      );
-      
-      if (colorSet) {
+      if (formData.customPrimary && formData.customSecondary) {
         await base44.entities.ThemeConfig.create({
           tenant_id: tenant.id,
-          color_set_name: formData.theme,
-          primary_color: colorSet.dark,
-          accent_color: colorSet.light,
+          color_set_name: formData.theme || 'Custom',
+          primary_color: formData.customPrimary,
+          accent_color: formData.customSecondary,
+        });
+      }
+
+      // Create asset if logo was uploaded
+      if (formData.logoUrl) {
+        await base44.entities.Asset.create({
+          tenant_id: tenant.id,
+          name: 'business_logo',
+          type: 'logo',
+          url: formData.logoUrl,
+          is_active: true,
         });
       }
 

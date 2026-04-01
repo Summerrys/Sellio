@@ -128,7 +128,21 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
       }
     }
 
-    updateFormData({ ...data, logoUrl, theme: selectedTheme, customPrimary: selectedTheme === 'Custom' ? customPrimary : null, customSecondary: selectedTheme === 'Custom' ? customSecondary : null });
+    const themeData = {
+      theme: selectedTheme,
+      logoUrl,
+    };
+    if (selectedTheme === 'Custom') {
+      themeData.customPrimary = customPrimary;
+      themeData.customSecondary = customSecondary;
+    } else {
+      const palette = POPULAR_PALETTES.find(p => p.name === selectedTheme);
+      if (palette) {
+        themeData.customPrimary = palette.dark;
+        themeData.customSecondary = palette.light;
+      }
+    }
+    updateFormData({ ...data, ...themeData });
     nextStep();
   };
 
