@@ -70,7 +70,7 @@ export default function Auth() {
       <Toaster position="top-center" richColors />
       <div
         className="min-h-screen flex items-center justify-center p-4"
-        style={{ background: 'linear-gradient(135deg, #f0e6ff 0%, #fce4ec 50%, #e8eaf6 100%)' }}
+        style={{ background: 'radial-gradient(ellipse at top left, #fde8d8 0%, #fef3ee 30%, #ffffff 60%, #fef0eb 100%)' }}
         onClick={() => setShowCountryDropdown(false)}
       >
         <div className="w-full max-w-sm">
