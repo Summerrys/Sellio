@@ -126,7 +126,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
         </div>
 
         {/* Operating Hours */}
-        <div className="rounded-lg sm:rounded-xl p-3 sm:p-5" style={formData.theme ? { backgroundColor: 'rgba(var(--color-primary-rgb), 0.05)', borderColor: 'rgb(var(--color-primary))', borderWidth: '1px' } : { backgroundColor: '#eff6ff', borderColor: '#bfdbfe', borderWidth: '1px' }}>
+        <div className="rounded-lg sm:rounded-xl p-3 sm:p-5" style={formData.theme ? { backgroundColor: 'rgba(var(--color-primary-rgb), 0.05)', borderColor: 'rgb(var(--color-primary))', borderWidth: '1px' } : { backgroundColor: 'rgba(147, 51, 234, 0.05)', borderColor: '#c084fc', borderWidth: '1px' }}>
           <h3 className="text-xs sm:text-sm font-semibold text-slate-900 flex items-center gap-2 mb-4" style={formData.theme ? { color: 'rgb(var(--color-primary))' } : {}}>
             <Clock className="w-4 h-4" style={formData.theme ? { color: 'rgb(var(--color-primary))' } : { color: '#2563eb' }} />
             Operating Hours
@@ -177,6 +177,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
                       [day]: { ...operatingHours[day], enabled: e.target.checked }
                     })}
                     className="w-4 h-4 rounded cursor-pointer flex-shrink-0"
+                    style={formData.theme ? { accentColor: 'rgb(var(--color-primary))' } : { accentColor: '#9333ea' }}
                   />
                   <span className="text-xs sm:text-sm font-medium text-slate-700 flex-shrink-0 w-14">{day}</span>
                 </div>
