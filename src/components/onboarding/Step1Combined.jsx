@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, UtensilsCrossed, ShoppingBag, Wrench, X, Edit3, ChevronLeft, ChevronRight, Check, Palette } from 'lucide-react';
+import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, UtensilsCrossed, ShoppingBag, Wrench, X, Edit3, Check, Palette } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { getSupabase } from '@/lib/supabaseClient';
 import { generateThemeVariables } from '../theme/themeUtils';
@@ -44,8 +44,6 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
   const [logoError, setLogoError] = React.useState('');
   const fileInputRef = React.useRef(null);
   const [selectedTheme, setSelectedTheme] = useState(formData.theme || 'Ocean Blue');
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const carouselRef = useRef(null);
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
     resolver: zodResolver(schema),
@@ -91,14 +89,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
     });
   };
 
-  const scrollCarousel = (direction) => {
-    const cardWidth = 120; // width + gap
-    if (direction === 'left') {
-      setCarouselIndex(Math.max(0, carouselIndex - 1));
-    } else {
-      setCarouselIndex(Math.min(POPULAR_PALETTES.length - 3, carouselIndex + 1));
-    }
-  };
+
 
   const onSubmit = async (data) => {
     let logoUrl = formData.logoUrl;
@@ -253,66 +244,47 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
           </Select>
         </div>
 
-        {/* Theme Selection - Carousel Style */}
+        {/* Theme Selection - Grid Layout */}
         <div className="border-t pt-6">
           <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-4">
             <Palette className="w-4 h-4 text-purple-500" /> Choose Your Brand Colors
           </Label>
           
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => scrollCarousel('left')}
-              disabled={carouselIndex === 0}
-              className="h-10 w-10 flex-shrink-0"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-
-            <div className="flex gap-3 flex-1 overflow-hidden">
-              {visiblePalettes.map((palette) => (
-                <button
-                  key={palette.name}
-                  type="button"
-                  onClick={() => handleThemeSelect(palette)}
-                  className={cn(
-                    "relative rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 w-[100px] h-[100px] sm:w-[110px] sm:h-[110px]",
-                    selectedTheme === palette.name
-                      ? "border-slate-900 ring-2 ring-slate-900 ring-offset-2"
-                      : "border-slate-200 hover:border-slate-300"
-                  )}
-                  title={palette.name}
-                >
-                  <div className="aspect-square flex flex-col h-full">
-                    <div className="flex-1" style={{ backgroundColor: palette.dark }} />
-                    <div className="flex-1" style={{ backgroundColor: palette.light }} />
-                  </div>
-                  {selectedTheme === palette.name && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="bg-white rounded-full p-1.5 shadow-lg">
-                        <Check className="w-4 h-4 text-slate-900" />
-                      </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {POPULAR_PALETTES.map((palette) => (
+              <button
+                key={palette.name}
+                type="button"
+                onClick={() => handleThemeSelect(palette)}
+                className={cn(
+                  "relative rounded-lg overflow-hidden border-2 transition-all aspect-square",
+                  selectedTheme === palette.name
+                    ? "border-slate-900 ring-2 ring-slate-900 ring-offset-2"
+                    : "border-slate-200 hover:border-slate-300"
+                )}
+                title={palette.name}
+              >
+                <div className="w-full h-full flex flex-col">
+                  <div className="flex-1" style={{ backgroundColor: palette.dark }} />
+                  <div className="flex-1" style={{ backgroundColor: palette.light }} />
+                </div>
+                {selectedTheme === palette.name && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="bg-white rounded-full p-2 shadow-lg">
+                      <Check className="w-5 h-5 text-slate-900" />
                     </div>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => scrollCarousel('right')}
-              disabled={carouselIndex >= POPULAR_PALETTES.length - 3}
-              className="h-10 w-10 flex-shrink-0"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+                  </div>
+                )}
+                <div className="absolute bottom-2 left-2 right-2">
+                  <span className="text-xs font-medium text-white bg-black/50 px-2 py-1 rounded-full backdrop-blur-sm block text-center truncate">
+                    {palette.name}
+                  </span>
+                </div>
+              </button>
+            ))}
           </div>
 
-          <p className="text-xs text-slate-500 mt-3">
+          <p className="text-xs text-slate-500 mt-4">
             ✨ Your theme updates live as you select colors
           </p>
         </div>
