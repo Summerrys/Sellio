@@ -3,6 +3,8 @@ import { Phone, Lock, User, Mail, ChevronDown } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { createPageUrl } from '../utils';
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+
 const COUNTRY_CODES = [
   { code: '+65', flag: '🇸🇬', name: 'SG', placeholder: '91234567', validate: (p) => /^[89]\d{7}$/.test(p), hint: '8 digits, starting with 8 or 9' },
   { code: '+60', flag: '🇲🇾', name: 'MY', placeholder: '112345678', validate: (p) => /^1\d{8,9}$/.test(p), hint: '9–10 digits, starting with 1' },
@@ -36,9 +38,14 @@ export default function Auth() {
         ? { phone: fullPhone, password: formData.password }
         : { phone: fullPhone, password: formData.password, full_name: formData.full_name, email: formData.email };
 
-      const { base44 } = await import('@/api/base44Client');
-      const response = await base44.functions.invoke(endpoint, body);
-      const data = response.data;
+      const functionUrl = `${BACKEND_URL}/${endpoint}`;
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
 
       if (data.success) {
         localStorage.setItem('app_user', JSON.stringify(data.user));
