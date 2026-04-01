@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import Step1Combined from '../components/onboarding/Step1Combined';
-import Step3Admin from '../components/onboarding/Step3Admin';
 import Step4Business from '../components/onboarding/Step4Business';
 import Step5QuickStart from '../components/onboarding/Step5QuickStart';
 import Step6Confirmation from '../components/onboarding/Step6Confirmation';
@@ -74,7 +73,6 @@ export default function Onboarding() {
 
   const steps = [
     { component: Step1Combined, title: 'Business & Theme' },
-    { component: Step3Admin, title: 'Admin Account' },
     { component: Step4Business, title: 'Business Setup' },
     { component: Step5QuickStart, title: 'Quick Start' },
     { component: Step6Confirmation, title: 'Launch' },
