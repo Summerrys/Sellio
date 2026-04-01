@@ -389,7 +389,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
         </div>
 
         {(() => {
-          const buttonBgColor = selectedPalette?.dark || '#F97316';
+          const buttonBgColor = selectedPalette?.dark || POPULAR_PALETTES[0].dark;
           const buttonStyle = {
             backgroundColor: buttonBgColor,
           };
