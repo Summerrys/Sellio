@@ -5,8 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowRight, ArrowLeft, Package, Plus, X, Upload } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { base44 } from '@/api/base44Client';
+import { getSupabase } from '@/lib/supabaseClient';
 
 export default function Step5QuickStart({ formData, updateFormData, nextStep, prevStep }) {
   const [addProduct, setAddProduct] = useState(false);
@@ -46,8 +45,19 @@ export default function Step5QuickStart({ formData, updateFormData, nextStep, pr
     let imageUrl = null;
     if (productImage) {
       try {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file: productImage });
-        imageUrl = file_url;
+        const supabase = await getSupabase();
+        const timestamp = Date.now();
+        const fileName = `${timestamp}-${productImage.name}`;
+        const { data: uploadData, error } = await supabase.storage
+          .from('product-images')
+          .upload(fileName, productImage);
+        
+        if (error) throw error;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(fileName);
+        imageUrl = publicUrl;
       } catch (error) {
         console.error('Image upload failed:', error);
       }
