@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, Rocket, BookOpen, UtensilsCrossed } from 'lucide-react';
+import { CheckCircle2, Rocket, BookOpen } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { DEFAULT_COLORS } from '@/lib/themeConstants';
 
