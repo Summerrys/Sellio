@@ -105,49 +105,52 @@ export default function Step4Business({ formData, updateFormData, nextStep, prev
           {/* Quick Apply */}
           <div className="mb-4 p-3 bg-white border border-blue-200 rounded-lg">
             <p className="text-xs font-medium text-slate-700 mb-2">Apply to all days</p>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="time"
-                defaultValue="09:00"
-                id="quickStart"
-                className="flex-1 px-2 py-1.5 border border-slate-300 rounded-lg text-xs"
-              />
-              <span className="hidden sm:inline text-slate-400 text-xs">to</span>
-              <input
-                type="time"
-                defaultValue="22:00"
-                id="quickEnd"
-                className="flex-1 px-2 py-1.5 border border-slate-300 rounded-lg text-xs"
-              />
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2 w-full">
+                <input
+                  type="time"
+                  defaultValue="09:00"
+                  id="quickStart"
+                  className="flex-1 min-w-0 px-2 py-1.5 border border-slate-300 rounded-lg text-xs"
+                />
+                <input
+                  type="time"
+                  defaultValue="22:00"
+                  id="quickEnd"
+                  className="flex-1 min-w-0 px-2 py-1.5 border border-slate-300 rounded-lg text-xs"
+                />
+              </div>
               <button
                 type="button"
                 onClick={() => applyToAllDays(
                   document.getElementById('quickStart').value,
                   document.getElementById('quickEnd').value
                 )}
-                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700"
+                className="w-full px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700"
               >
-                Apply
+                Apply to All
               </button>
             </div>
           </div>
 
           {/* Days List */}
-          <div className="space-y-2.5">
+          <div className="space-y-2.5 overflow-y-auto max-h-56 sm:max-h-none">
             {days.map((day) => (
-              <div key={day} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-200">
-                <input
-                  type="checkbox"
-                  checked={operatingHours[day].enabled}
-                  onChange={(e) => setOperatingHours({
-                    ...operatingHours,
-                    [day]: { ...operatingHours[day], enabled: e.target.checked }
-                  })}
-                  className="w-4 h-4 rounded cursor-pointer"
-                />
-                <span className="w-14 text-xs sm:text-sm font-medium text-slate-700 flex-shrink-0">{day}</span>
+              <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 bg-white rounded-lg border border-slate-200">
+                <div className="flex items-center gap-2 min-w-0">
+                  <input
+                    type="checkbox"
+                    checked={operatingHours[day].enabled}
+                    onChange={(e) => setOperatingHours({
+                      ...operatingHours,
+                      [day]: { ...operatingHours[day], enabled: e.target.checked }
+                    })}
+                    className="w-4 h-4 rounded cursor-pointer flex-shrink-0"
+                  />
+                  <span className="text-xs sm:text-sm font-medium text-slate-700 flex-shrink-0 w-14">{day}</span>
+                </div>
                 {operatingHours[day].enabled && (
-                  <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
+                  <div className="flex items-center gap-1 w-full sm:w-auto sm:flex-1">
                     <input
                       type="time"
                       value={operatingHours[day].start}
@@ -155,7 +158,7 @@ export default function Step4Business({ formData, updateFormData, nextStep, prev
                         ...operatingHours,
                         [day]: { ...operatingHours[day], start: e.target.value }
                       })}
-                      className="flex-1 px-2 py-1 border border-slate-300 rounded text-xs"
+                      className="flex-1 px-2 py-1 border border-slate-300 rounded text-xs min-w-0"
                     />
                     <span className="text-slate-400 text-xs flex-shrink-0">-</span>
                     <input
@@ -165,12 +168,12 @@ export default function Step4Business({ formData, updateFormData, nextStep, prev
                         ...operatingHours,
                         [day]: { ...operatingHours[day], end: e.target.value }
                       })}
-                      className="flex-1 px-2 py-1 border border-slate-300 rounded text-xs"
+                      className="flex-1 px-2 py-1 border border-slate-300 rounded text-xs min-w-0"
                     />
                   </div>
                 )}
                 {!operatingHours[day].enabled && (
-                  <span className="text-xs text-slate-400 italic flex-1">Closed</span>
+                  <span className="text-xs text-slate-400 italic sm:flex-1">Closed</span>
                 )}
               </div>
             ))}
