@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, UtensilsCrossed, ShoppingBag, Wrench } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { createClient } from '@supabase/supabase-js';
 
 const schema = z.object({
   businessName: z.string().min(2, 'Business name is required').max(100, 'Business name must be under 100 characters'),
@@ -23,6 +24,11 @@ const businessTypes = [
 ];
 
 const countries = ['Singapore', 'Malaysia'];
+
+const supabase = createClient(
+  process.env.REACT_APP_SUPABASE_URL || localStorage.getItem('supabase_url'),
+  process.env.REACT_APP_SUPABASE_ANON_KEY || localStorage.getItem('supabase_key')
+);
 
 export default function Step1Welcome({ formData, updateFormData, nextStep }) {
   const [logoFile, setLogoFile] = React.useState(null);
@@ -71,11 +77,21 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
   const onSubmit = async (data) => {
     let logoUrl = formData.logoUrl;
     
-    // Upload logo if one was selected
+    // Upload logo to Supabase Storage if one was selected
     if (logoFile) {
       try {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file: logoFile });
-        logoUrl = file_url;
+        const timestamp = Date.now();
+        const fileName = `${timestamp}-${logoFile.name}`;
+        const { data: uploadData, error } = await supabase.storage
+          .from('logos')
+          .upload(fileName, logoFile);
+        
+        if (error) throw error;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('logos')
+          .getPublicUrl(fileName);
+        logoUrl = publicUrl;
       } catch (error) {
         console.error('Logo upload failed:', error);
       }
