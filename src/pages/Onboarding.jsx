@@ -91,16 +91,10 @@ export default function Onboarding() {
       <div className="bg-white border-b border-slate-100 px-4 py-3">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[rgb(var(--color-primary))] flex items-center justify-center">
-              <span className="text-white font-bold text-sm">A</span>
-            </div>
+            <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className="h-8 object-contain" />
             <div>
-              <span className="font-bold text-sm text-slate-900 tracking-tight">Apptelier</span>
-              <span className="text-xs text-slate-400 ml-1">Suite</span>
+              <span className="font-bold text-sm text-slate-900 tracking-tight">Sellio</span>
             </div>
-          </div>
-          <div className="text-xs text-slate-400">
-            Step {currentStep} of {steps.length}
           </div>
         </div>
       </div>

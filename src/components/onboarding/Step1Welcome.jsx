@@ -89,11 +89,9 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
   return (
     <Card className="p-8 sm:p-10 bg-white/80 backdrop-blur border-0 shadow-xl">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgb(var(--color-primary))] to-[rgb(var(--color-primary-light))] flex items-center justify-center mx-auto mb-4">
-          <Building2 className="w-8 h-8 text-white" />
-        </div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome to Apptelier Suite</h1>
-        <p className="text-slate-500">Let's set up your business in just a few minutes</p>
+        <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className="h-12 object-contain mx-auto mb-4" />
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome to Sellio</h1>
+        <p className="text-slate-500">Let's customise your business in just a few minutes</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
