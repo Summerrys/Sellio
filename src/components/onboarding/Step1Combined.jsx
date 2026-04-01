@@ -130,10 +130,19 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
   };
 
   const selectedPalette = selectedTheme ? POPULAR_PALETTES.find(p => p.name === selectedTheme) : null;
-  const cardBgColor = selectedPalette?.light || '#FFFFFF';
+  
+  const getCardBackground = () => {
+    if (!selectedPalette) return '#FFFFFF';
+    // Use hex to rgba conversion with reduced opacity for a toned-down effect
+    const hex = selectedPalette.light.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, 0.4)`;
+  };
 
   return (
-    <Card className="p-8 sm:p-10 border-0 shadow-lg transition-colors" style={{ backgroundColor: cardBgColor }}>
+    <Card className="p-8 sm:p-10 border-0 shadow-lg transition-colors" style={{ backgroundColor: getCardBackground() }}>
       <div className="text-center mb-8">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
           <Building2 className="w-8 h-8 text-white" />
