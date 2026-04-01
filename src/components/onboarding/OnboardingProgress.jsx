@@ -22,7 +22,7 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
           <Rocket className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
           <h3 className="text-sm sm:text-base font-bold text-slate-900">Your Progress</h3>
         </div>
-        <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-semibold">
+        <div className="text-white px-2 sm:px-3 py-1 rounded-full text-xs font-semibold" style={{ background: 'linear-gradient(to right, #0369A1, #E0F2FE)' }}>
                   {Math.min(completedSteps.length, totalSteps)} / {totalSteps} Complete
                 </div>
       </div>
