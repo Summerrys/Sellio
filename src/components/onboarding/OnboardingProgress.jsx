@@ -52,11 +52,11 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
                 {completedSteps.includes(step.number) ? (
                    <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                  ) : step.number === 3 ? (
-                   <div className="flex items-center gap-1">
-                     <BookOpen className={`w-3 h-3 sm:w-4 sm:h-4 ${
+                   <div className="flex items-center justify-center gap-0.5">
+                     <BookOpen className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
                        currentStep === step.number ? 'text-white' : 'text-slate-400'
                      }`} />
-                     <UtensilsCrossed className={`w-3 h-3 sm:w-4 sm:h-4 ${
+                     <UtensilsCrossed className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
                        currentStep === step.number ? 'text-white' : 'text-slate-400'
                      }`} />
                    </div>
