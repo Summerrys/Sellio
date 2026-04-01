@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowRight, ArrowLeft, MapPin, Clock } from 'lucide-react';
+import { generateThemeVariables } from '../theme/themeUtils';
 
 const schema = z.object({
   branchName: z.string().min(1, 'Branch name is required').max(100),
@@ -36,6 +37,17 @@ export default function Step4Business({ formData, updateFormData, nextStep, prev
     Saturday: { start: '09:00', end: '22:00', enabled: false },
     Sunday: { start: '09:00', end: '22:00', enabled: false },
   });
+
+  // Apply theme colors from Step 1
+  useEffect(() => {
+    if (formData.customPrimary && formData.customSecondary) {
+      const variables = generateThemeVariables(formData.customPrimary, formData.customSecondary);
+      const root = document.documentElement;
+      Object.entries(variables).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
+    }
+  }, [formData.customPrimary, formData.customSecondary]);
 
   const applyToAllDays = (start, end) => {
     const updated = {};
