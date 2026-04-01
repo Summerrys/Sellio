@@ -41,7 +41,7 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
                 completedSteps.includes(step.number)
                   ? 'bg-gradient-to-r from-purple-500 to-pink-500 border-purple-500'
                   : currentStep === step.number
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 border-purple-500 animate-pulse'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 border-purple-500'
                   : 'bg-white border-slate-300'
               }`}>
                 {completedSteps.includes(step.number) ? (
