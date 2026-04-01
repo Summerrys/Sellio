@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import Step1Combined from '../components/onboarding/Step1Combined';
-import Step4Business from '../components/onboarding/Step4Business';
+import Step2Business from '../components/onboarding/Step2Business';
 import Step3MenuSetup from '../components/onboarding/Step3MenuSetup';
 import Step4TablesQR from '../components/onboarding/Step4TablesQR';
-import Step6Confirmation from '../components/onboarding/Step6Confirmation';
+import Step5Confirmation from '../components/onboarding/Step5Confirmation';
 import OnboardingProgress from '../components/onboarding/OnboardingProgress';
 
 const STORAGE_KEY = 'apptelier_onboarding_state';
@@ -59,7 +59,7 @@ export default function Onboarding() {
     const isFnB = formData.businessType === 'food' || formData.businessType === 'fnb' || formData.businessType === 'F&B';
     const baseSteps = [
       { component: Step1Combined, title: 'Business & Theme' },
-      { component: Step4Business, title: 'Branch Setup' },
+      { component: Step2Business, title: 'Branch Setup' },
       { component: Step3MenuSetup, title: 'Menu Setup' },
     ];
     
@@ -67,7 +67,7 @@ export default function Onboarding() {
       baseSteps.push({ component: Step4TablesQR, title: 'Tables & QR' });
     }
     
-    baseSteps.push({ component: Step6Confirmation, title: 'Review & Launch' });
+    baseSteps.push({ component: Step5Confirmation, title: 'Review & Launch' });
     return baseSteps;
   };
 
