@@ -215,7 +215,7 @@ export default function Auth() {
                 type="submit"
                 disabled={loading}
                 className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70"
-                style={{ background: 'linear-gradient(90deg, #fb923c, #f97316, #fbbf24)' }}
+                style={{ background: 'linear-gradient(90deg, #fb923c, #f97316, #fdba74)' }}
               >
                 {loading ? 'Please wait...' : isLogin ? 'Login' : 'Sign Up'}
               </button>
