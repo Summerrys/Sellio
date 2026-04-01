@@ -389,11 +389,10 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
         </div>
 
         {(() => {
-          const computedStyle = getComputedStyle(document.documentElement);
-          const defaultGradient = `linear-gradient(to right, ${computedStyle.getPropertyValue('--color-primary')}, ${computedStyle.getPropertyValue('--color-primary-light')})`;
+          const defaultPalette = POPULAR_PALETTES[0];
           const buttonStyle = selectedPalette?.dark
             ? { backgroundColor: selectedPalette.dark }
-            : { background: defaultGradient };
+            : { background: `linear-gradient(to right, ${defaultPalette.dark}, ${defaultPalette.light})` };
           return (
             <Button
               type="submit"
