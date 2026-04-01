@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, ArrowLeft, Check, Palette } from 'lucide-react';
@@ -19,6 +19,35 @@ const POPULAR_PALETTES = [
 
 export default function Step2Theme({ formData, updateFormData, nextStep, prevStep }) {
   const [selectedTheme, setSelectedTheme] = useState(formData.theme || 'Ocean Blue');
+  const [customPrimary] = useState(formData.customPrimary || null);
+  const [customSecondary] = useState(formData.customSecondary || null);
+
+  React.useEffect(() => {
+    // Apply saved theme on component mount
+    if (formData.theme) {
+      let themeToApply = null;
+      if (formData.theme === 'Custom' && formData.customPrimary && formData.customSecondary) {
+        themeToApply = { dark: formData.customPrimary, light: formData.customSecondary };
+      } else {
+        themeToApply = POPULAR_PALETTES.find(p => p.name === formData.theme);
+      }
+      if (themeToApply) {
+        const variables = generateThemeVariables(themeToApply.dark, themeToApply.light);
+        const root = document.documentElement;
+        Object.entries(variables).forEach(([key, value]) => {
+          root.style.setProperty(key, value);
+        });
+      }
+    } else {
+      // Default to Ocean Blue
+      const defaultPalette = POPULAR_PALETTES[0];
+      const variables = generateThemeVariables(defaultPalette.dark, defaultPalette.light);
+      const root = document.documentElement;
+      Object.entries(variables).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
+    }
+  }, [formData]);
 
   const handleThemeSelect = (palette) => {
     setSelectedTheme(palette.name);
