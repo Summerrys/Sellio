@@ -19,7 +19,20 @@ const POPULAR_PALETTES = [
 ];
 
 export default function Step2Theme({ formData, updateFormData, nextStep, prevStep }) {
-  const [selectedTheme, setSelectedTheme] = useState(formData.theme || 'Brand Default');
+  // Initialize selectedTheme from formData, or find matching palette
+  const initializeTheme = () => {
+    if (formData.theme) return formData.theme;
+    if (formData.customPrimary && formData.customSecondary) {
+      const matching = POPULAR_PALETTES.find(
+        p => p.dark.toLowerCase() === formData.customPrimary.toLowerCase() && 
+             p.light.toLowerCase() === formData.customSecondary.toLowerCase()
+      );
+      return matching?.name || 'Brand Default';
+    }
+    return 'Brand Default';
+  };
+
+  const [selectedTheme, setSelectedTheme] = useState(initializeTheme());
   const [customPrimary] = useState(formData.customPrimary || null);
   const [customSecondary] = useState(formData.customSecondary || null);
 
