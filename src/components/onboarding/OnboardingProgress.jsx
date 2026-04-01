@@ -3,10 +3,10 @@ import { CheckCircle2, Rocket } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const steps = [
-  { number: 1, label: 'Business\nSetup' },
-  { number: 2, label: 'Branch\nSetup' },
-  { number: 3, label: 'Menu/\nServices' },
-  { number: 4, label: 'Tables\n& QR' },
+  { number: 1, label: 'Business\n& Theme' },
+  { number: 2, label: 'Admin\nAccount' },
+  { number: 3, label: 'Business\nSetup' },
+  { number: 4, label: 'Quick\nStart' },
   { number: 5, label: 'Review\n& Go Live' },
 ];
 
@@ -23,8 +23,8 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
           <h3 className="text-sm sm:text-base font-bold text-slate-900">Your Progress</h3>
         </div>
         <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-semibold">
-          {completedSteps.length} / {totalSteps} Complete
-        </div>
+                  {Math.min(completedSteps.length, totalSteps)} / {totalSteps} Complete
+                </div>
       </div>
 
       {/* Step Indicators */}

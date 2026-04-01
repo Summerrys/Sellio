@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import Step1Welcome from '../components/onboarding/Step1Welcome';
-import Step2Theme from '../components/onboarding/Step2Theme';
+import Step1Combined from '../components/onboarding/Step1Combined';
 import Step3Admin from '../components/onboarding/Step3Admin';
 import Step4Business from '../components/onboarding/Step4Business';
 import Step5QuickStart from '../components/onboarding/Step5QuickStart';
@@ -17,20 +16,20 @@ export default function Onboarding() {
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState([]);
   const [formData, setFormData] = useState({
-    // Step 1
+    // Step 1 (Business + Theme)
     businessName: '',
     businessType: '',
     country: 'Singapore',
     logoUrl: '',
-    // Step 2
     theme: 'Ocean Blue',
-    // Step 3 (formerly Step 4)
+    // Step 2 (Admin)
+    // Step 3 (Business Setup)
     currency: 'SGD',
     taxRate: 9,
     taxInclusive: false,
     businessHours: {},
     tableCount: 0,
-    // Step 4 (formerly Step 5)
+    // Step 4 (Quick Start)
     products: [],
   });
 
@@ -58,7 +57,7 @@ export default function Onboarding() {
   };
 
   const nextStep = () => {
-    if (currentStep < 5) {
+    if (currentStep < 4) {
       setCompletedSteps([...completedSteps, currentStep]);
       setCurrentStep(currentStep + 1);
     }
@@ -74,8 +73,8 @@ export default function Onboarding() {
   };
 
   const steps = [
-    { component: Step1Welcome, title: 'Welcome' },
-    { component: Step2Theme, title: 'Choose Theme' },
+    { component: Step1Combined, title: 'Business & Theme' },
+    { component: Step3Admin, title: 'Admin Account' },
     { component: Step4Business, title: 'Business Setup' },
     { component: Step5QuickStart, title: 'Quick Start' },
     { component: Step6Confirmation, title: 'Launch' },
