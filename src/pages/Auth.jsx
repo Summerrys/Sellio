@@ -46,7 +46,13 @@ export default function Auth() {
           window.location.href = createPageUrl(data.user?.onboarding_completed ? 'Dashboard' : 'Onboarding');
         }, 500);
       } else {
-        toast.error(data.error || 'Something went wrong');
+        // Check if signup failed because account already exists
+        if (!isLogin && data.error?.includes('already registered')) {
+          toast.error('Phone number already registered. Switching to login...');
+          setTimeout(() => setIsLogin(true), 1000);
+        } else {
+          toast.error(data.error || 'Something went wrong');
+        }
       }
     } catch (error) {
       console.error('Auth error:', error);
