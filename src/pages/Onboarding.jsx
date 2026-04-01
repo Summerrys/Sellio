@@ -8,7 +8,7 @@ import Step3Admin from '../components/onboarding/Step3Admin';
 import Step4Business from '../components/onboarding/Step4Business';
 import Step5QuickStart from '../components/onboarding/Step5QuickStart';
 import Step6Confirmation from '../components/onboarding/Step6Confirmation';
-import ProgressBar from '../components/onboarding/ProgressBar';
+import OnboardingProgress from '../components/onboarding/OnboardingProgress';
 
 const STORAGE_KEY = 'apptelier_onboarding_state';
 
@@ -93,8 +93,12 @@ export default function Onboarding() {
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <ProgressBar currentStep={currentStep} totalSteps={steps.length} />
+      {/* Progress Section */}
+      <div className="bg-slate-50 border-b border-slate-100 px-4 py-6 sm:py-8">
+        <div className="max-w-4xl mx-auto">
+          <OnboardingProgress currentStep={currentStep} />
+        </div>
+      </div>
 
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
