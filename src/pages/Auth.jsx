@@ -36,21 +36,35 @@ export default function Auth() {
         ? { action: 'login', phone: fullPhone, password: formData.password }
         : { action: 'signup', phone: fullPhone, password: formData.password, full_name: formData.full_name, email: formData.email };
 
-      const response = await base44.functions.invoke('authProxy', payload);
-      const data = response.data;
+      try {
+        const response = await base44.functions.invoke('authProxy', payload);
+        const data = response.data;
 
-      if (data.success) {
-        localStorage.setItem('app_user', JSON.stringify(data.user));
-        toast.success(isLogin ? 'Login successful!' : 'Account created!');
-        setTimeout(() => {
-          window.location.href = createPageUrl(data.user?.onboarding_completed ? 'Dashboard' : 'Onboarding');
-        }, 500);
-      } else {
-        toast.error(data.error || 'Something went wrong');
+        if (data.success) {
+          localStorage.setItem('app_user', JSON.stringify(data.user));
+          toast.success(isLogin ? 'Login successful!' : 'Account created!');
+          setTimeout(() => {
+            window.location.href = createPageUrl(data.user?.onboarding_completed ? 'Dashboard' : 'Onboarding');
+          }, 500);
+        } else {
+          toast.error(data.error || 'Something went wrong');
+        }
+      } catch (invokeError) {
+        // Handle errors from base44.functions.invoke
+        const errorData = invokeError.response?.data;
+        if (errorData?.error) {
+          toast.error(errorData.error);
+        } else if (invokeError.response?.status === 400) {
+          toast.error('Invalid request. Please check your details.');
+        } else if (invokeError.response?.status === 401) {
+          toast.error('Invalid credentials. Please try again.');
+        } else {
+          toast.error(invokeError.message || 'An error occurred');
+        }
       }
     } catch (error) {
       console.error('Auth error:', error);
-      toast.error(error.message || 'An error occurred');
+      toast.error(error.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
