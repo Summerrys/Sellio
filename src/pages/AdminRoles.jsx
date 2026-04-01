@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+const BACKEND_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1';
+
 export default function AdminRoles() {
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,7 +42,7 @@ export default function AdminRoles() {
   const fetchRoles = async () => {
     try {
       setLoading(true);
-      const functionUrl = `${window.location.origin}/api/functions/manageRoles`;
+      const functionUrl = `${BACKEND_URL}/manageRoles`;
       const response = await fetch(functionUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -68,7 +70,7 @@ export default function AdminRoles() {
         return;
       }
 
-      const functionUrl = `${window.location.origin}/api/functions/manageRoles`;
+      const functionUrl = `${BACKEND_URL}/manageRoles`;
       const action = editingRole ? 'update' : 'create';
       const body = {
         action,
@@ -111,7 +113,7 @@ export default function AdminRoles() {
     if (!confirm('Are you sure you want to delete this role?')) return;
 
     try {
-      const functionUrl = `${window.location.origin}/api/functions/manageRoles`;
+      const functionUrl = `${BACKEND_URL}/manageRoles`;
       const response = await fetch(functionUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -3,7 +3,7 @@ import { Phone, Lock, User, Mail, ChevronDown } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { createPageUrl } from '../utils';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+const BACKEND_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1';
 
 const COUNTRY_CODES = [
   { code: '+65', flag: '🇸🇬', name: 'SG', placeholder: '91234567', validate: (p) => /^[89]\d{7}$/.test(p), hint: '8 digits, starting with 8 or 9' },
