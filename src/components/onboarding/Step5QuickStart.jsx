@@ -293,7 +293,7 @@ export default function Step5QuickStart({ formData, updateFormData, nextStep, pr
             </Button>
             <Button
               onClick={handleContinue}
-              style={{ backgroundColor: `rgb(var(--color-primary, 147 51 234))` }}
+              style={formData.theme ? { backgroundColor: 'rgb(var(--color-primary))' } : { background: 'linear-gradient(to right, #9333ea, #ec4899)' }}
               className="flex-1 h-11 hover:opacity-90 gap-2"
             >
               Continue <ArrowRight className="w-4 h-4" />

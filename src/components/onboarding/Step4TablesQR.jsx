@@ -56,7 +56,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
           type="button"
           onClick={handleSubmit}
           className="flex-1 h-10 sm:h-11 text-white gap-1 sm:gap-2 text-sm"
-          style={{ backgroundColor: `rgb(var(--color-primary, 147 51 234))` }}
+          style={formData.theme ? { backgroundColor: 'rgb(var(--color-primary))' } : { background: 'linear-gradient(to right, #9333ea, #ec4899)' }}
         >
           <span className="hidden sm:inline">Continue</span> <span className="sm:hidden">Next</span> <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
         </Button>
