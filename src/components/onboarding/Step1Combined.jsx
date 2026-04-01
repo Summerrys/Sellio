@@ -81,12 +81,21 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
   };
 
   const handleThemeSelect = (palette) => {
-    setSelectedTheme(palette.name);
-    const variables = generateThemeVariables(palette.dark, palette.light);
-    const root = document.documentElement;
-    Object.entries(variables).forEach(([key, value]) => {
-      root.style.setProperty(key, value);
-    });
+    if (selectedTheme === palette.name) {
+      // Unclick to revert to default
+      setSelectedTheme('');
+      const root = document.documentElement;
+      root.style.removeProperty('--color-primary');
+      root.style.removeProperty('--color-primary-100');
+    } else {
+      // Select new theme
+      setSelectedTheme(palette.name);
+      const variables = generateThemeVariables(palette.dark, palette.light);
+      const root = document.documentElement;
+      Object.entries(variables).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
+    }
   };
 
 
@@ -120,8 +129,8 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
     nextStep();
   };
 
-  const selectedPalette = POPULAR_PALETTES.find(p => p.name === selectedTheme);
-  const cardBgColor = selectedPalette?.light || '#E0F2FE';
+  const selectedPalette = selectedTheme ? POPULAR_PALETTES.find(p => p.name === selectedTheme) : null;
+  const cardBgColor = selectedPalette?.light || '#FFFFFF';
 
   return (
     <Card className="p-8 sm:p-10 border-0 shadow-lg transition-colors" style={{ backgroundColor: cardBgColor }}>
@@ -291,7 +300,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
         </div>
 
         {(() => {
-          const buttonBgColor = selectedPalette?.dark || '#0369A1';
+          const buttonBgColor = selectedPalette?.dark || '#1F2937';
           return (
             <Button
               type="submit"
