@@ -39,7 +39,7 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
             >
               <div className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 sm:border-3 shadow-md transition-all ${
                 completedSteps.includes(step.number)
-                  ? 'bg-gradient-to-r from-green-400 to-emerald-500 border-green-500 scale-110'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 border-purple-500'
                   : currentStep === step.number
                   ? 'bg-gradient-to-r from-purple-500 to-pink-500 border-purple-500 animate-pulse'
                   : 'bg-white border-slate-300'
@@ -63,7 +63,7 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
             {index < steps.length - 1 && (
               <div className={`flex-1 h-1 mx-0.5 sm:mx-2 rounded transition-all ${
                 completedSteps.includes(step.number)
-                  ? 'bg-gradient-to-r from-green-400 to-emerald-500'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500'
                   : 'bg-slate-200'
               }`} />
             )}
