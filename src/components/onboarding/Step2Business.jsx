@@ -93,7 +93,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
           </Label>
           <Input
             {...register('branchName')}
-            placeholder="Main Branch / Downtown / Orchard"
+            placeholder="eg. ION Orchard Outlet"
             className="h-10 sm:h-11 text-sm"
           />
           {errors.branchName && (
