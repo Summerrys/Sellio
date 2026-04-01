@@ -100,7 +100,7 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
         {/* Logo Upload */}
         <div>
           <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-3">
-            <Sparkles className="w-4 h-4" /> Business Logo (optional)
+            <Sparkles className="w-4 h-4 text-purple-500" /> Business Logo (optional)
           </Label>
           <input
             ref={fileInputRef}
@@ -143,7 +143,7 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
         {/* Two-column layout for name and type */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Building2 className="w-4 h-4" /> Business Name</Label>
+            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Building2 className="w-4 h-4 text-blue-500" /> Business Name</Label>
             <Input
               {...register('businessName')}
               placeholder="Acme Restaurant"
@@ -155,7 +155,7 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
           </div>
 
           <div>
-            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Briefcase className="w-4 h-4" /> Industry Type</Label>
+            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Briefcase className="w-4 h-4 text-green-500" /> Industry Type</Label>
             <Select
               value={watch('businessType')}
               onValueChange={(v) => setValue('businessType', v)}
@@ -178,7 +178,7 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
         </div>
 
         <div>
-          <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Globe className="w-4 h-4" /> Country</Label>
+          <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Globe className="w-4 h-4 text-orange-500" /> Country</Label>
           <Select
             value={watch('country')}
             onValueChange={(v) => setValue('country', v)}
