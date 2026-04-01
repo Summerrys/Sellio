@@ -19,7 +19,7 @@ export default function Splash() {
     <div
       className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden"
       style={{
-        background: 'radial-gradient(ellipse at 30% 20%, #fde8d8 0%, #fef3ee 35%, #ffffff 65%, #fef0eb 100%)',
+        background: 'radial-gradient(ellipse at 30% 20%, #f5ede8 0%, #faf8f7 35%, #ffffff 65%, #f8f5f3 100%)',
         transition: 'opacity 0.6s ease',
         opacity: leaving ? 0 : 1,
       }}
