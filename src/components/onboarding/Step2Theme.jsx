@@ -36,6 +36,12 @@ export default function Step2Theme({ formData, updateFormData, nextStep, prevSte
   const [customPrimary] = useState(formData.customPrimary || null);
   const [customSecondary] = useState(formData.customSecondary || null);
 
+  // Update selectedTheme when formData changes
+  useEffect(() => {
+    const newTheme = initializeTheme();
+    setSelectedTheme(newTheme);
+  }, [formData.theme, formData.customPrimary, formData.customSecondary]);
+
   useEffect(() => {
     // Apply saved theme on component mount
     if (formData.customPrimary && formData.customSecondary) {
