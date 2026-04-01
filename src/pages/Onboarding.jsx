@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -71,7 +71,8 @@ export default function Onboarding() {
     return baseSteps;
   };
 
-  const steps = getSteps();
+  // Recalculate steps whenever businessType changes
+  const steps = React.useMemo(() => getSteps(), [formData.businessType]);
 
   const nextStep = () => {
     if (currentStep < steps.length) {
