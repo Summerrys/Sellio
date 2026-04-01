@@ -39,13 +39,25 @@ export default function Auth() {
         : { phone: fullPhone, password: formData.password, full_name: formData.full_name, email: formData.email };
 
       const functionUrl = `${BACKEND_URL}/${endpoint}`;
+      console.log('Calling endpoint:', functionUrl, 'with body:', body);
+      
       const response = await fetch(functionUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
 
+      console.log('Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Fetch error:', errorText);
+        toast.error(`Server error: ${response.status} ${response.statusText}`);
+        return;
+      }
+
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (data.success) {
         localStorage.setItem('app_user', JSON.stringify(data.user));
@@ -57,6 +69,7 @@ export default function Auth() {
         toast.error(data.error || 'Something went wrong');
       }
     } catch (error) {
+      console.error('Fetch error:', error);
       toast.error(error.message || 'An error occurred');
     } finally {
       setLoading(false);
