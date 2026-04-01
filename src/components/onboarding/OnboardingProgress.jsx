@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const steps = [
@@ -19,8 +19,8 @@ export default function OnboardingProgress({ currentStep = 1 }) {
       {/* Compact Header */}
       <div className="flex items-center justify-between gap-3 mb-3">
         <div className="flex items-center gap-2 flex-1">
-          <Star className="w-4 h-4 text-orange-400 fill-orange-400 flex-shrink-0" />
-          <h3 className="text-sm font-bold text-slate-900">Progress</h3>
+          <CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0" />
+          <h3 className="text-sm font-bold text-slate-900">Your Progress</h3>
         </div>
         <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0">
           {currentStep}/{totalSteps}
