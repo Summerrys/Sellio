@@ -120,8 +120,11 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
     nextStep();
   };
 
+  const selectedPalette = POPULAR_PALETTES.find(p => p.name === selectedTheme);
+  const cardBgColor = selectedPalette?.light || '#E0F2FE';
+
   return (
-    <Card className="p-8 sm:p-10 bg-white border-0 shadow-lg">
+    <Card className="p-8 sm:p-10 border-0 shadow-lg transition-colors" style={{ backgroundColor: cardBgColor }}>
       <div className="text-center mb-8">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
           <Building2 className="w-8 h-8 text-white" />
@@ -288,7 +291,6 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
         </div>
 
         {(() => {
-          const selectedPalette = POPULAR_PALETTES.find(p => p.name === selectedTheme);
           const buttonBgColor = selectedPalette?.dark || '#0369A1';
           return (
             <Button
