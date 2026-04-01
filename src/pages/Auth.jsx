@@ -68,6 +68,11 @@ export default function Auth() {
   return (
     <>
       <Toaster position="top-center" richColors />
+      <style>{`
+        .orange-scroll::-webkit-scrollbar { width: 4px; }
+        .orange-scroll::-webkit-scrollbar-track { background: transparent; }
+        .orange-scroll::-webkit-scrollbar-thumb { background: #fe7824; border-radius: 4px; }
+      `}</style>
       <div
         className="min-h-screen flex items-center justify-center p-4"
         style={{ background: 'radial-gradient(ellipse at top left, #faeee6 0%, #fdf6f2 30%, #ffffff 60%, #fdf4f0 100%)' }}
@@ -158,7 +163,7 @@ export default function Auth() {
                       <ChevronDown className="w-3 h-3 text-slate-400" />
                     </button>
                     {showCountryDropdown && (
-                      <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto min-w-[130px]">
+                      <div className="orange-scroll absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto min-w-[130px]">
                         {COUNTRY_CODES.map((c) => (
                           <button
                             key={c.code}
