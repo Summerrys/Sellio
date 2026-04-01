@@ -64,6 +64,9 @@ export default function Auth() {
         .orange-scroll::-webkit-scrollbar { width: 4px; }
         .orange-scroll::-webkit-scrollbar-track { background: transparent; }
         .orange-scroll::-webkit-scrollbar-thumb { background: #fe7824; border-radius: 4px; }
+        html::-webkit-scrollbar, body::-webkit-scrollbar { width: 4px; }
+        html::-webkit-scrollbar-track, body::-webkit-scrollbar-track { background: transparent; }
+        html::-webkit-scrollbar-thumb, body::-webkit-scrollbar-thumb { background: #fe7824; border-radius: 4px; }
       `}</style>
       <div
         className="min-h-screen flex items-center justify-center p-4"
