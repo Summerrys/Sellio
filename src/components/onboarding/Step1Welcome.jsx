@@ -100,7 +100,7 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
   return (
     <Card className="p-8 sm:p-10 bg-white border-0 shadow-lg">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mx-auto mb-4">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
           <Building2 className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-3xl font-bold text-slate-900 mb-2">Let's set up your business</h2>
