@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, Rocket } from 'lucide-react';
+import { CheckCircle2, Rocket, BookOpen, UtensilsCrossed } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { DEFAULT_COLORS } from '@/lib/themeConstants';
 
@@ -50,14 +50,23 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
               }}
               >
                 {completedSteps.includes(step.number) ? (
-                  <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                ) : (
-                  <span className={`text-xs sm:text-sm font-bold ${
-                    currentStep === step.number ? 'text-white' : 'text-slate-400'
-                  }`}>
-                    {step.number}
-                  </span>
-                )}
+                   <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                 ) : step.number === 3 ? (
+                   <div className="flex items-center gap-1">
+                     <BookOpen className={`w-3 h-3 sm:w-4 sm:h-4 ${
+                       currentStep === step.number ? 'text-white' : 'text-slate-400'
+                     }`} />
+                     <UtensilsCrossed className={`w-3 h-3 sm:w-4 sm:h-4 ${
+                       currentStep === step.number ? 'text-white' : 'text-slate-400'
+                     }`} />
+                   </div>
+                 ) : (
+                   <span className={`text-xs sm:text-sm font-bold ${
+                     currentStep === step.number ? 'text-white' : 'text-slate-400'
+                   }`}>
+                     {step.number}
+                   </span>
+                 )}
               </div>
               <span className={`text-[10px] sm:text-xs mt-1 sm:mt-2 text-center font-medium max-w-14 leading-tight ${
                 currentStep === step.number ? 'text-slate-500' : 'text-slate-500'
