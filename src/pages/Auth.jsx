@@ -36,14 +36,9 @@ export default function Auth() {
         ? { phone: fullPhone, password: formData.password }
         : { phone: fullPhone, password: formData.password, full_name: formData.full_name, email: formData.email };
 
-      const functionUrl = `${window.location.origin}/api/functions/${endpoint}`;
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      const data = await response.json();
+      const { base44 } = await import('@/api/base44Client');
+      const response = await base44.functions.invoke(endpoint, body);
+      const data = response.data;
 
       if (data.success) {
         localStorage.setItem('app_user', JSON.stringify(data.user));
