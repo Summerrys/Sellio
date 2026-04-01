@@ -74,7 +74,7 @@ export default function Auth() {
         onClick={() => setShowCountryDropdown(false)}
       >
         <div className="w-full max-w-sm">
-          <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="rounded-2xl shadow-xl p-8" style={{ background: '#fffaf7' }}>
             {/* Header */}
             <div className="text-center mb-6">
               <div className="flex items-center justify-center mb-3">
