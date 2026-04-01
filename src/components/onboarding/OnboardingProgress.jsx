@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, Star } from 'lucide-react';
+import { CheckCircle2, Rocket } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const steps = [
@@ -19,7 +19,7 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
       {/* Header */}
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
-          <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 fill-yellow-500" />
+          <Rocket className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
           <h3 className="text-sm sm:text-base font-bold text-slate-900">Your Progress</h3>
         </div>
         <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-semibold">
