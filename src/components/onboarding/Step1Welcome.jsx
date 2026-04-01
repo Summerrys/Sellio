@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, UtensilsCrossed, ShoppingBag, Wrench, Edit3 } from 'lucide-react';
+import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, UtensilsCrossed, ShoppingBag, Wrench } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { getSupabase } from '@/lib/supabaseClient';
 
@@ -121,16 +121,8 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
             className="hidden"
           />
           {logoPreview ? (
-           <div className="mt-2 border-2 border-slate-200 rounded-xl p-4 flex items-center gap-4 group relative">
-             <div
-               onClick={() => fileInputRef.current?.click()}
-               className="relative cursor-pointer"
-             >
-               <img src={logoPreview} alt="Logo preview" className="w-16 h-16 object-cover rounded-lg" />
-               <div className="absolute inset-0 bg-black/30 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                 <Edit3 className="w-4 h-4 text-white" />
-               </div>
-             </div>
+           <div className="mt-2 border-2 border-slate-200 rounded-xl p-4 flex items-center gap-4">
+             <img src={logoPreview} alt="Logo preview" className="w-16 h-16 object-cover rounded-lg" />
              <div className="flex-1">
                <p className="text-sm font-medium text-slate-700">Logo uploaded</p>
                <p className="text-xs text-slate-500">Click to change</p>
