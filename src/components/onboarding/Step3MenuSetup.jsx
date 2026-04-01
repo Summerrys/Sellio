@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, ArrowLeft, Utensils, Layers, Sparkles, Upload } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Utensils, Layers, Sparkles, Upload, BookOpen, UtensilsCrossed } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -61,7 +61,10 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg max-h-screen overflow-y-auto">
       <div className="text-center mb-6 sm:mb-8">
         <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: primaryColor }}>
-          <Utensils className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
+          <div className="flex items-center gap-1">
+            <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            <UtensilsCrossed className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          </div>
         </div>
         <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Build your menu</h2>
         <p className="text-sm sm:text-base text-slate-600">Create categories and add your items</p>
