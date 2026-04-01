@@ -234,11 +234,12 @@ function AppLayout({ children, currentPageName }) {
 
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-slate-100 z-30 flex items-center px-4 justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-[rgb(var(--color-primary))] flex items-center justify-center">
-            <span className="text-white font-bold text-xs">A</span>
-          </div>
-          <span className="font-bold text-sm text-slate-900">Apptelier</span>
+        <div className="flex items-center gap-2">
+          {tenant?.logo_url ? (
+            <img src={tenant.logo_url} alt={tenant.name} className="h-8 w-auto object-contain rounded" />
+          ) : (
+            <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className="h-10 w-auto object-contain" />
+          )}
         </div>
         <div className="flex items-center gap-2">
           {displayUser && <NotificationBell />}
