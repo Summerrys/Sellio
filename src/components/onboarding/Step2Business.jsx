@@ -157,7 +157,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
                   document.getElementById('quickEnd').value
                 )}
                 className="w-full px-3 py-1.5 text-white rounded-lg text-xs font-medium"
-                style={formData.theme ? { backgroundColor: 'rgb(var(--color-primary))', cursor: 'pointer' } : { backgroundColor: '#2563eb' }}
+                style={formData.theme ? { backgroundColor: 'rgb(var(--color-primary))', cursor: 'pointer' } : { background: 'linear-gradient(to right, #9333ea, #ec4899)' }}
               >
                 Apply to All
               </button>
