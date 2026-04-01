@@ -2,11 +2,28 @@ import bcrypt from 'npm:bcryptjs@2.4.3';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 Deno.serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    });
+  }
+
   try {
     const { phone, password, full_name, email } = await req.json();
 
     if (!phone || !password || !full_name) {
-      return Response.json({ error: 'Name, phone and password are required' }, { status: 400 });
+      return Response.json(
+        { error: 'Name, phone and password are required' },
+        {
+          status: 400,
+          headers: { 'Access-Control-Allow-Origin': '*' },
+        }
+      );
     }
 
     const supabase = createClient(
@@ -21,7 +38,13 @@ Deno.serve(async (req) => {
       .eq('phone', phone.trim());
 
     if (existing && existing.length > 0) {
-      return Response.json({ error: 'Phone number already registered' }, { status: 400 });
+      return Response.json(
+        { error: 'Phone number already registered' },
+        {
+          status: 400,
+          headers: { 'Access-Control-Allow-Origin': '*' },
+        }
+      );
     }
 
     // Hash password
@@ -44,18 +67,35 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
 
-    return Response.json({
-      success: true,
-      user: {
-        id: newUser.id,
-        email: newUser.email,
-        full_name: newUser.full_name,
-        phone: newUser.phone,
-        role: newUser.role,
-        onboarding_completed: newUser.onboarding_completed,
+    return Response.json(
+      {
+        success: true,
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          full_name: newUser.full_name,
+          phone: newUser.phone,
+          role: newUser.role,
+          onboarding_completed: newUser.onboarding_completed,
+        }
+      },
+      {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json',
+        },
       }
-    });
+    );
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json(
+      { error: error.message },
+      {
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json',
+        },
+      }
+    );
   }
 });
