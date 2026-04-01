@@ -44,8 +44,8 @@ export default function Splash() {
         <div className="text-center space-y-1">
           <p className="text-2xl font-semibold text-slate-800 tracking-tight">Your business,</p>
           <p
-            className="text-2xl font-semibold tracking-tight bg-clip-text text-transparent"
-            style={{ backgroundImage: 'linear-gradient(90deg, #e86a1a, #fe7824, #ffaa6e)' }}
+            className="text-2xl font-semibold tracking-tight"
+            style={{ backgroundImage: 'linear-gradient(90deg, #e86a1a, #fe7824, #ffaa6e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
           >
             beautifully online.
           </p>
