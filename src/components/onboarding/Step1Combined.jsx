@@ -389,10 +389,10 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
         </div>
 
         {(() => {
-          const buttonBgColor = selectedPalette?.dark || POPULAR_PALETTES[0].dark;
-          const buttonStyle = {
-            backgroundColor: buttonBgColor,
-          };
+          const buttonBgColor = selectedPalette?.dark || 'rgb(var(--color-primary))';
+          const buttonStyle = selectedPalette?.dark
+            ? { backgroundColor: buttonBgColor }
+            : { background: 'linear-gradient(to right, rgb(var(--color-primary)), rgb(var(--color-primary-light)))' };
           return (
             <Button
               type="submit"
