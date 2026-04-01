@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 
 // Popular color palettes
 const POPULAR_PALETTES = [
+  { name: 'Brand Default', dark: '#9333ea', light: '#F3E8FF' },
   { name: 'Ocean Blue', dark: '#0369A1', light: '#E0F2FE' },
   { name: 'Forest Green', dark: '#15803D', light: '#DCFCE7' },
   { name: 'Sunset Orange', dark: '#EA580C', light: '#FFEDD5' },
@@ -18,7 +19,7 @@ const POPULAR_PALETTES = [
 ];
 
 export default function Step2Theme({ formData, updateFormData, nextStep, prevStep }) {
-  const [selectedTheme, setSelectedTheme] = useState(formData.theme || 'Ocean Blue');
+  const [selectedTheme, setSelectedTheme] = useState(formData.theme || 'Brand Default');
   const [customPrimary] = useState(formData.customPrimary || null);
   const [customSecondary] = useState(formData.customSecondary || null);
 
