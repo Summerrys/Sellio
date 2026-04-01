@@ -20,7 +20,7 @@ export default function Onboarding() {
     businessType: '',
     country: 'Singapore',
     logoUrl: '',
-    theme: 'Ocean Blue',
+    theme: '',
     // Step 2 (Admin)
     // Step 3 (Business Setup)
     currency: 'SGD',
@@ -73,7 +73,7 @@ export default function Onboarding() {
 
   const steps = [
     { component: Step1Combined, title: 'Business & Theme' },
-    { component: Step4Business, title: 'Business Setup' },
+    { component: Step4Business, title: 'Branch Setup' },
     { component: Step5QuickStart, title: 'Quick Start' },
     { component: Step6Confirmation, title: 'Launch' },
   ];

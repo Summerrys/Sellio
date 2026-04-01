@@ -43,7 +43,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
   const [logoPreview, setLogoPreview] = React.useState(formData.logoUrl || null);
   const [logoError, setLogoError] = React.useState('');
   const fileInputRef = React.useRef(null);
-  const [selectedTheme, setSelectedTheme] = useState(formData.theme || 'Ocean Blue');
+  const [selectedTheme, setSelectedTheme] = useState(formData.theme || '');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [customPrimary, setCustomPrimary] = useState(formData.customPrimary || '#0369A1');
   const [customSecondary, setCustomSecondary] = useState(formData.customSecondary || '#E0F2FE');
