@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowRight, ArrowLeft, MapPin, Clock } from 'lucide-react';
 import { generateThemeVariables } from '../theme/themeUtils';
+import { DEFAULT_COLORS } from '@/lib/themeConstants';
 import TimePicker from './TimePicker';
 
 const schema = z.object({
@@ -31,7 +32,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
       });
     } else {
       // Apply default theme
-      const variables = generateThemeVariables('#9333ea', '#ec4899');
+      const variables = generateThemeVariables(DEFAULT_COLORS.primary, DEFAULT_COLORS.secondary);
       const root = document.documentElement;
       Object.entries(variables).forEach(([key, value]) => {
         root.style.setProperty(key, value);
@@ -146,7 +147,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
                 type="button"
                 onClick={() => applyToAllDays(quickApplyStart, quickApplyEnd)}
                 className="w-full px-3 py-1.5 text-white rounded-lg text-xs font-medium"
-                style={formData.theme ? { backgroundColor: 'rgb(var(--color-primary))', cursor: 'pointer' } : { background: 'linear-gradient(to right, #9333ea, #ec4899)' }}
+                style={formData.theme ? { backgroundColor: 'rgb(var(--color-primary))', cursor: 'pointer' } : { background: `linear-gradient(to right, ${DEFAULT_COLORS.primary}, ${DEFAULT_COLORS.secondary})` }}
               >
                 Apply to All
               </button>

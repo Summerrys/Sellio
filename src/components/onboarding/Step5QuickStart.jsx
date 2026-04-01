@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { ArrowRight, ArrowLeft, Package, Plus, X, Upload } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { generateThemeVariables } from '../theme/themeUtils';
+import { DEFAULT_COLORS } from '@/lib/themeConstants';
 
 export default function Step5QuickStart({ formData, updateFormData, nextStep, prevStep }) {
   // Apply theme from Step 1
@@ -19,7 +20,7 @@ export default function Step5QuickStart({ formData, updateFormData, nextStep, pr
       });
     } else {
       // Apply default theme
-      const variables = generateThemeVariables('#9333ea', '#ec4899');
+      const variables = generateThemeVariables(DEFAULT_COLORS.primary, DEFAULT_COLORS.secondary);
       const root = document.documentElement;
       Object.entries(variables).forEach(([key, value]) => {
         root.style.setProperty(key, value);

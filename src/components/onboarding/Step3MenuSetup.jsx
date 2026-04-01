@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { generateThemeVariables } from '../theme/themeUtils';
-import { getThemeCSSColors } from '@/lib/themeConstants';
+import { getThemeCSSColors, DEFAULT_COLORS } from '@/lib/themeConstants';
 
 export default function Step3MenuSetup({ formData, updateFormData, nextStep, prevStep }) {
   const [categories, setCategories] = useState(formData.menuCategories || []);
@@ -25,7 +25,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         root.style.setProperty(key, value);
       });
     } else {
-      const variables = generateThemeVariables('#9333ea', '#ec4899');
+      const variables = generateThemeVariables(DEFAULT_COLORS.primary, DEFAULT_COLORS.secondary);
       const root = document.documentElement;
       Object.entries(variables).forEach(([key, value]) => {
         root.style.setProperty(key, value);
