@@ -15,14 +15,13 @@ export default function Onboarding() {
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState([]);
   const [formData, setFormData] = useState({
-    // Step 1 (Business + Theme)
+    // Step 1 (Business & Theme)
     businessName: '',
     businessType: '',
     country: 'Singapore',
     logoUrl: '',
     theme: '',
-    // Step 2 (Admin)
-    // Step 3 (Business Setup)
+    // Step 2 (Branch Setup)
     currency: 'SGD',
     taxRate: 9,
     taxInclusive: false,
