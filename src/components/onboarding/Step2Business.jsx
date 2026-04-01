@@ -57,16 +57,8 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
     Sunday: { start: '09:00', end: '22:00', enabled: false },
   });
 
-  // Apply theme colors from Step 1
-  useEffect(() => {
-    if (formData.customPrimary && formData.customSecondary) {
-      const variables = generateThemeVariables(formData.customPrimary, formData.customSecondary);
-      const root = document.documentElement;
-      Object.entries(variables).forEach(([key, value]) => {
-        root.style.setProperty(key, value);
-      });
-    }
-  }, [formData.customPrimary, formData.customSecondary]);
+  const [quickApplyStart, setQuickApplyStart] = React.useState('09:00');
+  const [quickApplyEnd, setQuickApplyEnd] = React.useState('22:00');
 
   const applyToAllDays = (start, end) => {
     const updated = {};
@@ -137,26 +129,22 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
           <div className="mb-4 p-3 bg-white border rounded-lg" style={formData.theme ? { borderColor: 'rgba(var(--color-primary-rgb), 0.2)' } : { borderColor: '#bfdbfe' }}>
             <p className="text-xs font-medium text-slate-700 mb-2">Apply to all days</p>
             <div className="flex flex-col gap-2">
-              <div className="flex gap-2 w-full">
-                <input
-                  type="time"
-                  defaultValue="09:00"
-                  id="quickStart"
-                  className="flex-1 min-w-0 px-2 py-1.5 border border-slate-300 rounded-lg text-xs"
+              <div className="flex items-center gap-1 w-full">
+                <TimePicker
+                  value={quickApplyStart}
+                  onChange={setQuickApplyStart}
+                  formData={formData}
                 />
-                <input
-                  type="time"
-                  defaultValue="22:00"
-                  id="quickEnd"
-                  className="flex-1 min-w-0 px-2 py-1.5 border border-slate-300 rounded-lg text-xs"
+                <span className="text-slate-400 text-xs flex-shrink-0">-</span>
+                <TimePicker
+                  value={quickApplyEnd}
+                  onChange={setQuickApplyEnd}
+                  formData={formData}
                 />
               </div>
               <button
                 type="button"
-                onClick={() => applyToAllDays(
-                  document.getElementById('quickStart').value,
-                  document.getElementById('quickEnd').value
-                )}
+                onClick={() => applyToAllDays(quickApplyStart, quickApplyEnd)}
                 className="w-full px-3 py-1.5 text-white rounded-lg text-xs font-medium"
                 style={formData.theme ? { backgroundColor: 'rgb(var(--color-primary))', cursor: 'pointer' } : { background: 'linear-gradient(to right, #9333ea, #ec4899)' }}
               >
