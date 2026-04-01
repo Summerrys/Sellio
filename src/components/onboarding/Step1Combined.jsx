@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, UtensilsCrossed, ShoppingBag, Wrench, X, Edit3, Check, Palette, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, UtensilsCrossed, ShoppingBag, Wrench, X, Edit3, Check, Palette } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { getSupabase } from '@/lib/supabaseClient';
 import { generateThemeVariables } from '../theme/themeUtils';
@@ -45,9 +45,6 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
   const fileInputRef = React.useRef(null);
   const [selectedTheme, setSelectedTheme] = useState(formData.theme || 'Ocean Blue');
   const [gradientEnabled, setGradientEnabled] = useState(formData.gradientEnabled || false);
-  const scrollContainerRef = useRef(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
     resolver: zodResolver(schema),
@@ -82,25 +79,6 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
       setLogoPreview(reader.result);
     };
     reader.readAsDataURL(file);
-  };
-
-  const checkScroll = () => {
-    if (scrollContainerRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
-    }
-  };
-
-  const scroll = (direction) => {
-    if (scrollContainerRef.current) {
-      const scrollAmount = 300;
-      scrollContainerRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth'
-      });
-      setTimeout(checkScroll, 100);
-    }
   };
 
   const handleThemeSelect = (palette) => {
@@ -286,27 +264,20 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
           </Select>
         </div>
 
-        {/* Theme Selection - Carousel */}
+        {/* Theme Selection - Grid Layout */}
         <div className="border-t pt-6">
           <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-4">
             <Palette className="w-4 h-4 text-purple-500" /> Choose Your Brand Colors
           </Label>
           
-          <div className="relative">
-            <div
-              ref={scrollContainerRef}
-              onScroll={checkScroll}
-              className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth pb-2"
-              style={{ scrollBehavior: 'smooth' }}
-            >
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {POPULAR_PALETTES.map((palette) => (
               <button
                 key={palette.name}
                 type="button"
                 onClick={() => handleThemeSelect(palette)}
                 className={cn(
-                  "relative flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all",
-                  "w-20 h-20 sm:w-24 sm:h-24",
+                  "relative rounded-lg overflow-hidden border-2 transition-all aspect-square",
                   selectedTheme === palette.name
                     ? "border-slate-900 ring-2 ring-slate-900 ring-offset-2"
                     : "border-slate-200 hover:border-slate-300"
@@ -320,7 +291,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                 {selectedTheme === palette.name && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="bg-white rounded-full p-2 shadow-lg">
-                      <Check className="w-4 h-4 text-slate-900" />
+                      <Check className="w-5 h-5 text-slate-900" />
                     </div>
                   </div>
                 )}
@@ -331,25 +302,6 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                 </div>
               </button>
             ))}
-            </div>
-            
-            {/* Scroll Buttons */}
-            {canScrollLeft && (
-              <button
-                onClick={() => scroll('left')}
-                className="absolute left-0 top-1/2 -translate-y-1/2 -ml-4 z-10 bg-white rounded-full p-2 shadow-md hover:shadow-lg transition-shadow"
-              >
-                <ChevronLeft className="w-5 h-5 text-slate-600" />
-              </button>
-            )}
-            {canScrollRight && (
-              <button
-                onClick={() => scroll('right')}
-                className="absolute right-0 top-1/2 -translate-y-1/2 -mr-4 z-10 bg-white rounded-full p-2 shadow-md hover:shadow-lg transition-shadow"
-              >
-                <ChevronRight className="w-5 h-5 text-slate-600" />
-              </button>
-            )}
           </div>
 
           <p className="text-xs text-slate-500 mt-4">
