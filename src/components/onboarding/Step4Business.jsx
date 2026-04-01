@@ -28,14 +28,22 @@ export default function Step4Business({ formData, updateFormData, nextStep, prev
   });
 
   const [operatingHours, setOperatingHours] = React.useState(formData.operatingHours || {
-    Monday: { start: '09:00', end: '22:00' },
-    Tuesday: { start: '09:00', end: '22:00' },
-    Wednesday: { start: '09:00', end: '22:00' },
-    Thursday: { start: '09:00', end: '22:00' },
-    Friday: { start: '09:00', end: '22:00' },
-    Saturday: { start: '09:00', end: '22:00' },
-    Sunday: { start: '09:00', end: '22:00' },
+    Monday: { start: '09:00', end: '22:00', enabled: true },
+    Tuesday: { start: '09:00', end: '22:00', enabled: true },
+    Wednesday: { start: '09:00', end: '22:00', enabled: true },
+    Thursday: { start: '09:00', end: '22:00', enabled: true },
+    Friday: { start: '09:00', end: '22:00', enabled: true },
+    Saturday: { start: '09:00', end: '22:00', enabled: false },
+    Sunday: { start: '09:00', end: '22:00', enabled: false },
   });
+
+  const applyToAllDays = (start, end) => {
+    const updated = {};
+    days.forEach(day => {
+      updated[day] = { ...operatingHours[day], start, end };
+    });
+    setOperatingHours(updated);
+  };
 
   const onSubmit = (data) => {
     updateFormData({ ...data, operatingHours });
@@ -89,38 +97,81 @@ export default function Step4Business({ formData, updateFormData, nextStep, prev
 
         {/* Operating Hours */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg sm:rounded-xl p-3 sm:p-5">
-          <h3 className="text-xs sm:text-sm font-semibold text-slate-900 flex items-center gap-2 mb-3">
+          <h3 className="text-xs sm:text-sm font-semibold text-slate-900 flex items-center gap-2 mb-4">
             <Clock className="w-4 h-4 text-blue-600" />
             Operating Hours
           </h3>
-          <div className="space-y-2 sm:space-y-3 overflow-y-auto max-h-48 sm:max-h-none">
+
+          {/* Quick Apply */}
+          <div className="mb-4 p-3 bg-white border border-blue-200 rounded-lg">
+            <p className="text-xs font-medium text-slate-700 mb-2">Apply to all days</p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="time"
+                defaultValue="09:00"
+                id="quickStart"
+                className="flex-1 px-2 py-1.5 border border-slate-300 rounded-lg text-xs"
+              />
+              <span className="hidden sm:inline text-slate-400 text-xs">to</span>
+              <input
+                type="time"
+                defaultValue="22:00"
+                id="quickEnd"
+                className="flex-1 px-2 py-1.5 border border-slate-300 rounded-lg text-xs"
+              />
+              <button
+                type="button"
+                onClick={() => applyToAllDays(
+                  document.getElementById('quickStart').value,
+                  document.getElementById('quickEnd').value
+                )}
+                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+
+          {/* Days List */}
+          <div className="space-y-2.5">
             {days.map((day) => (
-              <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs sm:text-sm">
-                <div className="w-16 sm:w-24 flex-shrink-0">
-                  <p className="font-medium text-slate-700">{day}</p>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-1">
-                  <input
-                    type="time"
-                    value={operatingHours[day].start}
-                    onChange={(e) => setOperatingHours({
-                      ...operatingHours,
-                      [day]: { ...operatingHours[day], start: e.target.value }
-                    })}
-                    className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 border border-slate-300 rounded-lg text-xs sm:text-sm"
-                  />
-                  <span className="hidden sm:inline text-slate-400 flex-shrink-0">to</span>
-                  <span className="sm:hidden text-slate-400 text-xs">to</span>
-                  <input
-                    type="time"
-                    value={operatingHours[day].end}
-                    onChange={(e) => setOperatingHours({
-                      ...operatingHours,
-                      [day]: { ...operatingHours[day], end: e.target.value }
-                    })}
-                    className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 border border-slate-300 rounded-lg text-xs sm:text-sm"
-                  />
-                </div>
+              <div key={day} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-200">
+                <input
+                  type="checkbox"
+                  checked={operatingHours[day].enabled}
+                  onChange={(e) => setOperatingHours({
+                    ...operatingHours,
+                    [day]: { ...operatingHours[day], enabled: e.target.checked }
+                  })}
+                  className="w-4 h-4 rounded cursor-pointer"
+                />
+                <span className="w-14 text-xs sm:text-sm font-medium text-slate-700 flex-shrink-0">{day}</span>
+                {operatingHours[day].enabled && (
+                  <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
+                    <input
+                      type="time"
+                      value={operatingHours[day].start}
+                      onChange={(e) => setOperatingHours({
+                        ...operatingHours,
+                        [day]: { ...operatingHours[day], start: e.target.value }
+                      })}
+                      className="flex-1 px-2 py-1 border border-slate-300 rounded text-xs"
+                    />
+                    <span className="text-slate-400 text-xs flex-shrink-0">-</span>
+                    <input
+                      type="time"
+                      value={operatingHours[day].end}
+                      onChange={(e) => setOperatingHours({
+                        ...operatingHours,
+                        [day]: { ...operatingHours[day], end: e.target.value }
+                      })}
+                      className="flex-1 px-2 py-1 border border-slate-300 rounded text-xs"
+                    />
+                  </div>
+                )}
+                {!operatingHours[day].enabled && (
+                  <span className="text-xs text-slate-400 italic flex-1">Closed</span>
+                )}
               </div>
             ))}
           </div>
