@@ -85,7 +85,7 @@ export default function Auth() {
                   <p className="text-2xl font-semibold text-slate-900 tracking-tight">Your business,</p>
                   <div className="absolute -bottom-1 left-0 h-1 bg-gradient-to-r from-purple-600 to-pink-500 rounded-full" style={{width: '120px'}}></div>
                 </div>
-                <p className="text-2xl font-semibold tracking-tight mt-2 bg-clip-text text-transparent" style={{backgroundImage: 'linear-gradient(90deg, #fb923c, #f97316, #ea580c)'}}>beautifully online.</p>
+                <p className="text-2xl font-semibold tracking-tight mt-2 bg-clip-text text-transparent" style={{backgroundImage: 'linear-gradient(90deg, #fb923c, #e0449a, #8b2fc9)'}}>beautifully online.</p>
               </div>
             </div>
 
@@ -215,7 +215,7 @@ export default function Auth() {
                 type="submit"
                 disabled={loading}
                 className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70"
-                style={{ background: 'linear-gradient(90deg, #fb923c, #f97316, #ea580c)' }}
+                style={{ background: 'linear-gradient(90deg, #fb923c, #e0449a, #8b2fc9)' }}
               >
                 {loading ? 'Please wait...' : isLogin ? 'Login' : 'Sign Up'}
               </button>
