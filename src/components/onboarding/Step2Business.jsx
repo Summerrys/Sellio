@@ -126,14 +126,14 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
         </div>
 
         {/* Operating Hours */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg sm:rounded-xl p-3 sm:p-5">
-          <h3 className="text-xs sm:text-sm font-semibold text-slate-900 flex items-center gap-2 mb-4">
-            <Clock className="w-4 h-4 text-blue-600" />
+        <div className="rounded-lg sm:rounded-xl p-3 sm:p-5" style={formData.theme ? { backgroundColor: 'rgba(var(--color-primary-rgb), 0.05)', borderColor: 'rgb(var(--color-primary))', borderWidth: '1px' } : { backgroundColor: '#eff6ff', borderColor: '#bfdbfe', borderWidth: '1px' }}>
+          <h3 className="text-xs sm:text-sm font-semibold text-slate-900 flex items-center gap-2 mb-4" style={formData.theme ? { color: 'rgb(var(--color-primary))' } : {}}>
+            <Clock className="w-4 h-4" style={formData.theme ? { color: 'rgb(var(--color-primary))' } : { color: '#2563eb' }} />
             Operating Hours
           </h3>
 
           {/* Quick Apply */}
-          <div className="mb-4 p-3 bg-white border border-blue-200 rounded-lg">
+          <div className="mb-4 p-3 bg-white border rounded-lg" style={formData.theme ? { borderColor: 'rgba(var(--color-primary-rgb), 0.2)' } : { borderColor: '#bfdbfe' }}>
             <p className="text-xs font-medium text-slate-700 mb-2">Apply to all days</p>
             <div className="flex flex-col gap-2">
               <div className="flex gap-2 w-full">
@@ -156,7 +156,8 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
                   document.getElementById('quickStart').value,
                   document.getElementById('quickEnd').value
                 )}
-                className="w-full px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700"
+                className="w-full px-3 py-1.5 text-white rounded-lg text-xs font-medium"
+                style={formData.theme ? { backgroundColor: 'rgb(var(--color-primary))', cursor: 'pointer' } : { backgroundColor: '#2563eb' }}
               >
                 Apply to All
               </button>
@@ -166,7 +167,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
           {/* Days List */}
           <div className="space-y-2.5 overflow-y-auto max-h-56 sm:max-h-none">
             {days.map((day) => (
-              <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 bg-white rounded-lg border border-slate-200">
+              <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 bg-white rounded-lg border" style={formData.theme ? { borderColor: 'rgba(var(--color-primary-rgb), 0.2)' } : { borderColor: '#e2e8f0' }}>
                 <div className="flex items-center gap-2 min-w-0">
                   <input
                     type="checkbox"
@@ -189,9 +190,9 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
                         [day]: { ...operatingHours[day], start: e.target.value }
                       })}
                       className="flex-1 px-2 py-1 border border-slate-300 rounded text-xs min-w-0"
-                    />
-                    <span className="text-slate-400 text-xs flex-shrink-0">-</span>
-                    <input
+                      />
+                      <span className="text-slate-400 text-xs flex-shrink-0">-</span>
+                      <input
                       type="time"
                       value={operatingHours[day].end}
                       onChange={(e) => setOperatingHours({
