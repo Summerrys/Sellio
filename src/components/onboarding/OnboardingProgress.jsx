@@ -1,8 +1,9 @@
 import React from 'react';
 import { CheckCircle2, Rocket } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { DEFAULT_COLORS } from '@/lib/themeConstants';
 
-export default function OnboardingProgress({ currentStep = 1, completedSteps = [], steps = [] }) {
+export default function OnboardingProgress({ currentStep = 1, completedSteps = [], steps = [], formData = {} }) {
   const displaySteps = steps.length > 0 ? steps.map((s, i) => ({
     number: i + 1,
     label: s.title.replace(/ /g, '\n'),
@@ -18,7 +19,7 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
           <Rocket className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
           <h3 className="text-sm sm:text-base font-bold text-slate-900">Your Progress</h3>
         </div>
-        <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-semibold">
+        <div className="text-white px-2 sm:px-3 py-1 rounded-full text-xs font-semibold" style={{ background: `linear-gradient(to right, ${formData.customPrimary || DEFAULT_COLORS.primary}, ${formData.customSecondary || DEFAULT_COLORS.secondary})` }}>
           {Math.min(completedSteps.length, displaySteps.length)} / {displaySteps.length} Complete
         </div>
       </div>
@@ -35,11 +36,19 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
             >
               <div className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 sm:border-3 shadow-md transition-all ${
                 completedSteps.includes(step.number)
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 border-purple-500'
+                  ? 'border-purple-500'
                   : currentStep === step.number
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 border-purple-500 animate-pulse'
+                  ? 'border-purple-500 animate-pulse'
                   : 'bg-white border-slate-300'
-              }`}>
+              }`}
+              style={{
+                background: completedSteps.includes(step.number) 
+                  ? `linear-gradient(to right, ${formData.customPrimary || DEFAULT_COLORS.primary}, ${formData.customSecondary || DEFAULT_COLORS.secondary})`
+                  : currentStep === step.number
+                  ? `linear-gradient(to right, ${formData.customPrimary || DEFAULT_COLORS.primary}, ${formData.customSecondary || DEFAULT_COLORS.secondary})`
+                  : 'transparent'
+              }}
+              >
                 {completedSteps.includes(step.number) ? (
                   <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 ) : (
@@ -51,7 +60,7 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
                 )}
               </div>
               <span className={`text-[10px] sm:text-xs mt-1 sm:mt-2 text-center font-medium max-w-14 leading-tight ${
-                currentStep === step.number ? 'text-purple-600' : 'text-slate-500'
+                currentStep === step.number ? 'text-slate-500' : 'text-slate-500'
               }`}>
                 {step.label}
               </span>
@@ -59,9 +68,14 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
             {index < displaySteps.length - 1 && (
               <div className={`flex-1 h-1 mx-0.5 sm:mx-2 rounded transition-all ${
                 completedSteps.includes(step.number)
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500'
+                  ? ''
                   : 'bg-slate-200'
-              }`} />
+              }`}
+              style={{
+                background: completedSteps.includes(step.number)
+                  ? `linear-gradient(to right, ${formData.customPrimary || DEFAULT_COLORS.primary}, ${formData.customSecondary || DEFAULT_COLORS.secondary})`
+                  : 'transparent'
+              }} />
             )}
           </div>
         ))}
@@ -73,7 +87,10 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
           <motion.div
             animate={{ width: `${percentage}%` }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="h-full rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500"
+            className="h-full rounded-full"
+            style={{
+              background: `linear-gradient(to right, ${formData.customPrimary || DEFAULT_COLORS.primary}, ${formData.customSecondary || DEFAULT_COLORS.secondary})`
+            }}
           />
         </div>
       </div>
