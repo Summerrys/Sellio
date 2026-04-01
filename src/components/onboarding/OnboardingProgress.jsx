@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const steps = [
@@ -10,54 +10,81 @@ const steps = [
   { number: 5, label: 'Review\n& Go Live' },
 ];
 
-export default function OnboardingProgress({ currentStep = 1 }) {
+export default function OnboardingProgress({ currentStep = 1, completedSteps = [] }) {
   const totalSteps = steps.length;
   const percentage = Math.round((currentStep / totalSteps) * 100);
 
   return (
-    <div className="w-full">
-      {/* Compact Header */}
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2 flex-1">
-          <CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0" />
-          <h3 className="text-sm font-bold text-slate-900">Your Progress</h3>
+    <div className="w-full bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-100">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 fill-yellow-500" />
+          <h3 className="text-sm sm:text-base font-bold text-slate-900">Your Progress</h3>
         </div>
-        <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0">
-          {currentStep}/{totalSteps}
+        <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-semibold">
+          {completedSteps.length} / {totalSteps} Complete
         </div>
       </div>
 
-      {/* Compact Steps */}
-      <div className="flex justify-between items-end gap-1 mb-2 overflow-x-auto pb-1">
-        {steps.map((step) => (
-          <div key={step.number} className="flex flex-col items-center gap-0.5 flex-shrink-0">
+      {/* Step Indicators */}
+      <div className="flex justify-between mb-4 gap-1">
+        {steps.map((step, index) => (
+          <div key={step.number} className="flex items-center flex-1">
             <motion.div
-              animate={{
-                scale: currentStep === step.number ? 1.05 : 1,
-                backgroundColor: currentStep >= step.number ? '#a855f7' : '#f3f4f6',
-              }}
-              transition={{ duration: 0.3 }}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shadow-sm"
-              style={{
-                color: currentStep >= step.number ? 'white' : '#9ca3af',
-              }}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: index * 0.05 }}
+              className="flex flex-col items-center flex-1"
             >
-              {step.number}
+              <div className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 sm:border-3 shadow-md transition-all ${
+                completedSteps.includes(step.number)
+                  ? 'bg-gradient-to-r from-green-400 to-emerald-500 border-green-500 scale-110'
+                  : currentStep === step.number
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 border-purple-500 animate-pulse'
+                  : 'bg-white border-slate-300'
+              }`}>
+                {completedSteps.includes(step.number) ? (
+                  <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                ) : (
+                  <span className={`text-xs sm:text-sm font-bold ${
+                    currentStep === step.number ? 'text-white' : 'text-slate-400'
+                  }`}>
+                    {step.number}
+                  </span>
+                )}
+              </div>
+              <span className={`text-[10px] sm:text-xs mt-1 sm:mt-2 text-center font-medium max-w-14 leading-tight ${
+                currentStep === step.number ? 'text-purple-600' : 'text-slate-500'
+              }`}>
+                {step.label}
+              </span>
             </motion.div>
-            <p className="text-[10px] sm:text-xs text-center font-medium text-slate-600 leading-tight max-w-14 whitespace-pre-line">
-              {step.label}
-            </p>
+            {index < steps.length - 1 && (
+              <div className={`flex-1 h-1 mx-0.5 sm:mx-2 rounded transition-all ${
+                completedSteps.includes(step.number)
+                  ? 'bg-gradient-to-r from-green-400 to-emerald-500'
+                  : 'bg-slate-200'
+              }`} />
+            )}
           </div>
         ))}
       </div>
 
-      {/* Compact Progress Bar */}
-      <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-        <motion.div
-          animate={{ width: `${percentage}%` }}
-          transition={{ duration: 0.5 }}
-          className="h-full rounded-full bg-gradient-to-r from-purple-500 to-orange-500"
-        />
+      {/* Progress Bar */}
+      <div className="relative mb-2">
+        <div className="w-full bg-slate-200 rounded-full h-2 sm:h-3 overflow-hidden">
+          <motion.div
+            animate={{ width: `${percentage}%` }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="h-full rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500"
+          />
+        </div>
+      </div>
+      <div className="text-center">
+        <span className="text-xs sm:text-sm font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          {percentage}% Complete - You're doing great! 🎉
+        </span>
       </div>
     </div>
   );

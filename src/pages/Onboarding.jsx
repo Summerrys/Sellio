@@ -15,6 +15,7 @@ const STORAGE_KEY = 'apptelier_onboarding_state';
 export default function Onboarding() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
+  const [completedSteps, setCompletedSteps] = useState([]);
   const [formData, setFormData] = useState({
     // Step 1
     businessName: '',
@@ -57,7 +58,10 @@ export default function Onboarding() {
   };
 
   const nextStep = () => {
-    if (currentStep < 5) setCurrentStep(currentStep + 1);
+    if (currentStep < 5) {
+      setCompletedSteps([...completedSteps, currentStep]);
+      setCurrentStep(currentStep + 1);
+    }
   };
 
   const prevStep = () => {
@@ -84,7 +88,7 @@ export default function Onboarding() {
       {/* Header with Compact Progress */}
       <div className="bg-white border-b border-slate-100 px-4 py-4">
         <div className="max-w-4xl mx-auto">
-          <OnboardingProgress currentStep={currentStep} />
+          <OnboardingProgress currentStep={currentStep} completedSteps={completedSteps} />
         </div>
       </div>
 
