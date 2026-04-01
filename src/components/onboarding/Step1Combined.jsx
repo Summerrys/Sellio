@@ -44,7 +44,6 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
   const [logoError, setLogoError] = React.useState('');
   const fileInputRef = React.useRef(null);
   const [selectedTheme, setSelectedTheme] = useState(formData.theme || 'Ocean Blue');
-  const [gradientEnabled, setGradientEnabled] = useState(formData.gradientEnabled || false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [customPrimary, setCustomPrimary] = useState(formData.customPrimary || '#0369A1');
   const [customSecondary, setCustomSecondary] = useState(formData.customSecondary || '#E0F2FE');
@@ -129,7 +128,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
       }
     }
 
-    updateFormData({ ...data, logoUrl, theme: selectedTheme, gradientEnabled, customPrimary: selectedTheme === 'Custom' ? customPrimary : null, customSecondary: selectedTheme === 'Custom' ? customSecondary : null });
+    updateFormData({ ...data, logoUrl, theme: selectedTheme, customPrimary: selectedTheme === 'Custom' ? customPrimary : null, customSecondary: selectedTheme === 'Custom' ? customSecondary : null });
     nextStep();
   };
 
@@ -389,31 +388,14 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
             ✨ Your theme updates live as you select colors
           </p>
           
-          {selectedTheme && (
-            <div className="mt-4 flex items-center gap-3 p-4 bg-slate-50 rounded-lg">
-              <input
-                type="checkbox"
-                id="gradient-toggle"
-                checked={gradientEnabled}
-                onChange={(e) => setGradientEnabled(e.target.checked)}
-                className="w-4 h-4 cursor-pointer"
-              />
-              <Label htmlFor="gradient-toggle" className="text-sm font-medium text-slate-700 cursor-pointer">
-                Apply gradient effect
-              </Label>
-            </div>
-          )}
+
         </div>
 
         {(() => {
           const buttonBgColor = selectedPalette?.dark || '#F97316';
-          const buttonStyle = gradientEnabled && selectedPalette
-            ? {
-                backgroundImage: `linear-gradient(135deg, ${selectedPalette.dark}, ${selectedPalette.light})`,
-              }
-            : {
-                backgroundColor: buttonBgColor,
-              };
+          const buttonStyle = {
+            backgroundColor: buttonBgColor,
+          };
           return (
             <Button
               type="submit"
