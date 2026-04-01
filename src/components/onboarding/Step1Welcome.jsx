@@ -136,19 +136,19 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
   };
 
   return (
-    <Card className="p-8 sm:p-10 bg-white border-0 shadow-lg">
-      <div className="text-center mb-8">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
-          <Building2 className="w-8 h-8 text-white" />
+    <Card className="p-4 sm:p-8 md:p-10 bg-white border-0 shadow-lg">
+      <div className="text-center mb-6 sm:mb-8">
+        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-3 sm:mb-4">
+          <Building2 className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
         </div>
-        <h2 className="text-3xl font-bold text-slate-900 mb-2">Let's set up your business</h2>
-        <p className="text-slate-600">Tell us about your company to get started</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1 sm:mb-2">Let's set up your business</h2>
+        <p className="text-sm sm:text-base text-slate-600">Tell us about your company to get started</p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
         {/* Logo Upload */}
         <div>
-          <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-3">
+          <Label className="text-xs sm:text-sm font-medium text-slate-700 flex items-center gap-2 mb-2 sm:mb-3">
             <Sparkles className="w-4 h-4 text-purple-500" /> Business Logo (optional)
           </Label>
           <input
@@ -199,13 +199,13 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
         </div>
 
         {/* Two-column layout for name and type */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
-            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Building2 className="w-4 h-4 text-blue-500" /> Business Name</Label>
+            <Label className="text-xs sm:text-sm font-medium text-slate-700 flex items-center gap-2"><Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500" /> Business Name</Label>
             <Input
               {...register('businessName')}
               placeholder="eg. Xin Fu Ji Local Delights"
-              className="mt-2 h-11"
+              className="mt-1.5 sm:mt-2 h-10 sm:h-11 text-sm"
             />
             {errors.businessName && (
               <p className="text-xs text-red-500 mt-1">{errors.businessName.message}</p>
@@ -213,12 +213,12 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
           </div>
 
           <div>
-            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Briefcase className="w-4 h-4 text-green-500" /> Industry Type</Label>
+            <Label className="text-xs sm:text-sm font-medium text-slate-700 flex items-center gap-2"><Briefcase className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" /> Industry Type</Label>
             <Select
               value={watch('businessType')}
               onValueChange={(v) => setValue('businessType', v)}
             >
-              <SelectTrigger className="mt-2 h-11">
+              <SelectTrigger className="mt-1.5 sm:mt-2 h-10 sm:h-11 text-sm">
                 <SelectValue placeholder="Select industry" />
               </SelectTrigger>
               <SelectContent>
@@ -239,12 +239,12 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
         </div>
 
         <div>
-          <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Globe className="w-4 h-4 text-orange-500" /> Country</Label>
+          <Label className="text-xs sm:text-sm font-medium text-slate-700 flex items-center gap-2"><Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500" /> Country</Label>
           <Select
             value={watch('country')}
             onValueChange={(v) => setValue('country', v)}
           >
-            <SelectTrigger className="mt-2 h-11">
+            <SelectTrigger className="mt-1.5 sm:mt-2 h-10 sm:h-11 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -259,13 +259,13 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
 
         {/* Theme Selection Carousel */}
         <div>
-          <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-3">
+          <Label className="text-xs sm:text-sm font-medium text-slate-700 flex items-center gap-2 mb-2 sm:mb-3">
             <Sparkles className="w-4 h-4 text-purple-500" /> Choose Your Brand Colors
           </Label>
-          <div className="relative">
+          <div className="relative px-2 sm:px-0">
             <div
               ref={carouselRef}
-              className="flex gap-3 overflow-x-auto scrollbar-hide pb-2"
+              className="flex gap-2 sm:gap-3 overflow-x-auto scrollbar-hide pb-2"
               style={{ scrollBehavior: 'smooth' }}
             >
               {PALETTES.map((palette) => (
@@ -273,9 +273,9 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
                   key={palette.name}
                   onClick={() => handleThemeSelect(palette)}
                   className={cn(
-                    "flex-shrink-0 w-32 aspect-square rounded-xl overflow-hidden border-2 transition-all relative group",
+                    "flex-shrink-0 w-20 sm:w-32 aspect-square rounded-lg sm:rounded-xl overflow-hidden border-2 transition-all relative group",
                     selectedTheme === palette.name
-                      ? "border-slate-900 ring-2 ring-slate-900 ring-offset-2"
+                      ? "border-slate-900 ring-2 ring-slate-900 ring-offset-1 sm:ring-offset-2"
                       : "border-slate-200 hover:border-slate-300"
                   )}
                 >
@@ -285,13 +285,13 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
                   </div>
                   {selectedTheme === palette.name && (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="bg-white rounded-full p-2 shadow-lg">
-                        <Check className="w-5 h-5 text-slate-900" />
+                      <div className="bg-white rounded-full p-1 sm:p-2 shadow-lg">
+                        <Check className="w-3 h-3 sm:w-5 sm:h-5 text-slate-900" />
                       </div>
                     </div>
                   )}
-                  <div className="absolute bottom-1 left-1 right-1">
-                    <span className="text-xs font-medium text-white bg-black/50 px-2 py-0.5 rounded-full backdrop-blur-sm block text-center truncate">
+                  <div className="absolute bottom-0.5 left-0.5 right-0.5 sm:bottom-1 sm:left-1 sm:right-1">
+                    <span className="text-xs sm:text-xs font-medium text-white bg-black/50 px-1.5 py-0.5 rounded-full backdrop-blur-sm block text-center truncate">
                       {palette.name}
                     </span>
                   </div>
@@ -301,24 +301,24 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
             <button
               type="button"
               onClick={() => scrollCarousel('left')}
-              className="absolute -left-3 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-1.5 shadow-md hover:bg-slate-50"
+              className="hidden sm:flex absolute -left-3 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-1.5 shadow-md hover:bg-slate-50"
             >
               <ChevronLeft className="w-4 h-4 text-slate-600" />
             </button>
             <button
               type="button"
               onClick={() => scrollCarousel('right')}
-              className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-1.5 shadow-md hover:bg-slate-50"
+              className="hidden sm:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-1.5 shadow-md hover:bg-slate-50"
             >
               <ChevronRight className="w-4 h-4 text-slate-600" />
             </button>
           </div>
-          <p className="text-xs text-slate-500 mt-2">✨ Your theme is being previewed live!</p>
+          <p className="text-xs text-slate-500 mt-1.5 sm:mt-2">✨ Your theme is being previewed live!</p>
         </div>
 
         <Button
           type="submit"
-          className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white text-base font-medium gap-2 mt-8"
+          className="w-full h-10 sm:h-12 bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base font-medium gap-2 mt-6 sm:mt-8"
         >
           Continue <ArrowRight className="w-4 h-4" />
         </Button>
