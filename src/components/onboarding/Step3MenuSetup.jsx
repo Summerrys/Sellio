@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { generateThemeVariables } from '../theme/themeUtils';
+import { getThemeCSSColors } from '@/lib/themeConstants';
 
 export default function Step3MenuSetup({ formData, updateFormData, nextStep, prevStep }) {
   const [categories, setCategories] = useState(formData.menuCategories || []);
@@ -54,8 +55,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     nextStep();
   };
 
-  const primaryColor = formData.theme ? 'rgb(var(--color-primary))' : '#9333ea';
-  const secondaryColor = formData.theme ? 'rgb(var(--color-secondary))' : '#ec4899';
+  const { primary: primaryColor, secondary: secondaryColor, accent: accentColor } = getThemeCSSColors(formData);
 
   return (
     <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg max-h-screen overflow-y-auto">
