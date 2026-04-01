@@ -120,8 +120,6 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
     nextStep();
   };
 
-  const visiblePalettes = POPULAR_PALETTES.slice(carouselIndex, carouselIndex + 3);
-
   return (
     <Card className="p-8 sm:p-10 bg-white border-0 shadow-lg">
       <div className="text-center mb-8">
