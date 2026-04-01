@@ -23,7 +23,7 @@ const businessTypes = [
   { value: 'other', label: '📦 Other' },
 ];
 
-const countries = ['Singapore', 'Malaysia', 'Thailand', 'Indonesia', 'Philippines', 'Vietnam'];
+const countries = ['Singapore', 'Malaysia'];
 
 export default function Step1Welcome({ formData, updateFormData, nextStep }) {
   const [logoFile, setLogoFile] = React.useState(null);
