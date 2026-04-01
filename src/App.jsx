@@ -6,6 +6,7 @@ import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import SupabaseTest from './pages/SupabaseTest';
+import Splash from './pages/Splash';
 import DataMigration from './pages/DataMigration';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -60,6 +61,7 @@ const AuthenticatedApp = () => {
           }
         />
       ))}
+      <Route path="/Splash" element={<Splash />} />
       <Route path="/SupabaseTest" element={<SupabaseTest />} />
       <Route path="/DataMigration" element={<LayoutWrapper currentPageName="DataMigration"><DataMigration /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />

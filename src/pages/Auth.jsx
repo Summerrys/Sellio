@@ -77,16 +77,11 @@ export default function Auth() {
           <div className="bg-white rounded-2xl shadow-xl p-8">
             {/* Header */}
             <div className="text-center mb-6">
-              <div className="flex items-center justify-center mb-2">
+              <div className="flex items-center justify-center mb-3">
                 <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className="h-28 w-auto object-contain" />
               </div>
-              <div className="inline-block">
-                <div className="relative inline-block mb-1">
-                  <p className="text-2xl font-semibold text-slate-900 tracking-tight">Your business,</p>
-                  <div className="absolute -bottom-1 left-0 h-1 bg-gradient-to-r from-purple-600 to-pink-500 rounded-full" style={{width: '120px'}}></div>
-                </div>
-                <p className="text-2xl font-semibold tracking-tight mt-2 bg-clip-text text-transparent" style={{backgroundImage: 'linear-gradient(90deg, #fb923c, #e0449a, #8b2fc9)'}}>beautifully online.</p>
-              </div>
+              <p className="text-xl font-semibold text-slate-800 mb-0.5">Welcome!</p>
+              <p className="text-sm text-slate-500">Let's get you started</p>
             </div>
 
             {/* Tab Toggle */}
