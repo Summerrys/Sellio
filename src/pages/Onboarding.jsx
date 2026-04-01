@@ -67,7 +67,7 @@ export default function Onboarding() {
       baseSteps.push({ component: Step4TablesQR, title: 'Tables & QR' });
     }
     
-    baseSteps.push({ component: Step6Confirmation, title: 'Launch' });
+    baseSteps.push({ component: Step6Confirmation, title: 'Review & Launch' });
     return baseSteps;
   };
 
