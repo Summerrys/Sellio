@@ -23,31 +23,35 @@ export default function TimePicker({ value = '00:00', onChange, formData }) {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:border-slate-400 transition-colors flex items-center justify-center gap-2"
+        className="w-full px-2 py-1.5 border rounded-lg text-xs sm:text-sm font-medium text-slate-700 hover:border-slate-400 transition-colors flex items-center justify-center gap-2"
         style={{ borderColor: primaryColor }}
       >
-        <span style={{ color: primaryColor }}>
+        <span className="text-xs sm:text-sm" style={{ color: primaryColor }}>
           {String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}
         </span>
       </button>
 
       {isOpen && (
+        <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+      )}
+
+      {isOpen && (
         <div
-          className="absolute top-full left-0 right-0 mt-2 p-4 border rounded-lg shadow-lg z-50 bg-white"
+          className="absolute bottom-full left-0 right-0 mb-2 p-3 border rounded-lg shadow-lg z-50 bg-white"
           style={{ borderColor: primaryColor, backgroundColor: 'white' }}
         >
-          <div className="flex gap-4 items-center justify-center">
+          <div className="flex gap-3 items-center justify-center">
             {/* Hours */}
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => handleHourChange(hours + 1)}
-                className="p-1.5 hover:bg-slate-100 rounded transition-colors"
+                className="p-1 hover:bg-slate-100 rounded transition-colors"
               >
-                <ChevronUp className="w-4 h-4" style={{ color: primaryColor }} />
+                <ChevronUp className="w-3.5 h-3.5" style={{ color: primaryColor }} />
               </button>
               <div
-                className="w-12 h-12 rounded-lg flex items-center justify-center font-bold text-lg"
+                className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-base"
                 style={{ backgroundColor: bgColor, color: primaryColor }}
               >
                 {String(hours).padStart(2, '0')}
@@ -55,28 +59,28 @@ export default function TimePicker({ value = '00:00', onChange, formData }) {
               <button
                 type="button"
                 onClick={() => handleHourChange(hours - 1)}
-                className="p-1.5 hover:bg-slate-100 rounded transition-colors"
+                className="p-1 hover:bg-slate-100 rounded transition-colors"
               >
-                <ChevronDown className="w-4 h-4" style={{ color: primaryColor }} />
+                <ChevronDown className="w-3.5 h-3.5" style={{ color: primaryColor }} />
               </button>
             </div>
 
             {/* Separator */}
-            <div style={{ color: primaryColor }} className="text-xl font-bold">
+            <div style={{ color: primaryColor }} className="text-lg font-bold">
               :
             </div>
 
             {/* Minutes */}
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => handleMinuteChange(minutes + 1)}
-                className="p-1.5 hover:bg-slate-100 rounded transition-colors"
+                className="p-1 hover:bg-slate-100 rounded transition-colors"
               >
-                <ChevronUp className="w-4 h-4" style={{ color: primaryColor }} />
+                <ChevronUp className="w-3.5 h-3.5" style={{ color: primaryColor }} />
               </button>
               <div
-                className="w-12 h-12 rounded-lg flex items-center justify-center font-bold text-lg"
+                className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-base"
                 style={{ backgroundColor: bgColor, color: primaryColor }}
               >
                 {String(minutes).padStart(2, '0')}
@@ -84,21 +88,12 @@ export default function TimePicker({ value = '00:00', onChange, formData }) {
               <button
                 type="button"
                 onClick={() => handleMinuteChange(minutes - 1)}
-                className="p-1.5 hover:bg-slate-100 rounded transition-colors"
+                className="p-1 hover:bg-slate-100 rounded transition-colors"
               >
-                <ChevronDown className="w-4 h-4" style={{ color: primaryColor }} />
+                <ChevronDown className="w-3.5 h-3.5" style={{ color: primaryColor }} />
               </button>
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setIsOpen(false)}
-            className="w-full mt-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-            style={{ backgroundColor: primaryColor }}
-          >
-            Done
-          </button>
         </div>
       )}
     </div>
