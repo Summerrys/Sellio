@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, UtensilsCrossed, ShoppingBag, Wrench, X, Edit3 } from 'lucide-react';
+import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, UtensilsCrossed, ShoppingBag, Wrench, X, Edit3, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { getSupabase } from '@/lib/supabaseClient';
+import { generateThemeVariables } from '../theme/themeUtils';
+import { cn } from '@/lib/utils';
 
 const schema = z.object({
   businessName: z.string().min(2, 'Business name is required').max(100, 'Business name must be under 100 characters'),
@@ -25,11 +27,25 @@ const businessTypes = [
 
 const countries = ['Singapore', 'Malaysia'];
 
+const PALETTES = [
+  { name: 'Ocean Blue', dark: '#0369A1', light: '#E0F2FE' },
+  { name: 'Forest Green', dark: '#15803D', light: '#DCFCE7' },
+  { name: 'Sunset Orange', dark: '#EA580C', light: '#FFEDD5' },
+  { name: 'Royal Purple', dark: '#7E22CE', light: '#F3E8FF' },
+  { name: 'Berry Red', dark: '#DC2626', light: '#FEE2E2' },
+  { name: 'Teal Breeze', dark: '#0891B2', light: '#CFFAFE' },
+  { name: 'Indigo Sky', dark: '#4F46E5', light: '#E0E7FF' },
+  { name: 'Rose Garden', dark: '#BE185D', light: '#FFE4E6' },
+];
+
 export default function Step1Welcome({ formData, updateFormData, nextStep }) {
-  const [logoFile, setLogoFile] = React.useState(null);
-  const [logoPreview, setLogoPreview] = React.useState(formData.logoUrl || null);
-  const [logoError, setLogoError] = React.useState('');
-  const fileInputRef = React.useRef(null);
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(formData.logoUrl || null);
+  const [logoError, setLogoError] = useState('');
+  const [selectedTheme, setSelectedTheme] = useState(formData.theme || 'Ocean Blue');
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const fileInputRef = useRef(null);
+  const carouselRef = useRef(null);
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
     resolver: zodResolver(schema),
@@ -69,6 +85,25 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
     reader.readAsDataURL(file);
   };
 
+  const handleThemeSelect = (palette) => {
+    setSelectedTheme(palette.name);
+    const variables = generateThemeVariables(palette.dark, palette.light);
+    const root = document.documentElement;
+    Object.entries(variables).forEach(([key, value]) => {
+      root.style.setProperty(key, value);
+    });
+  };
+
+  const scrollCarousel = (direction) => {
+    if (carouselRef.current) {
+      const scrollAmount = 160;
+      carouselRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      });
+    }
+  };
+
   const onSubmit = async (data) => {
     let logoUrl = formData.logoUrl;
     
@@ -96,7 +131,7 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
       }
     }
 
-    updateFormData({ ...data, logoUrl });
+    updateFormData({ ...data, logoUrl, theme: selectedTheme });
     nextStep();
   };
 
@@ -220,6 +255,65 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Theme Selection Carousel */}
+        <div>
+          <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-3">
+            <Sparkles className="w-4 h-4 text-purple-500" /> Choose Your Brand Colors
+          </Label>
+          <div className="relative">
+            <div
+              ref={carouselRef}
+              className="flex gap-3 overflow-x-auto scrollbar-hide pb-2"
+              style={{ scrollBehavior: 'smooth' }}
+            >
+              {PALETTES.map((palette) => (
+                <button
+                  key={palette.name}
+                  onClick={() => handleThemeSelect(palette)}
+                  className={cn(
+                    "flex-shrink-0 w-32 aspect-square rounded-xl overflow-hidden border-2 transition-all relative group",
+                    selectedTheme === palette.name
+                      ? "border-slate-900 ring-2 ring-slate-900 ring-offset-2"
+                      : "border-slate-200 hover:border-slate-300"
+                  )}
+                >
+                  <div className="flex h-full">
+                    <div className="flex-1" style={{ backgroundColor: palette.dark }} />
+                    <div className="flex-1" style={{ backgroundColor: palette.light }} />
+                  </div>
+                  {selectedTheme === palette.name && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="bg-white rounded-full p-2 shadow-lg">
+                        <Check className="w-5 h-5 text-slate-900" />
+                      </div>
+                    </div>
+                  )}
+                  <div className="absolute bottom-1 left-1 right-1">
+                    <span className="text-xs font-medium text-white bg-black/50 px-2 py-0.5 rounded-full backdrop-blur-sm block text-center truncate">
+                      {palette.name}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => scrollCarousel('left')}
+              className="absolute -left-3 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-1.5 shadow-md hover:bg-slate-50"
+            >
+              <ChevronLeft className="w-4 h-4 text-slate-600" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollCarousel('right')}
+              className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-1.5 shadow-md hover:bg-slate-50"
+            >
+              <ChevronRight className="w-4 h-4 text-slate-600" />
+            </button>
+          </div>
+          <p className="text-xs text-slate-500 mt-2">✨ Your theme is being previewed live!</p>
         </div>
 
         <Button
