@@ -3,11 +3,11 @@ import { Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const steps = [
-  { number: 1, label: 'Business\nSetup' },
-  { number: 2, label: 'Branch\nSetup' },
-  { number: 3, label: 'Menu/\nServices' },
-  { number: 4, label: 'Tables\n& QR' },
-  { number: 5, label: 'Review\n& Go Live' },
+  { number: 1, label: 'Business\nSetup', shortLabel: 'Biz' },
+  { number: 2, label: 'Branch\nSetup', shortLabel: 'Br' },
+  { number: 3, label: 'Menu/\nServices', shortLabel: 'M' },
+  { number: 4, label: 'Tables\n& QR', shortLabel: 'T' },
+  { number: 5, label: 'Review\n& Go Live', shortLabel: 'R' },
 ];
 
 export default function OnboardingProgress({ currentStep = 1 }) {
@@ -30,7 +30,7 @@ export default function OnboardingProgress({ currentStep = 1 }) {
       {/* Compact Steps */}
       <div className="flex justify-between items-end gap-1 mb-2 overflow-x-auto pb-1">
         {steps.map((step) => (
-          <div key={step.number} className="flex flex-col items-center gap-1 flex-shrink-0">
+          <div key={step.number} className="flex flex-col items-center gap-0.5 flex-shrink-0">
             <motion.div
               animate={{
                 scale: currentStep === step.number ? 1.05 : 1,
@@ -44,8 +44,11 @@ export default function OnboardingProgress({ currentStep = 1 }) {
             >
               {step.number}
             </motion.div>
-            <p className="text-xs text-center font-medium text-slate-600 whitespace-pre-line leading-tight min-w-16">
+            <p className="text-xs text-center font-medium text-slate-600 leading-tight max-w-12 hidden sm:block">
               {step.label}
+            </p>
+            <p className="text-xs text-center font-medium text-slate-600 leading-tight sm:hidden">
+              {step.shortLabel}
             </p>
           </div>
         ))}
