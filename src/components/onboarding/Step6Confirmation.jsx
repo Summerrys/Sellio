@@ -149,7 +149,7 @@ export default function Step6Confirmation({ formData, prevStep, onComplete }) {
   return (
     <Card className="p-8 sm:p-10 bg-white/80 backdrop-blur border-0 shadow-xl">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={formData.theme ? { background: `linear-gradient(135deg, rgb(var(--color-primary)), rgb(var(--color-primary-light)))` } : { background: 'linear-gradient(135deg, #0369A1, #7E22CE)' }}>
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4" style={formData.theme ? { backgroundImage: 'none', background: `linear-gradient(135deg, rgb(var(--color-primary)), rgb(var(--color-primary-light)))` } : {}}>
           <Rocket className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Ready to Launch! 🎉</h2>
