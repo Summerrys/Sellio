@@ -313,7 +313,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                   </div>
                 )}
                 <div className="absolute bottom-2 left-2 right-2">
-                  <span className="text-xs font-medium text-white bg-black/50 px-2 py-1 rounded-full backdrop-blur-sm block text-center truncate">
+                  <span className="text-[10px] font-medium text-white bg-black/50 px-2 py-0.5 rounded-full backdrop-blur-sm block text-center truncate">
                     {palette.name}
                   </span>
                 </div>
