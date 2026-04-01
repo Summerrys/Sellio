@@ -44,6 +44,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
   const [logoError, setLogoError] = React.useState('');
   const fileInputRef = React.useRef(null);
   const [selectedTheme, setSelectedTheme] = useState(formData.theme || 'Ocean Blue');
+  const [gradientEnabled, setGradientEnabled] = useState(formData.gradientEnabled || false);
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
     resolver: zodResolver(schema),
@@ -125,7 +126,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
       }
     }
 
-    updateFormData({ ...data, logoUrl, theme: selectedTheme });
+    updateFormData({ ...data, logoUrl, theme: selectedTheme, gradientEnabled });
     nextStep();
   };
 
@@ -306,17 +307,37 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
           <p className="text-xs text-slate-500 mt-4">
             ✨ Your theme updates live as you select colors
           </p>
+          
+          {selectedTheme && (
+            <div className="mt-4 flex items-center gap-3 p-4 bg-slate-50 rounded-lg">
+              <input
+                type="checkbox"
+                id="gradient-toggle"
+                checked={gradientEnabled}
+                onChange={(e) => setGradientEnabled(e.target.checked)}
+                className="w-4 h-4 cursor-pointer"
+              />
+              <Label htmlFor="gradient-toggle" className="text-sm font-medium text-slate-700 cursor-pointer">
+                Apply gradient effect
+              </Label>
+            </div>
+          )}
         </div>
 
         {(() => {
           const buttonBgColor = selectedPalette?.dark || '#F97316';
+          const buttonStyle = gradientEnabled && selectedPalette
+            ? {
+                backgroundImage: `linear-gradient(135deg, ${selectedPalette.dark}, ${selectedPalette.light})`,
+              }
+            : {
+                backgroundColor: buttonBgColor,
+              };
           return (
             <Button
               type="submit"
               className="w-full h-12 text-white text-base font-medium gap-2 mt-8 transition-all"
-              style={{
-                backgroundColor: buttonBgColor,
-              }}
+              style={buttonStyle}
               onMouseEnter={(e) => {
                 e.target.style.opacity = '0.9';
               }}
