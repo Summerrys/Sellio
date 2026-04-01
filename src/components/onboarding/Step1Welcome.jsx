@@ -88,6 +88,9 @@ export default function Step1Welcome({ formData, updateFormData, nextStep }) {
           .from('logos')
           .getPublicUrl(fileName);
         logoUrl = publicUrl;
+        
+        // Save logo URL to localStorage for app-wide use
+        localStorage.setItem('business_logo_url', logoUrl);
       } catch (error) {
         console.error('Logo upload failed:', error);
       }

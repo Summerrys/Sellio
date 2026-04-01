@@ -227,6 +227,7 @@ function AppLayout({ children, currentPageName }) {
       `}</style>
 
       {/* Desktop Sidebar */}
+      {currentPageName !== 'Onboarding' && (
       <aside
         className={cn(
           "hidden lg:flex flex-col fixed left-0 top-0 h-screen bg-white border-r border-slate-100 z-30 transition-all duration-300",
@@ -241,14 +242,16 @@ function AppLayout({ children, currentPageName }) {
           {collapsed ? <ChevronRight className="w-3 h-3 text-slate-600" /> : <ChevronLeft className="w-3 h-3 text-slate-600" />}
         </button>
       </aside>
+      )}
 
       {/* Mobile Header */}
+      {currentPageName !== 'Onboarding' && (
       <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-slate-100 z-30 flex items-center px-4 justify-between">
         <div className="flex items-center gap-2">
           {tenant?.logo_url ? (
             <img src={tenant.logo_url} alt={tenant.name} className="h-8 w-auto object-contain rounded" />
           ) : (
-            <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className="h-10 w-auto object-contain" />
+            <img src={localStorage.getItem('business_logo_url') || 'https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png'} alt="Sellio" className="h-10 w-auto object-contain" />
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -258,6 +261,7 @@ function AppLayout({ children, currentPageName }) {
           </Button>
         </div>
       </div>
+      )}
 
       {/* Mobile Sidebar Overlay */}
       {mobileOpen && (
@@ -278,8 +282,8 @@ function AppLayout({ children, currentPageName }) {
       <main
         className={cn(
           "flex-1 transition-all duration-300 min-h-screen",
-          "pt-14 lg:pt-0",
-          collapsed ? "lg:ml-[72px]" : "lg:ml-[260px]"
+          currentPageName === 'Onboarding' ? "pt-0" : "pt-14 lg:pt-0",
+          currentPageName !== 'Onboarding' && (collapsed ? "lg:ml-[72px]" : "lg:ml-[260px]")
         )}
       >
         <div className="p-4 sm:p-6 lg:p-8 max-w-[1400px]">
