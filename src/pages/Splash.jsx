@@ -19,7 +19,7 @@ export default function Splash() {
     <div
       className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden"
       style={{
-        background: 'radial-gradient(ellipse at 30% 20%, #f5ede8 0%, #faf8f7 35%, #ffffff 65%, #f8f5f3 100%)',
+        background: '#ffffff',
         transition: 'opacity 0.6s ease',
         opacity: leaving ? 0 : 1,
       }}
@@ -27,11 +27,11 @@ export default function Splash() {
       {/* Ambient glow blobs */}
       <div
         className="absolute rounded-full blur-3xl pointer-events-none"
-        style={{ width: 480, height: 480, top: '-80px', left: '-100px', background: 'radial-gradient(circle, rgba(254,120,36,0.25) 0%, transparent 70%)' }}
+        style={{ width: 480, height: 480, top: '-80px', left: '-100px', background: 'radial-gradient(circle, rgba(254,120,36,0.08) 0%, transparent 70%)' }}
       />
       <div
         className="absolute rounded-full blur-3xl pointer-events-none"
-        style={{ width: 400, height: 400, bottom: '-60px', right: '-80px', background: 'radial-gradient(circle, rgba(254,120,36,0.15) 0%, transparent 70%)' }}
+        style={{ width: 400, height: 400, bottom: '-60px', right: '-80px', background: 'radial-gradient(circle, rgba(254,120,36,0.06) 0%, transparent 70%)' }}
       />
 
       {/* Content */}
