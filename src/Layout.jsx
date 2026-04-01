@@ -197,9 +197,19 @@ function AppLayout({ children, currentPageName }) {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <style>{`
+          @keyframes colorCycle {
+            0% { background: linear-gradient(135deg, #3b82f6, #06b6d4); }
+            50% { background: linear-gradient(135deg, #7c3aed, #3b82f6); }
+            100% { background: linear-gradient(135deg, #3b82f6, #06b6d4); }
+          }
+          .color-cycle-bg {
+            animation: colorCycle 3s ease-in-out infinite;
+          }
+        `}</style>
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[rgb(var(--color-primary))] flex items-center justify-center animate-pulse">
-            <span className="text-white font-bold text-sm">A</span>
+          <div className="w-10 h-10 rounded-xl color-cycle-bg flex items-center justify-center">
+            <span className="text-white font-bold text-sm">S</span>
           </div>
           <p className="text-sm text-slate-400">Loading...</p>
         </div>
