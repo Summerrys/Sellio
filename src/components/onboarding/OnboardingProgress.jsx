@@ -72,7 +72,7 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
       </div>
 
       {/* Progress Bar */}
-      <div className="relative mb-2">
+      <div className="relative">
         <div className="w-full bg-slate-200 rounded-full h-2 sm:h-3 overflow-hidden">
           <motion.div
             animate={{ width: `${percentage}%` }}
@@ -80,11 +80,6 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
             className="h-full rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500"
           />
         </div>
-      </div>
-      <div className="text-center">
-        <span className="text-xs sm:text-sm font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-          {percentage}% Complete - You're doing great! 🎉
-        </span>
       </div>
     </div>
   );
