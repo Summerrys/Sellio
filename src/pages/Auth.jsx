@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Phone, Lock, User, Mail, ChevronDown } from 'lucide-react';
+import { Phone, Lock, User, Mail, ChevronDown, Check } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
@@ -42,7 +42,17 @@ export default function Auth() {
 
         if (data.success) {
           localStorage.setItem('app_user', JSON.stringify(data.user));
-          toast.success(isLogin ? 'Login successful!' : 'Account created!');
+          toast.custom((t) => (
+            <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-lg">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                <Check className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-green-900">{isLogin ? 'Welcome back!' : 'Account created!'}</p>
+                <p className="text-xs text-green-700">You're all set. Redirecting now...</p>
+              </div>
+            </div>
+          ));
           setTimeout(() => {
             window.location.href = createPageUrl(data.user?.onboarding_completed ? 'Dashboard' : 'Onboarding');
           }, 500);
