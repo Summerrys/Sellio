@@ -85,7 +85,7 @@ export default function Auth() {
                   <p className="text-2xl font-semibold text-slate-900 tracking-tight">Your business,</p>
                   <div className="absolute -bottom-1 left-0 h-1 bg-gradient-to-r from-purple-600 to-pink-500 rounded-full" style={{width: '120px'}}></div>
                 </div>
-                <p className="text-2xl font-semibold tracking-tight mt-2" style={{ background: 'linear-gradient(135deg, #ff7811, #ffaa66)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>beautifully online.</p>
+                <p className="text-2xl font-semibold tracking-tight mt-2" style={{ background: 'linear-gradient(135deg, #ff7811, #ffaa66)', backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>beautifully online.</p>
               </div>
             </div>
 
