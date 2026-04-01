@@ -85,10 +85,11 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
             />
             <button
               onClick={addCategory}
-              className="w-full sm:w-auto px-4 py-2.5 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2"
+              disabled={!categoryInput.trim()}
+              className="w-full sm:w-auto px-4 py-2.5 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
               style={{ backgroundColor: primaryColor }}
             >
-              <span className="text-lg">+</span>
+              Add
             </button>
           </div>
           {categories.length > 0 && (
@@ -165,10 +166,10 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
             <button
               onClick={addItem}
               disabled={!selectedCategory || !itemName.trim() || !itemPrice.trim()}
-              className="w-full py-2.5 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              style={{ background: `linear-gradient(to right, ${primaryColor}, ${secondaryColor})` }}
+              className="w-full py-2.5 text-white rounded-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:opacity-90"
+              style={{ backgroundColor: primaryColor }}
             >
-              <span>+</span> Add Item
+              + Add Item
             </button>
           </div>
         </div>
@@ -181,7 +182,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
           variant="outline"
           className="h-10 sm:h-11 px-4 sm:px-6 gap-1 sm:gap-2 text-sm"
         >
-          <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Back</span>
+          <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" /> Back
         </Button>
         <Button
           type="button"
@@ -194,10 +195,10 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         <Button
           type="button"
           onClick={handleSubmit}
-          className="flex-1 h-10 sm:h-11 text-white gap-1 sm:gap-2 text-sm"
+          className="flex-1 h-10 sm:h-11 text-white gap-2 text-sm font-semibold"
           style={{ backgroundColor: primaryColor }}
         >
-          <span className="hidden sm:inline">Continue</span> <span className="sm:hidden">Next</span> <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
+          Continue <ArrowRight className="w-4 h-4" />
         </Button>
       </div>
     </Card>
