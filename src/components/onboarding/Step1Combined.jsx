@@ -287,12 +287,27 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
           </p>
         </div>
 
-        <Button
-          type="submit"
-          className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white text-base font-medium gap-2 mt-8"
-        >
-          Continue <ArrowRight className="w-4 h-4" />
-        </Button>
+        {(() => {
+          const selectedPalette = POPULAR_PALETTES.find(p => p.name === selectedTheme);
+          const buttonBgColor = selectedPalette?.dark || '#0369A1';
+          return (
+            <Button
+              type="submit"
+              className="w-full h-12 text-white text-base font-medium gap-2 mt-8 transition-all"
+              style={{
+                backgroundColor: buttonBgColor,
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.opacity = '0.9';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.opacity = '1';
+              }}
+            >
+              Continue <ArrowRight className="w-4 h-4" />
+            </Button>
+          );
+        })()}
       </form>
     </Card>
   );
