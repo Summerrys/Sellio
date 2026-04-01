@@ -4,7 +4,8 @@ import { createPageUrl } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import Step1Combined from '../components/onboarding/Step1Combined';
 import Step4Business from '../components/onboarding/Step4Business';
-import Step5QuickStart from '../components/onboarding/Step5QuickStart';
+import Step3MenuSetup from '../components/onboarding/Step3MenuSetup';
+import Step4TablesQR from '../components/onboarding/Step4TablesQR';
 import Step6Confirmation from '../components/onboarding/Step6Confirmation';
 import OnboardingProgress from '../components/onboarding/OnboardingProgress';
 
@@ -27,7 +28,7 @@ export default function Onboarding() {
     taxInclusive: false,
     businessHours: {},
     tableCount: 0,
-    // Step 4 (Quick Start)
+    // Step 3 (Menu Setup)
     products: [],
   });
 
@@ -54,8 +55,26 @@ export default function Onboarding() {
     setFormData(prev => ({ ...prev, ...data }));
   };
 
+  const getSteps = () => {
+    const isFnB = formData.businessType === 'fnb' || formData.businessType === 'F&B';
+    const baseSteps = [
+      { component: Step1Combined, title: 'Business & Theme' },
+      { component: Step4Business, title: 'Branch Setup' },
+      { component: Step3MenuSetup, title: 'Menu Setup' },
+    ];
+    
+    if (isFnB) {
+      baseSteps.push({ component: Step4TablesQR, title: 'Tables & QR' });
+    }
+    
+    baseSteps.push({ component: Step6Confirmation, title: 'Launch' });
+    return baseSteps;
+  };
+
+  const steps = getSteps();
+
   const nextStep = () => {
-    if (currentStep < 4) {
+    if (currentStep < steps.length) {
       setCompletedSteps([...completedSteps, currentStep]);
       setCurrentStep(currentStep + 1);
     }
@@ -70,13 +89,6 @@ export default function Onboarding() {
     navigate(createPageUrl('Dashboard'));
   };
 
-  const steps = [
-    { component: Step1Combined, title: 'Business & Theme' },
-    { component: Step4Business, title: 'Branch Setup' },
-    { component: Step5QuickStart, title: 'Quick Start' },
-    { component: Step6Confirmation, title: 'Launch' },
-  ];
-
   const CurrentStepComponent = steps[currentStep - 1].component;
 
   return (
@@ -84,7 +96,7 @@ export default function Onboarding() {
       {/* Header with Compact Progress */}
       <div className="bg-white border-b border-slate-100 px-4 py-4">
         <div className="max-w-4xl mx-auto">
-          <OnboardingProgress currentStep={currentStep} completedSteps={completedSteps} />
+          <OnboardingProgress currentStep={currentStep} totalSteps={steps.length} completedSteps={completedSteps} />
         </div>
       </div>
 
