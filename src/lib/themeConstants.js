@@ -1,8 +1,8 @@
-// Default theme colors
+// Default theme colors - Orange tones matching Auth page
 export const DEFAULT_COLORS = {
-  primary: '#9333ea',
-  secondary: '#ec4899',
-  accent: '#2563eb',
+  primary: '#e86a1a',
+  secondary: '#fe7824',
+  accent: '#ffaa6e',
 };
 
 // Get theme colors from formData or use defaults
