@@ -311,23 +311,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
           </div>
         </div>
 
-        {/* Rotation Slider */}
-        {!isCropping && (
-          <div className="px-4 py-3 border-t border-slate-100">
-            <p className="text-xs font-medium text-slate-600 mb-2">Rotation: {current.rotation}°</p>
-            <input
-              type="range"
-              min="0"
-              max="359"
-              value={current.rotation}
-              onChange={(e) => handleRotateByDegree(parseInt(e.target.value))}
-              className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
-              style={{
-                background: `linear-gradient(to right, rgb(59, 130, 246) 0%, rgb(59, 130, 246) ${current.rotation}%, rgb(226, 232, 240) ${current.rotation}%, rgb(226, 232, 240) 100%)`
-              }}
-            />
-          </div>
-        )}
+
 
         {/* Tool buttons */}
         <div className="grid grid-cols-5 gap-px bg-slate-100 border-t border-slate-100">
