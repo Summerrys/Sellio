@@ -123,6 +123,14 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     } catch (err) {
       console.error('Image upload failed:', err);
     }
+    const newItem = {
+      id: Date.now(),
+      category: selectedCategory,
+      name: itemName,
+      price: parseFloat(itemPrice),
+      images: imageUrls,
+    };
+    updateFormData({ ...formData, products: [...(formData.products || []), newItem] });
     setItemName('');
     setItemPrice('');
     setImageFiles([]);
