@@ -58,7 +58,7 @@ export default function Onboarding() {
   const getSteps = () => {
     const isFnB = formData.businessType === 'food' || formData.businessType === 'fnb' || formData.businessType === 'F&B';
     const baseSteps = [
-      { component: Step1Combined, title: 'Business & Theme' },
+      { component: Step1Combined, title: 'Business Theme' },
       { component: Step2Business, title: 'Branch Setup' },
       { component: Step3MenuSetup, title: 'Menu Setup' },
     ];
