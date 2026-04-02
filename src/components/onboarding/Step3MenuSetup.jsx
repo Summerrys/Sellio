@@ -11,6 +11,29 @@ import { getThemeCSSColors, DEFAULT_COLORS } from '@/lib/themeConstants';
 
 const BLUE_PURPLE = 'linear-gradient(to right, #3b82f6, #9333ea)';
 
+const INDUSTRY_HINTS = {
+  'F&B': {
+    categoryPlaceholder: 'Appetizers, Mains, Desserts...',
+    itemPlaceholder: 'eg., Caesar Salad',
+    sectionTitle: 'Build your menu',
+    sectionSubtitle: 'Create categories and add your menu items',
+  },
+  'Retail': {
+    categoryPlaceholder: 'Clothing, Electronics, Accessories...',
+    itemPlaceholder: 'eg., Blue Denim Jacket',
+    sectionTitle: 'Set up your catalogue',
+    sectionSubtitle: 'Create categories and add your products',
+  },
+  'Services': {
+    categoryPlaceholder: 'Haircuts, Treatments, Packages...',
+    itemPlaceholder: 'eg., Deep Tissue Massage',
+    sectionTitle: 'Set up your services',
+    sectionSubtitle: 'Create categories and add your services',
+  },
+};
+
+const DEFAULT_HINTS = INDUSTRY_HINTS['F&B'];
+
 export default function Step3MenuSetup({ formData, updateFormData, nextStep, prevStep }) {
   const [categories, setCategories] = useState(formData.menuCategories || []);
   const [categoryInput, setCategoryInput] = useState('');
@@ -96,6 +119,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   };
 
   const { primary: primaryColor, secondary: secondaryColor, accent: accentColor } = getThemeCSSColors(formData);
+  const hints = INDUSTRY_HINTS[formData.businessType] || DEFAULT_HINTS;
 
   return (
     <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg max-h-screen overflow-y-auto">
@@ -103,8 +127,8 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: BLUE_PURPLE }}>
           <Menu className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
         </div>
-        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Build your menu</h2>
-        <p className="text-sm sm:text-base text-slate-600">Create categories and add your items</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">{hints.sectionTitle}</h2>
+        <p className="text-sm sm:text-base text-slate-600">{hints.sectionSubtitle}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
@@ -120,7 +144,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               value={categoryInput}
               onChange={(e) => setCategoryInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && addCategory()}
-              placeholder="Appetizers, Mains..."
+              placeholder={hints.categoryPlaceholder}
               className="flex-1 px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-slate-300"
             />
             <button
@@ -201,7 +225,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               <Input
                 value={itemName}
                 onChange={(e) => setItemName(e.target.value)}
-                placeholder="eg., Caesar Salad"
+                placeholder={hints.itemPlaceholder}
                 className="h-10 text-sm"
               />
             </div>
