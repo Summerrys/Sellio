@@ -159,27 +159,27 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
                 />
                 {cropRect.w > 5 && cropRect.h > 5 && (
                   <div
-                    className="absolute flex gap-2 items-center"
+                    className="absolute flex gap-2 items-center justify-center"
                     style={{
                       left: cropRect.x + cropRect.w / 2,
-                      top: cropRect.y + cropRect.h / 2,
-                      transform: 'translate(-50%, -50%)',
+                      top: cropRect.y + cropRect.h + 12,
+                      transform: 'translateX(-50%)',
                       pointerEvents: 'auto',
                     }}
                   >
                     <button
                       onClick={applyCrop}
-                      className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-full shadow-lg transition-colors"
+                      className="bg-green-500 hover:bg-green-600 text-white p-1.5 rounded-full shadow-lg transition-colors"
                       title="Apply crop"
                     >
-                      <Check className="w-5 h-5" />
+                      <Check className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => { setTool(TOOLS.NONE); setCropStart(null); setCropEnd(null); }}
-                      className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-colors"
+                      className="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full shadow-lg transition-colors"
                       title="Cancel crop"
                     >
-                      <X className="w-5 h-5" />
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
                 )}
