@@ -126,7 +126,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
         </div>
 
         {/* Operating Hours */}
-        <div className="rounded-lg sm:rounded-xl p-3 sm:p-5" style={{ background: `linear-gradient(white, white) padding-box, ${chosenColor || '#3b82f6'} border-box`, border: '1px solid transparent' }}>
+        <div className="rounded-lg sm:rounded-xl p-3 sm:p-5" style={{ background: `linear-gradient(white, white) padding-box, ${themeColor} border-box`, border: '1px solid transparent' }}>
           <h3 className="text-xs sm:text-sm font-semibold text-slate-900 flex items-center gap-2 mb-4">
             <Clock className="w-4 h-4 text-slate-700" />
             Operating Hours
