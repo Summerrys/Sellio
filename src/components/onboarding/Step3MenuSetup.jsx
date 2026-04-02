@@ -48,7 +48,13 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const fileInputRef = useRef(null);
 
   const handleEditSave = (newDataUrl) => {
-    // Convert dataURL back to a File-like blob
+    if (newDataUrl === null) {
+      // Delete the image
+      setImagePreviews(prev => prev.filter((_, i) => i !== editingImageIdx));
+      setImageFiles(prev => prev.filter((_, i) => i !== editingImageIdx));
+      setEditingImageIdx(null);
+      return;
+    }
     fetch(newDataUrl).then(r => r.blob()).then(blob => {
       const file = new File([blob], `edited-${Date.now()}.jpg`, { type: 'image/jpeg' });
       setImagePreviews(prev => prev.map((p, i) => i === editingImageIdx ? newDataUrl : p));

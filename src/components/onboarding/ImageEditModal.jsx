@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, RotateCw, Crop, Undo2, ImagePlus, Check, Save } from 'lucide-react';
+import { X, RotateCw, Crop, Undo2, ImagePlus, Check, Save, Trash2 } from 'lucide-react';
 
 const TOOLS = { NONE: 'none', CROP: 'crop' };
 
@@ -122,16 +122,12 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
   const isCropping = tool === TOOLS.CROP;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div
         ref={containerRef}
-        className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden"
+        className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
-        {/* Handle bar (mobile) */}
-        <div className="flex justify-center pt-3 pb-1 sm:hidden">
-          <div className="w-10 h-1 bg-slate-200 rounded-full" />
-        </div>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
@@ -172,9 +168,9 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
         )}
 
         {/* Tool buttons */}
-        <div className="grid grid-cols-4 gap-px bg-slate-100 border-t border-slate-100">
+        <div className="grid grid-cols-5 gap-px bg-slate-100 border-t border-slate-100">
           {[
-            { label: 'Rotate', icon: RotateCw, action: handleRotate, active: false },
+            { label: 'Rotate', icon: RotateCw, action: handleRotate },
             {
               label: isCropping ? 'Cancel' : 'Crop', icon: Crop,
               action: () => { setTool(t => t === TOOLS.CROP ? TOOLS.NONE : TOOLS.CROP); setCropStart(null); setCropEnd(null); },
@@ -182,13 +178,14 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
             },
             { label: 'Undo', icon: Undo2, action: handleUndo, disabled: history.length <= 1 },
             { label: 'Replace', icon: ImagePlus, action: () => replaceInputRef.current?.click() },
-          ].map(({ label, icon: Icon, action, active, disabled }) => (
+            { label: 'Delete', icon: Trash2, action: () => { onSave(null); onClose(); }, danger: true },
+          ].map(({ label, icon: Icon, action, active, disabled, danger }) => (
             <button
               key={label}
               onClick={action}
               disabled={disabled}
               className={`flex flex-col items-center justify-center gap-1 py-3 text-xs font-medium transition-colors
-                ${active ? 'bg-blue-50 text-blue-600' : 'bg-white text-slate-600 hover:bg-slate-50'}
+                ${active ? 'bg-blue-50 text-blue-600' : danger ? 'bg-white text-red-500 hover:bg-red-50' : 'bg-white text-slate-600 hover:bg-slate-50'}
                 ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
             >
               <Icon className="w-5 h-5" />
