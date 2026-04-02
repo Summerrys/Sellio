@@ -2,8 +2,8 @@ import React from 'react';
 import { CheckCircle2, Rocket } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const FALLBACK_PRIMARY = '#3b82f6';
-const FALLBACK_SECONDARY = '#9333ea';
+const FALLBACK_PRIMARY = '#9333ea';
+const FALLBACK_SECONDARY = '#ec4899';
 
 export default function OnboardingProgress({ currentStep = 1, completedSteps = [], steps = [], formData = {} }) {
   const displaySteps = steps.length > 0 ? steps.map((s, i) => ({
