@@ -173,7 +173,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
                     className="w-4 h-4 rounded cursor-pointer flex-shrink-0"
                     style={{ accentColor: primaryColor }}
                   />
-                  <span className="text-xs sm:text-sm font-medium text-slate-700 flex-shrink-0 w-14">{day}</span>
+                  <span className="text-xs sm:text-sm font-medium text-slate-700 flex-shrink-0 w-24">{day}</span>
                 </div>
                 {operatingHours[day].enabled && (
                   <div className="flex items-center gap-1 w-full sm:w-auto sm:flex-1">
@@ -205,7 +205,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
         </div>
 
         {/* Navigation */}
-        <div className="flex gap-2 sm:gap-3 pt-3 sm:pt-4">
+        <div className="flex justify-between gap-2 sm:gap-3 pt-3 sm:pt-4">
           <Button
             type="button"
             onClick={prevStep}
@@ -216,10 +216,10 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
           </Button>
           <Button
             type="submit"
-            className="flex-1 h-10 sm:h-11 text-white gap-1 sm:gap-2 text-sm"
+            className="h-10 sm:h-11 px-4 sm:px-6 text-white gap-1 sm:gap-2 text-sm"
             style={{ background: BLUE_PURPLE }}
           >
-            <span className="hidden sm:inline">Continue</span> <span className="sm:hidden">Next</span> <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
+            Next <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
         </div>
       </form>
