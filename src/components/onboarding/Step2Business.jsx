@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowRight, ArrowLeft, MapPin, Clock } from 'lucide-react';
 import { generateThemeVariables } from '../theme/themeUtils';
-import { DEFAULT_COLORS } from '@/lib/themeConstants';
+import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 import TimePicker from './TimePicker';
 
 const schema = z.object({
@@ -39,6 +39,8 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
       });
     }
   }, [formData.customPrimary, formData.customSecondary]);
+
+  const { primary: primaryColor, secondary: secondaryColor } = getThemeCSSColors(formData);
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
     resolver: zodResolver(schema),
@@ -78,7 +80,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
     <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg max-h-screen overflow-y-auto">
       {/* Header */}
       <div className="text-center mb-6 sm:mb-8">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4" style={formData.theme ? { backgroundImage: 'none', backgroundColor: 'rgb(var(--color-primary))' } : {}}>
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: primaryColor }}>
           <MapPin className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1 sm:mb-2">Set up your first branch</h2>
@@ -120,14 +122,14 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
         </div>
 
         {/* Operating Hours */}
-        <div className="rounded-lg sm:rounded-xl p-3 sm:p-5" style={formData.theme ? { backgroundColor: 'rgba(var(--color-primary-rgb), 0.05)', borderColor: 'rgb(var(--color-primary))', borderWidth: '1px' } : { backgroundColor: 'rgba(147, 51, 234, 0.05)', borderColor: '#c084fc', borderWidth: '1px' }}>
-          <h3 className="text-xs sm:text-sm font-semibold text-slate-900 flex items-center gap-2 mb-4" style={formData.theme ? { color: 'rgb(var(--color-primary))' } : {}}>
-            <Clock className="w-4 h-4" style={formData.theme ? { color: 'rgb(var(--color-primary))' } : { color: '#2563eb' }} />
+        <div className="rounded-lg sm:rounded-xl p-3 sm:p-5" style={{ backgroundColor: `${primaryColor}10`, borderColor: primaryColor, borderWidth: '1px' }}>
+          <h3 className="text-xs sm:text-sm font-semibold text-slate-900 flex items-center gap-2 mb-4" style={{ color: primaryColor }}>
+            <Clock className="w-4 h-4" style={{ color: primaryColor }} />
             Operating Hours
           </h3>
 
           {/* Quick Apply */}
-          <div className="mb-4 p-3 bg-white border rounded-lg" style={formData.theme ? { borderColor: 'rgba(var(--color-primary-rgb), 0.2)' } : { borderColor: '#bfdbfe' }}>
+          <div className="mb-4 p-3 bg-white border rounded-lg" style={{ borderColor: `${primaryColor}40` }}>
             <p className="text-xs font-medium text-slate-700 mb-2">Apply to all days</p>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-1 w-full">
@@ -147,7 +149,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
                 type="button"
                 onClick={() => applyToAllDays(quickApplyStart, quickApplyEnd)}
                 className="w-full px-3 py-1.5 text-white rounded-lg text-xs font-medium"
-                style={formData.theme ? { backgroundColor: 'rgb(var(--color-primary))', cursor: 'pointer' } : { background: `linear-gradient(to right, ${DEFAULT_COLORS.primary}, ${DEFAULT_COLORS.secondary})` }}
+                style={{ backgroundColor: primaryColor, cursor: 'pointer' }}
               >
                 Apply to All
               </button>
@@ -157,7 +159,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
           {/* Days List */}
           <div className="space-y-2.5 overflow-y-auto max-h-56 sm:max-h-none">
             {days.map((day) => (
-              <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 bg-white rounded-lg border" style={formData.theme ? { borderColor: 'rgba(var(--color-primary-rgb), 0.2)' } : { borderColor: '#e2e8f0' }}>
+              <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 bg-white rounded-lg border" style={{ borderColor: `${primaryColor}30` }}>
                 <div className="flex items-center gap-2 min-w-0">
                   <input
                     type="checkbox"
@@ -167,7 +169,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
                       [day]: { ...operatingHours[day], enabled: e.target.checked }
                     })}
                     className="w-4 h-4 rounded cursor-pointer flex-shrink-0"
-                    style={formData.theme ? { accentColor: 'rgb(var(--color-primary))' } : { accentColor: '#9333ea' }}
+                    style={{ accentColor: primaryColor }}
                   />
                   <span className="text-xs sm:text-sm font-medium text-slate-700 flex-shrink-0 w-14">{day}</span>
                 </div>
@@ -213,7 +215,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
           <Button
             type="submit"
             className="flex-1 h-10 sm:h-11 text-white gap-1 sm:gap-2 text-sm"
-            style={formData.theme ? { backgroundColor: 'rgb(var(--color-primary))' } : { background: 'linear-gradient(to right, #9333ea, #ec4899)' }}
+            style={{ backgroundColor: primaryColor }}
           >
             <span className="hidden sm:inline">Continue</span> <span className="sm:hidden">Next</span> <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>

@@ -1,12 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Check, Rocket, Loader2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { generateThemeVariables } from '../theme/themeUtils';
+import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 
 export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   const [isLaunching, setIsLaunching] = useState(false);
+
+  useEffect(() => {
+    const colors = formData.customPrimary && formData.customSecondary
+      ? { primary: formData.customPrimary, secondary: formData.customSecondary }
+      : DEFAULT_COLORS;
+    const variables = generateThemeVariables(colors.primary, colors.secondary);
+    Object.entries(variables).forEach(([key, value]) => {
+      document.documentElement.style.setProperty(key, value);
+    });
+  }, [formData.customPrimary, formData.customSecondary]);
+
+  const { primary: primaryColor } = getThemeCSSColors(formData);
 
   const handleLaunch = async () => {
     if (isLaunching) return;
@@ -149,7 +163,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   return (
     <Card className="p-8 sm:p-10 bg-white/80 backdrop-blur border-0 shadow-xl">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgb(var(--color-primary))] to-[rgb(var(--color-primary-light))] flex items-center justify-center mx-auto mb-4">
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: primaryColor }}>
           <Rocket className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Ready to Launch! 🎉</h2>
@@ -196,7 +210,8 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
         <Button
           onClick={handleLaunch}
           disabled={isLaunching}
-          className="flex-1 h-12 bg-gradient-to-r from-[rgb(var(--color-primary))] to-[rgb(var(--color-primary-light))] hover:opacity-90 text-base font-medium gap-2"
+          className="flex-1 h-12 hover:opacity-90 text-base font-medium gap-2 text-white"
+          style={{ backgroundColor: primaryColor }}
         >
           {isLaunching ? (
             <>
