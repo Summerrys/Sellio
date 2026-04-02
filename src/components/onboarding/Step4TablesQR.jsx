@@ -27,7 +27,8 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   }, [formData.customPrimary, formData.customSecondary]);
 
   const { primary: primaryColor } = getThemeCSSColors(formData);
-  const themeColor = formData?.themeColors?.dark || formData?.customPrimary || '#3b82f6';
+  const chosenColor = formData?.themeColors?.dark || formData?.customPrimary;
+  const themeColor = chosenColor || 'linear-gradient(to right, #3b82f6, #9333ea)';
 
   const handleSubmit = () => {
     nextStep();

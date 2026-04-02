@@ -43,7 +43,8 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
   }, [formData.customPrimary, formData.customSecondary]);
 
   const { primary: primaryColor, secondary: secondaryColor } = getThemeCSSColors(formData);
-  const themeColor = formData?.themeColors?.dark || formData?.customPrimary || '#3b82f6';
+  const chosenColor = formData?.themeColors?.dark || formData?.customPrimary;
+  const themeColor = chosenColor || 'linear-gradient(to right, #3b82f6, #9333ea)';
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
     resolver: zodResolver(schema),
@@ -125,7 +126,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
         </div>
 
         {/* Operating Hours */}
-        <div className="rounded-lg sm:rounded-xl p-3 sm:p-5" style={{ background: 'linear-gradient(white, white) padding-box, ' + themeColor + ' border-box', border: '1px solid transparent' }}>
+        <div className="rounded-lg sm:rounded-xl p-3 sm:p-5" style={{ background: `linear-gradient(white, white) padding-box, ${chosenColor || '#3b82f6'} border-box`, border: '1px solid transparent' }}>
           <h3 className="text-xs sm:text-sm font-semibold text-slate-900 flex items-center gap-2 mb-4">
             <Clock className="w-4 h-4 text-slate-700" />
             Operating Hours

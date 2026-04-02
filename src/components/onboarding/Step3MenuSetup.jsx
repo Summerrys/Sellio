@@ -119,7 +119,8 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   };
 
   const { primary: primaryColor, secondary: secondaryColor, accent: accentColor } = getThemeCSSColors(formData);
-  const themeColor = formData?.themeColors?.dark || formData?.customPrimary || '#3b82f6';
+  const chosenColor = formData?.themeColors?.dark || formData?.customPrimary;
+  const themeColor = chosenColor || 'linear-gradient(to right, #3b82f6, #9333ea)';
   const hints = INDUSTRY_HINTS[formData.businessType] || DEFAULT_HINTS;
 
   return (
