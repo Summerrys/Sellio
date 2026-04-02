@@ -2,9 +2,6 @@ import React from 'react';
 import { CheckCircle2, Rocket } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const FALLBACK_PRIMARY = '#9333ea';
-const FALLBACK_SECONDARY = '#ec4899';
-
 const PURPLE_PINK = `linear-gradient(to right, #9333ea, #ec4899)`;
 
 export default function OnboardingProgress({ currentStep = 1, completedSteps = [], steps = [] }) {
@@ -38,23 +35,23 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
               transition={{ delay: index * 0.05 }}
               className="flex flex-col items-center flex-1"
             >
-              <div className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 sm:border-3 shadow-md transition-all ${
-                completedSteps.includes(step.number)
-                  ? 'border-purple-500'
-                  : currentStep === step.number
-                  ? 'border-purple-500 animate-pulse'
-                  : 'bg-white border-slate-300'
-              }`}
-              style={{
-                background: completedSteps.includes(step.number) 
-                  ? PURPLE_PINK
-                  : currentStep === step.number
-                  ? PURPLE_PINK
-                  : 'transparent'
-              }}
+              <div
+                className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 shadow-md transition-all"
+                style={{
+                  background: completedSteps.includes(step.number)
+                    ? '#f97316'
+                    : currentStep === step.number
+                    ? PURPLE_PINK
+                    : 'white',
+                  borderColor: completedSteps.includes(step.number)
+                    ? '#fb923c'
+                    : currentStep === step.number
+                    ? '#9333ea'
+                    : '#cbd5e1'
+                }}
               >
                 {completedSteps.includes(step.number) ? (
-                  <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
+                  <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 ) : (
                   <span className={`text-xs sm:text-sm font-bold ${
                     currentStep === step.number ? 'text-white' : 'text-slate-400'
@@ -63,21 +60,17 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
                   </span>
                 )}
               </div>
-              <span className={`text-[10px] sm:text-xs mt-1 sm:mt-2 text-center font-medium max-w-14 leading-tight ${
-                currentStep === step.number ? 'text-slate-500' : 'text-slate-500'
-              }`}>
+              <span className="text-[10px] sm:text-xs mt-1 sm:mt-2 text-center font-medium max-w-14 leading-tight text-slate-500">
                 {step.label}
               </span>
             </motion.div>
             {index < displaySteps.length - 1 && (
-              <div className={`flex-1 h-1 mx-0.5 sm:mx-2 rounded transition-all ${
-                completedSteps.includes(step.number)
-                  ? ''
-                  : 'bg-slate-200'
-              }`}
-              style={{
-                background: completedSteps.includes(step.number) ? PURPLE_PINK : 'transparent'
-              }} />
+              <div
+                className="flex-1 h-1 mx-0.5 sm:mx-2 rounded transition-all"
+                style={{
+                  background: completedSteps.includes(step.number) ? PURPLE_PINK : '#e2e8f0'
+                }}
+              />
             )}
           </div>
         ))}
@@ -90,9 +83,7 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
             animate={{ width: `${percentage}%` }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
             className="h-full rounded-full"
-            style={{
-              background: PURPLE_PINK
-            }}
+            style={{ background: PURPLE_PINK }}
           />
         </div>
       </div>
