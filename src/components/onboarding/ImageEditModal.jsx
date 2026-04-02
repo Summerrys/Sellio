@@ -113,9 +113,9 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     
     if (!dragMode) { setCropEnd(pos); return; }
     
-    const x = Math.min(cropStart.x, cropEnd.x), y = Math.min(cropStart.y, cropEnd.y);
-    const w = Math.abs(cropEnd.x - cropStart.x), h = Math.abs(cropEnd.y - cropStart.y);
-    const dx = pos.x - (x + w / 2), dy = pos.y - (y + h / 2);
+    const x1 = Math.min(cropStart.x, cropEnd.x), y1 = Math.min(cropStart.y, cropEnd.y);
+    const x2 = Math.max(cropStart.x, cropEnd.x), y2 = Math.max(cropStart.y, cropEnd.y);
+    const w = x2 - x1, h = y2 - y1;
     const minSize = 10;
     
     if (dragMode === 'move') {
@@ -124,15 +124,23 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
       setCropStart({ x: nx, y: ny });
       setCropEnd({ x: nx + w, y: ny + h });
     } else if (dragMode === 'corner-tl') {
-      setCropStart({ x: Math.max(0, Math.min(pos.x, x + w - minSize)), y: Math.max(0, Math.min(pos.y, y + h - minSize)) });
+      const nx = Math.max(0, Math.min(pos.x, x2 - minSize));
+      const ny = Math.max(0, Math.min(pos.y, y2 - minSize));
+      setCropStart({ x: nx, y: ny });
     } else if (dragMode === 'corner-tr') {
-      setCropStart({ x: Math.max(0, Math.min(cropStart.x, pos.x - minSize)), y: Math.max(0, Math.min(cropStart.y, pos.y - minSize)) });
-      setCropEnd({ x: Math.min(canvas.width, Math.max(pos.x, cropStart.x + minSize)), y: Math.max(0, Math.min(cropStart.y, pos.y - minSize)) });
+      const nx = Math.min(canvas.width, Math.max(pos.x, x1 + minSize));
+      const ny = Math.max(0, Math.min(pos.y, y2 - minSize));
+      setCropStart({ x: x1, y: ny });
+      setCropEnd({ x: nx, y: y2 });
     } else if (dragMode === 'corner-bl') {
-      setCropStart({ x: Math.max(0, Math.min(pos.x, cropEnd.x - minSize)), y: Math.max(0, Math.min(cropStart.y, cropEnd.y - minSize)) });
-      setCropEnd({ x: Math.max(0, Math.min(cropStart.x, pos.x - minSize)), y: Math.min(canvas.height, Math.max(pos.y, cropStart.y + minSize)) });
+      const nx = Math.max(0, Math.min(pos.x, x2 - minSize));
+      const ny = Math.min(canvas.height, Math.max(pos.y, y1 + minSize));
+      setCropStart({ x: nx, y: y1 });
+      setCropEnd({ x: x2, y: ny });
     } else if (dragMode === 'corner-br') {
-      setCropEnd({ x: Math.min(canvas.width, Math.max(pos.x, cropStart.x + minSize)), y: Math.min(canvas.height, Math.max(pos.y, cropStart.y + minSize)) });
+      const nx = Math.min(canvas.width, Math.max(pos.x, x1 + minSize));
+      const ny = Math.min(canvas.height, Math.max(pos.y, y1 + minSize));
+      setCropEnd({ x: nx, y: ny });
     }
   };
 
