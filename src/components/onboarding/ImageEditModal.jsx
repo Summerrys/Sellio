@@ -77,8 +77,8 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     return {
-      x: Math.max(0, Math.min(clientX - rect.left, canvas.width)),
-      y: Math.max(0, Math.min(clientY - rect.top, canvas.height)),
+      x: clientX - rect.left,
+      y: clientY - rect.top,
     };
   };
 
