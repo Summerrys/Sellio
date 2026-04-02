@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, ArrowLeft, Utensils, Layers, Sparkles, Upload, Menu } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Utensils, Layers, Sparkles, Upload, Menu, X } from 'lucide-react';
+import { getSupabase } from '@/lib/supabaseClient';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,7 +17,10 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const [selectedCategory, setSelectedCategory] = useState('');
   const [itemName, setItemName] = useState('');
   const [itemPrice, setItemPrice] = useState('');
-  const [imageFile, setImageFile] = useState(null);
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   // Apply theme from Step 1
   useEffect(() => {
@@ -44,12 +48,46 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     }
   };
 
-  const addItem = () => {
-    if (selectedCategory && itemName.trim() && itemPrice.trim()) {
-      setItemName('');
-      setItemPrice('');
-      setImageFile(null);
+  const handleImageSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setImageFiles(prev => [...prev, ...files]);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreviews(prev => [...prev, reader.result]);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (idx) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== idx));
+    setImagePreviews(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const addItem = async () => {
+    if (!selectedCategory || !itemName.trim() || !itemPrice.trim()) return;
+    setUploading(true);
+    let imageUrls = [];
+    try {
+      if (imageFiles.length > 0) {
+        const supabase = await getSupabase();
+        for (const file of imageFiles) {
+          const fileName = `${Date.now()}-${file.name}`;
+          const { error } = await supabase.storage.from('menu-images').upload(fileName, file);
+          if (!error) {
+            const { data: { publicUrl } } = supabase.storage.from('menu-images').getPublicUrl(fileName);
+            imageUrls.push(publicUrl);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Image upload failed:', err);
     }
+    setItemName('');
+    setItemPrice('');
+    setImageFiles([]);
+    setImagePreviews([]);
+    setUploading(false);
   };
 
   const handleSubmit = () => {
@@ -113,6 +151,38 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
           </h3>
           <div className="space-y-4">
             <div>
+              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Images (optional)</Label>
+              {imagePreviews.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {imagePreviews.map((src, idx) => (
+                    <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-slate-200">
+                      <img src={src} alt="preview" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(idx)}
+                        className="absolute top-0.5 right-0.5 w-4 h-4 bg-black/60 rounded-full flex items-center justify-center"
+                      >
+                        <X className="w-2.5 h-2.5 text-white" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <label className="border-2 border-dashed border-slate-300 rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors">
+                <Upload className="w-5 h-5 text-slate-400 mb-1" />
+                <span className="text-xs text-slate-500">Click to add images</span>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            <div>
               <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Category</Label>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger className="w-full h-10 text-sm">
@@ -120,9 +190,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -151,27 +219,13 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               />
             </div>
 
-            <div>
-              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Image (optional)</Label>
-              <label className="border-2 border-dashed border-slate-300 rounded-lg p-6 sm:p-8 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors">
-                <Upload className="w-6 h-6 text-slate-400 mb-2" />
-                <span className="text-xs sm:text-sm text-slate-500">Click to upload</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                  className="hidden"
-                />
-              </label>
-            </div>
-
             <button
               onClick={addItem}
-              disabled={!selectedCategory || !itemName.trim() || !itemPrice.trim()}
+              disabled={!selectedCategory || !itemName.trim() || !itemPrice.trim() || uploading}
               className="w-full py-2.5 text-white rounded-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:opacity-90"
               style={{ background: BLUE_PURPLE }}
             >
-              + Add Item
+              {uploading ? 'Uploading...' : '+ Add Item'}
             </button>
           </div>
         </div>
