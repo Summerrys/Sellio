@@ -141,21 +141,21 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const hints = INDUSTRY_HINTS[formData.businessType] || DEFAULT_HINTS;
 
   return (
-    <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg max-h-screen overflow-y-auto">
-      <div className="text-center mb-6 sm:mb-8">
-        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: themeColor }}>
-          <Menu className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
+    <Card className="p-3 sm:p-6 bg-white border-0 shadow-lg overflow-y-auto" style={{ maxHeight: 'calc(100vh - 140px)' }}>
+      <div className="text-center mb-4">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: themeColor }}>
+          <Menu className="w-5 h-5 text-white" />
         </div>
-        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">{hints.sectionTitle}</h2>
-        <p className="text-sm sm:text-base text-slate-600">{hints.sectionSubtitle}</p>
+        <h2 className="text-xl font-bold text-slate-900 mb-1">{hints.sectionTitle}</h2>
+        <p className="text-xs text-slate-500">{hints.sectionSubtitle}</p>
       </div>
 
-      <div className="space-y-4 sm:space-y-6 mb-6 sm:mb-8">
+      <div className="space-y-3 mb-4">
 
         {/* Images Section */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
-          <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-4 flex items-center gap-3">
-            <Upload className="w-5 h-5" style={{ color: primaryColor }} />
+        <div className="bg-white border border-slate-200 rounded-xl p-3">
+          <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+            <Upload className="w-4 h-4" style={{ color: primaryColor }} />
             Product Images
           </h3>
           <div>
@@ -181,9 +181,9 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         </div>
 
         {/* Item Details Section (includes Categories) */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
-          <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-4 flex items-center gap-3">
-            <Sparkles className="w-5 h-5" style={{ color: secondaryColor }} />
+        <div className="bg-white border border-slate-200 rounded-xl p-3">
+          <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+            <Sparkles className="w-4 h-4" style={{ color: secondaryColor }} />
             Item Details
           </h3>
           <div className="space-y-4">
