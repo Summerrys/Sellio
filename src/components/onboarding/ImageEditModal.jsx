@@ -331,23 +331,20 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
             { label: 'Undo', icon: Undo2, action: handleUndo, disabled: history.length <= 1 },
             { label: 'Rotate', icon: RotateCw, action: () => handleRotateByDegree((current.rotation + 90) % 360) },
             {
-              label: isCropping ? 'Cancel' : 'Crop', icon: Crop,
+              label: 'Crop', icon: Crop,
               action: () => {
-                if (isCropping) {
-                  setTool(TOOLS.NONE); setCropStart(null); setCropEnd(null); setAspectRatio(null);
-                } else {
-                  setTool(TOOLS.CROP);
-                  const canvas = canvasRef.current;
-                  if (canvas) {
-                    const side = Math.round(Math.min(canvas.width, canvas.height) * 0.7);
-                    const cx = Math.round(canvas.width / 2);
-                    const cy = Math.round(canvas.height / 2);
-                    setCropStart({ x: cx - side / 2, y: cy - side / 2 });
-                    setCropEnd({ x: cx + side / 2, y: cy + side / 2 });
-                  }
+                setTool(TOOLS.CROP);
+                const canvas = canvasRef.current;
+                if (canvas) {
+                  const side = Math.round(Math.min(canvas.width, canvas.height) * 0.7);
+                  const cx = Math.round(canvas.width / 2);
+                  const cy = Math.round(canvas.height / 2);
+                  setCropStart({ x: cx - side / 2, y: cy - side / 2 });
+                  setCropEnd({ x: cx + side / 2, y: cy + side / 2 });
                 }
               },
               active: isCropping,
+              disabled: isCropping,
             },
             { label: 'Replace', icon: ImagePlus, action: () => replaceInputRef.current?.click() },
             { label: 'Delete', icon: Trash2, action: () => { onSave(null); onClose(); }, danger: true },
