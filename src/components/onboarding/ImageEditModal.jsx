@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, RotateCw, Crop, Undo2, ImagePlus, Check, Save, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
+import { X, RotateCw, Crop, Undo2, ImagePlus, Save, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
 
 const TOOLS = { NONE: 'none', CROP: 'crop' };
 const ASPECT_RATIOS = [
@@ -298,32 +298,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
                 {[{x: cropRect.x, y: cropRect.y, cursor: 'nwse-resize'}, {x: cropRect.x + cropRect.w, y: cropRect.y, cursor: 'nesw-resize'}, {x: cropRect.x, y: cropRect.y + cropRect.h, cursor: 'nesw-resize'}, {x: cropRect.x + cropRect.w, y: cropRect.y + cropRect.h, cursor: 'nwse-resize'}].map((h, i) => (
                   <div key={i} className="absolute w-3 h-3 bg-white border border-slate-800 rounded-full" style={{ left: h.x - 6, top: h.y - 6, cursor: h.cursor, pointerEvents: 'auto' }} />
                 ))}
-                {cropRect.w > 5 && cropRect.h > 5 && (
-                  <div
-                    className="absolute flex gap-2 items-center justify-center"
-                    style={{
-                      left: cropRect.x + cropRect.w / 2,
-                      top: cropRect.y + cropRect.h + 12,
-                      transform: 'translateX(-50%)',
-                      pointerEvents: 'auto',
-                    }}
-                  >
-                    <button
-                      onClick={applyCrop}
-                      className="bg-green-500 hover:bg-green-600 text-white p-1.5 rounded-full shadow-lg transition-colors"
-                      title="Apply crop"
-                    >
-                      <Check className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => { setTool(TOOLS.NONE); setCropStart(null); setCropEnd(null); setAspectRatio(null); }}
-                      className="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full shadow-lg transition-colors"
-                      title="Cancel crop"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
+
               </>
             )}
           </div>
@@ -370,17 +345,32 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
         {/* Footer */}
         <div className="flex gap-3 px-4 py-4 border-t border-slate-100">
           <button
-            onClick={onClose}
+            onClick={() => {
+              if (isCropping) {
+                setTool(TOOLS.NONE);
+                setCropStart(null);
+                setCropEnd(null);
+                setAspectRatio(null);
+              } else {
+                onClose();
+              }
+            }}
             className="flex-1 py-3 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600"
           >
             Cancel
           </button>
           <button
-            onClick={handleSave}
+            onClick={() => {
+              if (isCropping) {
+                applyCrop();
+              } else {
+                handleSave();
+              }
+            }}
             className="flex-1 py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2"
             style={{ background: themeColor }}
           >
-            <Save className="w-4 h-4" /> Save
+            <Save className="w-4 h-4" /> {isCropping ? 'Apply' : 'Save'}
           </button>
         </div>
 
