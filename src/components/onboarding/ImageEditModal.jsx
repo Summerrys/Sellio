@@ -254,6 +254,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
         {/* Tool buttons */}
         <div className="grid grid-cols-5 gap-px bg-slate-100 border-t border-slate-100">
           {[
+            { label: 'Undo', icon: Undo2, action: handleUndo, disabled: history.length <= 1 },
             { label: 'Rotate', icon: RotateCw, action: handleRotate },
             {
               label: isCropping ? 'Cancel' : 'Crop', icon: Crop,
@@ -275,7 +276,6 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
               },
               active: isCropping,
             },
-            { label: 'Undo', icon: Undo2, action: handleUndo, disabled: history.length <= 1 },
             { label: 'Replace', icon: ImagePlus, action: () => replaceInputRef.current?.click() },
             { label: 'Delete', icon: Trash2, action: () => { onSave(null); onClose(); }, danger: true },
           ].map(({ label, icon: Icon, action, active, disabled, danger }) => (
