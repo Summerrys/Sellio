@@ -1,7 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, RotateCw, Crop, Undo2, ImagePlus, Check, Save, Trash2 } from 'lucide-react';
+import { X, RotateCw, Crop, Undo2, ImagePlus, Check, Save, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
 
 const TOOLS = { NONE: 'none', CROP: 'crop' };
+const ASPECT_RATIOS = [
+  { label: 'Free', value: null },
+  { label: '1:1', value: 1 },
+  { label: '16:9', value: 16/9 },
+  { label: '4:3', value: 4/3 },
+  { label: '3:2', value: 3/2 },
+];
 
 export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
   const canvasRef = useRef(null);
@@ -14,8 +21,10 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
   const [cropStart, setCropStart] = useState(null);
   const [cropEnd, setCropEnd] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragMode, setDragMode] = useState(null); // 'move', 'corner-tl', 'corner-tr', 'corner-bl', 'corner-br'
+  const [dragMode, setDragMode] = useState(null);
   const [canvasSize, setCanvasSize] = useState({ w: 300, h: 300 });
+  const [zoom, setZoom] = useState(1);
+  const [aspectRatio, setAspectRatio] = useState(null);
 
   const imgRef = useRef(new Image());
 
@@ -53,7 +62,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     setCropStart(null); setCropEnd(null);
   };
 
-  const handleRotate = () => pushHistory({ ...current, rotation: (current.rotation + 90) % 360 });
+  const handleRotateByDegree = (degrees) => pushHistory({ ...current, rotation: (degrees + 360) % 360 });
 
   const handleUndo = () => {
     if (history.length <= 1) return;
@@ -91,14 +100,12 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     
     const x = Math.min(cropStart.x, cropEnd.x), y = Math.min(cropStart.y, cropEnd.y);
     const w = Math.abs(cropEnd.x - cropStart.x), h = Math.abs(cropEnd.y - cropStart.y);
-    const handle = 8; // corner handle size
+    const handle = 8;
     
-    // Check corner handles
     if (Math.abs(pos.x - x) < handle && Math.abs(pos.y - y) < handle) setDragMode('corner-tl');
     else if (Math.abs(pos.x - (x + w)) < handle && Math.abs(pos.y - y) < handle) setDragMode('corner-tr');
     else if (Math.abs(pos.x - x) < handle && Math.abs(pos.y - (y + h)) < handle) setDragMode('corner-bl');
     else if (Math.abs(pos.x - (x + w)) < handle && Math.abs(pos.y - (y + h)) < handle) setDragMode('corner-br');
-    // Check if clicking inside the crop area
     else if (pos.x >= x && pos.x <= x + w && pos.y >= y && pos.y <= y + h) setDragMode('move');
     else { setIsDragging(true); setCropStart(pos); setCropEnd(pos); return; }
     
@@ -127,15 +134,42 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
       setCropStart({ x: nx, y: ny });
       setCropEnd({ x: nx + w, y: ny + h });
     } else if (dragMode === 'corner-tl') {
-      setCropStart(pos);
+      let newStart = pos;
+      let newEnd = { x: cropEnd.x, y: cropEnd.y };
+      if (aspectRatio) {
+        const newW = newEnd.x - newStart.x, newH = newEnd.y - newStart.y;
+        const targetH = newW / aspectRatio;
+        newStart = { x: newStart.x, y: newEnd.y - targetH };
+      }
+      setCropStart(newStart);
     } else if (dragMode === 'corner-tr') {
-      setCropStart({ x: x1, y: pos.y });
-      setCropEnd({ x: pos.x, y: y2 });
+      let newStart = { x: cropStart.x, y: pos.y };
+      let newEnd = { x: pos.x, y: cropEnd.y };
+      if (aspectRatio) {
+        const newW = newEnd.x - newStart.x, newH = newEnd.y - newStart.y;
+        const targetH = newW / aspectRatio;
+        newStart = { x: newStart.x, y: newEnd.y - targetH };
+      }
+      setCropStart(newStart);
+      setCropEnd(newEnd);
     } else if (dragMode === 'corner-bl') {
-      setCropStart({ x: pos.x, y: y1 });
-      setCropEnd({ x: x2, y: pos.y });
+      let newStart = { x: pos.x, y: cropStart.y };
+      let newEnd = { x: cropEnd.x, y: pos.y };
+      if (aspectRatio) {
+        const newW = newEnd.x - newStart.x, newH = newEnd.y - newStart.y;
+        const targetH = newW / aspectRatio;
+        newStart = { x: newStart.x, y: newEnd.y - targetH };
+      }
+      setCropStart(newStart);
+      setCropEnd(newEnd);
     } else if (dragMode === 'corner-br') {
-      setCropEnd(pos);
+      let newEnd = pos;
+      if (aspectRatio && cropStart) {
+        const newW = newEnd.x - cropStart.x, newH = newEnd.y - cropStart.y;
+        const targetH = newW / aspectRatio;
+        newEnd = { x: newEnd.x, y: cropStart.y + targetH };
+      }
+      setCropEnd(newEnd);
     }
   };
 
@@ -155,7 +189,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
   };
 
   const handleSave = () => {
-    const imageData = isCropping && cropStart && cropEnd ? 
+    const imageData = tool === TOOLS.CROP && cropStart && cropEnd ? 
       (() => {
         const x = Math.min(cropStart.x, cropEnd.x);
         const y = Math.min(cropStart.y, cropEnd.y);
@@ -182,20 +216,45 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div
         ref={containerRef}
-        className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden"
+        className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={e => e.stopPropagation()}
       >
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
           <h3 className="font-semibold text-slate-900 text-base">Edit Image</h3>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500">
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200">
             <X className="w-4 h-4" />
           </button>
         </div>
 
+        {/* Controls */}
+        {isCropping && (
+          <div className="px-4 py-3 border-b border-slate-100 space-y-3">
+            {/* Aspect Ratio Presets */}
+            <div>
+              <p className="text-xs font-medium text-slate-600 mb-2">Aspect Ratio</p>
+              <div className="flex gap-1 flex-wrap">
+                {ASPECT_RATIOS.map(preset => (
+                  <button
+                    key={preset.label}
+                    onClick={() => setAspectRatio(preset.value)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      aspectRatio === preset.value
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Canvas */}
-        <div className="flex items-center justify-center bg-slate-900 py-4 px-4" style={{ minHeight: 220 }}>
+        <div className="flex-1 flex items-center justify-center bg-slate-900 px-4 py-4 overflow-auto">
           <div
             className="relative inline-block select-none"
             style={{ cursor: isCropping ? 'crosshair' : 'default', touchAction: isCropping ? 'none' : 'auto' }}
@@ -214,7 +273,6 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
                     pointerEvents: 'auto',
                   }}
                 />
-                {/* Corner handles */}
                 {[{x: cropRect.x, y: cropRect.y, cursor: 'nwse-resize'}, {x: cropRect.x + cropRect.w, y: cropRect.y, cursor: 'nesw-resize'}, {x: cropRect.x, y: cropRect.y + cropRect.h, cursor: 'nesw-resize'}, {x: cropRect.x + cropRect.w, y: cropRect.y + cropRect.h, cursor: 'nwse-resize'}].map((h, i) => (
                   <div key={i} className="absolute w-3 h-3 bg-white border border-slate-800 rounded-full" style={{ left: h.x - 6, top: h.y - 6, cursor: h.cursor, pointerEvents: 'auto' }} />
                 ))}
@@ -249,21 +307,36 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
           </div>
         </div>
 
-
+        {/* Rotation Slider */}
+        {!isCropping && (
+          <div className="px-4 py-3 border-t border-slate-100">
+            <p className="text-xs font-medium text-slate-600 mb-2">Rotation: {current.rotation}°</p>
+            <input
+              type="range"
+              min="0"
+              max="359"
+              value={current.rotation}
+              onChange={(e) => handleRotateByDegree(parseInt(e.target.value))}
+              className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+              style={{
+                background: `linear-gradient(to right, rgb(59, 130, 246) 0%, rgb(59, 130, 246) ${current.rotation}%, rgb(226, 232, 240) ${current.rotation}%, rgb(226, 232, 240) 100%)`
+              }}
+            />
+          </div>
+        )}
 
         {/* Tool buttons */}
         <div className="grid grid-cols-5 gap-px bg-slate-100 border-t border-slate-100">
           {[
             { label: 'Undo', icon: Undo2, action: handleUndo, disabled: history.length <= 1 },
-            { label: 'Rotate', icon: RotateCw, action: handleRotate },
+            { label: 'Rotate', icon: RotateCw, action: () => handleRotateByDegree((current.rotation + 90) % 360) },
             {
               label: isCropping ? 'Cancel' : 'Crop', icon: Crop,
               action: () => {
                 if (isCropping) {
-                  setTool(TOOLS.NONE); setCropStart(null); setCropEnd(null);
+                  setTool(TOOLS.NONE); setCropStart(null); setCropEnd(null); setAspectRatio(null);
                 } else {
                   setTool(TOOLS.CROP);
-                  // Set default centered 1:1 box
                   const canvas = canvasRef.current;
                   if (canvas) {
                     const side = Math.round(Math.min(canvas.width, canvas.height) * 0.7);
@@ -283,17 +356,13 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
               key={label}
               onClick={action}
               disabled={disabled}
-              className={`flex flex-col items-center justify-center gap-1 py-3 text-xs font-medium transition-colors
-                ${active ? 'bg-blue-50 text-blue-600' : danger ? 'bg-white text-red-500 hover:bg-red-50' : 'bg-white text-slate-600 hover:bg-slate-50'}
-                ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+              className={`flex flex-col items-center justify-center gap-1 py-3 text-xs font-medium transition-colors ${active ? 'bg-blue-50 text-blue-600' : danger ? 'bg-white text-red-500 hover:bg-red-50' : 'bg-white text-slate-600 hover:bg-slate-50'} ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
             >
               <Icon className="w-5 h-5" />
               {label}
             </button>
           ))}
         </div>
-
-
 
         {/* Footer */}
         <div className="flex gap-3 px-4 py-4 border-t border-slate-100">
