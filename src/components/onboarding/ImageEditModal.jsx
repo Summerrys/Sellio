@@ -294,7 +294,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
                       <Check className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => { setTool(TOOLS.NONE); setCropStart(null); setCropEnd(null); }}
+                      onClick={() => { setTool(TOOLS.NONE); setCropStart(null); setCropEnd(null); setAspectRatio(null); }}
                       className="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full shadow-lg transition-colors"
                       title="Cancel crop"
                     >
