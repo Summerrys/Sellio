@@ -3,7 +3,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useRoutes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import SupabaseTest from './pages/SupabaseTest';
 import Splash from './pages/Splash';
@@ -46,7 +46,6 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      <Route path="/" element={<Splash />} />
       {Object.entries(Pages).map(([path, Page]) => (
         <Route
           key={path}
@@ -75,7 +74,10 @@ function App() {
       <QueryClientProvider client={queryClientInstance}>
         <Router>
           <NavigationTracker />
-          <AuthenticatedApp />
+          <Routes>
+            <Route path="/" element={<Splash />} />
+            <Route path="/*" element={<AuthenticatedApp />} />
+          </Routes>
         </Router>
         <Toaster />
       </QueryClientProvider>
