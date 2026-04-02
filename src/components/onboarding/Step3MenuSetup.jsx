@@ -152,18 +152,23 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
             <Upload className="w-5 h-5" style={{ color: primaryColor }} />
             Product Images
           </h3>
-          <div className="flex flex-wrap gap-3">
-            {imagePreviews.map((src, idx) => (
-              <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200 group cursor-pointer" onClick={() => setEditingImageIdx(idx)}>
-                <img src={src} alt="preview" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <Pencil className="w-4 h-4 text-white" />
-                </div>
+          <div>
+            <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Images (optional)</Label>
+            {imagePreviews.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {imagePreviews.map((src, idx) => (
+                  <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-slate-200 group cursor-pointer" onClick={() => setEditingImageIdx(idx)}>
+                    <img src={src} alt="preview" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <Pencil className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-            <label className="w-20 h-20 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors">
+            )}
+            <label className="border-2 border-dashed border-slate-300 rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors">
               <Upload className="w-5 h-5 text-slate-400 mb-1" />
-              <span className="text-xs text-slate-400">Add</span>
+              <span className="text-xs text-slate-500">Click to add images</span>
               <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
             </label>
           </div>
