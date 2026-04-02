@@ -14,6 +14,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
   const [cropStart, setCropStart] = useState(null);
   const [cropEnd, setCropEnd] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [dragMode, setDragMode] = useState(null); // 'move', 'corner-tl', 'corner-tr', 'corner-bl', 'corner-br'
   const [canvasSize, setCanvasSize] = useState({ w: 300, h: 300 });
 
   const imgRef = useRef(new Image());
@@ -85,16 +86,57 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     if (tool !== TOOLS.CROP) return;
     e.preventDefault();
     const pos = getPos(e, canvasRef.current);
-    setIsDragging(true); setCropStart(pos); setCropEnd(pos);
+    const canvas = canvasRef.current;
+    if (!cropStart || !cropEnd) { setIsDragging(true); setCropStart(pos); setCropEnd(pos); return; }
+    
+    const x = Math.min(cropStart.x, cropEnd.x), y = Math.min(cropStart.y, cropEnd.y);
+    const w = Math.abs(cropEnd.x - cropStart.x), h = Math.abs(cropEnd.y - cropStart.y);
+    const handle = 8; // corner handle size
+    
+    // Check corner handles
+    if (Math.abs(pos.x - x) < handle && Math.abs(pos.y - y) < handle) setDragMode('corner-tl');
+    else if (Math.abs(pos.x - (x + w)) < handle && Math.abs(pos.y - y) < handle) setDragMode('corner-tr');
+    else if (Math.abs(pos.x - x) < handle && Math.abs(pos.y - (y + h)) < handle) setDragMode('corner-bl');
+    else if (Math.abs(pos.x - (x + w)) < handle && Math.abs(pos.y - (y + h)) < handle) setDragMode('corner-br');
+    // Check if clicking inside the crop area
+    else if (pos.x >= x && pos.x <= x + w && pos.y >= y && pos.y <= y + h) setDragMode('move');
+    else { setIsDragging(true); setCropStart(pos); setCropEnd(pos); return; }
+    
+    setIsDragging(true);
   };
 
   const onMove = (e) => {
     if (!isDragging || tool !== TOOLS.CROP) return;
     e.preventDefault();
-    setCropEnd(getPos(e, canvasRef.current));
+    const pos = getPos(e, canvasRef.current);
+    const canvas = canvasRef.current;
+    
+    if (!dragMode) { setCropEnd(pos); return; }
+    
+    const x = Math.min(cropStart.x, cropEnd.x), y = Math.min(cropStart.y, cropEnd.y);
+    const w = Math.abs(cropEnd.x - cropStart.x), h = Math.abs(cropEnd.y - cropStart.y);
+    const dx = pos.x - (x + w / 2), dy = pos.y - (y + h / 2);
+    const minSize = 10;
+    
+    if (dragMode === 'move') {
+      const nx = Math.max(0, Math.min(pos.x - w / 2, canvas.width - w));
+      const ny = Math.max(0, Math.min(pos.y - h / 2, canvas.height - h));
+      setCropStart({ x: nx, y: ny });
+      setCropEnd({ x: nx + w, y: ny + h });
+    } else if (dragMode === 'corner-tl') {
+      setCropStart({ x: Math.max(0, Math.min(pos.x, x + w - minSize)), y: Math.max(0, Math.min(pos.y, y + h - minSize)) });
+    } else if (dragMode === 'corner-tr') {
+      setCropStart({ x: Math.max(0, Math.min(cropStart.x, pos.x - minSize)), y: Math.max(0, Math.min(cropStart.y, pos.y - minSize)) });
+      setCropEnd({ x: Math.min(canvas.width, Math.max(pos.x, cropStart.x + minSize)), y: Math.max(0, Math.min(cropStart.y, pos.y - minSize)) });
+    } else if (dragMode === 'corner-bl') {
+      setCropStart({ x: Math.max(0, Math.min(pos.x, cropEnd.x - minSize)), y: Math.max(0, Math.min(cropStart.y, cropEnd.y - minSize)) });
+      setCropEnd({ x: Math.max(0, Math.min(cropStart.x, pos.x - minSize)), y: Math.min(canvas.height, Math.max(pos.y, cropStart.y + minSize)) });
+    } else if (dragMode === 'corner-br') {
+      setCropEnd({ x: Math.min(canvas.width, Math.max(pos.x, cropStart.x + minSize)), y: Math.min(canvas.height, Math.max(pos.y, cropStart.y + minSize)) });
+    }
   };
 
-  const onEnd = () => setIsDragging(false);
+  const onEnd = () => { setIsDragging(false); setDragMode(null); };
 
   const applyCrop = () => {
     if (!cropStart || !cropEnd) return;
@@ -149,14 +191,18 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
             {isCropping && cropRect && cropRect.w > 0 && (
               <>
                 <div
-                  className="absolute border-2 border-white rounded"
+                  className="absolute border-2 border-white rounded cursor-move"
                   style={{
                     left: cropRect.x, top: cropRect.y, width: cropRect.w, height: cropRect.h,
                     background: 'rgba(255,255,255,0.1)',
                     boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)',
-                    pointerEvents: 'none',
+                    pointerEvents: 'auto',
                   }}
                 />
+                {/* Corner handles */}
+                {[{x: cropRect.x, y: cropRect.y, cursor: 'nwse-resize'}, {x: cropRect.x + cropRect.w, y: cropRect.y, cursor: 'nesw-resize'}, {x: cropRect.x, y: cropRect.y + cropRect.h, cursor: 'nesw-resize'}, {x: cropRect.x + cropRect.w, y: cropRect.y + cropRect.h, cursor: 'nwse-resize'}].map((h, i) => (
+                  <div key={i} className="absolute w-3 h-3 bg-white border border-slate-800 rounded-full" style={{ left: h.x - 6, top: h.y - 6, cursor: h.cursor, pointerEvents: 'auto' }} />
+                ))}
                 {cropRect.w > 5 && cropRect.h > 5 && (
                   <div
                     className="absolute flex gap-2 items-center justify-center"
