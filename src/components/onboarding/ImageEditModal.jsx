@@ -112,7 +112,6 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     const canvas = canvasRef.current;
     
     if (!dragMode) { 
-      pos = { x: Math.max(0, Math.min(pos.x, canvas.width)), y: Math.max(0, Math.min(pos.y, canvas.height)) };
       setCropEnd(pos); 
       return; 
     }
@@ -122,28 +121,18 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     const w = x2 - x1, h = y2 - y1;
     
     if (dragMode === 'move') {
-      const nx = Math.max(0, Math.min(pos.x - w / 2, canvas.width - w));
-      const ny = Math.max(0, Math.min(pos.y - h / 2, canvas.height - h));
-      setCropStart({ x: nx, y: ny });
-      setCropEnd({ x: nx + w, y: ny + h });
+      setCropStart({ x: pos.x - w / 2, y: pos.y - h / 2 });
+      setCropEnd({ x: pos.x + w / 2, y: pos.y + h / 2 });
     } else if (dragMode === 'corner-tl') {
-      const nx = Math.max(0, Math.min(pos.x, x2));
-      const ny = Math.max(0, Math.min(pos.y, y2));
-      setCropStart({ x: nx, y: ny });
+      setCropStart({ x: pos.x, y: pos.y });
     } else if (dragMode === 'corner-tr') {
-      const nx = Math.min(canvas.width, Math.max(pos.x, x1));
-      const ny = Math.max(0, Math.min(pos.y, y2));
-      setCropStart({ x: x1, y: ny });
-      setCropEnd({ x: nx, y: y2 });
+      setCropStart({ x: x1, y: pos.y });
+      setCropEnd({ x: pos.x, y: y2 });
     } else if (dragMode === 'corner-bl') {
-      const nx = Math.max(0, Math.min(pos.x, x2));
-      const ny = Math.min(canvas.height, Math.max(pos.y, y1));
-      setCropStart({ x: nx, y: y1 });
-      setCropEnd({ x: x2, y: ny });
+      setCropStart({ x: pos.x, y: y1 });
+      setCropEnd({ x: x2, y: pos.y });
     } else if (dragMode === 'corner-br') {
-      const nx = Math.min(canvas.width, Math.max(pos.x, x1));
-      const ny = Math.min(canvas.height, Math.max(pos.y, y1));
-      setCropEnd({ x: nx, y: ny });
+      setCropEnd({ x: pos.x, y: pos.y });
     }
   };
 
