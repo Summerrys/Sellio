@@ -2,12 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, RotateCw, Crop, Undo2, ImagePlus, Save, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
 
 const TOOLS = { NONE: 'none', CROP: 'crop' };
-const ASPECT_RATIOS = [
-  { label: 'Free', value: null },
-  { label: '1:1', value: 1 },
-  { label: '16:9', value: 16/9 },
-  { label: '4:3', value: 4/3 },
-];
 
 export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
   const canvasRef = useRef(null);
@@ -23,7 +17,6 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
   const [dragMode, setDragMode] = useState(null);
   const [canvasSize, setCanvasSize] = useState({ w: 300, h: 300 });
   const [zoom, setZoom] = useState(1);
-  const [aspectRatio, setAspectRatio] = useState(null);
   const [dragOffset, setDragOffset] = useState(null);
   const [dragDimensions, setDragDimensions] = useState(null);
 
@@ -60,7 +53,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     setHistory(prev => [...prev, newState]);
     setCurrent(newState);
     setTool(TOOLS.NONE);
-    setCropStart(null); setCropEnd(null); setAspectRatio(null);
+    setCropStart(null); setCropEnd(null);
   };
 
   const handleRotateByDegree = (degrees) => pushHistory({ ...current, rotation: (degrees + 360) % 360 });
@@ -70,7 +63,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     const newHistory = history.slice(0, -1);
     setHistory(newHistory);
     setCurrent(newHistory[newHistory.length - 1]);
-    setTool(TOOLS.NONE); setCropStart(null); setCropEnd(null); setAspectRatio(null);
+    setTool(TOOLS.NONE); setCropStart(null); setCropEnd(null);
   };
 
   const handleReplace = (e) => {
@@ -140,57 +133,15 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
       setCropStart({ x: nx, y: ny });
       setCropEnd({ x: nx + dw, y: ny + dh });
     } else if (dragMode === 'corner-tl') {
-      let newStart = pos;
-      let newEnd = { x: cropEnd.x, y: cropEnd.y };
-      if (aspectRatio) {
-        const newW = newEnd.x - newStart.x, newH = newEnd.y - newStart.y;
-        if (Math.abs(newW) > Math.abs(newH)) {
-          const targetH = newW / aspectRatio;
-          newStart.y = newEnd.y - targetH;
-        } else {
-          const targetW = newH * aspectRatio;
-          newStart.x = newEnd.x - targetW;
-        }
-      }
-      setCropStart(newStart);
+      setCropStart(pos);
     } else if (dragMode === 'corner-tr') {
-      let newStart = { x: cropStart.x, y: pos.y };
-      let newEnd = { x: pos.x, y: cropEnd.y };
-      if (aspectRatio) {
-        const newW = newEnd.x - newStart.x, newH = newEnd.y - newStart.y;
-        if (Math.abs(newW) > Math.abs(newH)) {
-          const targetH = newW / aspectRatio;
-          newStart.y = newEnd.y - targetH;
-        } else {
-          const targetW = newH * aspectRatio;
-          newEnd.x = newStart.x + targetW;
-        }
-      }
-      setCropStart(newStart);
-      setCropEnd(newEnd);
+      setCropStart({ x: cropStart.x, y: pos.y });
+      setCropEnd({ x: pos.x, y: cropEnd.y });
     } else if (dragMode === 'corner-bl') {
-      let newStart = { x: pos.x, y: cropStart.y };
-      let newEnd = { x: cropEnd.x, y: pos.y };
-      if (aspectRatio) {
-        const newW = newEnd.x - newStart.x, newH = newEnd.y - newStart.y;
-        if (Math.abs(newW) > Math.abs(newH)) {
-          const targetH = newW / aspectRatio;
-          newEnd.y = newStart.y + targetH;
-        } else {
-          const targetW = newH * aspectRatio;
-          newStart.x = newEnd.x - targetW;
-        }
-      }
-      setCropStart(newStart);
-      setCropEnd(newEnd);
+      setCropStart({ x: pos.x, y: cropStart.y });
+      setCropEnd({ x: cropEnd.x, y: pos.y });
     } else if (dragMode === 'corner-br') {
-      let newEnd = pos;
-      if (aspectRatio && cropStart) {
-        const newW = newEnd.x - cropStart.x, newH = newEnd.y - cropStart.y;
-        const targetH = newW / aspectRatio;
-        newEnd = { x: newEnd.x, y: cropStart.y + targetH };
-      }
-      setCropEnd(newEnd);
+      setCropEnd(pos);
     }
   };
 
@@ -350,7 +301,6 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
                 setTool(TOOLS.NONE);
                 setCropStart(null);
                 setCropEnd(null);
-                setAspectRatio(null);
               } else {
                 onClose();
               }
