@@ -12,19 +12,19 @@ import { getThemeCSSColors, DEFAULT_COLORS } from '@/lib/themeConstants';
 const BLUE_PURPLE = 'linear-gradient(to right, #3b82f6, #9333ea)';
 
 const INDUSTRY_HINTS = {
-  'F&B': {
+  'food': {
     categoryPlaceholder: 'Appetizers, Mains, Desserts...',
     itemPlaceholder: 'eg., Caesar Salad',
     sectionTitle: 'Build your menu',
     sectionSubtitle: 'Create categories and add your menu items',
   },
-  'Retail': {
+  'retail': {
     categoryPlaceholder: 'Clothing, Electronics, Accessories...',
     itemPlaceholder: 'eg., Blue Denim Jacket',
     sectionTitle: 'Set up your catalogue',
     sectionSubtitle: 'Create categories and add your products',
   },
-  'Services': {
+  'service': {
     categoryPlaceholder: 'Haircuts, Treatments, Packages...',
     itemPlaceholder: 'eg., Deep Tissue Massage',
     sectionTitle: 'Set up your services',
@@ -32,7 +32,7 @@ const INDUSTRY_HINTS = {
   },
 };
 
-const DEFAULT_HINTS = INDUSTRY_HINTS['F&B'];
+const DEFAULT_HINTS = INDUSTRY_HINTS['food'];
 
 export default function Step3MenuSetup({ formData, updateFormData, nextStep, prevStep }) {
   const [categories, setCategories] = useState(formData.menuCategories || []);
