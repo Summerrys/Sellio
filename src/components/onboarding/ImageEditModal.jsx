@@ -200,31 +200,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
           </button>
         </div>
 
-        {/* Controls */}
-        {isCropping && (
-          <div className="px-4 py-3 border-b border-slate-100 space-y-3">
-            {/* Aspect Ratio Presets */}
-            <div>
-              <p className="text-xs font-medium text-slate-600 mb-2">Aspect Ratio</p>
-              <div className="flex gap-1 flex-wrap">
-                {ASPECT_RATIOS.map(preset => (
-                  <button
-                    key={preset.label}
-                    onClick={() => setAspectRatio(preset.value)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      aspectRatio === preset.value
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
-            </div>
 
-          </div>
-        )}
 
         {/* Canvas */}
         <div className="flex-1 flex items-center justify-center bg-slate-900 px-4 py-4 overflow-auto">
