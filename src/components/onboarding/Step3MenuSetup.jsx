@@ -174,64 +174,61 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
           </div>
         </div>
 
-        {/* Categories Section */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
-          <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-4 flex items-center gap-3">
-            <Layers className="w-5 h-5" style={{ color: primaryColor }} />
-            Categories
-          </h3>
-          <div className="flex gap-2 flex-col sm:flex-row">
-            <input
-              type="text"
-              value={categoryInput}
-              onChange={(e) => setCategoryInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && addCategory()}
-              placeholder={hints.categoryPlaceholder}
-              className="flex-1 px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-slate-300"
-            />
-            <button
-              onClick={addCategory}
-              disabled={!categoryInput.trim()}
-              className="w-full sm:w-auto px-4 py-2.5 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
-              style={{ background: themeColor }}
-            >
-              Add
-            </button>
-          </div>
-          {categories.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {categories.map((cat) => (
-                <div key={cat} className="px-3 py-1.5 bg-slate-50 rounded-full text-sm text-slate-700 flex items-center gap-2 border border-slate-200">
-                  <span>{cat}</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const updated = categories.filter(c => c !== cat);
-                      setCategories(updated);
-                      if (selectedCategory === cat) setSelectedCategory('');
-                    }}
-                    className="text-slate-400 hover:text-red-500 transition-colors"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Item Details Section */}
+        {/* Item Details Section (includes Categories) */}
         <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
           <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-4 flex items-center gap-3">
             <Sparkles className="w-5 h-5" style={{ color: secondaryColor }} />
             Item Details
           </h3>
           <div className="space-y-4">
+            {/* Create categories */}
+            <div>
+              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Create Categories</Label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={categoryInput}
+                  onChange={(e) => setCategoryInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && addCategory()}
+                  placeholder={hints.categoryPlaceholder}
+                  className="flex-1 px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-slate-300"
+                />
+                <button
+                  onClick={addCategory}
+                  disabled={!categoryInput.trim()}
+                  className="px-4 py-2.5 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 text-sm"
+                  style={{ background: themeColor }}
+                >
+                  Add
+                </button>
+              </div>
+              {categories.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {categories.map((cat) => (
+                    <div key={cat} className="px-3 py-1.5 bg-slate-50 rounded-full text-sm text-slate-700 flex items-center gap-2 border border-slate-200">
+                      <span>{cat}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = categories.filter(c => c !== cat);
+                          setCategories(updated);
+                          if (selectedCategory === cat) setSelectedCategory('');
+                        }}
+                        className="text-slate-400 hover:text-red-500 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Select category */}
             <div>
               <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Category</Label>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger className="w-full h-10 text-sm">
-                  <SelectValue placeholder="Select category" />
+                  <SelectValue placeholder={categories.length === 0 ? 'Add a category above first' : 'Select category'} />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((cat) => (
