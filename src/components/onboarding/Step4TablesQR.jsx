@@ -5,7 +5,7 @@ import { ArrowRight, ArrowLeft, QrCode } from 'lucide-react';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 
-const BLUE_PURPLE = 'linear-gradient(to right, #3b82f6, #9333ea)';
+
 
 export default function Step4TablesQR({ formData, updateFormData, nextStep, prevStep }) {
   // Apply theme from Step 1
@@ -27,6 +27,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   }, [formData.customPrimary, formData.customSecondary]);
 
   const { primary: primaryColor } = getThemeCSSColors(formData);
+  const themeGradient = `linear-gradient(to right, ${formData?.themeColors?.dark || formData?.customPrimary || '#3b82f6'}, ${formData?.themeColors?.light || formData?.customSecondary || '#9333ea'})`;
 
   const handleSubmit = () => {
     nextStep();
@@ -35,7 +36,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   return (
     <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg max-h-screen overflow-y-auto">
       <div className="text-center mb-6 sm:mb-8">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: BLUE_PURPLE }}>
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: themeGradient }}>
           <QrCode className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1 sm:mb-2">Tables & QR Codes</h2>
@@ -61,7 +62,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
           type="button"
           onClick={handleSubmit}
           className="flex-1 h-10 sm:h-11 text-white gap-1 sm:gap-2 text-sm"
-          style={{ background: BLUE_PURPLE }}
+          style={{ background: themeGradient }}
         >
           <span className="hidden sm:inline">Continue</span> <span className="sm:hidden">Next</span> <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
         </Button>

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { generateThemeVariables } from '../theme/themeUtils';
 import { getThemeCSSColors, DEFAULT_COLORS } from '@/lib/themeConstants';
 
-const BLUE_PURPLE = 'linear-gradient(to right, #3b82f6, #9333ea)';
+
 
 const INDUSTRY_HINTS = {
   'food': {
@@ -119,12 +119,13 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   };
 
   const { primary: primaryColor, secondary: secondaryColor, accent: accentColor } = getThemeCSSColors(formData);
+  const themeGradient = `linear-gradient(to right, ${formData?.themeColors?.dark || formData?.customPrimary || '#3b82f6'}, ${formData?.themeColors?.light || formData?.customSecondary || '#9333ea'})`;
   const hints = INDUSTRY_HINTS[formData.businessType] || DEFAULT_HINTS;
 
   return (
     <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg max-h-screen overflow-y-auto">
       <div className="text-center mb-6 sm:mb-8">
-        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: BLUE_PURPLE }}>
+        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: themeGradient }}>
           <Menu className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
         </div>
         <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">{hints.sectionTitle}</h2>
@@ -151,7 +152,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               onClick={addCategory}
               disabled={!categoryInput.trim()}
               className="w-full sm:w-auto px-4 py-2.5 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
-              style={{ background: BLUE_PURPLE }}
+              style={{ background: themeGradient }}
             >
               Add
             </button>
@@ -258,7 +259,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               onClick={addItem}
               disabled={!selectedCategory || !itemName.trim() || !itemPrice.trim() || uploading}
               className="w-full py-2.5 text-white rounded-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:opacity-90"
-              style={{ background: BLUE_PURPLE }}
+              style={{ background: themeGradient }}
             >
               {uploading ? 'Uploading...' : '+ Add Item'}
             </button>
@@ -287,7 +288,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
           type="button"
           onClick={handleSubmit}
           className="flex-1 h-10 sm:h-11 text-white gap-1 sm:gap-2 text-sm"
-          style={{ background: BLUE_PURPLE }}
+          style={{ background: themeGradient }}
         >
           <span className="hidden sm:inline">Next</span> <span className="sm:hidden">Next</span> <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
         </Button>
