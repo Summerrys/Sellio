@@ -26,6 +26,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
   const [zoom, setZoom] = useState(1);
   const [aspectRatio, setAspectRatio] = useState(null);
   const [dragOffset, setDragOffset] = useState(null);
+  const [customAspectInput, setCustomAspectInput] = useState('');
 
   const imgRef = useRef(new Image());
 
@@ -257,9 +258,9 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
                 {ASPECT_RATIOS.map(preset => (
                   <button
                     key={preset.label}
-                    onClick={() => setAspectRatio(preset.value)}
+                    onClick={() => { setAspectRatio(preset.value); setCustomAspectInput(''); }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      aspectRatio === preset.value
+                      aspectRatio === preset.value && customAspectInput === ''
                         ? 'bg-blue-500 text-white'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
@@ -267,6 +268,35 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
                     {preset.label}
                   </button>
                 ))}
+              </div>
+            </div>
+            {/* Custom Aspect Ratio */}
+            <div>
+              <p className="text-xs font-medium text-slate-600 mb-2">Custom Ratio</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g., 5:3 or 2.5"
+                  value={customAspectInput}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCustomAspectInput(val);
+                    if (val) {
+                      if (val.includes(':')) {
+                        const [w, h] = val.split(':').map(Number);
+                        if (!isNaN(w) && !isNaN(h) && w > 0 && h > 0) {
+                          setAspectRatio(w / h);
+                        }
+                      } else {
+                        const num = parseFloat(val);
+                        if (!isNaN(num) && num > 0) {
+                          setAspectRatio(num);
+                        }
+                      }
+                    }
+                  }}
+                  className="flex-1 px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
             </div>
           </div>
@@ -313,7 +343,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
                       <Check className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => { setTool(TOOLS.NONE); setCropStart(null); setCropEnd(null); setAspectRatio(null); }}
+                      onClick={() => { setTool(TOOLS.NONE); setCropStart(null); setCropEnd(null); setAspectRatio(null); setCustomAspectInput(''); }}
                       className="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full shadow-lg transition-colors"
                       title="Cancel crop"
                     >
