@@ -141,7 +141,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const hints = INDUSTRY_HINTS[formData.businessType] || DEFAULT_HINTS;
 
   return (
-    <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg max-h-screen overflow-y-auto" style={{ overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+    <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg w-full" style={{ overflowX: 'hidden', maxWidth: '100%', boxSizing: 'border-box' }}>
       <div className="text-center mb-4">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: themeColor }}>
           <Menu className="w-5 h-5 text-white" />
@@ -190,14 +190,14 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
             {/* Create categories */}
             <div>
               <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Create Categories</Label>
-              <div className="flex gap-2 w-full min-w-0">
+              <div className="flex gap-2 w-full min-w-0 overflow-hidden">
                 <input
                   type="text"
                   value={categoryInput}
                   onChange={(e) => setCategoryInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && addCategory()}
                   placeholder={hints.categoryPlaceholder}
-                  className="flex-1 px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-slate-300"
+                  className="flex-1 min-w-0 w-0 px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-slate-300"
                 />
                 <button
                   onClick={addCategory}

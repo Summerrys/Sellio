@@ -102,8 +102,8 @@ export default function Onboarding() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
-        <div className="w-full max-w-3xl">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 overflow-x-hidden">
+        <div className="w-full max-w-3xl min-w-0 overflow-x-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
@@ -111,6 +111,7 @@ export default function Onboarding() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
+              className="w-full min-w-0 overflow-x-hidden"
             >
               <CurrentStepComponent
                 formData={formData}
