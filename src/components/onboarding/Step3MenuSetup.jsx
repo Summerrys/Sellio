@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, ArrowLeft, Utensils, Layers, Sparkles, Upload, Menu, X, Pencil, Trash2 } from 'lucide-react';
+import ImageEditModal from './ImageEditModal';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,18 +46,14 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const [uploading, setUploading] = useState(false);
   const [editingImageIdx, setEditingImageIdx] = useState(null);
   const fileInputRef = useRef(null);
-  const editFileInputRef = useRef(null);
 
-  const handleEditImageReplace = (e) => {
-    const file = e.target.files?.[0];
-    if (!file || editingImageIdx === null) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreviews(prev => prev.map((p, i) => i === editingImageIdx ? reader.result : p));
+  const handleEditSave = (newDataUrl) => {
+    // Convert dataURL back to a File-like blob
+    fetch(newDataUrl).then(r => r.blob()).then(blob => {
+      const file = new File([blob], `edited-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      setImagePreviews(prev => prev.map((p, i) => i === editingImageIdx ? newDataUrl : p));
       setImageFiles(prev => prev.map((f, i) => i === editingImageIdx ? file : f));
-      setEditingImageIdx(null);
-    };
-    reader.readAsDataURL(file);
+    });
   };
 
   // Apply theme from Step 1
@@ -278,37 +275,13 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         </div>
       </div>
 
-      {/* Image Edit Modal */}
       {editingImageIdx !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setEditingImageIdx(null)}>
-          <div className="bg-white rounded-2xl p-6 w-80 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-slate-900">Edit Image</h3>
-              <button onClick={() => setEditingImageIdx(null)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="flex justify-center mb-5">
-              <img src={imagePreviews[editingImageIdx]} alt="editing" className="w-48 h-48 object-cover rounded-xl border border-slate-200" />
-            </div>
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={() => editFileInputRef.current?.click()}
-                className="w-full py-2.5 text-white rounded-lg font-medium flex items-center justify-center gap-2 hover:opacity-90"
-                style={{ background: themeColor }}
-              >
-                <Upload className="w-4 h-4" /> Replace Image
-              </button>
-              <button
-                onClick={() => { removeImage(editingImageIdx); setEditingImageIdx(null); }}
-                className="w-full py-2.5 border border-red-200 text-red-500 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-red-50"
-              >
-                <Trash2 className="w-4 h-4" /> Remove Image
-              </button>
-            </div>
-            <input ref={editFileInputRef} type="file" accept="image/*" onChange={handleEditImageReplace} className="hidden" />
-          </div>
-        </div>
+        <ImageEditModal
+          src={imagePreviews[editingImageIdx]}
+          themeColor={themeColor}
+          onSave={handleEditSave}
+          onClose={() => setEditingImageIdx(null)}
+        />
       )}
 
       <div className="flex gap-2 sm:gap-3 pt-3 sm:pt-4">
