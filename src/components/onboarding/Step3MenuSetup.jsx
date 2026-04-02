@@ -161,6 +161,17 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               {categories.map((cat) => (
                 <div key={cat} className="px-3 py-2 bg-slate-50 rounded-lg text-sm text-slate-700 flex items-center justify-between">
                   <span>{cat}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = categories.filter(c => c !== cat);
+                      setCategories(updated);
+                      if (selectedCategory === cat) setSelectedCategory('');
+                    }}
+                    className="ml-2 text-slate-400 hover:text-red-500 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               ))}
             </div>
