@@ -141,7 +141,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const hints = INDUSTRY_HINTS[formData.businessType] || DEFAULT_HINTS;
 
   return (
-    <Card className="p-4 sm:p-6 bg-white border-0 shadow-lg">
+    <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg max-h-screen overflow-y-auto overflow-x-hidden">
       <div className="text-center mb-4">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: themeColor }}>
           <Menu className="w-5 h-5 text-white" />
@@ -172,7 +172,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                 ))}
               </div>
             )}
-            <label className="border-2 border-dashed border-slate-300 rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors">
+            <label className="border-2 border-dashed border-slate-300 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors w-full min-w-0">
               <Upload className="w-5 h-5 text-slate-400 mb-1" />
               <span className="text-xs text-slate-500">Click to add images</span>
               <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
