@@ -153,7 +153,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       <div className="space-y-3 mb-4">
 
         {/* Images Section */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3">
+        <div className="bg-white border border-slate-200 rounded-xl p-3 overflow-x-hidden">
           <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
             <Upload className="w-4 h-4" style={{ color: primaryColor }} />
             Product Images
@@ -181,7 +181,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         </div>
 
         {/* Item Details Section (includes Categories) */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3">
+        <div className="bg-white border border-slate-200 rounded-xl p-3 overflow-x-hidden">
           <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
             <Sparkles className="w-4 h-4" style={{ color: secondaryColor }} />
             Item Details
@@ -190,7 +190,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
             {/* Create categories */}
             <div>
               <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Create Categories</Label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full min-w-0">
                 <input
                   type="text"
                   value={categoryInput}
@@ -209,7 +209,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                 </button>
               </div>
               {categories.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2 w-full min-w-0">
                   {categories.map((cat) => (
                     <div key={cat} className="px-3 py-1.5 bg-slate-50 rounded-full text-sm text-slate-700 flex items-center gap-2 border border-slate-200">
                       <span>{cat}</span>
