@@ -59,7 +59,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     setHistory(prev => [...prev, newState]);
     setCurrent(newState);
     setTool(TOOLS.NONE);
-    setCropStart(null); setCropEnd(null);
+    setCropStart(null); setCropEnd(null); setAspectRatio(null);
   };
 
   const handleRotateByDegree = (degrees) => pushHistory({ ...current, rotation: (degrees + 360) % 360 });
@@ -69,7 +69,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     const newHistory = history.slice(0, -1);
     setHistory(newHistory);
     setCurrent(newHistory[newHistory.length - 1]);
-    setTool(TOOLS.NONE); setCropStart(null); setCropEnd(null);
+    setTool(TOOLS.NONE); setCropStart(null); setCropEnd(null); setAspectRatio(null);
   };
 
   const handleReplace = (e) => {
