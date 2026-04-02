@@ -141,7 +141,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const hints = INDUSTRY_HINTS[formData.businessType] || DEFAULT_HINTS;
 
   return (
-    <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg max-h-screen overflow-y-auto overflow-x-hidden">
+    <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg max-h-screen overflow-y-auto" style={{ overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
       <div className="text-center mb-4">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: themeColor }}>
           <Menu className="w-5 h-5 text-white" />
@@ -150,7 +150,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         <p className="text-xs text-slate-500">{hints.sectionSubtitle}</p>
       </div>
 
-      <div className="space-y-3 mb-4">
+      <div className="space-y-3 mb-4 w-full min-w-0">
 
         {/* Images Section */}
         <div className="bg-white border border-slate-200 rounded-xl p-3 overflow-x-hidden">
@@ -233,7 +233,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
             <div>
               <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Category</Label>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-full h-10 text-sm">
+                <SelectTrigger className="w-full h-10 text-sm min-w-0">
                   <SelectValue placeholder={categories.length === 0 ? 'Add a category above first' : 'Select category'} />
                 </SelectTrigger>
                 <SelectContent>

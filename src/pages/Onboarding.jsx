@@ -93,7 +93,7 @@ export default function Onboarding() {
   const CurrentStepComponent = steps[currentStep - 1].component;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col overflow-x-hidden">
       {/* Header with Compact Progress */}
       <div className="bg-white border-b border-slate-100 px-4 py-4">
         <div className="max-w-4xl mx-auto">
