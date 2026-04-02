@@ -142,8 +142,13 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
       let newEnd = { x: cropEnd.x, y: cropEnd.y };
       if (aspectRatio) {
         const newW = newEnd.x - newStart.x, newH = newEnd.y - newStart.y;
-        const targetH = newW / aspectRatio;
-        newStart = { x: newStart.x, y: newEnd.y - targetH };
+        if (Math.abs(newW) > Math.abs(newH)) {
+          const targetH = newW / aspectRatio;
+          newStart.y = newEnd.y - targetH;
+        } else {
+          const targetW = newH * aspectRatio;
+          newStart.x = newEnd.x - targetW;
+        }
       }
       setCropStart(newStart);
     } else if (dragMode === 'corner-tr') {
@@ -151,8 +156,13 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
       let newEnd = { x: pos.x, y: cropEnd.y };
       if (aspectRatio) {
         const newW = newEnd.x - newStart.x, newH = newEnd.y - newStart.y;
-        const targetH = newW / aspectRatio;
-        newStart = { x: newStart.x, y: newEnd.y - targetH };
+        if (Math.abs(newW) > Math.abs(newH)) {
+          const targetH = newW / aspectRatio;
+          newStart.y = newEnd.y - targetH;
+        } else {
+          const targetW = newH * aspectRatio;
+          newEnd.x = newStart.x + targetW;
+        }
       }
       setCropStart(newStart);
       setCropEnd(newEnd);
@@ -161,8 +171,13 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
       let newEnd = { x: cropEnd.x, y: pos.y };
       if (aspectRatio) {
         const newW = newEnd.x - newStart.x, newH = newEnd.y - newStart.y;
-        const targetH = newW / aspectRatio;
-        newStart = { x: newStart.x, y: newEnd.y - targetH };
+        if (Math.abs(newW) > Math.abs(newH)) {
+          const targetH = newW / aspectRatio;
+          newEnd.y = newStart.y + targetH;
+        } else {
+          const targetW = newH * aspectRatio;
+          newStart.x = newEnd.x - targetW;
+        }
       }
       setCropStart(newStart);
       setCropEnd(newEnd);
