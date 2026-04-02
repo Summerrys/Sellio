@@ -144,7 +144,31 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         <p className="text-sm sm:text-base text-slate-600">{hints.sectionSubtitle}</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+      <div className="space-y-4 sm:space-y-6 mb-6 sm:mb-8">
+
+        {/* Images Section */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-4 flex items-center gap-3">
+            <Upload className="w-5 h-5" style={{ color: primaryColor }} />
+            Product Images
+          </h3>
+          <div className="flex flex-wrap gap-3">
+            {imagePreviews.map((src, idx) => (
+              <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200 group cursor-pointer" onClick={() => setEditingImageIdx(idx)}>
+                <img src={src} alt="preview" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <Pencil className="w-4 h-4 text-white" />
+                </div>
+              </div>
+            ))}
+            <label className="w-20 h-20 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors">
+              <Upload className="w-5 h-5 text-slate-400 mb-1" />
+              <span className="text-xs text-slate-400">Add</span>
+              <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
+            </label>
+          </div>
+        </div>
+
         {/* Categories Section */}
         <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
           <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-4 flex items-center gap-3">
@@ -170,9 +194,9 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
             </button>
           </div>
           {categories.length > 0 && (
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 flex flex-wrap gap-2">
               {categories.map((cat) => (
-                <div key={cat} className="px-3 py-2 bg-slate-50 rounded-lg text-sm text-slate-700 flex items-center justify-between">
+                <div key={cat} className="px-3 py-1.5 bg-slate-50 rounded-full text-sm text-slate-700 flex items-center gap-2 border border-slate-200">
                   <span>{cat}</span>
                   <button
                     type="button"
@@ -181,9 +205,9 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                       setCategories(updated);
                       if (selectedCategory === cat) setSelectedCategory('');
                     }}
-                    className="ml-2 text-slate-400 hover:text-red-500 transition-colors"
+                    className="text-slate-400 hover:text-red-500 transition-colors"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-3 h-3" />
                   </button>
                 </div>
               ))}
@@ -191,41 +215,13 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
           )}
         </div>
 
-        {/* Add Item Section */}
+        {/* Item Details Section */}
         <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
           <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-4 flex items-center gap-3">
             <Sparkles className="w-5 h-5" style={{ color: secondaryColor }} />
-            Add Item
+            Item Details
           </h3>
           <div className="space-y-4">
-            <div>
-              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Images (optional)</Label>
-              {imagePreviews.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {imagePreviews.map((src, idx) => (
-                    <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-slate-200 group cursor-pointer" onClick={() => setEditingImageIdx(idx)}>
-                      <img src={src} alt="preview" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                        <Pencil className="w-4 h-4 text-white" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <label className="border-2 border-dashed border-slate-300 rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors">
-                <Upload className="w-5 h-5 text-slate-400 mb-1" />
-                <span className="text-xs text-slate-500">Click to add images</span>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageSelect}
-                  className="hidden"
-                />
-              </label>
-            </div>
-
             <div>
               <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Category</Label>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
@@ -239,7 +235,6 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Item Name</Label>
               <Input
@@ -249,7 +244,6 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                 className="h-10 text-sm"
               />
             </div>
-
             <div>
               <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">$ Price</Label>
               <Input
@@ -262,7 +256,6 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                 className="h-10 text-sm"
               />
             </div>
-
             <button
               onClick={addItem}
               disabled={!selectedCategory || !itemName.trim() || !itemPrice.trim() || uploading}
@@ -273,6 +266,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
             </button>
           </div>
         </div>
+
       </div>
 
       {editingImageIdx !== null && (
