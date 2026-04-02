@@ -25,6 +25,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
   const [canvasSize, setCanvasSize] = useState({ w: 300, h: 300 });
   const [zoom, setZoom] = useState(1);
   const [aspectRatio, setAspectRatio] = useState(null);
+  const [dragOffset, setDragOffset] = useState(null);
 
   const imgRef = useRef(new Image());
 
@@ -106,7 +107,10 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     else if (Math.abs(pos.x - (x + w)) < handle && Math.abs(pos.y - y) < handle) setDragMode('corner-tr');
     else if (Math.abs(pos.x - x) < handle && Math.abs(pos.y - (y + h)) < handle) setDragMode('corner-bl');
     else if (Math.abs(pos.x - (x + w)) < handle && Math.abs(pos.y - (y + h)) < handle) setDragMode('corner-br');
-    else if (pos.x >= x && pos.x <= x + w && pos.y >= y && pos.y <= y + h) setDragMode('move');
+    else if (pos.x >= x && pos.x <= x + w && pos.y >= y && pos.y <= y + h) {
+      setDragMode('move');
+      setDragOffset({ x: pos.x - x, y: pos.y - y });
+    }
     else { setIsDragging(true); setCropStart(pos); setCropEnd(pos); return; }
     
     setIsDragging(true);
@@ -128,9 +132,9 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     const x2 = Math.max(cropStart.x, cropEnd.x), y2 = Math.max(cropStart.y, cropEnd.y);
     const w = x2 - x1, h = y2 - y1;
     
-    if (dragMode === 'move') {
-      const nx = Math.max(0, Math.min(pos.x - w / 2, canvas.width - w));
-      const ny = Math.max(0, Math.min(pos.y - h / 2, canvas.height - h));
+    if (dragMode === 'move' && dragOffset) {
+      const nx = Math.max(0, Math.min(pos.x - dragOffset.x, canvas.width - w));
+      const ny = Math.max(0, Math.min(pos.y - dragOffset.y, canvas.height - h));
       setCropStart({ x: nx, y: ny });
       setCropEnd({ x: nx + w, y: ny + h });
     } else if (dragMode === 'corner-tl') {
@@ -173,7 +177,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     }
   };
 
-  const onEnd = () => { setIsDragging(false); setDragMode(null); };
+  const onEnd = () => { setIsDragging(false); setDragMode(null); setDragOffset(null); };
 
   const applyCrop = () => {
     if (!cropStart || !cropEnd) return;
