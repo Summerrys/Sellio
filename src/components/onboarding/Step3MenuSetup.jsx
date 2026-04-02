@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { generateThemeVariables } from '../theme/themeUtils';
 import { getThemeCSSColors, DEFAULT_COLORS } from '@/lib/themeConstants';
 
+const BLUE_PURPLE = 'linear-gradient(to right, #3b82f6, #9333ea)';
+
 export default function Step3MenuSetup({ formData, updateFormData, nextStep, prevStep }) {
   const [categories, setCategories] = useState(formData.menuCategories || []);
   const [categoryInput, setCategoryInput] = useState('');
@@ -60,7 +62,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   return (
     <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg max-h-screen overflow-y-auto">
       <div className="text-center mb-6 sm:mb-8">
-        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: primaryColor }}>
+        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: BLUE_PURPLE }}>
           <Menu className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
         </div>
         <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Build your menu</h2>
@@ -87,7 +89,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               onClick={addCategory}
               disabled={!categoryInput.trim()}
               className="w-full sm:w-auto px-4 py-2.5 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
-              style={{ backgroundColor: primaryColor }}
+              style={{ background: BLUE_PURPLE }}
             >
               Add
             </button>
@@ -167,7 +169,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               onClick={addItem}
               disabled={!selectedCategory || !itemName.trim() || !itemPrice.trim()}
               className="w-full py-2.5 text-white rounded-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:opacity-90"
-              style={{ backgroundColor: primaryColor }}
+              style={{ background: BLUE_PURPLE }}
             >
               + Add Item
             </button>
@@ -196,7 +198,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
           type="button"
           onClick={handleSubmit}
           className="flex-1 h-10 sm:h-11 text-white gap-2 text-sm font-semibold"
-          style={{ backgroundColor: primaryColor }}
+          style={{ background: BLUE_PURPLE }}
         >
           Continue <ArrowRight className="w-4 h-4" />
         </Button>

@@ -7,6 +7,8 @@ import confetti from 'canvas-confetti';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 
+const BLUE_PURPLE = 'linear-gradient(to right, #3b82f6, #9333ea)';
+
 export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   const [isLaunching, setIsLaunching] = useState(false);
 
@@ -163,7 +165,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   return (
     <Card className="p-8 sm:p-10 bg-white/80 backdrop-blur border-0 shadow-xl">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: primaryColor }}>
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: BLUE_PURPLE }}>
           <Rocket className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Ready to Launch! 🎉</h2>
@@ -211,7 +213,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
           onClick={handleLaunch}
           disabled={isLaunching}
           className="flex-1 h-12 hover:opacity-90 text-base font-medium gap-2 text-white"
-          style={{ backgroundColor: primaryColor }}
+          style={{ background: BLUE_PURPLE }}
         >
           {isLaunching ? (
             <>
