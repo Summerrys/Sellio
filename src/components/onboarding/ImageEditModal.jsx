@@ -147,25 +147,48 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
           >
             <canvas ref={canvasRef} style={{ display: 'block', maxWidth: '100%', borderRadius: 8 }} />
             {isCropping && cropRect && cropRect.w > 0 && (
-              <div
-                className="absolute border-2 border-white rounded"
-                style={{
-                  left: cropRect.x, top: cropRect.y, width: cropRect.w, height: cropRect.h,
-                  background: 'rgba(255,255,255,0.1)',
-                  boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)',
-                  pointerEvents: 'none',
-                }}
-              />
+              <>
+                <div
+                  className="absolute border-2 border-white rounded"
+                  style={{
+                    left: cropRect.x, top: cropRect.y, width: cropRect.w, height: cropRect.h,
+                    background: 'rgba(255,255,255,0.1)',
+                    boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)',
+                    pointerEvents: 'none',
+                  }}
+                />
+                {cropRect.w > 5 && cropRect.h > 5 && (
+                  <div
+                    className="absolute flex gap-2 items-center"
+                    style={{
+                      left: cropRect.x + cropRect.w / 2,
+                      top: cropRect.y + cropRect.h / 2,
+                      transform: 'translate(-50%, -50%)',
+                      pointerEvents: 'auto',
+                    }}
+                  >
+                    <button
+                      onClick={applyCrop}
+                      className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-full shadow-lg transition-colors"
+                      title="Apply crop"
+                    >
+                      <Check className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => { setTool(TOOLS.NONE); setCropStart(null); setCropEnd(null); }}
+                      className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-colors"
+                      title="Cancel crop"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
 
-        {/* Crop hint */}
-        {isCropping && (
-          <div className="text-center py-2 text-xs text-slate-500 bg-blue-50">
-            Drag to select an area, then tap <strong>Apply Crop</strong>
-          </div>
-        )}
+
 
         {/* Tool buttons */}
         <div className="grid grid-cols-5 gap-px bg-slate-100 border-t border-slate-100">
@@ -209,17 +232,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
           ))}
         </div>
 
-        {/* Apply crop button (visible when crop selection made) */}
-        {isCropping && cropRect && cropRect.w > 5 && (
-          <div className="px-4 py-2 bg-white border-t border-slate-100">
-            <button
-              onClick={applyCrop}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold bg-green-500 text-white flex items-center justify-center gap-2"
-            >
-              <Check className="w-4 h-4" /> Apply Crop
-            </button>
-          </div>
-        )}
+
 
         {/* Footer */}
         <div className="flex gap-3 px-4 py-4 border-t border-slate-100">
