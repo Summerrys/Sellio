@@ -1,7 +1,9 @@
 import React from 'react';
 import { CheckCircle2, Rocket } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { DEFAULT_COLORS } from '@/lib/themeConstants';
+
+const FALLBACK_PRIMARY = '#9333ea';
+const FALLBACK_SECONDARY = '#ec4899';
 
 export default function OnboardingProgress({ currentStep = 1, completedSteps = [], steps = [], formData = {} }) {
   const displaySteps = steps.length > 0 ? steps.map((s, i) => ({
@@ -19,7 +21,7 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
           <Rocket className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
           <h3 className="text-sm sm:text-base font-bold text-slate-900">Your Progress</h3>
         </div>
-        <div className="text-white px-2 sm:px-3 py-1 rounded-full text-xs font-semibold" style={{ background: `linear-gradient(to right, ${formData.customPrimary || DEFAULT_COLORS.primary}, ${formData.customSecondary || DEFAULT_COLORS.secondary})` }}>
+        <div className="text-white px-2 sm:px-3 py-1 rounded-full text-xs font-semibold" style={{ background: `linear-gradient(to right, ${formData.customPrimary || FALLBACK_PRIMARY}, ${formData.customSecondary || FALLBACK_SECONDARY})` }}>
           {Math.min(completedSteps.length, displaySteps.length)} / {displaySteps.length} Complete
         </div>
       </div>
@@ -43,9 +45,9 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
               }`}
               style={{
                 background: completedSteps.includes(step.number) 
-                  ? `linear-gradient(to right, ${formData.customPrimary || DEFAULT_COLORS.primary}, ${formData.customSecondary || DEFAULT_COLORS.secondary})`
+                  ? `linear-gradient(to right, ${formData.customPrimary || FALLBACK_PRIMARY}, ${formData.customSecondary || FALLBACK_SECONDARY})`
                   : currentStep === step.number
-                  ? `linear-gradient(to right, ${formData.customPrimary || DEFAULT_COLORS.primary}, ${formData.customSecondary || DEFAULT_COLORS.secondary})`
+                  ? `linear-gradient(to right, ${formData.customPrimary || FALLBACK_PRIMARY}, ${formData.customSecondary || FALLBACK_SECONDARY})`
                   : 'transparent'
               }}
               >
@@ -73,7 +75,7 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
               }`}
               style={{
                 background: completedSteps.includes(step.number)
-                  ? `linear-gradient(to right, ${formData.customPrimary || DEFAULT_COLORS.primary}, ${formData.customSecondary || DEFAULT_COLORS.secondary})`
+                  ? `linear-gradient(to right, ${formData.customPrimary || FALLBACK_PRIMARY}, ${formData.customSecondary || FALLBACK_SECONDARY})`
                   : 'transparent'
               }} />
             )}
@@ -89,7 +91,7 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
             transition={{ duration: 0.5, ease: 'easeOut' }}
             className="h-full rounded-full"
             style={{
-              background: `linear-gradient(to right, ${formData.customPrimary || DEFAULT_COLORS.primary}, ${formData.customSecondary || DEFAULT_COLORS.secondary})`
+              background: `linear-gradient(to right, ${formData.customPrimary || FALLBACK_PRIMARY}, ${formData.customSecondary || FALLBACK_SECONDARY})`
             }}
           />
         </div>
