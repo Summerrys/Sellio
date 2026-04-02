@@ -59,7 +59,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
       });
     } else {
       // Apply default theme
-      const variables = generateThemeVariables('#9333ea', '#ec4899');
+      const variables = generateThemeVariables('#3b82f6', '#9333ea');
       const root = document.documentElement;
       Object.entries(variables).forEach(([key, value]) => {
         root.style.setProperty(key, value);
@@ -165,9 +165,9 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
         }
       }
     } else {
-      // Use default purple-pink gradient
-      themeData.customPrimary = '#9333ea';
-      themeData.customSecondary = '#ec4899';
+      // Use default blue-purple gradient
+      themeData.customPrimary = '#3b82f6';
+      themeData.customSecondary = '#9333ea';
       const variables = generateThemeVariables(themeData.customPrimary, themeData.customSecondary);
       const root = document.documentElement;
       Object.entries(variables).forEach(([key, value]) => {

@@ -1,8 +1,8 @@
-// Default theme colors - Orange tones matching Auth page
+// Default theme colors - Blue to Purple gradient
 export const DEFAULT_COLORS = {
-  primary: '#e86a1a',
-  secondary: '#fe7824',
-  accent: '#ffaa6e',
+  primary: '#3b82f6',
+  secondary: '#9333ea',
+  accent: '#c084fc',
 };
 
 // Get theme colors from formData or use defaults
