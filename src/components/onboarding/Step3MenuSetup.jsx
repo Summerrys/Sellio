@@ -255,30 +255,30 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-3 sm:pt-4">
+      <div className="flex gap-2 sm:gap-3 pt-3 sm:pt-4">
         <Button
           type="button"
           onClick={prevStep}
           variant="outline"
           className="h-10 sm:h-11 px-4 sm:px-6 gap-1 sm:gap-2 text-sm"
         >
-          <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" /> Back
+          <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Back</span>
         </Button>
         <Button
           type="button"
           onClick={() => nextStep()}
           variant="outline"
-          className="h-10 sm:h-11 px-4 sm:px-6 text-sm"
+          className="h-10 sm:h-11 px-3 sm:px-4 text-xs sm:text-sm text-slate-500"
         >
-          Skip for now
+          Skip
         </Button>
         <Button
           type="button"
           onClick={handleSubmit}
-          className="flex-1 h-10 sm:h-11 text-white gap-2 text-sm font-semibold"
+          className="flex-1 h-10 sm:h-11 text-white gap-1 sm:gap-2 text-sm"
           style={{ background: BLUE_PURPLE }}
         >
-          Continue <ArrowRight className="w-4 h-4" />
+          <span className="hidden sm:inline">Next</span> <span className="sm:hidden">Next</span> <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
         </Button>
       </div>
     </Card>
