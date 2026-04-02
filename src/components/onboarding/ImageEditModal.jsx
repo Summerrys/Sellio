@@ -155,7 +155,19 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
   };
 
   const handleSave = () => {
-    onSave(canvasRef.current.toDataURL('image/jpeg', 0.92));
+    const imageData = isCropping && cropStart && cropEnd ? 
+      (() => {
+        const x = Math.min(cropStart.x, cropEnd.x);
+        const y = Math.min(cropStart.y, cropEnd.y);
+        const w = Math.abs(cropEnd.x - cropStart.x);
+        const h = Math.abs(cropEnd.y - cropStart.y);
+        const dest = document.createElement('canvas');
+        dest.width = w; dest.height = h;
+        dest.getContext('2d').drawImage(canvasRef.current, x, y, w, h, 0, 0, w, h);
+        return dest.toDataURL('image/jpeg', 0.92);
+      })()
+      : canvasRef.current.toDataURL('image/jpeg', 0.92);
+    onSave(imageData);
     onClose();
   };
 
