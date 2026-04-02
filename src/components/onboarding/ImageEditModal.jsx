@@ -7,7 +7,6 @@ const ASPECT_RATIOS = [
   { label: '1:1', value: 1 },
   { label: '16:9', value: 16/9 },
   { label: '4:3', value: 4/3 },
-  { label: '3:2', value: 3/2 },
 ];
 
 export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
@@ -26,7 +25,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
   const [zoom, setZoom] = useState(1);
   const [aspectRatio, setAspectRatio] = useState(null);
   const [dragOffset, setDragOffset] = useState(null);
-  const [customAspectInput, setCustomAspectInput] = useState('');
+  const [dragDimensions, setDragDimensions] = useState(null);
 
   const imgRef = useRef(new Image());
 
@@ -109,8 +108,9 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     else if (Math.abs(pos.x - x) < handle && Math.abs(pos.y - (y + h)) < handle) setDragMode('corner-bl');
     else if (Math.abs(pos.x - (x + w)) < handle && Math.abs(pos.y - (y + h)) < handle) setDragMode('corner-br');
     else if (pos.x >= x && pos.x <= x + w && pos.y >= y && pos.y <= y + h) {
-      setDragMode('move');
-      setDragOffset({ x: pos.x - x, y: pos.y - y });
+     setDragMode('move');
+     setDragOffset({ x: pos.x - x, y: pos.y - y });
+     setDragDimensions({ w, h });
     }
     else { setIsDragging(true); setCropStart(pos); setCropEnd(pos); return; }
     
@@ -133,11 +133,12 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     const x2 = Math.max(cropStart.x, cropEnd.x), y2 = Math.max(cropStart.y, cropEnd.y);
     const w = x2 - x1, h = y2 - y1;
     
-    if (dragMode === 'move' && dragOffset) {
-      const nx = Math.max(0, Math.min(pos.x - dragOffset.x, canvas.width - w));
-      const ny = Math.max(0, Math.min(pos.y - dragOffset.y, canvas.height - h));
+    if (dragMode === 'move' && dragOffset && dragDimensions) {
+      const { w: dw, h: dh } = dragDimensions;
+      const nx = Math.max(0, Math.min(pos.x - dragOffset.x, canvas.width - dw));
+      const ny = Math.max(0, Math.min(pos.y - dragOffset.y, canvas.height - dh));
       setCropStart({ x: nx, y: ny });
-      setCropEnd({ x: nx + w, y: ny + h });
+      setCropEnd({ x: nx + dw, y: ny + dh });
     } else if (dragMode === 'corner-tl') {
       let newStart = pos;
       let newEnd = { x: cropEnd.x, y: cropEnd.y };
@@ -193,7 +194,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     }
   };
 
-  const onEnd = () => { setIsDragging(false); setDragMode(null); setDragOffset(null); };
+  const onEnd = () => { setIsDragging(false); setDragMode(null); setDragOffset(null); setDragDimensions(null); };
 
   const applyCrop = () => {
     if (!cropStart || !cropEnd) return;
@@ -258,9 +259,9 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
                 {ASPECT_RATIOS.map(preset => (
                   <button
                     key={preset.label}
-                    onClick={() => { setAspectRatio(preset.value); setCustomAspectInput(''); }}
+                    onClick={() => setAspectRatio(preset.value)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      aspectRatio === preset.value && customAspectInput === ''
+                      aspectRatio === preset.value
                         ? 'bg-blue-500 text-white'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
@@ -270,35 +271,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
                 ))}
               </div>
             </div>
-            {/* Custom Aspect Ratio */}
-            <div>
-              <p className="text-xs font-medium text-slate-600 mb-2">Custom Ratio</p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="e.g., 5:3 or 2.5"
-                  value={customAspectInput}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setCustomAspectInput(val);
-                    if (val) {
-                      if (val.includes(':')) {
-                        const [w, h] = val.split(':').map(Number);
-                        if (!isNaN(w) && !isNaN(h) && w > 0 && h > 0) {
-                          setAspectRatio(w / h);
-                        }
-                      } else {
-                        const num = parseFloat(val);
-                        if (!isNaN(num) && num > 0) {
-                          setAspectRatio(num);
-                        }
-                      }
-                    }
-                  }}
-                  className="flex-1 px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
+
           </div>
         )}
 
@@ -343,7 +316,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
                       <Check className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => { setTool(TOOLS.NONE); setCropStart(null); setCropEnd(null); setAspectRatio(null); setCustomAspectInput(''); }}
+                      onClick={() => { setTool(TOOLS.NONE); setCropStart(null); setCropEnd(null); setAspectRatio(null); }}
                       className="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full shadow-lg transition-colors"
                       title="Cancel crop"
                     >
