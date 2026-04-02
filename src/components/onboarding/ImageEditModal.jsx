@@ -173,7 +173,22 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
             { label: 'Rotate', icon: RotateCw, action: handleRotate },
             {
               label: isCropping ? 'Cancel' : 'Crop', icon: Crop,
-              action: () => { setTool(t => t === TOOLS.CROP ? TOOLS.NONE : TOOLS.CROP); setCropStart(null); setCropEnd(null); },
+              action: () => {
+                if (isCropping) {
+                  setTool(TOOLS.NONE); setCropStart(null); setCropEnd(null);
+                } else {
+                  setTool(TOOLS.CROP);
+                  // Set default centered 1:1 box
+                  const canvas = canvasRef.current;
+                  if (canvas) {
+                    const side = Math.round(Math.min(canvas.width, canvas.height) * 0.7);
+                    const cx = Math.round(canvas.width / 2);
+                    const cy = Math.round(canvas.height / 2);
+                    setCropStart({ x: cx - side / 2, y: cy - side / 2 });
+                    setCropEnd({ x: cx + side / 2, y: cy + side / 2 });
+                  }
+                }
+              },
               active: isCropping,
             },
             { label: 'Undo', icon: Undo2, action: handleUndo, disabled: history.length <= 1 },
