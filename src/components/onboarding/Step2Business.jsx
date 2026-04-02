@@ -43,7 +43,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
   }, [formData.customPrimary, formData.customSecondary]);
 
   const { primary: primaryColor, secondary: secondaryColor } = getThemeCSSColors(formData);
-  const themeGradient = `linear-gradient(to right, ${formData?.themeColors?.dark || formData?.customPrimary || '#3b82f6'}, ${formData?.themeColors?.light || formData?.customSecondary || '#9333ea'})`;
+  const themeColor = formData?.themeColors?.dark || formData?.customPrimary || '#3b82f6';
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
     resolver: zodResolver(schema),
@@ -83,7 +83,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
     <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg max-h-screen overflow-y-auto">
       {/* Header */}
       <div className="text-center mb-6 sm:mb-8">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: themeGradient }}>
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: themeColor }}>
           <MapPin className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1 sm:mb-2">Set up your first branch</h2>
@@ -125,7 +125,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
         </div>
 
         {/* Operating Hours */}
-        <div className="rounded-lg sm:rounded-xl p-3 sm:p-5" style={{ background: `linear-gradient(white, white) padding-box, ${themeGradient} border-box`, border: '1px solid transparent' }}>
+        <div className="rounded-lg sm:rounded-xl p-3 sm:p-5" style={{ background: 'linear-gradient(white, white) padding-box, ' + themeColor + ' border-box', border: '1px solid transparent' }}>
           <h3 className="text-xs sm:text-sm font-semibold text-slate-900 flex items-center gap-2 mb-4">
             <Clock className="w-4 h-4 text-slate-700" />
             Operating Hours
@@ -152,7 +152,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
                 type="button"
                 onClick={() => applyToAllDays(quickApplyStart, quickApplyEnd)}
                 className="w-full px-3 py-1.5 text-white rounded-lg text-xs font-medium"
-                style={{ background: themeGradient, cursor: 'pointer' }}
+                style={{ background: themeColor, cursor: 'pointer' }}
               >
                 Apply to All
               </button>
@@ -218,7 +218,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
           <Button
             type="submit"
             className="h-10 sm:h-11 px-4 sm:px-6 text-white gap-1 sm:gap-2 text-sm"
-            style={{ background: themeGradient }}
+            style={{ background: themeColor }}
           >
             Next <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>

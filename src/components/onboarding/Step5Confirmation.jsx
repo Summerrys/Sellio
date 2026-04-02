@@ -23,7 +23,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   }, [formData.customPrimary, formData.customSecondary]);
 
   const { primary: primaryColor } = getThemeCSSColors(formData);
-  const themeGradient = `linear-gradient(to right, ${formData?.themeColors?.dark || formData?.customPrimary || '#3b82f6'}, ${formData?.themeColors?.light || formData?.customSecondary || '#9333ea'})`;
+  const themeColor = formData?.themeColors?.dark || formData?.customPrimary || '#3b82f6';
 
   const handleLaunch = async () => {
     if (isLaunching) return;
@@ -166,7 +166,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   return (
     <Card className="p-8 sm:p-10 bg-white/80 backdrop-blur border-0 shadow-xl">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: themeGradient }}>
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: themeColor }}>
           <Rocket className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Ready to Launch! 🎉</h2>
@@ -214,7 +214,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
           onClick={handleLaunch}
           disabled={isLaunching}
           className="flex-1 h-12 hover:opacity-90 text-base font-medium gap-2 text-white"
-          style={{ background: themeGradient }}
+          style={{ background: themeColor }}
         >
           {isLaunching ? (
             <>
