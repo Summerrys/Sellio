@@ -127,15 +127,15 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
       setCropStart({ x: nx, y: ny });
       setCropEnd({ x: nx + w, y: ny + h });
     } else if (dragMode === 'corner-tl') {
-      setCropStart({ x: Math.max(0, pos.x), y: Math.max(0, pos.y) });
+      setCropStart(pos);
     } else if (dragMode === 'corner-tr') {
-      setCropStart({ x: x1, y: Math.max(0, pos.y) });
-      setCropEnd({ x: Math.min(canvas.width, pos.x), y: y2 });
+      setCropStart({ x: x1, y: pos.y });
+      setCropEnd({ x: pos.x, y: y2 });
     } else if (dragMode === 'corner-bl') {
-      setCropStart({ x: Math.max(0, pos.x), y: y1 });
-      setCropEnd({ x: x2, y: Math.min(canvas.height, pos.y) });
+      setCropStart({ x: pos.x, y: y1 });
+      setCropEnd({ x: x2, y: pos.y });
     } else if (dragMode === 'corner-br') {
-      setCropEnd({ x: Math.min(canvas.width, pos.x), y: Math.min(canvas.height, pos.y) });
+      setCropEnd(pos);
     }
   };
 
