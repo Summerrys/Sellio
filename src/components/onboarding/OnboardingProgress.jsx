@@ -54,7 +54,7 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
               }}
               >
                 {completedSteps.includes(step.number) ? (
-                  <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
                 ) : (
                   <span className={`text-xs sm:text-sm font-bold ${
                     currentStep === step.number ? 'text-white' : 'text-slate-400'
