@@ -131,7 +131,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
           </h3>
 
           {/* Quick Apply */}
-          <div className="mb-4 p-3 bg-white border rounded-lg" style={{ borderColor: `${primaryColor}40` }}>
+          <div className="mb-4 p-3 bg-white border border-slate-200 rounded-lg">
             <p className="text-xs font-medium text-slate-700 mb-2">Apply to all days</p>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-1 w-full">
@@ -161,7 +161,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
           {/* Days List */}
           <div className="space-y-2.5 overflow-y-auto max-h-56 sm:max-h-none">
             {days.map((day) => (
-              <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 bg-white rounded-lg border" style={{ borderColor: `${primaryColor}30` }}>
+              <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 bg-white rounded-lg border border-slate-200">
                 <div className="flex items-center gap-2 min-w-0">
                   <input
                     type="checkbox"

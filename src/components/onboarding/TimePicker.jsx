@@ -15,8 +15,8 @@ export default function TimePicker({ value = '00:00', onChange, formData }) {
     onChange(`${String(hours).padStart(2, '0')}:${String(clipped).padStart(2, '0')}`);
   };
 
-  const primaryColor = formData?.theme ? 'rgb(var(--color-primary))' : '#9333ea';
-  const bgColor = formData?.theme ? 'rgba(var(--color-primary-rgb), 0.1)' : 'rgba(147, 51, 234, 0.1)';
+  const primaryColor = '#1e293b';
+  const bgColor = '#f1f5f9';
 
   return (
     <div className="relative w-full">
