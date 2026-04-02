@@ -39,19 +39,19 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
                 className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 shadow-md transition-all"
                 style={{
                   background: completedSteps.includes(step.number)
-                    ? '#f97316'
+                    ? PURPLE_PINK
                     : currentStep === step.number
                     ? PURPLE_PINK
                     : 'white',
                   borderColor: completedSteps.includes(step.number)
-                    ? '#fb923c'
+                    ? '#9333ea'
                     : currentStep === step.number
                     ? '#9333ea'
                     : '#cbd5e1'
                 }}
               >
                 {completedSteps.includes(step.number) ? (
-                  <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
                 ) : (
                   <span className={`text-xs sm:text-sm font-bold ${
                     currentStep === step.number ? 'text-white' : 'text-slate-400'
