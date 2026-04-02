@@ -26,7 +26,7 @@ const INDUSTRY_HINTS = {
   },
   'service': {
     categoryPlaceholder: 'Haircuts, Treatments, Packages...',
-    itemPlaceholder: 'eg., Deep Tissue Massage',
+    itemPlaceholder: 'eg., 60-min Facial Treatment',
     sectionTitle: 'Set up your services',
     sectionSubtitle: 'Create categories and add your services',
   },
