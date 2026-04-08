@@ -21,6 +21,7 @@ Deno.serve(async (req) => {
       external_google_enabled: true,
       external_google_client_id: googleClientId,
       external_google_secret: googleClientSecret,
+      uri_allow_list: "https://selliosg.base44.app/**",
     }),
   });
 
