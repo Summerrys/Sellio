@@ -31,7 +31,7 @@ export default function Auth() {
     return () => document.body.removeChild(script);
   }, []);
 
-  const handleGoogleSignIn = () => {
+  const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     const clientId = googleClientIdRef.current;
 
@@ -41,14 +41,23 @@ export default function Auth() {
       return;
     }
 
+    // Generate nonce for security
+    const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
+    const encoder = new TextEncoder();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(nonce));
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashedNonce = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
     window.google.accounts.id.initialize({
       client_id: clientId,
+      nonce: hashedNonce,
       callback: async (response) => {
         try {
           const supabase = await getSupabase();
           const { data, error } = await supabase.auth.signInWithIdToken({
             provider: 'google',
             token: response.credential,
+            nonce,
           });
           if (error) throw error;
           const user = data.session.user;
