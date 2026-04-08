@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Phone, Lock, User, Mail, ChevronDown, Check } from 'lucide-react';
 import { getSupabase } from '../lib/supabaseClient';
 import { toast, Toaster } from 'sonner';
@@ -15,48 +15,66 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  // Handle OAuth callback — Supabase redirects back with session in URL hash
+  const googleClientIdRef = useRef(null);
+
+  // Load Google Identity Services and fetch client ID
   useEffect(() => {
-    const handleOAuthCallback = async () => {
-      if (!window.location.hash.includes('access_token')) return;
-      const supabase = await getSupabase();
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error || !session) return;
-      const user = session.user;
-      // Store user in localStorage for app usage
-      const appUser = {
-        id: user.id,
-        email: user.email,
-        full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
-        avatar_url: user.user_metadata?.avatar_url,
-        provider: 'google',
-        onboarding_completed: false,
-      };
-      // Check if user already exists in tenants/users
-      const { data: existing } = await supabase.from('tenant_users').select('*').eq('email', user.email).single();
-      if (existing) {
-        appUser.onboarding_completed = true;
-        appUser.role = existing.role;
-        appUser.tenant_id = existing.tenant_id;
-      }
-      localStorage.setItem('app_user', JSON.stringify(appUser));
-      window.location.href = appUser.onboarding_completed ? '/Dashboard' : '/Onboarding';
-    };
-    handleOAuthCallback();
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    document.body.appendChild(script);
+
+    base44.functions.invoke('getSupabaseConfig', {}).then(res => {
+      googleClientIdRef.current = res.data?.googleClientId;
+    });
+
+    return () => document.body.removeChild(script);
   }, []);
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = () => {
     setGoogleLoading(true);
-    const supabase = await getSupabase();
-    const redirectTo = `${window.location.origin}/Auth`;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo },
-    });
-    if (error) {
-      toast.error(error.message);
+    const clientId = googleClientIdRef.current;
+
+    if (!window.google || !clientId) {
+      toast.error('Google Sign-In not ready. Please try again.');
       setGoogleLoading(false);
+      return;
     }
+
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: async (response) => {
+        try {
+          const supabase = await getSupabase();
+          const { data, error } = await supabase.auth.signInWithIdToken({
+            provider: 'google',
+            token: response.credential,
+          });
+          if (error) throw error;
+          const user = data.session.user;
+          const appUser = {
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
+            avatar_url: user.user_metadata?.avatar_url,
+            provider: 'google',
+            onboarding_completed: false,
+          };
+          const { data: existing } = await supabase.from('tenant_users').select('*').eq('email', user.email).single();
+          if (existing) {
+            appUser.onboarding_completed = true;
+            appUser.role = existing.role;
+            appUser.tenant_id = existing.tenant_id;
+          }
+          localStorage.setItem('app_user', JSON.stringify(appUser));
+          window.location.href = appUser.onboarding_completed ? '/Dashboard' : '/Onboarding';
+        } catch (err) {
+          toast.error(err.message || 'Sign-in failed');
+          setGoogleLoading(false);
+        }
+      },
+    });
+    window.google.accounts.id.prompt();
   };
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);

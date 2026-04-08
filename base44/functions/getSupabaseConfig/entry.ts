@@ -9,8 +9,9 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Supabase credentials not configured' }, { status: 500 });
     }
 
+    const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
     // Return public config (anon key is safe to expose to frontend)
-    return Response.json({ supabaseUrl, supabaseAnonKey });
+    return Response.json({ supabaseUrl, supabaseAnonKey, googleClientId });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
