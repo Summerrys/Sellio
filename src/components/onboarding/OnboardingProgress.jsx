@@ -11,7 +11,7 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
   })) : [];
   
   const percentage = displaySteps.length > 0 ? Math.round((currentStep / displaySteps.length) * 100) : 0;
-  const isNearComplete = percentage >= 75;
+  const isNearComplete = percentage >= 75 && currentStep === displaySteps.length;
 
   return (
     <div className="w-full">
