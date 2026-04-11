@@ -118,7 +118,6 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
     setNewPax('');
     toast.success(`Table "${newLabel.trim()}" added`);
   };
-  };
 
   const startEdit = (table) => {
     setEditingId(table.id);
