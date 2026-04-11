@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, ArrowLeft, Utensils, Layers, Sparkles, Upload, Menu, X, Pencil, Trash2, Plus } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ImageEditModal from './ImageEditModal';
+import EditItemModal from './EditItemModal';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,6 +49,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const [uploading, setUploading] = useState(false);
   const [editingImageIdx, setEditingImageIdx] = useState(null);
   const [editingItemId, setEditingItemId] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
   const fileInputRef = useRef(null);
 
   const handleEditSave = (newDataUrl) => {
@@ -108,16 +110,11 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   };
 
   const startEditItem = (item) => {
-    setEditingItemId(item.id);
-    setSelectedCategory(item.category);
-    setItemName(item.name);
-    setItemPrice(String(item.price));
-    // Load existing image URLs as previews (no local files)
-    setImagePreviews(item.images || []);
-    setImageFiles([]);
+    setEditingItem(item);
   };
 
   const cancelEdit = () => {
+    setEditingItem(null);
     setEditingItemId(null);
     setItemName('');
     setItemPrice('');
@@ -125,11 +122,20 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     setImagePreviews([]);
   };
 
+  const handleEditItemSave = (updatedItem) => {
+    const updated = (formData.products || []).map(p =>
+      p.id === updatedItem.id ? updatedItem : p
+    );
+    updateFormData({ ...formData, products: updated });
+    setEditingItem(null);
+    toast.success(`"${updatedItem.name}" updated!`);
+  };
+
   const addItem = async () => {
     if (!selectedCategory || !itemName.trim() || !itemPrice.trim()) return;
     setUploading(true);
-    // Preserve existing http URLs (from previously uploaded images)
-    let imageUrls = imagePreviews.filter(p => p.startsWith('http'));
+    // Preserve all existing previews (http URLs already uploaded, data URLs for new ones)
+    let imageUrls = imagePreviews.filter(p => p.startsWith('http') || p.startsWith('data:'));
     try {
       if (imageFiles.length > 0) {
         const supabase = await getSupabase();
@@ -406,6 +412,17 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         )}
 
       </div>
+
+      {editingItem && (
+        <EditItemModal
+          item={editingItem}
+          categories={categories}
+          themeColor={themeColor}
+          primaryColor={primaryColor}
+          onSave={handleEditItemSave}
+          onClose={() => setEditingItem(null)}
+        />
+      )}
 
       {editingImageIdx !== null && (
         <ImageEditModal
