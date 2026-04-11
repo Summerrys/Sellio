@@ -301,7 +301,8 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
           <Button
             onClick={handleLaunch}
             disabled={isLaunching}
-            className="h-12 px-8 text-base font-semibold gap-2 text-white bg-green-600 hover:bg-green-700"
+            className="h-12 px-8 text-base font-semibold gap-2 text-white"
+            style={{ background: themeColor }}
           >
             {isLaunching ? (
               <>
