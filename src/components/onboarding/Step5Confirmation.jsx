@@ -280,51 +280,6 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
             </motion.div>
           ))}
         </div>
-
-        {/* Progress Bar with Sparks */}
-        <div className="mt-6 relative">
-          <div className="flex justify-between items-center mb-2">
-            <p className="text-sm font-semibold text-slate-900">Your Setup Progress</p>
-            <p className="text-xs font-medium text-slate-400">{completedCount}/{totalCount} completed</p>
-          </div>
-          <div className="relative w-full bg-slate-200 rounded-full h-3 overflow-visible">
-            <motion.div
-              className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${progressPercentage}%`,
-                backgroundColor: `rgb(var(--color-primary))`
-              }}
-            />
-            {isNearComplete && (
-              <>
-                {[...Array(8)].map((_, i) => (
-                  <motion.div
-                    key={`spark-${i}`}
-                    className="absolute w-2 h-2 rounded-full"
-                    style={{
-                      backgroundColor: `rgb(var(--color-primary))`,
-                      left: `${progressPercentage}%`,
-                      top: '50%',
-                      transform: 'translateY(-50%)'
-                    }}
-                    animate={{
-                      x: Math.cos((i / 8) * Math.PI * 2) * 25,
-                      y: Math.sin((i / 8) * Math.PI * 2) * 25,
-                      opacity: [1, 0],
-                      scale: [1, 0.3]
-                    }}
-                    transition={{
-                      duration: 1,
-                      repeat: Infinity,
-                      repeatDelay: 0.5,
-                      ease: 'easeOut'
-                    }}
-                  />
-                ))}
-              </>
-            )}
-          </div>
-        </div>
       </Card>
 
       {/* What Happens Next Card */}
