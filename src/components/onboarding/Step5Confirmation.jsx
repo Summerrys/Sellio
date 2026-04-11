@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Rocket, Loader2, CheckCircle2, Circle, Star } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { motion } from 'framer-motion';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 
@@ -43,7 +44,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
     { label: 'Business Profile', completed: !!formData.businessName, optional: false },
     { label: 'Branch Setup', completed: !!formData.country, optional: false },
     { label: 'Menu/Services', completed: formData.products?.length > 0, optional: true },
-    { label: 'Tables & QR Codes', completed: formData.tableCount > 0 || formData.tables?.length > 0, optional: true },
+    ...(formData.businessType === 'Food & Beverage' ? [{ label: 'Tables & QR Codes', completed: formData.tableCount > 0 || formData.tables?.length > 0, optional: true }] : []),
   ];
 
   const nextSteps = [
@@ -239,7 +240,11 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
 
         <div className="space-y-3">
           {checklistItems.map((item, idx) => (
-            <div
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.15, duration: 0.4 }}
               key={idx}
               className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
                 item.completed
@@ -262,7 +267,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
               {item.optional && (
                 <span className="text-xs font-medium text-slate-500">Optional</span>
               )}
-            </div>
+            </motion.div>
           ))}
         </div>
       </Card>
