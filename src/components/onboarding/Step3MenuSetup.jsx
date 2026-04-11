@@ -215,7 +215,6 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                 <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
               </label>
             ) : (
-              <div className="w-full overflow-hidden">
               <DragDropContext onDragEnd={(result) => {
                 if (!result.destination) return;
                 const from = result.source.index;
@@ -263,7 +262,6 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                   )}
                 </Droppable>
               </DragDropContext>
-              </div>
             )}
           </div>
         </div>
