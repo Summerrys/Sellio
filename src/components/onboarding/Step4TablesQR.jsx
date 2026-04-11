@@ -393,7 +393,8 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                         {setupQr && qrCodes[t.id] && (
                           <div className="flex justify-center">
                             <button
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setSelectedQR(t);
                                 setQRModalOpen(true);
                               }}
