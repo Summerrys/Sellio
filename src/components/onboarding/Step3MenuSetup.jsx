@@ -283,6 +283,40 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
           </div>
         </div>
 
+        {/* Added Items List */}
+        {(formData.products || []).length > 0 && (
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+            <h3 className="text-sm font-bold text-slate-900 mb-3">Added Items ({formData.products.length})</h3>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {(formData.products || []).map((item, idx) => (
+                <div key={item.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-slate-100">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {item.images?.[0] && (
+                      <img src={item.images[0]} alt={item.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate">{item.name}</p>
+                      <p className="text-xs text-slate-400">{item.category}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-sm font-semibold text-slate-700">${item.price.toFixed(2)}</span>
+                    <button
+                      onClick={() => {
+                        const updated = (formData.products || []).filter((_, i) => i !== idx);
+                        updateFormData({ ...formData, products: updated });
+                      }}
+                      className="text-slate-300 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
 
       {editingImageIdx !== null && (
