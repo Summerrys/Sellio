@@ -1,7 +1,7 @@
 import bcrypt from 'npm:bcryptjs@2.4.3';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const sgNow = () => new Date(Date.now() + 8 * 3600 * 1000).toISOString().replace('Z', '+08:00');
+const sgNow = () => new Date(Date.now() + 8 * 3600 * 1000).toISOString().replace('Z', '').replace('T', ' ').substring(0, 23);
 
 Deno.serve(async (req) => {
   // Handle CORS preflight

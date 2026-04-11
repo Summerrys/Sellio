@@ -15,7 +15,8 @@ Deno.serve(async (req) => {
 
   const queries = [
     `ALTER TABLE app_users ADD COLUMN IF NOT EXISTS auth_provider TEXT DEFAULT 'phone'`,
-    `ALTER TABLE app_users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ`,
+    `ALTER TABLE app_users ALTER COLUMN last_login_at TYPE TIMESTAMP WITHOUT TIME ZONE USING last_login_at AT TIME ZONE 'UTC'`,
+    `ALTER TABLE app_users ALTER COLUMN created_at TYPE TIMESTAMP WITHOUT TIME ZONE USING created_at AT TIME ZONE 'UTC'`,
     `UPDATE app_users SET auth_provider = 'phone' WHERE auth_provider IS NULL`,
   ];
 
