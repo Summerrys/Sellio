@@ -174,7 +174,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
             <p className="text-sm font-semibold text-slate-900">Set up Tables</p>
             <p className="text-xs text-slate-500">Create physical or virtual tables for your venue</p>
           </div>
-          {setupTables && <Table2 className="w-5 h-5 text-slate-400" />}
+          {setupTables && <Table2 className="w-5 h-5 text-green-500" />}
         </div>
 
         <div className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors"
@@ -184,7 +184,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
             <p className="text-sm font-semibold text-slate-900">Set up QR Code(s)</p>
             <p className="text-xs text-slate-500">Generate scannable QR codes for ordering</p>
           </div>
-          {setupQr && <QrCode className="w-5 h-5 text-slate-400" />}
+          {setupQr && <QrCode className="w-5 h-5 text-orange-500" />}
         </div>
       </div>
 
@@ -268,11 +268,12 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                 {tables.map((t) => (
                   <div key={t.id}>
                     {editingId === t.id ? (
-                      <div className="flex flex-col gap-1 bg-white rounded-lg px-2.5 py-1.5 border border-slate-200">
+                      <div className="flex flex-col gap-1 bg-white rounded-lg px-2.5 py-1.5 border-2 border-slate-400 shadow-md">
                         <input
                           value={editLabel}
                           onChange={(e) => setEditLabel(e.target.value)}
-                          className="text-xs px-1.5 py-1 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-slate-400"
+                          className="text-xs px-1.5 py-1 border border-slate-200 rounded focus:outline-none focus:ring-2 focus:ring-slate-400"
+                          autoFocus
                         />
                         <input
                           type="number"
@@ -280,7 +281,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                           onChange={(e) => setEditPax(e.target.value)}
                           min="1"
                           max="20"
-                          className="text-xs px-1.5 py-1 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-slate-400"
+                          className="text-xs px-1.5 py-1 border border-slate-200 rounded focus:outline-none focus:ring-2 focus:ring-slate-400"
                         />
                         <div className="flex gap-1">
                           <button
@@ -299,17 +300,17 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                         </div>
                       </div>
                     ) : (
-                      <div className="flex flex-col gap-1 bg-slate-50 rounded-lg p-2 border border-slate-100 group hover:bg-slate-100">
-                        <div className="flex items-center justify-between cursor-pointer" onClick={() => startEdit(t)}>
+                      <div className="flex flex-col gap-1 bg-white rounded-lg p-2.5 border-2 border-slate-200 shadow-sm group hover:border-slate-400 hover:shadow-md hover:scale-105 transition-all cursor-pointer">
+                        <div className="flex items-center justify-between" onClick={() => startEdit(t)}>
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-medium text-slate-700 truncate">{t.label}</p>
-                            <p className="text-xs text-slate-400">{t.pax || 2} pax</p>
+                            <p className="text-xs font-semibold text-slate-700 truncate">{t.label}</p>
+                            <p className="text-xs text-slate-500">{t.pax || 2} pax</p>
                           </div>
                           <button
                             onClick={(e) => { e.stopPropagation(); removeTable(t.id); }}
-                            className="text-slate-300 hover:text-red-500 transition-colors ml-1"
+                            className="text-slate-300 hover:text-red-500 transition-colors ml-1 flex-shrink-0"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                         {setupQr && qrCodes[t.id] && (
@@ -319,7 +320,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                               setSelectedQR(t);
                               setQRModalOpen(true);
                             }}
-                            className="text-xs px-2 py-1 rounded bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition-colors"
+                            className="text-xs px-2 py-1.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors font-medium text-center"
                           >
                             View QR
                           </button>
