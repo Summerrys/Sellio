@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -107,6 +108,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
     setTables(prev => [...prev, ...generated]);
     setTableCount('');
     setTablePax('');
+    toast.success(`Generated ${n} table${n > 1 ? 's' : ''}`);
   };
 
   const addSingle = () => {
@@ -114,6 +116,8 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
     setTables(prev => [...prev, { id: Date.now(), label: newLabel.trim(), pax: parseInt(newPax) || 2 }]);
     setNewLabel('');
     setNewPax('');
+    toast.success(`Table "${newLabel.trim()}" added`);
+  };
   };
 
   const startEdit = (table) => {
