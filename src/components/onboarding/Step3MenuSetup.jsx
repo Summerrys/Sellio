@@ -245,8 +245,13 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                               {idx === 0 && (
                                 <div className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium" style={{ background: themeColor }}>Cover</div>
                               )}
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                <Pencil className="w-4 h-4 text-white" />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-3 transition-opacity">
+                                <button onClick={(e) => { e.stopPropagation(); setEditingImageIdx(idx); }} className="p-1 hover:bg-white/20 rounded transition-colors">
+                                  <Pencil className="w-4 h-4 text-white" />
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); removeImage(idx); }} className="p-1 hover:bg-white/20 rounded transition-colors">
+                                  <X className="w-4 h-4 text-white" />
+                                </button>
                               </div>
                             </div>
                           )}
