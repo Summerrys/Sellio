@@ -427,31 +427,37 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
           )}
 
           {/* Table QR Codes Display */}
-          {setupTables && setupQr && tables.length > 0 && Object.keys(qrCodes).length > 0 && (
-          <div className="space-y-4 mb-6 pb-6 border-b border-slate-200">
-          <div className="bg-white rounded-xl p-4 border border-slate-200">
-           <Label className="text-xs font-semibold text-slate-700 mb-3 block">Table QR Codes</Label>
-           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-             {tables.map((table) => (
-               qrCodes[table.id] && (
-                 <div key={table.id} className="flex flex-col items-center gap-2 bg-slate-50 rounded-lg p-3 border border-slate-200">
-                   <img src={qrCodes[table.id]} alt={table.label} className="w-24 h-24" />
-                   <p className="text-xs font-medium text-slate-700 text-center truncate">{table.label}</p>
-                   <button
-                     onClick={() => {
-                       setSelectedQR(table);
-                       setQRModalOpen(true);
-                     }}
-                     className="text-xs text-blue-600 hover:text-blue-800 transition-colors"
-                   >
-                     View
-                   </button>
-                 </div>
-               )
-             ))}
-           </div>
-          </div>
-          </div>
+          {setupTables && setupQr && tables.length > 0 && (
+            <div className="space-y-4 mb-6 pb-6 border-b border-slate-200">
+              <div className="bg-white rounded-xl p-4 border border-slate-200">
+                <Label className="text-xs font-semibold text-slate-700 mb-3 block">Table QR Codes</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {tables.map((table) => (
+                    <div key={table.id} className="flex flex-col items-center gap-2 bg-slate-50 rounded-lg p-3 border border-slate-200">
+                      {qrCodes[table.id] ? (
+                        <>
+                          <img src={qrCodes[table.id]} alt={table.label} className="w-24 h-24" />
+                          <p className="text-xs font-medium text-slate-700 text-center truncate">{table.label}</p>
+                          <button
+                            onClick={() => {
+                              setSelectedQR(table);
+                              setQRModalOpen(true);
+                            }}
+                            className="text-xs text-blue-600 hover:text-blue-800 transition-colors"
+                          >
+                            View
+                          </button>
+                        </>
+                      ) : (
+                        <div className="flex items-center justify-center w-24 h-24">
+                          <p className="text-xs text-slate-400">Generating...</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           )}
 
 
