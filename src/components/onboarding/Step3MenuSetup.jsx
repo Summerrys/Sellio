@@ -201,12 +201,12 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       <div className="space-y-3 mb-4 w-full min-w-0">
 
         {/* Images Section */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3 overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-xl p-3">
           <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
             <Upload className="w-4 h-4" style={{ color: primaryColor }} />
             Product Images
           </h3>
-          <div className="w-full overflow-x-hidden">
+          <div>
             <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Images (optional)</Label>
             {imagePreviews.length === 0 ? (
               <label className="border-2 border-dashed border-slate-300 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors w-full min-w-0">
