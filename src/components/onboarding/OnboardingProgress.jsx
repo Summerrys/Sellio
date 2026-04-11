@@ -89,30 +89,58 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
           />
           {isNearComplete && (
             <>
-              {[...Array(8)].map((_, i) => (
-                <motion.div
-                  key={`spark-${i}`}
-                  className="absolute w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full"
-                  style={{
-                    background: PURPLE_PINK,
-                    left: `${percentage}%`,
-                    top: '50%',
-                    transform: 'translateY(-50%)'
-                  }}
-                  animate={{
-                    x: Math.cos((i / 8) * Math.PI * 2) * 20,
-                    y: Math.sin((i / 8) * Math.PI * 2) * 20,
-                    opacity: [1, 0],
-                    scale: [1, 0.3]
-                  }}
-                  transition={{
-                    duration: 1,
-                    repeat: Infinity,
-                    repeatDelay: 0.5,
-                    ease: 'easeOut'
-                  }}
-                />
-              ))}
+              {/* Glow Effect */}
+              <motion.div
+                className="absolute w-6 h-6 sm:w-8 sm:h-8 rounded-full blur-xl pointer-events-none"
+                style={{
+                  left: `${percentage}%`,
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  background: 'radial-gradient(circle, rgba(249,115,22,0.6) 0%, rgba(234,88,12,0.3) 100%)'
+                }}
+                animate={{
+                  opacity: [0.8, 1, 0.8],
+                  scale: [1, 1.2, 1]
+                }}
+                transition={{
+                  duration: 0.6,
+                  repeat: Infinity,
+                  repeatDelay: 0.5
+                }}
+              />
+              {/* Sparks */}
+              {[...Array(12)].map((_, i) => {
+                const colors = ['#ff6b35', '#f97316', '#fbbf24', '#fcd34d'];
+                const color = colors[i % colors.length];
+                const radius = (i % 3) * 8 + 15;
+                return (
+                  <motion.div
+                    key={`spark-${i}`}
+                    className="absolute rounded-full pointer-events-none"
+                    style={{
+                      width: i % 3 === 0 ? '3px' : '2px',
+                      height: i % 3 === 0 ? '3px' : '2px',
+                      background: color,
+                      boxShadow: `0 0 ${i % 3 === 0 ? '8px' : '4px'} ${color}`,
+                      left: `${percentage}%`,
+                      top: '50%',
+                      transform: 'translateY(-50%)'
+                    }}
+                    animate={{
+                      x: Math.cos((i / 12) * Math.PI * 2) * radius,
+                      y: Math.sin((i / 12) * Math.PI * 2) * radius,
+                      opacity: [1, 0.7, 0],
+                      scale: [1, 0.6, 0]
+                    }}
+                    transition={{
+                      duration: 0.8,
+                      repeat: Infinity,
+                      repeatDelay: 0.5,
+                      ease: 'easeOut'
+                    }}
+                  />
+                );
+              })}
             </>
           )}
         </div>
