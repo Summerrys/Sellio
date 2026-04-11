@@ -64,12 +64,12 @@ Deno.serve(async (req) => {
     if (!isValid) {
       return Response.json(
         { error: 'Invalid credentials' },
-        {
-          status: 401,
-          headers: { 'Access-Control-Allow-Origin': '*' },
-        }
+        { status: 401, headers: { 'Access-Control-Allow-Origin': '*' } }
       );
     }
+
+    // Track last login
+    await supabase.from('app_users').update({ last_login_at: new Date().toISOString() }).eq('id', user.id);
 
     return Response.json(
       {
@@ -81,6 +81,8 @@ Deno.serve(async (req) => {
           phone: user.phone,
           role: user.role,
           onboarding_completed: user.onboarding_completed,
+          created_at: user.created_at,
+          last_login_at: new Date().toISOString(),
         }
       },
       {

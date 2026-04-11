@@ -61,6 +61,43 @@ export default function Auth() {
           });
           if (error) throw error;
           const user = data.session.user;
+
+          // Check if this email is already registered as a phone/password user
+          const { data: phoneUser } = await supabase
+            .from('app_users')
+            .select('id, auth_provider')
+            .eq('email', user.email)
+            .neq('auth_provider', 'google')
+            .limit(1);
+          if (phoneUser && phoneUser.length > 0) {
+            toast.error('This email is already registered with a phone/password account. Please log in using your phone number.');
+            setGoogleLoading(false);
+            return;
+          }
+
+          const now = new Date().toISOString();
+          // Upsert into app_users to track Google users and last login
+          const { data: existingAppUser } = await supabase
+            .from('app_users')
+            .select('id, created_at')
+            .eq('email', user.email)
+            .limit(1);
+          
+          if (existingAppUser && existingAppUser.length > 0) {
+            await supabase.from('app_users').update({ last_login_at: now }).eq('id', existingAppUser[0].id);
+          } else {
+            await supabase.from('app_users').insert({
+              email: user.email,
+              full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
+              auth_provider: 'google',
+              role: 'admin',
+              is_active: true,
+              onboarding_completed: false,
+              created_at: now,
+              last_login_at: now,
+            });
+          }
+
           const appUser = {
             id: user.id,
             email: user.email,
@@ -68,6 +105,8 @@ export default function Auth() {
             avatar_url: user.user_metadata?.avatar_url,
             provider: 'google',
             onboarding_completed: false,
+            created_at: existingAppUser?.[0]?.created_at || now,
+            last_login_at: now,
           };
           const { data: existing } = await supabase.from('tenant_users').select('*').eq('email', user.email).single();
           if (existing) {

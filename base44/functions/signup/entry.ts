@@ -40,11 +40,24 @@ Deno.serve(async (req) => {
     if (existing && existing.length > 0) {
       return Response.json(
         { error: 'Phone number already registered' },
-        {
-          status: 400,
-          headers: { 'Access-Control-Allow-Origin': '*' },
-        }
+        { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } }
       );
+    }
+
+    // Check if email is already used (phone/password or social login)
+    if (email) {
+      const { data: emailExists } = await supabase
+        .from('app_users')
+        .select('id, auth_provider')
+        .eq('email', email.toLowerCase().trim())
+        .limit(1);
+      if (emailExists && emailExists.length > 0) {
+        const provider = emailExists[0].auth_provider || 'email';
+        const msg = provider === 'google'
+          ? 'This email is already registered via Google. Please sign in with Google.'
+          : 'This email is already registered. Please log in instead.';
+        return Response.json({ error: msg }, { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } });
+      }
     }
 
     // Hash password
@@ -61,6 +74,9 @@ Deno.serve(async (req) => {
         role: 'admin',
         is_active: true,
         onboarding_completed: false,
+        auth_provider: 'phone',
+        created_at: new Date().toISOString(),
+        last_login_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -77,6 +93,8 @@ Deno.serve(async (req) => {
           phone: newUser.phone,
           role: newUser.role,
           onboarding_completed: newUser.onboarding_completed,
+          created_at: newUser.created_at,
+          last_login_at: newUser.last_login_at,
         }
       },
       {
