@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowRight, ArrowLeft, QrCode, Table2, Plus, Trash2, Download, Edit2 } from 'lucide-react';
+import { ArrowRight, ArrowLeft, QrCode, Table2, Plus, Trash2, Download, Edit2, Printer } from 'lucide-react';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 import QR from 'qrcode';
@@ -458,10 +458,10 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                   </button>
                   <button
                     onClick={handlePrintSingleQR}
-                    className="flex-1 px-3 h-8 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
+                    className="flex-1 px-3 h-8 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors flex items-center gap-1 justify-center"
                     style={{ background: themeColor }}
                   >
-                    🖨️ Print
+                    <Printer className="w-3.5 h-3.5" /> Print
                   </button>
                 </div>
               </div>
