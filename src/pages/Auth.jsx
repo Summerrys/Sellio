@@ -22,13 +22,20 @@ export default function Auth() {
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
+    script.defer = true;
     document.body.appendChild(script);
 
     base44.functions.invoke('getSupabaseConfig', {}).then(res => {
       googleClientIdRef.current = res.data?.googleClientId;
     });
 
-    return () => document.body.removeChild(script);
+    return () => {
+      try {
+        document.body.removeChild(script);
+      } catch (e) {
+        // Script already removed
+      }
+    };
   }, []);
 
   const handleGoogleSignIn = async () => {
@@ -37,8 +44,8 @@ export default function Auth() {
 
     // Wait for Google Script to load if not ready
     let attempts = 0;
-    while ((!window.google || !clientId) && attempts < 10) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+    while ((!window.google || !clientId) && attempts < 15) {
+      await new Promise(resolve => setTimeout(resolve, 200));
       attempts++;
     }
 
@@ -48,82 +55,114 @@ export default function Auth() {
       return;
     }
 
-    window.google.accounts.id.initialize({
-      client_id: clientId,
-      nonce: hashedNonce,
-      callback: async (response) => {
-        try {
-          const supabase = await getSupabase();
-          const { data, error } = await supabase.auth.signInWithIdToken({
-            provider: 'google',
-            token: response.credential,
-            nonce,
-          });
-          if (error) throw error;
-          const user = data.session.user;
+    try {
+      // Initialize Google Sign-In
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleCredentialResponse,
+      });
 
-          // Check if this email is already registered as a phone/password user
-          const { data: phoneUser } = await supabase
-            .from('app_users')
-            .select('id, auth_provider')
-            .eq('email', user.email)
-            .neq('auth_provider', 'google')
-            .limit(1);
-          if (phoneUser && phoneUser.length > 0) {
-            toast.error('This email is already registered with a phone/password account. Please log in using your phone number.');
-            setGoogleLoading(false);
-            return;
-          }
-
-          const now = new Date(Date.now() + 8 * 3600 * 1000).toISOString().replace('Z', '').replace('T', ' ').substring(0, 23);
-          // Upsert into app_users to track Google users and last login
-          const { data: existingAppUser } = await supabase
-            .from('app_users')
-            .select('id, created_at')
-            .eq('email', user.email)
-            .limit(1);
-          
-          if (existingAppUser && existingAppUser.length > 0) {
-            await supabase.from('app_users').update({ last_login_at: now }).eq('id', existingAppUser[0].id);
-          } else {
-            await supabase.from('app_users').insert({
-              email: user.email,
-              full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
-              auth_provider: 'google',
-              role: 'admin',
-              is_active: true,
-              onboarding_completed: false,
-              created_at: now,
-              last_login_at: now,
-            });
-          }
-
-          const appUser = {
-            id: user.id,
-            email: user.email,
-            full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
-            avatar_url: user.user_metadata?.avatar_url,
-            provider: 'google',
-            onboarding_completed: false,
-            created_at: existingAppUser?.[0]?.created_at || now,
-            last_login_at: now,
-          };
-          const { data: existing } = await supabase.from('tenant_users').select('*').eq('email', user.email).single();
-          if (existing) {
-            appUser.onboarding_completed = true;
-            appUser.role = existing.role;
-            appUser.tenant_id = existing.tenant_id;
-          }
-          localStorage.setItem('app_user', JSON.stringify(appUser));
-          window.location.href = appUser.onboarding_completed ? '/Dashboard' : '/Onboarding';
-        } catch (err) {
-          toast.error(err.message || 'Sign-in failed');
-          setGoogleLoading(false);
+      // Try to show One Tap UI
+      window.google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          // Fallback to click-to-sign-in button
+          showGoogleSignInButton();
         }
-      },
-    });
-    window.google.accounts.id.prompt();
+      });
+    } catch (err) {
+      console.error('Google Sign-In error:', err);
+      toast.error('Google Sign-In failed. Please try again.');
+      setGoogleLoading(false);
+    }
   };
+
+  const showGoogleSignInButton = () => {
+    const container = document.querySelector('[data-google-button]');
+    if (container && window.google) {
+      window.google.accounts.id.renderButton(container, {
+        theme: 'outline',
+        size: 'large',
+        width: '100%',
+      });
+    }
+  };
+
+  const handleCredentialResponse = async (response) => {
+    try {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: response.credential,
+      });
+
+      if (error) throw error;
+      const user = data.session.user;
+
+      // Check if this email is already registered as a phone/password user
+      const { data: phoneUser } = await supabase
+        .from('app_users')
+        .select('id, auth_provider')
+        .eq('email', user.email)
+        .neq('auth_provider', 'google')
+        .limit(1);
+      
+      if (phoneUser && phoneUser.length > 0) {
+        toast.error('This email is already registered with a phone/password account. Please log in using your phone number.');
+        setGoogleLoading(false);
+        return;
+      }
+
+      const now = new Date(Date.now() + 8 * 3600 * 1000).toISOString().replace('Z', '').replace('T', ' ').substring(0, 23);
+      
+      // Upsert into app_users to track Google users and last login
+      const { data: existingAppUser } = await supabase
+        .from('app_users')
+        .select('id, created_at')
+        .eq('email', user.email)
+        .limit(1);
+      
+      if (existingAppUser && existingAppUser.length > 0) {
+        await supabase.from('app_users').update({ last_login_at: now }).eq('id', existingAppUser[0].id);
+      } else {
+        await supabase.from('app_users').insert({
+          email: user.email,
+          full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
+          auth_provider: 'google',
+          role: 'admin',
+          is_active: true,
+          onboarding_completed: false,
+          created_at: now,
+          last_login_at: now,
+        });
+      }
+
+      const appUser = {
+        id: user.id,
+        email: user.email,
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
+        avatar_url: user.user_metadata?.avatar_url,
+        provider: 'google',
+        onboarding_completed: false,
+        created_at: existingAppUser?.[0]?.created_at || now,
+        last_login_at: now,
+      };
+      
+      const { data: existing } = await supabase.from('tenant_users').select('*').eq('email', user.email).single();
+      if (existing) {
+        appUser.onboarding_completed = true;
+        appUser.role = existing.role;
+        appUser.tenant_id = existing.tenant_id;
+      }
+      
+      localStorage.setItem('app_user', JSON.stringify(appUser));
+      window.location.href = appUser.onboarding_completed ? '/Dashboard' : '/Onboarding';
+    } catch (err) {
+      console.error('Auth error:', err);
+      toast.error(err.message || 'Sign-in failed');
+      setGoogleLoading(false);
+    }
+  };
+
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);
   const [formData, setFormData] = useState({
@@ -172,7 +211,6 @@ export default function Auth() {
           toast.error(data.error || 'Something went wrong');
         }
       } catch (invokeError) {
-        // Handle errors from base44.functions.invoke
         const errorData = invokeError.response?.data;
         if (errorData?.error) {
           toast.error(errorData.error);
