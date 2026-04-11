@@ -194,7 +194,6 @@ export default function Auth() {
 
   return (
     <>
-      <Toaster position="top-center" richColors />
       <style>{`
         .orange-scroll::-webkit-scrollbar { width: 4px; }
         .orange-scroll::-webkit-scrollbar-track { background: transparent; }
