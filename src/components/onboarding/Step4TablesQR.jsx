@@ -30,7 +30,6 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const [editingId, setEditingId] = useState(null);
   const [editLabel, setEditLabel] = useState('');
   const [editPax, setEditPax] = useState('2');
-  const [qrLabel, setQrLabel] = useState(formData.singleQrLabel || 'Counter');
   const [qrCodes, setQrCodes] = useState({});
   const [selectedQR, setSelectedQR] = useState(null);
   const [qrModalOpen, setQRModalOpen] = useState(false);
@@ -150,12 +149,11 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
     updateFormData({
       ...formData,
       tables: setupTables ? tables : [],
-      singleQrLabel: setupQr ? qrLabel : null,
     });
     nextStep();
   };
 
-  const canContinue = (!setupTables || tables.length > 0) && (!setupQr || qrLabel.trim());
+  const canContinue = !setupTables || tables.length > 0;
 
   return (
     <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
@@ -361,28 +359,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
         </div>
       )}
 
-      {/* QR Code setup */}
-      {setupQr && (
-        <div className="mb-6 bg-slate-50 rounded-xl p-4 border border-slate-200">
-          <Label className="text-xs font-semibold text-slate-700 mb-2 block">QR Code Label</Label>
-          <Input
-            value={qrLabel}
-            onChange={(e) => setQrLabel(e.target.value)}
-            placeholder="e.g. Counter, Takeaway"
-            className="h-9 text-sm mb-3"
-          />
-          <p className="text-xs text-slate-500 mb-3">This label will appear on your generated QR code.</p>
-          <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: themeColor }}>
-              <QrCode className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-800">{qrLabel || 'Counter'}</p>
-              <p className="text-xs text-slate-500">1 QR code will be generated</p>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {!setupTables && !setupQr && (
         <div className="mb-6 text-center p-4 text-slate-500">
