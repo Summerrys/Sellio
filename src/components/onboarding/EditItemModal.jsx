@@ -75,7 +75,7 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
                 }}>
                   <Droppable droppableId="edit-images" direction="horizontal">
                     {(provided) => (
-                      <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-wrap gap-2">
+                      <div ref={provided.innerRef} {...provided.droppableProps} className="grid grid-cols-4 gap-3">
                         {imagePreviews.map((src, idx) => (
                           <Draggable key={`edit-img-${idx}`} draggableId={`edit-img-${idx}`} index={idx}>
                             {(provided, snapshot) => (
@@ -83,7 +83,7 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
-                                className={`relative w-16 h-16 rounded-lg overflow-hidden border-2 group cursor-grab ${snapshot.isDragging ? 'shadow-lg scale-105' : ''}`}
+                                className={`relative w-full aspect-square rounded-lg overflow-hidden border-2 group cursor-grab ${snapshot.isDragging ? 'shadow-lg scale-105' : ''}`}
                                 style={{ borderColor: idx === 0 ? primaryColor : '#e2e8f0', ...provided.draggableProps.style }}
                                 onClick={() => setEditingImageIdx(idx)}
                               >
@@ -105,7 +105,7 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
                           </Draggable>
                         ))}
                         {provided.placeholder}
-                        <label className="w-16 h-16 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors flex-shrink-0">
+                        <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors">
                           <Plus className="w-5 h-5 text-slate-400" />
                           <input type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
                         </label>
