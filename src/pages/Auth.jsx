@@ -226,8 +226,9 @@ export default function Auth() {
 
       const response = await base44.functions.invoke('authProxy', payload);
       const data = response.data;
+      console.log('Auth response:', data);
 
-      if (data.success) {
+      if (data && data.success) {
         localStorage.setItem('app_user', JSON.stringify(data.user));
         toast.custom((t) => (
           <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-lg">
@@ -243,19 +244,22 @@ export default function Auth() {
         setTimeout(() => {
           window.location.href = createPageUrl(data.user?.onboarding_completed ? 'Dashboard' : 'Onboarding');
         }, 500);
-      } else if (data.error) {
+      } else if (data && data.error) {
         toast.error(data.error);
+      } else if (data && data.message) {
+        toast.error(data.message);
       } else {
-        toast.error(data.message || 'Something went wrong');
+       toast.error('Login failed. Please check your credentials.');
       }
       } catch (error) {
       console.error('Auth error:', error);
-      const errorMsg = error?.response?.data?.error || error?.response?.data?.message || error.message || 'An unexpected error occurred';
+      const errorMsg = error?.response?.data?.error || error?.response?.data?.message || error?.message || 'An unexpected error occurred';
+      console.error('Error details:', error?.response?.data);
       toast.error(errorMsg);
       } finally {
       setLoading(false);
-    }
-  };
+      }
+      };
 
   return (
     <>
