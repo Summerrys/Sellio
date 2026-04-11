@@ -44,8 +44,14 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
           owner_email: formData.adminEmail,
           country: formData.country,
           currency: formData.currency,
+          address: formData.address || null,
           status: 'trial',
           plan: 'free',
+          settings: {
+            branch_name: formData.branchName || null,
+            tax_rate: formData.taxRate ?? null,
+            tax_inclusive: formData.taxInclusive ?? false,
+          },
         })
         .select()
         .single();
@@ -98,6 +104,22 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
         status: 'active',
       });
 
+      // Save business hours
+      if (formData.operatingHours) {
+        const dayMap = {
+          Monday: 'monday', Tuesday: 'tuesday', Wednesday: 'wednesday',
+          Thursday: 'thursday', Friday: 'friday', Saturday: 'saturday', Sunday: 'sunday',
+        };
+        const hoursRows = Object.entries(formData.operatingHours).map(([day, config]) => ({
+          tenant_id: tenant.id,
+          day_of_week: dayMap[day],
+          open_time: config.enabled ? config.start : null,
+          close_time: config.enabled ? config.end : null,
+          is_closed: !config.enabled,
+        }));
+        await supabase.from('business_hours').insert(hoursRows);
+      }
+
       // Create tables if F&B business
       if (formData.tableCount > 0) {
         const tables = Array.from({ length: formData.tableCount }, (_, i) => ({
@@ -140,6 +162,8 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
             name: product.name,
             slug: product.name.toLowerCase().replace(/\s+/g, '-'),
             price: product.price,
+            image_url: product.images?.[0] || null,
+            tags: product.images?.length > 1 ? product.images.slice(1) : [],
             is_active: true,
           });
         }
