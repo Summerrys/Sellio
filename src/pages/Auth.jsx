@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Phone, Lock, User, Mail, ChevronDown, Check } from 'lucide-react';
 import { getSupabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
@@ -16,7 +16,6 @@ export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [googleReady, setGoogleReady] = useState(false);
-  const nonceRef = useRef(null);
 
   useEffect(() => {
     const script = document.createElement('script');
@@ -41,18 +40,14 @@ export default function Auth() {
   }, []);
 
   const handleCredentialResponse = async (response) => {
-    console.log('🟢 Credential response');
+    console.log('🟢 Credential received from Google');
     try {
       const supabase = await getSupabase();
-      const nonce = nonceRef.current;
-      
-      console.log('   Nonce:', nonce);
-      console.log('   Token:', !!response.credential);
+      console.log('   Calling signInWithIdToken...');
 
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: response.credential,
-        nonce: nonce,
       });
 
       if (error) {
@@ -61,7 +56,7 @@ export default function Auth() {
         return;
       }
 
-      console.log('✓ Signed in');
+      console.log('✓ Signed in successfully');
       const user = data.session.user;
 
       const appUser = {
@@ -87,14 +82,9 @@ export default function Auth() {
     }
 
     console.log('🔵 Google sign-in clicked');
-    const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36);
-    nonceRef.current = nonce;
-    console.log('📌 Nonce:', nonce);
-
     window.google.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
       callback: handleCredentialResponse,
-      nonce: nonce,
     });
 
     window.google.accounts.id.prompt();
@@ -120,17 +110,18 @@ export default function Auth() {
     setLoading(true);
     try {
       const fullPhone = selectedCountry.code + cleanPhone;
-      console.log('📱 Phone:', fullPhone, 'Password:', formData.password);
+      console.log('📱 Phone:', fullPhone);
 
       const payload = isLogin
         ? { action: 'login', phone: fullPhone, password: formData.password }
         : { action: 'signup', phone: fullPhone, password: formData.password, full_name: formData.full_name, email: formData.email };
 
-      console.log('📤 Payload:', payload);
+      console.log('📤 Invoking authProxy with:', payload);
       const response = await base44.functions.invoke('authProxy', payload);
       console.log('📥 Response:', response);
       
       const data = response?.data || response;
+      console.log('📦 Data:', data);
 
       if (data && data.success) {
         localStorage.setItem('app_user', JSON.stringify(data.user));
@@ -155,8 +146,6 @@ export default function Auth() {
       }
     } catch (error) {
       console.error('❌ Exception:', error);
-      console.error('❌ Exception message:', error?.message);
-      console.error('❌ Exception response:', error?.response);
       toast.error(error?.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
