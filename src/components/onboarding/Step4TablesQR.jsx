@@ -375,18 +375,30 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                             <p className="text-xs text-slate-500">{t.pax || 2} pax</p>
                           </div>
                           <div className="flex gap-1 flex-shrink-0 ml-1">
+                            {setupQr && qrCodes[t.id] && (
+                              <button
+                                onClick={() => {
+                                  setSelectedQR(t);
+                                  setQRModalOpen(true);
+                                }}
+                                className="text-slate-400 hover:text-blue-500 transition-colors p-1"
+                                title="View QR code"
+                              >
+                                <QrCode className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                             <button
-                              onClick={() => startEdit(t)}
-                              className="text-slate-400 hover:text-blue-500 transition-colors p-1"
-                              title="Edit table"
+                               onClick={() => startEdit(t)}
+                               className="text-slate-400 hover:text-blue-500 transition-colors p-1"
+                               title="Edit table"
                             >
-                              <Edit2 className="w-3.5 h-3.5" />
+                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => removeTable(t.id)}
-                              className="text-slate-300 hover:text-red-500 transition-colors p-1"
+                               onClick={() => removeTable(t.id)}
+                               className="text-slate-300 hover:text-red-500 transition-colors p-1"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
@@ -426,39 +438,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
           </div>
           )}
 
-          {/* Table QR Codes Display */}
-          {setupTables && setupQr && tables.length > 0 && (
-            <div className="space-y-4 mb-6 pb-6 border-b border-slate-200">
-              <div className="bg-white rounded-xl p-4 border border-slate-200">
-                <Label className="text-xs font-semibold text-slate-700 mb-3 block">Table QR Codes</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {tables.map((table) => (
-                    <div key={table.id} className="flex flex-col items-center gap-2 bg-slate-50 rounded-lg p-3 border border-slate-200">
-                      {qrCodes[table.id] ? (
-                        <>
-                          <img src={qrCodes[table.id]} alt={table.label} className="w-24 h-24" />
-                          <p className="text-xs font-medium text-slate-700 text-center truncate">{table.label}</p>
-                          <button
-                            onClick={() => {
-                              setSelectedQR(table);
-                              setQRModalOpen(true);
-                            }}
-                            className="text-xs text-blue-600 hover:text-blue-800 transition-colors"
-                          >
-                            View
-                          </button>
-                        </>
-                      ) : (
-                        <div className="flex items-center justify-center w-24 h-24">
-                          <p className="text-xs text-slate-400">Generating...</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+
 
 
 
