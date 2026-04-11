@@ -377,7 +377,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                           <div className="flex gap-1 flex-shrink-0">
                             <button
                                 onClick={() => startEdit(t)}
-                                className="transition-colors p-1 hover:opacity-80"
+                                className="transition-all p-1 hover:opacity-80 hover:scale-125"
                                 style={{ color: primaryColor }}
                                 title="Edit table"
                              >
@@ -385,7 +385,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                             </button>
                             <button
                                 onClick={() => removeTable(t.id)}
-                                className="transition-colors p-1 hover:opacity-80"
+                                className="transition-all p-1 hover:opacity-80 hover:scale-125"
                                 style={{ color: '#ef4444' }}
                              >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -400,7 +400,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                                setSelectedQR(t);
                                setQRModalOpen(true);
                              }}
-                             className="transition-colors p-1 hover:opacity-80"
+                             className="transition-all p-1 hover:opacity-80 hover:scale-125"
                              style={{ color: '#f97316' }}
                              title="View QR code"
                             >
