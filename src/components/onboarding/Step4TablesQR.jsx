@@ -25,6 +25,9 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const [tablePax, setTablePax] = useState('2');
   const [newLabel, setNewLabel] = useState('');
   const [newPax, setNewPax] = useState('2');
+  const [editingId, setEditingId] = useState(null);
+  const [editLabel, setEditLabel] = useState('');
+  const [editPax, setEditPax] = useState('2');
   const [qrLabel, setQrLabel] = useState(formData.singleQrLabel || 'Counter');
 
   useEffect(() => {
@@ -57,6 +60,22 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
     setTables(prev => [...prev, { id: Date.now(), label: newLabel.trim(), pax: parseInt(newPax) || 2 }]);
     setNewLabel('');
     setNewPax('2');
+  };
+
+  const startEdit = (table) => {
+    setEditingId(table.id);
+    setEditLabel(table.label);
+    setEditPax(String(table.pax));
+  };
+
+  const saveEdit = () => {
+    if (!editLabel.trim()) return;
+    setTables(prev => prev.map(t => t.id === editingId ? { ...t, label: editLabel.trim(), pax: parseInt(editPax) || 2 } : t));
+    setEditingId(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
   };
 
   const removeTable = (id) => setTables(prev => prev.filter(t => t.id !== id));
@@ -183,17 +202,51 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
               <p className="text-xs font-semibold text-slate-700 mb-2">{tables.length} table{tables.length > 1 ? 's' : ''} added</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                 {tables.map((t) => (
-                  <div key={t.id} className="flex items-center justify-between bg-slate-50 rounded-lg px-2.5 py-1.5 border border-slate-100 group">
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-slate-700 truncate">{t.label}</p>
-                      <p className="text-xs text-slate-400">{t.pax || 2} pax</p>
-                    </div>
-                    <button
-                      onClick={() => removeTable(t.id)}
-                      className="text-slate-300 hover:text-red-500 transition-colors ml-1 opacity-0 group-hover:opacity-100"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                  <div key={t.id}>
+                    {editingId === t.id ? (
+                      <div className="flex flex-col gap-1 bg-white rounded-lg px-2.5 py-1.5 border border-slate-200">
+                        <input
+                          value={editLabel}
+                          onChange={(e) => setEditLabel(e.target.value)}
+                          className="text-xs px-1.5 py-1 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-slate-400"
+                        />
+                        <input
+                          type="number"
+                          value={editPax}
+                          onChange={(e) => setEditPax(e.target.value)}
+                          min="1"
+                          max="20"
+                          className="text-xs px-1.5 py-1 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-slate-400"
+                        />
+                        <div className="flex gap-1">
+                          <button
+                            onClick={saveEdit}
+                            className="flex-1 text-xs px-2 py-0.5 rounded bg-green-500 text-white hover:bg-green-600"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="flex-1 text-xs px-2 py-0.5 rounded bg-slate-300 text-slate-700 hover:bg-slate-400"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between bg-slate-50 rounded-lg px-2.5 py-1.5 border border-slate-100 group cursor-pointer hover:bg-slate-100" onClick={() => startEdit(t)}>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-slate-700 truncate">{t.label}</p>
+                          <p className="text-xs text-slate-400">{t.pax || 2} pax</p>
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeTable(t.id); }}
+                          className="text-slate-300 hover:text-red-500 transition-colors ml-1 opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
