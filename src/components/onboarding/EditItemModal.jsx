@@ -75,7 +75,7 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
                 }}>
                   <Droppable droppableId="edit-images" direction="horizontal">
                     {(provided) => (
-                      <div ref={provided.innerRef} {...provided.droppableProps} className="grid grid-cols-6 gap-2">
+                      <div ref={provided.innerRef} {...provided.droppableProps} className="grid grid-cols-4 gap-3">
                         {imagePreviews.map((src, idx) => (
                           <Draggable key={`edit-img-${idx}`} draggableId={`edit-img-${idx}`} index={idx}>
                             {(provided, snapshot) => (
@@ -105,8 +105,8 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
                           </Draggable>
                         ))}
                         {provided.placeholder}
-                        <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors" title="Add more images">
-                          <Plus className="w-6 h-6 text-slate-300" />
+                        <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors">
+                          <Plus className="w-5 h-5 text-slate-400" />
                           <input type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
                         </label>
                       </div>
