@@ -26,7 +26,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const [tablePrefix, setTablePrefix] = useState('Table');
   const [tablePax, setTablePax] = useState('');
   const [newLabel, setNewLabel] = useState('');
-  const [newPax, setNewPax] = useState('2');
+  const [newPax, setNewPax] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editLabel, setEditLabel] = useState('');
   const [editPax, setEditPax] = useState('2');
@@ -113,7 +113,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
     if (!newLabel.trim()) return;
     setTables(prev => [...prev, { id: Date.now(), label: newLabel.trim(), pax: parseInt(newPax) || 2 }]);
     setNewLabel('');
-    setNewPax('2');
+    setNewPax('');
   };
 
   const startEdit = (table) => {
@@ -302,7 +302,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                 type="number"
                 value={newPax}
                 onChange={(e) => setNewPax(e.target.value)}
-                placeholder="Pax"
+                placeholder="e.g. 4"
                 className="h-9 text-sm w-20"
                 min="1"
                 max="20"
