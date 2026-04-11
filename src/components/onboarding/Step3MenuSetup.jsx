@@ -191,7 +191,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               }}>
                 <Droppable droppableId="images" direction="horizontal">
                   {(provided) => (
-                    <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-wrap gap-2">
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-wrap gap-2" style={{ overflowX: 'auto' }}>
                       {imagePreviews.map((src, idx) => (
                         <Draggable key={src + idx} draggableId={`img-${idx}`} index={idx}>
                           {(provided, snapshot) => (
@@ -199,7 +199,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              className={`relative w-16 h-16 rounded-lg overflow-hidden border-2 group cursor-grab ${snapshot.isDragging ? 'shadow-lg scale-105' : ''} border-slate-200`}
+                              className={`relative w-14 h-14 rounded-lg overflow-hidden border-2 group cursor-grab ${snapshot.isDragging ? 'shadow-lg scale-105' : ''} border-slate-200`}
                               style={idx === 0 ? { borderColor: primaryColor } : {}}
                               onClick={() => setEditingImageIdx(idx)}
                             >
@@ -215,7 +215,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                         </Draggable>
                       ))}
                       {provided.placeholder}
-                      <label className="w-16 h-16 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors flex-shrink-0">
+                      <label className="w-14 h-14 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors flex-shrink-0">
                         <Plus className="w-5 h-5 text-slate-400" />
                         <input type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
                       </label>
