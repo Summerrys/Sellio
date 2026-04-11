@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowRight, ArrowLeft, QrCode, Table2, Plus, Trash2, Download } from 'lucide-react';
+import { ArrowRight, ArrowLeft, QrCode, Table2, Plus, Trash2, Download, Edit2 } from 'lucide-react';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 import QR from 'qrcode';
@@ -300,18 +300,27 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                         </div>
                       </div>
                     ) : (
-                      <div className="flex flex-col gap-1 bg-white rounded-lg p-2.5 border-2 border-slate-200 shadow-sm group hover:border-slate-400 hover:shadow-md hover:scale-105 transition-all cursor-pointer">
-                        <div className="flex items-center justify-between" onClick={() => startEdit(t)}>
+                      <div className="flex flex-col gap-1 bg-white rounded-lg p-2.5 border-2 border-slate-200 shadow-sm group hover:border-slate-400 hover:shadow-md hover:scale-105 transition-all">
+                        <div className="flex items-center justify-between">
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-semibold text-slate-700 truncate">{t.label}</p>
                             <p className="text-xs text-slate-500">{t.pax || 2} pax</p>
                           </div>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); removeTable(t.id); }}
-                            className="text-slate-300 hover:text-red-500 transition-colors ml-1 flex-shrink-0"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex gap-1 flex-shrink-0 ml-1">
+                            <button
+                              onClick={() => startEdit(t)}
+                              className="text-slate-400 hover:text-blue-500 transition-colors p-1"
+                              title="Edit table"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => removeTable(t.id)}
+                              className="text-slate-300 hover:text-red-500 transition-colors p-1"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                         {setupQr && qrCodes[t.id] && (
                           <button
