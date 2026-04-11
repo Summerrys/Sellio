@@ -3,36 +3,10 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowRight, ArrowLeft, QrCode, Table2, ScanLine, Package, Plus, Trash2, Check } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ArrowRight, ArrowLeft, QrCode, Table2, Plus, Trash2 } from 'lucide-react';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
-
-const SETUP_MODES = [
-  {
-    id: 'tables_qr',
-    icon: QrCode,
-    label: 'Tables with QR Codes',
-    desc: 'Customers scan QR at their table to order',
-  },
-  {
-    id: 'tables_only',
-    icon: Table2,
-    label: 'Tables, No QR Codes',
-    desc: 'Physical menus or staff takes orders at table',
-  },
-  {
-    id: 'qr_only',
-    icon: ScanLine,
-    label: 'QR Code Only (No Tables)',
-    desc: 'Counter / takeaway — one QR for all orders',
-  },
-  {
-    id: 'none',
-    icon: Package,
-    label: 'No Tables or QR Codes',
-    desc: 'Skip this step, set up later',
-  },
-];
 
 function generateDefaultTables(count, prefix) {
   return Array.from({ length: count }, (_, i) => ({
@@ -42,7 +16,8 @@ function generateDefaultTables(count, prefix) {
 }
 
 export default function Step4TablesQR({ formData, updateFormData, nextStep, prevStep }) {
-  const [mode, setMode] = useState(formData.tableSetupMode || null);
+  const [setupTables, setSetupTables] = useState(formData.tables && formData.tables.length > 0);
+  const [setupQr, setSetupQr] = useState(!!formData.singleQrLabel);
   const [tables, setTables] = useState(formData.tables || []);
   const [tableCount, setTableCount] = useState('');
   const [tablePrefix, setTablePrefix] = useState('Table');
@@ -65,11 +40,6 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const themeColor = chosenColor || 'linear-gradient(to right, #3b82f6, #9333ea)';
   const { primary: primaryColor } = getThemeCSSColors(formData);
 
-  const handleModeSelect = (m) => {
-    setMode(m);
-    if (m === 'none' || m === 'qr_only') setTables([]);
-  };
-
   const bulkAdd = () => {
     const n = parseInt(tableCount);
     if (!n || n < 1) return;
@@ -89,60 +59,50 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const handleSubmit = () => {
     updateFormData({
       ...formData,
-      tableSetupMode: mode,
-      tables: mode === 'tables_qr' || mode === 'tables_only' ? tables : [],
-      singleQrLabel: mode === 'qr_only' ? qrLabel : null,
+      tables: setupTables ? tables : [],
+      singleQrLabel: setupQr ? qrLabel : null,
     });
     nextStep();
   };
 
-  const canContinue = mode === 'none' || mode === 'qr_only' || (mode && tables.length > 0);
+  const canContinue = (!setupTables || tables.length > 0) && (!setupQr || qrLabel.trim());
 
   return (
     <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
-      <div className="text-center mb-5">
+      <div className="text-center mb-6">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: themeColor }}>
           <QrCode className="w-5 h-5 text-white" />
         </div>
         <h2 className="text-xl font-bold text-slate-900 mb-1">Tables & QR Codes</h2>
-        <p className="text-xs text-slate-500">Choose how customers will interact with your ordering system.</p>
+        <p className="text-xs text-slate-500">Choose what you'd like to set up.</p>
       </div>
 
-      {/* Mode Selection */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
-        {SETUP_MODES.map(({ id, icon: Icon, label, desc }) => {
-          const selected = mode === id;
-          return (
-            <button
-              key={id}
-              onClick={() => handleModeSelect(id)}
-              className={`flex items-start gap-3 p-3 rounded-xl border-2 text-left transition-all ${
-                selected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300 bg-white'
-              }`}
-              style={selected ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}}
-            >
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-                style={{ background: selected ? themeColor : '#f1f5f9' }}>
-                <Icon className="w-4 h-4" style={{ color: selected ? '#fff' : '#64748b' }} />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-800">{label}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
-              </div>
-              {selected && (
-                <div className="ml-auto flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: themeColor }}>
-                  <Check className="w-3 h-3 text-white" />
-                </div>
-              )}
-            </button>
-          );
-        })}
+      {/* Feature checkboxes */}
+      <div className="space-y-3 mb-6">
+        <div className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors"
+          onClick={() => setSetupTables(!setupTables)}>
+          <Checkbox checked={setupTables} onChange={(checked) => setSetupTables(checked)} />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-slate-900">Set up Tables</p>
+            <p className="text-xs text-slate-500">Create physical or virtual tables for your venue</p>
+          </div>
+          {setupTables && <Table2 className="w-5 h-5 text-slate-400" />}
+        </div>
+
+        <div className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors"
+          onClick={() => setSetupQr(!setupQr)}>
+          <Checkbox checked={setupQr} onChange={(checked) => setSetupQr(checked)} />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-slate-900">Set up QR Code(s)</p>
+            <p className="text-xs text-slate-500">Generate scannable QR codes for ordering</p>
+          </div>
+          {setupQr && <QrCode className="w-5 h-5 text-slate-400" />}
+        </div>
       </div>
 
       {/* Tables setup */}
-      {(mode === 'tables_qr' || mode === 'tables_only') && (
-        <div className="space-y-4 mb-5">
-          {/* Bulk generate */}
+      {setupTables && (
+        <div className="space-y-4 mb-6 pb-6 border-b border-slate-200">
           <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
             <Label className="text-xs font-semibold text-slate-700 mb-2 block">Quick Generate Tables</Label>
             <div className="flex gap-2 flex-wrap">
@@ -172,7 +132,6 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
             </div>
           </div>
 
-          {/* Add single */}
           <div className="bg-white rounded-xl p-3 border border-slate-200">
             <Label className="text-xs font-semibold text-slate-700 mb-2 block">Add Individual Table / Zone</Label>
             <div className="flex gap-2">
@@ -194,18 +153,13 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
             </div>
           </div>
 
-          {/* Table list */}
           {tables.length > 0 && (
             <div className="bg-white rounded-xl border border-slate-200 p-3">
               <p className="text-xs font-semibold text-slate-700 mb-2">{tables.length} table{tables.length > 1 ? 's' : ''} added</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                 {tables.map((t) => (
                   <div key={t.id} className="flex items-center justify-between bg-slate-50 rounded-lg px-2.5 py-1.5 border border-slate-100 group">
-                    <div className="flex items-center gap-1.5">
-                      {mode === 'tables_qr' && <QrCode className="w-3 h-3 text-slate-400" />}
-                      {mode === 'tables_only' && <Table2 className="w-3 h-3 text-slate-400" />}
-                      <span className="text-xs font-medium text-slate-700 truncate">{t.label}</span>
-                    </div>
+                    <span className="text-xs font-medium text-slate-700 truncate">{t.label}</span>
                     <button
                       onClick={() => removeTable(t.id)}
                       className="text-slate-300 hover:text-red-500 transition-colors ml-1 opacity-0 group-hover:opacity-100"
@@ -234,34 +188,32 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
         </div>
       )}
 
-      {/* QR Only setup */}
-      {mode === 'qr_only' && (
-        <div className="mb-5 bg-slate-50 rounded-xl p-3 border border-slate-200">
+      {/* QR Code setup */}
+      {setupQr && (
+        <div className="mb-6 bg-slate-50 rounded-xl p-4 border border-slate-200">
           <Label className="text-xs font-semibold text-slate-700 mb-2 block">QR Code Label</Label>
           <Input
             value={qrLabel}
             onChange={(e) => setQrLabel(e.target.value)}
             placeholder="e.g. Counter, Takeaway"
-            className="h-9 text-sm"
+            className="h-9 text-sm mb-3"
           />
-          <p className="text-xs text-slate-500 mt-1.5">This label will appear on your generated QR code.</p>
-          <div className="mt-3 flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ background: themeColor }}>
+          <p className="text-xs text-slate-500 mb-3">This label will appear on your generated QR code.</p>
+          <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200">
+            <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: themeColor }}>
               <QrCode className="w-6 h-6 text-white" />
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-800">{qrLabel || 'Counter'}</p>
-              <p className="text-xs text-slate-500">1 QR code will be generated for all orders</p>
+              <p className="text-xs text-slate-500">1 QR code will be generated</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* None selected hint */}
-      {mode === 'none' && (
-        <div className="mb-5 bg-slate-50 rounded-xl p-3 border border-slate-200 text-center">
-          <p className="text-sm text-slate-600">No tables or QR codes will be set up now.</p>
-          <p className="text-xs text-slate-400 mt-1">You can configure this anytime from the Tables & QR section.</p>
+      {!setupTables && !setupQr && (
+        <div className="mb-6 text-center p-4 text-slate-500">
+          <p className="text-sm">Check the options above to set up tables and/or QR codes.</p>
         </div>
       )}
 
@@ -271,7 +223,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
         </Button>
         <Button
           type="button"
-          onClick={() => { updateFormData({ ...formData, tableSetupMode: null, tables: [], singleQrLabel: null }); nextStep(); }}
+          onClick={() => { updateFormData({ ...formData, tables: [], singleQrLabel: null }); nextStep(); }}
           variant="outline"
           className="h-10 sm:h-11 px-3 sm:px-4 text-xs sm:text-sm text-slate-500"
         >
