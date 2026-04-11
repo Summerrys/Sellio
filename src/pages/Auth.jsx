@@ -29,11 +29,12 @@ export default function Auth() {
 
       try {
         const res = await base44.functions.invoke('getSupabaseConfig', {});
-        googleClientIdRef.current = res.data.googleClientId || res.googleClientId;
-        if (googleClientIdRef.current) {
+        const clientId = res.data?.googleClientId || res?.googleClientId;
+        if (clientId) {
+          googleClientIdRef.current = clientId;
           setGoogleReady(true);
         } else {
-          console.error('No Google Client ID found in response');
+          console.error('No Google Client ID in response:', res);
         }
       } catch (err) {
         console.error('Failed to load Google config:', err);
