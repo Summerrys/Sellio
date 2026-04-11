@@ -193,12 +193,13 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              className={`relative w-16 h-16 rounded-lg overflow-hidden border-2 group cursor-grab ${snapshot.isDragging ? 'shadow-lg scale-105' : ''} ${idx === 0 ? 'border-blue-400' : 'border-slate-200'}`}
+                              className={`relative w-16 h-16 rounded-lg overflow-hidden border-2 group cursor-grab ${snapshot.isDragging ? 'shadow-lg scale-105' : ''} border-slate-200`}
+                              style={idx === 0 ? { borderColor: primaryColor } : {}}
                               onClick={() => setEditingImageIdx(idx)}
                             >
                               <img src={src} alt="preview" className="w-full h-full object-cover" />
                               {idx === 0 && (
-                                <div className="absolute bottom-0 left-0 right-0 bg-blue-500/80 text-white text-[9px] text-center py-0.5 font-medium">Cover</div>
+                                <div className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium" style={{ background: themeColor }}>Cover</div>
                               )}
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                                 <Pencil className="w-4 h-4 text-white" />
