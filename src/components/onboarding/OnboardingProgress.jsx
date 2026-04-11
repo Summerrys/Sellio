@@ -135,6 +135,7 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
                     transition={{
                       duration: 0.8,
                       repeat: Infinity,
+                      repeatDelay: 0.5,
                       ease: 'easeOut'
                     }}
                   />
