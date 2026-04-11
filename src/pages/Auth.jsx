@@ -139,7 +139,6 @@ export default function Auth() {
           role: 'admin',
           is_active: true,
           onboarding_completed: false,
-          created_at: now,
           last_login_at: now,
         });
       }
@@ -151,7 +150,6 @@ export default function Auth() {
         avatar_url: user.user_metadata?.avatar_url,
         provider: 'google',
         onboarding_completed: false,
-        created_at: existingAppUser?.[0]?.created_at || now,
         last_login_at: now,
       };
       
@@ -195,40 +193,29 @@ export default function Auth() {
         ? { action: 'login', phone: fullPhone, password: formData.password }
         : { action: 'signup', phone: fullPhone, password: formData.password, full_name: formData.full_name, email: formData.email };
 
-      try {
-        const response = await base44.functions.invoke('authProxy', payload);
-        const data = response.data;
+      const response = await base44.functions.invoke('authProxy', payload);
+      const data = response.data;
 
-        if (data.success) {
-          localStorage.setItem('app_user', JSON.stringify(data.user));
-          toast.custom((t) => (
-            <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-lg">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-                <Check className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-green-900">{isLogin ? 'Welcome back!' : 'Account created!'}</p>
-                <p className="text-xs text-green-700">You're all set. Redirecting now...</p>
-              </div>
+      if (data.success) {
+        localStorage.setItem('app_user', JSON.stringify(data.user));
+        toast.custom((t) => (
+          <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-lg">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+              <Check className="w-5 h-5 text-white" />
             </div>
-          ));
-          setTimeout(() => {
-            window.location.href = createPageUrl(data.user?.onboarding_completed ? 'Dashboard' : 'Onboarding');
-          }, 500);
-        } else {
-          toast.error(data.error || 'Something went wrong');
-        }
-      } catch (invokeError) {
-        const errorData = invokeError.response?.data;
-        if (errorData?.error) {
-          toast.error(errorData.error);
-        } else if (invokeError.response?.status === 400) {
-          toast.error('Invalid request. Please check your details.');
-        } else if (invokeError.response?.status === 401) {
-          toast.error('Invalid credentials. Please try again.');
-        } else {
-          toast.error(invokeError.message || 'An error occurred');
-        }
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-green-900">{isLogin ? 'Welcome back!' : 'Account created!'}</p>
+              <p className="text-xs text-green-700">You're all set. Redirecting now...</p>
+            </div>
+          </div>
+        ));
+        setTimeout(() => {
+          window.location.href = createPageUrl(data.user?.onboarding_completed ? 'Dashboard' : 'Onboarding');
+        }, 500);
+      } else if (data.error) {
+        toast.error(data.error);
+      } else {
+        toast.error('Something went wrong');
       }
     } catch (error) {
       console.error('Auth error:', error);
