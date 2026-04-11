@@ -40,7 +40,6 @@ export default function Onboarding() {
         const parsed = JSON.parse(saved);
         setFormData(parsed.formData || formData);
         setCurrentStep(parsed.currentStep || 1);
-        setCompletedSteps(parsed.completedSteps || []);
       } catch (e) {
         console.error('Failed to parse saved onboarding state');
       }
@@ -49,8 +48,8 @@ export default function Onboarding() {
 
   // Save to localStorage whenever state changes
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ formData, currentStep, completedSteps }));
-  }, [formData, currentStep, completedSteps]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ formData, currentStep }));
+  }, [formData, currentStep]);
 
   const updateFormData = (data) => {
     setFormData(prev => ({ ...prev, ...data }));
