@@ -300,7 +300,18 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                         </div>
                       </div>
                     ) : (
-                      <div className="flex flex-col gap-1 bg-white rounded-lg p-2.5 border-2 border-slate-200 shadow-sm group hover:border-slate-400 hover:shadow-md transition-all cursor-pointer" onClick={() => startEdit(t)}>
+                      <div 
+                        className="flex flex-col gap-1 bg-white rounded-lg p-2.5 border-2 border-slate-200 shadow-sm group transition-all cursor-pointer" 
+                        onClick={() => startEdit(t)}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = primaryColor;
+                          e.currentTarget.style.boxShadow = `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 0 0 3px ${primaryColor}20`;
+                        }} 
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#e2e8f0';
+                          e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+                        }}
+                      >
                         <div className="flex items-center justify-between">
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-semibold text-slate-700 truncate">{t.label}</p>
@@ -322,18 +333,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                             </button>
                           </div>
                         </div>
-                        {setupQr && qrCodes[t.id] && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedQR(t);
-                              setQRModalOpen(true);
-                            }}
-                            className="text-xs px-2 py-1.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors font-medium text-center"
-                          >
-                            View QR
-                          </button>
-                        )}
+
                       </div>
                     )}
                   </div>
