@@ -35,18 +35,18 @@ export default function Auth() {
     setGoogleLoading(true);
     const clientId = googleClientIdRef.current;
 
+    // Wait for Google Script to load if not ready
+    let attempts = 0;
+    while ((!window.google || !clientId) && attempts < 10) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+
     if (!window.google || !clientId) {
       toast.error('Google Sign-In not ready. Please try again.');
       setGoogleLoading(false);
       return;
     }
-
-    // Generate nonce for security
-    const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
-    const encoder = new TextEncoder();
-    const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(nonce));
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashedNonce = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
     window.google.accounts.id.initialize({
       client_id: clientId,
