@@ -300,7 +300,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                         </div>
                       </div>
                     ) : (
-                      <div className="flex flex-col gap-1 bg-white rounded-lg p-2.5 border-2 border-slate-200 shadow-sm group hover:border-slate-400 hover:shadow-md hover:scale-105 transition-all cursor-pointer" onClick={() => startEdit(t)}>
+                      <div className="flex flex-col gap-1 bg-white rounded-lg p-2.5 border-2 border-slate-200 shadow-sm group hover:border-slate-400 hover:shadow-md transition-all cursor-pointer" onClick={() => startEdit(t)}>
                         <div className="flex items-center justify-between">
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-semibold text-slate-700 truncate">{t.label}</p>
