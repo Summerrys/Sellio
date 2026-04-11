@@ -29,29 +29,24 @@ export default function Auth() {
       document.body.appendChild(script);
 
       try {
-         const clientId = window.GOOGLE_CLIENT_ID;
-         if (!clientId) {
-          // Fallback: fetch from function
-          const res = await base44.functions.invoke('getSupabaseConfig', {});
-          const id = res.data?.googleClientId || res?.googleClientId;
-          if (id) {
-            googleClientIdRef.current = id;
-            setGoogleReady(true);
-          } else {
-            console.error('No Google Client ID found');
-          }
-        } else {
-          googleClientIdRef.current = clientId;
+        // Fetch from backend function
+        const res = await base44.functions.invoke('getSupabaseConfig', {});
+        const id = res.data?.googleClientId || res?.googleClientId || res.data?.google_client_id;
+
+        if (id) {
+          googleClientIdRef.current = id;
+          console.log('Google Client ID loaded successfully');
           setGoogleReady(true);
+        } else {
+          throw new Error('No Google Client ID in response');
         }
       } catch (err) {
         console.error('Failed to load Google config:', err);
         // Try hardcoded value as last resort
         const hardcodedId = '390618701573-0n3emgl2e2v8redsf2d5dl28fikknl1h.apps.googleusercontent.com';
-        if (hardcodedId) {
-          googleClientIdRef.current = hardcodedId;
-          setGoogleReady(true);
-        }
+        googleClientIdRef.current = hardcodedId;
+        console.log('Using hardcoded Google Client ID');
+        setGoogleReady(true);
       }
     };
 
@@ -152,7 +147,7 @@ export default function Auth() {
         .eq('email', user.email)
         .neq('auth_provider', 'google')
         .limit(1);
-      
+
       if (phoneUser && phoneUser.length > 0) {
         toast.error('This email is already registered with a phone/password account. Please log in using your phone number.');
         setGoogleLoading(false);
@@ -160,14 +155,14 @@ export default function Auth() {
       }
 
       const now = new Date(Date.now() + 8 * 3600 * 1000).toISOString().replace('Z', '').replace('T', ' ').substring(0, 23);
-      
+
       // Upsert into app_users to track Google users and last login
       const { data: existingAppUser } = await supabase
         .from('app_users')
         .select('id, created_at')
         .eq('email', user.email)
         .limit(1);
-      
+
       if (existingAppUser && existingAppUser.length > 0) {
         await supabase.from('app_users').update({ last_login_at: now }).eq('id', existingAppUser[0].id);
       } else {
@@ -191,14 +186,14 @@ export default function Auth() {
         onboarding_completed: false,
         last_login_at: now,
       };
-      
+
       const { data: existing } = await supabase.from('tenant_users').select('*').eq('email', user.email).single();
       if (existing) {
         appUser.onboarding_completed = true;
         appUser.role = existing.role;
         appUser.tenant_id = existing.tenant_id;
       }
-      
+
       localStorage.setItem('app_user', JSON.stringify(appUser));
       window.location.href = appUser.onboarding_completed ? '/Dashboard' : '/Onboarding';
     } catch (err) {
@@ -221,22 +216,22 @@ export default function Auth() {
     e.preventDefault();
     const cleanPhone = formData.phone.replace(/^0+/, '');
     if (!selectedCountry.validate(cleanPhone)) {
-    toast.error(`Invalid phone number for ${selectedCountry.name}. Expected: ${selectedCountry.hint}`);
-    return;
+      toast.error(`Invalid phone number for ${selectedCountry.name}. Expected: ${selectedCountry.hint}`);
+      return;
     }
     setLoading(true);
     try {
-    const fullPhone = selectedCountry.code + formData.phone.replace(/^0+/, '');
-    console.log('Attempting login/signup with phone:', fullPhone);
+      const fullPhone = selectedCountry.code + formData.phone.replace(/^0+/, '');
+      console.log('Attempting login/signup with phone:', fullPhone);
 
-    const payload = isLogin
-      ? { action: 'login', phone: fullPhone, password: formData.password }
-      : { action: 'signup', phone: fullPhone, password: formData.password, full_name: formData.full_name, email: formData.email };
+      const payload = isLogin
+        ? { action: 'login', phone: fullPhone, password: formData.password }
+        : { action: 'signup', phone: fullPhone, password: formData.password, full_name: formData.full_name, email: formData.email };
 
-    console.log('Sending payload:', payload);
-    const response = await base44.functions.invoke('authProxy', payload);
-    const data = response.data;
-    console.log('Auth response:', data, 'Status:', response.status);
+      console.log('Sending payload:', payload);
+      const response = await base44.functions.invoke('authProxy', payload);
+      const data = response.data;
+      console.log('Auth response:', data, 'Status:', response.status);
 
       if (data && data.success) {
         localStorage.setItem('app_user', JSON.stringify(data.user));
@@ -259,17 +254,18 @@ export default function Auth() {
       } else if (data && data.message) {
         toast.error(data.message);
       } else {
-       toast.error('Login failed. Please check your credentials.');
+        console.error('Unexpected response structure:', data);
+        toast.error('Login failed. Please try again.');
       }
-      } catch (error) {
+    } catch (error) {
       console.error('Auth error:', error);
       const errorMsg = error?.response?.data?.error || error?.response?.data?.message || error?.message || 'An unexpected error occurred';
       console.error('Error details:', error?.response?.data);
       toast.error(errorMsg);
-      } finally {
+    } finally {
       setLoading(false);
-      }
-      };
+    }
+  };
 
   return (
     <>
