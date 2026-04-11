@@ -29,8 +29,8 @@ export default function Auth() {
       document.body.appendChild(script);
 
       try {
-        const clientId = Deno.env.get('GOOGLE_CLIENT_ID') || window.GOOGLE_CLIENT_ID;
-        if (!clientId) {
+         const clientId = window.GOOGLE_CLIENT_ID;
+         if (!clientId) {
           // Fallback: fetch from function
           const res = await base44.functions.invoke('getSupabaseConfig', {});
           const id = res.data?.googleClientId || res?.googleClientId;
