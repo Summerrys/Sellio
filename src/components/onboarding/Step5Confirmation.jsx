@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Rocket, Loader2, Check } from 'lucide-react';
+import { ArrowLeft, Rocket, Loader2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
@@ -215,108 +215,100 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   };
 
   return (
-    <div className="bg-gradient-to-b from-slate-50 to-white p-6 max-w-2xl">
-      <div>
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-900 flex items-center gap-3">✨ Setup Checklist</h1>
+    <Card className="p-4 sm:p-6 bg-white border-0 shadow-lg w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
+      {/* Header */}
+      <div className="text-center mb-6">
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: themeColor }}>
+          <Rocket className="w-8 h-8 text-white" />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 mb-1">Ready to Launch</h2>
+        <p className="text-sm text-slate-500">Your business configuration is complete</p>
+      </div>
+
+      {/* Summary Grid - Two Columns */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        {/* Business Info */}
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 border border-blue-400 shadow-sm hover:shadow-md transition-shadow">
+          <div className="text-xs font-semibold text-blue-100 uppercase tracking-wide mb-2">Business</div>
+          <p className="text-sm font-bold text-white truncate">{formData.businessName}</p>
+          <p className="text-xs text-blue-100 capitalize">{formData.businessType}</p>
         </div>
 
-        {/* Checklist Items */}
-        <div className="bg-slate-100 rounded-2xl p-8 mb-8">
-          <div className="space-y-3">
-            {/* Business Profile */}
-            <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 flex items-center gap-4">
-              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-green-600 flex items-center justify-center">
-                <Check className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-lg font-semibold text-slate-900">Business Profile</span>
-            </div>
-
-            {/* Branch Setup */}
-            <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 flex items-center gap-4">
-              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-green-600 flex items-center justify-center">
-                <Check className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-lg font-semibold text-slate-900">Branch Setup</span>
-            </div>
-
-            {/* Menu/Services */}
-            <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-green-600 flex items-center justify-center">
-                  <Check className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-lg font-semibold text-slate-900">Menu/Services</span>
-              </div>
-              <span className="text-sm text-slate-500 font-medium">Optional</span>
-            </div>
-
-            {/* Tables & QR Codes */}
-            <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-green-600 flex items-center justify-center">
-                  <Check className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-lg font-semibold text-slate-900">Tables & QR Codes</span>
-              </div>
-              <span className="text-sm text-slate-500 font-medium">Optional</span>
-            </div>
-          </div>
+        {/* Location & Currency */}
+        <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-4 border border-emerald-400 shadow-sm hover:shadow-md transition-shadow">
+          <div className="text-xs font-semibold text-emerald-100 uppercase tracking-wide mb-2">Setup</div>
+          <p className="text-sm font-bold text-white">{formData.country}</p>
+          <p className="text-xs text-emerald-100">{formData.currency}</p>
         </div>
 
-        {/* What Happens Next */}
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-8 mb-8">
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">What happens next?</h2>
-          <ul className="space-y-3">
-            <li className="flex items-start gap-3 text-slate-700">
-              <span className="text-blue-600 font-bold text-lg mt-0">✓</span>
-              <span className="text-base">Access your dashboard to start taking orders and bookings</span>
-            </li>
-            <li className="flex items-start gap-3 text-slate-700">
-              <span className="text-blue-600 font-bold text-lg mt-0">✓</span>
-              <span className="text-base">Print QR codes for tables (if applicable)</span>
-            </li>
-            <li className="flex items-start gap-3 text-slate-700">
-              <span className="text-blue-600 font-bold text-lg mt-0">✓</span>
-              <span className="text-base">Invite your team members to collaborate</span>
-            </li>
-            <li className="flex items-start gap-3 text-slate-700">
-              <span className="text-blue-600 font-bold text-lg mt-0">✓</span>
-              <span className="text-base">Customize settings and branding anytime</span>
-            </li>
-          </ul>
+        {/* Theme */}
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 border border-purple-400 shadow-sm hover:shadow-md transition-shadow">
+          <div className="text-xs font-semibold text-purple-100 uppercase tracking-wide mb-2">Theme</div>
+          <p className="text-sm font-bold text-white">{formData.theme || 'Custom'}</p>
+          <p className="text-xs text-purple-100">Brand colors set</p>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-4 justify-center">
-          <Button
-            onClick={prevStep}
-            variant="outline"
-            className="h-12 px-8 gap-2"
-            disabled={isLaunching}
-          >
-            <ArrowLeft className="w-4 h-4" /> Back
-          </Button>
-          <Button
-            onClick={handleLaunch}
-            disabled={isLaunching}
-            className="h-12 px-8 text-base font-semibold gap-2 text-white"
-            style={{ background: themeColor }}
-          >
-            {isLaunching ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Going Live...
-              </>
-            ) : (
-              <>
-                🚀 Go Live!
-              </>
-            )}
-          </Button>
+        {/* Tax */}
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-4 border border-orange-400 shadow-sm hover:shadow-md transition-shadow">
+          <div className="text-xs font-semibold text-orange-100 uppercase tracking-wide mb-2">Tax</div>
+          <p className="text-sm font-bold text-white">{taxLabel}: {taxRate}%</p>
+          <p className="text-xs text-orange-100">{formData.country === 'Malaysia' ? 'SST Fixed' : formData.country === 'Singapore' ? 'GST Standard' : 'Custom rate'}</p>
         </div>
       </div>
-    </div>
+
+      {/* Products & Tables Summary */}
+      <div className="space-y-2 mb-6">
+        {formData.products?.length > 0 && (
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between shadow-sm">
+            <span className="text-sm font-semibold text-blue-900">📦 {formData.products.length} Product{formData.products.length > 1 ? 's' : ''}</span>
+            <span className="text-xs font-medium text-blue-700">Menu ready</span>
+          </div>
+        )}
+        
+        {(formData.tables?.length > 0 || formData.tableCount > 0) && (
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between shadow-sm">
+            <span className="text-sm font-semibold text-amber-900">🍽️ {formData.tableCount || formData.tables?.length || 0} Table{(formData.tableCount || formData.tables?.length) > 1 ? 's' : ''}</span>
+            <span className="text-xs font-medium text-amber-700">QR ready</span>
+          </div>
+        )}
+
+        {formData.logoUrl && (
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-3 flex items-center justify-between shadow-sm">
+            <span className="text-sm font-semibold text-purple-900">🎨 Logo</span>
+            <span className="text-xs font-medium text-purple-700">Uploaded</span>
+          </div>
+        )}
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-3">
+        <Button
+          onClick={prevStep}
+          variant="outline"
+          className="h-11 px-4 gap-2"
+          disabled={isLaunching}
+        >
+          <ArrowLeft className="w-4 h-4" /> Back
+        </Button>
+        <Button
+          onClick={handleLaunch}
+          disabled={isLaunching}
+          className="flex-1 h-11 hover:opacity-90 text-base font-semibold gap-2 text-white"
+          style={{ background: themeColor }}
+        >
+          {isLaunching ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Launching...
+            </>
+          ) : (
+            <>
+              <Rocket className="w-5 h-5" />
+              Launch Business
+            </>
+          )}
+        </Button>
+      </div>
+    </Card>
   );
 }
