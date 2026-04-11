@@ -213,17 +213,17 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const canContinue = (setupTables && tables.length > 0) || (setupQr && !setupTables) || (!setupTables && !setupQr);
 
   return (
-    <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
-      <div className="text-center mb-6">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: themeColor }}>
+    <Card className="p-4 sm:p-6 bg-white border-0 shadow-lg w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
+      <div className="text-center mb-4">
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-2" style={{ background: themeColor }}>
           <QrCode className="w-5 h-5 text-white" />
         </div>
-        <h2 className="text-xl font-bold text-slate-900 mb-1">Tables & QR Codes</h2>
+        <h2 className="text-lg font-bold text-slate-900 mb-0.5">Tables & QR Codes</h2>
         <p className="text-xs text-slate-500">Choose what you'd like to set up.</p>
       </div>
 
       {/* Feature checkboxes */}
-      <div className="space-y-3 mb-6">
+      <div className="space-y-2 mb-4">
         <div className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors"
           onClick={() => setSetupTables(!setupTables)}>
           <Checkbox checked={setupTables} onChange={(checked) => setSetupTables(checked)} />
@@ -247,8 +247,8 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
 
       {/* Tables setup */}
       {setupTables && (
-        <div className="space-y-4 mb-6 pb-6 border-b border-slate-200">
-          <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+        <div className="space-y-3 mb-4 pb-4 border-b border-slate-200">
+          <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-200">
             <Label className="text-xs font-semibold text-slate-700 mb-2 block">Quick Generate Tables</Label>
             <div className="flex flex-col gap-2">
               <div className="flex gap-2">
@@ -288,7 +288,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-3 border border-slate-200">
+          <div className="bg-white rounded-lg p-2.5 border border-slate-200">
             <Label className="text-xs font-semibold text-slate-700 mb-2 block">Add Individual Table / Zone</Label>
             <div className="flex gap-2 flex-wrap">
               <Input
@@ -319,8 +319,8 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
           </div>
 
           {tables.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200 p-3">
-              <p className="text-xs font-semibold text-slate-700 mb-2">{tables.length} table{tables.length > 1 ? 's' : ''} added</p>
+           <div className="bg-white rounded-lg border border-slate-200 p-2.5">
+             <p className="text-xs font-semibold text-slate-700 mb-2">{tables.length} table{tables.length > 1 ? 's' : ''} added</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                 {tables.map((t) => (
                   <div key={t.id}>
@@ -447,9 +447,9 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
 
       {/* Single QR Code setup */}
       {setupQr && !setupTables && (
-        <div className="space-y-4 mb-6 pb-6 border-b border-slate-200">
-          <div className="bg-white rounded-xl p-4 border border-slate-200">
-            <Label className="text-xs font-semibold text-slate-700 mb-3 block">Online Menu QR Code</Label>
+       <div className="space-y-3 mb-4 pb-4 border-b border-slate-200">
+         <div className="bg-white rounded-lg p-3 border border-slate-200">
+           <Label className="text-xs font-semibold text-slate-700 mb-2 block">Online Menu QR Code</Label>
             <p className="text-xs text-slate-500 mb-3">Generate a single QR code for your online ordering menu</p>
             
             <div className="flex gap-2 mb-4">
