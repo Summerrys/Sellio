@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, ArrowLeft, Utensils, Layers, Sparkles, Upload, Menu, X, Pencil, Trash2 } from 'lucide-react';
@@ -169,16 +170,48 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
           <div>
             <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Images (optional)</Label>
             {imagePreviews.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-3">
-                {imagePreviews.map((src, idx) => (
-                  <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-slate-200 group cursor-pointer" onClick={() => setEditingImageIdx(idx)}>
-                    <img src={src} alt="preview" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                      <Pencil className="w-4 h-4 text-white" />
+              <DragDropContext onDragEnd={(result) => {
+                if (!result.destination) return;
+                const from = result.source.index;
+                const to = result.destination.index;
+                const newPreviews = [...imagePreviews];
+                const newFiles = [...imageFiles];
+                const [movedPreview] = newPreviews.splice(from, 1);
+                const [movedFile] = newFiles.splice(from, 1);
+                newPreviews.splice(to, 0, movedPreview);
+                newFiles.splice(to, 0, movedFile);
+                setImagePreviews(newPreviews);
+                setImageFiles(newFiles);
+              }}>
+                <Droppable droppableId="images" direction="horizontal">
+                  {(provided) => (
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-wrap gap-2 mb-3">
+                      {imagePreviews.map((src, idx) => (
+                        <Draggable key={src + idx} draggableId={`img-${idx}`} index={idx}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              className={`relative w-16 h-16 rounded-lg overflow-hidden border-2 group cursor-grab ${snapshot.isDragging ? 'shadow-lg scale-105' : ''} ${idx === 0 ? 'border-blue-400' : 'border-slate-200'}`}
+                              onClick={() => setEditingImageIdx(idx)}
+                            >
+                              <img src={src} alt="preview" className="w-full h-full object-cover" />
+                              {idx === 0 && (
+                                <div className="absolute bottom-0 left-0 right-0 bg-blue-500/80 text-white text-[9px] text-center py-0.5 font-medium">Cover</div>
+                              )}
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                <Pencil className="w-4 h-4 text-white" />
+                              </div>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
                     </div>
-                  </div>
-                ))}
-              </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
             )}
             <label className="border-2 border-dashed border-slate-300 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors w-full min-w-0">
               <Upload className="w-5 h-5 text-slate-400 mb-1" />
