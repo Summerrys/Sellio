@@ -20,7 +20,7 @@ function generateDefaultTables(count, prefix, pax = 2) {
 
 export default function Step4TablesQR({ formData, updateFormData, nextStep, prevStep }) {
   const [setupTables, setSetupTables] = useState(formData.tables && formData.tables.length > 0);
-  const [setupQr, setSetupQr] = useState(!!formData.singleQrLabel);
+  const [setupQr, setSetupQr] = useState(!!formData.singleQrLabel || false);
   const [tables, setTables] = useState(formData.tables || []);
   const [tableCount, setTableCount] = useState('');
   const [tablePrefix, setTablePrefix] = useState('Table');
@@ -33,6 +33,8 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const [qrCodes, setQrCodes] = useState({});
   const [selectedQR, setSelectedQR] = useState(null);
   const [qrModalOpen, setQRModalOpen] = useState(false);
+  const [singleQrLabel, setSingleQrLabel] = useState(formData.singleQrLabel || 'Online Menu');
+  const [singleQrGenerated, setSingleQrGenerated] = useState(!!formData.singleQrCode);
 
   useEffect(() => {
     if (formData.customPrimary && formData.customSecondary) {
@@ -68,10 +70,31 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
       }
     };
 
-    if (setupQr) {
+    if (setupQr && tables.length > 0) {
       generateQRCodes();
     }
   }, [tables, setupQr, qrCodes]);
+
+  // Generate single online menu QR
+  useEffect(() => {
+    const generateSingleQR = async () => {
+      if (setupQr && !setupTables && singleQrLabel) {
+        try {
+          const qrData = await QR.toDataURL(`${window.location.origin}/CustomerMenu`, {
+            width: 300,
+            margin: 2,
+            color: { dark: '#000000', light: '#ffffff' },
+          });
+          setQrCodes(prev => ({ ...prev, 'single': qrData }));
+          setSingleQrGenerated(true);
+        } catch (err) {
+          console.error('Single QR generation failed:', err);
+        }
+      }
+    };
+
+    generateSingleQR();
+  }, [setupQr, setupTables, singleQrLabel]);
 
   const chosenColor = formData?.theme ? (formData?.themeColors?.dark || formData?.customPrimary) : null;
   const themeColor = chosenColor || 'linear-gradient(to right, #3b82f6, #9333ea)';
@@ -145,15 +168,49 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
     });
   };
 
+  const handleDownloadSingleQR = () => {
+    const qrCode = qrCodes['single'];
+    if (qrCode) {
+      const link = document.createElement('a');
+      link.href = qrCode;
+      link.download = `${singleQrLabel.replace(/\s+/g, '_')}_QR.png`;
+      link.click();
+    }
+  };
+
+  const handlePrintSingleQR = () => {
+    const qrCode = qrCodes['single'];
+    if (qrCode) {
+      const printWindow = window.open();
+      printWindow.document.write(`
+        <html>
+          <head><title>${singleQrLabel}</title></head>
+          <body style="text-align:center;font-family:Arial">
+            <h2>${singleQrLabel}</h2>
+            <img src="${qrCode}" style="max-width:400px;margin:20px auto;" />
+            <p>Scan to access menu</p>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      setTimeout(() => printWindow.print(), 500);
+    }
+  };
+
   const handleSubmit = () => {
-    updateFormData({
+    const formUpdate = {
       ...formData,
       tables: setupTables ? tables : [],
-    });
+    };
+    if (setupQr && !setupTables) {
+      formUpdate.singleQrLabel = singleQrLabel;
+      formUpdate.singleQrCode = qrCodes['single'];
+    }
+    updateFormData(formUpdate);
     nextStep();
   };
 
-  const canContinue = !setupTables || tables.length > 0;
+  const canContinue = (setupTables && tables.length > 0) || (setupQr && !setupTables) || (!setupTables && !setupQr);
 
   return (
     <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
@@ -370,6 +427,48 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
       )}
 
 
+
+      {/* Single QR Code setup */}
+      {setupQr && !setupTables && (
+        <div className="space-y-4 mb-6 pb-6 border-b border-slate-200">
+          <div className="bg-white rounded-xl p-4 border border-slate-200">
+            <Label className="text-xs font-semibold text-slate-700 mb-3 block">Online Menu QR Code</Label>
+            <p className="text-xs text-slate-500 mb-3">Generate a single QR code for your online ordering menu</p>
+            
+            <div className="flex gap-2 mb-4">
+              <Input
+                value={singleQrLabel}
+                onChange={(e) => setSingleQrLabel(e.target.value)}
+                placeholder="e.g. Online Menu"
+                className="h-9 text-sm flex-1"
+              />
+            </div>
+
+            {singleQrGenerated && qrCodes['single'] && (
+              <div className="flex flex-col items-center gap-3 bg-slate-50 rounded-lg p-4">
+                <img src={qrCodes['single']} alt="QR Code" className="w-32 h-32" />
+                <p className="text-xs text-slate-500">{singleQrLabel}</p>
+                <div className="flex gap-2 w-full">
+                  <button
+                    onClick={handleDownloadSingleQR}
+                    className="flex-1 px-3 h-8 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors flex items-center gap-1 justify-center"
+                    style={{ background: themeColor }}
+                  >
+                    <Download className="w-3.5 h-3.5" /> Download
+                  </button>
+                  <button
+                    onClick={handlePrintSingleQR}
+                    className="flex-1 px-3 h-8 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
+                    style={{ background: themeColor }}
+                  >
+                    🖨️ Print
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {!setupTables && !setupQr && (
         <div className="mb-6 text-center p-4 text-slate-500">
