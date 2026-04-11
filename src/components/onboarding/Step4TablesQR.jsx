@@ -8,10 +8,11 @@ import { ArrowRight, ArrowLeft, QrCode, Table2, Plus, Trash2 } from 'lucide-reac
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 
-function generateDefaultTables(count, prefix) {
+function generateDefaultTables(count, prefix, pax = 2) {
   return Array.from({ length: count }, (_, i) => ({
     id: Date.now() + i,
     label: `${prefix} ${i + 1}`,
+    pax: parseInt(pax) || 2,
   }));
 }
 
@@ -21,7 +22,9 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const [tables, setTables] = useState(formData.tables || []);
   const [tableCount, setTableCount] = useState('');
   const [tablePrefix, setTablePrefix] = useState('Table');
+  const [tablePax, setTablePax] = useState('2');
   const [newLabel, setNewLabel] = useState('');
+  const [newPax, setNewPax] = useState('2');
   const [qrLabel, setQrLabel] = useState(formData.singleQrLabel || 'Counter');
 
   useEffect(() => {
@@ -43,15 +46,17 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const bulkAdd = () => {
     const n = parseInt(tableCount);
     if (!n || n < 1) return;
-    const generated = generateDefaultTables(n, tablePrefix.trim() || 'Table');
+    const generated = generateDefaultTables(n, tablePrefix.trim() || 'Table', tablePax);
     setTables(prev => [...prev, ...generated]);
     setTableCount('');
+    setTablePax('2');
   };
 
   const addSingle = () => {
     if (!newLabel.trim()) return;
-    setTables(prev => [...prev, { id: Date.now(), label: newLabel.trim() }]);
+    setTables(prev => [...prev, { id: Date.now(), label: newLabel.trim(), pax: parseInt(newPax) || 2 }]);
     setNewLabel('');
+    setNewPax('2');
   };
 
   const removeTable = (id) => setTables(prev => prev.filter(t => t.id !== id));
@@ -121,6 +126,15 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                 min="1"
                 max="100"
               />
+              <Input
+                type="number"
+                value={tablePax}
+                onChange={(e) => setTablePax(e.target.value)}
+                placeholder="Pax"
+                className="h-9 text-sm w-20"
+                min="1"
+                max="20"
+              />
               <button
                 onClick={bulkAdd}
                 disabled={!tableCount || parseInt(tableCount) < 1}
@@ -134,13 +148,22 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
 
           <div className="bg-white rounded-xl p-3 border border-slate-200">
             <Label className="text-xs font-semibold text-slate-700 mb-2 block">Add Individual Table / Zone</Label>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Input
                 value={newLabel}
                 onChange={(e) => setNewLabel(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && addSingle()}
                 placeholder="e.g. VIP Room, Bar Seat 1"
-                className="h-9 text-sm flex-1"
+                className="h-9 text-sm flex-1 min-w-[150px]"
+              />
+              <Input
+                type="number"
+                value={newPax}
+                onChange={(e) => setNewPax(e.target.value)}
+                placeholder="Pax"
+                className="h-9 text-sm w-20"
+                min="1"
+                max="20"
               />
               <button
                 onClick={addSingle}
@@ -159,7 +182,10 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                 {tables.map((t) => (
                   <div key={t.id} className="flex items-center justify-between bg-slate-50 rounded-lg px-2.5 py-1.5 border border-slate-100 group">
-                    <span className="text-xs font-medium text-slate-700 truncate">{t.label}</span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-slate-700 truncate">{t.label}</p>
+                      <p className="text-xs text-slate-400">{t.pax || 2} pax</p>
+                    </div>
                     <button
                       onClick={() => removeTable(t.id)}
                       className="text-slate-300 hover:text-red-500 transition-colors ml-1 opacity-0 group-hover:opacity-100"
