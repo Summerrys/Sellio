@@ -265,9 +265,9 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
           </div>
         )}
         
-        {formData.tableCount > 0 && (
+        {(formData.tables?.length > 0 || formData.tableCount > 0) && (
           <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between shadow-sm">
-            <span className="text-sm font-semibold text-amber-900">🍽️ {formData.tableCount} Table{formData.tableCount > 1 ? 's' : ''}</span>
+            <span className="text-sm font-semibold text-amber-900">🍽️ {formData.tableCount || formData.tables?.length || 0} Table{(formData.tableCount || formData.tables?.length) > 1 ? 's' : ''}</span>
             <span className="text-xs font-medium text-amber-700">QR ready</span>
           </div>
         )}
