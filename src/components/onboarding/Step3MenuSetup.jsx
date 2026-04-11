@@ -230,7 +230,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               }}>
                 <Droppable droppableId="images" direction="horizontal">
                   {(provided) => (
-                    <div ref={provided.innerRef} {...provided.droppableProps} className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-4 gap-2 w-full">
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-wrap gap-2">
                       {imagePreviews.map((src, idx) => (
                         <Draggable key={src + idx} draggableId={`img-${idx}`} index={idx}>
                           {(provided, snapshot) => (
