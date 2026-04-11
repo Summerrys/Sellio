@@ -369,24 +369,12 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                           e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
                         }}
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div className="flex items-start justify-between gap-2 mb-2">
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-semibold text-slate-700 truncate">{t.label}</p>
                             <p className="text-xs text-slate-500">{t.pax || 2} pax</p>
                           </div>
                           <div className="flex gap-1 flex-shrink-0">
-                            {setupQr && qrCodes[t.id] && (
-                              <button
-                                onClick={() => {
-                                  setSelectedQR(t);
-                                  setQRModalOpen(true);
-                                }}
-                                className="text-slate-400 hover:text-blue-500 transition-colors p-1"
-                                title="View QR code"
-                              >
-                                <QrCode className="w-3.5 h-3.5" />
-                              </button>
-                            )}
                             <button
                                onClick={() => startEdit(t)}
                                className="text-slate-400 hover:text-blue-500 transition-colors p-1"
@@ -402,6 +390,20 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                             </button>
                           </div>
                         </div>
+                        {setupQr && qrCodes[t.id] && (
+                          <div className="flex justify-center">
+                            <button
+                              onClick={() => {
+                                setSelectedQR(t);
+                                setQRModalOpen(true);
+                              }}
+                              className="text-slate-400 hover:text-blue-500 transition-colors p-1"
+                              title="View QR code"
+                            >
+                              <QrCode className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
 
                       </div>
                     )}
