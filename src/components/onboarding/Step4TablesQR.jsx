@@ -109,7 +109,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
       </div>
 
       {/* Mode Selection */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
         {SETUP_MODES.map(({ id, icon: Icon, label, desc }) => {
           const selected = mode === id;
           return (
