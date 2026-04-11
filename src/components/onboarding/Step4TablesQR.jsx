@@ -358,7 +358,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                       </div>
                     ) : (
                       <div 
-                        className="flex flex-col gap-1 bg-white rounded-lg p-2.5 border-2 border-slate-200 shadow-sm group transition-all cursor-pointer" 
+                        className="flex flex-col gap-2 bg-white rounded-lg p-2.5 border-2 border-slate-200 shadow-sm group transition-all cursor-pointer" 
                         onClick={() => startEdit(t)}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.borderColor = primaryColor;
@@ -369,12 +369,12 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                           e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
                         }}
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-semibold text-slate-700 truncate">{t.label}</p>
                             <p className="text-xs text-slate-500">{t.pax || 2} pax</p>
                           </div>
-                          <div className="flex gap-1 flex-shrink-0 ml-1">
+                          <div className="flex gap-1 flex-shrink-0">
                             {setupQr && qrCodes[t.id] && (
                               <button
                                 onClick={() => {
