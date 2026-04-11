@@ -201,7 +201,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       <div className="space-y-3 mb-4 w-full min-w-0">
 
         {/* Images Section */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3">
+        <div className="bg-white border border-slate-200 rounded-xl p-3 overflow-visible">
           <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
             <Upload className="w-4 h-4" style={{ color: primaryColor }} />
             Product Images
@@ -230,7 +230,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               }}>
                 <Droppable droppableId="images" direction="horizontal">
                   {(provided) => (
-                    <div ref={provided.innerRef} {...provided.droppableProps} className="grid grid-cols-4 gap-3 w-full auto-rows-max transition-all duration-200 pb-2">
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="grid grid-cols-4 gap-3 w-full auto-rows-max transition-all duration-200">
                       {imagePreviews.map((src, idx) => (
                         <Draggable key={src + idx} draggableId={`img-${idx}`} index={idx}>
                           {(provided, snapshot) => (
