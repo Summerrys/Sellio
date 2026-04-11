@@ -429,7 +429,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
 
 
       {/* Single QR Code setup */}
-      {setupQr && !setupTables && (
+      {setupQr && (
         <div className="space-y-4 mb-6 pb-6 border-b border-slate-200">
           <div className="bg-white rounded-xl p-4 border border-slate-200">
             <Label className="text-xs font-semibold text-slate-700 mb-3 block">Online Menu QR Code</Label>
