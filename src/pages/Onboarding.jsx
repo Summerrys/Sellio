@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
-import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
 import Step1Combined from '../components/onboarding/Step1Combined';
 import Step2Business from '../components/onboarding/Step2Business';
@@ -16,7 +15,6 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState({
     // Step 1 (Business & Theme)
     businessName: '',
@@ -34,56 +32,25 @@ export default function Onboarding() {
     products: [],
   });
 
-  // Load from Supabase/localStorage on mount
+  // Load from localStorage on mount
   useEffect(() => {
-    const loadOnboardingState = async () => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
       try {
-        const user = await base44.auth.me();
-        if (user?.onboarding_state) {
-          // Load from Supabase
-          const state = JSON.parse(user.onboarding_state);
-          setFormData(state.formData || formData);
-          setCurrentStep(state.currentStep || 1);
-          setCompletedSteps(state.completedSteps || []);
-        } else {
-          // Fallback to localStorage
-          const saved = localStorage.getItem(STORAGE_KEY);
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            setFormData(parsed.formData || formData);
-            setCurrentStep(parsed.currentStep || 1);
-            setCompletedSteps(parsed.completedSteps || []);
-          }
-        }
+        const parsed = JSON.parse(saved);
+        setFormData(parsed.formData || formData);
+        setCurrentStep(parsed.currentStep || 1);
+        setCompletedSteps(parsed.completedSteps || []);
       } catch (e) {
-        console.error('Failed to load onboarding state:', e);
-        // Fallback to localStorage on error
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          setFormData(parsed.formData || formData);
-          setCurrentStep(parsed.currentStep || 1);
-          setCompletedSteps(parsed.completedSteps || []);
-        }
-      } finally {
-        setIsLoading(false);
+        console.error('Failed to parse saved onboarding state');
       }
-    };
-    loadOnboardingState();
+    }
   }, []);
 
-  // Save to localStorage and Supabase whenever state changes
+  // Save to localStorage whenever state changes
   useEffect(() => {
-    if (isLoading) return;
-    
-    const state = { formData, currentStep, completedSteps };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    
-    // Save to Supabase
-    base44.auth.updateMe({
-      onboarding_state: JSON.stringify(state)
-    }).catch(err => console.error('Failed to save to Supabase:', err));
-  }, [formData, currentStep, completedSteps, isLoading]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ formData, currentStep, completedSteps }));
+  }, [formData, currentStep, completedSteps]);
 
   const updateFormData = (data) => {
     setFormData(prev => ({ ...prev, ...data }));
@@ -125,14 +92,6 @@ export default function Onboarding() {
   };
 
   const CurrentStepComponent = steps[currentStep - 1].component;
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col overflow-x-hidden">
