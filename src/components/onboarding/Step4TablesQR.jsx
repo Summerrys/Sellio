@@ -110,38 +110,40 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
         <div className="space-y-4 mb-6 pb-6 border-b border-slate-200">
           <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
             <Label className="text-xs font-semibold text-slate-700 mb-2 block">Quick Generate Tables</Label>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Input
-                value={tablePrefix}
-                onChange={(e) => setTablePrefix(e.target.value)}
-                placeholder="Prefix"
-                className="h-9 text-sm flex-1"
-              />
-              <Input
-                type="number"
-                value={tableCount}
-                onChange={(e) => setTableCount(e.target.value)}
-                placeholder="Qty"
-                className="h-9 text-sm sm:w-20"
-                min="1"
-                max="100"
-              />
-              <Input
-                type="number"
-                value={tablePax}
-                onChange={(e) => setTablePax(e.target.value)}
-                placeholder="Pax"
-                className="h-9 text-sm sm:w-20"
-                min="1"
-                max="20"
-              />
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <Input
+                  value={tablePrefix}
+                  onChange={(e) => setTablePrefix(e.target.value)}
+                  placeholder="Prefix"
+                  className="h-9 text-sm flex-1"
+                />
+                <Input
+                  type="number"
+                  value={tableCount}
+                  onChange={(e) => setTableCount(e.target.value)}
+                  placeholder="Qty"
+                  className="h-9 text-sm w-16"
+                  min="1"
+                  max="100"
+                />
+                <Input
+                  type="number"
+                  value={tablePax}
+                  onChange={(e) => setTablePax(e.target.value)}
+                  placeholder="Pax"
+                  className="h-9 text-sm w-16"
+                  min="1"
+                  max="20"
+                />
+              </div>
               <button
                 onClick={bulkAdd}
                 disabled={!tableCount || parseInt(tableCount) < 1}
-                className="px-3 sm:px-4 h-9 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:opacity-90 whitespace-nowrap"
+                className="px-4 h-9 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:opacity-90"
                 style={{ background: themeColor }}
               >
-                Go
+                Generate
               </button>
             </div>
           </div>
