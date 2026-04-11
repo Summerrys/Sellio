@@ -28,16 +28,29 @@ export default function Auth() {
       document.body.appendChild(script);
 
       try {
-        const res = await base44.functions.invoke('getSupabaseConfig', {});
-        const clientId = res.data?.googleClientId || res?.googleClientId;
-        if (clientId) {
+        const clientId = Deno.env.get('GOOGLE_CLIENT_ID') || window.GOOGLE_CLIENT_ID;
+        if (!clientId) {
+          // Fallback: fetch from function
+          const res = await base44.functions.invoke('getSupabaseConfig', {});
+          const id = res.data?.googleClientId || res?.googleClientId;
+          if (id) {
+            googleClientIdRef.current = id;
+            setGoogleReady(true);
+          } else {
+            console.error('No Google Client ID found');
+          }
+        } else {
           googleClientIdRef.current = clientId;
           setGoogleReady(true);
-        } else {
-          console.error('No Google Client ID in response:', res);
         }
       } catch (err) {
         console.error('Failed to load Google config:', err);
+        // Try hardcoded value as last resort
+        const hardcodedId = '390618701573-0n3emgl2e2v8redsf2d5dl28fikknl1h.apps.googleusercontent.com';
+        if (hardcodedId) {
+          googleClientIdRef.current = hardcodedId;
+          setGoogleReady(true);
+        }
       }
     };
 
