@@ -228,31 +228,31 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
       {/* Summary Grid - Two Columns */}
       <div className="grid grid-cols-2 gap-4 mb-6">
         {/* Business Info */}
-        <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Business</div>
-          <p className="text-sm font-bold text-slate-900 truncate">{formData.businessName}</p>
-          <p className="text-xs text-slate-600 capitalize">{formData.businessType}</p>
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 border border-blue-400 shadow-sm hover:shadow-md transition-shadow">
+          <div className="text-xs font-semibold text-blue-100 uppercase tracking-wide mb-2">Business</div>
+          <p className="text-sm font-bold text-white truncate">{formData.businessName}</p>
+          <p className="text-xs text-blue-100 capitalize">{formData.businessType}</p>
         </div>
 
         {/* Location & Currency */}
-        <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Setup</div>
-          <p className="text-sm font-bold text-slate-900">{formData.country}</p>
-          <p className="text-xs text-slate-600">{formData.currency}</p>
+        <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-4 border border-emerald-400 shadow-sm hover:shadow-md transition-shadow">
+          <div className="text-xs font-semibold text-emerald-100 uppercase tracking-wide mb-2">Setup</div>
+          <p className="text-sm font-bold text-white">{formData.country}</p>
+          <p className="text-xs text-emerald-100">{formData.currency}</p>
         </div>
 
         {/* Theme */}
-        <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Theme</div>
-          <p className="text-sm font-bold text-slate-900">{formData.theme || 'Custom'}</p>
-          <p className="text-xs text-slate-600">Brand colors set</p>
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 border border-purple-400 shadow-sm hover:shadow-md transition-shadow">
+          <div className="text-xs font-semibold text-purple-100 uppercase tracking-wide mb-2">Theme</div>
+          <p className="text-sm font-bold text-white">{formData.theme || 'Custom'}</p>
+          <p className="text-xs text-purple-100">Brand colors set</p>
         </div>
 
         {/* Tax */}
-        <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Tax</div>
-          <p className="text-sm font-bold text-slate-900">{taxLabel}: {taxRate}%</p>
-          <p className="text-xs text-slate-600">{formData.country === 'Malaysia' ? 'SST Fixed' : formData.country === 'Singapore' ? 'GST Standard' : 'Custom rate'}</p>
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-4 border border-orange-400 shadow-sm hover:shadow-md transition-shadow">
+          <div className="text-xs font-semibold text-orange-100 uppercase tracking-wide mb-2">Tax</div>
+          <p className="text-sm font-bold text-white">{taxLabel}: {taxRate}%</p>
+          <p className="text-xs text-orange-100">{formData.country === 'Malaysia' ? 'SST Fixed' : formData.country === 'Singapore' ? 'GST Standard' : 'Custom rate'}</p>
         </div>
       </div>
 
