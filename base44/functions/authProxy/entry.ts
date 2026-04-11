@@ -82,7 +82,6 @@ Deno.serve(async (req) => {
             phone: user.phone,
             role: user.role,
             onboarding_completed: user.onboarding_completed,
-            created_at: user.created_at,
             last_login_at: sgNow(),
           },
         },
@@ -142,7 +141,6 @@ Deno.serve(async (req) => {
           is_active: true,
           onboarding_completed: false,
           auth_provider: 'phone',
-          created_at: sgNow(),
           last_login_at: sgNow(),
         })
         .select()
@@ -160,7 +158,6 @@ Deno.serve(async (req) => {
             phone: newUser.phone,
             role: newUser.role,
             onboarding_completed: newUser.onboarding_completed,
-            created_at: newUser.created_at,
             last_login_at: newUser.last_login_at,
           },
         },
