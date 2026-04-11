@@ -53,7 +53,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
       for (const table of tables) {
         if (!qrCodes[table.id] && setupQr) {
           try {
-            const qrData = await QR.toDataURL(JSON.stringify({ label: table.label, pax: table.pax }), {
+            const qrData = await QR.toDataURL(`${window.location.origin}/CustomerMenu?table=${encodeURIComponent(table.label)}`, {
               width: 300,
               margin: 2,
               color: { dark: '#000000', light: '#ffffff' },
@@ -336,7 +336,8 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                   {setupQr && Object.keys(qrCodes).length > 0 && (
                     <button
                       onClick={handleBulkDownload}
-                      className="text-xs px-3 py-1 rounded bg-slate-700 text-white hover:bg-slate-800 transition-colors flex items-center gap-1"
+                      className="text-xs px-3 py-1 rounded text-white hover:opacity-90 transition-colors flex items-center gap-1"
+                      style={{ background: themeColor }}
                     >
                       <Download className="w-3 h-3" /> Download All
                     </button>
