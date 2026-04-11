@@ -24,6 +24,21 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   const chosenColor = formData?.theme ? (formData?.themeColors?.dark || formData?.customPrimary) : null;
   const themeColor = chosenColor || 'linear-gradient(to right, #3b82f6, #9333ea)';
 
+  const getTaxRate = () => {
+    if (formData.country === 'Singapore') return 9;
+    if (formData.country === 'Malaysia') return 6;
+    return formData.taxRate ?? 0;
+  };
+
+  const getTaxLabel = () => {
+    if (formData.country === 'Singapore') return 'GST';
+    if (formData.country === 'Malaysia') return 'SST';
+    return 'Tax';
+  };
+
+  const taxRate = getTaxRate();
+  const taxLabel = getTaxLabel();
+
   const handleLaunch = async () => {
     if (isLaunching) return;
     setIsLaunching(true);
@@ -47,7 +62,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
           plan: 'free',
           settings: {
             branch_name: formData.branchName || null,
-            tax_rate: formData.taxRate ?? null,
+            tax_rate: taxRate,
             tax_inclusive: formData.taxInclusive ?? false,
           },
         })
@@ -211,56 +226,56 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
       </div>
 
       {/* Summary Grid - Two Columns */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
+      <div className="grid grid-cols-2 gap-4 mb-6">
         {/* Business Info */}
-        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-3 border border-slate-200">
+        <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
           <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Business</div>
           <p className="text-sm font-bold text-slate-900 truncate">{formData.businessName}</p>
           <p className="text-xs text-slate-600 capitalize">{formData.businessType}</p>
         </div>
 
         {/* Location & Currency */}
-        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-3 border border-slate-200">
+        <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
           <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Setup</div>
           <p className="text-sm font-bold text-slate-900">{formData.country}</p>
           <p className="text-xs text-slate-600">{formData.currency}</p>
         </div>
 
-        {/* Admin Info */}
-        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-3 border border-slate-200">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Admin</div>
-          <p className="text-sm font-bold text-slate-900 truncate">{formData.adminName || 'Admin'}</p>
-          <p className="text-xs text-slate-600 truncate">{formData.adminEmail}</p>
+        {/* Theme */}
+        <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Theme</div>
+          <p className="text-sm font-bold text-slate-900">{formData.theme || 'Custom'}</p>
+          <p className="text-xs text-slate-600">Brand colors set</p>
         </div>
 
-        {/* Theme & Tax */}
-        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-3 border border-slate-200">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Details</div>
-          <p className="text-sm font-bold text-slate-900">{formData.theme || 'Default'} Theme</p>
-          <p className="text-xs text-slate-600">Tax: {formData.taxRate}%</p>
+        {/* Tax */}
+        <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Tax</div>
+          <p className="text-sm font-bold text-slate-900">{taxLabel}: {taxRate}%</p>
+          <p className="text-xs text-slate-600">{formData.country === 'Malaysia' ? 'SST Fixed' : formData.country === 'Singapore' ? 'GST Standard' : 'Custom rate'}</p>
         </div>
       </div>
 
       {/* Products & Tables Summary */}
       <div className="space-y-2 mb-6">
         {formData.products?.length > 0 && (
-          <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-center justify-between">
-            <span className="text-sm font-medium text-blue-900">📦 {formData.products.length} Product{formData.products.length > 1 ? 's' : ''}</span>
-            <span className="text-xs text-blue-700">Menu configured</span>
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between shadow-sm">
+            <span className="text-sm font-semibold text-blue-900">📦 {formData.products.length} Product{formData.products.length > 1 ? 's' : ''}</span>
+            <span className="text-xs font-medium text-blue-700">Menu ready</span>
           </div>
         )}
         
-        {formData.tables?.length > 0 && (
-          <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 flex items-center justify-between">
-            <span className="text-sm font-medium text-amber-900">🍽️ {formData.tables.length} Table{formData.tables.length > 1 ? 's' : ''}</span>
-            <span className="text-xs text-amber-700">QR ready</span>
+        {formData.tableCount > 0 && (
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between shadow-sm">
+            <span className="text-sm font-semibold text-amber-900">🍽️ {formData.tableCount} Table{formData.tableCount > 1 ? 's' : ''}</span>
+            <span className="text-xs font-medium text-amber-700">QR ready</span>
           </div>
         )}
 
         {formData.logoUrl && (
-          <div className="bg-purple-50 border border-purple-100 rounded-lg p-3 flex items-center justify-between">
-            <span className="text-sm font-medium text-purple-900">🎨 Logo</span>
-            <span className="text-xs text-purple-700">Uploaded</span>
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-3 flex items-center justify-between shadow-sm">
+            <span className="text-sm font-semibold text-purple-900">🎨 Logo</span>
+            <span className="text-xs font-medium text-purple-700">Uploaded</span>
           </div>
         )}
       </div>
