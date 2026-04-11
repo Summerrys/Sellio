@@ -11,6 +11,7 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
   })) : [];
   
   const percentage = displaySteps.length > 0 ? Math.round((currentStep / displaySteps.length) * 100) : 0;
+  const isNearComplete = percentage >= 75;
 
   return (
     <div className="w-full">
@@ -77,15 +78,43 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
         ))}
       </div>
 
-      {/* Progress Bar */}
+      {/* Progress Bar with Sparks */}
       <div className="relative">
-        <div className="w-full bg-slate-200 rounded-full h-2 sm:h-3 overflow-hidden">
+        <div className="w-full bg-slate-200 rounded-full h-2 sm:h-3 overflow-visible">
           <motion.div
             animate={{ width: `${percentage}%` }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
             className="h-full rounded-full"
             style={{ background: PURPLE_PINK }}
           />
+          {isNearComplete && (
+            <>
+              {[...Array(8)].map((_, i) => (
+                <motion.div
+                  key={`spark-${i}`}
+                  className="absolute w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full"
+                  style={{
+                    background: PURPLE_PINK,
+                    left: `${percentage}%`,
+                    top: '50%',
+                    transform: 'translateY(-50%)'
+                  }}
+                  animate={{
+                    x: Math.cos((i / 8) * Math.PI * 2) * 20,
+                    y: Math.sin((i / 8) * Math.PI * 2) * 20,
+                    opacity: [1, 0],
+                    scale: [1, 0.3]
+                  }}
+                  transition={{
+                    duration: 1,
+                    repeat: Infinity,
+                    repeatDelay: 0.5,
+                    ease: 'easeOut'
+                  }}
+                />
+              ))}
+            </>
+          )}
         </div>
       </div>
     </div>
