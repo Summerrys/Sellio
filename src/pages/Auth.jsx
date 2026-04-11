@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Phone, Lock, User, Mail, ChevronDown, Check } from 'lucide-react';
 import { getSupabase } from '../lib/supabaseClient';
-import { toast, Toaster } from 'sonner';
+import { toast } from 'sonner';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
 
@@ -10,155 +10,99 @@ const COUNTRY_CODES = [
   { code: '+60', flag: '🇲🇾', name: 'MY', placeholder: '112345678', validate: (p) => /^1\d{8,9}$/.test(p), hint: '9–10 digits, starting with 1' },
 ];
 
+const GOOGLE_CLIENT_ID = '390618701573-0n3emgl2e2v8redsf2d5dl28fikknl1h.apps.googleusercontent.com';
+
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleReady, setGoogleReady] = useState(false);
 
-  const googleClientIdRef = useRef(null);
   const nonceRef = useRef(null);
 
-  // Load Google Identity Services and fetch client ID
+  // Load Google SDK
   useEffect(() => {
-    const loadGoogleConfig = async () => {
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      document.body.appendChild(script);
-
-      try {
-        // Fetch from backend function
-        const res = await base44.functions.invoke('getSupabaseConfig', {});
-        console.log('Raw response:', res);
-        
-        // Response structure from base44: {data: {...}, status, headers}
-        const responseData = res?.data || res;
-        console.log('Response data:', responseData);
-        
-        // Try different possible keys
-        const id = responseData?.googleClientId || responseData?.google_client_id || responseData?.GOOGLE_CLIENT_ID;
-        console.log('Extracted Google Client ID:', id);
-        
-        if (!id || typeof id !== 'string' || id.includes('<')) {
-          console.warn('Invalid Google Client ID:', id);
-          throw new Error('Invalid Google Client ID format');
-        }
-        
-        googleClientIdRef.current = id;
-        console.log('✓ Google Client ID loaded successfully');
-        setGoogleReady(true);
-      } catch (err) {
-        console.error('Failed to load Google config:', err);
-        // Use hardcoded value as fallback
-        const hardcodedId = '390618701573-0n3emgl2e2v8redsf2d5dl28fikknl1h.apps.googleusercontent.com';
-        googleClientIdRef.current = hardcodedId;
-        console.log('Using hardcoded Google Client ID as fallback');
-        setGoogleReady(true);
-      }
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      console.log('✓ Google SDK loaded');
+      setGoogleReady(true);
     };
-
-    loadGoogleConfig();
+    script.onerror = () => {
+      console.error('Failed to load Google SDK');
+      setGoogleReady(true); // Allow form login anyway
+    };
+    document.body.appendChild(script);
 
     return () => {
       try {
-        const script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-        if (script) document.body.removeChild(script);
+        document.body.removeChild(script);
       } catch (e) {
-        // Script already removed
+        // Already removed
       }
     };
   }, []);
 
   const handleGoogleSignIn = async () => {
-    if (!googleClientIdRef.current) {
-      toast.error('Google Sign-In is not configured. Please contact support.');
+    if (!window.google) {
+      toast.error('Google Sign-In is not ready. Please try again.');
       return;
     }
 
     setGoogleLoading(true);
-
-    // Wait for google script to load if not ready yet
-    let attempts = 0;
-    while (!window.google && attempts < 50) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      attempts++;
-    }
-
-    if (!window.google) {
-      toast.error('Google Sign-In failed to load. Please try again.');
-      setGoogleLoading(false);
-      return;
-    }
+    console.log('🔵 Google sign-in button clicked');
 
     try {
-      // Generate nonce for security BEFORE initialization
+      // Generate nonce FIRST
       const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36);
       nonceRef.current = nonce;
-      console.log('Nonce generated:', nonce, 'Type:', typeof nonce);
+      console.log('📌 Nonce generated and stored:', nonce);
 
-      const clientId = googleClientIdRef.current;
-      console.log('Using Client ID:', clientId, 'Type:', typeof clientId);
-      
-      if (!clientId || typeof clientId !== 'string') {
-        throw new Error(`Invalid client ID: ${clientId}`);
-      }
-
-      // Initialize Google Sign-In with nonce
+      // Initialize with callback
       window.google.accounts.id.initialize({
-        client_id: clientId,
+        client_id: GOOGLE_CLIENT_ID,
         callback: handleCredentialResponse,
         nonce: nonce,
       });
-      console.log('✓ Google initialized successfully');
+      console.log('✓ Google initialized');
 
-      // Try to show One Tap UI
-      window.google.accounts.id.prompt((notification) => {
-        console.log('Prompt notification:', notification);
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          // Fallback to click-to-sign-in button
-          showGoogleSignInButton();
-        }
-      });
+      // Trigger One Tap
+      window.google.accounts.id.prompt();
     } catch (err) {
-      console.error('Google Sign-In error:', err);
+      console.error('❌ Google Sign-In error:', err);
       toast.error('Google Sign-In failed. Please try again.');
       setGoogleLoading(false);
     }
   };
 
-  const showGoogleSignInButton = () => {
-    const container = document.querySelector('[data-google-button]');
-    if (container && window.google) {
-      window.google.accounts.id.renderButton(container, {
-        theme: 'outline',
-        size: 'large',
-        width: '100%',
-      });
-    }
-  };
-
   const handleCredentialResponse = async (response) => {
+    console.log('🟢 Credential response received');
     try {
       const supabase = await getSupabase();
-      const currentNonce = nonceRef.current;
-      console.log('Credential response received, nonce:', currentNonce);
+      const nonce = nonceRef.current;
+      
+      console.log('   Nonce from ref:', nonce);
+      console.log('   Token present:', !!response.credential);
 
+      // Call Supabase with nonce
+      console.log('   Calling signInWithIdToken...');
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: response.credential,
-        nonce: currentNonce,
+        nonce: nonce,
       });
 
       if (error) {
-        console.error('Supabase signInWithIdToken error:', error);
+        console.error('❌ Supabase error:', error.message);
         throw error;
       }
 
+      console.log('✓ Supabase auth successful');
       const user = data.session.user;
 
-      // Check if this email is already registered as a phone/password user
+      // Check if email is already registered as phone/password
       const { data: phoneUser } = await supabase
         .from('app_users')
         .select('id, auth_provider')
@@ -167,17 +111,17 @@ export default function Auth() {
         .limit(1);
 
       if (phoneUser && phoneUser.length > 0) {
-        toast.error('This email is already registered with a phone/password account. Please log in using your phone number.');
+        toast.error('This email is already registered with a phone/password account.');
         setGoogleLoading(false);
         return;
       }
 
       const now = new Date(Date.now() + 8 * 3600 * 1000).toISOString().replace('Z', '').replace('T', ' ').substring(0, 23);
 
-      // Upsert into app_users to track Google users and last login
+      // Upsert app_users
       const { data: existingAppUser } = await supabase
         .from('app_users')
-        .select('id, created_at')
+        .select('id')
         .eq('email', user.email)
         .limit(1);
 
@@ -202,9 +146,9 @@ export default function Auth() {
         avatar_url: user.user_metadata?.avatar_url,
         provider: 'google',
         onboarding_completed: false,
-        last_login_at: now,
       };
 
+      // Check tenant_users
       const { data: existing } = await supabase.from('tenant_users').select('*').eq('email', user.email).single();
       if (existing) {
         appUser.onboarding_completed = true;
@@ -215,7 +159,7 @@ export default function Auth() {
       localStorage.setItem('app_user', JSON.stringify(appUser));
       window.location.href = appUser.onboarding_completed ? '/Dashboard' : '/Onboarding';
     } catch (err) {
-      console.error('Auth error:', err);
+      console.error('❌ Auth error:', err);
       toast.error(err.message || 'Sign-in failed');
       setGoogleLoading(false);
     }
@@ -234,24 +178,21 @@ export default function Auth() {
     e.preventDefault();
     const cleanPhone = formData.phone.replace(/^0+/, '');
     if (!selectedCountry.validate(cleanPhone)) {
-      toast.error(`Invalid phone number for ${selectedCountry.name}. Expected: ${selectedCountry.hint}`);
+      toast.error(`Invalid phone number for ${selectedCountry.name}. ${selectedCountry.hint}`);
       return;
     }
+
     setLoading(true);
     try {
-      const fullPhone = selectedCountry.code + formData.phone.replace(/^0+/, '');
-      console.log('Attempting login/signup with phone:', fullPhone);
+      const fullPhone = selectedCountry.code + cleanPhone;
+      console.log('📱 Phone auth attempt:', fullPhone);
 
       const payload = isLogin
         ? { action: 'login', phone: fullPhone, password: formData.password }
         : { action: 'signup', phone: fullPhone, password: formData.password, full_name: formData.full_name, email: formData.email };
 
-      console.log('Sending payload:', payload);
       const response = await base44.functions.invoke('authProxy', payload);
-      console.log('Response object:', response);
-      
       const data = response?.data || response;
-      console.log('Auth response:', data, 'Status:', response?.status);
 
       if (data && data.success) {
         localStorage.setItem('app_user', JSON.stringify(data.user));
@@ -262,34 +203,21 @@ export default function Auth() {
             </div>
             <div className="flex-1">
               <p className="text-sm font-semibold text-green-900">{isLogin ? 'Welcome back!' : 'Account created!'}</p>
-              <p className="text-xs text-green-700">You're all set. Redirecting now...</p>
+              <p className="text-xs text-green-700">Redirecting...</p>
             </div>
           </div>
         ));
         setTimeout(() => {
           window.location.href = createPageUrl(data.user?.onboarding_completed ? 'Dashboard' : 'Onboarding');
         }, 500);
-      } else if (data && data.error) {
-        console.error('Error from backend:', data.error);
-        toast.error(data.error);
-      } else if (data && data.message) {
-        console.error('Message from backend:', data.message);
-        toast.error(data.message);
       } else {
-        console.error('Unexpected response structure:', data);
-        toast.error('Login failed. Please try again.');
+        const errorMsg = data?.error || data?.message || 'Login failed';
+        console.error('❌ Backend error:', errorMsg);
+        toast.error(errorMsg);
       }
     } catch (error) {
-      console.error('Auth error:', error);
-      console.error('Error details:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        responseStatus: error?.response?.status,
-        fullError: error
-      });
-      const errorMsg = error?.response?.data?.error || error?.response?.data?.message || error?.message || 'Login failed. Please try again.';
-      console.error('Showing error to user:', errorMsg);
-      toast.error(errorMsg);
+      console.error('❌ Auth error:', error);
+      toast.error(error?.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -309,7 +237,6 @@ export default function Auth() {
       >
         <div className="w-full max-w-sm">
           <div className="bg-white rounded-2xl shadow-xl p-8">
-            {/* Header */}
             <div className="text-center mb-6">
               <div className="flex items-center justify-center mb-3">
                 <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className="h-28 w-auto object-contain" />
@@ -318,7 +245,6 @@ export default function Auth() {
               <p className="text-sm text-slate-500">Let's get you started</p>
             </div>
 
-            {/* Tab Toggle */}
             <div className="flex rounded-xl p-1 mb-6" style={{ background: '#fde8d8' }}>
               <button
                 type="button"
@@ -341,7 +267,6 @@ export default function Auth() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Name - Sign Up only */}
               {!isLogin && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
@@ -359,7 +284,6 @@ export default function Auth() {
                 </div>
               )}
 
-              {/* Email - Sign Up only */}
               {!isLogin && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
@@ -376,11 +300,9 @@ export default function Auth() {
                 </div>
               )}
 
-              {/* Phone Number */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number *</label>
                 <div className="flex gap-2">
-                  {/* Country code picker */}
                   <div className="relative" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
@@ -408,7 +330,6 @@ export default function Auth() {
                       </div>
                     )}
                   </div>
-                  {/* Phone input */}
                   <div className="relative flex-1">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
@@ -423,7 +344,6 @@ export default function Auth() {
                 </div>
               </div>
 
-              {/* Password */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Password *</label>
                 <div className="relative">
@@ -439,7 +359,6 @@ export default function Auth() {
                 </div>
               </div>
 
-              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={loading}
@@ -450,14 +369,12 @@ export default function Auth() {
               </button>
             </form>
 
-            {/* Divider */}
             <div className="flex items-center gap-3 my-4">
               <div className="flex-1 h-px bg-slate-200" />
               <span className="text-xs text-slate-400 font-medium">or continue with</span>
               <div className="flex-1 h-px bg-slate-200" />
             </div>
 
-            {/* Google Sign In */}
             <button
               type="button"
               onClick={handleGoogleSignIn}
