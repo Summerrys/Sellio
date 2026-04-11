@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowRight, ArrowLeft, QrCode, Table2, Plus, Trash2 } from 'lucide-react';
+import { ArrowRight, ArrowLeft, QrCode, Table2, Plus, Trash2, Download } from 'lucide-react';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
+import QR from 'qrcode';
+import QRCodeModal from './QRCodeModal';
 
 function generateDefaultTables(count, prefix, pax = 2) {
   return Array.from({ length: count }, (_, i) => ({
@@ -29,6 +31,9 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const [editLabel, setEditLabel] = useState('');
   const [editPax, setEditPax] = useState('2');
   const [qrLabel, setQrLabel] = useState(formData.singleQrLabel || 'Counter');
+  const [qrCodes, setQrCodes] = useState({});
+  const [selectedQR, setSelectedQR] = useState(null);
+  const [qrModalOpen, setQRModalOpen] = useState(false);
 
   useEffect(() => {
     if (formData.customPrimary && formData.customSecondary) {
@@ -41,6 +46,33 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
       Object.entries(variables).forEach(([key, value]) => root.style.setProperty(key, value));
     }
   }, [formData.customPrimary, formData.customSecondary]);
+
+  useEffect(() => {
+    const generateQRCodes = async () => {
+      const newQRCodes = {};
+      for (const table of tables) {
+        if (!qrCodes[table.id] && setupQr) {
+          try {
+            const qrData = await QR.toDataURL(JSON.stringify({ label: table.label, pax: table.pax }), {
+              width: 300,
+              margin: 2,
+              color: { dark: '#000000', light: '#ffffff' },
+            });
+            newQRCodes[table.id] = qrData;
+          } catch (err) {
+            console.error('QR generation failed:', err);
+          }
+        }
+      }
+      if (Object.keys(newQRCodes).length > 0) {
+        setQrCodes(prev => ({ ...prev, ...newQRCodes }));
+      }
+    };
+
+    if (setupQr) {
+      generateQRCodes();
+    }
+  }, [tables, setupQr, qrCodes]);
 
   const chosenColor = formData?.theme ? (formData?.themeColors?.dark || formData?.customPrimary) : null;
   const themeColor = chosenColor || 'linear-gradient(to right, #3b82f6, #9333ea)';
@@ -71,6 +103,11 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const saveEdit = () => {
     if (!editLabel.trim()) return;
     setTables(prev => prev.map(t => t.id === editingId ? { ...t, label: editLabel.trim(), pax: parseInt(editPax) || 2 } : t));
+    setQrCodes(prev => {
+      const newCodes = { ...prev };
+      delete newCodes[editingId];
+      return newCodes;
+    });
     setEditingId(null);
   };
 
@@ -78,7 +115,36 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
     setEditingId(null);
   };
 
-  const removeTable = (id) => setTables(prev => prev.filter(t => t.id !== id));
+  const removeTable = (id) => {
+    setTables(prev => prev.filter(t => t.id !== id));
+    setQrCodes(prev => {
+      const newCodes = { ...prev };
+      delete newCodes[id];
+      return newCodes;
+    });
+  };
+
+  const handleBulkDownload = async () => {
+    if (typeof window !== 'undefined' && 'JSZip' in window === false) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      script.onload = () => performBulkDownload();
+      document.head.appendChild(script);
+    } else {
+      performBulkDownload();
+    }
+  };
+
+  const performBulkDownload = () => {
+    tables.forEach((table, idx) => {
+      if (qrCodes[table.id]) {
+        const link = document.createElement('a');
+        link.href = qrCodes[table.id];
+        link.download = `${idx + 1}_${table.label.replace(/\s+/g, '_')}_QR.png`;
+        link.click();
+      }
+    });
+  };
 
   const handleSubmit = () => {
     updateFormData({
@@ -235,29 +301,53 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-between bg-slate-50 rounded-lg px-2.5 py-1.5 border border-slate-100 group cursor-pointer hover:bg-slate-100" onClick={() => startEdit(t)}>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium text-slate-700 truncate">{t.label}</p>
-                          <p className="text-xs text-slate-400">{t.pax || 2} pax</p>
+                      <div className="flex flex-col gap-1 bg-slate-50 rounded-lg p-2 border border-slate-100 group hover:bg-slate-100">
+                        <div className="flex items-center justify-between cursor-pointer" onClick={() => startEdit(t)}>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium text-slate-700 truncate">{t.label}</p>
+                            <p className="text-xs text-slate-400">{t.pax || 2} pax</p>
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); removeTable(t.id); }}
+                            className="text-slate-300 hover:text-red-500 transition-colors ml-1"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
                         </div>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); removeTable(t.id); }}
-                          className="text-slate-300 hover:text-red-500 transition-colors ml-1 opacity-0 group-hover:opacity-100"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                        {setupQr && qrCodes[t.id] && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedQR(t);
+                              setQRModalOpen(true);
+                            }}
+                            className="text-xs px-2 py-1 rounded bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition-colors"
+                          >
+                            View QR
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
                 ))}
               </div>
               {tables.length > 0 && (
-                <button
-                  onClick={() => setTables([])}
-                  className="mt-2 text-xs text-red-400 hover:text-red-600 transition-colors"
-                >
-                  Clear all
-                </button>
+                <div className="flex gap-2 mt-2">
+                  {setupQr && Object.keys(qrCodes).length > 0 && (
+                    <button
+                      onClick={handleBulkDownload}
+                      className="text-xs px-3 py-1 rounded bg-slate-700 text-white hover:bg-slate-800 transition-colors flex items-center gap-1"
+                    >
+                      <Download className="w-3 h-3" /> Download All
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setTables([])}
+                    className="text-xs text-red-400 hover:text-red-600 transition-colors flex-1 text-right"
+                  >
+                    Clear all
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -297,6 +387,16 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
         <div className="mb-6 text-center p-4 text-slate-500">
           <p className="text-sm">Check the options above to set up tables and/or QR codes.</p>
         </div>
+      )}
+
+      {selectedQR && (
+        <QRCodeModal
+          isOpen={qrModalOpen}
+          onClose={() => setQRModalOpen(false)}
+          table={selectedQR}
+          qrDataUrl={qrCodes[selectedQR.id]}
+          themeColor={themeColor}
+        />
       )}
 
       <div className="flex gap-2 sm:gap-3 pt-3 sm:pt-4">
