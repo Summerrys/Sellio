@@ -203,7 +203,10 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const handleSubmit = () => {
     const formUpdate = {
       ...formData,
+      setupTables,
+      setupQr,
       tables: setupTables ? tables : [],
+      qrCodes: setupQr ? qrCodes : {},
     };
     if (setupQr && !setupTables) {
       formUpdate.singleQrLabel = singleQrLabel;
