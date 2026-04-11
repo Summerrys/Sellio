@@ -31,21 +31,30 @@ export default function Auth() {
       try {
         // Fetch from backend function
         const res = await base44.functions.invoke('getSupabaseConfig', {});
-        const id = res.data?.googleClientId || res?.googleClientId || res.data?.google_client_id;
-
-        if (id) {
-          googleClientIdRef.current = id;
-          console.log('Google Client ID loaded successfully');
-          setGoogleReady(true);
-        } else {
-          throw new Error('No Google Client ID in response');
+        console.log('Raw response:', res);
+        
+        // Response structure from base44: {data: {...}, status, headers}
+        const responseData = res?.data || res;
+        console.log('Response data:', responseData);
+        
+        // Try different possible keys
+        const id = responseData?.googleClientId || responseData?.google_client_id || responseData?.GOOGLE_CLIENT_ID;
+        console.log('Extracted Google Client ID:', id);
+        
+        if (!id || typeof id !== 'string' || id.includes('<')) {
+          console.warn('Invalid Google Client ID:', id);
+          throw new Error('Invalid Google Client ID format');
         }
+        
+        googleClientIdRef.current = id;
+        console.log('✓ Google Client ID loaded successfully');
+        setGoogleReady(true);
       } catch (err) {
         console.error('Failed to load Google config:', err);
-        // Try hardcoded value as last resort
+        // Use hardcoded value as fallback
         const hardcodedId = '390618701573-0n3emgl2e2v8redsf2d5dl28fikknl1h.apps.googleusercontent.com';
         googleClientIdRef.current = hardcodedId;
-        console.log('Using hardcoded Google Client ID');
+        console.log('Using hardcoded Google Client ID as fallback');
         setGoogleReady(true);
       }
     };
@@ -87,15 +96,22 @@ export default function Auth() {
       // Generate nonce for security BEFORE initialization
       const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36);
       nonceRef.current = nonce;
-      console.log('Generated nonce before init:', nonce);
+      console.log('Nonce generated:', nonce, 'Type:', typeof nonce);
+
+      const clientId = googleClientIdRef.current;
+      console.log('Using Client ID:', clientId, 'Type:', typeof clientId);
+      
+      if (!clientId || typeof clientId !== 'string') {
+        throw new Error(`Invalid client ID: ${clientId}`);
+      }
 
       // Initialize Google Sign-In with nonce
       window.google.accounts.id.initialize({
-        client_id: googleClientIdRef.current,
+        client_id: clientId,
         callback: handleCredentialResponse,
         nonce: nonce,
       });
-      console.log('Google initialized with nonce:', nonce);
+      console.log('✓ Google initialized successfully');
 
       // Try to show One Tap UI
       window.google.accounts.id.prompt((notification) => {
@@ -109,6 +125,17 @@ export default function Auth() {
       console.error('Google Sign-In error:', err);
       toast.error('Google Sign-In failed. Please try again.');
       setGoogleLoading(false);
+    }
+  };
+
+  const showGoogleSignInButton = () => {
+    const container = document.querySelector('[data-google-button]');
+    if (container && window.google) {
+      window.google.accounts.id.renderButton(container, {
+        theme: 'outline',
+        size: 'large',
+        width: '100%',
+      });
     }
   };
 
@@ -221,8 +248,10 @@ export default function Auth() {
 
       console.log('Sending payload:', payload);
       const response = await base44.functions.invoke('authProxy', payload);
-      const data = response.data;
-      console.log('Auth response:', data, 'Status:', response.status);
+      console.log('Response object:', response);
+      
+      const data = response?.data || response;
+      console.log('Auth response:', data, 'Status:', response?.status);
 
       if (data && data.success) {
         localStorage.setItem('app_user', JSON.stringify(data.user));
@@ -241,8 +270,10 @@ export default function Auth() {
           window.location.href = createPageUrl(data.user?.onboarding_completed ? 'Dashboard' : 'Onboarding');
         }, 500);
       } else if (data && data.error) {
+        console.error('Error from backend:', data.error);
         toast.error(data.error);
       } else if (data && data.message) {
+        console.error('Message from backend:', data.message);
         toast.error(data.message);
       } else {
         console.error('Unexpected response structure:', data);
@@ -250,9 +281,14 @@ export default function Auth() {
       }
     } catch (error) {
       console.error('Auth error:', error);
-      console.error('Full error object:', error);
+      console.error('Error details:', {
+        message: error?.message,
+        responseData: error?.response?.data,
+        responseStatus: error?.response?.status,
+        fullError: error
+      });
       const errorMsg = error?.response?.data?.error || error?.response?.data?.message || error?.message || 'Login failed. Please try again.';
-      console.error('Error details:', error?.response?.data);
+      console.error('Showing error to user:', errorMsg);
       toast.error(errorMsg);
     } finally {
       setLoading(false);
