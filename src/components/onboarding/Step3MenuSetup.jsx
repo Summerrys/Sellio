@@ -190,15 +190,15 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
 
   return (
     <Card className="p-2 sm:p-4 bg-white border-0 shadow-lg w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
-      <div className="text-center mb-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2" style={{ background: themeColor }}>
+      <div className="text-center mb-4">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: themeColor }}>
           <Menu className="w-5 h-5 text-white" />
         </div>
-        <h2 className="text-lg font-bold text-slate-900 mb-0.5">{hints.sectionTitle}</h2>
+        <h2 className="text-xl font-bold text-slate-900 mb-1">{hints.sectionTitle}</h2>
         <p className="text-xs text-slate-500">{hints.sectionSubtitle}</p>
       </div>
 
-      <div className="space-y-2 mb-3 w-full min-w-0">
+      <div className="space-y-3 mb-4 w-full min-w-0">
 
         {/* Images Section */}
         <div className="bg-white border border-slate-200 rounded-xl p-3">
@@ -230,7 +230,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               }}>
                 <Droppable droppableId="images" direction="horizontal">
                   {(provided) => (
-                    <div ref={provided.innerRef} {...provided.droppableProps} className="grid grid-cols-4 gap-2">
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-wrap gap-2">
                       {imagePreviews.map((src, idx) => (
                         <Draggable key={src + idx} draggableId={`img-${idx}`} index={idx}>
                           {(provided, snapshot) => (
