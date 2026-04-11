@@ -210,8 +210,8 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
         <p className="text-sm text-slate-500">Your business configuration is complete</p>
       </div>
 
-      {/* Summary Grid - Two Columns */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
+      {/* Summary Grid - Three Columns */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
         {/* Business Info */}
         <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-3 border border-slate-200">
           <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Business</div>
@@ -235,9 +235,28 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
 
         {/* Theme & Tax */}
         <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-3 border border-slate-200">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Details</div>
-          <p className="text-sm font-bold text-slate-900">{formData.theme || 'Default'} Theme</p>
-          <p className="text-xs text-slate-600">Tax: {formData.taxRate}%</p>
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Theme</div>
+          <p className="text-sm font-bold text-slate-900" style={{ color: chosenColor || '#3b82f6' }}>{formData.theme || 'Default'}</p>
+          {formData.themeColors && (
+            <div className="flex gap-1.5 mt-2">
+              <div className="w-4 h-4 rounded-full" style={{ backgroundColor: formData.themeColors?.dark || '#000' }} />
+              <div className="w-4 h-4 rounded-full" style={{ backgroundColor: formData.themeColors?.light || '#ccc' }} />
+            </div>
+          )}
+        </div>
+
+        {/* Tax Info */}
+        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-3 border border-slate-200">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Tax</div>
+          <p className="text-sm font-bold text-slate-900">{formData.taxRate}%</p>
+          <p className="text-xs text-slate-600">{formData.taxInclusive ? 'Inclusive' : 'Exclusive'}</p>
+        </div>
+
+        {/* Branch Info */}
+        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-3 border border-slate-200">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Branch</div>
+          <p className="text-sm font-bold text-slate-900 truncate">{formData.branchName || 'Main'}</p>
+          {formData.address && <p className="text-xs text-slate-600 truncate">{formData.address}</p>}
         </div>
       </div>
 
