@@ -2,12 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Check, Rocket, Loader2, Globe, Utensils, Package } from 'lucide-react';
+import { ArrowLeft, Rocket, Loader2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
-
-
 
 export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   const [isLaunching, setIsLaunching] = useState(false);
@@ -202,105 +200,85 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   };
 
   return (
-    <Card className="p-3 sm:p-5 bg-white/80 backdrop-blur border-0 shadow-xl">
-      <div className="text-center mb-8">
+    <Card className="p-4 sm:p-6 bg-white border-0 shadow-lg w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
+      {/* Header */}
+      <div className="text-center mb-6">
         <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: themeColor }}>
           <Rocket className="w-8 h-8 text-white" />
         </div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Ready to Launch! 🎉</h2>
-        <p className="text-slate-500">Review your setup and launch your business</p>
+        <h2 className="text-2xl font-bold text-slate-900 mb-1">Ready to Launch</h2>
+        <p className="text-sm text-slate-500">Your business configuration is complete</p>
       </div>
 
-      <div className="space-y-3 mb-8 max-h-[500px] overflow-y-auto">
-        {/* Step 1: Business & Theme */}
-        <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-4">Business Setup</div>
-        <SummaryItem icon={Check} label="Business Name" value={formData.businessName} />
-        <SummaryItem icon={Check} label="Business Type" value={formData.businessType?.charAt(0).toUpperCase() + formData.businessType?.slice(1) || 'N/A'} />
-        <SummaryItem icon={Check} label="Country" value={formData.country} />
-        {formData.logoUrl && <SummaryItem icon={Check} label="Logo" value="Uploaded" />}
-        
-        {/* Step 2: Theme & Branch */}
-        <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-4">Theme & Settings</div>
-        <SummaryItem 
-          icon={Check} 
-          label="Theme" 
-          value={
-            <div className="flex items-center gap-2">
-              <span>{formData.theme || 'Not selected'}</span>
-              {formData.themeColors && (
-                <div className="flex gap-1">
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: formData.themeColors?.dark || '#000' }} />
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: formData.themeColors?.light || '#ccc' }} />
-                </div>
-              )}
-            </div>
-          } 
-        />
-        <SummaryItem icon={Check} label="Admin Name" value={formData.adminName || formData.adminEmail} />
-        <SummaryItem icon={Check} label="Admin Email" value={formData.adminEmail} />
-        <SummaryItem icon={Check} label="Currency" value={formData.currency} />
-        <SummaryItem icon={Check} label="Tax Rate" value={`${formData.taxRate}% (${formData.taxInclusive ? 'Inclusive' : 'Exclusive'})`} />
-        {formData.branchName && <SummaryItem icon={Check} label="Branch Name" value={formData.branchName} />}
-        {formData.address && <SummaryItem icon={Check} label="Address" value={formData.address} />}
-        
-        {/* Step 3: Menu/Products */}
+      {/* Summary Grid - Two Columns */}
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        {/* Business Info */}
+        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-3 border border-slate-200">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Business</div>
+          <p className="text-sm font-bold text-slate-900 truncate">{formData.businessName}</p>
+          <p className="text-xs text-slate-600 capitalize">{formData.businessType}</p>
+        </div>
+
+        {/* Location & Currency */}
+        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-3 border border-slate-200">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Setup</div>
+          <p className="text-sm font-bold text-slate-900">{formData.country}</p>
+          <p className="text-xs text-slate-600">{formData.currency}</p>
+        </div>
+
+        {/* Admin Info */}
+        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-3 border border-slate-200">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Admin</div>
+          <p className="text-sm font-bold text-slate-900 truncate">{formData.adminName || 'Admin'}</p>
+          <p className="text-xs text-slate-600 truncate">{formData.adminEmail}</p>
+        </div>
+
+        {/* Theme & Tax */}
+        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-3 border border-slate-200">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Details</div>
+          <p className="text-sm font-bold text-slate-900">{formData.theme || 'Default'} Theme</p>
+          <p className="text-xs text-slate-600">Tax: {formData.taxRate}%</p>
+        </div>
+      </div>
+
+      {/* Products & Tables Summary */}
+      <div className="space-y-2 mb-6">
         {formData.products?.length > 0 && (
-          <>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-4">Menu & Products</div>
-            <SummaryItem icon={Package} label="Products" value={`${formData.products.length} product${formData.products.length > 1 ? 's' : ''} configured`} />
-            {formData.products.slice(0, 3).map((product, idx) => (
-              <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <Package className="w-4 h-4 text-blue-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-slate-500">{product.category}</p>
-                  <div className="text-sm font-medium text-slate-900 truncate">{product.name} • ${product.price}</div>
-                </div>
-              </div>
-            ))}
-            {formData.products.length > 3 && (
-              <div className="px-3 py-2 text-xs text-slate-500">+{formData.products.length - 3} more products</div>
-            )}
-          </>
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-center justify-between">
+            <span className="text-sm font-medium text-blue-900">📦 {formData.products.length} Product{formData.products.length > 1 ? 's' : ''}</span>
+            <span className="text-xs text-blue-700">Menu configured</span>
+          </div>
         )}
         
-        {/* Step 4: Tables & QR */}
         {formData.tables?.length > 0 && (
-          <>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-4">Tables & QR Codes</div>
-            <SummaryItem icon={Utensils} label="Tables" value={`${formData.tables.length} tables created`} />
-            {formData.tables.slice(0, 3).map((table, idx) => (
-              <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                  <Utensils className="w-4 h-4 text-amber-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-slate-500">Table</p>
-                  <div className="text-sm font-medium text-slate-900">{table.label} {table.pax ? `• ${table.pax} pax` : ''}</div>
-                </div>
-              </div>
-            ))}
-            {formData.tables.length > 3 && (
-              <div className="px-3 py-2 text-xs text-slate-500">+{formData.tables.length - 3} more tables</div>
-            )}
-          </>
+          <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 flex items-center justify-between">
+            <span className="text-sm font-medium text-amber-900">🍽️ {formData.tables.length} Table{formData.tables.length > 1 ? 's' : ''}</span>
+            <span className="text-xs text-amber-700">QR ready</span>
+          </div>
+        )}
+
+        {formData.logoUrl && (
+          <div className="bg-purple-50 border border-purple-100 rounded-lg p-3 flex items-center justify-between">
+            <span className="text-sm font-medium text-purple-900">🎨 Logo</span>
+            <span className="text-xs text-purple-700">Uploaded</span>
+          </div>
         )}
       </div>
 
+      {/* Action Buttons */}
       <div className="flex gap-3">
         <Button
           onClick={prevStep}
           variant="outline"
-          className="flex-1 h-12"
+          className="h-11 px-4 gap-2"
           disabled={isLaunching}
         >
-          <ArrowLeft className="w-4 h-4 mr-2" /> Back
+          <ArrowLeft className="w-4 h-4" /> Back
         </Button>
         <Button
           onClick={handleLaunch}
           disabled={isLaunching}
-          className="flex-1 h-12 hover:opacity-90 text-base font-medium gap-2 text-white"
+          className="flex-1 h-11 hover:opacity-90 text-base font-semibold gap-2 text-white"
           style={{ background: themeColor }}
         >
           {isLaunching ? (
@@ -311,27 +289,11 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
           ) : (
             <>
               <Rocket className="w-5 h-5" />
-              Launch Your Business
+              Launch Business
             </>
           )}
         </Button>
       </div>
     </Card>
-  );
-}
-
-function SummaryItem({ icon: Icon, label, value }) {
-  return (
-    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-      <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-        <Icon className="w-4 h-4 text-green-600" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-slate-500">{label}</p>
-        <div className="text-sm font-medium text-slate-900 truncate">
-          {typeof value === 'string' ? value : value}
-        </div>
-      </div>
-    </div>
   );
 }
