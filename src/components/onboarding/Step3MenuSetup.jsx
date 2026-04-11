@@ -201,12 +201,12 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       <div className="space-y-3 mb-4 w-full min-w-0">
 
         {/* Images Section */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3">
+        <div className="bg-white border border-slate-200 rounded-xl p-3 overflow-hidden">
           <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
             <Upload className="w-4 h-4" style={{ color: primaryColor }} />
             Product Images
           </h3>
-          <div>
+          <div className="w-full overflow-x-hidden">
             <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Images (optional)</Label>
             {imagePreviews.length === 0 ? (
               <label className="border-2 border-dashed border-slate-300 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors w-full min-w-0">
@@ -215,6 +215,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                 <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
               </label>
             ) : (
+              <div className="w-full overflow-hidden">
               <DragDropContext onDragEnd={(result) => {
                 if (!result.destination) return;
                 const from = result.source.index;
@@ -230,7 +231,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               }}>
                 <Droppable droppableId="images" direction="horizontal">
                   {(provided) => (
-                    <div ref={provided.innerRef} {...provided.droppableProps} className="grid grid-cols-4 gap-3 w-full auto-rows-max transition-all duration-200">
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="grid grid-cols-4 gap-3 w-full auto-rows-max transition-all duration-200 pb-2">
                       {imagePreviews.map((src, idx) => (
                         <Draggable key={src + idx} draggableId={`img-${idx}`} index={idx}>
                           {(provided, snapshot) => (
@@ -262,6 +263,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                   )}
                 </Droppable>
               </DragDropContext>
+              </div>
             )}
           </div>
         </div>
