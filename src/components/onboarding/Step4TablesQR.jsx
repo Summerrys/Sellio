@@ -221,7 +221,8 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                         <div className="flex gap-1">
                           <button
                             onClick={saveEdit}
-                            className="flex-1 text-xs px-2 py-0.5 rounded bg-green-500 text-white hover:bg-green-600"
+                            className="flex-1 text-xs px-2 py-0.5 rounded text-white hover:opacity-90"
+                            style={{ background: themeColor }}
                           >
                             Save
                           </button>
