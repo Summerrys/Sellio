@@ -120,13 +120,16 @@ export default function Auth() {
     setLoading(true);
     try {
       const fullPhone = selectedCountry.code + cleanPhone;
-      console.log('📱 Phone auth attempt:', fullPhone);
+      console.log('📱 Phone:', fullPhone, 'Password:', formData.password);
 
       const payload = isLogin
         ? { action: 'login', phone: fullPhone, password: formData.password }
         : { action: 'signup', phone: fullPhone, password: formData.password, full_name: formData.full_name, email: formData.email };
 
+      console.log('📤 Payload:', payload);
       const response = await base44.functions.invoke('authProxy', payload);
+      console.log('📥 Response:', response);
+      
       const data = response?.data || response;
 
       if (data && data.success) {
@@ -147,11 +150,13 @@ export default function Auth() {
         }, 500);
       } else {
         const errorMsg = data?.error || data?.message || 'Login failed';
-        console.error('❌ Backend error:', errorMsg);
+        console.error('❌ Error:', errorMsg);
         toast.error(errorMsg);
       }
     } catch (error) {
-      console.error('❌ Auth error:', error);
+      console.error('❌ Exception:', error);
+      console.error('❌ Exception message:', error?.message);
+      console.error('❌ Exception response:', error?.response);
       toast.error(error?.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
