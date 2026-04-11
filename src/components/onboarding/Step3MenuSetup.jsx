@@ -216,15 +216,14 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               </label>
             ) : (
               <DragDropContext onDragEnd={(result) => {
-                if (!result.destination) return;
+                if (!result.destination || result.source.index === result.destination.index) return;
                 const from = result.source.index;
                 const to = result.destination.index;
                 const newPreviews = [...imagePreviews];
                 const newFiles = [...imageFiles];
-                const [movedPreview] = newPreviews.splice(from, 1);
-                const [movedFile] = newFiles.splice(from, 1);
-                newPreviews.splice(to, 0, movedPreview);
-                newFiles.splice(to, 0, movedFile);
+                // Swap only the two items
+                [newPreviews[from], newPreviews[to]] = [newPreviews[to], newPreviews[from]];
+                [newFiles[from], newFiles[to]] = [newFiles[to], newFiles[from]];
                 setImagePreviews(newPreviews);
                 setImageFiles(newFiles);
               }}>
