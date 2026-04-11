@@ -303,7 +303,7 @@ export default function Auth() {
                 type="submit"
                 disabled={loading}
                 className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70"
-                style={{ background: 'linear-gradient(90deg, #e86a1a, #fe7824, #ffaa6e)' }}
+                style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
               >
                 {loading ? 'Please wait...' : isLogin ? 'Login' : 'Sign Up'}
               </button>
