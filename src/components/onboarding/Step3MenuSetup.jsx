@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, ArrowLeft, Utensils, Layers, Sparkles, Upload, Menu, X, Pencil, Trash2 } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Utensils, Layers, Sparkles, Upload, Menu, X, Pencil, Trash2, Plus } from 'lucide-react';
 import ImageEditModal from './ImageEditModal';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Input } from '@/components/ui/input';
@@ -169,7 +169,13 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
           </h3>
           <div>
             <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Images (optional)</Label>
-            {imagePreviews.length > 0 && (
+            {imagePreviews.length === 0 ? (
+              <label className="border-2 border-dashed border-slate-300 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors w-full min-w-0">
+                <Upload className="w-5 h-5 text-slate-400 mb-1" />
+                <span className="text-xs text-slate-500">Click to add images</span>
+                <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
+              </label>
+            ) : (
               <DragDropContext onDragEnd={(result) => {
                 if (!result.destination) return;
                 const from = result.source.index;
@@ -185,7 +191,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               }}>
                 <Droppable droppableId="images" direction="horizontal">
                   {(provided) => (
-                    <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-wrap gap-2 mb-3">
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-wrap gap-2">
                       {imagePreviews.map((src, idx) => (
                         <Draggable key={src + idx} draggableId={`img-${idx}`} index={idx}>
                           {(provided, snapshot) => (
@@ -209,16 +215,15 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                         </Draggable>
                       ))}
                       {provided.placeholder}
+                      <label className="w-16 h-16 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors flex-shrink-0">
+                        <Plus className="w-5 h-5 text-slate-400" />
+                        <input type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
+                      </label>
                     </div>
                   )}
                 </Droppable>
               </DragDropContext>
             )}
-            <label className="border-2 border-dashed border-slate-300 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors w-full min-w-0">
-              <Upload className="w-5 h-5 text-slate-400 mb-1" />
-              <span className="text-xs text-slate-500">Click to add images</span>
-              <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
-            </label>
           </div>
         </div>
 
