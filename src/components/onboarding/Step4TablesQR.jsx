@@ -470,11 +470,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
         </div>
       )}
 
-      {!setupTables && !setupQr && (
-        <div className="mb-6 text-center p-4 text-slate-500">
-          <p className="text-sm">Check the options above to set up tables and/or QR codes.</p>
-        </div>
-      )}
+
 
       {selectedQR && (
         <QRCodeModal
