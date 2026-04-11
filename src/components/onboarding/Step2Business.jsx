@@ -161,7 +161,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
           </div>
 
           {/* Days List */}
-          <div className="space-y-2.5 overflow-y-auto max-h-56 sm:max-h-none">
+          <div className="space-y-2.5 overflow-y-auto max-h-56 sm:max-h-none pointer-events-auto">
             {days.map((day) => (
               <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 bg-white rounded-lg border border-slate-200">
                 <div className="flex items-center gap-2 min-w-0">
