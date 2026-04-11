@@ -50,20 +50,20 @@ export default function QRCodeModal({ isOpen, onClose, table, qrDataUrl, themeCo
             <p className="text-sm text-slate-600">{table.pax} pax</p>
           </div>
           <div className="flex gap-2 w-full">
-            <Button
+            <button
               onClick={handleDownload}
-              variant="outline"
-              className="flex-1 gap-2"
+              className="flex-1 px-3 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors flex items-center gap-2 justify-center"
+              style={{ background: themeColor }}
             >
               <Download className="w-4 h-4" /> Download
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={handlePrint}
-              variant="outline"
-              className="flex-1 gap-2"
+              className="flex-1 px-3 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors flex items-center gap-2 justify-center"
+              style={{ background: themeColor }}
             >
               <Printer className="w-4 h-4" /> Print
-            </Button>
+            </button>
           </div>
         </div>
       </DialogContent>
