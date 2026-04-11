@@ -84,10 +84,10 @@ export default function Auth() {
     }
 
     try {
-      // Generate nonce for security
+      // Generate nonce for security BEFORE initialization
       const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36);
       nonceRef.current = nonce;
-      console.log('Generated nonce:', nonce);
+      console.log('Generated nonce before init:', nonce);
 
       // Initialize Google Sign-In with nonce
       window.google.accounts.id.initialize({
@@ -95,9 +95,11 @@ export default function Auth() {
         callback: handleCredentialResponse,
         nonce: nonce,
       });
+      console.log('Google initialized with nonce:', nonce);
 
       // Try to show One Tap UI
       window.google.accounts.id.prompt((notification) => {
+        console.log('Prompt notification:', notification);
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
           // Fallback to click-to-sign-in button
           showGoogleSignInButton();
@@ -107,17 +109,6 @@ export default function Auth() {
       console.error('Google Sign-In error:', err);
       toast.error('Google Sign-In failed. Please try again.');
       setGoogleLoading(false);
-    }
-  };
-
-  const showGoogleSignInButton = () => {
-    const container = document.querySelector('[data-google-button]');
-    if (container && window.google) {
-      window.google.accounts.id.renderButton(container, {
-        theme: 'outline',
-        size: 'large',
-        width: '100%',
-      });
     }
   };
 
@@ -259,7 +250,8 @@ export default function Auth() {
       }
     } catch (error) {
       console.error('Auth error:', error);
-      const errorMsg = error?.response?.data?.error || error?.response?.data?.message || error?.message || 'An unexpected error occurred';
+      console.error('Full error object:', error);
+      const errorMsg = error?.response?.data?.error || error?.response?.data?.message || error?.message || 'Login failed. Please try again.';
       console.error('Error details:', error?.response?.data);
       toast.error(errorMsg);
     } finally {
