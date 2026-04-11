@@ -230,7 +230,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               }}>
                 <Droppable droppableId="images" direction="horizontal">
                   {(provided) => (
-                    <div ref={provided.innerRef} {...provided.droppableProps} className="grid grid-cols-4 gap-3 w-full min-h-24 transition-all duration-200">
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="grid grid-cols-4 gap-3 w-full auto-rows-max transition-all duration-200">
                       {imagePreviews.map((src, idx) => (
                         <Draggable key={src + idx} draggableId={`img-${idx}`} index={idx}>
                           {(provided, snapshot) => (
@@ -238,7 +238,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              className={`relative w-full aspect-square rounded-lg overflow-hidden border-2 group cursor-grab transition-all duration-150 ${snapshot.isDragging ? 'shadow-lg opacity-70 scale-95' : 'opacity-100'} border-slate-200`}
+                              className={`relative w-full aspect-square rounded-lg overflow-hidden border-2 group cursor-grab transition-all duration-150 ${snapshot.isDragging ? 'shadow-lg opacity-70 scale-95' : 'opacity-100'} border-slate-200 col-span-1`}
                               style={idx === 0 ? { ...provided.draggableProps.style, borderColor: primaryColor } : provided.draggableProps.style}
                               onClick={() => setEditingImageIdx(idx)}
                             >
