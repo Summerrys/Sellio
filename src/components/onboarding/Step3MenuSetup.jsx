@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, ArrowLeft, Utensils, Layers, Sparkles, Upload, Menu, X, Pencil, Trash2, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Utensils, Layers, Sparkles, Upload, Menu, X, Pencil, Trash2, Plus } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ImageEditModal from './ImageEditModal';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Input } from '@/components/ui/input';
@@ -182,7 +183,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const hints = INDUSTRY_HINTS[formData.businessType] || DEFAULT_HINTS;
 
   return (
-    <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg w-full" style={{ overflowX: 'hidden', maxWidth: '100%', boxSizing: 'border-box' }}>
+    <Card className="p-4 sm:p-8 bg-white border-0 shadow-lg w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
       <div className="text-center mb-4">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: themeColor }}>
           <Menu className="w-5 h-5 text-white" />
@@ -194,7 +195,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       <div className="space-y-3 mb-4 w-full min-w-0">
 
         {/* Images Section */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3 overflow-x-hidden">
+        <div className="bg-white border border-slate-200 rounded-xl p-3">
           <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
             <Upload className="w-4 h-4" style={{ color: primaryColor }} />
             Product Images
@@ -208,55 +209,59 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                 <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
               </label>
             ) : (
-              <div className="flex flex-wrap gap-2">
-                {imagePreviews.map((src, idx) => (
-                  <div key={src + idx} className={`relative w-14 h-14 rounded-lg overflow-hidden border-2 group ${
-                    idx === 0 ? '' : 'border-slate-200'
-                  }`} style={idx === 0 ? { borderColor: primaryColor } : {}}>
-                    <img src={src} alt="preview" className="w-full h-full object-cover" onClick={() => setEditingImageIdx(idx)} />
-                    {idx === 0 && (
-                      <div className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium" style={{ background: themeColor }}>Cover</div>
-                    )}
-                    <div className="absolute top-0 right-0">
-                      <button onClick={() => removeImage(idx)} className="bg-black/50 text-white rounded-bl p-0.5">
-                        <X className="w-2.5 h-2.5" />
-                      </button>
+              <DragDropContext onDragEnd={(result) => {
+                if (!result.destination) return;
+                const from = result.source.index;
+                const to = result.destination.index;
+                const newPreviews = [...imagePreviews];
+                const newFiles = [...imageFiles];
+                const [movedPreview] = newPreviews.splice(from, 1);
+                const [movedFile] = newFiles.splice(from, 1);
+                newPreviews.splice(to, 0, movedPreview);
+                newFiles.splice(to, 0, movedFile);
+                setImagePreviews(newPreviews);
+                setImageFiles(newFiles);
+              }}>
+                <Droppable droppableId="images" direction="horizontal">
+                  {(provided) => (
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-wrap gap-2">
+                      {imagePreviews.map((src, idx) => (
+                        <Draggable key={src + idx} draggableId={`img-${idx}`} index={idx}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              className={`relative w-14 h-14 rounded-lg overflow-hidden border-2 group cursor-grab ${snapshot.isDragging ? 'shadow-lg scale-105' : ''} border-slate-200`}
+                              style={idx === 0 ? { ...provided.draggableProps.style, borderColor: primaryColor } : provided.draggableProps.style}
+                              onClick={() => setEditingImageIdx(idx)}
+                            >
+                              <img src={src} alt="preview" className="w-full h-full object-cover" />
+                              {idx === 0 && (
+                                <div className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium" style={{ background: themeColor }}>Cover</div>
+                              )}
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                <Pencil className="w-4 h-4 text-white" />
+                              </div>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                      <label className="w-14 h-14 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors flex-shrink-0">
+                        <Plus className="w-5 h-5 text-slate-400" />
+                        <input type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
+                      </label>
                     </div>
-                    <div className="absolute top-0 left-0 flex flex-col gap-0.5">
-                      {idx > 0 && (
-                        <button onClick={() => {
-                          const newP = [...imagePreviews]; const newF = [...imageFiles];
-                          [newP[idx-1], newP[idx]] = [newP[idx], newP[idx-1]];
-                          [newF[idx-1], newF[idx]] = [newF[idx], newF[idx-1]];
-                          setImagePreviews(newP); setImageFiles(newF);
-                        }} className="bg-black/50 text-white rounded-br p-0.5">
-                          <ChevronLeft className="w-2.5 h-2.5" />
-                        </button>
-                      )}
-                      {idx < imagePreviews.length - 1 && (
-                        <button onClick={() => {
-                          const newP = [...imagePreviews]; const newF = [...imageFiles];
-                          [newP[idx], newP[idx+1]] = [newP[idx+1], newP[idx]];
-                          [newF[idx], newF[idx+1]] = [newF[idx+1], newF[idx]];
-                          setImagePreviews(newP); setImageFiles(newF);
-                        }} className="bg-black/50 text-white rounded-br p-0.5">
-                          <ChevronRight className="w-2.5 h-2.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                <label className="w-14 h-14 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors flex-shrink-0">
-                  <Plus className="w-5 h-5 text-slate-400" />
-                  <input type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
-                </label>
-              </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
             )}
           </div>
         </div>
 
         {/* Item Details Section (includes Categories) */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3 overflow-x-hidden">
+        <div className="bg-white border border-slate-200 rounded-xl p-3">
           <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
             <Sparkles className="w-4 h-4" style={{ color: secondaryColor }} />
             Item Details
