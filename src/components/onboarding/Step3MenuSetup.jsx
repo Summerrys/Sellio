@@ -127,7 +127,8 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const addItem = async () => {
     if (!selectedCategory || !itemName.trim() || !itemPrice.trim()) return;
     setUploading(true);
-    let imageUrls = [];
+    // Preserve existing http URLs (from previously uploaded images)
+    let imageUrls = imagePreviews.filter(p => p.startsWith('http'));
     try {
       if (imageFiles.length > 0) {
         const supabase = await getSupabase();
@@ -139,9 +140,6 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
             imageUrls.push(publicUrl);
           }
         }
-      } else {
-        // Keep existing URL previews when no new files selected
-        imageUrls = imagePreviews.filter(p => p.startsWith('http'));
       }
     } catch (err) {
       console.error('Image upload failed:', err);
