@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Check, Rocket, Loader2 } from 'lucide-react';
+import { ArrowLeft, Check, Rocket, Loader2, Globe, Utensils, Package } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
@@ -171,9 +171,22 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
 
       // Launch confetti
       confetti({
+        particleCount: 200,
+        spread: 100,
+        origin: { y: 0.6 },
+        duration: 3000
+      });
+      confetti({
         particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
+        spread: 60,
+        origin: { x: 0.2, y: 0.8 },
+        duration: 2500
+      });
+      confetti({
+        particleCount: 100,
+        spread: 60,
+        origin: { x: 0.8, y: 0.8 },
+        duration: 2500
       });
 
       // Wait a moment for effect
@@ -198,31 +211,80 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
         <p className="text-slate-500">Review your setup and launch your business</p>
       </div>
 
-      <div className="space-y-4 mb-8 max-h-[400px] overflow-y-auto">
-        <SummaryItem icon={Check} label="Business" value={formData.businessName} />
-        <SummaryItem icon={Check} label="Type" value={formData.businessType?.charAt(0).toUpperCase() + formData.businessType?.slice(1) || 'N/A'} />
+      <div className="space-y-3 mb-8 max-h-[500px] overflow-y-auto">
+        {/* Step 1: Business & Theme */}
+        <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-4">Business Setup</div>
+        <SummaryItem icon={Check} label="Business Name" value={formData.businessName} />
+        <SummaryItem icon={Check} label="Business Type" value={formData.businessType?.charAt(0).toUpperCase() + formData.businessType?.slice(1) || 'N/A'} />
+        <SummaryItem icon={Check} label="Country" value={formData.country} />
+        {formData.logoUrl && <SummaryItem icon={Check} label="Logo" value="Uploaded" />}
+        
+        {/* Step 2: Theme & Branch */}
+        <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-4">Theme & Settings</div>
         <SummaryItem 
           icon={Check} 
           label="Theme" 
           value={
             <div className="flex items-center gap-2">
-              <span>{formData.theme}</span>
-              <div className="flex gap-1">
-                <div className="w-4 h-4 rounded" style={{ backgroundColor: formData.themeColors?.dark || '#000' }} />
-                <div className="w-4 h-4 rounded" style={{ backgroundColor: formData.themeColors?.light || '#ccc' }} />
-              </div>
+              <span>{formData.theme || 'Not selected'}</span>
+              {formData.themeColors && (
+                <div className="flex gap-1">
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: formData.themeColors?.dark || '#000' }} />
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: formData.themeColors?.light || '#ccc' }} />
+                </div>
+              )}
             </div>
           } 
         />
-        <SummaryItem icon={Check} label="Admin" value={formData.adminName || formData.adminEmail} />
-        <SummaryItem icon={Check} label="Email" value={formData.adminEmail} />
+        <SummaryItem icon={Check} label="Admin Name" value={formData.adminName || formData.adminEmail} />
+        <SummaryItem icon={Check} label="Admin Email" value={formData.adminEmail} />
         <SummaryItem icon={Check} label="Currency" value={formData.currency} />
-        <SummaryItem icon={Check} label="Tax" value={`${formData.taxRate}% (${formData.taxInclusive ? 'Inclusive' : 'Exclusive'})`} />
-        {formData.tableCount > 0 && (
-          <SummaryItem icon={Check} label="Tables" value={`${formData.tableCount} tables`} />
-        )}
+        <SummaryItem icon={Check} label="Tax Rate" value={`${formData.taxRate}% (${formData.taxInclusive ? 'Inclusive' : 'Exclusive'})`} />
+        {formData.branchName && <SummaryItem icon={Check} label="Branch Name" value={formData.branchName} />}
+        {formData.address && <SummaryItem icon={Check} label="Address" value={formData.address} />}
+        
+        {/* Step 3: Menu/Products */}
         {formData.products?.length > 0 && (
-          <SummaryItem icon={Check} label="Products" value={`${formData.products.length} product${formData.products.length > 1 ? 's' : ''} added`} />
+          <>
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-4">Menu & Products</div>
+            <SummaryItem icon={Package} label="Products" value={`${formData.products.length} product${formData.products.length > 1 ? 's' : ''} configured`} />
+            {formData.products.slice(0, 3).map((product, idx) => (
+              <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <Package className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-500">{product.category}</p>
+                  <div className="text-sm font-medium text-slate-900 truncate">{product.name} • ${product.price}</div>
+                </div>
+              </div>
+            ))}
+            {formData.products.length > 3 && (
+              <div className="px-3 py-2 text-xs text-slate-500">+{formData.products.length - 3} more products</div>
+            )}
+          </>
+        )}
+        
+        {/* Step 4: Tables & QR */}
+        {formData.tables?.length > 0 && (
+          <>
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-4">Tables & QR Codes</div>
+            <SummaryItem icon={Utensils} label="Tables" value={`${formData.tables.length} tables created`} />
+            {formData.tables.slice(0, 3).map((table, idx) => (
+              <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <Utensils className="w-4 h-4 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-slate-500">Table</p>
+                  <div className="text-sm font-medium text-slate-900">{table.label} {table.pax ? `• ${table.pax} pax` : ''}</div>
+                </div>
+              </div>
+            ))}
+            {formData.tables.length > 3 && (
+              <div className="px-3 py-2 text-xs text-slate-500">+{formData.tables.length - 3} more tables</div>
+            )}
+          </>
         )}
       </div>
 
