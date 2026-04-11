@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Rocket, Loader2, CheckCircle2, Circle, Star } from 'lucide-react';
+import { ArrowLeft, Rocket, Loader2, CheckCircle2, Circle, Star, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { motion } from 'framer-motion';
 import { generateThemeVariables } from '../theme/themeUtils';
@@ -48,6 +48,11 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
     { label: 'Menu/Services', completed: formData.products?.length > 0, optional: true },
     ...(isFoodBeverage ? [{ label: 'Tables & QR Codes', completed: formData.tableCount > 0 || formData.tables?.length > 0, optional: true }] : []),
   ];
+
+  const completedCount = checklistItems.filter(item => item.completed).length;
+  const totalCount = checklistItems.length;
+  const progressPercentage = (completedCount / totalCount) * 100;
+  const isNearComplete = progressPercentage >= 75;
 
   const nextSteps = [
     'Access your dashboard to start taking orders and bookings',
@@ -199,23 +204,27 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
         }
       }
 
-      // Launch confetti
+      // Launch confetti with more intensity
       confetti({
-        particleCount: 200,
-        spread: 100,
+        particleCount: 250,
+        spread: 120,
         origin: { y: 0.6 },
+        gravity: 0.8,
+        scalar: 1.3,
         duration: 3000
       });
       confetti({
-        particleCount: 100,
-        spread: 60,
+        particleCount: 150,
+        spread: 70,
         origin: { x: 0.2, y: 0.8 },
+        gravity: 0.8,
         duration: 2500
       });
       confetti({
-        particleCount: 100,
-        spread: 60,
+        particleCount: 150,
+        spread: 70,
         origin: { x: 0.8, y: 0.8 },
+        gravity: 0.8,
         duration: 2500
       });
 
@@ -247,7 +256,6 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.15, duration: 0.4 }}
-              key={idx}
               className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
                 item.completed
                   ? 'bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-300'
@@ -271,6 +279,51 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
               )}
             </motion.div>
           ))}
+        </div>
+
+        {/* Progress Bar with Sparks */}
+        <div className="mt-6 relative">
+          <div className="flex justify-between items-center mb-2">
+            <p className="text-sm font-semibold text-slate-900">Your Setup Progress</p>
+            <p className="text-xs font-medium text-slate-400">{completedCount}/{totalCount} completed</p>
+          </div>
+          <div className="relative w-full bg-slate-200 rounded-full h-3 overflow-visible">
+            <motion.div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${progressPercentage}%`,
+                backgroundColor: `rgb(var(--color-primary))`
+              }}
+            />
+            {isNearComplete && (
+              <>
+                {[...Array(8)].map((_, i) => (
+                  <motion.div
+                    key={`spark-${i}`}
+                    className="absolute w-2 h-2 rounded-full"
+                    style={{
+                      backgroundColor: `rgb(var(--color-primary))`,
+                      left: `${progressPercentage}%`,
+                      top: '50%',
+                      transform: 'translateY(-50%)'
+                    }}
+                    animate={{
+                      x: Math.cos((i / 8) * Math.PI * 2) * 25,
+                      y: Math.sin((i / 8) * Math.PI * 2) * 25,
+                      opacity: [1, 0],
+                      scale: [1, 0.3]
+                    }}
+                    transition={{
+                      duration: 1,
+                      repeat: Infinity,
+                      repeatDelay: 0.5,
+                      ease: 'easeOut'
+                    }}
+                  />
+                ))}
+              </>
+            )}
+          </div>
         </div>
       </Card>
 
