@@ -75,7 +75,7 @@ export default function Auth() {
             return;
           }
 
-          const now = new Date().toISOString();
+          const now = new Date(Date.now() + 8 * 3600 * 1000).toISOString().replace('Z', '+08:00');
           // Upsert into app_users to track Google users and last login
           const { data: existingAppUser } = await supabase
             .from('app_users')

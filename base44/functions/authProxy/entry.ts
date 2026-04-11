@@ -1,6 +1,8 @@
 import bcrypt from 'npm:bcryptjs@2.4.3';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
+const sgNow = () => new Date(Date.now() + 8 * 3600 * 1000).toISOString().replace('Z', '+08:00');
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -68,7 +70,7 @@ Deno.serve(async (req) => {
       }
 
       // Track last login
-      await supabase.from('app_users').update({ last_login_at: new Date().toISOString() }).eq('id', user.id);
+      await supabase.from('app_users').update({ last_login_at: sgNow() }).eq('id', user.id);
 
       return Response.json(
         {
@@ -81,7 +83,7 @@ Deno.serve(async (req) => {
             role: user.role,
             onboarding_completed: user.onboarding_completed,
             created_at: user.created_at,
-            last_login_at: new Date().toISOString(),
+            last_login_at: sgNow(),
           },
         },
         {
@@ -140,8 +142,8 @@ Deno.serve(async (req) => {
           is_active: true,
           onboarding_completed: false,
           auth_provider: 'phone',
-          created_at: new Date().toISOString(),
-          last_login_at: new Date().toISOString(),
+          created_at: sgNow(),
+          last_login_at: sgNow(),
         })
         .select()
         .single();
