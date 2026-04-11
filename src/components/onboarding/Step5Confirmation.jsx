@@ -215,8 +215,8 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white p-6 lg:p-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="bg-gradient-to-b from-slate-50 to-white p-6 max-w-2xl">
+      <div>
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-slate-900 flex items-center gap-3">✨ Setup Checklist</h1>
