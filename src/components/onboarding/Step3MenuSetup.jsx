@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { getThemeCSSColors, DEFAULT_COLORS } from '@/lib/themeConstants';
+import { toast } from 'sonner';
 
 
 
@@ -153,6 +154,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       );
       updateFormData({ ...formData, products: updated });
       setEditingItemId(null);
+      toast.success(`"${itemName}" updated successfully!`);
     } else {
       const newItem = {
         id: Date.now(),
