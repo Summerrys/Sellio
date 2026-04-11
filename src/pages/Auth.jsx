@@ -17,6 +17,7 @@ export default function Auth() {
   const [googleReady, setGoogleReady] = useState(false);
 
   const googleClientIdRef = useRef(null);
+  const nonceRef = useRef(null);
 
   // Load Google Identity Services and fetch client ID
   useEffect(() => {
@@ -88,10 +89,15 @@ export default function Auth() {
     }
 
     try {
-      // Initialize Google Sign-In
+      // Generate nonce for security
+      const nonce = Math.random().toString(36).substring(2);
+      nonceRef.current = nonce;
+      
+      // Initialize Google Sign-In with nonce
       window.google.accounts.id.initialize({
         client_id: googleClientIdRef.current,
         callback: handleCredentialResponse,
+        nonce: nonce,
       });
 
       // Try to show One Tap UI
@@ -125,6 +131,7 @@ export default function Auth() {
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: response.credential,
+        nonce: nonceRef.current,
       });
 
       if (error) throw error;
