@@ -40,11 +40,13 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   const taxRate = getTaxRate();
   const taxLabel = getTaxLabel();
 
+  const isFoodBeverage = formData.businessType?.toLowerCase().includes('food') || formData.businessType?.toLowerCase().includes('f&b');
+
   const checklistItems = [
     { label: 'Business Profile', completed: !!formData.businessName, optional: false },
     { label: 'Branch Setup', completed: !!formData.country, optional: false },
     { label: 'Menu/Services', completed: formData.products?.length > 0, optional: true },
-    ...(formData.businessType === 'Food & Beverage' ? [{ label: 'Tables & QR Codes', completed: formData.tableCount > 0 || formData.tables?.length > 0, optional: true }] : []),
+    ...(isFoodBeverage ? [{ label: 'Tables & QR Codes', completed: formData.tableCount > 0 || formData.tables?.length > 0, optional: true }] : []),
   ];
 
   const nextSteps = [
