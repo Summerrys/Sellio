@@ -15,12 +15,9 @@ const GOOGLE_CLIENT_ID = '390618701573-0n3emgl2e2v8redsf2d5dl28fikknl1h.apps.goo
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [googleReady, setGoogleReady] = useState(false);
-
   const nonceRef = useRef(null);
 
-  // Load Google SDK
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
@@ -44,28 +41,14 @@ export default function Auth() {
   }, []);
 
   const handleCredentialResponse = async (response) => {
-    console.log('🟢 Credential response received');
-    setGoogleLoading(true);
+    console.log('🟢 Credential response');
     try {
       const supabase = await getSupabase();
       const nonce = nonceRef.current;
       
-      console.log('   Nonce stored:', nonce);
-      console.log('   Token received:', !!response.credential);
-      
-      // Decode JWT to inspect nonce
-      if (response.credential) {
-        const parts = response.credential.split('.');
-        if (parts.length === 3) {
-          try {
-            const payload = JSON.parse(atob(parts[1]));
-            console.log('   JWT nonce:', payload.nonce);
-            console.log('   Nonce match:', payload.nonce === nonce);
-          } catch (e) {}
-        }
-      }
+      console.log('   Nonce:', nonce);
+      console.log('   Token:', !!response.credential);
 
-      console.log('   Calling Supabase signInWithIdToken...');
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: response.credential,
@@ -73,127 +56,48 @@ export default function Auth() {
       });
 
       if (error) {
-        console.error('❌ Supabase error:', error.message);
+        console.error('❌ Auth error:', error.message);
         toast.error(error.message);
-        setGoogleLoading(false);
         return;
       }
 
-      console.log('✓ Supabase auth successful');
+      console.log('✓ Signed in');
       const user = data.session.user;
-
-      // Check if email already registered as phone/password
-      const { data: phoneUser } = await supabase
-        .from('app_users')
-        .select('id')
-        .eq('email', user.email)
-        .neq('auth_provider', 'google')
-        .limit(1);
-
-      if (phoneUser && phoneUser.length > 0) {
-        toast.error('This email is already registered with a phone/password account.');
-        setGoogleLoading(false);
-        return;
-      }
-
-      const now = new Date(Date.now() + 8 * 3600 * 1000).toISOString().replace('Z', '').replace('T', ' ').substring(0, 23);
-
-      // Upsert app_users
-      const { data: existingAppUser } = await supabase
-        .from('app_users')
-        .select('id')
-        .eq('email', user.email)
-        .limit(1);
-
-      if (existingAppUser && existingAppUser.length > 0) {
-        await supabase.from('app_users').update({ last_login_at: now }).eq('id', existingAppUser[0].id);
-      } else {
-        await supabase.from('app_users').insert({
-          email: user.email,
-          full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
-          auth_provider: 'google',
-          role: 'admin',
-          is_active: true,
-          onboarding_completed: false,
-          last_login_at: now,
-        });
-      }
 
       const appUser = {
         id: user.id,
         email: user.email,
-        full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
-        avatar_url: user.user_metadata?.avatar_url,
+        full_name: user.user_metadata?.full_name || user.email,
         provider: 'google',
         onboarding_completed: false,
       };
 
-      // Check tenant_users
-      const { data: existing } = await supabase.from('tenant_users').select('*').eq('email', user.email).single();
-      if (existing) {
-        appUser.onboarding_completed = true;
-        appUser.role = existing.role;
-        appUser.tenant_id = existing.tenant_id;
-      }
-
       localStorage.setItem('app_user', JSON.stringify(appUser));
-      window.location.href = appUser.onboarding_completed ? '/Dashboard' : '/Onboarding';
+      window.location.href = '/Onboarding';
     } catch (err) {
-      console.error('❌ Auth error:', err);
+      console.error('❌ Error:', err);
       toast.error(err.message || 'Sign-in failed');
-      setGoogleLoading(false);
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = () => {
     if (!window.google) {
-      toast.error('Google Sign-In is not ready. Please try again.');
+      toast.error('Google not ready');
       return;
     }
 
-    setGoogleLoading(true);
-    console.log('🔵 Google sign-in button clicked');
+    console.log('🔵 Google sign-in clicked');
+    const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    nonceRef.current = nonce;
+    console.log('📌 Nonce:', nonce);
 
-    try {
-      // Generate nonce
-      const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36);
-      nonceRef.current = nonce;
-      console.log('📌 Nonce stored:', nonce);
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleCredentialResponse,
+      nonce: nonce,
+    });
 
-      // Initialize with callback
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleCredentialResponse,
-        nonce: nonce,
-      });
-
-      // Render button in temp container and click it
-      const tempContainer = document.createElement('div');
-      tempContainer.id = 'temp-google-button';
-      tempContainer.style.display = 'none';
-      document.body.appendChild(tempContainer);
-
-      window.google.accounts.id.renderButton(tempContainer, {
-        type: 'standard',
-        theme: 'outline',
-        size: 'large',
-      });
-
-      const button = tempContainer.querySelector('button');
-      if (button) {
-        button.click();
-      }
-
-      setTimeout(() => {
-        try {
-          document.body.removeChild(tempContainer);
-        } catch (e) {}
-      }, 100);
-    } catch (err) {
-      console.error('❌ Google Sign-In error:', err);
-      toast.error('Google Sign-In failed. Please try again.');
-      setGoogleLoading(false);
-    }
+    window.google.accounts.id.prompt();
   };
 
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
@@ -409,20 +313,16 @@ export default function Auth() {
             <button
               type="button"
               onClick={handleGoogleSignIn}
-              disabled={googleLoading || !googleReady}
+              disabled={!googleReady}
               className="w-full flex items-center justify-center gap-3 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-70"
             >
-              {googleLoading ? (
-                <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
-              ) : (
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-              )}
-              {googleLoading ? 'Redirecting...' : googleReady ? 'Sign in with Google' : 'Loading...'}
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              {googleReady ? 'Sign in with Google' : 'Loading...'}
             </button>
           </div>
         </div>
