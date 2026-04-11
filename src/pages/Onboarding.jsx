@@ -102,7 +102,7 @@ export default function Onboarding() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center px-1 sm:px-3 py-3 sm:py-4 overflow-x-hidden">
+      <div className="flex-1 flex items-center justify-center px-0 sm:px-1 py-2 sm:py-3 overflow-x-hidden">
         <div className="w-full max-w-6xl min-w-0 overflow-x-hidden">
           <AnimatePresence mode="wait">
             <motion.div

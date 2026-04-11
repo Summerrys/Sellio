@@ -81,7 +81,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
   };
 
   return (
-    <Card className="p-2 sm:p-4 bg-white border-0 shadow-lg max-h-screen overflow-y-auto">
+    <Card className="p-3 sm:p-5 bg-white border-0 shadow-lg max-h-screen overflow-y-auto">
       {/* Header */}
       <div className="text-center mb-6 sm:mb-8">
         <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: themeColor }}>

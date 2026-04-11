@@ -194,7 +194,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
   };
 
   return (
-    <Card className="p-2 sm:p-4 border-0 shadow-lg transition-colors" style={{ backgroundColor: getCardBackground() }}>
+    <Card className="p-3 sm:p-5 border-0 shadow-lg transition-colors" style={{ backgroundColor: getCardBackground() }}>
       <div className="text-center mb-8">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
           <Building2 className="w-8 h-8 text-white" />
