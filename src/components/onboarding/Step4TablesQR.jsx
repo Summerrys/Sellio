@@ -401,10 +401,10 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                                setQRModalOpen(true);
                              }}
                              className="transition-colors p-1 hover:opacity-80"
-                             style={{ color: primaryColor }}
+                             style={{ color: '#f97316' }}
                              title="View QR code"
                             >
-                             <QrCode className="w-4 h-4" />
+                             <QrCode className="w-5 h-5" />
                             </button>
                           </div>
                         )}
