@@ -83,7 +83,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
     const generated = generateDefaultTables(n, tablePrefix.trim() || 'Table', tablePax);
     setTables(prev => [...prev, ...generated]);
     setTableCount('');
-    setTablePax('2');
+    setTablePax('');
   };
 
   const addSingle = () => {
