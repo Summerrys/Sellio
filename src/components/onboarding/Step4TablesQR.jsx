@@ -376,32 +376,35 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                           </div>
                           <div className="flex gap-1 flex-shrink-0">
                             <button
-                               onClick={() => startEdit(t)}
-                               className="text-slate-400 hover:text-blue-500 transition-colors p-1"
-                               title="Edit table"
-                            >
-                               <Edit2 className="w-3.5 h-3.5" />
+                                onClick={() => startEdit(t)}
+                                className="transition-colors p-1 hover:opacity-80"
+                                style={{ color: primaryColor }}
+                                title="Edit table"
+                             >
+                                <Edit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
-                               onClick={() => removeTable(t.id)}
-                               className="text-slate-300 hover:text-red-500 transition-colors p-1"
-                            >
-                               <Trash2 className="w-3.5 h-3.5" />
+                                onClick={() => removeTable(t.id)}
+                                className="transition-colors p-1 hover:opacity-80"
+                                style={{ color: '#ef4444' }}
+                             >
+                                <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
                         {setupQr && qrCodes[t.id] && (
                           <div className="flex justify-center">
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedQR(t);
-                                setQRModalOpen(true);
-                              }}
-                              className="text-slate-400 hover:text-blue-500 transition-colors p-1"
-                              title="View QR code"
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               setSelectedQR(t);
+                               setQRModalOpen(true);
+                             }}
+                             className="transition-colors p-1 hover:opacity-80"
+                             style={{ color: primaryColor }}
+                             title="View QR code"
                             >
-                              <QrCode className="w-4 h-4" />
+                             <QrCode className="w-4 h-4" />
                             </button>
                           </div>
                         )}
