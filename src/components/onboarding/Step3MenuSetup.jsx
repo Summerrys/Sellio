@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, ArrowLeft, Utensils, Layers, Sparkles, Upload, Menu, X, Pencil, Trash2, Plus } from 'lucide-react';
@@ -198,8 +198,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         <p className="text-xs text-slate-500">{hints.sectionSubtitle}</p>
       </div>
 
-      <div className="space-y-3 mb-4 w-full min-w-0">
-
+      <div className="space-y-3 mb-4 w-full min-w-0 max-h-[calc(100vh-400px)] overflow-y-auto">
         {/* Images Section */}
         <div className="bg-white border border-slate-200 rounded-xl p-3">
           <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
@@ -230,7 +229,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               }}>
                 <Droppable droppableId="images" direction="horizontal">
                   {(provided) => (
-                    <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-wrap gap-2">
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="grid grid-cols-4 gap-2">
                       {imagePreviews.map((src, idx) => (
                         <Draggable key={src + idx} draggableId={`img-${idx}`} index={idx}>
                           {(provided, snapshot) => (
@@ -238,7 +237,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              className={`relative w-14 h-14 rounded-lg overflow-hidden border-2 group cursor-grab ${snapshot.isDragging ? 'shadow-lg scale-105' : ''} border-slate-200`}
+                              className={`relative w-full aspect-square rounded-lg overflow-hidden border-2 group cursor-grab ${snapshot.isDragging ? 'shadow-lg scale-105' : ''} border-slate-200`}
                               style={idx === 0 ? { ...provided.draggableProps.style, borderColor: primaryColor } : provided.draggableProps.style}
                               onClick={() => setEditingImageIdx(idx)}
                             >
@@ -254,7 +253,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                         </Draggable>
                       ))}
                       {provided.placeholder}
-                      <label className="w-14 h-14 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors flex-shrink-0">
+                      <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors flex-shrink-0">
                         <Plus className="w-5 h-5 text-slate-400" />
                         <input type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
                       </label>
