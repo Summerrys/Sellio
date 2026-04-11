@@ -90,9 +90,10 @@ export default function Auth() {
 
     try {
       // Generate nonce for security
-      const nonce = Math.random().toString(36).substring(2);
+      const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36);
       nonceRef.current = nonce;
-      
+      console.log('Generated nonce:', nonce);
+
       // Initialize Google Sign-In with nonce
       window.google.accounts.id.initialize({
         client_id: googleClientIdRef.current,
@@ -128,13 +129,20 @@ export default function Auth() {
   const handleCredentialResponse = async (response) => {
     try {
       const supabase = await getSupabase();
+      const currentNonce = nonceRef.current;
+      console.log('Credential response received, nonce:', currentNonce);
+
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: response.credential,
-        nonce: nonceRef.current,
+        nonce: currentNonce,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase signInWithIdToken error:', error);
+        throw error;
+      }
+
       const user = data.session.user;
 
       // Check if this email is already registered as a phone/password user
@@ -213,20 +221,22 @@ export default function Auth() {
     e.preventDefault();
     const cleanPhone = formData.phone.replace(/^0+/, '');
     if (!selectedCountry.validate(cleanPhone)) {
-      toast.error(`Invalid phone number for ${selectedCountry.name}. Expected: ${selectedCountry.hint}`);
-      return;
+    toast.error(`Invalid phone number for ${selectedCountry.name}. Expected: ${selectedCountry.hint}`);
+    return;
     }
     setLoading(true);
     try {
-      const fullPhone = selectedCountry.code + formData.phone.replace(/^0+/, '');
-      
-      const payload = isLogin
-        ? { action: 'login', phone: fullPhone, password: formData.password }
-        : { action: 'signup', phone: fullPhone, password: formData.password, full_name: formData.full_name, email: formData.email };
+    const fullPhone = selectedCountry.code + formData.phone.replace(/^0+/, '');
+    console.log('Attempting login/signup with phone:', fullPhone);
 
-      const response = await base44.functions.invoke('authProxy', payload);
-      const data = response.data;
-      console.log('Auth response:', data);
+    const payload = isLogin
+      ? { action: 'login', phone: fullPhone, password: formData.password }
+      : { action: 'signup', phone: fullPhone, password: formData.password, full_name: formData.full_name, email: formData.email };
+
+    console.log('Sending payload:', payload);
+    const response = await base44.functions.invoke('authProxy', payload);
+    const data = response.data;
+    console.log('Auth response:', data, 'Status:', response.status);
 
       if (data && data.success) {
         localStorage.setItem('app_user', JSON.stringify(data.user));
