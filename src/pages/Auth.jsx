@@ -49,16 +49,22 @@ export default function Auth() {
   }, []);
 
   const handleGoogleSignIn = async () => {
-    if (!googleReady) {
-      toast.error('Google Sign-In is loading. Please wait a moment and try again.');
+    if (!googleClientIdRef.current) {
+      toast.error('Google Sign-In is not configured. Please contact support.');
       return;
     }
 
     setGoogleLoading(true);
-    const clientId = googleClientIdRef.current;
 
-    if (!window.google || !clientId) {
-      toast.error('Google Sign-In not ready. Please try again.');
+    // Wait for google script to load if not ready yet
+    let attempts = 0;
+    while (!window.google && attempts < 50) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+
+    if (!window.google) {
+      toast.error('Google Sign-In failed to load. Please try again.');
       setGoogleLoading(false);
       return;
     }
@@ -66,7 +72,7 @@ export default function Auth() {
     try {
       // Initialize Google Sign-In
       window.google.accounts.id.initialize({
-        client_id: clientId,
+        client_id: googleClientIdRef.current,
         callback: handleCredentialResponse,
       });
 
@@ -215,12 +221,13 @@ export default function Auth() {
       } else if (data.error) {
         toast.error(data.error);
       } else {
-        toast.error('Something went wrong');
+        toast.error(data.message || 'Something went wrong');
       }
-    } catch (error) {
+      } catch (error) {
       console.error('Auth error:', error);
-      toast.error(error.message || 'An unexpected error occurred');
-    } finally {
+      const errorMsg = error?.response?.data?.error || error?.response?.data?.message || error.message || 'An unexpected error occurred';
+      toast.error(errorMsg);
+      } finally {
       setLoading(false);
     }
   };
