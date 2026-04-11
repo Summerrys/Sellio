@@ -24,7 +24,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const [tables, setTables] = useState(formData.tables || []);
   const [tableCount, setTableCount] = useState('');
   const [tablePrefix, setTablePrefix] = useState('Table');
-  const [tablePax, setTablePax] = useState('2');
+  const [tablePax, setTablePax] = useState('');
   const [newLabel, setNewLabel] = useState('');
   const [newPax, setNewPax] = useState('2');
   const [editingId, setEditingId] = useState(null);
