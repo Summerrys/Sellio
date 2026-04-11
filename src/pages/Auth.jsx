@@ -32,62 +32,40 @@ export default function Auth() {
     };
     script.onerror = () => {
       console.error('Failed to load Google SDK');
-      setGoogleReady(true); // Allow form login anyway
+      setGoogleReady(true);
     };
     document.body.appendChild(script);
 
     return () => {
       try {
         document.body.removeChild(script);
-      } catch (e) {
-        // Already removed
-      }
+      } catch (e) {}
     };
   }, []);
 
-  const handleGoogleSignIn = async () => {
-    if (!window.google) {
-      toast.error('Google Sign-In is not ready. Please try again.');
-      return;
-    }
-
-    setGoogleLoading(true);
-    console.log('🔵 Google sign-in button clicked');
-
-    try {
-      // Generate nonce FIRST
-      const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36);
-      nonceRef.current = nonce;
-      console.log('📌 Nonce generated and stored:', nonce);
-
-      // Initialize with callback
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleCredentialResponse,
-        nonce: nonce,
-      });
-      console.log('✓ Google initialized');
-
-      // Trigger One Tap
-      window.google.accounts.id.prompt();
-    } catch (err) {
-      console.error('❌ Google Sign-In error:', err);
-      toast.error('Google Sign-In failed. Please try again.');
-      setGoogleLoading(false);
-    }
-  };
-
   const handleCredentialResponse = async (response) => {
     console.log('🟢 Credential response received');
+    setGoogleLoading(true);
     try {
       const supabase = await getSupabase();
       const nonce = nonceRef.current;
       
-      console.log('   Nonce from ref:', nonce);
-      console.log('   Token present:', !!response.credential);
+      console.log('   Nonce stored:', nonce);
+      console.log('   Token received:', !!response.credential);
+      
+      // Decode JWT to inspect nonce
+      if (response.credential) {
+        const parts = response.credential.split('.');
+        if (parts.length === 3) {
+          try {
+            const payload = JSON.parse(atob(parts[1]));
+            console.log('   JWT nonce:', payload.nonce);
+            console.log('   Nonce match:', payload.nonce === nonce);
+          } catch (e) {}
+        }
+      }
 
-      // Call Supabase with nonce
-      console.log('   Calling signInWithIdToken...');
+      console.log('   Calling Supabase signInWithIdToken...');
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: response.credential,
@@ -96,16 +74,18 @@ export default function Auth() {
 
       if (error) {
         console.error('❌ Supabase error:', error.message);
-        throw error;
+        toast.error(error.message);
+        setGoogleLoading(false);
+        return;
       }
 
       console.log('✓ Supabase auth successful');
       const user = data.session.user;
 
-      // Check if email is already registered as phone/password
+      // Check if email already registered as phone/password
       const { data: phoneUser } = await supabase
         .from('app_users')
-        .select('id, auth_provider')
+        .select('id')
         .eq('email', user.email)
         .neq('auth_provider', 'google')
         .limit(1);
@@ -161,6 +141,57 @@ export default function Auth() {
     } catch (err) {
       console.error('❌ Auth error:', err);
       toast.error(err.message || 'Sign-in failed');
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    if (!window.google) {
+      toast.error('Google Sign-In is not ready. Please try again.');
+      return;
+    }
+
+    setGoogleLoading(true);
+    console.log('🔵 Google sign-in button clicked');
+
+    try {
+      // Generate nonce
+      const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36);
+      nonceRef.current = nonce;
+      console.log('📌 Nonce stored:', nonce);
+
+      // Initialize with callback
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleCredentialResponse,
+        nonce: nonce,
+      });
+
+      // Render button in temp container and click it
+      const tempContainer = document.createElement('div');
+      tempContainer.id = 'temp-google-button';
+      tempContainer.style.display = 'none';
+      document.body.appendChild(tempContainer);
+
+      window.google.accounts.id.renderButton(tempContainer, {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+      });
+
+      const button = tempContainer.querySelector('button');
+      if (button) {
+        button.click();
+      }
+
+      setTimeout(() => {
+        try {
+          document.body.removeChild(tempContainer);
+        } catch (e) {}
+      }, 100);
+    } catch (err) {
+      console.error('❌ Google Sign-In error:', err);
+      toast.error('Google Sign-In failed. Please try again.');
       setGoogleLoading(false);
     }
   };
