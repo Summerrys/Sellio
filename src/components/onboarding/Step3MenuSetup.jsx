@@ -46,6 +46,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const [imagePreviews, setImagePreviews] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [editingImageIdx, setEditingImageIdx] = useState(null);
+  const [editingItemId, setEditingItemId] = useState(null);
   const fileInputRef = useRef(null);
 
   const handleEditSave = (newDataUrl) => {
@@ -105,6 +106,24 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     setImagePreviews(prev => prev.filter((_, i) => i !== idx));
   };
 
+  const startEditItem = (item) => {
+    setEditingItemId(item.id);
+    setSelectedCategory(item.category);
+    setItemName(item.name);
+    setItemPrice(String(item.price));
+    // Load existing image URLs as previews (no local files)
+    setImagePreviews(item.images || []);
+    setImageFiles([]);
+  };
+
+  const cancelEdit = () => {
+    setEditingItemId(null);
+    setItemName('');
+    setItemPrice('');
+    setImageFiles([]);
+    setImagePreviews([]);
+  };
+
   const addItem = async () => {
     if (!selectedCategory || !itemName.trim() || !itemPrice.trim()) return;
     setUploading(true);
@@ -120,18 +139,32 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
             imageUrls.push(publicUrl);
           }
         }
+      } else {
+        // Keep existing URL previews when no new files selected
+        imageUrls = imagePreviews.filter(p => p.startsWith('http'));
       }
     } catch (err) {
       console.error('Image upload failed:', err);
     }
-    const newItem = {
-      id: Date.now(),
-      category: selectedCategory,
-      name: itemName,
-      price: parseFloat(itemPrice),
-      images: imageUrls,
-    };
-    updateFormData({ ...formData, products: [...(formData.products || []), newItem] });
+
+    if (editingItemId !== null) {
+      const updated = (formData.products || []).map(p =>
+        p.id === editingItemId
+          ? { ...p, category: selectedCategory, name: itemName, price: parseFloat(itemPrice), images: imageUrls }
+          : p
+      );
+      updateFormData({ ...formData, products: updated });
+      setEditingItemId(null);
+    } else {
+      const newItem = {
+        id: Date.now(),
+        category: selectedCategory,
+        name: itemName,
+        price: parseFloat(itemPrice),
+        images: imageUrls,
+      };
+      updateFormData({ ...formData, products: [...(formData.products || []), newItem] });
+    }
     setItemName('');
     setItemPrice('');
     setImageFiles([]);
@@ -311,14 +344,24 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                 className="h-10 text-sm"
               />
             </div>
-            <button
-              onClick={addItem}
-              disabled={!selectedCategory || !itemName.trim() || !itemPrice.trim() || uploading}
-              className="w-full py-2.5 text-white rounded-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:opacity-90"
-              style={{ background: themeColor }}
-            >
-              {uploading ? 'Uploading...' : '+ Add Item'}
-            </button>
+            <div className="flex gap-2">
+              {editingItemId !== null && (
+                <button
+                  onClick={cancelEdit}
+                  className="px-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-all"
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                onClick={addItem}
+                disabled={!selectedCategory || !itemName.trim() || !itemPrice.trim() || uploading}
+                className="flex-1 py-2.5 text-white rounded-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:opacity-90"
+                style={{ background: themeColor }}
+              >
+                {uploading ? 'Uploading...' : editingItemId !== null ? '✓ Save Changes' : '+ Add Item'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -340,6 +383,12 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-sm font-semibold text-slate-700">${item.price.toFixed(2)}</span>
+                    <button
+                      onClick={() => startEditItem(item)}
+                      className="text-slate-300 hover:text-blue-500 transition-colors"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
                     <button
                       onClick={() => {
                         const updated = (formData.products || []).filter((_, i) => i !== idx);
