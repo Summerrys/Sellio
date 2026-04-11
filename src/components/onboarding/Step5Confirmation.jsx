@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Rocket, Loader2 } from 'lucide-react';
+import { ArrowLeft, Rocket, Loader2, CheckCircle2, Circle, Star } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
@@ -38,6 +38,20 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
 
   const taxRate = getTaxRate();
   const taxLabel = getTaxLabel();
+
+  const checklistItems = [
+    { label: 'Business Profile', completed: !!formData.businessName, optional: false },
+    { label: 'Branch Setup', completed: !!formData.country, optional: false },
+    { label: 'Menu/Services', completed: formData.products?.length > 0, optional: true },
+    { label: 'Tables & QR Codes', completed: formData.tableCount > 0 || formData.tables?.length > 0, optional: true },
+  ];
+
+  const nextSteps = [
+    'Access your dashboard to start taking orders and bookings',
+    'Print QR codes for tables (if applicable)',
+    'Invite your team members to collaborate',
+    'Customize settings and branding anytime',
+  ];
 
   const handleLaunch = async () => {
     if (isLaunching) return;
@@ -215,77 +229,63 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   };
 
   return (
-    <Card className="p-4 sm:p-6 bg-white border-0 shadow-lg w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
-      {/* Header */}
-      <div className="text-center mb-6">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: themeColor }}>
-          <Rocket className="w-8 h-8 text-white" />
-        </div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-1">Ready to Launch</h2>
-        <p className="text-sm text-slate-500">Your business configuration is complete</p>
-      </div>
-
-      {/* Summary Grid - Two Columns */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        {/* Business Info */}
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 border border-blue-400 shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-xs font-semibold text-blue-100 uppercase tracking-wide mb-2">Business</div>
-          <p className="text-sm font-bold text-white truncate">{formData.businessName}</p>
-          <p className="text-xs text-blue-100 capitalize">{formData.businessType}</p>
+    <div className="w-full space-y-6">
+      {/* Setup Checklist Card */}
+      <Card className="p-6 bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200 shadow-lg">
+        <div className="flex items-center gap-3 mb-6">
+          <Star className="w-6 h-6 text-amber-500" />
+          <h2 className="text-2xl font-bold text-slate-900">Setup Checklist</h2>
         </div>
 
-        {/* Location & Currency */}
-        <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-4 border border-emerald-400 shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-xs font-semibold text-emerald-100 uppercase tracking-wide mb-2">Setup</div>
-          <p className="text-sm font-bold text-white">{formData.country}</p>
-          <p className="text-xs text-emerald-100">{formData.currency}</p>
+        <div className="space-y-3">
+          {checklistItems.map((item, idx) => (
+            <div
+              key={idx}
+              className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
+                item.completed
+                  ? 'bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-300'
+                  : 'bg-white border-slate-200'
+              }`}
+            >
+              <div className="flex-shrink-0">
+                {item.completed ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                ) : (
+                  <Circle className="w-5 h-5 text-slate-300" />
+                )}
+              </div>
+              <span className={`flex-1 font-semibold ${
+                item.completed ? 'text-emerald-900' : 'text-slate-700'
+              }`}>
+                {item.label}
+              </span>
+              {item.optional && (
+                <span className="text-xs font-medium text-slate-500">Optional</span>
+              )}
+            </div>
+          ))}
         </div>
+      </Card>
 
-        {/* Theme */}
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 border border-purple-400 shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-xs font-semibold text-purple-100 uppercase tracking-wide mb-2">Theme</div>
-          <p className="text-sm font-bold text-white">{formData.theme || 'Custom'}</p>
-          <p className="text-xs text-purple-100">Brand colors set</p>
-        </div>
-
-        {/* Tax */}
-        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-4 border border-orange-400 shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-xs font-semibold text-orange-100 uppercase tracking-wide mb-2">Tax</div>
-          <p className="text-sm font-bold text-white">{taxLabel}: {taxRate}%</p>
-          <p className="text-xs text-orange-100">{formData.country === 'Malaysia' ? 'SST Fixed' : formData.country === 'Singapore' ? 'GST Standard' : 'Custom rate'}</p>
-        </div>
-      </div>
-
-      {/* Products & Tables Summary */}
-      <div className="space-y-2 mb-6">
-        {formData.products?.length > 0 && (
-          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between shadow-sm">
-            <span className="text-sm font-semibold text-blue-900">📦 {formData.products.length} Product{formData.products.length > 1 ? 's' : ''}</span>
-            <span className="text-xs font-medium text-blue-700">Menu ready</span>
-          </div>
-        )}
-        
-        {(formData.tables?.length > 0 || formData.tableCount > 0) && (
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between shadow-sm">
-            <span className="text-sm font-semibold text-amber-900">🍽️ {formData.tableCount || formData.tables?.length || 0} Table{(formData.tableCount || formData.tables?.length) > 1 ? 's' : ''}</span>
-            <span className="text-xs font-medium text-amber-700">QR ready</span>
-          </div>
-        )}
-
-        {formData.logoUrl && (
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-3 flex items-center justify-between shadow-sm">
-            <span className="text-sm font-semibold text-purple-900">🎨 Logo</span>
-            <span className="text-xs font-medium text-purple-700">Uploaded</span>
-          </div>
-        )}
-      </div>
+      {/* What Happens Next Card */}
+      <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 shadow-lg">
+        <h3 className="text-lg font-bold text-slate-900 mb-4">What happens next?</h3>
+        <ul className="space-y-3">
+          {nextSteps.map((step, idx) => (
+            <li key={idx} className="flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <span className="text-slate-700">{step}</span>
+            </li>
+          ))}
+        </ul>
+      </Card>
 
       {/* Action Buttons */}
       <div className="flex gap-3">
         <Button
           onClick={prevStep}
           variant="outline"
-          className="h-11 px-4 gap-2"
+          className="h-11 px-6 gap-2"
           disabled={isLaunching}
         >
           <ArrowLeft className="w-4 h-4" /> Back
@@ -299,16 +299,16 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
           {isLaunching ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              Launching...
+              Going Live...
             </>
           ) : (
             <>
               <Rocket className="w-5 h-5" />
-              Launch Business
+              Go Live!
             </>
           )}
         </Button>
       </div>
-    </Card>
+    </div>
   );
 }
