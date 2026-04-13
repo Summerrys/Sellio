@@ -72,18 +72,22 @@ Deno.serve(async (req) => {
       // Track last login
       await supabase.from('app_users').update({ last_login_at: sgNow() }).eq('id', user.id);
 
+      // Re-fetch to get the most up-to-date row
+      const { data: refreshed } = await supabase.from('app_users').select('*').eq('id', user.id).single();
+      const finalUser = refreshed || user;
+
       return Response.json(
         {
           success: true,
           user: {
-            id: user.id,
-            email: user.email,
-            full_name: user.full_name,
-            phone: user.phone,
-            role: user.role,
-            onboarding_completed: user.onboarding_completed,
-            tenant_id: user.tenant_id || null,
-            created_at: user.created_at,
+            id: finalUser.id,
+            email: finalUser.email,
+            full_name: finalUser.full_name,
+            phone: finalUser.phone,
+            role: finalUser.role,
+            onboarding_completed: finalUser.onboarding_completed,
+            tenant_id: finalUser.tenant_id || null,
+            created_at: finalUser.created_at,
             last_login_at: sgNow(),
           },
         },
@@ -143,7 +147,6 @@ Deno.serve(async (req) => {
           is_active: true,
           onboarding_completed: false,
           auth_provider: 'phone',
-          created_at: sgNow(),
           last_login_at: sgNow(),
         })
         .select()

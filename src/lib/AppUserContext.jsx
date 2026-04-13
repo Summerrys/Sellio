@@ -1,16 +1,28 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-// Cookie helpers — work on any hosting environment
+// Session helpers — cookie + localStorage fallback
 export const cookieUtils = {
   set: (user) => {
-    document.cookie = `app_session=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=604800; SameSite=Lax`;
+    const val = JSON.stringify(user);
+    document.cookie = `app_session=${encodeURIComponent(val)}; path=/; max-age=604800; SameSite=Lax`;
+    try { localStorage.setItem('app_session', val); } catch {}
   },
   get: () => {
-    const match = document.cookie.match(/app_session=([^;]+)/);
-    try { return match ? JSON.parse(decodeURIComponent(match[1])) : null; } catch { return null; }
+    // Try cookie first
+    const match = document.cookie.match(/(?:^|;\s*)app_session=([^;]+)/);
+    if (match) {
+      try { const parsed = JSON.parse(decodeURIComponent(match[1])); if (parsed?.id) return parsed; } catch {}
+    }
+    // Fallback to localStorage
+    try {
+      const raw = localStorage.getItem('app_session');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return null;
   },
   clear: () => {
     document.cookie = 'app_session=; path=/; max-age=0';
+    try { localStorage.removeItem('app_session'); } catch {}
   },
 };
 
