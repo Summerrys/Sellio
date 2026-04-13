@@ -23,7 +23,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
 
   const { primary: primaryColor } = getThemeCSSColors(formData);
   const chosenColor = formData?.customPrimary || '#3b82f6';
-  const themeColor = chosenColor || 'linear-gradient(to right, #3b82f6, #9333ea)';
+  const themeColor = formData?.customPrimary || 'linear-gradient(to right, #3b82f6, #9333ea)';
 
   const getTaxRate = () => {
     if (formData.country === 'Singapore') return 9;
