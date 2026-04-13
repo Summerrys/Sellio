@@ -256,8 +256,8 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
           )}
         </div>
 
-        {/* Two-column layout for name and type */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Three-column layout for name, type and country */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Building2 className="w-4 h-4 text-blue-500" /> Business Name</Label>
             <Input
@@ -294,25 +294,25 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
               <p className="text-xs text-red-500 mt-1">{errors.businessType.message}</p>
             )}
           </div>
-        </div>
 
-        <div>
-          <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Globe className="w-4 h-4 text-orange-500" /> Country</Label>
-          <Select
-            value={watch('country')}
-            onValueChange={(v) => setValue('country', v)}
-          >
-            <SelectTrigger className="mt-2 h-11">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {countries.map((country) => (
-                <SelectItem key={country} value={country}>
-                  {country}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div>
+            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Globe className="w-4 h-4 text-orange-500" /> Country</Label>
+            <Select
+              value={watch('country')}
+              onValueChange={(v) => setValue('country', v)}
+            >
+              <SelectTrigger className="mt-2 h-11">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {countries.map((country) => (
+                  <SelectItem key={country} value={country}>
+                    {country}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Theme Selection - Grid Layout */}
@@ -321,7 +321,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
             <Palette className="w-4 h-4 text-purple-500" /> Choose Your Brand Colors
           </Label>
           
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
             {/* Color Picker Button */}
             <button
               type="button"
