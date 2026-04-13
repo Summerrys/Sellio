@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -67,6 +68,9 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
     
     try {
       const supabase = await getSupabase();
+      const currentUser = await base44.auth.me();
+      const ownerEmail = formData.adminEmail || currentUser?.email;
+      if (!ownerEmail) throw new Error('No owner email found. Please log in.');
       const slug = formData.businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       
       // Create tenant
@@ -76,7 +80,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
           name: formData.businessName,
           slug,
           industry: formData.businessType,
-          owner_email: formData.adminEmail,
+          owner_email: ownerEmail,
           country: formData.country,
           currency: formData.currency,
           address: formData.address || null,
@@ -132,7 +136,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
       // Create tenant user (admin)
       await supabase.from('tenant_users').insert({
         tenant_id: tenant.id,
-        user_email: formData.adminEmail,
+        user_email: ownerEmail,
         role_id: adminRole.id,
         role_name: 'Admin',
         is_owner: true,
