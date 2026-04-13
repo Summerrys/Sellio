@@ -244,11 +244,15 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
           ) : (
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-slate-400 hover:bg-slate-50 transition-all cursor-pointer"
+              className="border-2 border-dashed border-slate-300 rounded-xl px-4 py-3 flex items-center gap-3 hover:border-slate-400 hover:bg-slate-50 transition-all cursor-pointer"
             >
-              <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-              <p className="text-sm text-slate-600 font-medium">Upload your logo</p>
-              <p className="text-xs text-slate-500 mt-1">JPG, PNG, WEBP up to 5MB</p>
+              <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                <Upload className="w-5 h-5 text-slate-400" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-600 font-medium">Upload your logo</p>
+                <p className="text-xs text-slate-400">JPG, PNG, WEBP up to 5MB</p>
+              </div>
             </div>
           )}
           {logoError && (
@@ -296,7 +300,8 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
           </div>
         </div>
 
-        <div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
           <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Globe className="w-4 h-4 text-orange-500" /> Country</Label>
           <Select
             value={watch('country')}
@@ -313,6 +318,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
               ))}
             </SelectContent>
           </Select>
+          </div>
         </div>
 
         {/* Theme Selection - Grid Layout */}
