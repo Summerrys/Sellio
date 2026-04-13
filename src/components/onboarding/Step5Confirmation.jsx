@@ -227,7 +227,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
       // Mark onboarding as complete for the user
       await supabase
         .from('app_users')
-        .update({ onboarding_completed: true, tenant_id: tenant.id })
+        .update({ onboarding_completed: true })
         .eq('email', ownerEmail);
 
       // Wait a moment for effect
