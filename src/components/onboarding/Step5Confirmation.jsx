@@ -257,14 +257,13 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.15, duration: 0.4 }}
               className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
-                item.completed
-                  ? 'bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-300'
-                  : 'bg-white border-slate-200'
+                item.completed ? 'bg-white' : 'bg-white border-slate-200'
               }`}
+              style={item.completed ? { borderColor: chosenColor || '#10b981' } : {}}
             >
               <div className="flex-shrink-0">
                 {item.completed ? (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                  <CheckCircle2 className="w-5 h-5" style={{ color: chosenColor || '#10b981' }} />
                 ) : (
                   <Circle className="w-5 h-5 text-slate-300" />
                 )}
