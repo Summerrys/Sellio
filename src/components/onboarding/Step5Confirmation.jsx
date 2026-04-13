@@ -273,7 +273,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
                 )}
               </div>
               <span className={`flex-1 font-semibold ${
-                item.completed ? 'text-emerald-900' : 'text-slate-700'
+                item.completed ? 'text-slate-900' : 'text-slate-700'
               }`}>
                 {item.label}
               </span>
