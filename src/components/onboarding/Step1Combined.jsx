@@ -258,7 +258,8 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
 
         {/* Three-column layout for name, type and country */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
+          {/* Business name takes full width on mobile */}
+          <div className="col-span-1 sm:col-span-1">
             <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Building2 className="w-4 h-4 text-blue-500" /> Business Name</Label>
             <Input
               {...register('businessName')}
@@ -270,6 +271,8 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
             )}
           </div>
 
+          {/* Industry + Country side by side on mobile */}
+          <div className="grid grid-cols-2 sm:contents gap-4">
           <div>
             <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Briefcase className="w-4 h-4 text-green-500" /> Industry Type</Label>
             <Select
@@ -312,6 +315,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
           </div>
         </div>
 
