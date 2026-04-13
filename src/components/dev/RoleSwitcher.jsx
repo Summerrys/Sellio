@@ -24,35 +24,31 @@ export default function RoleSwitcher() {
 
   const switchRole = (roleId) => {
     if (activeRole === roleId) {
-      // Clear override
       localStorage.removeItem('dev_role_override');
       setActiveRole(null);
-      window.location.reload();
     } else {
       localStorage.setItem('dev_role_override', roleId);
       setActiveRole(roleId);
-      window.location.reload();
     }
+    window.location.reload();
   };
 
   const activeRoleData = ROLES.find(r => r.id === activeRole);
 
-  const isOnboarding = window.location.pathname.includes('Onboarding');
-
   return (
-    <div className={cn("fixed z-50", isOnboarding ? "bottom-4 right-4" : "bottom-6 right-6")}>
+    <div className="fixed z-50 bottom-4 right-4">
       {isOpen ? (
-        <div className={cn("bg-white rounded-xl shadow-lg border border-slate-200", isOnboarding ? "p-2 min-w-[220px]" : "p-3 min-w-[280px]")}>
-          <div className={cn("flex items-center justify-between mb-2 px-2", isOnboarding && "mb-1")}>
-           <div className="flex items-center gap-2">
-             <Eye className={cn("text-slate-500", isOnboarding ? "w-3 h-3" : "w-4 h-4")} />
-             <span className={cn("font-semibold text-slate-700", isOnboarding ? "text-xs" : "text-xs")}>{isOnboarding ? "As" : "View As"}</span>
+        <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-2 min-w-[180px]">
+          <div className="flex items-center justify-between mb-1 px-1">
+            <div className="flex items-center gap-1.5">
+              <Eye className="w-3 h-3 text-slate-500" />
+              <span className="text-xs font-semibold text-slate-700">View As</span>
             </div>
-            <Button size="icon" variant="ghost" className={cn(isOnboarding ? "h-5 w-5" : "h-6 w-6")} onClick={() => setIsOpen(false)}>
+            <Button size="icon" variant="ghost" className="h-5 w-5" onClick={() => setIsOpen(false)}>
               <X className="w-3 h-3" />
             </Button>
           </div>
-          <div className={cn("space-y-1", isOnboarding && "space-y-0.5")}>
+          <div className="space-y-0.5">
             {ROLES.map(role => {
               const Icon = role.icon;
               const isActive = activeRole === role.id;
@@ -61,20 +57,15 @@ export default function RoleSwitcher() {
                   key={role.id}
                   onClick={() => switchRole(role.id)}
                   className={cn(
-                    "w-full flex items-center gap-2 px-2 rounded-md font-medium transition-all",
-                    isOnboarding ? "py-1.5 text-xs" : "gap-3 px-3 py-2 rounded-lg text-sm",
-                    isActive 
-                      ? "bg-slate-900 text-white shadow-sm" 
-                      : "text-slate-700 hover:bg-slate-50"
+                    'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs font-medium transition-all',
+                    isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'
                   )}
                 >
-                  <div className={cn("rounded-lg flex items-center justify-center", isOnboarding ? "w-5 h-5" : "w-7 h-7", isActive ? "bg-white/20" : role.color)}>
-                    <Icon className={cn(isOnboarding ? "w-3 h-3" : "w-4 h-4", isActive ? "text-white" : "text-white")} />
+                  <div className={cn('w-5 h-5 rounded flex items-center justify-center', isActive ? 'bg-white/20' : role.color)}>
+                    <Icon className="w-3 h-3 text-white" />
                   </div>
                   <span>{role.label}</span>
-                  {isActive && !isOnboarding && (
-                    <span className="ml-auto text-xs bg-white/20 px-2 py-0.5 rounded-full">Active</span>
-                  )}
+                  {isActive && <span className="ml-auto opacity-70">✓</span>}
                 </button>
               );
             })}
@@ -83,24 +74,16 @@ export default function RoleSwitcher() {
       ) : (
         <Button
           onClick={() => setIsOpen(true)}
+          size="icon"
           className={cn(
-            isOnboarding ? "h-10 px-3 rounded-lg gap-1" : "h-12 px-4 rounded-full gap-2",
-            "shadow-lg",
-            activeRoleData ? "bg-slate-900 hover:bg-slate-800" : "bg-white hover:bg-slate-50 text-slate-700 border border-slate-200"
+            'h-8 w-8 rounded-full shadow-md',
+            activeRoleData ? 'bg-slate-900 hover:bg-slate-800' : 'bg-white hover:bg-slate-50 text-slate-600 border border-slate-200'
           )}
         >
           {activeRoleData ? (
-           <>
-             <div className={cn("rounded-lg flex items-center justify-center", isOnboarding ? "w-5 h-5" : "w-7 h-7 rounded-full", activeRoleData.color)}>
-               <activeRoleData.icon className={cn(isOnboarding ? "w-3 h-3" : "w-4 h-4", "text-white")} />
-             </div>
-             {!isOnboarding && <span className="text-sm font-medium">{activeRoleData.label}</span>}
-           </>
+            <activeRoleData.icon className="w-3.5 h-3.5 text-white" />
           ) : (
-           <>
-             <Eye className={cn(isOnboarding ? "w-3 h-3" : "w-4 h-4")} />
-             {!isOnboarding && <span className="text-sm font-medium">View As...</span>}
-            </>
+            <Eye className="w-3.5 h-3.5" />
           )}
         </Button>
       )}

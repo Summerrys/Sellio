@@ -62,10 +62,7 @@ import Products from './pages/Products';
 import Reports from './pages/Reports';
 import RoleManagement from './pages/RoleManagement';
 import Staff from './pages/Staff';
-import SuperAdminAnalytics from './pages/SuperAdminAnalytics';
-import SuperAdminDashboard from './pages/SuperAdminDashboard';
-import SuperAdminTenantDetail from './pages/SuperAdminTenantDetail';
-import SuperAdminTenants from './pages/SuperAdminTenants';
+
 import Tables from './pages/Tables';
 import TenantSettings from './pages/TenantSettings';
 import UserManagement from './pages/UserManagement';
@@ -88,10 +85,7 @@ export const PAGES = {
     "Reports": Reports,
     "RoleManagement": RoleManagement,
     "Staff": Staff,
-    "SuperAdminAnalytics": SuperAdminAnalytics,
-    "SuperAdminDashboard": SuperAdminDashboard,
-    "SuperAdminTenantDetail": SuperAdminTenantDetail,
-    "SuperAdminTenants": SuperAdminTenants,
+
     "Tables": Tables,
     "TenantSettings": TenantSettings,
     "UserManagement": UserManagement,

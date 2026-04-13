@@ -33,13 +33,7 @@ import { cn } from '@/lib/utils';
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth'];
 
 function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser }) {
-  // SuperAdmin menu - show god view pages ONLY for real SuperAdmins
-  const superAdminItems = isRealSuperAdmin ? [
-    { label: 'God View', icon: Shield, page: 'SuperAdminDashboard' },
-    { label: 'All Tenants', icon: Building2, page: 'SuperAdminTenants' },
-    { label: 'Analytics', icon: BarChart3, page: 'SuperAdminAnalytics' },
-    { type: 'divider' },
-  ] : [];
+  const superAdminItems = [];
 
   // Check if user is admin
   const isAdmin = user?.role === 'admin';
