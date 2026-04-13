@@ -32,7 +32,7 @@ export default function TimePicker({ value = '00:00', onChange, formData }) {
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-40 pointer-events-none" onClick={() => setIsOpen(false)} />
+        <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
       )}
 
       {isOpen && (
