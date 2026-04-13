@@ -52,12 +52,19 @@ export function ThemeProvider({ children, tenantId }) {
 
   // Apply theme to DOM
   useEffect(() => {
-    const activeTheme = previewTheme || themeConfig?.color_set_name || 'Indigo';
-    const colorSet = COLOR_SETS.find(s => s.name === activeTheme);
-    if (!colorSet) return;
-
-    const variables = generateThemeVariables(colorSet.dark, colorSet.light);
+    let variables;
     const root = document.documentElement;
+
+    // If we have custom colors from the theme config, use them
+    if (themeConfig?.primary_color && themeConfig?.accent_color) {
+      variables = generateThemeVariables(themeConfig.primary_color, themeConfig.accent_color);
+    } else {
+      // Otherwise fall back to preset color sets
+      const activeTheme = previewTheme || themeConfig?.color_set_name || 'Indigo';
+      const colorSet = COLOR_SETS.find(s => s.name === activeTheme);
+      if (!colorSet) return;
+      variables = generateThemeVariables(colorSet.dark, colorSet.light);
+    }
 
     Object.entries(variables).forEach(([key, value]) => {
       root.style.setProperty(key, value);
