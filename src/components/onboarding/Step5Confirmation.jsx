@@ -262,18 +262,14 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
               style={item.completed ? (
                 formData?.theme
                   ? { borderColor: chosenColor }
-                  : { border: '2px solid transparent', background: 'linear-gradient(white, white) padding-box, linear-gradient(to right, #3b82f6, #9333ea) border-box' }
+                  : { border: '2px solid transparent', background: 'linear-gradient(white, white) padding-box, ' + themeColor + ' border-box' }
               ) : {}}
             >
               <div className="flex-shrink-0">
                 {item.completed ? (
                   <div
                     className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                    style={{
-                      background: formData?.theme
-                        ? chosenColor
-                        : 'linear-gradient(to right, #3b82f6, #9333ea)'
-                    }}
+                    style={{ background: themeColor }}
                   >
                     <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
                       <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
