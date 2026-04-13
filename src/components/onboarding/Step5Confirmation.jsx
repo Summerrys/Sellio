@@ -259,7 +259,11 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
               className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
                 item.completed ? 'bg-white' : 'bg-white border-slate-200'
               }`}
-              style={item.completed ? { borderColor: chosenColor || '#10b981' } : {}}
+              style={item.completed ? (
+                formData?.theme
+                  ? { borderColor: chosenColor }
+                  : { border: '2px solid transparent', background: 'linear-gradient(white, white) padding-box, linear-gradient(to right, #3b82f6, #9333ea) border-box' }
+              ) : {}}
             >
               <div className="flex-shrink-0">
                 {item.completed ? (
