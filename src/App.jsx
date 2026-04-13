@@ -10,6 +10,7 @@ import Splash from './pages/Splash';
 import DataMigration from './pages/DataMigration';
 import AdminRoles from './pages/AdminRoles';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import { AppUserProvider } from '@/lib/AppUserContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -70,6 +71,7 @@ const AuthenticatedApp = () => {
 function App() {
 
   return (
+    <AppUserProvider>
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <Router>
@@ -82,6 +84,7 @@ function App() {
         <SonnerToaster />
       </QueryClientProvider>
     </AuthProvider>
+    </AppUserProvider>
   )
 }
 

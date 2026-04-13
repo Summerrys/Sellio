@@ -7,9 +7,11 @@ import { ArrowLeft, Rocket, Loader2, CheckCircle2, Circle, Star, Sparkles } from
 import confetti from 'canvas-confetti';
 import { motion } from 'framer-motion';
 import { generateThemeVariables } from '../theme/themeUtils';
+import { useAppUser } from '@/lib/AppUserContext';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 
 export default function Step5Confirmation({ formData, prevStep, onComplete }) {
+  const { appUser, updateAppUser } = useAppUser();
   const [isLaunching, setIsLaunching] = useState(false);
 
   useEffect(() => {
@@ -68,11 +70,10 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
     
     try {
       const supabase = await getSupabase();
-      // Get the currently logged-in app_user from localStorage (custom phone/email auth)
-      const storedUser = JSON.parse(localStorage.getItem('app_user') || '{}');
+      const storedUser = appUser;
       const ownerEmail = storedUser?.email || formData.adminEmail;
       const ownerPhone = storedUser?.phone || null;
-      if (!ownerEmail && !ownerPhone) throw new Error('No user session found. Please log in.');
+      if (!storedUser?.id) throw new Error('No user session found. Please log in.');
       if (!ownerEmail) throw new Error('No owner email found. Please log in.');
       const slug = formData.businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       
@@ -228,14 +229,11 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
       });
 
       // Mark onboarding as complete for the app_user
-      if (storedUser?.id) {
-        await supabase
-          .from('app_users')
-          .update({ onboarding_completed: true, tenant_id: tenant.id })
-          .eq('id', storedUser.id);
-        // Update localStorage to reflect completed onboarding
-        localStorage.setItem('app_user', JSON.stringify({ ...storedUser, onboarding_completed: true, tenant_id: tenant.id }));
-      }
+      await supabase
+        .from('app_users')
+        .update({ onboarding_completed: true, tenant_id: tenant.id })
+        .eq('id', storedUser.id);
+      updateAppUser({ onboarding_completed: true, tenant_id: tenant.id });
 
       // Wait a moment for effect
       setTimeout(() => {

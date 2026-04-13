@@ -4,6 +4,7 @@ import { getSupabase } from '../lib/supabaseClient';
 import { toast, Toaster } from 'sonner';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
+import { useAppUser } from '@/lib/AppUserContext';
 
 const COUNTRY_CODES = [
   { code: '+65', flag: '🇸🇬', name: 'SG', placeholder: '91234567', validate: (p) => /^[89]\d{7}$/.test(p), hint: '8 digits, starting with 8 or 9' },
@@ -11,6 +12,7 @@ const COUNTRY_CODES = [
 ];
 
 export default function Auth() {
+  const { setAppUser } = useAppUser();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -114,7 +116,7 @@ export default function Auth() {
             appUser.role = existing.role;
             appUser.tenant_id = existing.tenant_id;
           }
-          localStorage.setItem('app_user', JSON.stringify(appUser));
+          setAppUser(appUser);
           window.location.href = appUser.onboarding_completed ? '/Dashboard' : '/Onboarding';
         } catch (err) {
           toast.error(err.message || 'Sign-in failed');
@@ -153,7 +155,7 @@ export default function Auth() {
         const data = response.data;
 
         if (data.success) {
-          localStorage.setItem('app_user', JSON.stringify(data.user));
+          setAppUser(data.user);
           toast.custom((t) => (
             <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-lg">
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">

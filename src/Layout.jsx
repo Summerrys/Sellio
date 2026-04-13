@@ -27,11 +27,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { base44 } from '@/api/base44Client';
+import { useAppUser } from '@/lib/AppUserContext';
 import { cn } from '@/lib/utils';
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth'];
 
-function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission }) {
+function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser }) {
   // SuperAdmin menu - show god view pages ONLY for real SuperAdmins
   const superAdminItems = isRealSuperAdmin ? [
     { label: 'God View', icon: Shield, page: 'SuperAdminDashboard' },
@@ -139,7 +140,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
               size="icon"
               className="h-8 w-8 text-slate-400 hover:text-slate-600"
               onClick={() => {
-                localStorage.removeItem('app_user');
+                clearAppUser();
                 window.location.href = createPageUrl('Auth');
               }}
             >
@@ -152,7 +153,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
             size="icon"
             className="h-8 w-8 text-slate-400 hover:text-slate-600"
             onClick={() => {
-              localStorage.removeItem('app_user');
+              clearAppUser();
               window.location.href = createPageUrl('Auth');
             }}
           >
@@ -167,7 +168,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
 function AppLayout({ children, currentPageName }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [customUser, setCustomUser] = useState(null);
+  const { appUser: customUser, clearAppUser } = useAppUser();
   const { user, tenant, isSuperAdmin, isLoading, hasPermission } = useTenant();
   const navigate = useNavigate();
   
@@ -175,18 +176,7 @@ function AppLayout({ children, currentPageName }) {
   const devRoleOverride = localStorage.getItem('dev_role_override');
   const isRealSuperAdmin = (!devRoleOverride && user?.role === 'admin') || devRoleOverride === 'superadmin';
 
-  // Check custom auth — skip redirect to allow testing without login
-  useEffect(() => {
-    if (!publicPages.includes(currentPageName)) {
-      const appUserData = localStorage.getItem('app_user');
-      if (appUserData) {
-        setCustomUser(JSON.parse(appUserData));
-      } else {
-        // Set a demo/guest user so all pages are accessible without login
-        setCustomUser({ full_name: 'Demo User', email: 'demo@test.com', role: 'admin' });
-      }
-    }
-  }, [currentPageName]);
+
 
   const displayUser = customUser || user;
 
@@ -234,7 +224,7 @@ function AppLayout({ children, currentPageName }) {
           collapsed ? "w-[72px]" : "w-[260px]"
         )}
       >
-        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} />
+        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} />
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 transition-colors"
@@ -251,7 +241,7 @@ function AppLayout({ children, currentPageName }) {
           {tenant?.logo_url ? (
             <img src={tenant.logo_url} alt={tenant.name} className="h-8 w-auto object-contain rounded" />
           ) : (
-            <img src={localStorage.getItem('business_logo_url') || 'https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png'} alt="Sellio" className="h-10 w-auto object-contain" />
+            <img src={tenant?.logo_url || 'https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png'} alt="Sellio" className="h-10 w-auto object-contain" />
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -273,7 +263,7 @@ function AppLayout({ children, currentPageName }) {
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} />
+            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} />
           </aside>
         </div>
       )}
