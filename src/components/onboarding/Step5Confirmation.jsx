@@ -68,8 +68,11 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
     
     try {
       const supabase = await getSupabase();
-      const currentUser = await base44.auth.me();
-      const ownerEmail = formData.adminEmail || currentUser?.email;
+      // Get the currently logged-in app_user from localStorage (custom phone/email auth)
+      const storedUser = JSON.parse(localStorage.getItem('app_user') || '{}');
+      const ownerEmail = storedUser?.email || formData.adminEmail;
+      const ownerPhone = storedUser?.phone || null;
+      if (!ownerEmail && !ownerPhone) throw new Error('No user session found. Please log in.');
       if (!ownerEmail) throw new Error('No owner email found. Please log in.');
       const slug = formData.businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       
@@ -81,7 +84,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
           slug,
           logo_url: formData.logoUrl || null,
           industry: formData.businessType,
-          owner_email: ownerEmail,
+          owner_email: ownerEmail || ownerPhone,
           country: formData.country,
           currency: formData.currency,
           address: formData.address || null,
@@ -224,11 +227,15 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
         duration: 2500
       });
 
-      // Mark onboarding as complete for the user
-      await supabase
-        .from('app_users')
-        .update({ onboarding_completed: true, tenant_id: tenant.id })
-        .eq('email', ownerEmail);
+      // Mark onboarding as complete for the app_user
+      if (storedUser?.id) {
+        await supabase
+          .from('app_users')
+          .update({ onboarding_completed: true, tenant_id: tenant.id })
+          .eq('id', storedUser.id);
+        // Update localStorage to reflect completed onboarding
+        localStorage.setItem('app_user', JSON.stringify({ ...storedUser, onboarding_completed: true, tenant_id: tenant.id }));
+      }
 
       // Wait a moment for effect
       setTimeout(() => {
