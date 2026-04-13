@@ -95,6 +95,29 @@ export default function ThemeSelector({ variant = 'full' }) {
               )}
             </button>
           )}
+          {COLOR_SETS.map((colorSet) => (
+            <button
+              key={colorSet.name}
+              onClick={() => handlePreview(colorSet.name)}
+              className={cn(
+                "relative h-12 rounded-lg border-2 transition-all overflow-hidden group",
+                selectedTheme === colorSet.name
+                  ? "border-slate-900 ring-2 ring-slate-900 ring-offset-2"
+                  : "border-slate-200 hover:border-slate-300"
+              )}
+              title={colorSet.name}
+            >
+              <div className="flex h-full">
+                <div className="flex-1" style={{ backgroundColor: colorSet.dark }} />
+                <div className="flex-1" style={{ backgroundColor: colorSet.light }} />
+              </div>
+              {selectedTheme === colorSet.name && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/20">
+                  <Check className="w-5 h-5 text-white drop-shadow" />
+                </div>
+              )}
+            </button>
+          ))}
         </div>
         {isChanged && (
           <div className="flex gap-2 pt-2">
@@ -130,7 +153,7 @@ export default function ThemeSelector({ variant = 'full' }) {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {customColors && (
             <button
               key="custom"
@@ -158,6 +181,33 @@ export default function ThemeSelector({ variant = 'full' }) {
               </div>
             </button>
           )}
+          {COLOR_SETS.map((colorSet) => (
+            <button
+              key={colorSet.name}
+              onClick={() => handlePreview(colorSet.name)}
+              className={cn(
+                "relative group rounded-xl border-2 transition-all overflow-hidden",
+                selectedTheme === colorSet.name
+                  ? "border-slate-900 ring-2 ring-slate-900 ring-offset-2"
+                  : "border-slate-200 hover:border-slate-300 hover:shadow-md"
+              )}
+            >
+              <div className="aspect-[4/3] flex flex-col">
+                <div className="flex-[2]" style={{ backgroundColor: colorSet.dark }} />
+                <div className="flex-1" style={{ backgroundColor: colorSet.light }} />
+              </div>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                {selectedTheme === colorSet.name && (
+                  <div className="bg-white rounded-full p-2 shadow-lg mb-2">
+                    <Check className="w-5 h-5 text-slate-900" />
+                  </div>
+                )}
+                <span className="text-xs font-medium text-white bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">
+                  {colorSet.name}
+                </span>
+              </div>
+            </button>
+          ))}
         </div>
 
         {isChanged && (
