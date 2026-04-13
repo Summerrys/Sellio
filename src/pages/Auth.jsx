@@ -81,7 +81,7 @@ export default function Auth() {
           // Upsert into app_users to track Google users and last login
           const { data: existingAppUser } = await supabase
             .from('app_users')
-            .select('id, created_at')
+            .select('id, created_at, onboarding_completed, tenant_id, role')
             .eq('email', user.email)
             .limit(1);
           
@@ -103,22 +103,19 @@ export default function Auth() {
             appUsersRowId = newAppUser?.id;
           }
 
+          const existingRow = existingAppUser?.[0];
           const appUser = {
             id: appUsersRowId,
             email: user.email,
             full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
             avatar_url: user.user_metadata?.avatar_url,
             provider: 'google',
-            onboarding_completed: false,
-            created_at: existingAppUser?.[0]?.created_at || now,
+            role: existingRow?.role || 'admin',
+            onboarding_completed: existingRow?.onboarding_completed || false,
+            tenant_id: existingRow?.tenant_id || null,
+            created_at: existingRow?.created_at || now,
             last_login_at: now,
           };
-          const { data: existing } = await supabase.from('tenant_users').select('*').eq('email', user.email).single();
-          if (existing) {
-            appUser.onboarding_completed = true;
-            appUser.role = existing.role;
-            appUser.tenant_id = existing.tenant_id;
-          }
           setAppUser(appUser);
           window.location.href = appUser.onboarding_completed ? '/Dashboard' : '/Onboarding';
         } catch (err) {
