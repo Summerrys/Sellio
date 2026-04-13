@@ -86,11 +86,13 @@ export default function Auth() {
             .limit(1);
           
           let appUsersRowId;
-          if (existingAppUser && existingAppUser.length > 0) {
-            appUsersRowId = existingAppUser[0].id;
+          let existingRow = existingAppUser?.[0] || null;
+
+          if (existingRow) {
+            appUsersRowId = existingRow.id;
             await supabase.from('app_users').update({ last_login_at: now }).eq('id', appUsersRowId);
           } else {
-            const { data: newAppUser } = await supabase.from('app_users').insert({
+            const { error: insertError } = await supabase.from('app_users').insert({
               email: user.email,
               full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
               auth_provider: 'google',
@@ -99,11 +101,21 @@ export default function Auth() {
               onboarding_completed: false,
               created_at: now,
               last_login_at: now,
-            }).select('id').single();
-            appUsersRowId = newAppUser?.id;
+            });
+            if (insertError) throw insertError;
+            // Re-fetch to get the actual row id
+            const { data: fetchedUser, error: fetchError } = await supabase
+              .from('app_users')
+              .select('id, created_at, onboarding_completed, tenant_id, role')
+              .eq('email', user.email)
+              .single();
+            if (fetchError) throw fetchError;
+            existingRow = fetchedUser;
+            appUsersRowId = fetchedUser?.id;
           }
 
-          const existingRow = existingAppUser?.[0];
+          if (!appUsersRowId) throw new Error('Failed to create or find user record. Please try again.');
+
           const appUser = {
             id: appUsersRowId,
             email: user.email,
