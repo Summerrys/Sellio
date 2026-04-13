@@ -242,7 +242,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
 
     } catch (error) {
       console.error('Onboarding error:', error);
-      alert('Something went wrong. Please try again.');
+      alert('Something went wrong: ' + (error?.message || JSON.stringify(error)));
       setIsLaunching(false);
     }
   };
