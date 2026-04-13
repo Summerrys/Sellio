@@ -1,9 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 
 export default function TimePicker({ value = '00:00', onChange, formData }) {
   const [hours, minutes] = value.split(':').map(Number);
   const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    const handleScroll = () => setIsOpen(false);
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [isOpen]);
 
   const handleHourChange = (newHour) => {
     const clipped = Math.max(0, Math.min(23, newHour));
@@ -19,7 +36,7 @@ export default function TimePicker({ value = '00:00', onChange, formData }) {
   const bgColor = '#f1f5f9';
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full" ref={containerRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -31,9 +48,7 @@ export default function TimePicker({ value = '00:00', onChange, formData }) {
         </span>
       </button>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-      )}
+
 
       {isOpen && (
         <div
