@@ -85,10 +85,12 @@ export default function Auth() {
             .eq('email', user.email)
             .limit(1);
           
+          let appUsersRowId;
           if (existingAppUser && existingAppUser.length > 0) {
-            await supabase.from('app_users').update({ last_login_at: now }).eq('id', existingAppUser[0].id);
+            appUsersRowId = existingAppUser[0].id;
+            await supabase.from('app_users').update({ last_login_at: now }).eq('id', appUsersRowId);
           } else {
-            await supabase.from('app_users').insert({
+            const { data: newAppUser } = await supabase.from('app_users').insert({
               email: user.email,
               full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
               auth_provider: 'google',
@@ -97,11 +99,12 @@ export default function Auth() {
               onboarding_completed: false,
               created_at: now,
               last_login_at: now,
-            });
+            }).select('id').single();
+            appUsersRowId = newAppUser?.id;
           }
 
           const appUser = {
-            id: user.id,
+            id: appUsersRowId,
             email: user.email,
             full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
             avatar_url: user.user_metadata?.avatar_url,
