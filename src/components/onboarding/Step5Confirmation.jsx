@@ -22,7 +22,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   }, [formData.customPrimary, formData.customSecondary]);
 
   const { primary: primaryColor } = getThemeCSSColors(formData);
-  const chosenColor = formData?.customPrimary || null;
+  const chosenColor = formData?.customPrimary || '#3b82f6';
   const themeColor = chosenColor || 'linear-gradient(to right, #3b82f6, #9333ea)';
 
   const getTaxRate = () => {
