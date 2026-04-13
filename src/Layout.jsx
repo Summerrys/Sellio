@@ -32,7 +32,7 @@ import { cn } from '@/lib/utils';
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth'];
 
-function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser }) {
+function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate }) {
   const superAdminItems = [];
 
   // Check if user is admin
@@ -100,6 +100,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
             <Link
               key={item.page}
               to={createPageUrl(item.page)}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
                 isActive
@@ -170,8 +171,6 @@ function AppLayout({ children, currentPageName }) {
   const devRoleOverride = localStorage.getItem('dev_role_override');
   const isRealSuperAdmin = (!devRoleOverride && user?.role === 'admin') || devRoleOverride === 'superadmin';
 
-
-
   const displayUser = customUser || user;
 
   if (publicPages.includes(currentPageName)) {
@@ -218,7 +217,7 @@ function AppLayout({ children, currentPageName }) {
           collapsed ? "w-[72px]" : "w-[260px]"
         )}
       >
-        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} />
+        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => {}} />
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 transition-colors"
@@ -257,7 +256,7 @@ function AppLayout({ children, currentPageName }) {
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} />
+            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
       )}
@@ -275,28 +274,28 @@ function AppLayout({ children, currentPageName }) {
         </div>
       </main>
       <RoleSwitcher />
-      </div>
-      );
-      }
+    </div>
+  );
+}
 
-      export default function Layout({ children, currentPageName }) {
+export default function Layout({ children, currentPageName }) {
+  return (
+    <TenantProvider>
+      {(tenantContext) => {
+        // Check if dev role override is set to superadmin, or if user is real superadmin
+        const devRoleOverride = localStorage.getItem('dev_role_override');
+        const isDevSuperAdmin = devRoleOverride === 'superadmin';
+        const isRealSuperAdmin = !devRoleOverride && tenantContext.user?.role === 'admin';
+        const themeScope = (isRealSuperAdmin || isDevSuperAdmin) ? 'superadmin' : tenantContext.tenantId;
+
         return (
-          <TenantProvider>
-            {(tenantContext) => {
-              // Check if dev role override is set to superadmin, or if user is real superadmin
-              const devRoleOverride = localStorage.getItem('dev_role_override');
-              const isDevSuperAdmin = devRoleOverride === 'superadmin';
-              const isRealSuperAdmin = !devRoleOverride && tenantContext.user?.role === 'admin';
-              const themeScope = (isRealSuperAdmin || isDevSuperAdmin) ? 'superadmin' : tenantContext.tenantId;
-
-              return (
-                <ThemeProvider tenantId={themeScope}>
-                  <NotificationProvider>
-                    <AppLayout currentPageName={currentPageName}>{children}</AppLayout>
-                  </NotificationProvider>
-                </ThemeProvider>
-              );
-            }}
-          </TenantProvider>
+          <ThemeProvider tenantId={themeScope}>
+            <NotificationProvider>
+              <AppLayout currentPageName={currentPageName}>{children}</AppLayout>
+            </NotificationProvider>
+          </ThemeProvider>
         );
-      }
+      }}
+    </TenantProvider>
+  );
+}
