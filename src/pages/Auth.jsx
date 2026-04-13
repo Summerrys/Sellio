@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Phone, Lock, User, Mail, ChevronDown, Check } from 'lucide-react';
 import { getSupabase } from '../lib/supabaseClient';
-import { toast } from 'sonner';
+import { toast, Toaster } from 'sonner';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
 
@@ -10,86 +10,120 @@ const COUNTRY_CODES = [
   { code: '+60', flag: '🇲🇾', name: 'MY', placeholder: '112345678', validate: (p) => /^1\d{8,9}$/.test(p), hint: '9–10 digits, starting with 1' },
 ];
 
-const GOOGLE_CLIENT_ID = '390618701573-0n3emgl2e2v8redsf2d5dl28fikknl1h.apps.googleusercontent.com';
-
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [googleReady, setGoogleReady] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
+  const googleClientIdRef = useRef(null);
+
+  // Load Google Identity Services and fetch client ID
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      console.log('✓ Google SDK loaded');
-      setGoogleReady(true);
-    };
-    script.onerror = () => {
-      console.error('Failed to load Google SDK');
-      setGoogleReady(true);
-    };
     document.body.appendChild(script);
 
-    return () => {
-      try {
-        document.body.removeChild(script);
-      } catch (e) {}
-    };
+    base44.functions.invoke('getSupabaseConfig', {}).then(res => {
+      googleClientIdRef.current = res.data?.googleClientId;
+    });
+
+    return () => document.body.removeChild(script);
   }, []);
 
-  const handleCredentialResponse = async (response) => {
-    console.log('🟢 Credential received from Google');
-    try {
-      const supabase = await getSupabase();
-      console.log('   Calling signInWithIdToken...');
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    const clientId = googleClientIdRef.current;
 
-      const { data, error } = await supabase.auth.signInWithIdToken({
-        provider: 'google',
-        token: response.credential,
-      });
-
-      if (error) {
-        console.error('❌ Auth error:', error.message);
-        toast.error(error.message);
-        return;
-      }
-
-      console.log('✓ Signed in successfully');
-      const user = data.session.user;
-
-      const appUser = {
-        id: user.id,
-        email: user.email,
-        full_name: user.user_metadata?.full_name || user.email,
-        provider: 'google',
-        onboarding_completed: false,
-      };
-
-      localStorage.setItem('app_user', JSON.stringify(appUser));
-      window.location.href = '/Onboarding';
-    } catch (err) {
-      console.error('❌ Error:', err);
-      toast.error(err.message || 'Sign-in failed');
-    }
-  };
-
-  const handleGoogleSignIn = () => {
-    if (!window.google) {
-      toast.error('Google not ready');
+    if (!window.google || !clientId) {
+      toast.error('Google Sign-In not ready. Please try again.');
+      setGoogleLoading(false);
       return;
     }
 
-    console.log('🔵 Google sign-in clicked');
-    window.google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: handleCredentialResponse,
-    });
+    // Generate nonce for security
+    const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
+    const encoder = new TextEncoder();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(nonce));
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashedNonce = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      nonce: hashedNonce,
+      callback: async (response) => {
+        try {
+          const supabase = await getSupabase();
+          const { data, error } = await supabase.auth.signInWithIdToken({
+            provider: 'google',
+            token: response.credential,
+            nonce,
+          });
+          if (error) throw error;
+          const user = data.session.user;
+
+          // Check if this email is already registered as a phone/password user
+          const { data: phoneUser } = await supabase
+            .from('app_users')
+            .select('id, auth_provider')
+            .eq('email', user.email)
+            .neq('auth_provider', 'google')
+            .limit(1);
+          if (phoneUser && phoneUser.length > 0) {
+            toast.error('This email is already registered with a phone/password account. Please log in using your phone number.');
+            setGoogleLoading(false);
+            return;
+          }
+
+          const now = new Date(Date.now() + 8 * 3600 * 1000).toISOString().replace('Z', '').replace('T', ' ').substring(0, 23);
+          // Upsert into app_users to track Google users and last login
+          const { data: existingAppUser } = await supabase
+            .from('app_users')
+            .select('id, created_at')
+            .eq('email', user.email)
+            .limit(1);
+          
+          if (existingAppUser && existingAppUser.length > 0) {
+            await supabase.from('app_users').update({ last_login_at: now }).eq('id', existingAppUser[0].id);
+          } else {
+            await supabase.from('app_users').insert({
+              email: user.email,
+              full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
+              auth_provider: 'google',
+              role: 'admin',
+              is_active: true,
+              onboarding_completed: false,
+              created_at: now,
+              last_login_at: now,
+            });
+          }
+
+          const appUser = {
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
+            avatar_url: user.user_metadata?.avatar_url,
+            provider: 'google',
+            onboarding_completed: false,
+            created_at: existingAppUser?.[0]?.created_at || now,
+            last_login_at: now,
+          };
+          const { data: existing } = await supabase.from('tenant_users').select('*').eq('email', user.email).single();
+          if (existing) {
+            appUser.onboarding_completed = true;
+            appUser.role = existing.role;
+            appUser.tenant_id = existing.tenant_id;
+          }
+          localStorage.setItem('app_user', JSON.stringify(appUser));
+          window.location.href = appUser.onboarding_completed ? '/Dashboard' : '/Onboarding';
+        } catch (err) {
+          toast.error(err.message || 'Sign-in failed');
+          setGoogleLoading(false);
+        }
+      },
+    });
     window.google.accounts.id.prompt();
   };
-
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);
   const [formData, setFormData] = useState({
@@ -103,50 +137,56 @@ export default function Auth() {
     e.preventDefault();
     const cleanPhone = formData.phone.replace(/^0+/, '');
     if (!selectedCountry.validate(cleanPhone)) {
-      toast.error(`Invalid phone number for ${selectedCountry.name}. ${selectedCountry.hint}`);
+      toast.error(`Invalid phone number for ${selectedCountry.name}. Expected: ${selectedCountry.hint}`);
       return;
     }
-
     setLoading(true);
     try {
-      const fullPhone = selectedCountry.code + cleanPhone;
-      console.log('📱 Phone:', fullPhone);
-
+      const fullPhone = selectedCountry.code + formData.phone.replace(/^0+/, '');
+      
       const payload = isLogin
         ? { action: 'login', phone: fullPhone, password: formData.password }
         : { action: 'signup', phone: fullPhone, password: formData.password, full_name: formData.full_name, email: formData.email };
 
-      console.log('📤 Invoking authProxy with:', payload);
-      const response = await base44.functions.invoke('authProxy', payload);
-      console.log('📥 Response:', response);
-      
-      const data = response?.data || response;
-      console.log('📦 Data:', data);
+      try {
+        const response = await base44.functions.invoke('authProxy', payload);
+        const data = response.data;
 
-      if (data && data.success) {
-        localStorage.setItem('app_user', JSON.stringify(data.user));
-        toast.custom((t) => (
-          <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-lg">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-              <Check className="w-5 h-5 text-white" />
+        if (data.success) {
+          localStorage.setItem('app_user', JSON.stringify(data.user));
+          toast.custom((t) => (
+            <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-lg">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                <Check className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-green-900">{isLogin ? 'Welcome back!' : 'Account created!'}</p>
+                <p className="text-xs text-green-700">You're all set. Redirecting now...</p>
+              </div>
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-green-900">{isLogin ? 'Welcome back!' : 'Account created!'}</p>
-              <p className="text-xs text-green-700">Redirecting...</p>
-            </div>
-          </div>
-        ));
-        setTimeout(() => {
-          window.location.href = createPageUrl(data.user?.onboarding_completed ? 'Dashboard' : 'Onboarding');
-        }, 500);
-      } else {
-        const errorMsg = data?.error || data?.message || 'Login failed';
-        console.error('❌ Error:', errorMsg);
-        toast.error(errorMsg);
+          ));
+          setTimeout(() => {
+            window.location.href = createPageUrl(data.user?.onboarding_completed ? 'Dashboard' : 'Onboarding');
+          }, 500);
+        } else {
+          toast.error(data.error || 'Something went wrong');
+        }
+      } catch (invokeError) {
+        // Handle errors from base44.functions.invoke
+        const errorData = invokeError.response?.data;
+        if (errorData?.error) {
+          toast.error(errorData.error);
+        } else if (invokeError.response?.status === 400) {
+          toast.error('Invalid request. Please check your details.');
+        } else if (invokeError.response?.status === 401) {
+          toast.error('Invalid credentials. Please try again.');
+        } else {
+          toast.error(invokeError.message || 'An error occurred');
+        }
       }
     } catch (error) {
-      console.error('❌ Exception:', error);
-      toast.error(error?.message || 'Login failed. Please try again.');
+      console.error('Auth error:', error);
+      toast.error(error.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -166,6 +206,7 @@ export default function Auth() {
       >
         <div className="w-full max-w-sm">
           <div className="bg-white rounded-2xl shadow-xl p-8">
+            {/* Header */}
             <div className="text-center mb-6">
               <div className="flex items-center justify-center mb-3">
                 <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className="h-28 w-auto object-contain" />
@@ -174,6 +215,7 @@ export default function Auth() {
               <p className="text-sm text-slate-500">Let's get you started</p>
             </div>
 
+            {/* Tab Toggle */}
             <div className="flex rounded-xl p-1 mb-6" style={{ background: '#fde8d8' }}>
               <button
                 type="button"
@@ -196,6 +238,7 @@ export default function Auth() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Name - Sign Up only */}
               {!isLogin && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
@@ -213,6 +256,7 @@ export default function Auth() {
                 </div>
               )}
 
+              {/* Email - Sign Up only */}
               {!isLogin && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
@@ -229,9 +273,11 @@ export default function Auth() {
                 </div>
               )}
 
+              {/* Phone Number */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number *</label>
                 <div className="flex gap-2">
+                  {/* Country code picker */}
                   <div className="relative" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
@@ -259,6 +305,7 @@ export default function Auth() {
                       </div>
                     )}
                   </div>
+                  {/* Phone input */}
                   <div className="relative flex-1">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
@@ -273,6 +320,7 @@ export default function Auth() {
                 </div>
               </div>
 
+              {/* Password */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Password *</label>
                 <div className="relative">
@@ -288,6 +336,7 @@ export default function Auth() {
                 </div>
               </div>
 
+              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={loading}
@@ -298,25 +347,31 @@ export default function Auth() {
               </button>
             </form>
 
+            {/* Divider */}
             <div className="flex items-center gap-3 my-4">
               <div className="flex-1 h-px bg-slate-200" />
               <span className="text-xs text-slate-400 font-medium">or continue with</span>
               <div className="flex-1 h-px bg-slate-200" />
             </div>
 
+            {/* Google Sign In */}
             <button
               type="button"
               onClick={handleGoogleSignIn}
-              disabled={!googleReady}
+              disabled={googleLoading}
               className="w-full flex items-center justify-center gap-3 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-70"
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              {googleReady ? 'Sign in with Google' : 'Loading...'}
+              {googleLoading ? (
+                <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+              ) : (
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+              )}
+              {googleLoading ? 'Redirecting...' : 'Sign in with Google'}
             </button>
           </div>
         </div>
