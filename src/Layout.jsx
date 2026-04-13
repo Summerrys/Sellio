@@ -230,6 +230,9 @@ function AppLayout({ children, currentPageName }) {
       {/* Mobile Header */}
       {currentPageName !== 'Onboarding' && (
       <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-slate-100 z-30 flex items-center px-4 justify-between">
+        <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)}>
+          <Menu className="w-5 h-5" />
+        </Button>
         <div className="flex items-center gap-2">
           {tenant?.logo_url ? (
             <img src={tenant.logo_url} alt={tenant.name} className="h-8 w-auto object-contain rounded" />
@@ -239,26 +242,8 @@ function AppLayout({ children, currentPageName }) {
         </div>
         <div className="flex items-center gap-2">
           {displayUser && <NotificationBell />}
-          <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)}>
-            <Menu className="w-5 h-5" />
-          </Button>
         </div>
       </div>
-      )}
-
-      {/* Mobile Sidebar Overlay */}
-      {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-40">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute left-0 top-0 h-full w-[280px] bg-white shadow-xl">
-            <div className="absolute top-4 right-4">
-              <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => setMobileOpen(false)} />
-          </aside>
-        </div>
       )}
 
       {/* Main Content */}
