@@ -71,33 +71,66 @@ export default function ThemeSelector({ variant = 'full' }) {
           <Palette className="w-4 h-4" />
           <span>Color Theme</span>
         </div>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 gap-3">
           {customColors && (
             <button
               key="custom"
               onClick={handleCustomPreview}
               className={cn(
-                "relative h-12 rounded-lg border-2 transition-all overflow-hidden group",
-                selectedTheme === customColors.name
-                  ? "border-slate-900 ring-2 ring-slate-900 ring-offset-2"
-                  : "border-slate-200 hover:border-slate-300"
+                "flex flex-col items-center gap-2 transition-all",
+                selectedTheme === customColors.name && "opacity-100"
               )}
-              title={customColors.name}
             >
-              <div className="flex h-full">
-                <div className="flex-1" style={{ backgroundColor: customColors.primary }} />
-                <div className="flex-1" style={{ backgroundColor: customColors.accent }} />
+              <div className={cn(
+                "w-16 h-16 rounded-xl border-2 overflow-hidden cursor-pointer",
+                selectedTheme === customColors.name
+                  ? "border-slate-900 ring-2 ring-slate-900"
+                  : "border-slate-300"
+              )}>
+                <div className="flex h-full">
+                  <div className="flex-1" style={{ backgroundColor: customColors.primary }} />
+                  <div className="flex-1" style={{ backgroundColor: customColors.accent }} />
+                </div>
               </div>
               {selectedTheme === customColors.name && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/20">
-                  <Check className="w-5 h-5 text-white drop-shadow" />
+                <div className="absolute mt-6 bg-white rounded-full p-1.5 shadow-lg">
+                  <Check className="w-4 h-4 text-slate-900" />
                 </div>
               )}
+              <span className="text-xs font-medium text-slate-700 text-center">Custom</span>
             </button>
           )}
+          {COLOR_SETS.slice(0, 4).map((colorSet) => (
+            <button
+              key={colorSet.name}
+              onClick={() => handlePreview(colorSet.name)}
+              className={cn(
+                "flex flex-col items-center gap-2 transition-all",
+                selectedTheme === colorSet.name && "opacity-100"
+              )}
+            >
+              <div className={cn(
+                "w-16 h-16 rounded-xl border-2 overflow-hidden cursor-pointer",
+                selectedTheme === colorSet.name
+                  ? "border-slate-900 ring-2 ring-slate-900"
+                  : "border-slate-300"
+              )}>
+                <div className="flex h-full">
+                  <div className="flex-1" style={{ backgroundColor: colorSet.dark }} />
+                  <div className="flex-1" style={{ backgroundColor: colorSet.light }} />
+                </div>
+              </div>
+              {selectedTheme === colorSet.name && (
+                <div className="absolute mt-6 bg-white rounded-full p-1.5 shadow-lg">
+                  <Check className="w-4 h-4 text-slate-900" />
+                </div>
+              )}
+              <span className="text-xs font-medium text-slate-700 text-center">{colorSet.name.split(' ')[0]}</span>
+            </button>
+          ))}
         </div>
         {isChanged && (
-          <div className="flex gap-2 pt-2">
+           <div className="flex gap-2 pt-2">
             <Button
               variant="outline"
               size="sm"
@@ -124,44 +157,111 @@ export default function ThemeSelector({ variant = 'full' }) {
     <Card className="p-6">
       <div className="space-y-4">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-1">Choose Your Color Theme</h3>
+          <h3 className="text-lg font-semibold text-slate-900 mb-1">Choose Your Brand Colors</h3>
           <p className="text-sm text-slate-500">
-            Select a color scheme that matches your brand. Changes apply instantly.
+            Select a color scheme that matches your brand.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {customColors && (
-            <button
-              key="custom"
-              onClick={handleCustomPreview}
-              className={cn(
-                "relative group rounded-xl border-2 transition-all overflow-hidden",
-                selectedTheme === customColors.name
-                  ? "border-slate-900 ring-2 ring-slate-900 ring-offset-2"
-                  : "border-slate-200 hover:border-slate-300 hover:shadow-md"
-              )}
-            >
-              <div className="aspect-[4/3] flex flex-col">
-                <div className="flex-[2]" style={{ backgroundColor: customColors.primary }} />
-                <div className="flex-1" style={{ backgroundColor: customColors.accent }} />
-              </div>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                {selectedTheme === customColors.name && (
-                  <div className="bg-white rounded-full p-2 shadow-lg mb-2">
-                    <Check className="w-5 h-5 text-slate-900" />
+        <div className="space-y-6">
+          {/* First row: Custom + 3 presets */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {/* Custom option */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="relative">
+                <button
+                  onClick={handleCustomPreview}
+                  className={cn(
+                    "relative w-24 h-24 rounded-2xl border-4 overflow-hidden transition-all",
+                    selectedTheme === customColors?.name
+                      ? "border-slate-900 ring-4 ring-slate-900"
+                      : "border-slate-300 hover:border-slate-400"
+                  )}
+                >
+                  {customColors ? (
+                    <div className="flex h-full">
+                      <div className="flex-1" style={{ backgroundColor: customColors.primary }} />
+                      <div className="flex-1" style={{ backgroundColor: customColors.accent }} />
+                    </div>
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
+                      <span className="text-xs text-slate-500">Custom</span>
+                    </div>
+                  )}
+                </button>
+                {selectedTheme === customColors?.name && (
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-full p-2 shadow-lg">
+                    <Check className="w-6 h-6 text-slate-900" />
                   </div>
                 )}
-                <span className="text-xs font-medium text-white bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">
-                  {customColors.name}
-                </span>
               </div>
-            </button>
+              <span className="text-xs font-medium text-slate-700">Custom</span>
+            </div>
+
+            {/* First row presets */}
+            {COLOR_SETS.slice(0, 3).map((colorSet) => (
+              <div key={colorSet.name} className="flex flex-col items-center gap-3">
+                <div className="relative">
+                  <button
+                    onClick={() => handlePreview(colorSet.name)}
+                    className={cn(
+                      "relative w-24 h-24 rounded-2xl border-4 overflow-hidden transition-all",
+                      selectedTheme === colorSet.name
+                        ? "border-slate-900 ring-4 ring-slate-900"
+                        : "border-slate-300 hover:border-slate-400"
+                    )}
+                  >
+                    <div className="flex h-full">
+                      <div className="flex-1" style={{ backgroundColor: colorSet.dark }} />
+                      <div className="flex-1" style={{ backgroundColor: colorSet.light }} />
+                    </div>
+                  </button>
+                  {selectedTheme === colorSet.name && (
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-full p-2 shadow-lg">
+                      <Check className="w-6 h-6 text-slate-900" />
+                    </div>
+                  )}
+                </div>
+                <span className="text-xs font-medium text-slate-700">{colorSet.name}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Remaining presets in subsequent rows */}
+          {COLOR_SETS.length > 3 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {COLOR_SETS.slice(3).map((colorSet) => (
+                <div key={colorSet.name} className="flex flex-col items-center gap-3">
+                  <div className="relative">
+                    <button
+                      onClick={() => handlePreview(colorSet.name)}
+                      className={cn(
+                        "relative w-24 h-24 rounded-2xl border-4 overflow-hidden transition-all",
+                        selectedTheme === colorSet.name
+                          ? "border-slate-900 ring-4 ring-slate-900"
+                          : "border-slate-300 hover:border-slate-400"
+                      )}
+                    >
+                      <div className="flex h-full">
+                        <div className="flex-1" style={{ backgroundColor: colorSet.dark }} />
+                        <div className="flex-1" style={{ backgroundColor: colorSet.light }} />
+                      </div>
+                    </button>
+                    {selectedTheme === colorSet.name && (
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-full p-2 shadow-lg">
+                        <Check className="w-6 h-6 text-slate-900" />
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-xs font-medium text-slate-700">{colorSet.name}</span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
         {isChanged && (
-          <div className="flex items-center justify-between pt-4 border-t">
+           <div className="flex items-center justify-between pt-4 border-t">
             <p className="text-sm text-slate-600">
               Preview mode - click Apply to save your selection
             </p>
