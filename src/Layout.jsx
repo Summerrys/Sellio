@@ -246,6 +246,21 @@ function AppLayout({ children, currentPageName }) {
       </div>
       )}
 
+      {/* Mobile Sidebar Overlay */}
+      {mobileOpen && (
+        <div className="lg:hidden fixed inset-0 z-40">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <aside className="absolute left-0 top-0 h-full w-[280px] bg-white shadow-xl">
+            <div className="absolute top-4 right-4">
+              <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => setMobileOpen(false)} />
+          </aside>
+        </div>
+      )}
+
       {/* Main Content */}
       <main
         className={cn(
