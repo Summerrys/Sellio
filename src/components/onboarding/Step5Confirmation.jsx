@@ -79,6 +79,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
         .insert({
           name: formData.businessName,
           slug,
+          logo_url: formData.logoUrl || null,
           industry: formData.businessType,
           owner_email: ownerEmail,
           country: formData.country,
@@ -107,16 +108,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
         });
       }
 
-      // Create asset if logo was uploaded
-      if (formData.logoUrl) {
-        await supabase.from('assets').insert({
-          tenant_id: tenant.id,
-          name: 'business_logo',
-          type: 'logo',
-          url: formData.logoUrl,
-          is_active: true,
-        });
-      }
+      // logo_url already saved on tenant above
 
       // Create admin role
       const { data: adminRole, error: roleError } = await supabase
