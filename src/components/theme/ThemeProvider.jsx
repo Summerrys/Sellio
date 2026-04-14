@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import db from '@/lib/db';
+import { base44 } from '@/api/base44Client';
 import { COLOR_SETS, generateThemeVariables } from './themeUtils';
 
 const ThemeContext = createContext({});
@@ -9,40 +9,27 @@ export function ThemeProvider({ children, tenantId }) {
   const queryClient = useQueryClient();
   const [previewTheme, setPreviewTheme] = useState(null);
 
-  // Fetch theme config from DB
+  // Fetch theme config via backend function (bypasses RLS)
   const { data: themeConfig } = useQuery({
     queryKey: ['themeConfig', tenantId],
     queryFn: async () => {
-      if (tenantId === 'superadmin') {
-        const configs = await db.entities.ThemeConfig.filter({ tenant_id: 'superadmin' });
-        return configs[0] || null;
-      }
-      const configs = await db.entities.ThemeConfig.filter({ tenant_id: tenantId });
-      return configs[0] || null;
+      const res = await base44.functions.invoke('getThemeConfig', { tenant_id: tenantId });
+      return res.data?.theme || null;
     },
     enabled: !!tenantId,
   });
 
-  // Save theme mutation
+  // Save theme mutation via backend function
   const saveThemeMutation = useMutation({
     mutationFn: async (colorSetName) => {
       const colorSet = COLOR_SETS.find(s => s.name === colorSetName);
       if (!colorSet) return;
-
-      if (themeConfig?.id) {
-        return db.entities.ThemeConfig.update(themeConfig.id, {
-          color_set_name: colorSetName,
-          primary_color: colorSet.dark,
-          accent_color: colorSet.light,
-        });
-      } else {
-        return db.entities.ThemeConfig.create({
-          tenant_id: tenantId,
-          color_set_name: colorSetName,
-          primary_color: colorSet.dark,
-          accent_color: colorSet.light,
-        });
-      }
+      return base44.functions.invoke('saveThemeConfig', {
+        tenant_id: tenantId,
+        color_set_name: colorSetName,
+        primary_color: colorSet.dark,
+        accent_color: colorSet.light,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['themeConfig'] });
@@ -50,18 +37,24 @@ export function ThemeProvider({ children, tenantId }) {
     },
   });
 
-  // Apply theme to DOM
+  // Apply theme to DOM — use primary_color/accent_color directly from DB record
   useEffect(() => {
-    const activeTheme = previewTheme || themeConfig?.color_set_name || 'Indigo';
-    const colorSet = COLOR_SETS.find(s => s.name === activeTheme);
-    if (!colorSet) return;
-
-    const variables = generateThemeVariables(colorSet.dark, colorSet.light);
-    const root = document.documentElement;
-
-    Object.entries(variables).forEach(([key, value]) => {
-      root.style.setProperty(key, value);
-    });
+    if (previewTheme) {
+      const colorSet = COLOR_SETS.find(s => s.name === previewTheme);
+      if (colorSet) {
+        const variables = generateThemeVariables(colorSet.dark, colorSet.light);
+        Object.entries(variables).forEach(([key, value]) => {
+          document.documentElement.style.setProperty(key, value);
+        });
+      }
+      return;
+    }
+    if (themeConfig?.primary_color && themeConfig?.accent_color) {
+      const variables = generateThemeVariables(themeConfig.primary_color, themeConfig.accent_color);
+      Object.entries(variables).forEach(([key, value]) => {
+        document.documentElement.style.setProperty(key, value);
+      });
+    }
   }, [previewTheme, themeConfig]);
 
   const value = {

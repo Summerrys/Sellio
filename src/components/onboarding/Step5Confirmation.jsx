@@ -102,15 +102,13 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
       
       if (tenantError) throw tenantError;
 
-      // Create theme config
-      if (formData.customPrimary && formData.customSecondary) {
-        await supabase.from('theme_configs').insert({
-          tenant_id: tenant.id,
-          color_set_name: formData.theme || 'Custom',
-          primary_color: formData.customPrimary,
-          accent_color: formData.customSecondary,
-        });
-      }
+      // Always save theme config via backend function (bypasses RLS)
+      await base44.functions.invoke('saveThemeConfig', {
+        tenant_id: tenant.id,
+        color_set_name: formData.theme || 'Ocean Blue',
+        primary_color: formData.customPrimary || '#0369A1',
+        accent_color: formData.customSecondary || '#E0F2FE',
+      });
 
       // logo_url already saved on tenant above
 

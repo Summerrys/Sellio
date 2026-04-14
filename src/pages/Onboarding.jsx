@@ -32,13 +32,13 @@ export default function Onboarding() {
     products: [],
   });
 
-  // Load from localStorage on mount
+  // Load from localStorage on mount (Supabase is the backup, localStorage is primary for speed)
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setFormData(parsed.formData || formData);
+        setFormData(parsed.formData || {});
         setCurrentStep(parsed.currentStep || 1);
       } catch (e) {
         console.error('Failed to parse saved onboarding state');
@@ -50,6 +50,8 @@ export default function Onboarding() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ formData, currentStep }));
   }, [formData, currentStep]);
+
+
 
   const updateFormData = (data) => {
     setFormData(prev => ({ ...prev, ...data }));
