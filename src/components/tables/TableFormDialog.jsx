@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import db from '@/lib/db';
+import { base44 } from '@/api/base44Client';
 import QRCode from 'qrcode';
 import {
   Dialog,
@@ -61,30 +61,26 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId })
 
       let createdTable;
       if (table) {
-        createdTable = await db.entities.TableEntity.update(table.id, data);
+        const res = await base44.functions.invoke('manageTable', { action: 'update', tenant_id: tenantId, table_id: table.id, table_data: data });
+        createdTable = res.data?.table;
       } else {
-        createdTable = await db.entities.TableEntity.create(data);
+        const res = await base44.functions.invoke('manageTable', { action: 'create', tenant_id: tenantId, table_data: data });
+        createdTable = res.data?.table;
       }
 
       // Generate QR code for new tables
-      if (!table && tenant && canvasRef.current) {
+      if (!table && tenant && canvasRef.current && createdTable?.id) {
         try {
-          const tableUrl = `https://${tenant.slug}.apptelier.sg/order?table=${createdTable.id}`;
+          const tableUrl = `${window.location.origin}/CustomerMenu?table=${encodeURIComponent(createdTable.name)}`;
           
           await QRCode.toCanvas(canvasRef.current, tableUrl, {
             width: 400,
             margin: 2,
-            color: {
-              dark: '#0f172a',
-              light: '#ffffff',
-            },
+            color: { dark: '#0f172a', light: '#ffffff' },
           });
 
           const dataUrl = canvasRef.current.toDataURL('image/png');
-          
-          await db.entities.TableEntity.update(createdTable.id, {
-            qr_code_url: dataUrl,
-          });
+          await base44.functions.invoke('manageTable', { action: 'update', tenant_id: tenantId, table_id: createdTable.id, table_data: { qr_code_url: dataUrl } });
         } catch (error) {
           console.error('QR generation error:', error);
         }
