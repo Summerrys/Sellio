@@ -11,24 +11,20 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { tenant_id } = await req.json();
-    if (!tenant_id) {
-      return Response.json({ error: 'tenant_id required' }, { status: 400, headers: corsHeaders });
+    const { tenant_id, tables } = await req.json();
+    if (!tenant_id || !tables?.length) {
+      return Response.json({ error: 'tenant_id and tables required' }, { status: 400, headers: corsHeaders });
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const { data, error } = await supabase
-      .from('tables')
-      .select('*')
-      .eq('tenant_id', tenant_id)
-      .order('sort_order', { ascending: true });
-
+    const rows = tables.map(t => ({ ...t, tenant_id }));
+    const { data, error } = await supabase.from('tables').insert(rows).select();
     if (error) throw error;
 
-    return Response.json({ tables: data || [] }, { headers: corsHeaders });
+    return Response.json({ tables: data }, { headers: corsHeaders });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500, headers: corsHeaders });
   }

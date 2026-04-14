@@ -157,24 +157,23 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
 
       // Create tables if provided from onboarding Step4
       if (formData.tables?.length > 0) {
-        const tables = formData.tables.map((t, i) => ({
-          tenant_id: tenant.id,
+        const tableRows = formData.tables.map((t, i) => ({
           name: t.label,
           capacity: t.pax || 2,
           status: 'available',
           sort_order: i,
+          qr_code_url: formData.qrCodes?.[t.id] || null,
         }));
-        await supabase.from('tables').insert(tables);
+        await base44.functions.invoke('bulkCreateTables', { tenant_id: tenant.id, tables: tableRows });
       } else if (formData.tableCount > 0) {
-        // Fallback for legacy tableCount field
-        const tables = Array.from({ length: formData.tableCount }, (_, i) => ({
-          tenant_id: tenant.id,
+        const tableRows = Array.from({ length: formData.tableCount }, (_, i) => ({
           name: `T${i + 1}`,
           capacity: 4,
           status: 'available',
           sort_order: i,
+          qr_code_url: null,
         }));
-        await supabase.from('tables').insert(tables);
+        await base44.functions.invoke('bulkCreateTables', { tenant_id: tenant.id, tables: tableRows });
       }
 
       // Create products

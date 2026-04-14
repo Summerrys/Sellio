@@ -14,8 +14,8 @@ Deno.serve(async (req) => {
     const { action, tenant_id, table_id, table_data } = await req.json();
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
-    const supabase = createClient(supabaseUrl, anonKey);
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabase = createClient(supabaseUrl, serviceKey);
 
     if (action === 'create') {
       const { data, error } = await supabase
