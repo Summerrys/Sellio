@@ -62,15 +62,18 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className={cn("flex items-center justify-between h-16 px-4 border-b border-slate-100 py-2", collapsed && "justify-center")}>
-        <div className="flex items-center gap-2.5 min-h-0">
+      <div className={cn("flex items-center h-16 px-4 border-b border-slate-100", collapsed && "justify-center")}>
+        <div className="flex items-center gap-2.5">
           {tenant?.logo_url ? (
-            <img src={tenant.logo_url} alt={tenant.name} className={collapsed ? 'h-8 w-8 object-contain rounded' : 'h-10 object-contain'} />
+            <img src={tenant.logo_url} alt={tenant.name} className={collapsed ? 'h-7 w-7 object-contain rounded' : 'h-8 object-contain'} />
           ) : (
             <>
-              <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className={collapsed ? 'h-8 w-auto object-contain' : 'h-12 w-auto object-contain'} />
+              <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className={collapsed ? 'h-12 w-auto object-contain' : 'h-16 w-auto object-contain'} />
               {!collapsed && tenant?.name && (
-                <span className="font-bold text-sm text-slate-900 tracking-tight truncate">{tenant.name}</span>
+                <div>
+                  <span className="font-bold text-sm text-slate-900 tracking-tight">{tenant.name}</span>
+                  <span className="text-xs text-slate-400 block -mt-0.5">Suite</span>
+                </div>
               )}
             </>
           )}
@@ -101,8 +104,8 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
                 isActive
-                  ? "text-white shadow-sm [background:linear-gradient(135deg,rgb(var(--color-primary)),rgb(var(--color-accent)))]"
-                  : "text-slate-500 hover:text-slate-900 hover:bg-slate-100",
+                  ? "bg-[rgb(var(--color-primary))] text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-900 hover:bg-[rgb(var(--color-primary-100))]",
                 collapsed && "justify-center px-2"
               )}
               title={collapsed ? item.label : undefined}
@@ -227,9 +230,6 @@ function AppLayout({ children, currentPageName }) {
       {/* Mobile Header */}
       {currentPageName !== 'Onboarding' && (
       <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-slate-100 z-30 flex items-center px-4 justify-between">
-        <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)}>
-          <Menu className="w-5 h-5" />
-        </Button>
         <div className="flex items-center gap-2">
           {tenant?.logo_url ? (
             <img src={tenant.logo_url} alt={tenant.name} className="h-8 w-auto object-contain rounded" />
@@ -239,6 +239,9 @@ function AppLayout({ children, currentPageName }) {
         </div>
         <div className="flex items-center gap-2">
           {displayUser && <NotificationBell />}
+          <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)}>
+            <Menu className="w-5 h-5" />
+          </Button>
         </div>
       </div>
       )}
