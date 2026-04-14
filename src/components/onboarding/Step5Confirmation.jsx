@@ -155,8 +155,18 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
         await supabase.from('business_hours').insert(hoursRows);
       }
 
-      // Create tables if F&B business
-      if (formData.tableCount > 0) {
+      // Create tables if provided from onboarding Step4
+      if (formData.tables?.length > 0) {
+        const tables = formData.tables.map((t, i) => ({
+          tenant_id: tenant.id,
+          name: t.label,
+          capacity: t.pax || 2,
+          status: 'available',
+          sort_order: i,
+        }));
+        await supabase.from('tables').insert(tables);
+      } else if (formData.tableCount > 0) {
+        // Fallback for legacy tableCount field
         const tables = Array.from({ length: formData.tableCount }, (_, i) => ({
           tenant_id: tenant.id,
           name: `T${i + 1}`,
