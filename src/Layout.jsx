@@ -68,11 +68,10 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
             <img src={tenant.logo_url} alt={tenant.name} className={collapsed ? 'h-7 w-7 object-contain rounded' : 'h-8 object-contain'} />
           ) : (
             <>
-              <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className={collapsed ? 'h-12 w-auto object-contain' : 'h-16 w-auto object-contain'} />
+              <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className={collapsed ? 'h-8 w-auto object-contain' : 'h-10 w-auto object-contain'} />
               {!collapsed && tenant?.name && (
                 <div>
                   <span className="font-bold text-sm text-slate-900 tracking-tight">{tenant.name}</span>
-                  <span className="text-xs text-slate-400 block -mt-0.5">Suite</span>
                 </div>
               )}
             </>
