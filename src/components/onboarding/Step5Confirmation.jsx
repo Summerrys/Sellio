@@ -70,7 +70,11 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
     
     try {
       const supabase = await getSupabase();
-      const storedUser = appUser;
+      // Try cookie context first, then fall back to localStorage
+      let storedUser = appUser;
+      if (!storedUser?.id) {
+        try { storedUser = JSON.parse(localStorage.getItem('app_user') || 'null'); } catch {}
+      }
       const ownerEmail = storedUser?.email || formData.adminEmail;
       const ownerPhone = storedUser?.phone || null;
       if (!storedUser?.id) throw new Error('No user session found. Please log in.');
@@ -235,11 +239,11 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
         duration: 2500
       });
 
-      // Mark onboarding as complete for the app_user
-      await supabase
-        .from('app_users')
-        .update({ onboarding_completed: true, tenant_id: tenant.id })
-        .eq('id', storedUser.id);
+      // Mark onboarding as complete via backend function (bypasses RLS)
+      await base44.functions.invoke('completeOnboarding', {
+        user_id: storedUser.id,
+        tenant_id: tenant.id,
+      });
       updateAppUser({ onboarding_completed: true, tenant_id: tenant.id });
 
       // Wait a moment for effect
