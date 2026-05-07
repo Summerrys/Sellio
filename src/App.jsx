@@ -1,4 +1,5 @@
 import { Toaster as SonnerToaster } from 'sonner';
+import { AnimatePresence, motion } from 'framer-motion';
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
@@ -54,7 +55,15 @@ const AuthenticatedApp = () => {
           path={`/${path}`}
           element={
             <LayoutWrapper currentPageName={path}>
-              <Page />
+              <motion.div
+                key={path}
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+              >
+                <Page />
+              </motion.div>
             </LayoutWrapper>
           }
         />

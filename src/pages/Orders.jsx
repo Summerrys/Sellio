@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import db from '@/lib/db';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
+import PullToRefresh from '../components/ui-custom/PullToRefresh';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -73,16 +74,28 @@ export default function Orders() {
     previousOrderCountRef.current = pendingOrders;
   }, [orders, soundEnabled]);
 
+  const handleRefresh = useCallback(() =>
+    queryClient.invalidateQueries({ queryKey: ['orders', tenantId] }), [queryClient, tenantId]);
+
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }) => {
       return db.entities.Order.update(orderId, { status });
     },
-    onSuccess: () => {
+    onMutate: async ({ orderId, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['orders', tenantId, statusFilter] });
+      const previous = queryClient.getQueryData(['orders', tenantId, statusFilter]);
+      queryClient.setQueryData(['orders', tenantId, statusFilter], (old = []) =>
+        old.map(o => o.id === orderId ? { ...o, status } : o)
+      );
+      return { previous };
+    },
+    onError: (error, _vars, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(['orders', tenantId, statusFilter], ctx.previous);
+      toast.error(error.message || 'Failed to update order');
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['orders', tenantId] });
       toast.success('Order status updated');
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to update order');
     },
   });
 
@@ -162,6 +175,7 @@ export default function Orders() {
 
   return (
     <RequirePermission permission="orders.view">
+      <PullToRefresh onRefresh={handleRefresh}>
       <div className="space-y-6">
         <PageHeader
           title="Orders"
@@ -262,6 +276,7 @@ export default function Orders() {
         {/* Hidden audio element for notifications */}
         <audio ref={audioRef} src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZSBQMS6Ln77BcGwU+ltTy0H4qBSh+zPDajzoJE1yy6+SfUBMJS6Lg8rllIQU2j9Ty0oIuBSV4yPDbki4HGWu/7OKXRxILT6jk8bJeHQU7mtXx0H8pBCuCzvDakTsJElyw6+GdTxkKSZ7h8rllHwU2kdPx1IIvBSp4yO/bkz0KFl2w6+KdUhIMT6fn8LRfHQU7nNXy0IAqBS2Bze/aj0IJEV6w6+SfVBUJSaDg8bViIAU3kdTy1IQxBSh4x+/ckT4KFl6x6+KeUhMLUanl8bNgHgVEnNTy0H8pBSt/yPDbkDwJFF+x6uKeTBYKSaHg8bllIAU5k9Tx1IMyBSh5ye/dlEEKFGCy6uOfUhQMUavm8bRiHwVFntXx0H4pBSh/ye7ckUILFWGz6+OgVBYLS6Ph8r" />
       </div>
+      </PullToRefresh>
     </RequirePermission>
   );
 }

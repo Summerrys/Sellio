@@ -297,6 +297,9 @@ function AppLayout({ children, currentPageName }) {
               <Link
                 key={page}
                 to={createPageUrl(page)}
+                onClick={() => {
+                  if (isActive) window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
                 className={cn(
                   "flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors",
                   isActive ? "text-[rgb(var(--color-primary))]" : "text-slate-400"

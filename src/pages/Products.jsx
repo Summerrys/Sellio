@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import PullToRefresh from '../components/ui-custom/PullToRefresh';
 import db from '@/lib/db';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
@@ -16,6 +17,7 @@ import { cn } from '@/lib/utils';
 
 export default function Products() {
   const { tenantId, tenant } = useTenant();
+  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -88,8 +90,15 @@ export default function Products() {
     window.URL.revokeObjectURL(url);
   };
 
+  const handleRefresh = useCallback(() =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['products', tenantId] }),
+      queryClient.invalidateQueries({ queryKey: ['categories', tenantId] }),
+    ]), [queryClient, tenantId]);
+
   return (
     <RequirePermission permission="products.view">
+      <PullToRefresh onRefresh={handleRefresh}>
       <div className="space-y-6">
         <PageHeader
           title="Products"
@@ -220,6 +229,7 @@ export default function Products() {
           categories={categories}
         />
       </div>
+      </PullToRefresh>
     </RequirePermission>
   );
 }

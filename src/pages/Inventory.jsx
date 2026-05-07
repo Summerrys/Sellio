@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import PullToRefresh from '../components/ui-custom/PullToRefresh';
 import db from '@/lib/db';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
@@ -26,6 +27,9 @@ export default function Inventory() {
 
 function InventoryContent() {
   const { tenantId } = useTenant();
+  const queryClient = useQueryClient();
+  const handleRefresh = useCallback(() =>
+    queryClient.invalidateQueries({ queryKey: ['products', tenantId] }), [queryClient, tenantId]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -80,6 +84,7 @@ function InventoryContent() {
   };
 
   return (
+    <PullToRefresh onRefresh={handleRefresh}>
     <div className="space-y-6">
         <PageHeader
           title="Inventory Management"
@@ -294,5 +299,6 @@ function InventoryContent() {
           tenantId={tenantId}
         />
       </div>
+    </PullToRefresh>
   );
 }
