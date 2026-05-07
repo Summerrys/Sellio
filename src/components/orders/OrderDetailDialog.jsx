@@ -27,7 +27,7 @@ export default function OrderDetailDialog({ open, onOpenChange, order, onPrint, 
 
         <div className="space-y-6 py-4">
           {/* Order Info */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-slate-500 mb-1">Date & Time</p>
               <div className="flex items-center gap-2">
@@ -124,7 +124,7 @@ export default function OrderDetailDialog({ open, onOpenChange, order, onPrint, 
           </div>
         </div>
 
-        <DialogFooter className="flex gap-2">
+        <DialogFooter className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => onPrint(order)}>
             <Printer className="w-4 h-4 mr-2" />
             Print Receipt
