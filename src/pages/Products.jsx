@@ -137,14 +137,14 @@ export default function Products() {
               placeholder="Search products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-9 h-11"
             />
           </div>
 
           <div className="flex gap-2 items-center flex-wrap">
             {/* Category Filter */}
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="flex-1 min-w-[120px]">
+              <SelectTrigger className="flex-1 min-w-[120px] h-11">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -157,7 +157,7 @@ export default function Products() {
 
             {/* Status Filter */}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="flex-1 min-w-[110px]">
+              <SelectTrigger className="flex-1 min-w-[110px] h-11">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

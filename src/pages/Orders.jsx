@@ -196,7 +196,7 @@ export default function Orders() {
         {/* Controls */}
         <div className="flex flex-wrap gap-3 items-center justify-between">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-36">
+            <SelectTrigger className="w-36 h-11">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

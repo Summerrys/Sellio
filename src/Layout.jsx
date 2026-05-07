@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { TenantProvider, useTenant } from './components/tenant/TenantContext';
@@ -166,6 +166,27 @@ function AppLayout({ children, currentPageName }) {
   const { appUser: customUser, clearAppUser } = useAppUser();
   const { user, tenant, isSuperAdmin, isLoading, hasPermission } = useTenant();
   const navigate = useNavigate();
+
+  // Persist scroll position per bottom-tab page
+  const scrollPositions = useRef({});
+  const handleTabNavigate = useCallback((page, isActive) => {
+    if (isActive) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    // Save current scroll position for the current page
+    scrollPositions.current[currentPageName] = window.scrollY;
+  }, [currentPageName]);
+
+  // Restore scroll position when page changes (bottom-tab pages only)
+  useEffect(() => {
+    const tabPages = ['Dashboard', 'Orders', 'Products', 'TenantSettings'];
+    if (tabPages.includes(currentPageName)) {
+      const saved = scrollPositions.current[currentPageName] ?? 0;
+      // Use rAF to wait for render before restoring
+      requestAnimationFrame(() => window.scrollTo({ top: saved, behavior: 'instant' }));
+    }
+  }, [currentPageName]);
   
   // Check if this is a REAL SuperAdmin OR dev role is set to superadmin
   const devRoleOverride = localStorage.getItem('dev_role_override');
@@ -273,7 +294,7 @@ function AppLayout({ children, currentPageName }) {
           currentPageName === 'Onboarding' ? "pt-0" : "pt-14 lg:pt-0",
           currentPageName !== 'Onboarding' && (collapsed ? "lg:ml-[72px]" : "lg:ml-[260px]")
         )}
-        style={{ paddingBottom: currentPageName !== 'Onboarding' ? 'calc(env(safe-area-inset-bottom) + 64px)' : undefined }}
+        style={{ paddingBottom: currentPageName !== 'Onboarding' ? 'calc(env(safe-area-inset-bottom, 0px) + 72px)' : undefined }}
       >
         <div className="p-4 sm:p-6 lg:p-8 max-w-[1400px] overflow-x-hidden">
           {children}
@@ -283,8 +304,8 @@ function AppLayout({ children, currentPageName }) {
       {/* Mobile Bottom Tab Bar */}
       {currentPageName !== 'Onboarding' && (
         <nav
-          className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-30 flex items-center"
-          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+          className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-30 flex items-stretch"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
           {[
             { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
@@ -297,11 +318,9 @@ function AppLayout({ children, currentPageName }) {
               <Link
                 key={page}
                 to={createPageUrl(page)}
-                onClick={() => {
-                  if (isActive) window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
+                onClick={() => handleTabNavigate(page, isActive)}
                 className={cn(
-                  "flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors",
+                  "flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors min-h-[56px]",
                   isActive ? "text-[rgb(var(--color-primary))]" : "text-slate-400"
                 )}
               >

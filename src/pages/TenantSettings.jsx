@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import db from '@/lib/db';
+import { base44 } from '@/api/base44Client';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PermissionGate from '../components/tenant/PermissionGate';
@@ -15,7 +16,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import ThemeSelector from '../components/theme/ThemeSelector';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Building2, Shield, Plus, Pencil, Trash2, Save, Palette, AlertTriangle } from 'lucide-react';
+import { Building2, Shield, Plus, Pencil, Trash2, Save, Palette, AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function TenantSettings() {
@@ -33,6 +34,7 @@ function TenantSettingsContent() {
   const [businessForm, setBusinessForm] = useState({ name: '', phone: '', address: '', currency: 'SGD', timezone: 'Asia/Singapore' });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
   const [showRoleForm, setShowRoleForm] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
   const [roleForm, setRoleForm] = useState({ name: '', description: '', permissions: [] });
@@ -114,20 +116,20 @@ function TenantSettingsContent() {
         <TabsContent value="business">
           <Card className="border-0 shadow-sm p-6 max-w-2xl">
             <div className="space-y-4">
-              <div><Label>Business Name</Label><Input value={businessForm.name} onChange={e => setBusinessForm({ ...businessForm, name: e.target.value })} /></div>
+              <div><Label>Business Name</Label><Input className="h-11" value={businessForm.name} onChange={e => setBusinessForm({ ...businessForm, name: e.target.value })} /></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div><Label>Phone</Label><Input value={businessForm.phone} onChange={e => setBusinessForm({ ...businessForm, phone: e.target.value })} /></div>
+                <div><Label>Phone</Label><Input className="h-11" value={businessForm.phone} onChange={e => setBusinessForm({ ...businessForm, phone: e.target.value })} /></div>
                 <div><Label>Currency</Label>
                   <Select value={businessForm.currency} onValueChange={v => setBusinessForm({ ...businessForm, currency: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {['SGD', 'USD', 'EUR', 'GBP', 'MYR', 'THB', 'IDR', 'PHP'].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
-              <div><Label>Address</Label><Input value={businessForm.address} onChange={e => setBusinessForm({ ...businessForm, address: e.target.value })} /></div>
-              <Button onClick={() => updateBusinessMutation.mutate()} disabled={updateBusinessMutation.isPending} className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-2">
+              <div><Label>Address</Label><Input className="h-11" value={businessForm.address} onChange={e => setBusinessForm({ ...businessForm, address: e.target.value })} /></div>
+              <Button onClick={() => updateBusinessMutation.mutate()} disabled={updateBusinessMutation.isPending} className="h-11 bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-2">
                 <Save className="w-4 h-4" /> {updateBusinessMutation.isPending ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
@@ -142,7 +144,7 @@ function TenantSettingsContent() {
                 <p className="text-xs text-slate-500 mt-1">Permanently delete your account and all associated data. This action cannot be undone.</p>
                 <Button
                   variant="outline"
-                  className="mt-3 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 text-xs"
+                  className="mt-3 h-11 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
                   onClick={() => { setDeleteConfirmText(''); setShowDeleteConfirm(true); }}
                 >
                   Delete Account
@@ -186,7 +188,7 @@ function TenantSettingsContent() {
       </Tabs>
 
       {/* Account Deletion Dialog */}
-      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      <Dialog open={showDeleteConfirm} onOpenChange={(open) => { if (!isDeleting) setShowDeleteConfirm(open); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
@@ -194,28 +196,51 @@ function TenantSettingsContent() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <p className="text-sm text-slate-600">This will permanently delete your account, all your data, products, orders, and staff. This <strong>cannot be undone</strong>.</p>
+            <p className="text-sm text-slate-600">
+              This will <strong>permanently delete</strong> your business account, all products, orders, staff, and settings. This cannot be undone.
+            </p>
+            <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-xs text-red-700 space-y-1">
+              <p>• All products and categories will be removed</p>
+              <p>• All order history will be erased</p>
+              <p>• All staff accounts will be revoked</p>
+            </div>
             <div>
-              <Label className="text-xs text-slate-500">Type <span className="font-mono font-semibold text-slate-800">DELETE</span> to confirm</Label>
+              <Label className="text-xs text-slate-500">
+                Type <span className="font-mono font-semibold text-slate-800">DELETE</span> to confirm
+              </Label>
               <Input
-                className="mt-1"
+                className="mt-1 h-11"
                 value={deleteConfirmText}
                 onChange={e => setDeleteConfirmText(e.target.value)}
                 placeholder="Type DELETE"
+                disabled={isDeleting}
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" className="h-11" onClick={() => setShowDeleteConfirm(false)} disabled={isDeleting}>
+              Cancel
+            </Button>
             <Button
-              disabled={deleteConfirmText !== 'DELETE'}
-              className="bg-red-600 hover:bg-red-700 text-white"
-              onClick={() => {
-                toast.error('Account deletion requires contacting support. Please email support@sellio.sg');
-                setShowDeleteConfirm(false);
+              disabled={deleteConfirmText !== 'DELETE' || isDeleting}
+              className="h-11 bg-red-600 hover:bg-red-700 text-white gap-2"
+              onClick={async () => {
+                setIsDeleting(true);
+                try {
+                  const res = await base44.functions.invoke('deleteTenantWithCascade', { tenant_id: tenantId });
+                  if (res.data?.success) {
+                    toast.success('Account deleted. Redirecting...');
+                    setTimeout(() => { window.location.href = '/'; }, 1500);
+                  } else {
+                    throw new Error(res.data?.error || 'Deletion failed');
+                  }
+                } catch (err) {
+                  toast.error(err.message || 'Failed to delete account. Please contact support.');
+                  setIsDeleting(false);
+                }
               }}
             >
-              Delete Permanently
+              {isDeleting ? <><Loader2 className="w-4 h-4 animate-spin" /> Deleting...</> : 'Delete Permanently'}
             </Button>
           </DialogFooter>
         </DialogContent>
