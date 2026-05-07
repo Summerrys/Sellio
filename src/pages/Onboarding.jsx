@@ -46,9 +46,20 @@ export default function Onboarding() {
     }
   }, []);
 
-  // Save to localStorage whenever state changes
+  // Save to localStorage whenever state changes (exclude large fields like products)
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ formData, currentStep }));
+    const { products, ...smallFormData } = formData;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ formData: smallFormData, currentStep }));
+    } catch (e) {
+      // Quota exceeded — clear and retry with minimal data
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ formData: smallFormData, currentStep }));
+      } catch (_) {
+        // Silently ignore if still failing
+      }
+    }
   }, [formData, currentStep]);
 
 
