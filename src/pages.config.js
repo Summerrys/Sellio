@@ -47,25 +47,26 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
-import Auth from './pages/Auth';
-import Categories from './pages/Categories';
-import CustomerMenu from './pages/CustomerMenu';
-import CustomerOrder from './pages/CustomerOrder';
-import Dashboard from './pages/Dashboard';
-import Inventory from './pages/Inventory';
-import KitchenDisplay from './pages/KitchenDisplay';
-import Notifications from './pages/Notifications';
-import Onboarding from './pages/Onboarding';
-import OrderTracking from './pages/OrderTracking';
-import Orders from './pages/Orders';
-import Products from './pages/Products';
-import Reports from './pages/Reports';
-import RoleManagement from './pages/RoleManagement';
-import Staff from './pages/Staff';
+import { lazy } from 'react';
 
-import Tables from './pages/Tables';
-import TenantSettings from './pages/TenantSettings';
-import UserManagement from './pages/UserManagement';
+const Auth = lazy(() => import('./pages/Auth'));
+const Categories = lazy(() => import('./pages/Categories'));
+const CustomerMenu = lazy(() => import('./pages/CustomerMenu'));
+const CustomerOrder = lazy(() => import('./pages/CustomerOrder'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Inventory = lazy(() => import('./pages/Inventory'));
+const KitchenDisplay = lazy(() => import('./pages/KitchenDisplay'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+const OrderTracking = lazy(() => import('./pages/OrderTracking'));
+const Orders = lazy(() => import('./pages/Orders'));
+const Products = lazy(() => import('./pages/Products'));
+const Reports = lazy(() => import('./pages/Reports'));
+const RoleManagement = lazy(() => import('./pages/RoleManagement'));
+const Staff = lazy(() => import('./pages/Staff'));
+const Tables = lazy(() => import('./pages/Tables'));
+const TenantSettings = lazy(() => import('./pages/TenantSettings'));
+const UserManagement = lazy(() => import('./pages/UserManagement'));
 import __Layout from './Layout.jsx';
 
 
@@ -85,7 +86,6 @@ export const PAGES = {
     "Reports": Reports,
     "RoleManagement": RoleManagement,
     "Staff": Staff,
-
     "Tables": Tables,
     "TenantSettings": TenantSettings,
     "UserManagement": UserManagement,

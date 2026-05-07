@@ -133,7 +133,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-slate-400 hover:text-slate-600"
+              className="h-11 w-11 text-slate-400 hover:text-slate-600"
               onClick={() => {
                 clearAppUser();
                 window.location.href = createPageUrl('Auth');
@@ -146,7 +146,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-slate-400 hover:text-slate-600"
+            className="h-11 w-11 text-slate-400 hover:text-slate-600"
             onClick={() => {
               clearAppUser();
               window.location.href = createPageUrl('Auth');
@@ -251,10 +251,10 @@ function AppLayout({ children, currentPageName }) {
       {/* Mobile Header */}
       {currentPageName !== 'Onboarding' && (
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-100 z-30 flex items-center px-4 justify-between"
-        style={{ height: '56px', paddingTop: 'env(safe-area-inset-top)' }}>
+        style={{ height: 'calc(56px + env(safe-area-inset-top, 0px))', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="flex items-center gap-2">
           {window.history.length > 1 && !['Dashboard','Orders','Products','TenantSettings'].includes(currentPageName) ? (
-            <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
+            <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => window.history.back()}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
           ) : tenant?.logo_url ? (
@@ -265,7 +265,7 @@ function AppLayout({ children, currentPageName }) {
         </div>
         <div className="flex items-center gap-2">
           {displayUser && <NotificationBell />}
-          <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)}>
+          <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setMobileOpen(true)}>
             <Menu className="w-5 h-5" />
           </Button>
         </div>
@@ -278,7 +278,7 @@ function AppLayout({ children, currentPageName }) {
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
           <aside className="absolute left-0 top-0 h-full w-[280px] bg-white shadow-xl">
             <div className="absolute top-4 right-4">
-              <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)}>
+              <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setMobileOpen(false)}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
@@ -291,7 +291,7 @@ function AppLayout({ children, currentPageName }) {
       <main
         className={cn(
           "flex-1 transition-all duration-300 min-h-screen overflow-x-hidden",
-          currentPageName === 'Onboarding' ? "pt-0" : "pt-14 lg:pt-0",
+          currentPageName === 'Onboarding' ? "pt-0" : "pt-[calc(56px+env(safe-area-inset-top,0px))] lg:pt-0",
           currentPageName !== 'Onboarding' && (collapsed ? "lg:ml-[72px]" : "lg:ml-[260px]")
         )}
         style={{ paddingBottom: currentPageName !== 'Onboarding' ? 'calc(env(safe-area-inset-bottom, 0px) + 72px)' : undefined }}
@@ -320,7 +320,7 @@ function AppLayout({ children, currentPageName }) {
                 to={createPageUrl(page)}
                 onClick={() => handleTabNavigate(page, isActive)}
                 className={cn(
-                  "flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors min-h-[56px]",
+                  "flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors min-h-[60px]",
                   isActive ? "text-[rgb(var(--color-primary))]" : "text-slate-400"
                 )}
               >

@@ -1,16 +1,16 @@
 import { Toaster as SonnerToaster } from 'sonner';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes, useRoutes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import SupabaseTest from './pages/SupabaseTest';
 import Splash from './pages/Splash';
 import DataMigration from './pages/DataMigration';
 import AdminRoles from './pages/AdminRoles';
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { AppUserProvider } from '@/lib/AppUserContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -48,32 +48,38 @@ const AuthenticatedApp = () => {
 
   // Render the main app
   return (
-    <Routes>
-      {Object.entries(Pages).map(([path, Page]) => (
-        <Route
-          key={path}
-          path={`/${path}`}
-          element={
-            <LayoutWrapper currentPageName={path}>
-              <motion.div
-                key={path}
-                initial={{ opacity: 0, x: 16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -16 }}
-                transition={{ duration: 0.18, ease: 'easeOut' }}
-              >
-                <Page />
-              </motion.div>
-            </LayoutWrapper>
-          }
-        />
-      ))}
-      <Route path="/Splash" element={<Splash />} />
-      <Route path="/SupabaseTest" element={<SupabaseTest />} />
-      <Route path="/DataMigration" element={<LayoutWrapper currentPageName="DataMigration"><DataMigration /></LayoutWrapper>} />
-      <Route path="/AdminRoles" element={<LayoutWrapper currentPageName="AdminRoles"><AdminRoles /></LayoutWrapper>} />
-      <Route path="*" element={<PageNotFound />} />
-    </Routes>
+    <Suspense fallback={
+      <div className="fixed inset-0 flex items-center justify-center bg-slate-50">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
+      </div>
+    }>
+      <Routes>
+        {Object.entries(Pages).map(([path, Page]) => (
+          <Route
+            key={path}
+            path={`/${path}`}
+            element={
+              <LayoutWrapper currentPageName={path}>
+                <motion.div
+                  key={path}
+                  initial={{ opacity: 0, x: 16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -16 }}
+                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                >
+                  <Page />
+                </motion.div>
+              </LayoutWrapper>
+            }
+          />
+        ))}
+        <Route path="/Splash" element={<Splash />} />
+        <Route path="/SupabaseTest" element={<SupabaseTest />} />
+        <Route path="/DataMigration" element={<LayoutWrapper currentPageName="DataMigration"><DataMigration /></LayoutWrapper>} />
+        <Route path="/AdminRoles" element={<LayoutWrapper currentPageName="AdminRoles"><AdminRoles /></LayoutWrapper>} />
+        <Route path="*" element={<PageNotFound />} />
+      </Routes>
+    </Suspense>
   );
 };
 
