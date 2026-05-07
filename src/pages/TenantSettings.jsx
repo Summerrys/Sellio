@@ -15,7 +15,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import ThemeSelector from '../components/theme/ThemeSelector';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Building2, Shield, Plus, Pencil, Trash2, Save, Palette } from 'lucide-react';
+import { Building2, Shield, Plus, Pencil, Trash2, Save, Palette, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function TenantSettings() {
@@ -31,6 +31,8 @@ function TenantSettingsContent() {
   const queryClient = useQueryClient();
 
   const [businessForm, setBusinessForm] = useState({ name: '', phone: '', address: '', currency: 'SGD', timezone: 'Asia/Singapore' });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [showRoleForm, setShowRoleForm] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
   const [roleForm, setRoleForm] = useState({ name: '', description: '', permissions: [] });
@@ -130,6 +132,24 @@ function TenantSettingsContent() {
               </Button>
             </div>
           </Card>
+
+          {/* Account Deletion */}
+          <Card className="border border-red-100 shadow-sm p-6 max-w-2xl mt-6">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-red-700">Delete Account</h3>
+                <p className="text-xs text-slate-500 mt-1">Permanently delete your account and all associated data. This action cannot be undone.</p>
+                <Button
+                  variant="outline"
+                  className="mt-3 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 text-xs"
+                  onClick={() => { setDeleteConfirmText(''); setShowDeleteConfirm(true); }}
+                >
+                  Delete Account
+                </Button>
+              </div>
+            </div>
+          </Card>
         </TabsContent>
 
         <TabsContent value="theme">
@@ -164,6 +184,42 @@ function TenantSettingsContent() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Account Deletion Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" /> Delete Account
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-slate-600">This will permanently delete your account, all your data, products, orders, and staff. This <strong>cannot be undone</strong>.</p>
+            <div>
+              <Label className="text-xs text-slate-500">Type <span className="font-mono font-semibold text-slate-800">DELETE</span> to confirm</Label>
+              <Input
+                className="mt-1"
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value)}
+                placeholder="Type DELETE"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>
+            <Button
+              disabled={deleteConfirmText !== 'DELETE'}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => {
+                toast.error('Account deletion requires contacting support. Please email support@sellio.sg');
+                setShowDeleteConfirm(false);
+              }}
+            >
+              Delete Permanently
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Role Form Dialog */}
       <Dialog open={showRoleForm} onOpenChange={setShowRoleForm}>

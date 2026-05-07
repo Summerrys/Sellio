@@ -22,7 +22,8 @@ import {
   LogOut,
   Menu,
   X,
-  QrCode
+  QrCode,
+  ArrowLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -228,12 +229,17 @@ function AppLayout({ children, currentPageName }) {
 
       {/* Mobile Header */}
       {currentPageName !== 'Onboarding' && (
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-slate-100 z-30 flex items-center px-4 justify-between">
+      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-100 z-30 flex items-center px-4 justify-between"
+        style={{ height: '56px', paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="flex items-center gap-2">
-          {tenant?.logo_url ? (
+          {window.history.length > 1 && !['Dashboard','Orders','Products','TenantSettings'].includes(currentPageName) ? (
+            <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          ) : tenant?.logo_url ? (
             <img src={tenant.logo_url} alt={tenant.name} className="h-8 w-auto object-contain rounded" />
           ) : (
-            <img src={tenant?.logo_url || 'https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png'} alt="Sellio" className="h-10 w-auto object-contain" />
+            <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className="h-10 w-auto object-contain" />
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -267,11 +273,43 @@ function AppLayout({ children, currentPageName }) {
           currentPageName === 'Onboarding' ? "pt-0" : "pt-14 lg:pt-0",
           currentPageName !== 'Onboarding' && (collapsed ? "lg:ml-[72px]" : "lg:ml-[260px]")
         )}
+        style={{ paddingBottom: currentPageName !== 'Onboarding' ? 'calc(env(safe-area-inset-bottom) + 64px)' : undefined }}
       >
         <div className="p-4 sm:p-6 lg:p-8 max-w-[1400px]">
           {children}
         </div>
       </main>
+
+      {/* Mobile Bottom Tab Bar */}
+      {currentPageName !== 'Onboarding' && (
+        <nav
+          className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-30 flex items-center"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          {[
+            { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
+            { label: 'Orders', icon: ClipboardList, page: 'Orders' },
+            { label: 'Products', icon: ShoppingBag, page: 'Products' },
+            { label: 'Settings', icon: Settings, page: 'TenantSettings' },
+          ].map(({ label, icon: Icon, page }) => {
+            const isActive = currentPageName === page;
+            return (
+              <Link
+                key={page}
+                to={createPageUrl(page)}
+                className={cn(
+                  "flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors",
+                  isActive ? "text-[rgb(var(--color-primary))]" : "text-slate-400"
+                )}
+              >
+                <Icon className="w-5 h-5" />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
+
       <RoleSwitcher />
     </div>
   );

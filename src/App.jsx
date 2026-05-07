@@ -9,6 +9,7 @@ import SupabaseTest from './pages/SupabaseTest';
 import Splash from './pages/Splash';
 import DataMigration from './pages/DataMigration';
 import AdminRoles from './pages/AdminRoles';
+import { useEffect } from 'react';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { AppUserProvider } from '@/lib/AppUserContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -69,6 +70,13 @@ const AuthenticatedApp = () => {
 
 
 function App() {
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = (e) => document.documentElement.classList.toggle('dark', e.matches);
+    apply(mq);
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
 
   return (
     <AppUserProvider>

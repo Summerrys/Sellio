@@ -37,6 +37,16 @@
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior: none;
+  }
+
+  button, a, [role="button"], input, select, textarea, label {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  input, textarea {
+    user-select: text;
   }
 }
 
