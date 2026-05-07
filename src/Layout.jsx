@@ -269,13 +269,13 @@ function AppLayout({ children, currentPageName }) {
       {/* Main Content */}
       <main
         className={cn(
-          "flex-1 transition-all duration-300 min-h-screen",
+          "flex-1 transition-all duration-300 min-h-screen overflow-x-hidden",
           currentPageName === 'Onboarding' ? "pt-0" : "pt-14 lg:pt-0",
           currentPageName !== 'Onboarding' && (collapsed ? "lg:ml-[72px]" : "lg:ml-[260px]")
         )}
         style={{ paddingBottom: currentPageName !== 'Onboarding' ? 'calc(env(safe-area-inset-bottom) + 64px)' : undefined }}
       >
-        <div className="p-4 sm:p-6 lg:p-8 max-w-[1400px]">
+        <div className="p-4 sm:p-6 lg:p-8 max-w-[1400px] overflow-x-hidden">
           {children}
         </div>
       </main>

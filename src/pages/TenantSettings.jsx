@@ -99,15 +99,15 @@ function TenantSettingsContent() {
       <PageHeader title="Settings" description="Configure your business and manage roles" />
 
       <Tabs defaultValue="business">
-        <TabsList className="bg-white border border-slate-100 shadow-sm mb-6">
-          <TabsTrigger value="business" className="data-[state=active]:bg-[rgb(var(--color-primary))] data-[state=active]:text-white rounded-lg gap-2">
-            <Building2 className="w-4 h-4" /> Business
+        <TabsList className="bg-white border border-slate-100 shadow-sm mb-6 w-full sm:w-auto">
+          <TabsTrigger value="business" className="data-[state=active]:bg-[rgb(var(--color-primary))] data-[state=active]:text-white rounded-lg gap-1.5 flex-1 sm:flex-none">
+            <Building2 className="w-4 h-4" /> <span className="hidden xs:inline">Business</span><span className="xs:hidden text-xs">Biz</span>
           </TabsTrigger>
-          <TabsTrigger value="theme" className="data-[state=active]:bg-[rgb(var(--color-primary))] data-[state=active]:text-white rounded-lg gap-2">
+          <TabsTrigger value="theme" className="data-[state=active]:bg-[rgb(var(--color-primary))] data-[state=active]:text-white rounded-lg gap-1.5 flex-1 sm:flex-none">
             <Palette className="w-4 h-4" /> Theme
           </TabsTrigger>
-          <TabsTrigger value="roles" className="data-[state=active]:bg-[rgb(var(--color-primary))] data-[state=active]:text-white rounded-lg gap-2">
-            <Shield className="w-4 h-4" /> Roles & Permissions
+          <TabsTrigger value="roles" className="data-[state=active]:bg-[rgb(var(--color-primary))] data-[state=active]:text-white rounded-lg gap-1.5 flex-1 sm:flex-none">
+            <Shield className="w-4 h-4" /> <span className="hidden xs:inline">Roles & Permissions</span><span className="xs:hidden text-xs">Roles</span>
           </TabsTrigger>
         </TabsList>
 
@@ -115,7 +115,7 @@ function TenantSettingsContent() {
           <Card className="border-0 shadow-sm p-6 max-w-2xl">
             <div className="space-y-4">
               <div><Label>Business Name</Label><Input value={businessForm.name} onChange={e => setBusinessForm({ ...businessForm, name: e.target.value })} /></div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div><Label>Phone</Label><Input value={businessForm.phone} onChange={e => setBusinessForm({ ...businessForm, phone: e.target.value })} /></div>
                 <div><Label>Currency</Label>
                   <Select value={businessForm.currency} onValueChange={v => setBusinessForm({ ...businessForm, currency: v })}>

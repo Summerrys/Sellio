@@ -28,11 +28,12 @@ export default function OrderKanban({ orders, onStatusChange, onOrderClick, curr
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 md:grid md:grid-cols-3 lg:grid-cols-5 md:overflow-x-visible">
+
         {COLUMNS.map((column) => {
           const columnOrders = getOrdersByStatus(column.id);
           return (
-            <div key={column.id} className="flex flex-col">
+            <div key={column.id} className="flex flex-col min-w-[260px] md:min-w-0">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="font-semibold text-slate-900">{column.label}</h3>
                 <Badge className={column.color}>{columnOrders.length}</Badge>

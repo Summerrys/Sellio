@@ -95,59 +95,60 @@ export default function Products() {
           title="Products"
           description="Manage your product catalog"
           actions={
-            <div className="flex gap-2">
-              <Button onClick={handleExport} variant="outline">
-                <Download className="w-4 h-4 mr-2" />
-                Export
+            <>
+              <Button onClick={handleExport} variant="outline" size="sm">
+                <Download className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Export</span>
               </Button>
               <RequirePermission permission="products.create" silent>
-                <Button onClick={() => setImportDialogOpen(true)} variant="outline">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Import
+                <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm">
+                  <Upload className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Import</span>
                 </Button>
                 <Button
                   onClick={handleAdd}
-                  className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-2"
+                  size="sm"
+                  className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-1.5"
                 >
-                  <Plus className="w-4 h-4" /> Add Product
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">Add Product</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
               </RequirePermission>
-            </div>
+            </>
           }
         />
 
         {/* Filters and View Toggle */}
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto">
-            {/* Search */}
-            <div className="relative flex-1 sm:max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
+        <div className="flex flex-col gap-3">
+          {/* Search */}
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
 
+          <div className="flex gap-2 items-center flex-wrap">
             {/* Category Filter */}
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full sm:w-40">
+              <SelectTrigger className="flex-1 min-w-[120px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
                 {categories.map(cat => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
+                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
             {/* Status Filter */}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-40">
+              <SelectTrigger className="flex-1 min-w-[110px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -157,26 +158,26 @@ export default function Products() {
                 <SelectItem value="low_stock">Low Stock</SelectItem>
               </SelectContent>
             </Select>
-          </div>
 
-          {/* View Toggle */}
-          <div className="flex gap-1 p-1 bg-slate-100 rounded-lg">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setViewMode('grid')}
-              className={cn("h-8 px-3", viewMode === 'grid' && "bg-white shadow-sm")}
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setViewMode('list')}
-              className={cn("h-8 px-3", viewMode === 'list' && "bg-white shadow-sm")}
-            >
-              <List className="w-4 h-4" />
-            </Button>
+            {/* View Toggle */}
+            <div className="flex gap-1 p-1 bg-slate-100 rounded-lg ml-auto">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className={cn("h-8 px-3", viewMode === 'grid' && "bg-white shadow-sm")}
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className={cn("h-8 px-3", viewMode === 'list' && "bg-white shadow-sm")}
+              >
+                <List className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
 

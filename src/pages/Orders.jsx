@@ -167,35 +167,32 @@ export default function Orders() {
           title="Orders"
           description="Manage incoming and active orders"
           actions={
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => navigate(createPageUrl('KitchenDisplay'))}
-                className="gap-2"
-              >
-                <Monitor className="w-4 h-4" />
-                Kitchen Display
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              onClick={() => navigate(createPageUrl('KitchenDisplay'))}
+              className="gap-2 text-sm"
+            >
+              <Monitor className="w-4 h-4" />
+              <span className="hidden sm:inline">Kitchen Display</span>
+              <span className="sm:hidden">Kitchen</span>
+            </Button>
           }
         />
 
         {/* Controls */}
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="flex gap-4">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Active Orders</SelectItem>
-                <SelectItem value="pending">New</SelectItem>
-                <SelectItem value="preparing">Preparing</SelectItem>
-                <SelectItem value="ready">Ready</SelectItem>
-                <SelectItem value="all">All Orders</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="flex flex-wrap gap-3 items-center justify-between">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active Orders</SelectItem>
+              <SelectItem value="pending">New</SelectItem>
+              <SelectItem value="preparing">Preparing</SelectItem>
+              <SelectItem value="ready">Ready</SelectItem>
+              <SelectItem value="all">All Orders</SelectItem>
+            </SelectContent>
+          </Select>
 
           <div className="flex items-center gap-2">
             <Switch
@@ -203,9 +200,9 @@ export default function Orders() {
               checked={soundEnabled}
               onCheckedChange={setSoundEnabled}
             />
-            <Label htmlFor="sound" className="flex items-center gap-2 cursor-pointer">
+            <Label htmlFor="sound" className="flex items-center gap-2 cursor-pointer text-sm">
               {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-              Sound Alerts
+              <span className="hidden sm:inline">Sound Alerts</span>
             </Label>
           </div>
         </div>
@@ -214,7 +211,7 @@ export default function Orders() {
         <TableCallAlerts tenantId={tenantId} />
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
             <p className="text-sm text-amber-700 mb-1">New Orders</p>
             <p className="text-3xl font-bold text-amber-900">{pendingCount}</p>
