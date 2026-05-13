@@ -43,6 +43,7 @@ export default function ProductFormBasic({
           <Label>Category</Label>
           <div className="flex gap-2 mt-1.5">
             <Select
+              key={formData.category_id || 'no-cat'}
               value={formData.category_id || ''}
               onValueChange={(v) => onChange({ category_id: v })}
             >

@@ -70,11 +70,27 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
     if (!result) return;
 
     // Match category at apply time — categories are guaranteed loaded by now
-    const suggested = result.suggested_category?.toLowerCase() || '';
-    const matchedCategory = suggested
-      ? (categories?.find(c => c.name.toLowerCase() === suggested) ||
-         categories?.find(c => c.name.toLowerCase().includes(suggested) || suggested.includes(c.name.toLowerCase())))
-      : null;
+    const suggested = (result.suggested_category || '').toLowerCase().trim();
+    let matchedCategory = null;
+    if (suggested && categories?.length) {
+      // 1. Exact match
+      matchedCategory = categories.find(c => c.name.toLowerCase().trim() === suggested);
+      // 2. One contains the other
+      if (!matchedCategory) {
+        matchedCategory = categories.find(c =>
+          c.name.toLowerCase().includes(suggested) || suggested.includes(c.name.toLowerCase())
+        );
+      }
+      // 3. Any word overlap (e.g. "Cold Beverage" vs "Beverages")
+      if (!matchedCategory) {
+        const words = suggested.split(/\s+/);
+        matchedCategory = categories.find(c =>
+          words.some(w => w.length > 3 && c.name.toLowerCase().includes(w))
+        );
+      }
+    }
+
+    console.log('[AIAssistant] suggested_category:', result.suggested_category, '| matched:', matchedCategory?.name, '| available:', categories?.map(c => c.name));
 
     const patch = {
       name: result.name,
