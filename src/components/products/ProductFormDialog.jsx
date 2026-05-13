@@ -14,13 +14,16 @@ import ProductFormPricing from './ProductFormPricing';
 import ProductFormMedia from './ProductFormMedia';
 import ProductFormInventory from './ProductFormInventory';
 import ProductFormVariants from './ProductFormVariants';
+import AIProductAssistant from './AIProductAssistant';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Loader2, Save, Eye } from 'lucide-react';
+import { Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTenant } from '@/components/tenant/TenantContext';
 
 export default function ProductFormDialog({ open, onOpenChange, product, tenantId }) {
   const queryClient = useQueryClient();
+  const { tenant } = useTenant();
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
@@ -134,7 +137,26 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         </DialogHeader>
 
         {/* Scrollable Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+
+          {/* AI Assistant — only show when creating a new product */}
+          {!product && (
+            <AIProductAssistant
+              tenantId={tenantId}
+              businessType={tenant?.industry}
+              currency={tenant?.currency || 'SGD'}
+              categories={categories}
+              onApply={(aiData) => {
+                setFormData(prev => ({
+                  ...prev,
+                  ...aiData,
+                  // Only override price if the user hasn't set one yet
+                  price: prev.price > 0 ? prev.price : (aiData.price || 0),
+                }));
+              }}
+            />
+          )}
+
           <Tabs defaultValue="basic" className="w-full">
             <TabsList className="grid w-full grid-cols-5 mb-4">
               <TabsTrigger value="basic">Basic</TabsTrigger>
