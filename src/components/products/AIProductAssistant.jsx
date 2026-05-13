@@ -52,15 +52,8 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
           throw new Error("Couldn't identify a product in this image. Try a clearer photo.");
         }
 
-        const matchedCategory = categories?.find(
-          c => c.name.toLowerCase() === product.suggested_category?.toLowerCase()
-        ) || categories?.find(
-          c => c.name.toLowerCase().includes(product.suggested_category?.toLowerCase() || '') ||
-               product.suggested_category?.toLowerCase().includes(c.name.toLowerCase())
-        );
-
         setUploadedUrl(uploadedImageUrl || '');
-        setResult({ ...product, matched_category_id: matchedCategory?.id || null });
+        setResult({ ...product });
         setStep('done');
 
       } catch (err) {
@@ -75,6 +68,14 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
 
   const handleApply = () => {
     if (!result) return;
+
+    // Match category at apply time — categories are guaranteed loaded by now
+    const suggested = result.suggested_category?.toLowerCase() || '';
+    const matchedCategory = suggested
+      ? (categories?.find(c => c.name.toLowerCase() === suggested) ||
+         categories?.find(c => c.name.toLowerCase().includes(suggested) || suggested.includes(c.name.toLowerCase())))
+      : null;
+
     const patch = {
       name: result.name,
       description: result.description,
@@ -82,8 +83,8 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
       price: result.estimated_price || 0,
       image_url: uploadedUrl || '',
     };
-    if (result.matched_category_id) {
-      patch.category_id = result.matched_category_id;
+    if (matchedCategory?.id) {
+      patch.category_id = matchedCategory.id;
     }
     onApply(patch);
     toast.success('AI suggestions applied!');
