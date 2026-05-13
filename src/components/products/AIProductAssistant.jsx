@@ -3,7 +3,6 @@ import { Sparkles, Upload, Loader2, Check, AlertCircle, X, Wand2 } from 'lucide-
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
-import { getSupabase } from '@/lib/supabaseClient';
 import { cn } from '@/lib/utils';
 
 export default function AIProductAssistant({ onApply, tenantId, businessType, currency, categories }) {
@@ -27,61 +26,48 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Show local preview immediately
-    const reader = new FileReader();
-    reader.onloadend = () => setPreview(reader.result);
-    reader.readAsDataURL(file);
-
     setStep('uploading');
     setErrorMsg('');
 
-    try {
-      // Upload to Supabase Storage so AI can access the URL
-      const supabase = await getSupabase();
-      const ext = file.name.split('.').pop() || 'jpg';
-      const folder = tenantId ? `${tenantId}/ai-temp` : 'ai-temp';
-      const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('product-images')
-        .upload(fileName, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(fileName);
-
-      setUploadedUrl(publicUrl);
+    // Read as base64 and show preview
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result;
+      setPreview(base64);
       setStep('analyzing');
 
-      // Call AI backend
-      const response = await base44.functions.invoke('analyzeProductImage', {
-        image_url: publicUrl,
-        currency: currency || 'SGD',
-        business_type: businessType || '',
-      });
+      try {
+        // Send base64 to backend — server does the Supabase upload with service role key
+        const response = await base44.functions.invoke('analyzeProductImage', {
+          image_data: base64,
+          image_mime_type: file.type || 'image/jpeg',
+          tenant_id: tenantId || '',
+          currency: currency || 'SGD',
+          business_type: businessType || '',
+        });
 
-      const { product } = response.data;
+        const { product, image_url: uploadedImageUrl } = response.data;
 
-      if (!product || product.confidence < 0.3) {
-        throw new Error("Couldn't identify a product in this image. Try a clearer photo.");
+        if (!product || product.confidence < 0.3) {
+          throw new Error("Couldn't identify a product in this image. Try a clearer photo.");
+        }
+
+        const matchedCategory = categories?.find(
+          c => c.name.toLowerCase() === product.suggested_category?.toLowerCase()
+        );
+
+        setUploadedUrl(uploadedImageUrl || '');
+        setResult({ ...product, matched_category_id: matchedCategory?.id || null });
+        setStep('done');
+
+      } catch (err) {
+        setErrorMsg(err.message || 'AI analysis failed');
+        setStep('error');
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = '';
       }
-
-      // Try to match suggested_category to an existing category
-      const matchedCategory = categories?.find(
-        c => c.name.toLowerCase() === product.suggested_category?.toLowerCase()
-      );
-
-      setResult({ ...product, matched_category_id: matchedCategory?.id || null });
-      setStep('done');
-
-    } catch (err) {
-      setErrorMsg(err.message || 'AI analysis failed');
-      setStep('error');
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleApply = () => {

@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 Deno.serve(async (req) => {
   const corsHeaders = {
@@ -17,10 +18,37 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
-    const { image_url, currency = 'SGD', business_type } = await req.json();
-    if (!image_url) {
-      return Response.json({ error: 'image_url is required' }, { status: 400, headers: corsHeaders });
+    const { image_data, image_mime_type, tenant_id, currency = 'SGD', business_type } = await req.json();
+    if (!image_data) {
+      return Response.json({ error: 'image_data is required' }, { status: 400, headers: corsHeaders });
     }
+
+    // Upload to Supabase using service role key (bypasses RLS)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const ext = image_mime_type?.split('/')[1] || 'jpg';
+    const folder = tenant_id ? `${tenant_id}/ai-temp` : 'ai-temp';
+    const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+    // Decode base64 to bytes
+    const base64 = image_data.includes(',') ? image_data.split(',')[1] : image_data;
+    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+
+    const { error: uploadError } = await supabase.storage
+      .from('product-images')
+      .upload(fileName, bytes, { contentType: image_mime_type || 'image/jpeg', upsert: true });
+
+    if (uploadError) {
+      return Response.json({ error: `Upload failed: ${uploadError.message}` }, { status: 500, headers: corsHeaders });
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(fileName);
+
+    const image_url = publicUrl;
 
     const businessContext = business_type
       ? `The merchant runs a ${business_type} business.`
@@ -56,7 +84,7 @@ Be concise and practical — merchants will use this to fill their catalog quick
       },
     });
 
-    return Response.json({ success: true, product: result }, { headers: corsHeaders });
+    return Response.json({ success: true, product: result, image_url: publicUrl }, { headers: corsHeaders });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500, headers: corsHeaders });
   }
