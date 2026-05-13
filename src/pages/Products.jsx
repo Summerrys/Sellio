@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react';
-import React, { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PullToRefresh from '../components/ui-custom/PullToRefresh';
 import db from '@/lib/db';
