@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { X, ChevronDown, ChevronUp, ImagePlus, Loader2 } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, ImagePlus, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import db from '@/lib/db';
@@ -59,6 +59,8 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
   const [errors, setErrors] = useState({});
   const [imageEditSrc, setImageEditSrc] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const imageInputRef = useRef(null);
 
   useEffect(() => {
@@ -110,6 +112,22 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
       toast.error(err.message || 'Failed to save product');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirmDelete) { setConfirmDelete(true); return; }
+    setDeleting(true);
+    try {
+      await db.entities.Product.delete(product.id);
+      toast.success('Product deleted');
+      queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete product');
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(false);
     }
   };
 
@@ -268,9 +286,26 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
 
         {/* Footer */}
         <div className="flex gap-3 px-4 py-4 border-t border-slate-100 flex-shrink-0">
-          <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
+          {product?.id ? (
+            <Button
+              variant="outline"
+              className={cn("flex-shrink-0 transition-all", confirmDelete ? "border-red-500 bg-red-50 text-red-600 hover:bg-red-100" : "text-red-500 border-red-200 hover:bg-red-50")}
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              {confirmDelete ? 'Confirm?' : ''}
+            </Button>
+          ) : (
+            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+          )}
+          {product?.id && (
+            <Button variant="outline" className="flex-1" onClick={() => { setConfirmDelete(false); onOpenChange(false); }}>
+              Cancel
+            </Button>
+          )}
           <Button
             className="flex-1 bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] text-white"
             onClick={handleSave}
