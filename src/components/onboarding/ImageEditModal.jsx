@@ -24,6 +24,7 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
 
   useEffect(() => {
     const img = imgRef.current;
+    img.crossOrigin = 'anonymous';
     img.onload = () => {
       const container = containerRef.current;
       const maxW = container ? container.offsetWidth - 32 : 320;
