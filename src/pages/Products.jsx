@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PullToRefresh from '../components/ui-custom/PullToRefresh';
 import db from '@/lib/db';
@@ -10,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ProductGrid from '../components/products/ProductGrid';
-import ProductFormDialog from '../components/products/ProductFormDialog';
+import ProductFormDialog from '../components/products/ProductFormDialog.jsx';
 import ProductImportDialog from '../components/products/ProductImportDialog';
 import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';

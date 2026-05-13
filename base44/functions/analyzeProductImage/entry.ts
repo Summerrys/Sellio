@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
-    const { image_data, image_mime_type, tenant_id, currency = 'SGD', business_type } = await req.json();
+    const { image_data, image_mime_type, tenant_id, currency = 'SGD', business_type, skip_analysis = false } = await req.json();
     if (!image_data) {
       return Response.json({ error: 'image_data is required' }, { status: 400, headers: corsHeaders });
     }
@@ -49,6 +49,11 @@ Deno.serve(async (req) => {
       .getPublicUrl(fileName);
 
     const image_url = publicUrl;
+
+    // If caller just wants upload (no AI), return early
+    if (skip_analysis) {
+      return Response.json({ success: true, image_url: publicUrl }, { headers: corsHeaders });
+    }
 
     const businessContext = business_type
       ? `The merchant runs a ${business_type} business.`
