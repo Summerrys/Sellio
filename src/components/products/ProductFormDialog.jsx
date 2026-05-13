@@ -158,7 +158,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
             </TabsContent>
 
             <TabsContent value="media" className="space-y-4">
-              <ProductFormMedia formData={formData} onChange={handleChange} />
+              <ProductFormMedia formData={formData} onChange={handleChange} tenantId={tenantId} />
             </TabsContent>
 
             <TabsContent value="inventory" className="space-y-4">

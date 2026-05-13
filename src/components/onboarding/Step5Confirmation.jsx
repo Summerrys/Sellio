@@ -178,6 +178,18 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
         await base44.functions.invoke('bulkCreateTables', { tenant_id: tenant.id, tables: tableRows });
       }
 
+      // Helper: upload a data URI to Supabase Storage and return the public URL
+      const uploadDataUri = async (dataUri, tenantId) => {
+        const res = await fetch(dataUri);
+        const blob = await res.blob();
+        const ext = blob.type.split('/')[1] || 'jpg';
+        const fileName = `${tenantId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from('product-images').upload(fileName, blob, { upsert: false });
+        if (error) throw error;
+        const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
+        return publicUrl;
+      };
+
       // Create products
       if (formData.products?.length > 0) {
         const categoryMap = {};
@@ -202,14 +214,25 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
             categoryMap[product.category] = categoryId;
           }
 
+          // Upload any data URI images to Supabase Storage
+          const resolvedImages = [];
+          for (const img of (product.images || [])) {
+            if (img.startsWith('data:')) {
+              const url = await uploadDataUri(img, tenant.id);
+              resolvedImages.push(url);
+            } else if (img.startsWith('http')) {
+              resolvedImages.push(img);
+            }
+          }
+
           await supabase.from('products').insert({
             tenant_id: tenant.id,
             category_id: categoryId,
             name: product.name,
             slug: product.name.toLowerCase().replace(/\s+/g, '-'),
             price: product.price,
-            image_url: product.images?.[0] || null,
-            tags: product.images?.length > 1 ? product.images.slice(1) : [],
+            image_url: resolvedImages[0] || null,
+            tags: resolvedImages.length > 1 ? resolvedImages.slice(1) : [],
             is_active: true,
           });
         }
