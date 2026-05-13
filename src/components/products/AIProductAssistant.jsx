@@ -54,6 +54,9 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
 
         const matchedCategory = categories?.find(
           c => c.name.toLowerCase() === product.suggested_category?.toLowerCase()
+        ) || categories?.find(
+          c => c.name.toLowerCase().includes(product.suggested_category?.toLowerCase() || '') ||
+               product.suggested_category?.toLowerCase().includes(c.name.toLowerCase())
         );
 
         setUploadedUrl(uploadedImageUrl || '');
@@ -72,14 +75,17 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
 
   const handleApply = () => {
     if (!result) return;
-    onApply({
+    const patch = {
       name: result.name,
       description: result.description,
       tags: result.suggested_tags || [],
       price: result.estimated_price || 0,
-      category_id: result.matched_category_id || '',
       image_url: uploadedUrl || '',
-    });
+    };
+    if (result.matched_category_id) {
+      patch.category_id = result.matched_category_id;
+    }
+    onApply(patch);
     toast.success('AI suggestions applied!');
     reset();
   };
