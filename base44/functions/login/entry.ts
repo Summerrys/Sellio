@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
           phone: user.phone,
           role: user.role,
           onboarding_completed: user.onboarding_completed,
-          created_at: user.created_at,
+          created_date: user.created_date,
           last_login_at: sgNow(),
         }
       },
