@@ -62,7 +62,6 @@ export default function Auth() {
             role: 'admin',
             is_active: true,
             onboarding_completed: false,
-            created_date: now,
             last_login_at: now,
           });
           if (insertError) throw insertError;
