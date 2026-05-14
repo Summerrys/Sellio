@@ -41,20 +41,6 @@ export default function Auth() {
 
         const user = session.user;
 
-        // Check if this email is already registered as a phone/password user
-        const { data: phoneUser } = await supabase
-          .from('app_users')
-          .select('id, auth_provider')
-          .eq('email', user.email)
-          .neq('auth_provider', 'google')
-          .limit(1);
-        if (phoneUser && phoneUser.length > 0) {
-          toast.error('This email is already registered with a phone/password account. Please log in using your phone number.');
-          setGoogleLoading(false);
-          window.history.replaceState(null, '', window.location.pathname);
-          return;
-        }
-
         const now = new Date(Date.now() + 8 * 3600 * 1000).toISOString().replace('Z', '').replace('T', ' ').substring(0, 23);
 
         const { data: existingAppUser } = await supabase
