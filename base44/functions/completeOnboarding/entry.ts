@@ -62,25 +62,37 @@ Deno.serve(async (req) => {
     const slug = formData.businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const ownerEmail = formData.ownerEmail;
 
-    // ── Check for existing tenant with same slug ──────────────────────────────
-    const { data: existingTenant } = await supabase
-      .from('tenants')
-      .select('id')
-      .eq('slug', slug)
-      .eq('owner_email', ownerEmail)
+    // ── Clean up any partial data from a previous incomplete onboarding ──────
+    const { data: appUser } = await supabase
+      .from('app_users')
+      .select('onboarding_completed, tenant_id')
+      .eq('id', user_id)
       .maybeSingle();
 
-    if (existingTenant) {
-      // Clean up all partial records tied to this tenant so we can recreate cleanly
-      const existingId = existingTenant.id;
-      await supabase.from('products').delete().eq('tenant_id', existingId);
-      await supabase.from('categories').delete().eq('tenant_id', existingId);
-      await supabase.from('tables').delete().eq('tenant_id', existingId);
-      await supabase.from('business_hours').delete().eq('tenant_id', existingId);
-      await supabase.from('tenant_users').delete().eq('tenant_id', existingId);
-      await supabase.from('roles').delete().eq('tenant_id', existingId);
-      await supabase.from('theme_configs').delete().eq('tenant_id', existingId);
-      await supabase.from('tenants').delete().eq('id', existingId);
+    if (appUser && appUser.onboarding_completed === false) {
+      // Find any tenant linked to this user via tenant_users
+      const { data: tenantUserRow } = await supabase
+        .from('tenant_users')
+        .select('tenant_id')
+        .eq('user_email', ownerEmail)
+        .maybeSingle();
+
+      const staleId = tenantUserRow?.tenant_id || appUser.tenant_id || null;
+
+      if (staleId) {
+        console.log('Cleaning up incomplete onboarding for tenant:', staleId);
+        await supabase.from('products').delete().eq('tenant_id', staleId);
+        await supabase.from('categories').delete().eq('tenant_id', staleId);
+        await supabase.from('tables').delete().eq('tenant_id', staleId);
+        await supabase.from('business_hours').delete().eq('tenant_id', staleId);
+        await supabase.from('theme_configs').delete().eq('tenant_id', staleId);
+        await supabase.from('roles').delete().eq('tenant_id', staleId);
+        await supabase.from('tenant_users').delete().eq('tenant_id', staleId);
+        await supabase.from('tenants').delete().eq('id', staleId);
+        // Clear tenant_id reference on app_user
+        await supabase.from('app_users').update({ tenant_id: null }).eq('id', user_id);
+        console.log('✓ Stale tenant cleaned up');
+      }
     }
 
     // ── Track created IDs for rollback on failure ─────────────────────────────
