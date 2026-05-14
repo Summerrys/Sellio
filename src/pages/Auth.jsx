@@ -19,13 +19,23 @@ export default function Auth() {
 
   // Handle Google OAuth callback (Supabase redirects back here with session in URL hash)
   useEffect(() => {
-    const handleOAuthCallback = async () => {
-      const hash = window.location.hash;
-      if (!hash.includes('access_token')) return;
+    const hash = window.location.hash;
 
-      setGoogleLoading(true);
+    if (hash.includes('error=')) {
+      const params = new URLSearchParams(hash.substring(1));
+      toast.error(params.get('error_description') || 'Google Sign-In failed');
+      window.history.replaceState(null, '', window.location.pathname);
+      return;
+    }
+
+    if (!hash.includes('access_token')) return;
+
+    setGoogleLoading(true);
+
+    const processSession = async () => {
       try {
         const supabase = await getSupabase();
+        // getSession() will auto-parse the access_token from the URL hash
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error || !session) throw error || new Error('No session found');
 
@@ -41,7 +51,6 @@ export default function Auth() {
         if (phoneUser && phoneUser.length > 0) {
           toast.error('This email is already registered with a phone/password account. Please log in using your phone number.');
           setGoogleLoading(false);
-          // Clear the hash
           window.history.replaceState(null, '', window.location.pathname);
           return;
         }
@@ -104,7 +113,7 @@ export default function Auth() {
       }
     };
 
-    handleOAuthCallback();
+    processSession();
   }, []);
 
   const handleGoogleSignIn = async () => {

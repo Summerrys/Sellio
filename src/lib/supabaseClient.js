@@ -7,7 +7,12 @@ let supabaseInstance = null;
 let initPromise = null;
 
 async function initSupabase() {
-  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      detectSessionInUrl: true,
+      persistSession: true,
+    },
+  });
 }
 
 export async function getSupabase() {
