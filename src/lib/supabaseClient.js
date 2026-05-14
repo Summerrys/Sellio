@@ -1,27 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
-import { base44 } from '@/api/base44Client';
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://gzktuteedbtnaxfdylyu.supabase.co';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6a3R1dGVlZGJ0bmF4ZmR5bHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NzY2NzIsImV4cCI6MjA5MDU1MjY3Mn0.zZL0Tyizzj3U8JTggYYKZ8BFrhDOKAzwISGNPJDAFzg';
 
 let supabaseInstance = null;
 let initPromise = null;
 
 async function initSupabase() {
-  // Try Vite env vars first (for local dev / Hostinger)
-  const url = import.meta.env.VITE_SUPABASE_URL;
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-  if (url && key) {
-    return createClient(url, key);
-  }
-
-  // Fall back to backend function (Base44 preview environment)
-  const response = await base44.functions.invoke('getSupabaseConfig', {});
-  const { supabaseUrl, supabaseAnonKey } = response.data;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Supabase credentials not available. Set SUPABASE_URL and SUPABASE_ANON_KEY in secrets.');
-  }
-
-  return createClient(supabaseUrl, supabaseAnonKey);
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
 export async function getSupabase() {
