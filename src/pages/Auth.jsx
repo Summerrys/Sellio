@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Phone, Lock, User, Mail, ChevronDown, Check } from 'lucide-react';
 import { getSupabase } from '../lib/supabaseClient';
-import { toast, Toaster } from 'sonner';
+import { toast } from 'sonner';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
 import { useAppUser } from '@/lib/AppUserContext';
@@ -17,126 +17,112 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  const googleClientIdRef = useRef(null);
-
-  // Load Google Identity Services and fetch client ID
+  // Handle Google OAuth callback (Supabase redirects back here with session in URL hash)
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    document.body.appendChild(script);
+    const handleOAuthCallback = async () => {
+      const hash = window.location.hash;
+      if (!hash.includes('access_token')) return;
 
-    base44.functions.invoke('getSupabaseConfig', {}).then(res => {
-      googleClientIdRef.current = res.data?.googleClientId;
-    });
+      setGoogleLoading(true);
+      try {
+        const supabase = await getSupabase();
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error || !session) throw error || new Error('No session found');
 
-    return () => document.body.removeChild(script);
+        const user = session.user;
+
+        // Check if this email is already registered as a phone/password user
+        const { data: phoneUser } = await supabase
+          .from('app_users')
+          .select('id, auth_provider')
+          .eq('email', user.email)
+          .neq('auth_provider', 'google')
+          .limit(1);
+        if (phoneUser && phoneUser.length > 0) {
+          toast.error('This email is already registered with a phone/password account. Please log in using your phone number.');
+          setGoogleLoading(false);
+          // Clear the hash
+          window.history.replaceState(null, '', window.location.pathname);
+          return;
+        }
+
+        const now = new Date(Date.now() + 8 * 3600 * 1000).toISOString().replace('Z', '').replace('T', ' ').substring(0, 23);
+
+        const { data: existingAppUser } = await supabase
+          .from('app_users')
+          .select('id, created_at, onboarding_completed, tenant_id, role')
+          .eq('email', user.email)
+          .limit(1);
+
+        let existingRow = existingAppUser?.[0] || null;
+        let appUsersRowId = existingRow?.id;
+
+        if (existingRow) {
+          await supabase.from('app_users').update({ last_login_at: now }).eq('id', appUsersRowId);
+        } else {
+          const { error: insertError } = await supabase.from('app_users').insert({
+            email: user.email,
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
+            auth_provider: 'google',
+            role: 'admin',
+            is_active: true,
+            onboarding_completed: false,
+            created_at: now,
+            last_login_at: now,
+          });
+          if (insertError) throw insertError;
+          const { data: fetchedUser, error: fetchError } = await supabase
+            .from('app_users')
+            .select('id, created_at, onboarding_completed, tenant_id, role')
+            .eq('email', user.email)
+            .single();
+          if (fetchError) throw fetchError;
+          existingRow = fetchedUser;
+          appUsersRowId = fetchedUser?.id;
+        }
+
+        if (!appUsersRowId) throw new Error('Failed to create or find user record.');
+
+        const appUser = {
+          id: appUsersRowId,
+          email: user.email,
+          full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
+          avatar_url: user.user_metadata?.avatar_url,
+          provider: 'google',
+          role: existingRow?.role || 'admin',
+          onboarding_completed: existingRow?.onboarding_completed || false,
+          tenant_id: existingRow?.tenant_id || null,
+          created_at: existingRow?.created_at || now,
+          last_login_at: now,
+        };
+        setAppUser(appUser);
+        window.location.href = appUser.onboarding_completed ? '/Dashboard' : '/Onboarding';
+      } catch (err) {
+        toast.error(err.message || 'Google Sign-In failed');
+        setGoogleLoading(false);
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    };
+
+    handleOAuthCallback();
   }, []);
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
-    const clientId = googleClientIdRef.current;
-
-    if (!window.google || !clientId) {
-      toast.error('Google Sign-In not ready. Please try again.');
+    try {
+      const supabase = await getSupabase();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/Auth`,
+        },
+      });
+      if (error) throw error;
+      // Browser will redirect to Google — no need to setGoogleLoading(false)
+    } catch (err) {
+      toast.error(err.message || 'Google Sign-In failed. Please try again.');
       setGoogleLoading(false);
-      return;
     }
-
-    // Generate nonce for security
-    const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
-    const encoder = new TextEncoder();
-    const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(nonce));
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashedNonce = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-    window.google.accounts.id.initialize({
-      client_id: clientId,
-      nonce: hashedNonce,
-      callback: async (response) => {
-        try {
-          const supabase = await getSupabase();
-          const { data, error } = await supabase.auth.signInWithIdToken({
-            provider: 'google',
-            token: response.credential,
-            nonce,
-          });
-          if (error) throw error;
-          const user = data.session.user;
-
-          // Check if this email is already registered as a phone/password user
-          const { data: phoneUser } = await supabase
-            .from('app_users')
-            .select('id, auth_provider')
-            .eq('email', user.email)
-            .neq('auth_provider', 'google')
-            .limit(1);
-          if (phoneUser && phoneUser.length > 0) {
-            toast.error('This email is already registered with a phone/password account. Please log in using your phone number.');
-            setGoogleLoading(false);
-            return;
-          }
-
-          const now = new Date(Date.now() + 8 * 3600 * 1000).toISOString().replace('Z', '').replace('T', ' ').substring(0, 23);
-          // Upsert into app_users to track Google users and last login
-          const { data: existingAppUser } = await supabase
-            .from('app_users')
-            .select('id, created_at, onboarding_completed, tenant_id, role')
-            .eq('email', user.email)
-            .limit(1);
-          
-          let appUsersRowId;
-          let existingRow = existingAppUser?.[0] || null;
-
-          if (existingRow) {
-            appUsersRowId = existingRow.id;
-            await supabase.from('app_users').update({ last_login_at: now }).eq('id', appUsersRowId);
-          } else {
-            const { error: insertError } = await supabase.from('app_users').insert({
-              email: user.email,
-              full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
-              auth_provider: 'google',
-              role: 'admin',
-              is_active: true,
-              onboarding_completed: false,
-              created_at: now,
-              last_login_at: now,
-            });
-            if (insertError) throw insertError;
-            // Re-fetch to get the actual row id
-            const { data: fetchedUser, error: fetchError } = await supabase
-              .from('app_users')
-              .select('id, created_at, onboarding_completed, tenant_id, role')
-              .eq('email', user.email)
-              .single();
-            if (fetchError) throw fetchError;
-            existingRow = fetchedUser;
-            appUsersRowId = fetchedUser?.id;
-          }
-
-          if (!appUsersRowId) throw new Error('Failed to create or find user record. Please try again.');
-
-          const appUser = {
-            id: appUsersRowId,
-            email: user.email,
-            full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
-            avatar_url: user.user_metadata?.avatar_url,
-            provider: 'google',
-            role: existingRow?.role || 'admin',
-            onboarding_completed: existingRow?.onboarding_completed || false,
-            tenant_id: existingRow?.tenant_id || null,
-            created_at: existingRow?.created_at || now,
-            last_login_at: now,
-          };
-          setAppUser(appUser);
-          window.location.href = appUser.onboarding_completed ? '/Dashboard' : '/Onboarding';
-        } catch (err) {
-          toast.error(err.message || 'Sign-in failed');
-          setGoogleLoading(false);
-        }
-      },
-    });
-    window.google.accounts.id.prompt();
   };
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);
