@@ -95,6 +95,27 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Also nuke any tenant with the same slug (catches edge cases) ──────────
+    const { data: slugTenant } = await supabase
+      .from('tenants')
+      .select('id')
+      .eq('slug', slug)
+      .maybeSingle();
+
+    if (slugTenant) {
+      const sid = slugTenant.id;
+      console.log('Cleaning up slug-duplicate tenant:', sid);
+      await supabase.from('products').delete().eq('tenant_id', sid);
+      await supabase.from('categories').delete().eq('tenant_id', sid);
+      await supabase.from('tables').delete().eq('tenant_id', sid);
+      await supabase.from('business_hours').delete().eq('tenant_id', sid);
+      await supabase.from('theme_configs').delete().eq('tenant_id', sid);
+      await supabase.from('roles').delete().eq('tenant_id', sid);
+      await supabase.from('tenant_users').delete().eq('tenant_id', sid);
+      await supabase.from('tenants').delete().eq('id', sid);
+      console.log('✓ Slug-duplicate tenant cleaned up');
+    }
+
     // ── Track created IDs for rollback on failure ─────────────────────────────
     let createdTenantId = null;
 
