@@ -228,17 +228,17 @@ Deno.serve(async (req) => {
     } catch (e) { return fail(6, 'tenant_users', e); }
 
     // ── Step 7: Update app_users ──────────────────────────────────────────────
-    console.log('→ Step 7: update app_users...');
+    console.log('→ Step 7: update app_users by email:', ownerEmail);
     let updatedUser;
     try {
       const { data, error } = await supabase.from('app_users')
         .update({ onboarding_completed: true, tenant_id: newTenantId })
-        .eq('id', user_id)
+        .eq('email', ownerEmail)
         .select()
-        .single();
+        .maybeSingle();
       if (error) throw error;
       updatedUser = data;
-      console.log('✓ Step 7 app_users updated, onboarding_completed=true');
+      console.log('✓ Step 7 app_users updated:', updatedUser ? 'row found' : 'no row matched (continuing)');
     } catch (e) { return fail(7, 'app_users', e); }
 
     // ── Step 8: Insert business_hours ─────────────────────────────────────────
