@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { invokeFunction } from '@/lib/functions';
+import { base44 } from '@/api/base44Client';
 import { COLOR_SETS, generateThemeVariables } from './themeUtils';
 
 const ThemeContext = createContext({});
@@ -13,7 +13,7 @@ export function ThemeProvider({ children, tenantId }) {
   const { data: themeConfig } = useQuery({
     queryKey: ['themeConfig', tenantId],
     queryFn: async () => {
-      const res = await invokeFunction('getThemeConfig', { tenant_id: tenantId });
+      const res = await base44.functions.invoke('getThemeConfig', { tenant_id: tenantId });
       return res.data?.theme || null;
     },
     enabled: !!tenantId,
@@ -24,7 +24,7 @@ export function ThemeProvider({ children, tenantId }) {
     mutationFn: async (colorSetName) => {
       const colorSet = COLOR_SETS.find(s => s.name === colorSetName);
       if (!colorSet) return;
-      return invokeFunction('saveThemeConfig', {
+      return base44.functions.invoke('saveThemeConfig', {
         tenant_id: tenantId,
         color_set_name: colorSetName,
         primary_color: colorSet.dark,

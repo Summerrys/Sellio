@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import db from '@/lib/db';
-import { getSupabase } from '@/lib/supabaseClient';
+import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -40,15 +40,7 @@ export default function BusinessProfile({ tenant }) {
 
     setUploading(true);
     try {
-      const supabase = await getSupabase();
-      const ext = file.name.split('.').pop() || 'png';
-      const path = `${tenant.id}/logo.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from('tenant-logos')
-        .upload(path, file, { contentType: file.type, upsert: true });
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from('tenant-logos').getPublicUrl(path);
-      const file_url = urlData.publicUrl;
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
       setFormData({ ...formData, logo_url: file_url });
       await updateMutation.mutateAsync({ logo_url: file_url });
       toast.success('Logo uploaded');

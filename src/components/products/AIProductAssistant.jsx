@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Sparkles, Upload, Loader2, Check, AlertCircle, X, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { invokeFunction } from '@/lib/functions';
+import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
 
 export default function AIProductAssistant({ onApply, tenantId, businessType, currency, categories }) {
@@ -38,7 +38,7 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
 
       try {
         // Send base64 to backend — server does the Supabase upload with service role key
-        const response = await invokeFunction('analyzeProductImage', {
+        const response = await base44.functions.invoke('analyzeProductImage', {
           image_data: base64,
           image_mime_type: file.type || 'image/jpeg',
           tenant_id: tenantId || '',
