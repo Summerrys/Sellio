@@ -165,8 +165,17 @@ export const db = {
   // Auth helpers (for custom auth system)
   auth: {
     async me() {
-      const appUser = localStorage.getItem('app_user');
-      return appUser ? JSON.parse(appUser) : null;
+      // Read from cookie (set by AppUserContext) — works across all domains
+      const match = document.cookie.match(/(?:^|;\s*)app_session=([^;]+)/);
+      if (match) {
+        try {
+          const parsed = JSON.parse(decodeURIComponent(match[1]));
+          if (parsed?.id) return parsed;
+        } catch {}
+      }
+      // Fallback: legacy localStorage key
+      const legacy = localStorage.getItem('app_user');
+      return legacy ? JSON.parse(legacy) : null;
     },
     
     async login(phone, password) {
