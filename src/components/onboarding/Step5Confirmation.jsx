@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Rocket, Loader2, CheckCircle2, Circle, Star, Sparkles } from 'lucide-react';
@@ -77,21 +76,17 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
       if (!ownerEmail) throw new Error('No owner email found. Please log in.');
 
       let result;
-      try {
-        const response = await base44.functions.invoke('completeOnboarding', {
-          user_id: storedUser.id,
-          formData: { ...formData, ownerEmail },
-        });
-        result = response?.data;
-      } catch (invokeErr) {
-        const backendData = invokeErr?.response?.data;
-        if (backendData) {
-          const msg = backendData.failedStep
-            ? `Failed at ${backendData.failedStep}: ${backendData.error}`
-            : (backendData.error || JSON.stringify(backendData));
-          throw new Error(msg);
-        }
-        throw invokeErr;
+      const res = await fetch('https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1/completeOnboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: storedUser.id, formData: { ...formData, ownerEmail } }),
+      });
+      result = await res.json();
+      if (!res.ok && !result?.success) {
+        const msg = result?.failedStep
+          ? `Failed at ${result.failedStep}: ${result.error}`
+          : (result?.error || `Server error ${res.status}`);
+        throw new Error(msg);
       }
 
       if (!result?.success) {
