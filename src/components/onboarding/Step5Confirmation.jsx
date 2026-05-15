@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { getSupabase } from '@/lib/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Rocket, Loader2, CheckCircle2, Circle, Star, Sparkles } from 'lucide-react';
@@ -67,212 +66,34 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   const handleLaunch = async () => {
     if (isLaunching) return;
     setIsLaunching(true);
-    
+
     try {
-      const supabase = await getSupabase();
-      // Try cookie context first, then fall back to localStorage
       let storedUser = appUser;
       if (!storedUser?.id) {
         try { storedUser = JSON.parse(localStorage.getItem('app_user') || 'null'); } catch {}
       }
-      const ownerEmail = storedUser?.email || formData.adminEmail;
-      const ownerPhone = storedUser?.phone || null;
       if (!storedUser?.id) throw new Error('No user session found. Please log in.');
+      const ownerEmail = storedUser?.email || formData.adminEmail;
       if (!ownerEmail) throw new Error('No owner email found. Please log in.');
-      const slug = formData.businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      
-      // Create tenant
-      const { data: tenant, error: tenantError } = await supabase
-        .from('tenants')
-        .insert({
-          name: formData.businessName,
-          slug,
-          logo_url: formData.logoUrl || null,
-          industry: formData.businessType,
-          owner_email: ownerEmail || ownerPhone,
-          country: formData.country,
-          currency: formData.currency,
-          address: formData.address || null,
-          status: 'trial',
-          plan: 'free',
-          settings: {
-            branch_name: formData.branchName || null,
-            tax_rate: taxRate,
-            tax_inclusive: formData.taxInclusive ?? false,
-          },
-        })
-        .select()
-        .single();
-      
-      if (tenantError) throw tenantError;
 
-      // Always save theme config via backend function (bypasses RLS)
-      await base44.functions.invoke('saveThemeConfig', {
-        tenant_id: tenant.id,
-        color_set_name: formData.theme || 'Ocean Blue',
-        primary_color: formData.customPrimary || '#0369A1',
-        accent_color: formData.customSecondary || '#E0F2FE',
-      });
-
-      // logo_url already saved on tenant above
-
-      // Create admin role
-      const { data: adminRole, error: roleError } = await supabase
-        .from('roles')
-        .insert({
-          tenant_id: tenant.id,
-          name: 'Admin',
-          slug: 'admin',
-          permissions: ['*'],
-          is_system: true,
-        })
-        .select()
-        .single();
-      
-      if (roleError) throw roleError;
-
-      // Create tenant user (admin)
-      await supabase.from('tenant_users').insert({
-        tenant_id: tenant.id,
-        user_email: ownerEmail,
-        role_id: adminRole.id,
-        role_name: 'Admin',
-        is_owner: true,
-        status: 'active',
-      });
-
-      // Save business hours
-      if (formData.operatingHours) {
-        const dayMap = {
-          Monday: 'monday', Tuesday: 'tuesday', Wednesday: 'wednesday',
-          Thursday: 'thursday', Friday: 'friday', Saturday: 'saturday', Sunday: 'sunday',
-        };
-        const hoursRows = Object.entries(formData.operatingHours).map(([day, config]) => ({
-          tenant_id: tenant.id,
-          day_of_week: dayMap[day],
-          open_time: config.enabled ? config.start : null,
-          close_time: config.enabled ? config.end : null,
-          is_closed: !config.enabled,
-        }));
-        await supabase.from('business_hours').insert(hoursRows);
-      }
-
-      // Create tables if provided from onboarding Step4
-      if (formData.tables?.length > 0) {
-        const tableRows = formData.tables.map((t, i) => ({
-          name: t.label,
-          capacity: t.pax || 2,
-          status: 'available',
-          sort_order: i,
-          qr_code_url: formData.qrCodes?.[t.id] || null,
-        }));
-        await base44.functions.invoke('bulkCreateTables', { tenant_id: tenant.id, tables: tableRows });
-      } else if (formData.tableCount > 0) {
-        const tableRows = Array.from({ length: formData.tableCount }, (_, i) => ({
-          name: `T${i + 1}`,
-          capacity: 4,
-          status: 'available',
-          sort_order: i,
-          qr_code_url: null,
-        }));
-        await base44.functions.invoke('bulkCreateTables', { tenant_id: tenant.id, tables: tableRows });
-      }
-
-      // Helper: upload a data URI to Supabase Storage and return the public URL
-      const uploadDataUri = async (dataUri, tenantId) => {
-        const res = await fetch(dataUri);
-        const blob = await res.blob();
-        const ext = blob.type.split('/')[1] || 'jpg';
-        const fileName = `${tenantId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error } = await supabase.storage.from('product-images').upload(fileName, blob, { upsert: false });
-        if (error) throw error;
-        const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
-        return publicUrl;
-      };
-
-      // Create products
-      if (formData.products?.length > 0) {
-        const categoryMap = {};
-        
-        for (const product of formData.products) {
-          let categoryId = categoryMap[product.category];
-          
-          if (!categoryId) {
-            const { data: category, error: catError } = await supabase
-              .from('categories')
-              .insert({
-                tenant_id: tenant.id,
-                name: product.category,
-                slug: product.category.toLowerCase().replace(/\s+/g, '-'),
-                is_active: true,
-              })
-              .select()
-              .single();
-            
-            if (catError) throw catError;
-            categoryId = category.id;
-            categoryMap[product.category] = categoryId;
-          }
-
-          // Upload any data URI images to Supabase Storage
-          const resolvedImages = [];
-          for (const img of (product.images || [])) {
-            if (img.startsWith('data:')) {
-              const url = await uploadDataUri(img, tenant.id);
-              resolvedImages.push(url);
-            } else if (img.startsWith('http')) {
-              resolvedImages.push(img);
-            }
-          }
-
-          await supabase.from('products').insert({
-            tenant_id: tenant.id,
-            category_id: categoryId,
-            name: product.name,
-            slug: product.name.toLowerCase().replace(/\s+/g, '-'),
-            price: product.price,
-            image_url: resolvedImages[0] || null,
-            tags: resolvedImages.length > 1 ? resolvedImages.slice(1) : [],
-            is_active: true,
-          });
-        }
-      }
-
-      // Launch confetti with more intensity
-      confetti({
-        particleCount: 250,
-        spread: 120,
-        origin: { y: 0.6 },
-        gravity: 0.8,
-        scalar: 1.3,
-        duration: 3000
-      });
-      confetti({
-        particleCount: 150,
-        spread: 70,
-        origin: { x: 0.2, y: 0.8 },
-        gravity: 0.8,
-        duration: 2500
-      });
-      confetti({
-        particleCount: 150,
-        spread: 70,
-        origin: { x: 0.8, y: 0.8 },
-        gravity: 0.8,
-        duration: 2500
-      });
-
-      // Mark onboarding as complete via backend function (bypasses RLS)
-      await base44.functions.invoke('completeOnboarding', {
+      const response = await base44.functions.invoke('completeOnboarding', {
         user_id: storedUser.id,
-        tenant_id: tenant.id,
+        formData: { ...formData, ownerEmail },
       });
-      updateAppUser({ onboarding_completed: true, tenant_id: tenant.id });
 
-      // Wait a moment for effect
-      setTimeout(() => {
-        onComplete();
-      }, 1500);
+      if (!response?.data?.success) {
+        const err = response?.data;
+        throw new Error(err?.error || 'Onboarding failed');
+      }
+
+      const { tenant_id } = response.data;
+      updateAppUser({ onboarding_completed: true, tenant_id });
+
+      confetti({ particleCount: 250, spread: 120, origin: { y: 0.6 }, gravity: 0.8, scalar: 1.3 });
+      confetti({ particleCount: 150, spread: 70, origin: { x: 0.2, y: 0.8 }, gravity: 0.8 });
+      confetti({ particleCount: 150, spread: 70, origin: { x: 0.8, y: 0.8 }, gravity: 0.8 });
+
+      setTimeout(() => { onComplete(); }, 1500);
 
     } catch (error) {
       console.error('Onboarding error:', error);
