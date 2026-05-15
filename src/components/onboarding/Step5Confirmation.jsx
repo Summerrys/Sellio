@@ -76,17 +76,27 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
       const ownerEmail = storedUser?.email || formData.adminEmail;
       if (!ownerEmail) throw new Error('No owner email found. Please log in.');
 
-      const response = await base44.functions.invoke('completeOnboarding', {
-        user_id: storedUser.id,
-        formData: { ...formData, ownerEmail },
-      });
-
-      if (!response?.data?.success) {
-        const err = response?.data;
-        throw new Error(err?.error || 'Onboarding failed');
+      let result;
+      try {
+        const response = await base44.functions.invoke('completeOnboarding', {
+          user_id: storedUser.id,
+          formData: { ...formData, ownerEmail },
+        });
+        result = response?.data;
+      } catch (invokeErr) {
+        // Extract the backend error detail if available
+        const backendData = invokeErr?.response?.data;
+        if (backendData?.error) {
+          throw new Error(`Step ${backendData.step} [${backendData.step_name}]: ${backendData.error}`);
+        }
+        throw invokeErr;
       }
 
-      const { tenant_id } = response.data;
+      if (!result?.success) {
+        throw new Error(result?.error ? `Step ${result.step} [${result.step_name}]: ${result.error}` : 'Onboarding failed');
+      }
+
+      const { tenant_id } = result;
       updateAppUser({ onboarding_completed: true, tenant_id });
 
       confetti({ particleCount: 250, spread: 120, origin: { y: 0.6 }, gravity: 0.8, scalar: 1.3 });
