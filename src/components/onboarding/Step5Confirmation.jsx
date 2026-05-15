@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { invokeFunction } from '@/lib/functions';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Rocket, Loader2, CheckCircle2, Circle, Star, Sparkles } from 'lucide-react';
@@ -76,29 +75,26 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
       const ownerEmail = storedUser?.email || formData.adminEmail;
       if (!ownerEmail) throw new Error('No owner email found. Please log in.');
 
-      let result;
-      try {
-        const response = await invokeFunction('completeOnboarding', {
-          user_id: storedUser.id,
-          formData: { ...formData, ownerEmail },
-        });
-        result = response?.data;
-      } catch (invokeErr) {
-        const backendData = invokeErr?.response?.data;
-        if (backendData) {
-          const msg = backendData.failedStep
-            ? `Failed at ${backendData.failedStep}: ${backendData.error}`
-            : (backendData.error || JSON.stringify(backendData));
-          throw new Error(msg);
+      const response = await fetch(
+        'https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1/complete-onboarding',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6a3R1dGVlZGJ0bmF4ZmR5bHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM5MzU3ODgsImV4cCI6MjA1OTUxMTc4OH0.your-anon-key'
+          },
+          body: JSON.stringify({
+            user_id: storedUser?.id,
+            formData: { ...formData, ownerEmail }
+          })
         }
-        throw invokeErr;
-      }
+      );
+      const result = await response.json();
 
-      if (!result?.success) {
-        const msg = result?.failedStep
-          ? `Failed at ${result.failedStep}: ${result.error}`
-          : (result?.error || 'Onboarding failed');
-        throw new Error(msg);
+      if (!result.success) {
+        alert(`Failed at ${result.failedStep}: ${result.error}`);
+        setIsLaunching(false);
+        return;
       }
 
       const { tenant_id } = result;
