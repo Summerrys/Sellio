@@ -27,15 +27,18 @@ function fail(step, name, error) {
 
 async function cleanupTenant(supabase, tenantId) {
   console.log('Cleaning up tenant:', tenantId);
-  await supabase.from('products').delete().eq('tenant_id', tenantId);
-  await supabase.from('categories').delete().eq('tenant_id', tenantId);
-  await supabase.from('business_hours').delete().eq('tenant_id', tenantId);
-  await supabase.from('tables').delete().eq('tenant_id', tenantId);
-  await supabase.from('theme_configs').delete().eq('tenant_id', tenantId);
-  await supabase.from('subscriptions').delete().eq('tenant_id', tenantId);
-  await supabase.from('roles').delete().eq('tenant_id', tenantId);
-  await supabase.from('tenant_users').delete().eq('tenant_id', tenantId);
-  await supabase.from('tenants').delete().eq('id', tenantId);
+  const r1 = await supabase.from('products').delete().eq('tenant_id', tenantId);
+  const r2 = await supabase.from('categories').delete().eq('tenant_id', tenantId);
+  const r3 = await supabase.from('business_hours').delete().eq('tenant_id', tenantId);
+  const r4 = await supabase.from('tables').delete().eq('tenant_id', tenantId);
+  const r5 = await supabase.from('theme_configs').delete().eq('tenant_id', tenantId);
+  const r6 = await supabase.from('subscriptions').delete().eq('tenant_id', tenantId);
+  const r7 = await supabase.from('roles').delete().eq('tenant_id', tenantId);
+  const r8 = await supabase.from('tenant_users').delete().eq('tenant_id', tenantId);
+  const r9 = await supabase.from('tenants').delete().eq('id', tenantId);
+  [r1,r2,r3,r4,r5,r6,r7,r8,r9].forEach((r, i) => {
+    if (r.error) console.warn(`  cleanup table ${i+1} error:`, r.error.message);
+  });
   console.log('✓ Cleanup done for tenant:', tenantId);
 }
 
@@ -72,31 +75,35 @@ Deno.serve(async (req) => {
     // ── Step 0: Cleanup previous incomplete onboarding ───────────────────────
     console.log('→ Step 0: cleanup check...');
     try {
+      const cleanupIds = new Set();
+
+      // Find via tenant_users by email
+      const { data: tuRow } = await supabase
+        .from('tenant_users').select('tenant_id').eq('user_email', ownerEmail).maybeSingle();
+      if (tuRow?.tenant_id) cleanupIds.add(tuRow.tenant_id);
+
+      // Find via app_users by email
       const { data: appUser } = await supabase
-        .from('app_users')
-        .select('onboarding_completed, tenant_id')
-        .eq('id', user_id)
-        .maybeSingle();
+        .from('app_users').select('onboarding_completed, tenant_id').eq('email', ownerEmail).maybeSingle();
+      if (appUser?.tenant_id) cleanupIds.add(appUser.tenant_id);
 
-      if (appUser && appUser.onboarding_completed === false) {
-        const { data: tuRow } = await supabase
-          .from('tenant_users')
-          .select('tenant_id')
-          .eq('user_email', ownerEmail)
-          .maybeSingle();
-
-        const staleId = tuRow?.tenant_id || appUser.tenant_id || null;
-        if (staleId) {
-          await cleanupTenant(supabase, staleId);
-          await supabase.from('app_users').update({ tenant_id: null }).eq('id', user_id);
-        }
-      }
-
+      // Find via tenant slug
       const { data: slugTenant } = await supabase
         .from('tenants').select('id').eq('slug', tenantSlug).maybeSingle();
-      if (slugTenant) {
-        await cleanupTenant(supabase, slugTenant.id);
+      if (slugTenant?.id) cleanupIds.add(slugTenant.id);
+
+      // Find via owner_email on tenants
+      const { data: ownerTenants } = await supabase
+        .from('tenants').select('id').eq('owner_email', ownerEmail);
+      ownerTenants?.forEach(t => cleanupIds.add(t.id));
+
+      console.log('Step 0: stale tenant IDs to clean:', [...cleanupIds]);
+      for (const id of cleanupIds) {
+        await cleanupTenant(supabase, id);
       }
+      // Reset app_user tenant_id reference
+      await supabase.from('app_users').update({ tenant_id: null, onboarding_completed: false }).eq('email', ownerEmail);
+
       console.log('✓ Step 0 cleanup done');
     } catch (e) {
       console.warn('Step 0 cleanup warning (non-fatal):', e.message);
@@ -242,20 +249,23 @@ Deno.serve(async (req) => {
     } catch (e) { return fail(7, 'app_users', e); }
 
     // ── Step 8: Insert business_hours ─────────────────────────────────────────
-    if (formData.operatingHours) {
-      console.log('→ Step 8: insert business_hours...');
+    const rawHours = formData.operatingHours || formData.businessHours || formData.operating_hours;
+    if (rawHours) {
+      console.log('→ Step 8: raw operatingHours data:', JSON.stringify(rawHours));
       try {
-        const dayMap = {
-          Monday: 'monday', Tuesday: 'tuesday', Wednesday: 'wednesday',
-          Thursday: 'thursday', Friday: 'friday', Saturday: 'saturday', Sunday: 'sunday',
-        };
-        const hoursRows = Object.entries(formData.operatingHours).map(([day, config]) => ({
-          tenant_id: newTenantId,
-          day_of_week: dayMap[day] || day.toLowerCase(),
-          open_time: config.enabled ? config.start : null,
-          close_time: config.enabled ? config.end : null,
-          is_closed: !config.enabled,
-        }));
+        const validDays = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+        const hoursRows = Object.entries(rawHours).map(([day, config]) => {
+          const normalizedDay = day.trim().toLowerCase();
+          const day_of_week = validDays.includes(normalizedDay) ? normalizedDay : null;
+          return {
+            tenant_id: newTenantId,
+            day_of_week,
+            open_time: config.enabled ? (config.start || config.open_time || null) : null,
+            close_time: config.enabled ? (config.end || config.close_time || null) : null,
+            is_closed: !config.enabled,
+          };
+        }).filter(r => r.day_of_week !== null);
+        console.log('→ Step 8: rows to insert:', JSON.stringify(hoursRows));
         const { error } = await supabase.from('business_hours').insert(hoursRows);
         if (error) throw error;
         console.log('✓ Step 8 business_hours inserted:', hoursRows.length);
