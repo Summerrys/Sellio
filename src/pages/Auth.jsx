@@ -3,7 +3,7 @@ import { Phone, Lock, User, Mail, ChevronDown, Check } from 'lucide-react';
 import { getSupabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { createPageUrl } from '../utils';
-import { base44 } from '@/api/base44Client';
+import { invokeFunction } from '@/lib/functions';
 import { useAppUser } from '@/lib/AppUserContext';
 
 const COUNTRY_CODES = [
@@ -143,7 +143,7 @@ export default function Auth() {
         : { action: 'signup', phone: fullPhone, password: formData.password, full_name: formData.full_name, email: formData.email };
 
       try {
-        const response = await base44.functions.invoke('authProxy', payload);
+        const response = await invokeFunction('authProxy', payload);
         const data = response.data;
 
         if (data.success) {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import db from '@/lib/db';
-import { base44 } from '@/api/base44Client';
+import { invokeFunction } from '@/lib/functions';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
@@ -51,14 +51,14 @@ export default function Tables() {
   const { data: tables = [], isLoading } = useQuery({
     queryKey: ['tables', tenantId],
     queryFn: async () => {
-      const res = await base44.functions.invoke('getTables', { tenant_id: tenantId });
+      const res = await invokeFunction('getTables', { tenant_id: tenantId });
       return res.data?.tables || [];
     },
     enabled: !!tenantId,
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (tableId) => base44.functions.invoke('manageTable', { action: 'delete', tenant_id: tenantId, table_id: tableId }),
+    mutationFn: (tableId) => invokeFunction('manageTable', { action: 'delete', tenant_id: tenantId, table_id: tableId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tables', tenantId] });
       toast.success('Table deleted');

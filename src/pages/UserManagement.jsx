@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { invokeFunction } from '@/lib/functions';
+import db from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,23 +18,12 @@ export default function UserManagement() {
   // Fetch all users
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['app-users'],
-    queryFn: async () => {
-      const result = await base44.asServiceRole.entities.AppUser.list();
-      return result;
-    }
+    queryFn: () => db.entities.AppUser.list('-created_date', 200)
   });
 
   // Update role mutation
   const updateRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }) => {
-      const functionUrl = `${window.location.origin}/api/functions/updateUserRole`;
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, role })
-      });
-      return response.json();
-    },
+    mutationFn: ({ userId, role }) => invokeFunction('updateUserRole', { userId, role }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['app-users'] });
       toast.success('User role updated successfully');
@@ -45,15 +35,7 @@ export default function UserManagement() {
 
   // Toggle status mutation
   const toggleStatusMutation = useMutation({
-    mutationFn: async ({ userId, is_active }) => {
-      const functionUrl = `${window.location.origin}/api/functions/toggleUserStatus`;
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, is_active })
-      });
-      return response.json();
-    },
+    mutationFn: ({ userId, is_active }) => invokeFunction('toggleUserStatus', { userId, is_active }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['app-users'] });
       toast.success('User status updated successfully');

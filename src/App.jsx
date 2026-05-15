@@ -44,6 +44,8 @@ const AuthenticatedApp = () => {
       navigateToLogin();
       return null;
     }
+    // For 'unknown' errors (e.g. Base44 platform API unreachable on self-hosted),
+    // fall through and render the app normally — our own cookie-based auth handles it.
   }
 
   // Render the main app

@@ -8,7 +8,8 @@ import { useTenant } from '../tenant/TenantContext';
 import { ROLE_TEMPLATES, INDUSTRY_ROLES } from '../tenant/TenantContext';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { invokeFunction } from '@/lib/functions';
+import db from '@/lib/db';
 
 export default function CreateStaffDialog({ open, onClose, onSuccess }) {
   const { tenant } = useTenant();
@@ -24,13 +25,7 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
   // Fetch roles for this tenant
   const { data: roles = [] } = useQuery({
     queryKey: ['roles', tenant?.id],
-    queryFn: async () => {
-      const result = await base44.functions.invoke('data/rolesPermissions/role', {
-        operation: 'list',
-        filters: { tenant_id: tenant?.id },
-      });
-      return result.data || [];
-    },
+    queryFn: () => db.entities.Role.filter({ tenant_id: tenant?.id }),
     enabled: !!tenant?.id,
   });
 
@@ -51,7 +46,7 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
       const selectedRole = roles.find(r => r.id === formData.role_id);
 
       // Create user in User entity
-      await base44.functions.invoke('data/core/user', {
+      await invokeFunction('data/core/user', {
         operation: 'create',
         data: {
           email: formData.email,
@@ -62,7 +57,7 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
       });
 
       // Create TenantUser record
-      await base44.functions.invoke('data/core/tenantUser', {
+      await invokeFunction('data/core/tenantUser', {
         operation: 'create',
         data: {
           tenant_id: tenant.id,

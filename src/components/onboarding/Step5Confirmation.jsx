@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { invokeFunction } from '@/lib/functions';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Rocket, Loader2, CheckCircle2, Circle, Star, Sparkles } from 'lucide-react';
@@ -78,7 +78,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
 
       let result;
       try {
-        const response = await base44.functions.invoke('completeOnboarding', {
+        const response = await invokeFunction('completeOnboarding', {
           user_id: storedUser.id,
           formData: { ...formData, ownerEmail },
         });
