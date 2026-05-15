@@ -84,16 +84,21 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
         });
         result = response?.data;
       } catch (invokeErr) {
-        // Extract the backend error detail if available
         const backendData = invokeErr?.response?.data;
-        if (backendData?.error) {
-          throw new Error(`Step ${backendData.step} [${backendData.step_name}]: ${backendData.error}`);
+        if (backendData) {
+          const msg = backendData.failedStep
+            ? `Failed at ${backendData.failedStep}: ${backendData.error}`
+            : (backendData.error || JSON.stringify(backendData));
+          throw new Error(msg);
         }
         throw invokeErr;
       }
 
       if (!result?.success) {
-        throw new Error(result?.error ? `Step ${result.step} [${result.step_name}]: ${result.error}` : 'Onboarding failed');
+        const msg = result?.failedStep
+          ? `Failed at ${result.failedStep}: ${result.error}`
+          : (result?.error || 'Onboarding failed');
+        throw new Error(msg);
       }
 
       const { tenant_id } = result;
