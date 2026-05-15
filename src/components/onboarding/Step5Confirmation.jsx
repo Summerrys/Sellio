@@ -76,9 +76,15 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
       if (!ownerEmail) throw new Error('No owner email found. Please log in.');
 
       let result;
-      const res = await fetch('https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1/completeOnboarding', {
+      const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
+      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6a3R1dGVlZGJ0bmF4ZmR5bHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxNzI2NTgsImV4cCI6MjA2MTc0ODY1OH0.pVFa8FHBMPNNjmrjRPXBJFSLoJ2pKJqxeM3LfmBrXLI';
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/completeOnboarding`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'apikey': SUPABASE_ANON_KEY,
+        },
         body: JSON.stringify({ user_id: storedUser.id, formData: { ...formData, ownerEmail } }),
       });
       result = await res.json();
