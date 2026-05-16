@@ -109,7 +109,11 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
       confetti({ particleCount: 150, spread: 70, origin: { x: 0.2, y: 0.8 }, gravity: 0.8 });
       confetti({ particleCount: 150, spread: 70, origin: { x: 0.8, y: 0.8 }, gravity: 0.8 });
 
-      setTimeout(() => { onComplete(); }, 1500);
+      setTimeout(() => {
+        onComplete();
+        // Force full page reload so TenantContext re-fetches fresh data
+        setTimeout(() => { window.location.href = '/Dashboard'; }, 500);
+      }, 1500);
 
     } catch (error) {
       console.error('Onboarding error:', error);

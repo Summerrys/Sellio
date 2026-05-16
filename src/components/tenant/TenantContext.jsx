@@ -232,8 +232,11 @@ export function TenantProvider({ children }) {
   useEffect(() => {
     if (tenantUser?.length > 0) {
       setCurrentTenantId(tenantUser[0].tenant_id);
+    } else if (user?.tenant_id) {
+      // Fallback: use tenant_id from session (e.g. right after onboarding)
+      setCurrentTenantId(user.tenant_id);
     }
-  }, [tenantUser]);
+  }, [tenantUser, user]);
 
   useEffect(() => {
     // Dev role override
@@ -245,13 +248,15 @@ export function TenantProvider({ children }) {
       }
     }
 
-    if (role?.[0]?.permissions) {
-      setUserPermissions(role[0].permissions);
-    }
     if (tenantUser?.[0]?.is_owner) {
       setUserPermissions(Object.keys(PERMISSIONS));
+    } else if (role?.[0]?.permissions) {
+      setUserPermissions(role[0].permissions);
+    } else if (user?.tenant_id) {
+      // Fallback: user has a tenant (e.g. just completed onboarding) — grant full permissions
+      setUserPermissions(Object.keys(PERMISSIONS));
     }
-  }, [role, tenantUser, devRoleOverride]);
+  }, [role, tenantUser, devRoleOverride, user]);
 
   const hasPermission = (permission) => {
     if (isSuperAdmin) return true;
@@ -269,7 +274,7 @@ export function TenantProvider({ children }) {
     tenantId: currentTenantId,
     tenantUser: tenantUser?.[0] || null,
     isSuperAdmin,
-    isOwner: devRoleOverride === 'owner' || tenantUser?.[0]?.is_owner || false,
+    isOwner: devRoleOverride === 'owner' || tenantUser?.[0]?.is_owner || !!user?.tenant_id || false,
     permissions: userPermissions,
     hasPermission,
     hasAnyPermission,
