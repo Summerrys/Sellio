@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, ArrowLeft, Utensils, Layers, Sparkles, Upload, Menu, X, Pencil, Trash2, Plus } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Utensils, Layers, Sparkles, Upload, Menu, X, Pencil, Trash2, Plus, Wand2, Loader2, AlertCircle, Check } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ImageEditModal from './ImageEditModal';
 import EditItemModal from './EditItemModal';
@@ -51,6 +51,81 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const [editingItemId, setEditingItemId] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const fileInputRef = useRef(null);
+  const aiFileInputRef = useRef(null);
+  const [aiStep, setAiStep] = useState('idle'); // idle | analyzing | done | error
+  const [aiPreview, setAiPreview] = useState(null);
+  const [aiResult, setAiResult] = useState(null);
+  const [aiImageUrl, setAiImageUrl] = useState(null);
+  const [aiError, setAiError] = useState('');
+
+  const handleAiFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAiStep('analyzing');
+    setAiError('');
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result;
+      setAiPreview(base64);
+      try {
+        const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6a3R1dGVlZGJ0bmF4ZmR5bHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxNzI2NTgsImV4cCI6MjA2MTc0ODY1OH0.pVFa8FHBMPNNjmrjRPXBJFSLoJ2pKJqxeM3LfmBrXLI';
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/analyzeProductImage`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'apikey': SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            image_data: base64,
+            image_mime_type: file.type || 'image/jpeg',
+            currency: formData.currency || 'SGD',
+            business_type: formData.businessType || '',
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`);
+        const { product, image_url } = data;
+        if (!product || product.confidence < 0.3) throw new Error("Couldn't identify a product. Try a clearer photo.");
+        setAiResult(product);
+        setAiImageUrl(image_url);
+        setAiStep('done');
+      } catch (err) {
+        setAiError(err.message || 'AI analysis failed');
+        setAiStep('error');
+      }
+      if (aiFileInputRef.current) aiFileInputRef.current.value = '';
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const applyAiResult = () => {
+    if (!aiResult) return;
+    setItemName(aiResult.name || '');
+    setItemPrice(aiResult.estimated_price ? String(aiResult.estimated_price) : '');
+    if (aiImageUrl) setImagePreviews([aiImageUrl]);
+    // Try to match category
+    if (aiResult.suggested_category && categories.length > 0) {
+      const suggested = aiResult.suggested_category.toLowerCase();
+      const match = categories.find(c => c.toLowerCase().includes(suggested) || suggested.includes(c.toLowerCase()));
+      if (match) setSelectedCategory(match);
+    }
+    setAiStep('idle');
+    setAiPreview(null);
+    setAiResult(null);
+    setAiImageUrl(null);
+    toast.success('AI suggestions applied!');
+  };
+
+  const resetAi = () => {
+    setAiStep('idle');
+    setAiPreview(null);
+    setAiResult(null);
+    setAiImageUrl(null);
+    setAiError('');
+    if (aiFileInputRef.current) aiFileInputRef.current.value = '';
+  };
 
   const handleEditSave = (newDataUrl) => {
     if (newDataUrl === null) {
@@ -328,6 +403,69 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                 </SelectContent>
               </Select>
             </div>
+            {/* AI Auto-fill */}
+            <div>
+              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Auto-fill with AI</Label>
+              <div className={`rounded-xl border-2 transition-all ${aiStep === 'done' ? 'border-green-200 bg-green-50' : aiStep === 'error' ? 'border-red-200 bg-red-50' : aiStep === 'analyzing' ? 'border-blue-200 bg-blue-50' : 'border-dashed border-slate-300 bg-slate-50 hover:border-slate-400'}`}>
+                {aiStep === 'idle' && (
+                  <label className="flex items-center gap-3 p-3 cursor-pointer">
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: themeColor }}>
+                      <Wand2 className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-800">Upload photo to auto-fill</p>
+                      <p className="text-xs text-slate-500">AI will generate name, price & category</p>
+                    </div>
+                    <span className="text-xs font-medium px-3 py-1.5 rounded-lg text-white flex-shrink-0" style={{ background: themeColor }}>Choose</span>
+                    <input ref={aiFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAiFileSelect} />
+                  </label>
+                )}
+                {aiStep === 'analyzing' && (
+                  <div className="flex items-center gap-3 p-3">
+                    {aiPreview && <img src={aiPreview} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                        <p className="text-sm font-semibold text-slate-800">Analyzing image...</p>
+                      </div>
+                      <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full w-3/4 transition-all" style={{ background: themeColor }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {aiStep === 'error' && (
+                  <div className="flex items-center gap-3 p-3">
+                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                    <p className="text-sm text-red-700 flex-1">{aiError}</p>
+                    <button onClick={resetAi} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+                  </div>
+                )}
+                {aiStep === 'done' && aiResult && (
+                  <div className="p-3">
+                    <div className="flex items-center gap-3 mb-3">
+                      {aiPreview && <img src={aiPreview} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-green-200" />}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <Sparkles className="w-3.5 h-3.5 text-green-600" />
+                          <p className="text-xs font-semibold text-green-700">AI suggestions ready</p>
+                        </div>
+                        <p className="text-sm font-bold text-slate-900 truncate">{aiResult.name}</p>
+                        <p className="text-xs text-slate-500 truncate">{aiResult.suggested_category} · {formData.currency || '$'}{aiResult.estimated_price?.toFixed(2)}</p>
+                      </div>
+                      <button onClick={resetAi} className="text-slate-400 hover:text-slate-600 flex-shrink-0"><X className="w-4 h-4" /></button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" onClick={applyAiResult} className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-1.5">
+                        <Check className="w-4 h-4" /> Apply
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" onClick={resetAi}>Discard</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div>
               <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Item Name</Label>
               <Input
