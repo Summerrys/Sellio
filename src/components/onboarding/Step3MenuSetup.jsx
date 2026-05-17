@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, ArrowLeft, Utensils, Layers, Sparkles, Upload, Menu, X, Pencil, Trash2, Plus, Wand2, Loader2, AlertCircle, Check } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Sparkles, Upload, Menu, X, Pencil, Trash2, Plus, Wand2, Loader2, AlertCircle, Check } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ImageEditModal from './ImageEditModal';
 import EditItemModal from './EditItemModal';
@@ -51,80 +51,95 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const [editingItemId, setEditingItemId] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const fileInputRef = useRef(null);
-  const aiFileInputRef = useRef(null);
   const [aiStep, setAiStep] = useState('idle'); // idle | analyzing | done | error
-  const [aiPreview, setAiPreview] = useState(null);
   const [aiResult, setAiResult] = useState(null);
-  const [aiImageUrl, setAiImageUrl] = useState(null);
   const [aiError, setAiError] = useState('');
 
-  const handleAiFileSelect = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6a3R1dGVlZGJ0bmF4ZmR5bHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxNzI2NTgsImV4cCI6MjA2MTc0ODY1OH0.pVFa8FHBMPNNjmrjRPXBJFSLoJ2pKJqxeM3LfmBrXLI';
+
+  // When a photo is selected in the Product Images section, show preview immediately and run AI
+  const handleImageSelect = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    // Add new file previews immediately (so they appear in the image grid)
+    const newPreviews = [];
+    for (const file of files) {
+      await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onloadend = () => { newPreviews.push(reader.result); resolve(); };
+        reader.readAsDataURL(file);
+      });
+    }
+    setImageFiles(prev => [...prev, ...files]);
+    setImagePreviews(prev => [...prev, ...newPreviews]);
+
+    // Run AI on the first new image
+    const firstFile = files[0];
+    const firstPreview = newPreviews[0];
     setAiStep('analyzing');
     setAiError('');
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64 = reader.result;
-      setAiPreview(base64);
-      try {
-        const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6a3R1dGVlZGJ0bmF4ZmR5bHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxNzI2NTgsImV4cCI6MjA2MTc0ODY1OH0.pVFa8FHBMPNNjmrjRPXBJFSLoJ2pKJqxeM3LfmBrXLI';
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/analyzeProductImage`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'apikey': SUPABASE_ANON_KEY,
-          },
-          body: JSON.stringify({
-            image_data: base64,
-            image_mime_type: file.type || 'image/jpeg',
-            currency: formData.currency || 'SGD',
-            business_type: formData.businessType || '',
-          }),
+    setAiResult(null);
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/analyzeProductImage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'apikey': SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          image_data: firstPreview,
+          image_mime_type: firstFile.type || 'image/jpeg',
+          currency: formData.currency || 'SGD',
+          business_type: formData.businessType || '',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`);
+      const { product, image_url } = data;
+      // Replace the data URL preview with the uploaded Supabase URL
+      if (image_url) {
+        setImagePreviews(prev => {
+          const updated = [...prev];
+          const idx = updated.length - newPreviews.length; // index of first new preview
+          updated[idx] = image_url;
+          return updated;
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`);
-        const { product, image_url } = data;
-        if (!product || product.confidence < 0.3) throw new Error("Couldn't identify a product. Try a clearer photo.");
-        setAiResult(product);
-        setAiImageUrl(image_url);
-        setAiStep('done');
-      } catch (err) {
-        setAiError(err.message || 'AI analysis failed');
-        setAiStep('error');
+        setImageFiles(prev => prev); // keep files as-is (already tracked)
       }
-      if (aiFileInputRef.current) aiFileInputRef.current.value = '';
-    };
-    reader.readAsDataURL(file);
+      if (!product || product.confidence < 0.3) {
+        setAiStep('idle');
+        return;
+      }
+      setAiResult(product);
+      setAiStep('done');
+    } catch (err) {
+      setAiError(err.message || 'AI analysis failed');
+      setAiStep('error');
+    }
   };
 
   const applyAiResult = () => {
     if (!aiResult) return;
     setItemName(aiResult.name || '');
     setItemPrice(aiResult.estimated_price ? String(aiResult.estimated_price) : '');
-    if (aiImageUrl) setImagePreviews([aiImageUrl]);
-    // Try to match category
     if (aiResult.suggested_category && categories.length > 0) {
       const suggested = aiResult.suggested_category.toLowerCase();
       const match = categories.find(c => c.toLowerCase().includes(suggested) || suggested.includes(c.toLowerCase()));
       if (match) setSelectedCategory(match);
     }
     setAiStep('idle');
-    setAiPreview(null);
     setAiResult(null);
-    setAiImageUrl(null);
     toast.success('AI suggestions applied!');
   };
 
-  const resetAi = () => {
+  const dismissAi = () => {
     setAiStep('idle');
-    setAiPreview(null);
     setAiResult(null);
-    setAiImageUrl(null);
     setAiError('');
-    if (aiFileInputRef.current) aiFileInputRef.current.value = '';
   };
 
   const handleEditSave = (newDataUrl) => {
@@ -166,17 +181,6 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       setCategoryInput('');
       if (!selectedCategory) setSelectedCategory(categoryInput);
     }
-  };
-
-  const handleImageSelect = (e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    setImageFiles(prev => [...prev, ...files]);
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreviews(prev => [...prev, reader.result]);
-      reader.readAsDataURL(file);
-    });
   };
 
   const removeImage = (idx) => {
@@ -277,26 +281,39 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
 
         {/* Images Section */}
         <div className="bg-white border border-slate-200 rounded-xl p-3 overflow-visible">
-          <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+          <h3 className="text-sm font-bold text-slate-900 mb-1 flex items-center gap-2">
             <Upload className="w-4 h-4" style={{ color: primaryColor }} />
             Product Images
           </h3>
-          <div>
-            <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Images (optional)</Label>
-            {imagePreviews.length === 0 ? (
-              <label className="border-2 border-dashed border-slate-300 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors w-full min-w-0">
-                <Upload className="w-5 h-5 text-slate-400 mb-1" />
-                <span className="text-xs text-slate-500">Click to add images</span>
-                <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
-              </label>
-            ) : (
+          <p className="text-xs text-slate-400 mb-3">Upload a photo — AI will auto-fill the name, price &amp; category</p>
+
+          {imagePreviews.length === 0 ? (
+            <label className={`border-2 border-dashed rounded-lg p-5 flex flex-col items-center justify-center cursor-pointer transition-colors w-full min-w-0 ${aiStep === 'analyzing' ? 'border-blue-300 bg-blue-50' : 'border-slate-300 hover:border-slate-400'}`}>
+              {aiStep === 'analyzing' ? (
+                <>
+                  <Loader2 className="w-6 h-6 text-blue-500 animate-spin mb-2" />
+                  <span className="text-sm font-medium text-blue-700">Analyzing with AI...</span>
+                  <span className="text-xs text-blue-400 mt-0.5">Generating name, price &amp; category</span>
+                </>
+              ) : (
+                <>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2" style={{ background: themeColor }}>
+                    <Wand2 className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-slate-700">Upload photo to auto-fill</span>
+                  <span className="text-xs text-slate-400 mt-0.5">AI generates name, price &amp; category</span>
+                </>
+              )}
+              <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" disabled={aiStep === 'analyzing'} />
+            </label>
+          ) : (
+            <>
               <DragDropContext onDragEnd={(result) => {
                 if (!result.destination || result.source.index === result.destination.index) return;
                 const from = result.source.index;
                 const to = result.destination.index;
                 const newPreviews = [...imagePreviews];
                 const newFiles = [...imageFiles];
-                // Swap only the two items
                 [newPreviews[from], newPreviews[to]] = [newPreviews[to], newPreviews[from]];
                 [newFiles[from], newFiles[to]] = [newFiles[to], newFiles[from]];
                 setImagePreviews(newPreviews);
@@ -336,8 +353,49 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                   )}
                 </Droppable>
               </DragDropContext>
-            )}
-          </div>
+
+              {/* AI status banner — shown after images are present */}
+              {aiStep === 'analyzing' && (
+                <div className="mt-3 flex items-center gap-3 p-3 rounded-xl bg-blue-50 border border-blue-200">
+                  <Loader2 className="w-4 h-4 text-blue-500 animate-spin flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-blue-800">Analyzing image with AI...</p>
+                    <div className="mt-1 h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full w-3/4" style={{ background: themeColor }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* AI result banner */}
+          {aiStep === 'done' && aiResult && (
+            <div className="mt-3 p-3 rounded-xl bg-green-50 border border-green-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-4 h-4 text-green-600" />
+                <p className="text-sm font-semibold text-green-800">AI suggestions ready</p>
+                <button onClick={dismissAi} className="ml-auto text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+              </div>
+              <p className="text-sm font-bold text-slate-900">{aiResult.name}</p>
+              <p className="text-xs text-slate-500 mb-3">{aiResult.suggested_category} · {formData.currency || '$'}{aiResult.estimated_price?.toFixed(2)}</p>
+              <div className="flex gap-2">
+                <Button type="button" size="sm" onClick={applyAiResult} className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-1.5">
+                  <Check className="w-4 h-4" /> Apply to fields
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={dismissAi}>Dismiss</Button>
+              </div>
+            </div>
+          )}
+
+          {/* AI error banner */}
+          {aiStep === 'error' && (
+            <div className="mt-3 flex items-center gap-3 p-3 rounded-xl bg-red-50 border border-red-200">
+              <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+              <p className="text-sm text-red-700 flex-1">{aiError}</p>
+              <button onClick={dismissAi} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+            </div>
+          )}
         </div>
 
         {/* Item Details Section (includes Categories) */}
@@ -403,69 +461,6 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                 </SelectContent>
               </Select>
             </div>
-            {/* AI Auto-fill */}
-            <div>
-              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Auto-fill with AI</Label>
-              <div className={`rounded-xl border-2 transition-all ${aiStep === 'done' ? 'border-green-200 bg-green-50' : aiStep === 'error' ? 'border-red-200 bg-red-50' : aiStep === 'analyzing' ? 'border-blue-200 bg-blue-50' : 'border-dashed border-slate-300 bg-slate-50 hover:border-slate-400'}`}>
-                {aiStep === 'idle' && (
-                  <label className="flex items-center gap-3 p-3 cursor-pointer">
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: themeColor }}>
-                      <Wand2 className="w-4 h-4 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800">Upload photo to auto-fill</p>
-                      <p className="text-xs text-slate-500">AI will generate name, price & category</p>
-                    </div>
-                    <span className="text-xs font-medium px-3 py-1.5 rounded-lg text-white flex-shrink-0" style={{ background: themeColor }}>Choose</span>
-                    <input ref={aiFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAiFileSelect} />
-                  </label>
-                )}
-                {aiStep === 'analyzing' && (
-                  <div className="flex items-center gap-3 p-3">
-                    {aiPreview && <img src={aiPreview} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                        <p className="text-sm font-semibold text-slate-800">Analyzing image...</p>
-                      </div>
-                      <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full w-3/4 transition-all" style={{ background: themeColor }} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {aiStep === 'error' && (
-                  <div className="flex items-center gap-3 p-3">
-                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-700 flex-1">{aiError}</p>
-                    <button onClick={resetAi} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
-                  </div>
-                )}
-                {aiStep === 'done' && aiResult && (
-                  <div className="p-3">
-                    <div className="flex items-center gap-3 mb-3">
-                      {aiPreview && <img src={aiPreview} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-green-200" />}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1 mb-0.5">
-                          <Sparkles className="w-3.5 h-3.5 text-green-600" />
-                          <p className="text-xs font-semibold text-green-700">AI suggestions ready</p>
-                        </div>
-                        <p className="text-sm font-bold text-slate-900 truncate">{aiResult.name}</p>
-                        <p className="text-xs text-slate-500 truncate">{aiResult.suggested_category} · {formData.currency || '$'}{aiResult.estimated_price?.toFixed(2)}</p>
-                      </div>
-                      <button onClick={resetAi} className="text-slate-400 hover:text-slate-600 flex-shrink-0"><X className="w-4 h-4" /></button>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button type="button" size="sm" onClick={applyAiResult} className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-1.5">
-                        <Check className="w-4 h-4" /> Apply
-                      </Button>
-                      <Button type="button" size="sm" variant="outline" onClick={resetAi}>Discard</Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
             <div>
               <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Item Name</Label>
               <Input

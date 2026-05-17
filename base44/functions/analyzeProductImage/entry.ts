@@ -13,10 +13,6 @@ Deno.serve(async (req) => {
 
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
-    }
 
     const { image_data, image_mime_type, tenant_id, currency = 'SGD', business_type, skip_analysis = false } = await req.json();
     if (!image_data) {
