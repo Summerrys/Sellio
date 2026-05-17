@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { base44 } from '@/api/base44Client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, ArrowLeft, Sparkles, Upload, Menu, X, Pencil, Trash2, Plus, Wand2, Loader2, AlertCircle, Check } from 'lucide-react';
@@ -55,9 +56,6 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const [aiResult, setAiResult] = useState(null);
   const [aiError, setAiError] = useState('');
 
-  const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6a3R1dGVlZGJ0bmF4ZmR5bHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxNzI2NTgsImV4cCI6MjA2MTc0ODY1OH0.pVFa8FHBMPNNjmrjRPXBJFSLoJ2pKJqxeM3LfmBrXLI';
-
   // When a photo is selected in the Product Images section, show preview immediately and run AI
   const handleImageSelect = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -83,32 +81,21 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     setAiResult(null);
 
     try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/analyzeProductImage`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'apikey': SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({
-          image_data: firstPreview,
-          image_mime_type: firstFile.type || 'image/jpeg',
-          currency: formData.currency || 'SGD',
-          business_type: formData.businessType || '',
-        }),
+      const response = await base44.functions.invoke('analyzeProductImage', {
+        image_data: firstPreview,
+        image_mime_type: firstFile.type || 'image/jpeg',
+        currency: formData.currency || 'SGD',
+        business_type: formData.businessType || '',
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`);
-      const { product, image_url } = data;
+      const { product, image_url } = response.data;
       // Replace the data URL preview with the uploaded Supabase URL
       if (image_url) {
         setImagePreviews(prev => {
           const updated = [...prev];
-          const idx = updated.length - newPreviews.length; // index of first new preview
+          const idx = updated.length - newPreviews.length;
           updated[idx] = image_url;
           return updated;
         });
-        setImageFiles(prev => prev); // keep files as-is (already tracked)
       }
       if (!product || product.confidence < 0.3) {
         setAiStep('idle');

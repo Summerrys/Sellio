@@ -3,6 +3,7 @@ import { Sparkles, Upload, Loader2, Check, AlertCircle, X, Wand2 } from 'lucide-
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { base44 } from '@/api/base44Client';
 
 export default function AIProductAssistant({ onApply, tenantId, businessType, currency, categories }) {
   const [step, setStep] = useState('idle'); // idle | uploading | analyzing | done | error
@@ -36,35 +37,15 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
       setStep('analyzing');
 
       try {
-        const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6a3R1dGVlZGJ0bmF4ZmR5bHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxNzI2NTgsImV4cCI6MjA2MTc0ODY1OH0.pVFa8FHBMPNNjmrjRPXBJFSLoJ2pKJqxeM3LfmBrXLI';
-        // Get session token from cookie or localStorage for auth
-        let authToken = SUPABASE_ANON_KEY;
-        try {
-          const match = document.cookie.match(/(?:^|;\s*)app_session=([^;]+)/);
-          const session = match ? JSON.parse(decodeURIComponent(match[1])) : JSON.parse(localStorage.getItem('app_user') || 'null');
-          if (session?.access_token) authToken = session.access_token;
-        } catch {}
-
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/analyzeProductImage`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`,
-            'apikey': SUPABASE_ANON_KEY,
-          },
-          body: JSON.stringify({
-            image_data: base64,
-            image_mime_type: file.type || 'image/jpeg',
-            tenant_id: tenantId || '',
-            currency: currency || 'SGD',
-            business_type: businessType || '',
-          }),
+        const response = await base44.functions.invoke('analyzeProductImage', {
+          image_data: base64,
+          image_mime_type: file.type || 'image/jpeg',
+          tenant_id: tenantId || '',
+          currency: currency || 'SGD',
+          business_type: businessType || '',
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`);
 
-        const { product, image_url: uploadedImageUrl } = data;
+        const { product, image_url: uploadedImageUrl } = response.data;
 
         if (!product || product.confidence < 0.3) {
           throw new Error("Couldn't identify a product in this image. Try a clearer photo.");
