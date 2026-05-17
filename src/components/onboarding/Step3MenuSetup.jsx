@@ -111,11 +111,30 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     if (!aiResult) return;
     setItemName(aiResult.name || '');
     setItemPrice(aiResult.estimated_price ? String(aiResult.estimated_price) : '');
-    if (aiResult.suggested_category && categories.length > 0) {
-      const suggested = aiResult.suggested_category.toLowerCase();
-      const match = categories.find(c => c.toLowerCase().includes(suggested) || suggested.includes(c.toLowerCase()));
-      if (match) setSelectedCategory(match);
+
+    if (aiResult.suggested_category) {
+      const suggested = aiResult.suggested_category.toLowerCase().trim();
+      // Try to match an existing category
+      const match = categories.find(c =>
+        c.toLowerCase() === suggested ||
+        c.toLowerCase().includes(suggested) ||
+        suggested.includes(c.toLowerCase())
+      );
+      if (match) {
+        setSelectedCategory(match);
+      } else {
+        // Auto-add the suggested category and select it
+        const newCat = aiResult.suggested_category;
+        setCategories(prev => {
+          if (!prev.includes(newCat)) {
+            return [...prev, newCat];
+          }
+          return prev;
+        });
+        setSelectedCategory(newCat);
+      }
     }
+
     setAiStep('idle');
     setAiResult(null);
     toast.success('AI suggestions applied!');
