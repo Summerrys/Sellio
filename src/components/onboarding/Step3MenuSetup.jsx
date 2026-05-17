@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appParams } from '@/lib/app-params';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, ArrowLeft, Sparkles, Upload, Menu, X, Pencil, Trash2, Plus, Wand2, Loader2, AlertCircle, Check } from 'lucide-react';
@@ -81,13 +81,20 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     setAiResult(null);
 
     try {
-      const response = await base44.functions.invoke('analyzeProductImage', {
-        image_data: firstPreview,
-        image_mime_type: firstFile.type || 'image/jpeg',
-        currency: formData.currency || 'SGD',
-        business_type: formData.businessType || '',
+      const fnUrl = `${appParams.appBaseUrl}/api/functions/analyzeProductImage`;
+      const res = await fetch(fnUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_data: firstPreview,
+          image_mime_type: firstFile.type || 'image/jpeg',
+          currency: formData.currency || 'SGD',
+          business_type: formData.businessType || '',
+        }),
       });
-      const { product, image_url } = response.data;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`);
+      const { product, image_url } = data;
       // Replace the data URL preview with the uploaded Supabase URL
       if (image_url) {
         setImagePreviews(prev => {

@@ -72,7 +72,7 @@ Return a JSON object with:
 
 If this is not a product image, set confidence below 0.3 and return generic defaults.
 Be concise and practical — merchants will use this to fill their catalog quickly.`,
-      file_urls: [image_url],
+      file_urls: [`data:${image_mime_type || 'image/jpeg'};base64,${base64}`],
       response_json_schema: {
         type: 'object',
         properties: {
