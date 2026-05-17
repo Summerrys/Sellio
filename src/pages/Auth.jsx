@@ -203,7 +203,7 @@ export default function Auth() {
             {/* Header */}
             <div className="text-center mb-6">
               <div className="flex items-center justify-center mb-3">
-                <img src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png" alt="Sellio" className="h-28 w-auto object-contain" />
+                <img src="https://assets.apptelier.sg/sellio/Logo_Sellio.png" alt="Sellio" className="h-28 w-auto object-contain" />
               </div>
               <p className="text-xl font-semibold text-slate-800 mb-0.5">Welcome!</p>
               <p className="text-sm text-slate-500">Let's get you started</p>
