@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { appParams } from '@/lib/app-params';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, ArrowLeft, Sparkles, Upload, Menu, X, Pencil, Trash2, Plus, Wand2, Loader2, AlertCircle, Check } from 'lucide-react';
@@ -81,12 +80,11 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     setAiResult(null);
 
     try {
-      const fnUrl = `${appParams.appBaseUrl}/api/functions/analyzeProductImage`;
-      const res = await fetch(fnUrl, {
+      const res = await fetch('https://selliosg.base44.app/api/functions/analyzeProductImage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          image_data: firstPreview,
+          imageBase64: firstPreview,
           image_mime_type: firstFile.type || 'image/jpeg',
           currency: formData.currency || 'SGD',
           business_type: formData.businessType || '',
@@ -94,21 +92,19 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`);
-      const { product, image_url } = data;
-      // Replace the data URL preview with the uploaded Supabase URL
-      if (image_url) {
-        setImagePreviews(prev => {
-          const updated = [...prev];
-          const idx = updated.length - newPreviews.length;
-          updated[idx] = image_url;
-          return updated;
-        });
-      }
-      if (!product || product.confidence < 0.3) {
+      if (!data.confidence || data.confidence < 0.3) {
         setAiStep('idle');
         return;
       }
-      setAiResult(product);
+      // Map flat response to the shape applyAiResult expects
+      setAiResult({
+        name: data.name,
+        description: data.description,
+        suggested_category: data.category,
+        estimated_price: data.price,
+        suggested_tags: data.tags || [],
+        confidence: data.confidence,
+      });
       setAiStep('done');
     } catch (err) {
       setAiError(err.message || 'AI analysis failed');
