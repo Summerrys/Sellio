@@ -39,12 +39,7 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
         const res = await fetch('https://selliosg.base44.app/api/functions/analyzeProductImage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            imageBase64: base64,
-            image_mime_type: file.type || 'image/jpeg',
-            currency: currency || 'SGD',
-            business_type: businessType || '',
-          }),
+          body: JSON.stringify({ imageBase64: base64 }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`);

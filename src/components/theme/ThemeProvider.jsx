@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { getSupabase } from '@/lib/supabaseClient';
 import { COLOR_SETS, generateThemeVariables } from './themeUtils';
 
 const ThemeContext = createContext({});
@@ -9,27 +9,37 @@ export function ThemeProvider({ children, tenantId }) {
   const queryClient = useQueryClient();
   const [previewTheme, setPreviewTheme] = useState(null);
 
-  // Fetch theme config via backend function (bypasses RLS)
+  // Fetch theme config directly from Supabase
   const { data: themeConfig } = useQuery({
     queryKey: ['themeConfig', tenantId],
     queryFn: async () => {
-      const res = await base44.functions.invoke('getThemeConfig', { tenant_id: tenantId });
-      return res.data?.theme || null;
+      const supabase = await getSupabase();
+      const { data, error } = await supabase
+        .from('theme_configs')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .maybeSingle();
+      if (error) throw error;
+      return data || null;
     },
     enabled: !!tenantId,
   });
 
-  // Save theme mutation via backend function
+  // Save theme mutation directly to Supabase
   const saveThemeMutation = useMutation({
     mutationFn: async (colorSetName) => {
       const colorSet = COLOR_SETS.find(s => s.name === colorSetName);
       if (!colorSet) return;
-      return base44.functions.invoke('saveThemeConfig', {
-        tenant_id: tenantId,
-        color_set_name: colorSetName,
-        primary_color: colorSet.dark,
-        accent_color: colorSet.light,
-      });
+      const supabase = await getSupabase();
+      const { error } = await supabase
+        .from('theme_configs')
+        .upsert({
+          tenant_id: tenantId,
+          color_set_name: colorSetName,
+          primary_color: colorSet.dark,
+          accent_color: colorSet.light,
+        }, { onConflict: 'tenant_id' });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['themeConfig'] });
@@ -37,7 +47,7 @@ export function ThemeProvider({ children, tenantId }) {
     },
   });
 
-  // Apply theme to DOM — use primary_color/accent_color directly from DB record
+  // Apply theme to DOM
   useEffect(() => {
     if (previewTheme) {
       const colorSet = COLOR_SETS.find(s => s.name === previewTheme);
