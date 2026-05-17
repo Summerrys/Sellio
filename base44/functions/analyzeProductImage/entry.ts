@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClient } from 'npm:@base44/sdk@0.8.25';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     // Strip data URL prefix if present
     const base64 = rawBase64.includes(',') ? rawBase64.split(',')[1] : rawBase64;
 
-    const base44 = createClientFromRequest(req);
+    const base44 = createClient();
 
     const businessContext = businessType
       ? `The merchant runs a ${businessType} business.`
