@@ -82,11 +82,13 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     if (!open) return;
     if (product) {
       setFormData({ ...EMPTY_FORM, ...product });
-      // Load cover + additional images
+      // Load all images: cover first, then additional images
       const all = [];
       if (product.image_url) all.push(product.image_url);
       if (product.images?.length) {
-        product.images.forEach(u => { if (u && u !== product.image_url) all.push(u); });
+        product.images.forEach(u => {
+          if (u && u !== product.image_url) all.push(u);
+        });
       }
       setImagePreviews(all);
     } else {
@@ -248,6 +250,21 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
                     </button>
                   </div>
                 ))}
+                {imagePreviews.length < 5 && (
+                  <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center hover:border-slate-400 transition-colors cursor-pointer">
+                    <Plus className="w-5 h-5 text-slate-400" />
+                    <input type="file" accept="image/*" onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      e.target.value = '';
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setImagePreviews(prev => [...prev, reader.result]);
+                      };
+                      reader.readAsDataURL(file);
+                    }} className="hidden" />
+                  </label>
+                )}
               </div>
             </Section>
           )}
