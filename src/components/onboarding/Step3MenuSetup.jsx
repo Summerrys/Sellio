@@ -45,7 +45,9 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const [itemName, setItemName] = useState('');
   const [itemPrice, setItemPrice] = useState('');
   const [imageFiles, setImageFiles] = useState([]);
-  const [imagePreviews, setImagePreviews] = useState([]); // base64 or http URLs for display
+  // imageUrls: parallel array of uploaded Supabase URLs (null = not yet uploaded)
+  const [imageUrls, setImageUrls] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]); // base64 or http for display only
   const [additionalUploading, setAdditionalUploading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [editingImageIdx, setEditingImageIdx] = useState(null);
@@ -59,14 +61,36 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
 
   const MAX_IMAGES = 5;
 
-  // Upload a file directly to Supabase product-images bucket, return public URL
+  // Upload a file to temp/ in product-images bucket, return { publicUrl, storagePath }
   const uploadToStorage = async (file) => {
     const supabase = await getSupabase();
-    const fileName = `temp/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-    const { error } = await supabase.storage.from('product-images').upload(fileName, file, { upsert: true });
+    const storagePath = `temp/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const { error } = await supabase.storage.from('product-images').upload(storagePath, file, { upsert: true });
     if (error) throw new Error(error.message);
-    const { data } = supabase.storage.from('product-images').getPublicUrl(fileName);
-    return data.publicUrl;
+    const { data } = supabase.storage.from('product-images').getPublicUrl(storagePath);
+    return { publicUrl: data.publicUrl, storagePath };
+  };
+
+  // Delete a file from Supabase Storage given its public URL (extract path from URL)
+  const deleteFromStorage = async (url) => {
+    if (!url || !url.startsWith('http')) return;
+    try {
+      const supabase = await getSupabase();
+      // Extract path after /product-images/
+      const match = url.match(/\/product-images\/(.+)$/);
+      if (match) {
+        await supabase.storage.from('product-images').remove([match[1]]);
+      }
+    } catch (_) { /* best effort */ }
+  };
+
+  // Remove an image slot: delete from storage and remove from state arrays
+  const removeImageSlot = async (idx) => {
+    const urlToDelete = imageUrls[idx];
+    setImagePreviews(prev => prev.filter((_, i) => i !== idx));
+    setImageFiles(prev => prev.filter((_, i) => i !== idx));
+    setImageUrls(prev => prev.filter((_, i) => i !== idx));
+    if (urlToDelete) deleteFromStorage(urlToDelete);
   };
 
   // Handle clicking "+" to add additional images
@@ -79,66 +103,73 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     }
     e.target.value = '';
     setAdditionalUploading(true);
+    // Show local preview immediately, reserve slot
+    const preview = await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(file);
+    });
+    setImagePreviews(prev => [...prev, preview]);
+    setImageFiles(prev => [...prev, null]); // null = already handled
+    setImageUrls(prev => [...prev, null]); // placeholder
     try {
-      // Show local preview immediately
-      const preview = await new Promise(resolve => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.readAsDataURL(file);
-      });
-      setImagePreviews(prev => [...prev, preview]);
-      setImageFiles(prev => [...prev, file]);
-      // Upload to storage and replace the base64 preview with real URL
-      const publicUrl = await uploadToStorage(file);
-      setImagePreviews(prev => prev.map((p, i) => i === prev.length - 1 ? publicUrl : p));
-      // Replace the file entry with null to signal it's already uploaded
-      setImageFiles(prev => prev.map((f, i) => i === prev.length - 1 ? null : f));
+      const { publicUrl } = await uploadToStorage(file);
+      // Replace the last slot with the real URL
+      setImagePreviews(prev => { const n = [...prev]; n[n.length - 1] = publicUrl; return n; });
+      setImageUrls(prev => { const n = [...prev]; n[n.length - 1] = publicUrl; return n; });
     } catch (err) {
       toast.error('Upload failed: ' + err.message);
       setImagePreviews(prev => prev.slice(0, -1));
       setImageFiles(prev => prev.slice(0, -1));
+      setImageUrls(prev => prev.slice(0, -1));
     } finally {
       setAdditionalUploading(false);
     }
   };
 
-  // When a photo is selected in the Product Images section, show preview immediately and run AI
+  // When a photo is selected for AI analysis (cover slot)
   const handleImageSelect = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
-    // Add new file previews immediately (so they appear in the image grid)
-    const newPreviews = [];
-    for (const file of files) {
-      await new Promise(resolve => {
-        const reader = new FileReader();
-        reader.onloadend = () => { newPreviews.push(reader.result); resolve(); };
-        reader.readAsDataURL(file);
-      });
-    }
-    setImageFiles(prev => [...prev, ...files]);
-    setImagePreviews(prev => [...prev, ...newPreviews]);
-
-    // Run AI on the first new image
+    // Show preview immediately
     const firstFile = files[0];
-    const firstPreview = newPreviews[0];
+    const firstPreview = await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(firstFile);
+    });
+
+    setImageFiles([firstFile]);
+    setImagePreviews([firstPreview]);
+    setImageUrls([null]); // will be filled after upload
+
     setAiStep('analyzing');
     setAiError('');
     setAiResult(null);
 
     try {
-      const res = await fetch('https://selliosg.base44.app/api/functions/analyzeProductImage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: firstPreview }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`);
+      // Upload to temp/ and run AI in parallel
+      const [uploadResult, aiRes] = await Promise.all([
+        uploadToStorage(firstFile),
+        fetch('https://selliosg.base44.app/api/functions/analyzeProductImage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: firstPreview }),
+        }),
+      ]);
+
+      // Store the uploaded URL
+      setImageUrls([uploadResult.publicUrl]);
+      setImagePreviews([uploadResult.publicUrl]);
+      setImageFiles([null]); // already uploaded
+
+      const data = await aiRes.json();
+      if (!aiRes.ok) throw new Error(data?.error || `Server error ${aiRes.status}`);
       if (!data.confidence || data.confidence < 0.3) {
         setAiStep('idle');
         return;
       }
-      // Map flat response to the shape applyAiResult expects
       setAiResult({
         name: data.name,
         description: data.description,
@@ -195,17 +226,19 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
 
   const handleEditSave = (newDataUrl) => {
     if (newDataUrl === null) {
-      // Delete the image
-      setImagePreviews(prev => prev.filter((_, i) => i !== editingImageIdx));
-      setImageFiles(prev => prev.filter((_, i) => i !== editingImageIdx));
+      // Delete — cleanup storage and remove slot
+      removeImageSlot(editingImageIdx);
       setEditingImageIdx(null);
       return;
     }
+    // Replace preview; mark as needing re-upload (set file, clear stored URL)
     fetch(newDataUrl).then(r => r.blob()).then(blob => {
       const file = new File([blob], `edited-${Date.now()}.jpg`, { type: 'image/jpeg' });
       setImagePreviews(prev => prev.map((p, i) => i === editingImageIdx ? newDataUrl : p));
       setImageFiles(prev => prev.map((f, i) => i === editingImageIdx ? file : f));
+      setImageUrls(prev => prev.map((u, i) => i === editingImageIdx ? null : u));
     });
+    setEditingImageIdx(null);
   };
 
   // Apply theme from Step 1
@@ -250,6 +283,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     setItemPrice('');
     setImageFiles([]);
     setImagePreviews([]);
+    setImageUrls([]);
   };
 
   const handleEditItemSave = (updatedItem) => {
@@ -264,26 +298,20 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const addItem = async () => {
     if (!selectedCategory || !itemName.trim() || !itemPrice.trim()) return;
     setUploading(true);
-    // Upload any remaining base64 files (cover image from AI flow)
-    let finalPreviews = [...imagePreviews];
+    // Upload any edited images that aren't yet in storage (imageFiles[i] != null)
+    let finalUrls = [...imageUrls];
     try {
-      const supabase = await getSupabase();
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i];
-        if (!file) continue; // already uploaded (additional images)
-        const fileName = `${Date.now()}-${i}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-        const { error } = await supabase.storage.from('product-images').upload(fileName, file, { upsert: true });
-        if (!error) {
-          const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
-          finalPreviews[i] = publicUrl;
-        }
+        if (!file) continue; // already uploaded
+        const { publicUrl } = await uploadToStorage(file);
+        finalUrls[i] = publicUrl;
       }
     } catch (err) {
       console.error('Image upload failed:', err);
     }
 
-    // Only keep http URLs — never store base64
-    const allUrls = finalPreviews.filter(p => p && p.startsWith('http'));
+    const allUrls = finalUrls.filter(u => u && u.startsWith('http'));
     const coverUrl = allUrls[0] || null;
     const additionalUrls = allUrls.slice(1);
 
@@ -311,6 +339,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     setItemPrice('');
     setImageFiles([]);
     setImagePreviews([]);
+    setImageUrls([]);
     setUploading(false);
   };
 
@@ -406,8 +435,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setImagePreviews(prev => prev.filter((_, i) => i !== idx));
-                                    setImageFiles(prev => prev.filter((_, i) => i !== idx));
+                                    removeImageSlot(idx);
                                   }}
                                   className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-500 transition-colors z-10"
                                 >
@@ -592,8 +620,8 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               {(formData.products || []).map((item, idx) => (
                 <div key={item.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-slate-100">
                   <div className="flex items-center gap-2 min-w-0">
-                    {item.images?.[0] && (
-                      <img src={item.images[0]} alt={item.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                    {(item.image_url || item.images?.[0]) && (
+                      <img src={item.image_url || item.images[0]} alt={item.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
                     )}
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-slate-800 truncate">{item.name}</p>

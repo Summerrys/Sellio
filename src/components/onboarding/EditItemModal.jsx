@@ -10,7 +10,15 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
   const [name, setName] = useState(item.name);
   const [price, setPrice] = useState(String(item.price));
   const [category, setCategory] = useState(item.category);
-  const [imagePreviews, setImagePreviews] = useState(item.images || []);
+  // Combine cover + additional into one flat list for the grid; cover is always index 0
+  const [imagePreviews, setImagePreviews] = useState(() => {
+    const all = [];
+    if (item.image_url) all.push(item.image_url);
+    if (item.images?.length) {
+      item.images.forEach(u => { if (u && u !== item.image_url) all.push(u); });
+    }
+    return all;
+  });
   const [editingImageIdx, setEditingImageIdx] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -35,7 +43,9 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
 
   const handleSave = () => {
     if (!category || !name.trim() || !price.trim()) return;
-    onSave({ ...item, name: name.trim(), price: parseFloat(price), category, images: imagePreviews });
+    const coverUrl = imagePreviews[0] || null;
+    const additionalUrls = imagePreviews.slice(1);
+    onSave({ ...item, name: name.trim(), price: parseFloat(price), category, image_url: coverUrl, images: additionalUrls });
   };
 
   return (
