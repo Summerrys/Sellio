@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -77,6 +77,9 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
    const [errors, setErrors] = useState({});
    const [confirmDelete, setConfirmDelete] = useState(false);
    const [deleting, setDeleting] = useState(false);
+   const [editingImageIdx, setEditingImageIdx] = useState(null);
+   const [uploadingImageIdx, setUploadingImageIdx] = useState(null);
+   const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!open) return;
@@ -111,6 +114,36 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     if (!formData.price && formData.price !== 0) errs.price = 'Price is required';
     setErrors(errs);
     return Object.keys(errs).length === 0;
+  };
+
+  const handleReplaceImage = (idx) => {
+    setEditingImageIdx(idx);
+    fileInputRef.current?.click();
+  };
+
+  const handleImageFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || editingImageIdx === null) return;
+
+    e.target.value = '';
+    setUploadingImageIdx(editingImageIdx);
+
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result;
+        // Show base64 preview immediately
+        setImagePreviews(prev => {
+          const updated = [...prev];
+          updated[editingImageIdx] = base64;
+          return updated;
+        });
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setEditingImageIdx(null);
+      setUploadingImageIdx(null);
+    }
   };
 
   const handleSave = async () => {
@@ -221,33 +254,40 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
             categories={categories}
           />
 
-          {/* Additional Images Gallery */}
+          {/* Unified Images Gallery */}
           {imagePreviews.length > 0 && (
-            <Section title="Additional Images" defaultOpen={true}>
+            <Section title="Images" defaultOpen={true}>
               <div className="grid grid-cols-4 gap-3">
                 {imagePreviews.map((src, idx) => (
                   <div
                     key={`img-${idx}`}
-                    className="relative w-full aspect-square rounded-lg overflow-hidden border-2 group cursor-pointer"
+                    className="relative w-full aspect-square rounded-lg overflow-hidden border-2 group"
                     style={{ borderColor: idx === 0 ? 'rgb(var(--color-primary))' : '#e2e8f0' }}
                   >
                     <img src={src} alt={`preview-${idx}`} className="w-full h-full object-cover" />
                     {idx === 0 && (
                       <div className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium" style={{ background: 'var(--color-primary-gradient)' }}>Cover</div>
                     )}
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                    {/* Edit overlay on hover */}
+                    <div 
+                      className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer"
+                      onClick={() => handleReplaceImage(idx)}
+                    >
                       <Pencil className="w-4 h-4 text-white" />
                     </div>
-                    <button
-                      type="button"
-                      className="absolute top-0.5 right-0.5 bg-red-500 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setImagePreviews(prev => prev.filter((_, i) => i !== idx));
-                      }}
-                    >
-                      <X className="w-2.5 h-2.5 text-white" />
-                    </button>
+                    {/* Delete button for non-cover images */}
+                    {idx > 0 && (
+                      <button
+                        type="button"
+                        className="absolute top-0.5 right-0.5 bg-red-500 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setImagePreviews(prev => prev.filter((_, i) => i !== idx));
+                        }}
+                      >
+                        <X className="w-2.5 h-2.5 text-white" />
+                      </button>
+                    )}
                   </div>
                 ))}
                 {imagePreviews.length < 5 && (
@@ -268,6 +308,15 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
               </div>
             </Section>
           )}
+
+          {/* Hidden file input for pencil edit */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageFileSelect}
+            className="hidden"
+          />
 
           {/* Basic Info */}
           <Section title="Basic Info" defaultOpen={true}>
