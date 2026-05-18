@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Phone, Lock, User, Mail, ChevronDown, Check } from 'lucide-react';
 import { getSupabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { createPageUrl } from '../utils';
-import { base44 } from '@/api/base44Client';
 import { useAppUser } from '@/lib/AppUserContext';
 
 const COUNTRY_CODES = [
@@ -129,57 +128,97 @@ export default function Auth() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const cleanPhone = formData.phone.replace(/^0+/, '');
-    if (!selectedCountry.validate(cleanPhone)) {
-      toast.error(`Invalid phone number for ${selectedCountry.name}. Expected: ${selectedCountry.hint}`);
+    if (!formData.email) {
+      toast.error('Email is required');
       return;
     }
     setLoading(true);
     try {
+      const supabase = await getSupabase();
       const fullPhone = selectedCountry.code + formData.phone.replace(/^0+/, '');
-      
-      const payload = isLogin
-        ? { action: 'login', phone: fullPhone, password: formData.password }
-        : { action: 'signup', phone: fullPhone, password: formData.password, full_name: formData.full_name, email: formData.email };
 
-      try {
-        const response = await base44.functions.invoke('authProxy', payload);
-        const data = response.data;
+      if (isLogin) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
+        if (error) throw error;
 
-        if (data.success) {
-          setAppUser(data.user);
-          toast.custom((t) => (
-            <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-lg">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-                <Check className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-green-900">{isLogin ? 'Welcome back!' : 'Account created!'}</p>
-                <p className="text-xs text-green-700">You're all set. Redirecting now...</p>
-              </div>
+        const { data: rows } = await supabase
+          .from('app_users')
+          .select('id, email, full_name, role, onboarding_completed, tenant_id')
+          .eq('email', data.user.email)
+          .limit(1);
+
+        const appUserRow = rows?.[0];
+        if (!appUserRow) throw new Error('User record not found. Please sign up first.');
+
+        setAppUser(appUserRow);
+        toast.custom(() => (
+          <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-lg">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+              <Check className="w-5 h-5 text-white" />
             </div>
-          ));
-          setTimeout(() => {
-            window.location.href = createPageUrl(data.user?.onboarding_completed ? 'Dashboard' : 'Onboarding');
-          }, 500);
-        } else {
-          toast.error(data.error || 'Something went wrong');
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-green-900">Welcome back!</p>
+              <p className="text-xs text-green-700">You're all set. Redirecting now...</p>
+            </div>
+          </div>
+        ));
+        setTimeout(() => {
+          window.location.href = createPageUrl(appUserRow.onboarding_completed ? 'Dashboard' : 'Onboarding');
+        }, 500);
+
+      } else {
+        // Validate phone for signup
+        const cleanPhone = formData.phone.replace(/^0+/, '');
+        if (formData.phone && !selectedCountry.validate(cleanPhone)) {
+          toast.error(`Invalid phone number for ${selectedCountry.name}. Expected: ${selectedCountry.hint}`);
+          setLoading(false);
+          return;
         }
-      } catch (invokeError) {
-        // Handle errors from base44.functions.invoke
-        const errorData = invokeError.response?.data;
-        if (errorData?.error) {
-          toast.error(errorData.error);
-        } else if (invokeError.response?.status === 400) {
-          toast.error('Invalid request. Please check your details.');
-        } else if (invokeError.response?.status === 401) {
-          toast.error('Invalid credentials. Please try again.');
-        } else {
-          toast.error(invokeError.message || 'An error occurred');
-        }
+
+        const { data, error } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+        });
+        if (error) throw error;
+
+        await supabase.from('app_users').insert({
+          email: formData.email,
+          full_name: formData.full_name,
+          phone: formData.phone ? fullPhone : null,
+          auth_provider: 'email',
+          onboarding_completed: false,
+          is_active: true,
+          role: 'admin',
+        });
+
+        const { data: rows } = await supabase
+          .from('app_users')
+          .select('id, email, full_name, role, onboarding_completed, tenant_id')
+          .eq('email', formData.email)
+          .limit(1);
+
+        const appUserRow = rows?.[0];
+        setAppUser(appUserRow || { email: formData.email, full_name: formData.full_name, role: 'admin', onboarding_completed: false });
+
+        toast.custom(() => (
+          <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-lg">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+              <Check className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-green-900">Account created!</p>
+              <p className="text-xs text-green-700">You're all set. Redirecting now...</p>
+            </div>
+          </div>
+        ));
+        setTimeout(() => {
+          window.location.href = createPageUrl('Onboarding');
+        }, 500);
       }
     } catch (error) {
-      console.error('Auth error:', error);
       toast.error(error.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -250,26 +289,26 @@ export default function Auth() {
                 </div>
               )}
 
-              {/* Email - Sign Up only */}
-              {!isLogin && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="email"
-                      placeholder="john@example.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Phone Number */}
+              {/* Email */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Email *</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="email"
+                    placeholder="john@example.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
+                    className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
+                  />
+                </div>
+              </div>
+
+              {/* Phone Number - Sign Up only */}
+              {!isLogin && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
                 <div className="flex gap-2">
                   {/* Country code picker */}
                   <div className="relative" onClick={(e) => e.stopPropagation()}>
@@ -307,12 +346,12 @@ export default function Auth() {
                       placeholder={selectedCountry.placeholder}
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      required
                       className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
                     />
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Password */}
               <div>
