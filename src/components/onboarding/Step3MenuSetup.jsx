@@ -393,24 +393,23 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                               {idx === 0 && (
                                 <div className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium" style={{ background: themeColor }}>Cover</div>
                               )}
-                              {/* Cover: edit on hover */}
-                              {idx === 0 && (
-                                <div
-                                  className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer"
-                                  onClick={() => setEditingImageIdx(idx)}
-                                >
-                                  <Pencil className="w-4 h-4 text-white" />
-                                </div>
-                              )}
+                              {/* Hover overlay with edit pencil — same for all slots */}
+                              <div
+                                className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer"
+                                onClick={() => setEditingImageIdx(idx)}
+                              >
+                                <Pencil className="w-4 h-4 text-white" />
+                              </div>
                               {/* Additional images: delete button */}
                               {idx > 0 && (
                                 <button
                                   type="button"
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     setImagePreviews(prev => prev.filter((_, i) => i !== idx));
                                     setImageFiles(prev => prev.filter((_, i) => i !== idx));
                                   }}
-                                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-500 transition-colors"
+                                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-500 transition-colors z-10"
                                 >
                                   <X className="w-3 h-3" />
                                 </button>
