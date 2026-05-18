@@ -45,15 +45,62 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const [itemName, setItemName] = useState('');
   const [itemPrice, setItemPrice] = useState('');
   const [imageFiles, setImageFiles] = useState([]);
-  const [imagePreviews, setImagePreviews] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]); // base64 or http URLs for display
+  const [additionalUploading, setAdditionalUploading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [editingImageIdx, setEditingImageIdx] = useState(null);
   const [editingItemId, setEditingItemId] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const fileInputRef = useRef(null);
+  const addMoreInputRef = useRef(null);
   const [aiStep, setAiStep] = useState('idle'); // idle | analyzing | done | error
   const [aiResult, setAiResult] = useState(null);
   const [aiError, setAiError] = useState('');
+
+  const MAX_IMAGES = 5;
+
+  // Upload a file directly to Supabase product-images bucket, return public URL
+  const uploadToStorage = async (file) => {
+    const supabase = await getSupabase();
+    const fileName = `temp/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const { error } = await supabase.storage.from('product-images').upload(fileName, file, { upsert: true });
+    if (error) throw new Error(error.message);
+    const { data } = supabase.storage.from('product-images').getPublicUrl(fileName);
+    return data.publicUrl;
+  };
+
+  // Handle clicking "+" to add additional images
+  const handleAddMoreSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (imagePreviews.length >= MAX_IMAGES) {
+      toast.error(`Maximum ${MAX_IMAGES} images allowed`);
+      return;
+    }
+    e.target.value = '';
+    setAdditionalUploading(true);
+    try {
+      // Show local preview immediately
+      const preview = await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+      });
+      setImagePreviews(prev => [...prev, preview]);
+      setImageFiles(prev => [...prev, file]);
+      // Upload to storage and replace the base64 preview with real URL
+      const publicUrl = await uploadToStorage(file);
+      setImagePreviews(prev => prev.map((p, i) => i === prev.length - 1 ? publicUrl : p));
+      // Replace the file entry with null to signal it's already uploaded
+      setImageFiles(prev => prev.map((f, i) => i === prev.length - 1 ? null : f));
+    } catch (err) {
+      toast.error('Upload failed: ' + err.message);
+      setImagePreviews(prev => prev.slice(0, -1));
+      setImageFiles(prev => prev.slice(0, -1));
+    } finally {
+      setAdditionalUploading(false);
+    }
+  };
 
   // When a photo is selected in the Product Images section, show preview immediately and run AI
   const handleImageSelect = async (e) => {
@@ -217,28 +264,33 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const addItem = async () => {
     if (!selectedCategory || !itemName.trim() || !itemPrice.trim()) return;
     setUploading(true);
-    // Only preserve already-uploaded http URLs — never store base64 in the database
-    let imageUrls = imagePreviews.filter(p => p.startsWith('http'));
+    // Upload any remaining base64 files (cover image from AI flow)
+    let finalPreviews = [...imagePreviews];
     try {
-      if (imageFiles.length > 0) {
-        const supabase = await getSupabase();
-        for (const file of imageFiles) {
-          const fileName = `${Date.now()}-${file.name}`;
-          const { error } = await supabase.storage.from('menu-images').upload(fileName, file);
-          if (!error) {
-            const { data: { publicUrl } } = supabase.storage.from('menu-images').getPublicUrl(fileName);
-            imageUrls.push(publicUrl);
-          }
+      const supabase = await getSupabase();
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i];
+        if (!file) continue; // already uploaded (additional images)
+        const fileName = `${Date.now()}-${i}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const { error } = await supabase.storage.from('product-images').upload(fileName, file, { upsert: true });
+        if (!error) {
+          const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
+          finalPreviews[i] = publicUrl;
         }
       }
     } catch (err) {
       console.error('Image upload failed:', err);
     }
 
+    // Only keep http URLs — never store base64
+    const allUrls = finalPreviews.filter(p => p && p.startsWith('http'));
+    const coverUrl = allUrls[0] || null;
+    const additionalUrls = allUrls.slice(1);
+
     if (editingItemId !== null) {
       const updated = (formData.products || []).map(p =>
         p.id === editingItemId
-          ? { ...p, category: selectedCategory, name: itemName, price: parseFloat(itemPrice), images: imageUrls }
+          ? { ...p, category: selectedCategory, name: itemName, price: parseFloat(itemPrice), image_url: coverUrl, images: additionalUrls }
           : p
       );
       updateFormData({ ...formData, products: updated });
@@ -250,10 +302,9 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         category: selectedCategory,
         name: itemName,
         price: parseFloat(itemPrice),
-        images: imageUrls,
-        image_url: imageUrls[0] || null,
+        image_url: coverUrl,
+        images: additionalUrls,
       };
-      console.log('product being added:', newItem);
       updateFormData({ ...formData, products: [...(formData.products || []), newItem] });
     }
     setItemName('');
@@ -335,26 +386,51 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              className={`relative w-full aspect-square rounded-lg overflow-hidden border-2 group cursor-grab transition-all duration-150 ${snapshot.isDragging ? 'shadow-lg opacity-70 scale-95' : 'opacity-100'} border-slate-200 col-span-1`}
-                              style={idx === 0 ? { ...provided.draggableProps.style, borderColor: primaryColor } : provided.draggableProps.style}
-                              onClick={() => setEditingImageIdx(idx)}
+                              className={`relative w-full aspect-square rounded-lg overflow-hidden border-2 group transition-all duration-150 ${snapshot.isDragging ? 'shadow-lg opacity-70 scale-95' : 'opacity-100'} col-span-1`}
+                              style={idx === 0 ? { ...provided.draggableProps.style, borderColor: primaryColor, cursor: 'grab' } : provided.draggableProps.style}
                             >
                               <img src={src} alt="preview" className="w-full h-full object-cover" />
                               {idx === 0 && (
                                 <div className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium" style={{ background: themeColor }}>Cover</div>
                               )}
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                <Pencil className="w-4 h-4 text-white" />
-                              </div>
+                              {/* Cover: edit on hover */}
+                              {idx === 0 && (
+                                <div
+                                  className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer"
+                                  onClick={() => setEditingImageIdx(idx)}
+                                >
+                                  <Pencil className="w-4 h-4 text-white" />
+                                </div>
+                              )}
+                              {/* Additional images: delete button */}
+                              {idx > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setImagePreviews(prev => prev.filter((_, i) => i !== idx));
+                                    setImageFiles(prev => prev.filter((_, i) => i !== idx));
+                                  }}
+                                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-500 transition-colors"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
                             </div>
                           )}
                         </Draggable>
                       ))}
                       {provided.placeholder}
-                      <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors">
-                        <Plus className="w-5 h-5 text-slate-400" />
-                        <input type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
-                      </label>
+                      {/* "+" slot — only show if under max */}
+                      {imagePreviews.length < MAX_IMAGES && (
+                        <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors relative">
+                          {additionalUploading ? (
+                            <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
+                          ) : (
+                            <Plus className="w-5 h-5 text-slate-400" />
+                          )}
+                          <input ref={addMoreInputRef} type="file" accept="image/*" onChange={handleAddMoreSelect} className="hidden" disabled={additionalUploading} />
+                        </label>
+                      )}
                     </div>
                   )}
                 </Droppable>
