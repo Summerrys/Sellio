@@ -6,18 +6,20 @@ import { cn } from '@/lib/utils';
 import ImageEditModal from '../onboarding/ImageEditModal';
 import { getSupabase } from '@/lib/supabaseClient';
 
-export default function AIProductAssistant({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange }) {
+export default function AIProductAssistant({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange, onAdditionalImagesChange, additionalImagesOnOpen }) {
    const [step, setStep] = useState(currentImageUrl ? 'image_only' : 'idle');
    const [preview, setPreview] = useState(currentImageUrl || null);
-   const [additionalImages, setAdditionalImages] = useState([]);
+   const [additionalImages, setAdditionalImages] = useState(additionalImagesOnOpen || []);
    const [result, setResult] = useState(null);
    const [errorMsg, setErrorMsg] = useState('');
    const [editModalOpen, setEditModalOpen] = useState(false);
+   const [editingImageIdx, setEditingImageIdx] = useState(null);
    const [addingImage, setAddingImage] = useState(false);
 
    const fileInputRef = useRef(null);       // AI analysis upload
    const plainImageInputRef = useRef(null); // "Add photo without AI"
    const addImageInputRef = useRef(null);   // Add additional images
+   const replaceImageInputRef = useRef(null); // Replace specific image
 
   // Track previous value to detect real changes from parent (new product opened)
   const prevImageUrlRef = useRef(currentImageUrl);
@@ -29,14 +31,16 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
     if (currentImageUrl) {
       setStep('image_only');
       setPreview(currentImageUrl);
+      setAdditionalImages(additionalImagesOnOpen || []);
       setResult(null);
       setErrorMsg('');
     } else {
       setStep('idle');
       setPreview(null);
+      setAdditionalImages([]);
       setResult(null);
     }
-  }, [currentImageUrl]);
+  }, [currentImageUrl, additionalImagesOnOpen]);
 
   const uploadToStorage = async (file) => {
     const supabase = await getSupabase();
@@ -192,11 +196,39 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
     setAddingImage(true);
     try {
       const publicUrl = await uploadToStorage(file);
-      setAdditionalImages(prev => [...prev, publicUrl]);
+      setAdditionalImages(prev => {
+        const updated = [...prev, publicUrl];
+        onAdditionalImagesChange?.(updated);
+        return updated;
+      });
     } catch (err) {
       toast.error('Upload failed: ' + err.message);
     } finally {
       setAddingImage(false);
+    }
+  };
+
+  const handleReplaceAdditionalImage = (idx) => {
+    setEditingImageIdx(idx);
+    replaceImageInputRef.current?.click();
+  };
+
+  const handleReplaceImageSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || editingImageIdx === null) return;
+    e.target.value = '';
+    try {
+      const publicUrl = await uploadToStorage(file);
+      setAdditionalImages(prev => {
+        const updated = [...prev];
+        updated[editingImageIdx] = publicUrl;
+        onAdditionalImagesChange?.(updated);
+        return updated;
+      });
+    } catch (err) {
+      toast.error('Upload failed: ' + err.message);
+    } finally {
+      setEditingImageIdx(null);
     }
   };
 
@@ -339,14 +371,55 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
                 </div>
               </div>
 
+              {/* Additional images from array */}
+              {additionalImages.map((src, idx) => (
+                <div
+                  key={`additional-${idx}`}
+                  className="relative w-full aspect-square rounded-lg overflow-hidden border-2 border-slate-300 group cursor-pointer col-span-1"
+                  onClick={() => handleReplaceAdditionalImage(idx)}
+                >
+                  <img src={src} alt={`additional-${idx}`} className="w-full h-full object-cover" />
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                    <Pencil className="w-4 h-4 text-white" />
+                  </div>
+                  {/* Delete button */}
+                  <button
+                    type="button"
+                    className="absolute top-0.5 right-0.5 bg-red-500 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAdditionalImages(prev => {
+                        const updated = prev.filter((_, i) => i !== idx);
+                        onAdditionalImagesChange?.(updated);
+                        return updated;
+                      });
+                    }}
+                  >
+                    <X className="w-2.5 h-2.5 text-white" />
+                  </button>
+                </div>
+              ))}
+
               {/* "+" add more slot for additional images */}
-              <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center hover:border-slate-400 transition-colors col-span-1 cursor-pointer">
-                {addingImage ? <Loader2 className="w-5 h-5 text-slate-400 animate-spin" /> : <Plus className="w-5 h-5 text-slate-400" />}
-                <input ref={addImageInputRef} type="file" accept="image/*" onChange={handleAddImage} className="hidden" disabled={addingImage} />
-              </label>
+              {additionalImages.length < 4 && (
+                <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center hover:border-slate-400 transition-colors col-span-1 cursor-pointer">
+                  {addingImage ? <Loader2 className="w-5 h-5 text-slate-400 animate-spin" /> : <Plus className="w-5 h-5 text-slate-400" />}
+                  <input ref={addImageInputRef} type="file" accept="image/*" onChange={handleAddImage} className="hidden" disabled={addingImage} />
+                </label>
+              )}
             </div>
           </div>
         )}
+
+        {/* Hidden file input for replacing additional images */}
+        <input
+          ref={replaceImageInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleReplaceImageSelect}
+          className="hidden"
+        />
       </div>
 
       {/* ImageEditModal — same as Step3 */}
