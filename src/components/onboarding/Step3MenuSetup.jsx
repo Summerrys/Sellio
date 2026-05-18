@@ -58,6 +58,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const [aiStep, setAiStep] = useState('idle'); // idle | analyzing | done | error
   const [aiResult, setAiResult] = useState(null);
   const [aiError, setAiError] = useState('');
+  const [itemDescription, setItemDescription] = useState('');
 
   const MAX_IMAGES = 5;
 
@@ -189,6 +190,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     if (!aiResult) return;
     setItemName(aiResult.name || '');
     setItemPrice(aiResult.estimated_price ? String(aiResult.estimated_price) : '');
+    setItemDescription(aiResult.description || '');
 
     if (aiResult.suggested_category) {
       const suggested = aiResult.suggested_category.toLowerCase().trim();
@@ -284,6 +286,10 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
 
   const startEditItem = (item) => {
     setEditingItem(item);
+    setEditingItemId(item.id);
+    setItemName(item.name);
+    setItemPrice(String(item.price));
+    setItemDescription(item.description || '');
   };
 
   const cancelEdit = () => {
@@ -291,6 +297,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     setEditingItemId(null);
     setItemName('');
     setItemPrice('');
+    setItemDescription('');
     setImageFiles([]);
     setImagePreviews([]);
     setImageUrls([]);
@@ -328,7 +335,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     if (editingItemId !== null) {
       const updated = (formData.products || []).map(p =>
         p.id === editingItemId
-          ? { ...p, category: selectedCategory, name: itemName, price: parseFloat(itemPrice), image_url: coverUrl, images: additionalUrls }
+          ? { ...p, category: selectedCategory, name: itemName, price: parseFloat(itemPrice), description: itemDescription, image_url: coverUrl, images: additionalUrls }
           : p
       );
       updateFormData({ ...formData, products: updated });
@@ -340,6 +347,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         category: selectedCategory,
         name: itemName,
         price: parseFloat(itemPrice),
+        description: itemDescription,
         image_url: coverUrl,
         images: additionalUrls,
       };
@@ -347,6 +355,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     }
     setItemName('');
     setItemPrice('');
+    setItemDescription('');
     setImageFiles([]);
     setImagePreviews([]);
     setImageUrls([]);
@@ -602,6 +611,15 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                 step="0.01"
                 min="0"
                 className="h-10 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Description (optional)</Label>
+              <textarea
+                value={itemDescription}
+                onChange={(e) => setItemDescription(e.target.value)}
+                placeholder="eg., Fresh, homemade, spicy..."
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-slate-300 h-16 resize-none"
               />
             </div>
             <div className="flex gap-2">

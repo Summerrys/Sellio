@@ -9,9 +9,10 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 
 export default function EditItemModal({ item, categories, themeColor, primaryColor, onSave, onClose }) {
-  const [name, setName] = useState(item.name);
-  const [price, setPrice] = useState(String(item.price));
-  const [category, setCategory] = useState(item.category);
+   const [name, setName] = useState(item.name);
+   const [price, setPrice] = useState(String(item.price));
+   const [description, setDescription] = useState(item.description || '');
+   const [category, setCategory] = useState(item.category);
   // Combine cover + additional into one flat list for the grid; cover is always index 0
   const [imagePreviews, setImagePreviews] = useState(() => {
     const all = [];
@@ -113,7 +114,7 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
     if (!category || !name.trim() || !price.trim()) return;
     const coverUrl = imagePreviews[0] || null;
     const additionalUrls = imagePreviews.slice(1);
-    onSave({ ...item, name: name.trim(), price: parseFloat(price), category, image_url: coverUrl, images: additionalUrls });
+    onSave({ ...item, name: name.trim(), price: parseFloat(price), description, category, image_url: coverUrl, images: additionalUrls });
   };
 
   return (
@@ -222,7 +223,13 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
               <Label className="text-sm font-medium text-slate-700 block mb-2">$ Price</Label>
               <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" step="0.01" min="0" className="h-10 text-sm" />
             </div>
-          </div>
+
+            {/* Description */}
+            <div>
+              <Label className="text-sm font-medium text-slate-700 block mb-2">Description</Label>
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe your item..." className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-slate-300 h-20 resize-none" />
+            </div>
+            </div>
 
           {/* Footer */}
           <div className="flex gap-2 p-4 border-t border-slate-100">

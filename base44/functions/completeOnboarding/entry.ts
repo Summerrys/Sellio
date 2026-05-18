@@ -298,8 +298,10 @@ Deno.serve(async (req) => {
           category_id: categoryMap[p.category] || null,
           name: p.name,
           slug: toSlug(p.name),
+          description: p.description || null,
           price: p.price,
           image_url: productImageMap[p.name] || p.image_url || null,
+          images: p.images && p.images.length > 0 ? p.images : null,
           is_active: true,
         }));
         const { error } = await supabase.from('products').insert(productRows);

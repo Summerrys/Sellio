@@ -32,6 +32,7 @@ import ProductFormPricing from './ProductFormPricing';
 import ProductFormInventory from './ProductFormInventory';
 import ProductFormVariants from './ProductFormVariants';
 import AIProductAssistant from './AIProductAssistant';
+import { Pencil, Plus } from 'lucide-react';
 
 const EMPTY_FORM = {
   name: '',
@@ -67,21 +68,30 @@ function Section({ title, children, defaultOpen = true }) {
 }
 
 export default function ProductFormDialog({ open, onOpenChange, product, tenantId }) {
-  const { tenant } = useTenant();
-  const queryClient = useQueryClient();
-  const [formData, setFormData] = useState(EMPTY_FORM);
-  const [categories, setCategories] = useState([]);
-  const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+   const { tenant } = useTenant();
+   const queryClient = useQueryClient();
+   const [formData, setFormData] = useState(EMPTY_FORM);
+   const [imagePreviews, setImagePreviews] = useState([]);
+   const [categories, setCategories] = useState([]);
+   const [saving, setSaving] = useState(false);
+   const [errors, setErrors] = useState({});
+   const [confirmDelete, setConfirmDelete] = useState(false);
+   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     if (product) {
       setFormData({ ...EMPTY_FORM, ...product });
+      // Load cover + additional images
+      const all = [];
+      if (product.image_url) all.push(product.image_url);
+      if (product.images?.length) {
+        product.images.forEach(u => { if (u && u !== product.image_url) all.push(u); });
+      }
+      setImagePreviews(all);
     } else {
       setFormData(EMPTY_FORM);
+      setImagePreviews([]);
     }
     setErrors({});
   }, [open, product]);
@@ -105,15 +115,15 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     if (!validate()) return;
     setSaving(true);
     try {
-      const image_url = await uploadImageIfBase64(formData.image_url, tenantId, formData.name);
-      // Also sanitize any base64 that may have snuck into the images array
-      const images = formData.images?.length
-        ? await Promise.all(formData.images.map(u => uploadImageIfBase64(u, tenantId, formData.name)))
-        : formData.images;
+      // Split imagePreviews into cover + additional
+      const coverUrl = imagePreviews[0] ? await uploadImageIfBase64(imagePreviews[0], tenantId, formData.name) : formData.image_url;
+      const additionalUrls = imagePreviews.length > 1
+        ? await Promise.all(imagePreviews.slice(1).map(u => uploadImageIfBase64(u, tenantId, formData.name)))
+        : [];
       const payload = {
         ...formData,
-        image_url,
-        images,
+        image_url: coverUrl,
+        images: additionalUrls,
         tenant_id: tenantId,
         price: parseFloat(formData.price) || 0,
         cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
@@ -194,13 +204,53 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
           {/* AI Assistant */}
           <AIProductAssistant
             onApply={(data) => update(data)}
-            onImageChange={(url) => update({ image_url: url })}
+            onImageChange={(url) => {
+              update({ image_url: url });
+              setImagePreviews(prev => {
+                const updated = [...prev];
+                updated[0] = url;
+                return updated;
+              });
+            }}
             currentImageUrl={formData.image_url}
             tenantId={tenantId}
             businessType={tenant?.business_type}
             currency={tenant?.currency || 'SGD'}
             categories={categories}
           />
+
+          {/* Additional Images Gallery */}
+          {imagePreviews.length > 0 && (
+            <Section title="Additional Images" defaultOpen={true}>
+              <div className="grid grid-cols-4 gap-3">
+                {imagePreviews.map((src, idx) => (
+                  <div
+                    key={`img-${idx}`}
+                    className="relative w-full aspect-square rounded-lg overflow-hidden border-2 group cursor-pointer"
+                    style={{ borderColor: idx === 0 ? 'rgb(var(--color-primary))' : '#e2e8f0' }}
+                  >
+                    <img src={src} alt={`preview-${idx}`} className="w-full h-full object-cover" />
+                    {idx === 0 && (
+                      <div className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium" style={{ background: 'var(--color-primary-gradient)' }}>Cover</div>
+                    )}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <Pencil className="w-4 h-4 text-white" />
+                    </div>
+                    <button
+                      type="button"
+                      className="absolute top-0.5 right-0.5 bg-red-500 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setImagePreviews(prev => prev.filter((_, i) => i !== idx));
+                      }}
+                    >
+                      <X className="w-2.5 h-2.5 text-white" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
 
           {/* Basic Info */}
           <Section title="Basic Info" defaultOpen={true}>
