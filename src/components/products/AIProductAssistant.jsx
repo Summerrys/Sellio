@@ -13,13 +13,13 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
    const [result, setResult] = useState(null);
    const [errorMsg, setErrorMsg] = useState('');
    const [editModalOpen, setEditModalOpen] = useState(false);
-   const [editingImageIdx, setEditingImageIdx] = useState(null);
+  const [editingImageIndex, setEditingImageIndex] = useState(null); // null = cover, number = additional index
    const [addingImage, setAddingImage] = useState(false);
 
    const fileInputRef = useRef(null);       // AI analysis upload
    const plainImageInputRef = useRef(null); // "Add photo without AI"
-   const addImageInputRef = useRef(null);   // Add additional images
    const replaceImageInputRef = useRef(null); // Replace specific image
+   const addImageInputRef = useRef(null); // Add additional images
 
   // Track previous value to detect real changes from parent (new product opened)
   const prevImageUrlRef = useRef(currentImageUrl);
@@ -167,26 +167,58 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
 
   // Called when ImageEditModal saves — null means delete
   const handleEditSave = async (newDataUrl) => {
+    const isCover = editingImageIndex === null;
+
     if (newDataUrl === null) {
-      onImageChange?.('');
-      reset();
+      // Delete
+      if (isCover) {
+        onImageChange?.('');
+        reset();
+      } else {
+        setAdditionalImages(prev => {
+          const updated = prev.filter((_, i) => i !== editingImageIndex);
+          onAdditionalImagesChange?.(updated);
+          return updated;
+        });
+      }
+      setEditModalOpen(false);
     } else if (newDataUrl.startsWith('data:')) {
       // Crop result — upload before storing
-      setStep('uploading');
       try {
         const publicUrl = await uploadBase64ToStorage(newDataUrl);
-        setPreview(publicUrl);
-        onImageChange?.(publicUrl);
-        setStep(prev => prev === 'applied' ? 'applied' : 'image_only');
+        if (isCover) {
+          setPreview(publicUrl);
+          onImageChange?.(publicUrl);
+          setStep(prev => prev === 'applied' ? 'applied' : 'image_only');
+        } else {
+          setAdditionalImages(prev => {
+            const updated = [...prev];
+            updated[editingImageIndex] = publicUrl;
+            onAdditionalImagesChange?.(updated);
+            return updated;
+          });
+        }
+        setEditModalOpen(false);
       } catch (err) {
         toast.error('Upload failed: ' + err.message);
       }
     } else {
-      setPreview(newDataUrl);
-      onImageChange?.(newDataUrl);
-      setStep(prev => prev === 'applied' ? 'applied' : 'image_only');
+      // Direct URL from replace
+      if (isCover) {
+        setPreview(newDataUrl);
+        onImageChange?.(newDataUrl);
+        setStep(prev => prev === 'applied' ? 'applied' : 'image_only');
+      } else {
+        setAdditionalImages(prev => {
+          const updated = [...prev];
+          updated[editingImageIndex] = newDataUrl;
+          onAdditionalImagesChange?.(updated);
+          return updated;
+        });
+      }
+      setEditModalOpen(false);
     }
-    setEditModalOpen(false);
+    setEditingImageIndex(null);
   };
 
   const handleAddImage = async (e) => {
@@ -208,27 +240,27 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
     }
   };
 
-  const handleReplaceAdditionalImage = (idx) => {
-    setEditingImageIdx(idx);
-    replaceImageInputRef.current?.click();
-  };
-
   const handleReplaceImageSelect = async (e) => {
     const file = e.target.files?.[0];
-    if (!file || editingImageIdx === null) return;
+    if (!file || editingImageIndex === null) return;
     e.target.value = '';
     try {
       const publicUrl = await uploadToStorage(file);
-      setAdditionalImages(prev => {
-        const updated = [...prev];
-        updated[editingImageIdx] = publicUrl;
-        onAdditionalImagesChange?.(updated);
-        return updated;
-      });
+      if (editingImageIndex === null) {
+        setPreview(publicUrl);
+        onImageChange?.(publicUrl);
+      } else {
+        setAdditionalImages(prev => {
+          const updated = [...prev];
+          updated[editingImageIndex] = publicUrl;
+          onAdditionalImagesChange?.(updated);
+          return updated;
+        });
+      }
     } catch (err) {
       toast.error('Upload failed: ' + err.message);
     } finally {
-      setEditingImageIdx(null);
+      setEditingImageIndex(null);
     }
   };
 
@@ -376,28 +408,16 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
                 <div
                   key={`additional-${idx}`}
                   className="relative w-full aspect-square rounded-lg overflow-hidden border-2 border-slate-300 group cursor-pointer col-span-1"
-                  onClick={() => handleReplaceAdditionalImage(idx)}
+                  onClick={() => {
+                    setEditingImageIndex(idx);
+                    setEditModalOpen(true);
+                  }}
                 >
                   <img src={src} alt={`additional-${idx}`} className="w-full h-full object-cover" />
                   {/* Hover overlay */}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                     <Pencil className="w-4 h-4 text-white" />
                   </div>
-                  {/* Delete button */}
-                  <button
-                    type="button"
-                    className="absolute top-0.5 right-0.5 bg-red-500 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setAdditionalImages(prev => {
-                        const updated = prev.filter((_, i) => i !== idx);
-                        onAdditionalImagesChange?.(updated);
-                        return updated;
-                      });
-                    }}
-                  >
-                    <X className="w-2.5 h-2.5 text-white" />
-                  </button>
                 </div>
               ))}
 
@@ -422,13 +442,19 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
         />
       </div>
 
-      {/* ImageEditModal — same as Step3 */}
-      {editModalOpen && preview && (
+      {/* ImageEditModal — handles cover and additional images */}
+      {editModalOpen && (
         <ImageEditModal
-          src={preview}
+          src={editingImageIndex === null ? preview : additionalImages[editingImageIndex]}
           themeColor={themeColor}
           onSave={handleEditSave}
-          onClose={() => setEditModalOpen(false)}
+          onClose={() => {
+            setEditModalOpen(false);
+            setEditingImageIndex(null);
+          }}
+          onReplace={() => {
+            replaceImageInputRef.current?.click();
+          }}
         />
       )}
     </>
