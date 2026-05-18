@@ -210,30 +210,21 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
   };
 
   const handleCancel = async () => {
-    // Clean up any images uploaded during this session
-    const imagesToDelete = [];
-    if (formData.image_url && !uploadedImagesRef.current.has(formData.image_url)) {
-      imagesToDelete.push(formData.image_url);
-    }
-    if (formData.images?.length) {
-      formData.images.forEach(url => {
-        if (!uploadedImagesRef.current.has(url)) {
-          imagesToDelete.push(url);
+    // Clean up temp paths from AIProductAssistant
+    if (aiAssistantRef.current) {
+      const tempPaths = aiAssistantRef.current.getTempUploadedPaths?.() || [];
+      if (tempPaths.length > 0) {
+        try {
+          const supabase = await getSupabase();
+          await supabase.storage.from('product-images').remove(tempPaths);
+          aiAssistantRef.current.clearTempUploadedPaths?.();
+          console.log('Cleaned up temp images:', tempPaths);
+        } catch (err) {
+          console.error('Failed to cleanup temp images:', err);
         }
-      });
-    }
-    
-    console.log('Cancel clicked - uploadedImages to delete:', imagesToDelete);
-    
-    // Delete new images from storage
-    for (const url of imagesToDelete) {
-      try {
-        await deleteImageFromStorage(url);
-      } catch (err) {
-        console.error('Cleanup failed:', err);
       }
     }
-    
+
     onOpenChange(false);
   };
 
@@ -244,7 +235,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-40 bg-black/40" onClick={() => onOpenChange(false)} />
+      <div className="fixed inset-0 z-40 bg-black/40" onClick={() => handleCancel()} />
 
       {/* Sheet — full screen on mobile, centered on desktop */}
       <div className={cn(

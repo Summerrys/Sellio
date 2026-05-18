@@ -32,6 +32,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
    const replaceImageInputRef = useRef(null); // Replace specific image
    const addImageInputRef = useRef(null); // Add additional images
    const deletedImagesRef = useRef([]); // Track images to delete on save
+   const tempUploadedPaths = useRef([]); // Track temp storage paths for cleanup
 
   // Track previous value to detect real changes from parent (new product opened)
   const prevImageUrlRef = useRef(currentImageUrl);
@@ -59,6 +60,8 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     const storagePath = `temp/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
     const { error } = await supabase.storage.from('product-images').upload(storagePath, file, { upsert: true });
     if (error) throw new Error(error.message);
+    // Track this temp path for cleanup
+    tempUploadedPaths.current.push(storagePath);
     const { data } = supabase.storage.from('product-images').getPublicUrl(storagePath);
     return data.publicUrl;
   };
@@ -216,9 +219,18 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     const oldUrl = isCover ? preview : additionalImages[editingImageIndex];
 
     if (newDataUrl === null) {
-      // Delete — track for cleanup and call onImageDelete immediately
+      // Delete — immediately remove from storage and track
       if (oldUrl) {
-        deletedImagesRef.current.push(oldUrl);
+        const storagePath = oldUrl.split('/product-images/')[1];
+        if (storagePath && tempUploadedPaths.current.includes(storagePath)) {
+          try {
+            const supabase = await getSupabase();
+            await supabase.storage.from('product-images').remove([storagePath]);
+            tempUploadedPaths.current = tempUploadedPaths.current.filter(p => p !== storagePath);
+          } catch (err) {
+            console.error('Failed to delete image immediately:', err);
+          }
+        }
         onImageDelete?.(oldUrl);
       }
 
@@ -318,8 +330,12 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     }
   };
 
-  // Expose ref to parent component
-  useImperativeHandle(ref, () => ({ deletedImagesRef }), []);
+  // Expose cleanup methods to parent component
+  useImperativeHandle(ref, () => ({ 
+    deletedImagesRef,
+    getTempUploadedPaths: () => tempUploadedPaths.current,
+    clearTempUploadedPaths: () => { tempUploadedPaths.current = []; }
+  }), []);
 
   const themeColor = 'var(--color-primary-gradient)';
   const hasImage = (step === 'applied' || step === 'image_only') && preview;
