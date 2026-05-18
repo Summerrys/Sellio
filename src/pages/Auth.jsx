@@ -126,94 +126,92 @@ export default function Auth() {
     password: '',
   });
 
+  const showSuccess = (message) => {
+    toast.custom(() => (
+      <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-lg">
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+          <Check className="w-5 h-5 text-white" />
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-green-900">{message}</p>
+          <p className="text-xs text-green-700">You're all set. Redirecting now...</p>
+        </div>
+      </div>
+    ));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.email) {
-      toast.error('Email is required');
-      return;
-    }
     setLoading(true);
     try {
       const supabase = await getSupabase();
-      const fullPhone = selectedCountry.code + formData.phone.replace(/^0+/, '');
+      const cleanPhone = formData.phone.replace(/^0+/, '');
+      const fullPhone = selectedCountry.code + cleanPhone;
 
       if (isLogin) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: formData.email,
+        // Look up email by phone number
+        const { data: rows, error: lookupError } = await supabase
+          .from('app_users')
+          .select('id, email, full_name, role, onboarding_completed, tenant_id')
+          .eq('phone', fullPhone)
+          .limit(1);
+
+        if (lookupError) throw lookupError;
+        const appUserRow = rows?.[0];
+        if (!appUserRow) throw new Error('No account found for this phone number. Please sign up first.');
+
+        const { error } = await supabase.auth.signInWithPassword({
+          email: appUserRow.email,
           password: formData.password,
         });
         if (error) throw error;
 
-        const { data: rows } = await supabase
-          .from('app_users')
-          .select('id, email, full_name, role, onboarding_completed, tenant_id')
-          .eq('email', data.user.email)
-          .limit(1);
-
-        const appUserRow = rows?.[0];
-        if (!appUserRow) throw new Error('User record not found. Please sign up first.');
-
         setAppUser(appUserRow);
-        toast.custom(() => (
-          <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-lg">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-              <Check className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-green-900">Welcome back!</p>
-              <p className="text-xs text-green-700">You're all set. Redirecting now...</p>
-            </div>
-          </div>
-        ));
+        showSuccess('Welcome back!');
         setTimeout(() => {
           window.location.href = createPageUrl(appUserRow.onboarding_completed ? 'Dashboard' : 'Onboarding');
         }, 500);
 
       } else {
-        // Validate phone for signup
-        const cleanPhone = formData.phone.replace(/^0+/, '');
-        if (formData.phone && !selectedCountry.validate(cleanPhone)) {
+        // Validate phone (required for signup)
+        if (!selectedCountry.validate(cleanPhone)) {
           toast.error(`Invalid phone number for ${selectedCountry.name}. Expected: ${selectedCountry.hint}`);
           setLoading(false);
           return;
         }
 
-        const { data, error } = await supabase.auth.signUp({
-          email: formData.email,
+        // Generate email if not provided
+        const authEmail = formData.email.trim()
+          ? formData.email.trim()
+          : `${fullPhone.replace('+', '')}@sellio.app`;
+
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: authEmail,
           password: formData.password,
         });
-        if (error) throw error;
+        if (signUpError) throw signUpError;
 
-        await supabase.from('app_users').insert({
-          email: formData.email,
+        const { error: insertError } = await supabase.from('app_users').insert({
+          email: authEmail,
           full_name: formData.full_name,
-          phone: formData.phone ? fullPhone : null,
-          auth_provider: 'email',
+          phone: fullPhone,
+          auth_provider: 'phone',
           onboarding_completed: false,
           is_active: true,
           role: 'admin',
         });
+        if (insertError) throw insertError;
 
         const { data: rows } = await supabase
           .from('app_users')
           .select('id, email, full_name, role, onboarding_completed, tenant_id')
-          .eq('email', formData.email)
+          .eq('phone', fullPhone)
           .limit(1);
 
         const appUserRow = rows?.[0];
-        setAppUser(appUserRow || { email: formData.email, full_name: formData.full_name, role: 'admin', onboarding_completed: false });
+        setAppUser(appUserRow || { email: authEmail, full_name: formData.full_name, role: 'admin', onboarding_completed: false });
 
-        toast.custom(() => (
-          <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-lg">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-              <Check className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-green-900">Account created!</p>
-              <p className="text-xs text-green-700">You're all set. Redirecting now...</p>
-            </div>
-          </div>
-        ));
+        showSuccess('Account created!');
         setTimeout(() => {
           window.location.href = createPageUrl('Onboarding');
         }, 500);
@@ -289,28 +287,10 @@ export default function Auth() {
                 </div>
               )}
 
-              {/* Email */}
+              {/* Phone Number — always shown */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email *</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="email"
-                    placeholder="john@example.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                    className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
-                  />
-                </div>
-              </div>
-
-              {/* Phone Number - Sign Up only */}
-              {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number *</label>
                 <div className="flex gap-2">
-                  {/* Country code picker */}
                   <div className="relative" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
@@ -338,7 +318,6 @@ export default function Auth() {
                       </div>
                     )}
                   </div>
-                  {/* Phone input */}
                   <div className="relative flex-1">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
@@ -346,11 +325,28 @@ export default function Auth() {
                       placeholder={selectedCountry.placeholder}
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      required
                       className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
                     />
                   </div>
                 </div>
               </div>
+
+              {/* Email — Sign Up only, optional */}
+              {!isLogin && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email <span className="text-slate-400 font-normal">(optional)</span></label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="email"
+                      placeholder="john@example.com"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
+                    />
+                  </div>
+                </div>
               )}
 
               {/* Password */}
