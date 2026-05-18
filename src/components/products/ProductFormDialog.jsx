@@ -31,7 +31,7 @@ import ProductFormBasic from './ProductFormBasic';
 import ProductFormPricing from './ProductFormPricing';
 import ProductFormInventory from './ProductFormInventory';
 import ProductFormVariants from './ProductFormVariants';
-import AIProductAssistant from './AIProductAssistant';
+import AIProductAssistant, { cleanupDeletedImages } from './AIProductAssistant';
 import { Pencil, Plus } from 'lucide-react';
 
 const EMPTY_FORM = {
@@ -72,6 +72,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
    const queryClient = useQueryClient();
    const [formData, setFormData] = useState(EMPTY_FORM);
    const [categories, setCategories] = useState([]);
+   const aiAssistantRef = useRef(null);
    const [saving, setSaving] = useState(false);
    const [errors, setErrors] = useState({});
    const [confirmDelete, setConfirmDelete] = useState(false);
@@ -123,6 +124,12 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         toast.success('Product created');
       }
       queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
+
+      // Clean up images that were explicitly deleted during edit session
+      if (aiAssistantRef.current) {
+        await cleanupDeletedImages(aiAssistantRef.current);
+      }
+
       onOpenChange(false);
     } catch (err) {
       toast.error(err.message || 'Failed to save product');
@@ -188,17 +195,18 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
 
           {/* AI Assistant */}
-          <AIProductAssistant
-            onApply={(data) => update(data)}
-            onImageChange={(url) => update({ image_url: url })}
-            onAdditionalImagesChange={(images) => update({ images })}
-            currentImageUrl={formData.image_url}
-            additionalImagesOnOpen={product?.images || []}
-            tenantId={tenantId}
-            businessType={tenant?.business_type}
-            currency={tenant?.currency || 'SGD'}
-            categories={categories}
-          />
+           <AIProductAssistant
+             ref={aiAssistantRef}
+             onApply={(data) => update(data)}
+             onImageChange={(url) => update({ image_url: url })}
+             onAdditionalImagesChange={(images) => update({ images })}
+             currentImageUrl={formData.image_url}
+             additionalImagesOnOpen={product?.images || []}
+             tenantId={tenantId}
+             businessType={tenant?.business_type}
+             currency={tenant?.currency || 'SGD'}
+             categories={categories}
+           />
 
 
 

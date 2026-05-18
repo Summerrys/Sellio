@@ -1,12 +1,23 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useImperativeHandle } from 'react';
 import { Sparkles, Upload, Loader2, Check, AlertCircle, X, Wand2, ImagePlus, Pencil, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import ImageEditModal from '../onboarding/ImageEditModal';
 import { getSupabase } from '@/lib/supabaseClient';
+import { deleteImageFromStorage } from '@/lib/imageStorage';
 
-export default function AIProductAssistant({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange, onAdditionalImagesChange, additionalImagesOnOpen }) {
+// Expose cleanup for parent to call
+export const cleanupDeletedImages = async (componentRef) => {
+  if (componentRef?.current?.deletedImagesRef?.current?.length > 0) {
+    const urls = componentRef.current.deletedImagesRef.current;
+    componentRef.current.deletedImagesRef.current = [];
+    const promises = urls.map(url => deleteImageFromStorage(url));
+    await Promise.all(promises);
+  }
+};
+
+function AIProductAssistantComponent({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange, onAdditionalImagesChange, additionalImagesOnOpen }, ref) {
    const [step, setStep] = useState(currentImageUrl ? 'image_only' : 'idle');
    const [preview, setPreview] = useState(currentImageUrl || null);
    const [additionalImages, setAdditionalImages] = useState(additionalImagesOnOpen || []);
@@ -20,6 +31,7 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
    const plainImageInputRef = useRef(null); // "Add photo without AI"
    const replaceImageInputRef = useRef(null); // Replace specific image
    const addImageInputRef = useRef(null); // Add additional images
+   const deletedImagesRef = useRef([]); // Track images to delete on save
 
   // Track previous value to detect real changes from parent (new product opened)
   const prevImageUrlRef = useRef(currentImageUrl);
@@ -168,9 +180,12 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
   // Called when ImageEditModal saves — null means delete
   const handleEditSave = async (newDataUrl) => {
     const isCover = editingImageIndex === null;
+    const oldUrl = isCover ? preview : additionalImages[editingImageIndex];
 
     if (newDataUrl === null) {
-      // Delete
+      // Delete — track for cleanup on product save
+      if (oldUrl) deletedImagesRef.current.push(oldUrl);
+
       if (isCover) {
         onImageChange?.('');
         reset();
@@ -183,8 +198,9 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
       }
       setEditModalOpen(false);
     } else if (newDataUrl.startsWith('data:')) {
-      // Crop result — upload before storing
+      // Crop result — upload before storing, delete old image
       try {
+        if (oldUrl) deletedImagesRef.current.push(oldUrl);
         const publicUrl = await uploadBase64ToStorage(newDataUrl);
         if (isCover) {
           setPreview(publicUrl);
@@ -203,7 +219,9 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
         toast.error('Upload failed: ' + err.message);
       }
     } else {
-      // Direct URL from replace
+      // Direct URL from replace — delete old image
+      if (oldUrl && oldUrl !== newDataUrl) deletedImagesRef.current.push(oldUrl);
+
       if (isCover) {
         setPreview(newDataUrl);
         onImageChange?.(newDataUrl);
@@ -263,6 +281,9 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
       setEditingImageIndex(null);
     }
   };
+
+  // Expose ref to parent component
+  useImperativeHandle(ref, () => ({ deletedImagesRef }), []);
 
   const themeColor = 'var(--color-primary-gradient)';
   const hasImage = (step === 'applied' || step === 'image_only') && preview;
@@ -460,3 +481,6 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
     </>
   );
 }
+
+const AIProductAssistant = React.forwardRef(AIProductAssistantComponent);
+export default AIProductAssistant;

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { generateThemeVariables } from '../theme/themeUtils';
 import { getThemeCSSColors, DEFAULT_COLORS } from '@/lib/themeConstants';
 import { toast } from 'sonner';
+import { deleteImageFromStorage } from '@/lib/imageStorage';
 
 
 
@@ -72,26 +73,13 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     return { publicUrl: data.publicUrl, storagePath };
   };
 
-  // Delete a file from Supabase Storage given its public URL (extract path from URL)
-  const deleteFromStorage = async (url) => {
-    if (!url || !url.startsWith('http')) return;
-    try {
-      const supabase = await getSupabase();
-      // Extract path after /product-images/
-      const match = url.match(/\/product-images\/(.+)$/);
-      if (match) {
-        await supabase.storage.from('product-images').remove([match[1]]);
-      }
-    } catch (_) { /* best effort */ }
-  };
-
   // Remove an image slot: delete from storage and remove from state arrays
   const removeImageSlot = async (idx) => {
     const urlToDelete = imageUrls[idx];
     setImagePreviews(prev => prev.filter((_, i) => i !== idx));
     setImageFiles(prev => prev.filter((_, i) => i !== idx));
     setImageUrls(prev => prev.filter((_, i) => i !== idx));
-    if (urlToDelete) deleteFromStorage(urlToDelete);
+    if (urlToDelete) await deleteImageFromStorage(urlToDelete);
   };
 
   // Handle clicking "+" to add additional images
@@ -228,15 +216,23 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
 
   const handleEditSave = async (newDataUrl) => {
     const idx = editingImageIdx;
+    const oldUrl = imageUrls[idx];
     setEditingImageIdx(null);
+
     if (newDataUrl === null) {
+      // Delete — clean up storage immediately
+      if (oldUrl) await deleteImageFromStorage(oldUrl);
       removeImageSlot(idx);
       return;
     }
+
     // Show cropped preview immediately, then upload
     setImagePreviews(prev => prev.map((p, i) => i === idx ? newDataUrl : p));
     setAdditionalUploading(true);
     try {
+      // Delete old image before uploading new one
+      if (oldUrl) await deleteImageFromStorage(oldUrl);
+
       const match = newDataUrl.match(/^data:([^;]+);base64,(.+)$/);
       const mimeType = match?.[1] || 'image/jpeg';
       const base64Data = match?.[2] || newDataUrl.split(',')[1];
