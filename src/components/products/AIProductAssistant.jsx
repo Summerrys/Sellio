@@ -1,16 +1,17 @@
 import React, { useState, useRef } from 'react';
-import { Sparkles, Upload, Loader2, Check, AlertCircle, X, Wand2 } from 'lucide-react';
+import { Sparkles, Upload, Loader2, Check, AlertCircle, X, Wand2, ImagePlus, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-export default function AIProductAssistant({ onApply, tenantId, businessType, currency, categories }) {
+export default function AIProductAssistant({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange }) {
   const [step, setStep] = useState('idle'); // idle | uploading | analyzing | done | error
   const [preview, setPreview] = useState(null);
   const [uploadedUrl, setUploadedUrl] = useState(null);
   const [result, setResult] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const fileInputRef = useRef(null);
+  const plainImageInputRef = useRef(null);
 
   const reset = () => {
     setStep('idle');
@@ -72,19 +73,15 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
   const handleApply = () => {
     if (!result) return;
 
-    // Match category at apply time — categories are guaranteed loaded by now
     const suggested = (result.suggested_category || '').toLowerCase().trim();
     let matchedCategory = null;
     if (suggested && categories?.length) {
-      // 1. Exact match
       matchedCategory = categories.find(c => c.name.toLowerCase().trim() === suggested);
-      // 2. One contains the other
       if (!matchedCategory) {
         matchedCategory = categories.find(c =>
           c.name.toLowerCase().includes(suggested) || suggested.includes(c.name.toLowerCase())
         );
       }
-      // 3. Any word overlap (e.g. "Cold Beverage" vs "Beverages")
       if (!matchedCategory) {
         const words = suggested.split(/\s+/);
         matchedCategory = categories.find(c =>
@@ -93,21 +90,36 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
       }
     }
 
-    console.log('[AIAssistant] suggested_category:', result.suggested_category, '| matched:', matchedCategory?.name, '| available:', categories?.map(c => c.name));
-
+    const appliedImage = preview || '';
     const patch = {
       name: result.name,
       description: result.description,
       tags: result.suggested_tags || [],
       price: result.estimated_price || 0,
-      image_url: uploadedUrl || '',
+      image_url: appliedImage,
     };
     if (matchedCategory?.id) {
       patch.category_id = matchedCategory.id;
     }
     onApply(patch);
     toast.success('AI suggestions applied!');
-    reset();
+    // Keep preview visible, move to applied state
+    setStep('applied');
+    setResult(null);
+  };
+
+  const handlePlainImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result;
+      onImageChange?.(base64);
+      setStep('image_only');
+      setPreview(base64);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   return (
@@ -115,32 +127,45 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
       'rounded-xl border-2 transition-all',
       step === 'done' ? 'border-green-200 bg-green-50' :
       step === 'error' ? 'border-red-200 bg-red-50' :
+      (step === 'applied' || step === 'image_only') ? 'border-slate-200 bg-white' :
       step !== 'idle' ? 'border-[rgb(var(--color-primary))]/30 bg-blue-50' :
       'border-dashed border-slate-300 bg-slate-50 hover:border-[rgb(var(--color-primary))]/50 hover:bg-white'
     )}>
       {/* Idle: upload prompt */}
       {step === 'idle' && (
-        <label className="flex flex-col items-center justify-center gap-3 p-6 cursor-pointer text-center">
-          <div className="w-12 h-12 rounded-xl bg-[rgb(var(--color-primary))]/10 flex items-center justify-center">
-            <Wand2 className="w-6 h-6 text-[rgb(var(--color-primary))]" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-slate-800">Auto-fill with AI</p>
-            <p className="text-xs text-slate-500 mt-0.5">Upload a product photo — AI will generate the name, description, price & category</p>
-          </div>
-          <div className="flex items-center gap-2 mt-1 px-4 py-2 bg-[rgb(var(--color-primary))] text-white text-sm font-medium rounded-lg">
-            <Upload className="w-4 h-4" />
-            Choose Image
-          </div>
-          <p className="text-xs text-slate-400">PNG, JPG up to 5MB</p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleFileSelect}
-          />
-        </label>
+        <div className="p-4">
+          <label className="flex flex-col items-center justify-center gap-3 pb-4 cursor-pointer text-center border-b border-slate-200">
+            <div className="w-12 h-12 rounded-xl bg-[rgb(var(--color-primary))]/10 flex items-center justify-center">
+              <Wand2 className="w-6 h-6 text-[rgb(var(--color-primary))]" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-800">Auto-fill with AI</p>
+              <p className="text-xs text-slate-500 mt-0.5">Upload a product photo — AI will generate the name, description, price & category</p>
+            </div>
+            <div className="flex items-center gap-2 mt-1 px-4 py-2 text-white text-sm font-medium rounded-lg" style={{ background: 'var(--color-primary-gradient)' }}>
+              <Upload className="w-4 h-4" />
+              Choose Image for AI
+            </div>
+            <p className="text-xs text-slate-400">PNG, JPG up to 5MB</p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+          </label>
+          {/* Plain image upload (no AI) */}
+          <button
+            type="button"
+            onClick={() => plainImageInputRef.current?.click()}
+            className="w-full mt-3 flex items-center justify-center gap-2 text-sm text-slate-500 hover:text-slate-700 py-2"
+          >
+            <ImagePlus className="w-4 h-4" />
+            Add photo without AI
+          </button>
+          <input ref={plainImageInputRef} type="file" accept="image/*" className="hidden" onChange={handlePlainImageSelect} />
+        </div>
       )}
 
       {/* Uploading / Analyzing */}
@@ -233,6 +258,38 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
               Discard
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* Applied / image_only: show image preview with replace/remove */}
+      {(step === 'applied' || step === 'image_only') && preview && (
+        <div className="flex items-center gap-3 p-3">
+          <img src={preview} alt="product" className="w-16 h-16 rounded-lg object-cover flex-shrink-0 border border-slate-200" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-slate-700">
+              {step === 'applied' ? 'AI image applied' : 'Product photo'}
+            </p>
+            <p className="text-xs text-slate-400">This will be saved as the product image</p>
+          </div>
+          <div className="flex gap-1 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              title="Replace"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => { onImageChange?.(''); reset(); }}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50"
+              title="Remove"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
         </div>
       )}
     </div>

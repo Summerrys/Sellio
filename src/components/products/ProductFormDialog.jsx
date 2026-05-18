@@ -1,21 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { X, ChevronDown, ChevronUp, ImagePlus, Loader2, Trash2 } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import db from '@/lib/db';
 import { useTenant } from '../tenant/TenantContext';
-import { base44 } from '@/api/base44Client';
 
 import ProductFormBasic from './ProductFormBasic';
 import ProductFormPricing from './ProductFormPricing';
 import ProductFormInventory from './ProductFormInventory';
 import ProductFormVariants from './ProductFormVariants';
 import AIProductAssistant from './AIProductAssistant';
-import ImageEditModal from '../onboarding/ImageEditModal';
 
 const EMPTY_FORM = {
   name: '',
@@ -57,11 +55,8 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
   const [categories, setCategories] = useState([]);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
-  const [imageEditSrc, setImageEditSrc] = useState(null);
-  const [uploadingImage, setUploadingImage] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const imageInputRef = useRef(null);
 
   useEffect(() => {
     if (!open) return;
@@ -131,42 +126,9 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     }
   };
 
-  // Image handling
-  const handleImageFileSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => setImageEditSrc(reader.result);
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
 
-  const handleImageSave = async (base64OrNull) => {
-    if (base64OrNull === null) {
-      update({ image_url: '' });
-      return;
-    }
-    setUploadingImage(true);
-    try {
-      const response = await base44.functions.invoke('analyzeProductImage', {
-        image_data: base64OrNull,
-        image_mime_type: 'image/jpeg',
-        tenant_id: tenantId || '',
-        upload_only: true,
-      });
-      const url = response.data?.image_url || '';
-      update({ image_url: url });
-    } catch {
-      // fallback: store base64 directly
-      update({ image_url: base64OrNull });
-    } finally {
-      setUploadingImage(false);
-    }
-  };
 
   if (!open) return null;
-
-  const themeColor = `rgb(var(--color-primary, 15 23 42))`;
 
   return (
     <>
@@ -207,51 +169,13 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
           {/* AI Assistant */}
           <AIProductAssistant
             onApply={(data) => update(data)}
+            onImageChange={(url) => update({ image_url: url })}
+            currentImageUrl={formData.image_url}
             tenantId={tenantId}
             businessType={tenant?.business_type}
             currency={tenant?.currency || 'SGD'}
             categories={categories}
           />
-
-          {/* Product Image */}
-          <Section title="Product Image" defaultOpen={true}>
-            <div className="flex items-center gap-4">
-              {uploadingImage ? (
-                <div className="w-24 h-24 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
-                  <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-                </div>
-              ) : formData.image_url ? (
-                <button
-                  type="button"
-                  onClick={() => setImageEditSrc(formData.image_url)}
-                  className="w-24 h-24 rounded-xl overflow-hidden border-2 border-slate-200 hover:border-slate-400 transition-colors flex-shrink-0"
-                >
-                  <img src={formData.image_url} alt="Product" className="w-full h-full object-cover" />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => imageInputRef.current?.click()}
-                  className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center gap-1 text-slate-400 hover:border-slate-400 hover:text-slate-500 transition-colors flex-shrink-0"
-                >
-                  <ImagePlus className="w-6 h-6" />
-                  <span className="text-xs">Add Photo</span>
-                </button>
-              )}
-              <div className="text-sm text-slate-500">
-                {formData.image_url
-                  ? 'Tap the image to crop, rotate, replace or delete.'
-                  : 'Add a product photo. You can crop and edit after selecting.'}
-              </div>
-            </div>
-            <input
-              ref={imageInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleImageFileSelect}
-            />
-          </Section>
 
           {/* Basic Info */}
           <Section title="Basic Info" defaultOpen={true}>
@@ -307,7 +231,8 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
             </Button>
           )}
           <Button
-            className="flex-1 bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] text-white"
+            className="flex-1 text-white"
+            style={{ background: 'var(--color-primary-gradient)' }}
             onClick={handleSave}
             disabled={saving}
           >
@@ -316,15 +241,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         </div>
       </div>
 
-      {/* Image Edit Modal */}
-      {imageEditSrc && (
-        <ImageEditModal
-          src={imageEditSrc}
-          themeColor={themeColor}
-          onSave={handleImageSave}
-          onClose={() => setImageEditSrc(null)}
-        />
-      )}
+
     </>
   );
 }

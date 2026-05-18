@@ -117,7 +117,8 @@ export default function Products() {
                 <Button
                   onClick={handleAdd}
                   size="sm"
-                  className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-1.5"
+                  className="text-white gap-1.5"
+                  style={{ background: 'var(--color-primary-gradient)' }}
                 >
                   <Plus className="w-4 h-4" />
                   <span className="hidden sm:inline">Add Product</span>
