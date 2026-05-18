@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getSupabase } from '@/lib/supabaseClient';
+import { generateThemeVariables } from '@/components/theme/themeUtils';
 
 // Session helpers — cookies only
 export const cookieUtils = {
@@ -20,12 +22,42 @@ export const cookieUtils = {
 
 const AppUserContext = createContext(null);
 
+async function loadAndApplyTheme(tenantId) {
+  if (!tenantId) return;
+  const supabase = await getSupabase();
+  const { data } = await supabase
+    .from('theme_configs')
+    .select('primary_color, accent_color')
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  const primary = data?.primary_color || '#3b82f6';
+  const accent = data?.accent_color || '#9333ea';
+
+  const variables = generateThemeVariables(primary, accent);
+  const root = document.documentElement;
+  Object.entries(variables).forEach(([key, value]) => {
+    root.style.setProperty(key, value);
+  });
+}
+
 export function AppUserProvider({ children }) {
   const [appUser, setAppUserState] = useState(() => cookieUtils.get());
+
+  // Apply theme on initial load if user is already in session
+  useEffect(() => {
+    const user = cookieUtils.get();
+    if (user?.tenant_id) {
+      loadAndApplyTheme(user.tenant_id);
+    }
+  }, []);
 
   const setAppUser = (user) => {
     if (user) {
       cookieUtils.set(user);
+      if (user.tenant_id) {
+        loadAndApplyTheme(user.tenant_id);
+      }
     } else {
       cookieUtils.clear();
     }
