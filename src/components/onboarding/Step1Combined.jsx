@@ -10,8 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, UtensilsCrossed, ShoppingBag, Wrench, X, Edit3, Check, Palette, Pipette } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { getSupabase } from '@/lib/supabaseClient';
-import { generateThemeVariables, COLOR_SETS as POPULAR_PALETTES } from '../theme/themeUtils';
-import { DEFAULT_COLORS } from '@/lib/themeConstants';
+import { generateThemeVariables, COLOR_SETS as POPULAR_PALETTES, DEFAULT_GRADIENT, DEFAULT_PRIMARY, DEFAULT_ACCENT } from '../theme/themeUtils';
 import { cn } from '@/lib/utils';
 
 const schema = z.object({
@@ -330,37 +329,53 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
               </div>
             </button>
 
-            {POPULAR_PALETTES.map((palette) => (
-              <button
-                key={palette.name}
-                type="button"
-                onClick={() => handleThemeSelect(palette)}
-                className={cn(
-                  "relative rounded-lg overflow-hidden border-2 transition-all aspect-square",
-                  selectedTheme === palette.name
-                    ? "border-slate-900 ring-2 ring-slate-900 ring-offset-2"
-                    : "border-slate-200 hover:border-slate-300"
-                )}
-                title={palette.name}
-              >
-                <div className="w-full h-full flex flex-col">
-                  <div className="flex-1" style={{ backgroundColor: palette.dark }} />
-                  <div className="flex-1" style={{ backgroundColor: palette.light }} />
-                </div>
-                {selectedTheme === palette.name && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="bg-white rounded-full p-2 shadow-lg">
-                      <Check className="w-5 h-5 text-slate-900" />
-                    </div>
+            {POPULAR_PALETTES.filter(p => !p.isGradient).map((palette) => {
+              const isSelected = selectedTheme === palette.name;
+              // lightest tone: light color at 30% opacity for hover bg
+              const hoverBg = palette.light + '4D'; // hex 4D ≈ 30% opacity
+              return (
+                <button
+                  key={palette.name}
+                  type="button"
+                  onClick={() => handleThemeSelect(palette)}
+                  title={palette.name}
+                  style={{
+                    border: isSelected ? `2px solid ${palette.dark}` : '2px solid #e2e8f0',
+                    transition: 'border 0.15s, transform 0.15s, background 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.border = `2px solid ${palette.dark}80`;
+                      e.currentTarget.style.transform = 'scale(1.03)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.border = '2px solid #e2e8f0';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }
+                  }}
+                  className="relative rounded-lg overflow-hidden aspect-square"
+                >
+                  <div className="w-full h-full flex flex-col">
+                    <div style={{ flex: '7', backgroundColor: palette.dark }} />
+                    <div style={{ flex: '3', backgroundColor: palette.light }} />
                   </div>
-                )}
-                <div className="absolute bottom-2 left-2 right-2">
-                  <span className="text-[10px] sm:text-xs font-medium text-white px-2 py-0.5 rounded-full block text-center truncate" style={{ backgroundColor: palette.dark }}>
-                    {palette.name}
-                  </span>
-                </div>
-              </button>
-            ))}
+                  {isSelected && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="rounded-full p-2 shadow-lg" style={{ backgroundColor: palette.dark }}>
+                        <Check className="w-5 h-5 text-white" />
+                      </div>
+                    </div>
+                  )}
+                  <div className="absolute bottom-2 left-2 right-2">
+                    <span className="text-[10px] sm:text-xs font-medium text-white px-2 py-0.5 rounded-full block text-center truncate" style={{ backgroundColor: palette.dark }}>
+                      {palette.name}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           {/* Color Picker Modal */}
@@ -434,7 +449,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
           const defaultPalette = POPULAR_PALETTES[0];
           const buttonStyle = selectedPalette?.dark
             ? { backgroundColor: selectedPalette.dark }
-            : { background: `linear-gradient(to right, ${DEFAULT_COLORS.primary}, ${DEFAULT_COLORS.secondary})` };
+            : { background: DEFAULT_GRADIENT };
           return (
             <Button
               type="submit"

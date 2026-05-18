@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
-import { COLOR_SETS, DEFAULT_PALETTE, generateThemeVariables } from './themeUtils';
+import { COLOR_SETS, DEFAULT_PRIMARY, DEFAULT_ACCENT, generateThemeVariables } from './themeUtils';
 
 const ThemeContext = createContext({});
 
@@ -27,7 +27,7 @@ export function ThemeProvider({ children, tenantId }) {
 
   // Resolve a colorSet by name (falls back to DEFAULT_PALETTE)
   const resolveColorSet = (colorSetName) =>
-    COLOR_SETS.find(s => s.name === colorSetName) || DEFAULT_PALETTE;
+    COLOR_SETS.find(s => s.name === colorSetName) || { dark: DEFAULT_PRIMARY, light: DEFAULT_ACCENT };
 
   // Apply a colorSet to the DOM immediately
   const applyColorSet = (colorSet) => {

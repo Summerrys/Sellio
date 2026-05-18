@@ -5,12 +5,10 @@ import { Card } from '@/components/ui/card';
 import { Check, Palette } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const DEFAULT_GRADIENT = 'linear-gradient(135deg, #3b82f6 0%, #9333ea 100%)';
+// Only show non-gradient (user-selectable) palettes
+const SELECTABLE_PALETTES = COLOR_SETS.filter(c => !c.isGradient);
 
 function SwatchBackground({ colorSet }) {
-  if (colorSet.isGradient) {
-    return <div className="w-full h-full" style={{ background: DEFAULT_GRADIENT }} />;
-  }
   return (
     <div className="w-full h-full flex flex-col">
       <div style={{ flex: '7', backgroundColor: colorSet.dark }} />
@@ -20,24 +18,19 @@ function SwatchBackground({ colorSet }) {
 }
 
 function SwatchCard({ colorSet, isSelected, onSelect, disabled }) {
-  const borderColor = colorSet.isGradient ? '#3b82f6' : colorSet.dark;
-  const checkmarkBg = colorSet.isGradient ? DEFAULT_GRADIENT : colorSet.dark;
-
   return (
     <button
       onClick={() => onSelect(colorSet.name)}
       disabled={disabled}
       title={colorSet.name}
-      style={isSelected ? { border: `2px solid ${borderColor}` } : {}}
-      className={cn(
-        "relative group rounded-xl border-2 transition-all duration-150 overflow-hidden",
-        isSelected
-          ? "ring-2 ring-offset-2"
-          : "border-slate-200"
-      )}
+      style={{
+        border: isSelected ? `2px solid ${colorSet.dark}` : '2px solid #e2e8f0',
+        transition: 'border 0.15s, transform 0.15s',
+      }}
+      className="relative rounded-xl overflow-hidden"
       onMouseEnter={(e) => {
         if (!isSelected) {
-          e.currentTarget.style.border = `2px solid ${borderColor}80`;
+          e.currentTarget.style.border = `2px solid ${colorSet.dark}80`;
           e.currentTarget.style.transform = 'scale(1.03)';
         }
       }}
@@ -53,7 +46,7 @@ function SwatchCard({ colorSet, isSelected, onSelect, disabled }) {
       </div>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         {isSelected && (
-          <div className="rounded-full p-2 shadow-lg mb-2" style={{ background: checkmarkBg }}>
+          <div className="rounded-full p-2 shadow-lg mb-2" style={{ backgroundColor: colorSet.dark }}>
             <Check className="w-5 h-5 text-white" />
           </div>
         )}
@@ -66,22 +59,19 @@ function SwatchCard({ colorSet, isSelected, onSelect, disabled }) {
 }
 
 function CompactSwatch({ colorSet, isSelected, onSelect, disabled }) {
-  const borderColor = colorSet.isGradient ? '#3b82f6' : colorSet.dark;
-  const checkmarkBg = colorSet.isGradient ? DEFAULT_GRADIENT : colorSet.dark;
-
   return (
     <button
       onClick={() => onSelect(colorSet.name)}
       disabled={disabled}
       title={colorSet.name}
-      style={isSelected ? { border: `2px solid ${borderColor}` } : {}}
-      className={cn(
-        "relative h-12 rounded-lg border-2 transition-all overflow-hidden",
-        isSelected ? "ring-2 ring-offset-1" : "border-slate-200"
-      )}
+      style={{
+        border: isSelected ? `2px solid ${colorSet.dark}` : '2px solid #e2e8f0',
+        transition: 'border 0.15s, transform 0.15s',
+      }}
+      className="relative h-12 rounded-lg overflow-hidden"
       onMouseEnter={(e) => {
         if (!isSelected) {
-          e.currentTarget.style.border = `2px solid ${borderColor}80`;
+          e.currentTarget.style.border = `2px solid ${colorSet.dark}80`;
           e.currentTarget.style.transform = 'scale(1.03)';
         }
       }}
@@ -95,7 +85,7 @@ function CompactSwatch({ colorSet, isSelected, onSelect, disabled }) {
       <SwatchBackground colorSet={colorSet} />
       {isSelected && (
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="rounded-full p-1 shadow" style={{ background: checkmarkBg }}>
+          <div className="rounded-full p-1 shadow" style={{ backgroundColor: colorSet.dark }}>
             <Check className="w-3 h-3 text-white" />
           </div>
         </div>
@@ -119,7 +109,7 @@ export default function ThemeSelector({ variant = 'full' }) {
           <span>Color Theme</span>
         </div>
         <div className="grid grid-cols-4 gap-2">
-          {COLOR_SETS.map((colorSet) => (
+          {SELECTABLE_PALETTES.map((colorSet) => (
             <CompactSwatch
               key={colorSet.name}
               colorSet={colorSet}
@@ -143,7 +133,7 @@ export default function ThemeSelector({ variant = 'full' }) {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {COLOR_SETS.map((colorSet) => (
+          {SELECTABLE_PALETTES.map((colorSet) => (
             <SwatchCard
               key={colorSet.name}
               colorSet={colorSet}
