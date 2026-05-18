@@ -1,5 +1,9 @@
+// Default gradient pair (blue-to-purple)
+export const DEFAULT_PALETTE = { name: 'Default', dark: '#3b82f6', light: '#9333ea', isGradient: true };
+
 // Color theme sets with light and dark anchor colors
 export const COLOR_SETS = [
+  DEFAULT_PALETTE,
   { name: 'Ocean Blue', dark: '#0369A1', light: '#E0F2FE' },
   { name: 'Forest Green', dark: '#15803D', light: '#DCFCE7' },
   { name: 'Sunset Orange', dark: '#EA580C', light: '#FFEDD5' },

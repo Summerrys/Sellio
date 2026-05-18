@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
-import { COLOR_SETS, generateThemeVariables } from './themeUtils';
+import { COLOR_SETS, DEFAULT_PALETTE, generateThemeVariables } from './themeUtils';
 
 const ThemeContext = createContext({});
 
@@ -25,11 +25,22 @@ export function ThemeProvider({ children, tenantId }) {
     enabled: !!tenantId,
   });
 
+  // Resolve a colorSet by name (falls back to DEFAULT_PALETTE)
+  const resolveColorSet = (colorSetName) =>
+    COLOR_SETS.find(s => s.name === colorSetName) || DEFAULT_PALETTE;
+
+  // Apply a colorSet to the DOM immediately
+  const applyColorSet = (colorSet) => {
+    const variables = generateThemeVariables(colorSet.dark, colorSet.light);
+    Object.entries(variables).forEach(([key, value]) => {
+      document.documentElement.style.setProperty(key, value);
+    });
+  };
+
   // Save theme mutation directly to Supabase
   const saveThemeMutation = useMutation({
     mutationFn: async (colorSetName) => {
-      const colorSet = COLOR_SETS.find(s => s.name === colorSetName);
-      if (!colorSet) return;
+      const colorSet = resolveColorSet(colorSetName);
       const supabase = await getSupabase();
       const { error } = await supabase
         .from('theme_configs')
@@ -40,8 +51,10 @@ export function ThemeProvider({ children, tenantId }) {
           accent_color: colorSet.light,
         }, { onConflict: 'tenant_id' });
       if (error) throw error;
+      return colorSet;
     },
-    onSuccess: () => {
+    onSuccess: (colorSet) => {
+      applyColorSet(colorSet);
       queryClient.invalidateQueries({ queryKey: ['themeConfig'] });
       setPreviewTheme(null);
     },
@@ -50,25 +63,17 @@ export function ThemeProvider({ children, tenantId }) {
   // Apply theme to DOM
   useEffect(() => {
     if (previewTheme) {
-      const colorSet = COLOR_SETS.find(s => s.name === previewTheme);
-      if (colorSet) {
-        const variables = generateThemeVariables(colorSet.dark, colorSet.light);
-        Object.entries(variables).forEach(([key, value]) => {
-          document.documentElement.style.setProperty(key, value);
-        });
-      }
+      applyColorSet(resolveColorSet(previewTheme));
       return;
     }
     if (themeConfig?.primary_color && themeConfig?.accent_color) {
-      const variables = generateThemeVariables(themeConfig.primary_color, themeConfig.accent_color);
-      Object.entries(variables).forEach(([key, value]) => {
-        document.documentElement.style.setProperty(key, value);
-      });
+      applyColorSet({ dark: themeConfig.primary_color, light: themeConfig.accent_color });
     }
   }, [previewTheme, themeConfig]);
 
   const value = {
-    currentTheme: themeConfig?.color_set_name || 'Indigo',
+    currentTheme: themeConfig?.color_set_name || 'Default',
+    // Immediately save + apply — no separate Apply button needed
     setTheme: (colorSetName) => saveThemeMutation.mutate(colorSetName),
     previewTheme: (colorSetName) => setPreviewTheme(colorSetName),
     clearPreview: () => setPreviewTheme(null),
