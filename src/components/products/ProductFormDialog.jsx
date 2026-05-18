@@ -66,11 +66,20 @@ import AIProductAssistant, { cleanupDeletedImages } from './AIProductAssistant';
 import { Pencil, Plus } from 'lucide-react';
 
 const deleteImageFromStorage = async (imageUrl) => {
-  if (!imageUrl || !imageUrl.includes('supabase')) return;
+  console.log('deleteImageFromStorage called with:', imageUrl);
+  if (!imageUrl || !imageUrl.includes('supabase')) {
+    console.log('Skipping - not a supabase URL');
+    return;
+  }
   const supabase = await getSupabase();
   const path = imageUrl.split('/object/public/product-images/')[1];
-  if (!path) return;
-  await supabase.storage.from('product-images').remove([path]);
+  console.log('Extracted path:', path);
+  if (!path) {
+    console.log('Skipping - no path extracted');
+    return;
+  }
+  const { error } = await supabase.storage.from('product-images').remove([path]);
+  console.log('Delete result - error:', error);
 };
 
 const EMPTY_FORM = {
@@ -213,6 +222,8 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         }
       });
     }
+    
+    console.log('Cancel clicked - uploadedImages to delete:', imagesToDelete);
     
     // Delete new images from storage
     for (const url of imagesToDelete) {
