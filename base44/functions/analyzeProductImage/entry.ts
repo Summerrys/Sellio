@@ -46,27 +46,17 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     );
     const ext = mimeType.split('/')[1] || 'jpg';
-    const fileName = `ai-analysis/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const tempPath = `temp/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
-    // Try menu-images first, fall back to product-images
-    let bucketName = 'menu-images';
-    let uploadError;
-    ({ error: uploadError } = await supabase.storage
-      .from(bucketName)
-      .upload(fileName, bytes, { contentType: mimeType, upsert: true }));
-
-    if (uploadError?.message?.includes('not found') || uploadError?.message?.includes('Bucket not found')) {
-      bucketName = 'product-images';
-      ({ error: uploadError } = await supabase.storage
-        .from(bucketName)
-        .upload(fileName, bytes, { contentType: mimeType, upsert: true }));
-    }
+    const { error: uploadError } = await supabase.storage
+      .from('product-images')
+      .upload(tempPath, bytes, { contentType: mimeType, upsert: true });
 
     if (uploadError) {
       return Response.json({ error: `Upload failed: ${uploadError.message}` }, { status: 500, headers: corsHeaders });
     }
 
-    const { data: { publicUrl } } = supabase.storage.from(bucketName).getPublicUrl(fileName);
+    const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(tempPath);
 
     // Now call InvokeLLM with a real URL
     const base44 = createClientFromRequest(req);
@@ -100,8 +90,8 @@ Be concise and practical — merchants will use this to fill their catalog quick
       },
     });
 
-    // Clean up the temp file (non-blocking)
-    supabase.storage.from(bucketName).remove([fileName]).catch(() => {});
+    // Clean up the temp file immediately after getting the result
+    await supabase.storage.from('product-images').remove([tempPath]).catch(() => {});
 
     return Response.json(
       { success: true, name: result.name, price: result.price, category: result.category, description: result.description, tags: result.tags, confidence: result.confidence },

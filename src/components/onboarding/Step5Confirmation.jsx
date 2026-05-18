@@ -78,7 +78,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
       let result;
       const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
       const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6a3R1dGVlZGJ0bmF4ZmR5bHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxNzI2NTgsImV4cCI6MjA2MTc0ODY1OH0.pVFa8FHBMPNNjmrjRPXBJFSLoJ2pKJqxeM3LfmBrXLI';
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/completeOnboarding`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/complete-onboarding`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
