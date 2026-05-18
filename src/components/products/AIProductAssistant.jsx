@@ -14,7 +14,6 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
 
   const fileInputRef = useRef(null);       // AI analysis upload
   const plainImageInputRef = useRef(null); // "Add photo without AI"
-  const addMoreInputRef = useRef(null);    // "+" slot
 
   // Track previous value to detect real changes from parent (new product opened)
   const prevImageUrlRef = useRef(currentImageUrl);
@@ -278,11 +277,14 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
                 </div>
               </div>
 
-              {/* "+" add more slot */}
-              <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors col-span-1">
+              {/* "+" add more slot — multiple images coming soon */}
+              <button
+                type="button"
+                onClick={() => toast('Multiple images coming soon')}
+                className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center hover:border-slate-400 transition-colors col-span-1"
+              >
                 <Plus className="w-5 h-5 text-slate-400" />
-                <input ref={addMoreInputRef} type="file" accept="image/*" className="hidden" onChange={handlePlainImageSelect} />
-              </label>
+              </button>
             </div>
           </div>
         )}
