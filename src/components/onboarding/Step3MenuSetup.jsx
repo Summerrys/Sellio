@@ -224,21 +224,31 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     setAiError('');
   };
 
-  const handleEditSave = (newDataUrl) => {
+  const handleEditSave = async (newDataUrl) => {
+    const idx = editingImageIdx;
+    setEditingImageIdx(null);
     if (newDataUrl === null) {
-      // Delete — cleanup storage and remove slot
-      removeImageSlot(editingImageIdx);
-      setEditingImageIdx(null);
+      removeImageSlot(idx);
       return;
     }
-    // Replace preview; mark as needing re-upload (set file, clear stored URL)
-    fetch(newDataUrl).then(r => r.blob()).then(blob => {
-      const file = new File([blob], `edited-${Date.now()}.jpg`, { type: 'image/jpeg' });
-      setImagePreviews(prev => prev.map((p, i) => i === editingImageIdx ? newDataUrl : p));
-      setImageFiles(prev => prev.map((f, i) => i === editingImageIdx ? file : f));
-      setImageUrls(prev => prev.map((u, i) => i === editingImageIdx ? null : u));
-    });
-    setEditingImageIdx(null);
+    // Show cropped preview immediately, then upload
+    setImagePreviews(prev => prev.map((p, i) => i === idx ? newDataUrl : p));
+    setAdditionalUploading(true);
+    try {
+      const match = newDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+      const mimeType = match?.[1] || 'image/jpeg';
+      const base64Data = match?.[2] || newDataUrl.split(',')[1];
+      const bytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+      const ext = mimeType.split('/')[1] || 'jpg';
+      const file = new File([bytes], `edited-${Date.now()}.${ext}`, { type: mimeType });
+      const { publicUrl } = await uploadToStorage(file);
+      setImagePreviews(prev => prev.map((p, i) => i === idx ? publicUrl : p));
+      setImageUrls(prev => prev.map((u, i) => i === idx ? publicUrl : u));
+    } catch (err) {
+      toast.error('Upload failed: ' + err.message);
+    } finally {
+      setAdditionalUploading(false);
+    }
   };
 
   // Apply theme from Step 1
@@ -400,10 +410,13 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                 const to = result.destination.index;
                 const newPreviews = [...imagePreviews];
                 const newFiles = [...imageFiles];
+                const newUrls = [...imageUrls];
                 [newPreviews[from], newPreviews[to]] = [newPreviews[to], newPreviews[from]];
                 [newFiles[from], newFiles[to]] = [newFiles[to], newFiles[from]];
+                [newUrls[from], newUrls[to]] = [newUrls[to], newUrls[from]];
                 setImagePreviews(newPreviews);
                 setImageFiles(newFiles);
+                setImageUrls(newUrls);
               }}>
                 <Droppable droppableId="images" direction="horizontal">
                   {(provided) => (
