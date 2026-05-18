@@ -104,10 +104,11 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
                 isActive
-                  ? "bg-[rgb(var(--color-primary))] text-white shadow-sm"
+                  ? "text-white shadow-sm"
                   : "text-slate-500 hover:text-slate-900 hover:bg-[rgb(var(--color-primary-100))]",
                 collapsed && "justify-center px-2"
               )}
+              style={isActive ? { background: 'var(--color-primary-gradient, rgb(var(--color-primary)))' } : {}}
               title={collapsed ? item.label : undefined}
             >
               <Icon className="w-4.5 h-4.5 flex-shrink-0" style={{ width: 18, height: 18 }} />

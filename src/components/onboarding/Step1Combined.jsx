@@ -329,10 +329,8 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
               </div>
             </button>
 
-            {POPULAR_PALETTES.filter(p => !p.isGradient).map((palette) => {
+            {POPULAR_PALETTES.map((palette) => {
               const isSelected = selectedTheme === palette.name;
-              // lightest tone: light color at 30% opacity for hover bg
-              const hoverBg = palette.light + '4D'; // hex 4D ≈ 30% opacity
               return (
                 <button
                   key={palette.name}
@@ -340,8 +338,8 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                   onClick={() => handleThemeSelect(palette)}
                   title={palette.name}
                   style={{
-                    border: isSelected ? `2px solid ${palette.dark}` : '2px solid #e2e8f0',
-                    transition: 'border 0.15s, transform 0.15s, background 0.2s',
+                    border: isSelected ? `3px solid ${palette.dark}` : '2px solid #e2e8f0',
+                    transition: 'border 0.15s, transform 0.15s',
                   }}
                   onMouseEnter={(e) => {
                     if (!isSelected) {
@@ -357,19 +355,19 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                   }}
                   className="relative rounded-lg overflow-hidden aspect-square"
                 >
-                  <div className="w-full h-full flex flex-col">
-                    <div style={{ flex: '7', backgroundColor: palette.dark }} />
-                    <div style={{ flex: '3', backgroundColor: palette.light }} />
-                  </div>
+                  <div
+                    className="w-full h-full"
+                    style={{ background: `linear-gradient(180deg, ${palette.dark} 70%, ${palette.light} 100%)` }}
+                  />
                   {isSelected && (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="rounded-full p-2 shadow-lg" style={{ backgroundColor: palette.dark }}>
-                        <Check className="w-5 h-5 text-white" />
+                      <div className="rounded-full p-2 shadow-lg bg-white">
+                        <Check className="w-5 h-5" style={{ color: palette.dark }} />
                       </div>
                     </div>
                   )}
                   <div className="absolute bottom-2 left-2 right-2">
-                    <span className="text-[10px] sm:text-xs font-medium text-white px-2 py-0.5 rounded-full block text-center truncate" style={{ backgroundColor: palette.dark }}>
+                    <span className="text-[10px] sm:text-xs font-medium text-white px-2 py-0.5 rounded-full block text-center truncate" style={{ backgroundColor: palette.dark + 'cc' }}>
                       {palette.name}
                     </span>
                   </div>

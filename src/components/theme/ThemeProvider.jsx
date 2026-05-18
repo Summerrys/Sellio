@@ -46,15 +46,13 @@ export function ThemeProvider({ children, tenantId }) {
         .from('theme_configs')
         .upsert({
           tenant_id: tenantId,
-          color_set_name: colorSetName,
+          color_set_name: colorSetName || null,
           primary_color: colorSet.dark,
           accent_color: colorSet.light,
         }, { onConflict: 'tenant_id' });
       if (error) throw error;
-      return colorSet;
     },
-    onSuccess: (colorSet) => {
-      applyColorSet(colorSet);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['themeConfig'] });
       setPreviewTheme(null);
     },
