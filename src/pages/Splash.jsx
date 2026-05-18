@@ -45,7 +45,7 @@ export default function Splash() {
       >
         {/* Logo */}
         <img
-          src="https://cart.apptelier.sg/wp-content/uploads/2026/04/Logo_Sellio.png"
+          src="https://assets.apptelier.sg/sellio/Logo_Sellio.png"
           alt="Sellio"
           className="object-contain mb-10"
           style={{ height: 200 }}
