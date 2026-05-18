@@ -7,14 +7,17 @@ import ImageEditModal from '../onboarding/ImageEditModal';
 import { getSupabase } from '@/lib/supabaseClient';
 
 export default function AIProductAssistant({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange }) {
-  const [step, setStep] = useState(currentImageUrl ? 'image_only' : 'idle');
-  const [preview, setPreview] = useState(currentImageUrl || null);
-  const [result, setResult] = useState(null);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [editModalOpen, setEditModalOpen] = useState(false);
+   const [step, setStep] = useState(currentImageUrl ? 'image_only' : 'idle');
+   const [preview, setPreview] = useState(currentImageUrl || null);
+   const [additionalImages, setAdditionalImages] = useState([]);
+   const [result, setResult] = useState(null);
+   const [errorMsg, setErrorMsg] = useState('');
+   const [editModalOpen, setEditModalOpen] = useState(false);
+   const [addingImage, setAddingImage] = useState(false);
 
-  const fileInputRef = useRef(null);       // AI analysis upload
-  const plainImageInputRef = useRef(null); // "Add photo without AI"
+   const fileInputRef = useRef(null);       // AI analysis upload
+   const plainImageInputRef = useRef(null); // "Add photo without AI"
+   const addImageInputRef = useRef(null);   // Add additional images
 
   // Track previous value to detect real changes from parent (new product opened)
   const prevImageUrlRef = useRef(currentImageUrl);
@@ -182,6 +185,21 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
     setEditModalOpen(false);
   };
 
+  const handleAddImage = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setAddingImage(true);
+    try {
+      const publicUrl = await uploadToStorage(file);
+      setAdditionalImages(prev => [...prev, publicUrl]);
+    } catch (err) {
+      toast.error('Upload failed: ' + err.message);
+    } finally {
+      setAddingImage(false);
+    }
+  };
+
   const themeColor = 'var(--color-primary-gradient)';
   const hasImage = (step === 'applied' || step === 'image_only') && preview;
 
@@ -321,14 +339,11 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
                 </div>
               </div>
 
-              {/* "+" add more slot — multiple images coming soon */}
-              <button
-                type="button"
-                onClick={() => toast('Multiple images coming soon')}
-                className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center hover:border-slate-400 transition-colors col-span-1"
-              >
-                <Plus className="w-5 h-5 text-slate-400" />
-              </button>
+              {/* "+" add more slot for additional images */}
+              <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center hover:border-slate-400 transition-colors col-span-1 cursor-pointer">
+                {addingImage ? <Loader2 className="w-5 h-5 text-slate-400 animate-spin" /> : <Plus className="w-5 h-5 text-slate-400" />}
+                <input ref={addImageInputRef} type="file" accept="image/*" onChange={handleAddImage} className="hidden" disabled={addingImage} />
+              </label>
             </div>
           </div>
         )}
