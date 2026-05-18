@@ -217,8 +217,8 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const addItem = async () => {
     if (!selectedCategory || !itemName.trim() || !itemPrice.trim()) return;
     setUploading(true);
-    // Preserve all existing previews (http URLs already uploaded, data URLs for new ones)
-    let imageUrls = imagePreviews.filter(p => p.startsWith('http') || p.startsWith('data:'));
+    // Only preserve already-uploaded http URLs — never store base64 in the database
+    let imageUrls = imagePreviews.filter(p => p.startsWith('http'));
     try {
       if (imageFiles.length > 0) {
         const supabase = await getSupabase();

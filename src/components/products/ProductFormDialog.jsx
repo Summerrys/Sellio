@@ -7,7 +7,25 @@ import { X, ChevronDown, ChevronUp, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import db from '@/lib/db';
+import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../tenant/TenantContext';
+
+const toSlug = (str) => (str || 'product').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+const uploadImageIfBase64 = async (imageData, tenantId, productName) => {
+  if (!imageData || !imageData.startsWith('data:image')) return imageData;
+  const supabase = await getSupabase();
+  const match = imageData.match(/^data:([^;]+);base64,(.+)$/);
+  const mimeType = match?.[1] || 'image/jpeg';
+  const base64Data = match?.[2] || imageData.split(',')[1];
+  const bytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+  const ext = mimeType.split('/')[1] || 'jpg';
+  const filename = `${tenantId}/${Date.now()}-${toSlug(productName)}.${ext}`;
+  const { error } = await supabase.storage.from('product-images').upload(filename, bytes, { contentType: mimeType, upsert: true });
+  if (error) throw new Error(`Image upload failed: ${error.message}`);
+  const { data } = supabase.storage.from('product-images').getPublicUrl(filename);
+  return data.publicUrl;
+};
 
 import ProductFormBasic from './ProductFormBasic';
 import ProductFormPricing from './ProductFormPricing';
@@ -87,8 +105,10 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     if (!validate()) return;
     setSaving(true);
     try {
+      const image_url = await uploadImageIfBase64(formData.image_url, tenantId, formData.name);
       const payload = {
         ...formData,
+        image_url,
         tenant_id: tenantId,
         price: parseFloat(formData.price) || 0,
         cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
