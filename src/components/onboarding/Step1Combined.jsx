@@ -353,24 +353,28 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                       e.currentTarget.style.transform = 'scale(1)';
                     }
                   }}
-                  className="relative rounded-lg overflow-hidden aspect-square"
+                  className="relative rounded-lg overflow-hidden aspect-square flex flex-col"
                 >
-                  <div
-                    className="w-full h-full"
-                    style={{ background: `linear-gradient(180deg, ${palette.dark} 70%, ${palette.light} 100%)` }}
-                  />
+                  {/* Dark section — 40% */}
+                  <div className="relative flex-none" style={{ height: '40%', background: palette.dark }}>
+                    <div className="absolute bottom-1 left-0 right-0 flex justify-center">
+                      <span
+                        className="text-[9px] sm:text-[10px] font-medium text-white px-1.5 py-0.5 rounded-full truncate max-w-[90%] text-center"
+                        style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+                      >
+                        {palette.name}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Light section — 60% */}
+                  <div className="flex-1" style={{ background: palette.light }} />
                   {isSelected && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="rounded-full p-2 shadow-lg bg-white">
-                        <Check className="w-5 h-5" style={{ color: palette.dark }} />
+                    <div className="absolute inset-0 flex items-center justify-center" style={{ bottom: '60%' }}>
+                      <div className="rounded-full p-1.5 shadow-lg bg-white">
+                        <Check className="w-4 h-4" style={{ color: palette.dark }} />
                       </div>
                     </div>
                   )}
-                  <div className="absolute bottom-2 left-2 right-2">
-                    <span className="text-[10px] sm:text-xs font-medium text-white px-2 py-0.5 rounded-full block text-center truncate" style={{ backgroundColor: palette.dark + 'cc' }}>
-                      {palette.name}
-                    </span>
-                  </div>
                 </button>
               );
             })}

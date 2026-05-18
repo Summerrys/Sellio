@@ -101,14 +101,20 @@ function TenantSettingsContent() {
       <PageHeader title="Settings" description="Configure your business and manage roles" />
 
       <Tabs defaultValue="business">
-        <TabsList className="bg-white border border-slate-100 shadow-sm mb-6 w-full sm:w-auto">
-          <TabsTrigger value="business" className="data-[state=active]:bg-[rgb(var(--color-primary))] data-[state=active]:text-white rounded-lg gap-1.5 flex-1 sm:flex-none">
+        <style>{`
+          .settings-tabs [data-state=active] {
+            background: var(--color-primary-gradient, rgb(var(--color-primary))) !important;
+            color: white !important;
+          }
+        `}</style>
+        <TabsList className="settings-tabs bg-white border border-slate-100 shadow-sm mb-6 w-full sm:w-auto">
+          <TabsTrigger value="business" className="rounded-lg gap-1.5 flex-1 sm:flex-none">
             <Building2 className="w-4 h-4" /> <span className="hidden xs:inline">Business</span><span className="xs:hidden text-xs">Biz</span>
           </TabsTrigger>
-          <TabsTrigger value="theme" className="data-[state=active]:bg-[rgb(var(--color-primary))] data-[state=active]:text-white rounded-lg gap-1.5 flex-1 sm:flex-none">
+          <TabsTrigger value="theme" className="rounded-lg gap-1.5 flex-1 sm:flex-none">
             <Palette className="w-4 h-4" /> Theme
           </TabsTrigger>
-          <TabsTrigger value="roles" className="data-[state=active]:bg-[rgb(var(--color-primary))] data-[state=active]:text-white rounded-lg gap-1.5 flex-1 sm:flex-none">
+          <TabsTrigger value="roles" className="rounded-lg gap-1.5 flex-1 sm:flex-none">
             <Shield className="w-4 h-4" /> <span className="hidden xs:inline">Roles & Permissions</span><span className="xs:hidden text-xs">Roles</span>
           </TabsTrigger>
         </TabsList>

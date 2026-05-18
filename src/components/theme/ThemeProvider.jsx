@@ -64,13 +64,14 @@ export function ThemeProvider({ children, tenantId }) {
       applyColorSet(resolveColorSet(previewTheme));
       return;
     }
-    if (themeConfig?.primary_color && themeConfig?.accent_color) {
-      applyColorSet({ dark: themeConfig.primary_color, light: themeConfig.accent_color });
-    }
+    // Use saved theme if available, otherwise apply default gradient colors
+    const dark = themeConfig?.primary_color || DEFAULT_PRIMARY;
+    const light = themeConfig?.accent_color || DEFAULT_ACCENT;
+    applyColorSet({ dark, light });
   }, [previewTheme, themeConfig]);
 
   const value = {
-    currentTheme: themeConfig?.color_set_name || 'Default',
+    currentTheme: themeConfig?.color_set_name || null,
     // Immediately save + apply — no separate Apply button needed
     setTheme: (colorSetName) => saveThemeMutation.mutate(colorSetName),
     previewTheme: (colorSetName) => setPreviewTheme(colorSetName),
