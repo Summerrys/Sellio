@@ -1,17 +1,42 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, Upload, Loader2, Check, AlertCircle, X, Wand2, ImagePlus, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export default function AIProductAssistant({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange }) {
-  const [step, setStep] = useState('idle'); // idle | uploading | analyzing | done | error
-  const [preview, setPreview] = useState(null);
+  const initialStep = currentImageUrl ? 'image_only' : 'idle';
+  const [step, setStep] = useState(initialStep);
+  const [preview, setPreview] = useState(currentImageUrl || null);
   const [uploadedUrl, setUploadedUrl] = useState(null);
   const [result, setResult] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const fileInputRef = useRef(null);
   const plainImageInputRef = useRef(null);
+  const replaceInputRef = useRef(null);
+
+  // Sync when dialog opens with a new product (currentImageUrl from parent)
+  // Use a ref to track the previously seen value so we only react to real changes
+  const prevImageUrlRef = useRef(currentImageUrl);
+  useEffect(() => {
+    const prev = prevImageUrlRef.current;
+    prevImageUrlRef.current = currentImageUrl;
+
+    // Only act if the value actually changed
+    if (currentImageUrl === prev) return;
+
+    if (currentImageUrl) {
+      setStep('image_only');
+      setPreview(currentImageUrl);
+      setResult(null);
+      setErrorMsg('');
+    } else {
+      // Cleared externally (new blank product opened)
+      setStep('idle');
+      setPreview(null);
+      setResult(null);
+    }
+  }, [currentImageUrl]);
 
   const reset = () => {
     setStep('idle');
@@ -261,35 +286,60 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
         </div>
       )}
 
-      {/* Applied / image_only: show image preview with replace/remove */}
+      {/* Applied / image_only: Step3-style square image with Cover badge */}
       {(step === 'applied' || step === 'image_only') && preview && (
-        <div className="flex items-center gap-3 p-3">
-          <img src={preview} alt="product" className="w-16 h-16 rounded-lg object-cover flex-shrink-0 border border-slate-200" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-700">
-              {step === 'applied' ? 'AI image applied' : 'Product photo'}
-            </p>
-            <p className="text-xs text-slate-400">This will be saved as the product image</p>
-          </div>
-          <div className="flex gap-1 flex-shrink-0">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-              title="Replace"
+        <div className="p-3">
+          <div className="flex items-start gap-3">
+            {/* Square image — same as Step3 grid cell */}
+            <div
+              className="relative w-28 h-28 rounded-xl overflow-hidden border-2 group cursor-pointer flex-shrink-0"
+              style={{ borderColor: 'rgb(var(--color-primary))' }}
+              onClick={() => replaceInputRef.current?.click()}
             >
-              <Pencil className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => { onImageChange?.(''); reset(); }}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50"
-              title="Remove"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+              <img src={preview} alt="product" className="w-full h-full object-cover" />
+              {/* Cover badge — same as Step3 */}
+              <div
+                className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium"
+                style={{ background: 'var(--color-primary-gradient)' }}
+              >
+                Cover
+              </div>
+              {/* Hover overlay — same as Step3 */}
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                <Pencil className="w-5 h-5 text-white" />
+              </div>
+            </div>
+
+            {/* Label + controls */}
+            <div className="flex-1 min-w-0 pt-1">
+              <p className="text-sm font-medium text-slate-700">
+                {step === 'applied' ? 'AI image applied' : 'Product photo'}
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5">Click image or edit icon to replace</p>
+              <div className="flex gap-2 mt-3">
+                <button
+                  type="button"
+                  onClick={() => replaceInputRef.current?.click()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-600 hover:bg-slate-50 transition-colors"
+                  title="Replace"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  Replace
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { onImageChange?.(''); reset(); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-100 text-xs text-red-500 hover:bg-red-50 transition-colors"
+                  title="Remove"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Remove
+                </button>
+              </div>
+            </div>
           </div>
-          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+          {/* Hidden file input for replacing */}
+          <input ref={replaceInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
         </div>
       )}
     </div>
