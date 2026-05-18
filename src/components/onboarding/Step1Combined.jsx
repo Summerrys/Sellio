@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, UtensilsCrossed, ShoppingBag, Wrench, X, Edit3, Check, Palette, Pipette } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { getSupabase } from '@/lib/supabaseClient';
-import { generateThemeVariables } from '../theme/themeUtils';
+import { generateThemeVariables, COLOR_SETS as POPULAR_PALETTES } from '../theme/themeUtils';
 import { DEFAULT_COLORS } from '@/lib/themeConstants';
 import { cn } from '@/lib/utils';
 
@@ -28,16 +28,7 @@ const businessTypes = [
 
 const countries = ['Singapore', 'Malaysia'];
 
-const POPULAR_PALETTES = [
-  { name: 'Ocean Blue', dark: '#0369A1', light: '#E0F2FE' },
-  { name: 'Forest Green', dark: '#15803D', light: '#DCFCE7' },
-  { name: 'Sunset Orange', dark: '#EA580C', light: '#FFEDD5' },
-  { name: 'Royal Purple', dark: '#7E22CE', light: '#F3E8FF' },
-  { name: 'Berry Red', dark: '#DC2626', light: '#FEE2E2' },
-  { name: 'Teal Breeze', dark: '#0891B2', light: '#CFFAFE' },
-  { name: 'Indigo Sky', dark: '#4F46E5', light: '#E0E7FF' },
-  { name: 'Rose Garden', dark: '#BE185D', light: '#FFE4E6' },
-];
+
 
 export default function Step1Combined({ formData, updateFormData, nextStep }) {
   const [logoFile, setLogoFile] = React.useState(null);

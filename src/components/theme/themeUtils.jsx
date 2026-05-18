@@ -1,32 +1,13 @@
 // Color theme sets with light and dark anchor colors
 export const COLOR_SETS = [
-  // Core themes
-  { name: 'Indigo', light: '#a8c8fb', dark: '#0941a2' },
-  { name: 'Forest Green', light: '#6bd68a', dark: '#1a5119' },
-  { name: 'Sky Blue', light: '#7ed0ff', dark: '#005585' },
-  { name: 'Purple', light: '#d9bafc', dark: '#5628a4' },
-  { name: 'Pink Magenta', light: '#ffade3', dark: '#8b0356' },
-  { name: 'Orange Amber', light: '#ffb57d', dark: '#763301' },
-  
-  // Minimalist tones
-  { name: 'Sage Mint', light: '#b8d4a8', dark: '#2d5016' },
-  { name: 'Lavender Mist', light: '#d4c5e8', dark: '#4a3563' },
-  { name: 'Soft Peach', light: '#ffd4b3', dark: '#8b4513' },
-  { name: 'Dusty Blue', light: '#a8c5d9', dark: '#2c4a5e' },
-  { name: 'Stone Gray', light: '#b8bdc9', dark: '#3d4451' },
-  { name: 'Moss Green', light: '#a3c4a8', dark: '#3a5a40' },
-  { name: 'Warm Taupe', light: '#d4c4b3', dark: '#6d5d4b' },
-  { name: 'Slate Blue', light: '#b0c4de', dark: '#3f4f6b' },
-  
-  // Candy & Marshmallow tones
-  { name: 'Bubblegum', light: '#ffb3e0', dark: '#c7016d' },
-  { name: 'Lemon Drop', light: '#ffe680', dark: '#957000' },
-  { name: 'Mint Candy', light: '#8effd1', dark: '#00a86b' },
-  { name: 'Cotton Candy', light: '#dbc4ff', dark: '#6b5b95' },
-  { name: 'Vanilla Cream', light: '#f5e6d3', dark: '#8b7355' },
-  { name: 'Strawberry', light: '#ffccdb', dark: '#c41e3a' },
-  { name: 'Pistachio', light: '#d4e8c1', dark: '#5a7247' },
-  { name: 'Blueberry', light: '#c8d5f0', dark: '#4a5a8a' },
+  { name: 'Ocean Blue', dark: '#0369A1', light: '#E0F2FE' },
+  { name: 'Forest Green', dark: '#15803D', light: '#DCFCE7' },
+  { name: 'Sunset Orange', dark: '#EA580C', light: '#FFEDD5' },
+  { name: 'Royal Purple', dark: '#7E22CE', light: '#F3E8FF' },
+  { name: 'Berry Red', dark: '#DC2626', light: '#FEE2E2' },
+  { name: 'Teal Breeze', dark: '#0891B2', light: '#CFFAFE' },
+  { name: 'Indigo Sky', dark: '#4F46E5', light: '#E0E7FF' },
+  { name: 'Rose Garden', dark: '#BE185D', light: '#FFE4E6' },
 ];
 
 // Convert hex to RGB
