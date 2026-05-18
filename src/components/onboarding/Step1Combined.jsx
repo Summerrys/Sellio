@@ -132,6 +132,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
         logoUrl = publicUrl;
         
         localStorage.setItem('business_logo_url', logoUrl);
+        updateFormData({ logoUrl });
       } catch (error) {
         console.error('Logo upload failed:', error);
       }

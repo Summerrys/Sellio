@@ -251,7 +251,9 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         name: itemName,
         price: parseFloat(itemPrice),
         images: imageUrls,
+        image_url: imageUrls[0] || null,
       };
+      console.log('product being added:', newItem);
       updateFormData({ ...formData, products: [...(formData.products || []), newItem] });
     }
     setItemName('');
