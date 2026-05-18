@@ -297,7 +297,7 @@ function AppLayout({ children, currentPageName }) {
         )}
         style={{ paddingBottom: currentPageName !== 'Onboarding' ? 'calc(env(safe-area-inset-bottom, 0px) + 72px)' : undefined }}
       >
-        <div className="p-4 sm:p-6 lg:p-8 max-w-[1400px] overflow-x-hidden">
+        <div className="p-4 sm:p-6 lg:p-8 max-w-[1280px] mx-auto overflow-x-hidden">
           {children}
         </div>
       </main>
