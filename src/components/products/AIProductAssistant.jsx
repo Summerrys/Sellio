@@ -152,6 +152,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
       tags: result.suggested_tags || [],
       price: result.estimated_price || 0,
       image_url: preview || '',
+      suggested_category: result.suggested_category || '',
     };
     if (matchedCategory?.id) patch.category_id = matchedCategory.id;
     onApply(patch);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -25,6 +26,37 @@ const uploadImageIfBase64 = async (imageData, tenantId, productName) => {
   if (error) throw new Error(`Image upload failed: ${error.message}`);
   const { data } = supabase.storage.from('product-images').getPublicUrl(filename);
   return data.publicUrl;
+};
+
+const applyCategory = async (suggestedCategoryName, tenantId, setFormData) => {
+  if (!suggestedCategoryName?.trim()) return;
+  const supabase = await getSupabase();
+  
+  // Check if category exists
+  let { data: existing } = await supabase
+    .from('categories')
+    .select('id, name')
+    .eq('tenant_id', tenantId)
+    .ilike('name', suggestedCategoryName)
+    .maybeSingle();
+  
+  if (!existing) {
+    // Create it
+    const { data: newCat } = await supabase
+      .from('categories')
+      .insert({ 
+        tenant_id: tenantId, 
+        name: suggestedCategoryName, 
+        slug: toSlug(suggestedCategoryName), 
+        is_active: true 
+      })
+      .select()
+      .single();
+    existing = newCat;
+  }
+  
+  // Set category in form
+  setFormData(prev => ({ ...prev, category_id: existing.id }));
 };
 
 import ProductFormBasic from './ProductFormBasic';
@@ -197,7 +229,13 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
           {/* AI Assistant */}
            <AIProductAssistant
              ref={aiAssistantRef}
-             onApply={(data) => update(data)}
+             onApply={async (data) => {
+               update(data);
+               // Auto-create/apply category if AI suggested one
+               if (data.suggested_category && !data.category_id) {
+                 await applyCategory(data.suggested_category, tenantId, setFormData);
+               }
+             }}
              onImageChange={(url) => update({ image_url: url })}
              onAdditionalImagesChange={(images) => update({ images })}
              currentImageUrl={formData.image_url}
