@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import ImageEditModal from '../onboarding/ImageEditModal';
+import { getSupabase } from '@/lib/supabaseClient';
 
 export default function AIProductAssistant({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange }) {
   const [step, setStep] = useState(currentImageUrl ? 'image_only' : 'idle');
@@ -34,6 +35,25 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
     }
   }, [currentImageUrl]);
 
+  const uploadToStorage = async (file) => {
+    const supabase = await getSupabase();
+    const storagePath = `temp/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const { error } = await supabase.storage.from('product-images').upload(storagePath, file, { upsert: true });
+    if (error) throw new Error(error.message);
+    const { data } = supabase.storage.from('product-images').getPublicUrl(storagePath);
+    return data.publicUrl;
+  };
+
+  const uploadBase64ToStorage = async (dataUrl) => {
+    const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    const mimeType = match?.[1] || 'image/jpeg';
+    const base64Data = match?.[2] || dataUrl.split(',')[1];
+    const bytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+    const ext = mimeType.split('/')[1] || 'jpg';
+    const file = new File([bytes], `edited-${Date.now()}.${ext}`, { type: mimeType });
+    return uploadToStorage(file);
+  };
+
   const reset = () => {
     setStep('idle');
     setPreview(null);
@@ -50,38 +70,48 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
     setStep('uploading');
     setErrorMsg('');
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64 = reader.result;
-      setPreview(base64);
+    try {
+      // Read base64 for AI analysis + upload to storage in parallel
+      const base64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+      });
+
+      setPreview(base64); // temp preview while uploading
       setStep('analyzing');
 
-      try {
-        const res = await fetch('https://selliosg.base44.app/api/functions/analyzeProductImage', {
+      const [publicUrl, res] = await Promise.all([
+        uploadToStorage(file),
+        fetch('https://selliosg.base44.app/api/functions/analyzeProductImage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageBase64: base64 }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`);
-        if (!data.confidence || data.confidence < 0.3) {
-          throw new Error("Couldn't identify a product in this image. Try a clearer photo.");
-        }
-        setResult({
-          name: data.name,
-          description: data.description,
-          suggested_category: data.category,
-          estimated_price: data.price,
-          suggested_tags: data.tags || [],
-          confidence: data.confidence,
-        });
-        setStep('done');
-      } catch (err) {
-        setErrorMsg(err.message || 'AI analysis failed');
-        setStep('error');
+        }),
+      ]);
+
+      // Replace temp base64 preview with real URL
+      setPreview(publicUrl);
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`);
+      if (!data.confidence || data.confidence < 0.3) {
+        throw new Error("Couldn't identify a product in this image. Try a clearer photo.");
       }
-    };
-    reader.readAsDataURL(file);
+      setResult({
+        name: data.name,
+        description: data.description,
+        suggested_category: data.category,
+        estimated_price: data.price,
+        suggested_tags: data.tags || [],
+        confidence: data.confidence,
+        _imageUrl: publicUrl,
+      });
+      setStep('done');
+    } catch (err) {
+      setErrorMsg(err.message || 'AI analysis failed');
+      setStep('error');
+    }
   };
 
   const handleApply = () => {
@@ -96,6 +126,7 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
         matchedCategory = categories.find(c => words.some(w => w.length > 3 && c.name.toLowerCase().includes(w)));
       }
     }
+    // preview is already the Supabase public URL at this point
     const patch = {
       name: result.name,
       description: result.description,
@@ -105,34 +136,47 @@ export default function AIProductAssistant({ onApply, tenantId, businessType, cu
     };
     if (matchedCategory?.id) patch.category_id = matchedCategory.id;
     onApply(patch);
+    onImageChange?.(preview || '');
     toast.success('AI suggestions applied!');
     setStep('applied');
     setResult(null);
   };
 
-  const handlePlainImageSelect = (e) => {
+  const handlePlainImageSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result;
-      onImageChange?.(base64);
-      setPreview(base64);
-      setStep('image_only');
-    };
-    reader.readAsDataURL(file);
     e.target.value = '';
+    setStep('uploading');
+    try {
+      const publicUrl = await uploadToStorage(file);
+      onImageChange?.(publicUrl);
+      setPreview(publicUrl);
+      setStep('image_only');
+    } catch (err) {
+      toast.error('Upload failed: ' + err.message);
+      setStep('idle');
+    }
   };
 
   // Called when ImageEditModal saves — null means delete
-  const handleEditSave = (newDataUrl) => {
+  const handleEditSave = async (newDataUrl) => {
     if (newDataUrl === null) {
       onImageChange?.('');
       reset();
+    } else if (newDataUrl.startsWith('data:')) {
+      // Crop result — upload before storing
+      setStep('uploading');
+      try {
+        const publicUrl = await uploadBase64ToStorage(newDataUrl);
+        setPreview(publicUrl);
+        onImageChange?.(publicUrl);
+        setStep(prev => prev === 'applied' ? 'applied' : 'image_only');
+      } catch (err) {
+        toast.error('Upload failed: ' + err.message);
+      }
     } else {
       setPreview(newDataUrl);
       onImageChange?.(newDataUrl);
-      // Stay in current image state
       setStep(prev => prev === 'applied' ? 'applied' : 'image_only');
     }
     setEditModalOpen(false);

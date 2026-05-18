@@ -1,10 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload, Plus, Pencil, Trash2 } from 'lucide-react';
+import { X, Upload, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ImageEditModal from './ImageEditModal';
+import { getSupabase } from '@/lib/supabaseClient';
+import { toast } from 'sonner';
 
 export default function EditItemModal({ item, categories, themeColor, primaryColor, onSave, onClose }) {
   const [name, setName] = useState(item.name);
@@ -20,21 +22,59 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
     return all;
   });
   const [editingImageIdx, setEditingImageIdx] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleImageSelect = (e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreviews(prev => [...prev, reader.result]);
-      reader.readAsDataURL(file);
-    });
+  const uploadToStorage = async (file) => {
+    const supabase = await getSupabase();
+    const storagePath = `temp/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const { error } = await supabase.storage.from('product-images').upload(storagePath, file, { upsert: true });
+    if (error) throw new Error(error.message);
+    const { data } = supabase.storage.from('product-images').getPublicUrl(storagePath);
+    return data.publicUrl;
   };
 
-  const handleEditSave = (newDataUrl) => {
+  const uploadBase64ToStorage = async (dataUrl) => {
+    const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    const mimeType = match?.[1] || 'image/jpeg';
+    const base64Data = match?.[2] || dataUrl.split(',')[1];
+    const bytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+    const ext = mimeType.split('/')[1] || 'jpg';
+    const file = new File([bytes], `edited-${Date.now()}.${ext}`, { type: mimeType });
+    return uploadToStorage(file);
+  };
+
+  const handleImageSelect = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    e.target.value = '';
+    setUploading(true);
+    try {
+      for (const file of files) {
+        const url = await uploadToStorage(file);
+        setImagePreviews(prev => [...prev, url]);
+      }
+    } catch (err) {
+      toast.error('Upload failed: ' + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleEditSave = async (newDataUrl) => {
     if (newDataUrl === null) {
       setImagePreviews(prev => prev.filter((_, i) => i !== editingImageIdx));
+    } else if (newDataUrl.startsWith('data:')) {
+      // Crop result — upload before storing
+      setUploading(true);
+      try {
+        const url = await uploadBase64ToStorage(newDataUrl);
+        setImagePreviews(prev => prev.map((p, i) => i === editingImageIdx ? url : p));
+      } catch (err) {
+        toast.error('Upload failed: ' + err.message);
+      } finally {
+        setUploading(false);
+      }
     } else {
       setImagePreviews(prev => prev.map((p, i) => i === editingImageIdx ? newDataUrl : p));
     }
@@ -116,9 +156,9 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
                         ))}
                         {provided.placeholder}
                         <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors">
-                          <Plus className="w-5 h-5 text-slate-400" />
-                          <input type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
-                        </label>
+                           {uploading ? <Loader2 className="w-5 h-5 text-slate-400 animate-spin" /> : <Plus className="w-5 h-5 text-slate-400" />}
+                           <input type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" disabled={uploading} />
+                         </label>
                       </div>
                     )}
                   </Droppable>
@@ -164,11 +204,11 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
             </button>
             <button
               onClick={handleSave}
-              disabled={!category || !name.trim() || !price.trim()}
-              className="flex-1 py-2.5 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 hover:opacity-90"
+              disabled={!category || !name.trim() || !price.trim() || uploading}
+              className="flex-1 py-2.5 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 hover:opacity-90 flex items-center justify-center gap-2"
               style={{ background: themeColor }}
             >
-              Save Changes
+              {uploading ? <><Loader2 className="w-4 h-4 animate-spin" /> Uploading...</> : 'Save Changes'}
             </button>
           </div>
         </div>

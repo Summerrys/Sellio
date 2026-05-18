@@ -106,9 +106,14 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     setSaving(true);
     try {
       const image_url = await uploadImageIfBase64(formData.image_url, tenantId, formData.name);
+      // Also sanitize any base64 that may have snuck into the images array
+      const images = formData.images?.length
+        ? await Promise.all(formData.images.map(u => uploadImageIfBase64(u, tenantId, formData.name)))
+        : formData.images;
       const payload = {
         ...formData,
         image_url,
+        images,
         tenant_id: tenantId,
         price: parseFloat(formData.price) || 0,
         cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
