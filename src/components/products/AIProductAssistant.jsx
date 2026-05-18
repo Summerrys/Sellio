@@ -17,7 +17,7 @@ export const cleanupDeletedImages = async (componentRef) => {
   }
 };
 
-function AIProductAssistantComponent({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange, onAdditionalImagesChange, additionalImagesOnOpen }, ref) {
+function AIProductAssistantComponent({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange, onAdditionalImagesChange, additionalImagesOnOpen, onImageDelete }, ref) {
    const [step, setStep] = useState(currentImageUrl ? 'image_only' : 'idle');
    const [preview, setPreview] = useState(currentImageUrl || null);
    const [additionalImages, setAdditionalImages] = useState(additionalImagesOnOpen || []);
@@ -184,8 +184,11 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     const oldUrl = isCover ? preview : additionalImages[editingImageIndex];
 
     if (newDataUrl === null) {
-      // Delete — track for cleanup on product save
-      if (oldUrl) deletedImagesRef.current.push(oldUrl);
+      // Delete — track for cleanup and call onImageDelete immediately
+      if (oldUrl) {
+        deletedImagesRef.current.push(oldUrl);
+        onImageDelete?.(oldUrl);
+      }
 
       if (isCover) {
         onImageChange?.('');

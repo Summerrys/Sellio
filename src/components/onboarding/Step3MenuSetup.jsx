@@ -363,6 +363,33 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     nextStep();
   };
 
+  // Cleanup orphaned temp images when navigating away or canceling
+  const handleNavigateAway = async (callback) => {
+    const uploadedProductImages = new Set();
+    (formData.products || []).forEach(p => {
+      if (p.image_url) uploadedProductImages.add(p.image_url);
+      if (p.images?.length) p.images.forEach(url => uploadedProductImages.add(url));
+    });
+
+    // Delete any images in state that aren't part of saved products
+    const imagesToDelete = [];
+    imagePreviews.forEach(url => {
+      if (url && !uploadedProductImages.has(url)) {
+        imagesToDelete.push(url);
+      }
+    });
+
+    for (const url of imagesToDelete) {
+      try {
+        await deleteImageFromStorage(url);
+      } catch (err) {
+        console.error('Cleanup failed:', err);
+      }
+    }
+
+    callback();
+  };
+
   const { primary: primaryColor, secondary: secondaryColor, accent: accentColor } = getThemeCSSColors(formData);
   const chosenColor = formData?.theme ? (formData?.themeColors?.dark || formData?.customPrimary) : null;
   const themeColor = chosenColor || 'linear-gradient(to right, #3b82f6, #9333ea)';
@@ -704,7 +731,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       <div className="flex gap-2 sm:gap-3 pt-3 sm:pt-4">
         <Button
           type="button"
-          onClick={prevStep}
+          onClick={() => handleNavigateAway(prevStep)}
           variant="outline"
           className="h-10 sm:h-11 px-4 sm:px-6 gap-1 sm:gap-2 text-sm"
         >
@@ -712,7 +739,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         </Button>
         <Button
           type="button"
-          onClick={() => nextStep()}
+          onClick={() => handleNavigateAway(() => nextStep())}
           variant="outline"
           className="h-10 sm:h-11 px-3 sm:px-4 text-xs sm:text-sm text-slate-500"
         >

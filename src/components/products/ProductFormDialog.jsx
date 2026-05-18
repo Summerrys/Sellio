@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import React, { useState, useRef, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -10,6 +9,7 @@ import { cn } from '@/lib/utils';
 import db from '@/lib/db';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../tenant/TenantContext';
+import { useState, useRef, useEffect } from 'react';
 
 const toSlug = (str) => (str || 'product').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -66,6 +66,14 @@ import ProductFormVariants from './ProductFormVariants';
 import AIProductAssistant, { cleanupDeletedImages } from './AIProductAssistant';
 import { Pencil, Plus } from 'lucide-react';
 
+const deleteImageFromStorage = async (imageUrl) => {
+  if (!imageUrl || !imageUrl.includes('supabase')) return;
+  const supabase = await getSupabase();
+  const path = imageUrl.split('/object/public/product-images/')[1];
+  if (!path) return;
+  await supabase.storage.from('product-images').remove([path]);
+};
+
 const EMPTY_FORM = {
   name: '',
   sku: '',
@@ -100,22 +108,29 @@ function Section({ title, children, defaultOpen = true }) {
 }
 
 export default function ProductFormDialog({ open, onOpenChange, product, tenantId }) {
-   const { tenant } = useTenant();
-   const queryClient = useQueryClient();
-   const [formData, setFormData] = useState(EMPTY_FORM);
-   const [categories, setCategories] = useState([]);
-   const aiAssistantRef = useRef(null);
-   const [saving, setSaving] = useState(false);
-   const [errors, setErrors] = useState({});
-   const [confirmDelete, setConfirmDelete] = useState(false);
-   const [deleting, setDeleting] = useState(false);
+    const { tenant } = useTenant();
+    const queryClient = useQueryClient();
+    const [formData, setFormData] = useState(EMPTY_FORM);
+    const [categories, setCategories] = useState([]);
+    const aiAssistantRef = useRef(null);
+    const uploadedImagesRef = useRef(new Set());
+    const [saving, setSaving] = useState(false);
+    const [errors, setErrors] = useState({});
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     if (product) {
       setFormData({ ...EMPTY_FORM, ...product });
+      // For edit mode, track existing images as already saved
+      uploadedImagesRef.current = new Set(product.image_url ? [product.image_url] : []);
+      if (product.images?.length) {
+        product.images.forEach(url => uploadedImagesRef.current.add(url));
+      }
     } else {
       setFormData(EMPTY_FORM);
+      uploadedImagesRef.current = new Set();
     }
     setErrors({});
   }, [open, product]);
@@ -186,6 +201,32 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     }
   };
 
+  const handleCancel = async () => {
+    // Clean up any images uploaded during this session
+    const imagesToDelete = [];
+    if (formData.image_url && !uploadedImagesRef.current.has(formData.image_url)) {
+      imagesToDelete.push(formData.image_url);
+    }
+    if (formData.images?.length) {
+      formData.images.forEach(url => {
+        if (!uploadedImagesRef.current.has(url)) {
+          imagesToDelete.push(url);
+        }
+      });
+    }
+    
+    // Delete new images from storage
+    for (const url of imagesToDelete) {
+      try {
+        await deleteImageFromStorage(url);
+      } catch (err) {
+        console.error('Cleanup failed:', err);
+      }
+    }
+    
+    onOpenChange(false);
+  };
+
 
 
   if (!open) return null;
@@ -215,7 +256,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
               <Label className="text-sm text-slate-600">{formData.is_active ? 'Active' : 'Inactive'}</Label>
             </div>
             <button
-              onClick={() => onOpenChange(false)}
+              onClick={handleCancel}
               className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
             >
               <X className="w-4 h-4" />
@@ -231,13 +272,29 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
              ref={aiAssistantRef}
              onApply={async (data) => {
                update(data);
+               // Track new image URLs
+               if (data.image_url) uploadedImagesRef.current.add(data.image_url);
+               if (data.images?.length) {
+                 data.images.forEach(url => uploadedImagesRef.current.add(url));
+               }
                // Auto-create/apply category if AI suggested one
                if (data.suggested_category && !data.category_id) {
                  await applyCategory(data.suggested_category, tenantId, setFormData);
                }
              }}
-             onImageChange={(url) => update({ image_url: url })}
-             onAdditionalImagesChange={(images) => update({ images })}
+             onImageChange={(url) => {
+               if (url) uploadedImagesRef.current.add(url);
+               update({ image_url: url });
+             }}
+             onAdditionalImagesChange={(images) => {
+               if (images?.length) {
+                 images.forEach(url => uploadedImagesRef.current.add(url));
+               }
+               update({ images });
+             }}
+             onImageDelete={async (url) => {
+               if (url) await deleteImageFromStorage(url);
+             }}
              currentImageUrl={formData.image_url}
              additionalImagesOnOpen={product?.images || []}
              tenantId={tenantId}
@@ -282,24 +339,24 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         {/* Footer */}
         <div className="flex gap-3 px-4 py-4 border-t border-slate-100 flex-shrink-0">
           {product?.id ? (
-            <Button
-              variant="outline"
-              className={cn("flex-shrink-0 transition-all", confirmDelete ? "border-red-500 bg-red-50 text-red-600 hover:bg-red-100" : "text-red-500 border-red-200 hover:bg-red-50")}
-              onClick={handleDelete}
-              disabled={deleting}
-            >
-              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              {confirmDelete ? 'Confirm?' : ''}
-            </Button>
+           <Button
+             variant="outline"
+             className={cn("flex-shrink-0 transition-all", confirmDelete ? "border-red-500 bg-red-50 text-red-600 hover:bg-red-100" : "text-red-500 border-red-200 hover:bg-red-50")}
+             onClick={handleDelete}
+             disabled={deleting}
+           >
+             {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+             {confirmDelete ? 'Confirm?' : ''}
+           </Button>
           ) : (
-            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
+           <Button variant="outline" className="flex-1" onClick={handleCancel}>
+             Cancel
+           </Button>
           )}
           {product?.id && (
-            <Button variant="outline" className="flex-1" onClick={() => { setConfirmDelete(false); onOpenChange(false); }}>
-              Cancel
-            </Button>
+           <Button variant="outline" className="flex-1" onClick={() => { setConfirmDelete(false); handleCancel(); }}>
+             Cancel
+           </Button>
           )}
           <Button
             className="flex-1 text-white"
