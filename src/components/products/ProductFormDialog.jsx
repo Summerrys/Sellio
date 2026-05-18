@@ -278,40 +278,40 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
 
           {/* AI Assistant */}
-           <AIProductAssistant
-             ref={aiAssistantRef}
-             onApply={async (data) => {
-               update(data);
-               // Track new image URLs
-               if (data.image_url) uploadedImagesRef.current.add(data.image_url);
-               if (data.images?.length) {
-                 data.images.forEach(url => uploadedImagesRef.current.add(url));
-               }
-               // Auto-create/apply category if AI suggested one
-               if (data.suggested_category && !data.category_id) {
-                 await applyCategory(data.suggested_category, tenantId, setFormData);
-               }
-             }}
-             onImageChange={(url) => {
-               if (url) uploadedImagesRef.current.add(url);
-               update({ image_url: url });
-             }}
-             onAdditionalImagesChange={(images) => {
-               if (images?.length) {
-                 images.forEach(url => uploadedImagesRef.current.add(url));
-               }
-               update({ images });
-             }}
-             onImageDelete={async (url) => {
-               if (url) await deleteImageFromStorage(url);
-             }}
-             currentImageUrl={formData.image_url}
-             additionalImagesOnOpen={product?.images || []}
-             tenantId={tenantId}
-             businessType={tenant?.business_type}
-             currency={tenant?.currency || 'SGD'}
-             categories={categories}
-           />
+          <AIProductAssistant
+            ref={aiAssistantRef}
+            onApply={async (data) => {
+              update(data);
+              // Track new image URLs
+              if (data.image_url) uploadedImagesRef.current.add(data.image_url);
+              if (data.images?.length) {
+                data.images.forEach(url => uploadedImagesRef.current.add(url));
+              }
+            }}
+            onImageChange={(url) => {
+              if (url) uploadedImagesRef.current.add(url);
+              update({ image_url: url });
+            }}
+            onAdditionalImagesChange={(images) => {
+              if (images?.length) {
+                images.forEach(url => uploadedImagesRef.current.add(url));
+              }
+              update({ images });
+            }}
+            onImageDelete={async (url) => {
+              if (url) await deleteImageFromStorage(url);
+            }}
+            onCategoriesRefresh={async () => {
+              const updated = await db.entities.Category.filter({ tenant_id: tenantId });
+              setCategories(updated);
+            }}
+            currentImageUrl={formData.image_url}
+            additionalImagesOnOpen={product?.images || []}
+            tenantId={tenantId}
+            businessType={tenant?.business_type}
+            currency={tenant?.currency || 'SGD'}
+            categories={categories}
+          />
 
 
 

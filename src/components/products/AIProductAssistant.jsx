@@ -17,7 +17,7 @@ export const cleanupDeletedImages = async (componentRef) => {
   }
 };
 
-function AIProductAssistantComponent({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange, onAdditionalImagesChange, additionalImagesOnOpen, onImageDelete }, ref) {
+function AIProductAssistantComponent({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange, onAdditionalImagesChange, additionalImagesOnOpen, onImageDelete, onCategoriesRefresh }, ref) {
    const [step, setStep] = useState(currentImageUrl ? 'image_only' : 'idle');
    const [preview, setPreview] = useState(currentImageUrl || null);
    const [additionalImages, setAdditionalImages] = useState(additionalImagesOnOpen || []);
@@ -133,10 +133,12 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     }
   };
 
-  const handleApply = () => {
+  const handleApply = async () => {
     if (!result) return;
     const suggested = (result.suggested_category || '').toLowerCase().trim();
     let matchedCategory = null;
+    let categoryId = null;
+
     if (suggested && categories?.length) {
       matchedCategory = categories.find(c => c.name.toLowerCase().trim() === suggested);
       if (!matchedCategory) matchedCategory = categories.find(c => c.name.toLowerCase().includes(suggested) || suggested.includes(c.name.toLowerCase()));
@@ -145,6 +147,36 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
         matchedCategory = categories.find(c => words.some(w => w.length > 3 && c.name.toLowerCase().includes(w)));
       }
     }
+
+    if (matchedCategory?.id) {
+      categoryId = matchedCategory.id;
+    } else if (suggested) {
+      // Create new category
+      try {
+        const supabase = await (await import('@/lib/supabaseClient')).getSupabase();
+        const slug = suggested.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const { data: newCat, error } = await supabase
+          .from('categories')
+          .insert({
+            tenant_id: tenantId,
+            name: result.suggested_category, // Use original case
+            slug,
+            is_active: true
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        categoryId = newCat.id;
+
+        // Refresh categories list in parent
+        if (onCategoriesRefresh) await onCategoriesRefresh();
+      } catch (err) {
+        console.error('Failed to create category:', err);
+        toast.error('Could not create category');
+      }
+    }
+
     // preview is already the Supabase public URL at this point
     const patch = {
       name: result.name,
@@ -154,7 +186,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
       image_url: preview || '',
       suggested_category: result.suggested_category || '',
     };
-    if (matchedCategory?.id) patch.category_id = matchedCategory.id;
+    if (categoryId) patch.category_id = categoryId;
     onApply(patch);
     onImageChange?.(preview || '');
     toast.success('AI suggestions applied!');
