@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit2, AlertCircle, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import PriceDisplay from './PriceDisplay';
 
 export default function ProductGrid({ products, onEdit, currency = 'SGD' }) {
   return (
@@ -58,7 +59,11 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD' }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-lg font-bold text-[rgb(var(--color-primary))]">
-                  {currency} {product.price?.toFixed(2)}
+                  <PriceDisplay
+                    price={product.price}
+                    compareAtPrice={product.compare_at_price}
+                    currency={currency}
+                  />
                 </p>
                 {product.cost_price && (
                   <p className="text-xs text-slate-400">

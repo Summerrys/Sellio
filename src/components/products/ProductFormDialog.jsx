@@ -59,6 +59,7 @@ const applyCategory = async (suggestedCategoryName, tenantId, setFormData) => {
 };
 
 import ProductFormBasic from './ProductFormBasic';
+import PriceDisplay from './PriceDisplay';
 import ProductFormPricing from './ProductFormPricing';
 import ProductFormInventory from './ProductFormInventory';
 import ProductFormVariants from './ProductFormVariants';
@@ -263,9 +264,20 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
       )}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100 flex-shrink-0">
-          <h2 className="text-base font-semibold text-slate-900">
-            {product?.id ? 'Edit Product' : 'New Product'}
-          </h2>
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">
+              {product?.id ? 'Edit Product' : 'New Product'}
+            </h2>
+            {product?.id && formData.price > 0 && (
+              <p className="text-sm mt-0.5">
+                <PriceDisplay
+                  price={formData.price}
+                  compareAtPrice={formData.compare_at_price}
+                  currency={tenant?.currency || 'SGD'}
+                />
+              </p>
+            )}
+          </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <Switch

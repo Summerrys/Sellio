@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Minus } from 'lucide-react';
+import PriceDisplay from '../products/PriceDisplay';
 
 export default function ProductCard({ product, onAddToCart, currency }) {
   const [quantity, setQuantity] = useState(1);
@@ -37,9 +38,13 @@ export default function ProductCard({ product, onAddToCart, currency }) {
         {/* Product Info */}
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-slate-900 text-lg mb-1">{product.name}</h3>
-          <p className="text-[var(--accent)] font-bold text-lg mb-2">
-            {currency} {product.price.toFixed(2)}
-          </p>
+          <div className="text-[var(--accent)] font-bold text-lg mb-2">
+            <PriceDisplay
+              price={product.price}
+              compareAtPrice={product.compare_at_price}
+              currency={currency}
+            />
+          </div>
           
           {product.description && (
             <div>
