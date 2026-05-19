@@ -338,15 +338,15 @@ function AppLayout({ children, currentPageName }) {
             <button
               onClick={() => setSellSheetOpen(true)}
               className="flex flex-col items-center gap-0.5 -mt-5"
-              style={{ background: 'var(--color-primary-gradient)' }}
+              style={{ outline: 'none' }}
             >
               <div
-                className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg"
+                className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg"
                 style={{ background: 'rgb(var(--color-primary))' }}
               >
                 <Plus className="w-7 h-7 text-white" strokeWidth={2.5} />
               </div>
-              <span className="text-xs font-semibold" style={{ color: 'rgb(var(--color-primary-gradient))' }}>Sell</span>
+              <span className="text-xs font-semibold" style={{ color: 'rgb(var(--color-primary))' }}>Sell</span>
             </button>
           </div>
 
