@@ -14,7 +14,7 @@ function SwatchCard({ colorSet, isSelected, onSelect, disabled }) {
       title={colorSet.name}
       style={{
         border: isSelected ? `3px solid ${bc}` : '2px solid #e2e8f0',
-        transition: 'border 0.15s, transform 0.15s'
+        transition: 'border 0.15s, transform 0.15s',
       }}
       className="relative rounded-xl overflow-hidden"
       onMouseEnter={(e) => {
@@ -28,8 +28,8 @@ function SwatchCard({ colorSet, isSelected, onSelect, disabled }) {
           e.currentTarget.style.border = '2px solid #e2e8f0';
           e.currentTarget.style.transform = 'scale(1)';
         }
-      }}>
-      
+      }}
+    >
       {/* Swatch: 40% dark on top, 60% light on bottom */}
       <div className="aspect-[4/3] flex flex-col">
         {/* Dark section — 40% */}
@@ -38,8 +38,8 @@ function SwatchCard({ colorSet, isSelected, onSelect, disabled }) {
           <div className="absolute bottom-1.5 left-0 right-0 flex justify-center">
             <span
               className="text-[10px] sm:text-xs font-medium text-white px-2 py-0.5 rounded-full truncate max-w-[90%] text-center"
-              style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
-              
+              style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+            >
               {colorSet.name}
             </span>
           </div>
@@ -49,15 +49,15 @@ function SwatchCard({ colorSet, isSelected, onSelect, disabled }) {
       </div>
 
       {/* Checkmark overlay */}
-      {isSelected &&
-      <div className="absolute inset-0 flex items-center justify-center" style={{ top: '20%', bottom: '60%' }}>
+      {isSelected && (
+        <div className="absolute inset-0 flex items-center justify-center" style={{ top: '20%', bottom: '60%' }}>
           <div className="rounded-full p-2 shadow-lg bg-white">
             <Check className="w-5 h-5" style={{ color: bc }} />
           </div>
         </div>
-      }
-    </button>);
-
+      )}
+    </button>
+  );
 }
 
 /* ── compact swatch ─────────────────────────────────────────────── */
@@ -70,7 +70,7 @@ function CompactSwatch({ colorSet, isSelected, onSelect, disabled }) {
       title={colorSet.name}
       style={{
         border: isSelected ? `3px solid ${bc}` : '2px solid #e2e8f0',
-        transition: 'border 0.15s, transform 0.15s'
+        transition: 'border 0.15s, transform 0.15s',
       }}
       className="relative h-12 rounded-lg overflow-hidden flex flex-col"
       onMouseEnter={(e) => {
@@ -84,19 +84,19 @@ function CompactSwatch({ colorSet, isSelected, onSelect, disabled }) {
           e.currentTarget.style.border = '2px solid #e2e8f0';
           e.currentTarget.style.transform = 'scale(1)';
         }
-      }}>
-      
+      }}
+    >
       <div className="flex-none" style={{ height: '40%', background: colorSet.dark }} />
       <div className="flex-1" style={{ background: colorSet.light }} />
-      {isSelected &&
-      <div className="absolute inset-0 flex items-center justify-center">
+      {isSelected && (
+        <div className="absolute inset-0 flex items-center justify-center">
           <div className="rounded-full p-1 shadow bg-white">
             <Check className="w-3 h-3" style={{ color: bc }} />
           </div>
         </div>
-      }
-    </button>);
-
+      )}
+    </button>
+  );
 }
 
 /* ── main export ────────────────────────────────────────────────── */
@@ -116,41 +116,41 @@ export default function ThemeSelector({ variant = 'full' }) {
           <span>Color Theme</span>
         </div>
         <div className="grid grid-cols-4 gap-2">
-          {COLOR_SETS.map((colorSet) =>
-          <CompactSwatch
-            key={colorSet.name}
-            colorSet={colorSet}
-            isSelected={currentTheme === colorSet.name}
-            onSelect={handleSelect}
-            disabled={isSaving} />
-
-          )}
+          {COLOR_SETS.map((colorSet) => (
+            <CompactSwatch
+              key={colorSet.name}
+              colorSet={colorSet}
+              isSelected={currentTheme === colorSet.name}
+              onSelect={handleSelect}
+              disabled={isSaving}
+            />
+          ))}
         </div>
         {isSaving && <p className="text-xs text-slate-500">Saving theme…</p>}
-      </div>);
-
+      </div>
+    );
   }
 
   return (
     <Card className="p-6">
       <div className="space-y-4">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-1">Choose Your Color Theme</h3>
-          
+          <h3 className="text-lg font-semibold text-slate-900 mb-1">Choose Your Brand Colors</h3>
+          <p className="text-sm text-slate-500">Click a swatch to apply it. Click again to revert to default.</p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {COLOR_SETS.map((colorSet) =>
-          <SwatchCard
-            key={colorSet.name}
-            colorSet={colorSet}
-            isSelected={currentTheme === colorSet.name}
-            onSelect={handleSelect}
-            disabled={isSaving} />
-
-          )}
+          {COLOR_SETS.map((colorSet) => (
+            <SwatchCard
+              key={colorSet.name}
+              colorSet={colorSet}
+              isSelected={currentTheme === colorSet.name}
+              onSelect={handleSelect}
+              disabled={isSaving}
+            />
+          ))}
         </div>
         {isSaving && <p className="text-sm text-slate-500 pt-2">Saving…</p>}
       </div>
-    </Card>);
-
+    </Card>
+  );
 }
