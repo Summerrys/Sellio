@@ -346,7 +346,7 @@ function AppLayout({ children, currentPageName }) {
               >
                 <Plus className="w-7 h-7 text-white" strokeWidth={2.5} />
               </div>
-              <span className="text-xs font-semibold" style={{ color: 'rgb(var(--color-primary))' }}>Sell</span>
+              <span className="text-xs font-semibold" style={{ color: 'rgb(var(--color-primary-gradient))' }}>Sell</span>
             </button>
           </div>
 
