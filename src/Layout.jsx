@@ -344,7 +344,7 @@ function AppLayout({ children, currentPageName }) {
                 className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg"
                 style={{ background: 'var(--color-primary-gradient)' }}
               >
-                <Plus className="w-7 h-7 text-white" strokeWidth={2.5} />
+                <Plus className="w-5 h-5 text-white" strokeWidth={2.5} />
               </div>
               <span className="text-xs font-semibold" style={{ color: 'rgb(var(--color-primary))' }}>Sell</span>
             </button>
