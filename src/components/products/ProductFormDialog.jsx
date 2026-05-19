@@ -148,7 +148,20 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     db.entities.Category.filter({ tenant_id: tenantId }).then(setCategories).catch(() => {});
   }, [tenantId, open]);
 
-  const update = (patch) => setFormData(prev => ({ ...prev, ...patch }));
+  const generateSku = (name) => {
+    const base = name.toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 8);
+    const suffix = Math.random().toString(36).slice(2, 5).toUpperCase();
+    return `${base}-${suffix}`;
+  };
+
+  const update = (patch) => setFormData(prev => {
+    const next = { ...prev, ...patch };
+    // Auto-generate SKU when name changes and SKU is still empty
+    if (patch.name !== undefined && !prev.sku) {
+      next.sku = patch.name.trim() ? generateSku(patch.name.trim()) : '';
+    }
+    return next;
+  });
 
   const validate = () => {
     const errs = {};
