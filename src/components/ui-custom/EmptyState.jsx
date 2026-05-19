@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import RequirePermission from '../components/auth/RequirePermission';
+import RequirePermission from '@/components/auth/RequirePermission';
 
 export default function EmptyState({ icon: Icon, title, description, actionLabel, onAction }) {
   return (
