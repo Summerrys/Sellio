@@ -103,6 +103,9 @@ Deno.serve(async (req) => {
     }
 
     // ── Generate tenant UUID upfront (reuse pendingTenantId if provided, so temp storage paths match) ──
+    if (!formData.pendingTenantId) {
+      console.warn('⚠️ pendingTenantId not provided — temp image paths may not match');
+    }
     const newTenantId = formData.pendingTenantId || crypto.randomUUID();
     console.log('→ newTenantId:', newTenantId);
 
@@ -111,17 +114,36 @@ Deno.serve(async (req) => {
     console.log('→ Step 1: logo upload...');
     if (formData.logoBase64 || formData.logoFile) {
       try {
-        const base64Data = formData.logoBase64 || formData.logoFile;
-        const base64Clean = base64Data.replace(/^data:[^;]+;base64,/, '');
-        const bytes = Uint8Array.from(atob(base64Clean), c => c.charCodeAt(0));
-        const path = `${newTenantId}/logo.png`;
-        const { error } = await supabase.storage
-          .from('tenant-logos')
-          .upload(path, bytes, { contentType: 'image/png', upsert: true });
-        if (error) throw error;
-        const { data: urlData } = supabase.storage.from('tenant-logos').getPublicUrl(path);
-        logoUrl = urlData.publicUrl;
-        console.log('✓ Step 1 logo uploaded:', logoUrl);
+        const tempLogoPath = `temp/onboarding/${newTenantId}/logo/logo.png`;
+        const permanentLogoPath = `${newTenantId}/logo/logo.png`;
+
+        const { error: copyError } = await supabase.storage
+          .from('product-images')
+          .copy(tempLogoPath, permanentLogoPath);
+
+        if (!copyError) {
+          await supabase.storage.from('product-images').remove([tempLogoPath]);
+          const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(permanentLogoPath);
+          logoUrl = urlData.publicUrl;
+          console.log('✓ Step 1 logo moved from temp:', logoUrl);
+        } else {
+          // Fallback: re-upload from base64
+          console.warn('Step 1 logo temp copy failed, falling back to base64:', copyError.message);
+          const base64Data = formData.logoBase64 || formData.logoFile;
+          const base64Clean = base64Data.replace(/^data:[^;]+;base64,/, '');
+          const bytes = Uint8Array.from(atob(base64Clean), c => c.charCodeAt(0));
+          const { error: uploadError } = await supabase.storage
+            .from('product-images')
+            .upload(permanentLogoPath, bytes, { contentType: 'image/png', upsert: true });
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(permanentLogoPath);
+            logoUrl = urlData.publicUrl;
+            console.log('✓ Step 1 logo uploaded via base64 fallback:', logoUrl);
+          } else {
+            console.warn('Step 1 logo base64 fallback also failed:', uploadError.message);
+            logoUrl = formData.logoUrl || null;
+          }
+        }
       } catch (e) {
         console.warn('Step 1 logo upload warning (non-fatal):', e.message);
         logoUrl = formData.logoUrl || null;
@@ -131,28 +153,48 @@ Deno.serve(async (req) => {
       console.log('✓ Step 1 logo skipped (no file), using:', logoUrl);
     }
 
-    // ── Step 2: Upload product images if provided as base64 ──────────────────
+    // ── Step 2: Move product images from temp to permanent storage ───────────
     const productImageMap = {};
     console.log('→ Step 2: product image uploads...');
     if (formData.products?.length > 0) {
       for (const product of formData.products) {
-        if (product.imageBase64) {
-          try {
-            const base64Clean = product.imageBase64.replace(/^data:[^;]+;base64,/, '');
-            const bytes = Uint8Array.from(atob(base64Clean), c => c.charCodeAt(0));
-            const filename = `${toSlug(product.name)}.png`;
-            const path = `${newTenantId}/${filename}`;
-            const { error } = await supabase.storage
-              .from('product-images')
-              .upload(path, bytes, { contentType: 'image/png', upsert: true });
-            if (error) throw error;
-            const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
+        const slug = toSlug(product.name);
+        const tempPath = `temp/onboarding/${newTenantId}/products/${slug}.png`;
+        const permanentPath = `${newTenantId}/products/${slug}.png`;
+
+        try {
+          const { error: copyError } = await supabase.storage
+            .from('product-images')
+            .copy(tempPath, permanentPath);
+
+          if (!copyError) {
+            await supabase.storage.from('product-images').remove([tempPath]);
+            const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(permanentPath);
             productImageMap[product.name] = urlData.publicUrl;
-          } catch (e) {
-            console.warn(`Step 2 product image warning for "${product.name}" (non-fatal):`, e.message);
-            productImageMap[product.name] = product.image_url || null;
+            console.log(`✓ Step 2 product image moved: ${product.name}`);
+          } else {
+            // Fallback: base64 upload if temp file doesn't exist
+            console.warn(`Step 2 temp copy failed for "${product.name}": ${copyError.message}`);
+            if (product.imageBase64) {
+              const base64Clean = product.imageBase64.replace(/^data:[^;]+;base64,/, '');
+              const bytes = Uint8Array.from(atob(base64Clean), c => c.charCodeAt(0));
+              const { error: uploadError } = await supabase.storage
+                .from('product-images')
+                .upload(permanentPath, bytes, { contentType: 'image/png', upsert: true });
+              if (!uploadError) {
+                const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(permanentPath);
+                productImageMap[product.name] = urlData.publicUrl;
+                console.log(`✓ Step 2 product image uploaded via base64 fallback: ${product.name}`);
+              } else {
+                console.warn(`Step 2 base64 fallback failed for "${product.name}":`, uploadError.message);
+                productImageMap[product.name] = product.image_url || null;
+              }
+            } else {
+              productImageMap[product.name] = product.image_url || null;
+            }
           }
-        } else {
+        } catch (e) {
+          console.warn(`Step 2 product image warning for "${product.name}" (non-fatal):`, e.message);
           productImageMap[product.name] = product.image_url || null;
         }
       }
