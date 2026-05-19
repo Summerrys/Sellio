@@ -23,8 +23,10 @@ import {
   Menu,
   X,
   QrCode,
-  ArrowLeft
+  ArrowLeft,
+  Plus
 } from 'lucide-react';
+import SellActionSheet from './components/nav/SellActionSheet';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { base44 } from '@/api/base44Client';
@@ -164,6 +166,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
 function AppLayout({ children, currentPageName }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sellSheetOpen, setSellSheetOpen] = useState(false);
   const { appUser: customUser, clearAppUser } = useAppUser();
   const { user, tenant, isSuperAdmin, isLoading, hasPermission } = useTenant();
   const navigate = useNavigate();
@@ -308,9 +311,47 @@ function AppLayout({ children, currentPageName }) {
           className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-30 flex items-stretch"
           style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
+          {/* Left: Dashboard, Orders */}
           {[
             { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
             { label: 'Orders', icon: ClipboardList, page: 'Orders' },
+          ].map(({ label, icon: Icon, page }) => {
+            const isActive = currentPageName === page;
+            return (
+              <Link
+                key={page}
+                to={createPageUrl(page)}
+                onClick={() => handleTabNavigate(page, isActive)}
+                className={cn(
+                  "flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors min-h-[60px]",
+                  isActive ? "text-[rgb(var(--color-primary))]" : "text-slate-400"
+                )}
+              >
+                <Icon className="w-5 h-5" />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
+
+          {/* Center: Sell FAB */}
+          <div className="flex-1 flex flex-col items-center justify-end pb-1" style={{ minHeight: 60 }}>
+            <button
+              onClick={() => setSellSheetOpen(true)}
+              className="flex flex-col items-center gap-0.5 -mt-5"
+              style={{ outline: 'none' }}
+            >
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg"
+                style={{ background: 'rgb(var(--color-primary))' }}
+              >
+                <Plus className="w-7 h-7 text-white" strokeWidth={2.5} />
+              </div>
+              <span className="text-xs font-semibold" style={{ color: 'rgb(var(--color-primary))' }}>Sell</span>
+            </button>
+          </div>
+
+          {/* Right: Products, Settings */}
+          {[
             { label: 'Products', icon: ShoppingBag, page: 'Products' },
             { label: 'Settings', icon: Settings, page: 'TenantSettings' },
           ].map(({ label, icon: Icon, page }) => {
@@ -332,6 +373,13 @@ function AppLayout({ children, currentPageName }) {
           })}
         </nav>
       )}
+
+      {/* Sell Action Sheet */}
+      <SellActionSheet
+        open={sellSheetOpen}
+        onClose={() => setSellSheetOpen(false)}
+        onNewProduct={() => navigate(createPageUrl('Products') + '?new=1')}
+      />
 
       <RoleSwitcher />
     </div>

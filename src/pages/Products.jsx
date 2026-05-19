@@ -23,8 +23,11 @@ export default function Products() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [editingProduct, setEditingProduct] = useState(null);
-  const [showDialog, setShowDialog] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+
+  // Auto-open new product dialog when navigated from Sell button (?new=1)
+  const urlParams = new URLSearchParams(window.location.search);
+  const [showDialog, setShowDialog] = useState(urlParams.get('new') === '1');
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products', tenantId],
