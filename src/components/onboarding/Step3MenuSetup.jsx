@@ -65,28 +65,17 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
 
   const MAX_IMAGES = 5;
 
-  // Get or create session ID for this onboarding session
-  const getOnboardingSessionId = () => {
-    let sessionId = localStorage.getItem('onboarding_session_id');
-    if (!sessionId) {
-      sessionId = crypto.randomUUID();
-      localStorage.setItem('onboarding_session_id', sessionId);
-    }
-    return sessionId;
-  };
-
-  // Shared path builder — used by both initial upload and edit/replace so they can never diverge
-  const buildTempPath = (sessionId, filename) => {
+  // Shared path builder — uses pendingTenantId so all onboarding images are under the correct tenant folder
+  const buildTempPath = (tenantId, filename) => {
     const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-    return `temp/onboarding/${sessionId}/products/${Date.now()}-${safeName}`;
+    return `temp/onboarding/${tenantId}/products/${Date.now()}-${safeName}`;
   };
 
-  // Upload a file to temp/onboarding/{sessionId}/products/ in product-images bucket
-  // TODO: schedule a Supabase Edge Function or cron job to delete files older than 48 hours under product-images/temp/onboarding/
+  // Upload a file to temp/onboarding/{pendingTenantId}/products/ in product-images bucket
   const uploadToStorage = async (file) => {
     const supabase = await getSupabase();
-    const sessionId = getOnboardingSessionId();
-    const storagePath = buildTempPath(sessionId, file.name);
+    const tenantId = formData.pendingTenantId;
+    const storagePath = buildTempPath(tenantId, file.name);
     const { error } = await supabase.storage.from('product-images').upload(storagePath, file, { upsert: true });
     if (error) throw new Error(error.message);
     const { data } = supabase.storage.from('product-images').getPublicUrl(storagePath);
@@ -259,7 +248,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     setAdditionalUploading(true);
     try {
       const supabase = await getSupabase();
-      const sessionId = getOnboardingSessionId();
+      const tenantId = formData.pendingTenantId;
 
       // Delete old image before uploading replacement
       if (oldPath) {
@@ -271,7 +260,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       const base64Data = match?.[2] || newDataUrl.split(',')[1];
       const bytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
       const ext = mimeType.split('/')[1] || 'jpg';
-      const storagePath = buildTempPath(sessionId, `edited.${ext}`);
+      const storagePath = buildTempPath(tenantId, `edited.${ext}`);
       const file = new File([bytes], `edited.${ext}`, { type: mimeType });
       const { error: uploadError } = await supabase.storage.from('product-images').upload(storagePath, file, { upsert: true });
       if (uploadError) throw new Error(uploadError.message);

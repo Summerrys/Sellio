@@ -59,6 +59,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
     return `${tenantId}/products/${Date.now()}-${safeName}`;
   };
+  // Path: product-images/{tenantId}/products/{filename} ✓
 
   const uploadToStorage = async (file) => {
     const supabase = await getSupabase();

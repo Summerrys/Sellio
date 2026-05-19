@@ -30,6 +30,8 @@ export default function Onboarding() {
     tableCount: 0,
     // Step 3 (Menu Setup)
     products: [],
+    // Pre-generated tenant ID used for temp storage paths during onboarding
+    pendingTenantId: crypto.randomUUID(),
   });
 
   // Load from localStorage on mount (Supabase is the backup, localStorage is primary for speed)

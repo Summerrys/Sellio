@@ -102,8 +102,8 @@ Deno.serve(async (req) => {
       console.warn('Step 0 cleanup warning (non-fatal):', e.message);
     }
 
-    // ── Generate tenant UUID upfront ──────────────────────────────────────────
-    const newTenantId = crypto.randomUUID();
+    // ── Generate tenant UUID upfront (reuse pendingTenantId if provided, so temp storage paths match) ──
+    const newTenantId = formData.pendingTenantId || crypto.randomUUID();
     console.log('→ newTenantId:', newTenantId);
 
     // ── Step 1: Upload logo if provided ──────────────────────────────────────

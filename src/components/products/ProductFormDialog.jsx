@@ -20,7 +20,7 @@ const uploadImageIfBase64 = async (imageData, tenantId, productName) => {
   const base64Data = match?.[2] || imageData.split(',')[1];
   const bytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
   const ext = mimeType.split('/')[1] || 'jpg';
-  const filename = `${tenantId}/${Date.now()}-${toSlug(productName)}.${ext}`;
+  const filename = `${tenantId}/products/${Date.now()}-${toSlug(productName)}.${ext}`;
   const { error } = await supabase.storage.from('product-images').upload(filename, bytes, { contentType: mimeType, upsert: true });
   if (error) throw new Error(`Image upload failed: ${error.message}`);
   const { data } = supabase.storage.from('product-images').getPublicUrl(filename);
