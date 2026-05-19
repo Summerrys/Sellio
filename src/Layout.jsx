@@ -342,7 +342,7 @@ function AppLayout({ children, currentPageName }) {
             >
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg"
-                style={{ background: 'rgb(var(--color-primary))' }}
+                style={{ background: 'var(--color-primary-gradient)' }}
               >
                 <Plus className="w-7 h-7 text-white" strokeWidth={2.5} />
               </div>
