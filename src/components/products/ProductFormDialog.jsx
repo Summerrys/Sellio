@@ -123,6 +123,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     const aiAssistantRef = useRef(null);
     const uploadedImagesRef = useRef(new Set());
     const [saving, setSaving] = useState(false);
+    const [savedSku, setSavedSku] = useState(null); // SKU returned after insert
     const [errors, setErrors] = useState({});
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
@@ -131,7 +132,6 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     if (!open) return;
     if (product) {
       setFormData({ ...EMPTY_FORM, ...product });
-      // For edit mode, track existing images as already saved
       uploadedImagesRef.current = new Set(product.image_url ? [product.image_url] : []);
       if (product.images?.length) {
         product.images.forEach(url => uploadedImagesRef.current.add(url));
@@ -139,6 +139,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     } else {
       setFormData(EMPTY_FORM);
       uploadedImagesRef.current = new Set();
+      setSavedSku(null);
     }
     setErrors({});
   }, [open, product]);
@@ -148,20 +149,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     db.entities.Category.filter({ tenant_id: tenantId }).then(setCategories).catch(() => {});
   }, [tenantId, open]);
 
-  const generateSku = (name) => {
-    const base = name.toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 8);
-    const suffix = Math.random().toString(36).slice(2, 5).toUpperCase();
-    return `${base}-${suffix}`;
-  };
-
-  const update = (patch) => setFormData(prev => {
-    const next = { ...prev, ...patch };
-    // Auto-generate SKU when name changes and SKU is still empty
-    if (patch.name !== undefined && !prev.sku) {
-      next.sku = patch.name.trim() ? generateSku(patch.name.trim()) : '';
-    }
-    return next;
-  });
+  const update = (patch) => setFormData(prev => ({ ...prev, ...patch }));
 
   const validate = () => {
     const errs = {};
@@ -175,30 +163,47 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     if (!validate()) return;
     setSaving(true);
     try {
-      // image_url and images are handled by AIProductAssistant onApply and onImageChange
-      // which update formData directly
-      const payload = {
-        ...formData,
-        tenant_id: tenantId,
-        price: parseFloat(formData.price) || 0,
-        cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
-        compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
-      };
+      const supabase = await getSupabase();
+
       if (product?.id) {
-        await db.entities.Product.update(product.id, payload);
+        // Edit: keep existing SKU, just update other fields
+        const { sku, ...rest } = formData;
+        const payload = {
+          ...rest,
+          tenant_id: tenantId,
+          price: parseFloat(formData.price) || 0,
+          cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
+          compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
+        };
+        const { error } = await supabase.from('products').update(payload).eq('id', product.id);
+        if (error) throw new Error(error.message);
         toast.success('Product updated');
+        queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
+        if (aiAssistantRef.current) await cleanupDeletedImages(aiAssistantRef.current);
+        onOpenChange(false);
       } else {
-        await db.entities.Product.create(payload);
+        // Create: omit SKU — let the DB trigger generate it
+        const { sku, ...rest } = formData;
+        const payload = {
+          ...rest,
+          tenant_id: tenantId,
+          price: parseFloat(formData.price) || 0,
+          cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
+          compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
+        };
+        const { data: inserted, error } = await supabase.from('products').insert(payload).select('id, sku').single();
+        if (error) throw new Error(error.message);
+
+        // Show the trigger-generated SKU briefly before closing
+        setSavedSku(inserted.sku || '');
         toast.success('Product created');
-      }
-      queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
+        queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
+        if (aiAssistantRef.current) await cleanupDeletedImages(aiAssistantRef.current);
 
-      // Clean up images that were explicitly deleted during edit session
-      if (aiAssistantRef.current) {
-        await cleanupDeletedImages(aiAssistantRef.current);
+        // Wait 1.2s so user sees the generated SKU, then close
+        await new Promise(res => setTimeout(res, 1200));
+        onOpenChange(false);
       }
-
-      onOpenChange(false);
     } catch (err) {
       toast.error(err.message || 'Failed to save product');
     } finally {
@@ -327,6 +332,8 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
               categories={categories}
               errors={errors}
               onCreateCategory={() => {}}
+              isEditMode={!!product?.id}
+              savedSku={savedSku}
             />
           </Section>
 

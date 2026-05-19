@@ -11,7 +11,9 @@ export default function ProductFormBasic({
   onChange, 
   categories, 
   errors,
-  onCreateCategory 
+  onCreateCategory,
+  isEditMode,
+  savedSku,
 }) {
   return (
     <div className="space-y-4">
@@ -32,10 +34,10 @@ export default function ProductFormBasic({
         <div>
           <Label>SKU</Label>
           <Input
-            value={formData.sku || ''}
-            onChange={(e) => onChange({ sku: e.target.value })}
-            placeholder="Auto-generated"
-            className="mt-1.5"
+            value={savedSku !== null && savedSku !== undefined ? savedSku : (formData.sku || '')}
+            readOnly
+            placeholder={isEditMode ? '' : 'Auto-generated on save'}
+            className={`mt-1.5 cursor-default ${savedSku ? 'border-green-400 bg-green-50 text-green-700 font-medium' : 'bg-slate-50 text-slate-500'}`}
           />
         </div>
 
