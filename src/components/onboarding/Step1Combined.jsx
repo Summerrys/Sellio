@@ -95,9 +95,9 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
       return;
     }
 
-    const maxSize = 5 * 1024 * 1024;
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      setLogoError('File size must be under 5MB');
+      setLogoError('File size must be under 10MB');
       return;
     }
 
@@ -271,7 +271,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                 <>
                   <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
                   <p className="text-sm text-slate-600 font-medium">Upload your logo</p>
-                  <p className="text-xs text-slate-500 mt-1">JPG, PNG, WEBP up to 5MB</p>
+                  <p className="text-xs text-slate-500 mt-1">JPG, PNG, WEBP up to 10MB</p>
                 </>
               )}
             </div>
