@@ -136,7 +136,7 @@ export default function ThemeSelector({ variant = 'full' }) {
       <div className="space-y-4">
         <div>
           <h3 className="text-lg font-semibold text-slate-900 mb-1">Choose Your Brand Colors</h3>
-          <p className="text-sm text-slate-500">Click a swatch to apply it. Click again to revert to default.</p>
+          
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {COLOR_SETS.map((colorSet) => (
