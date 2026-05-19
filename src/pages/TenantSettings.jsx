@@ -135,7 +135,7 @@ function TenantSettingsContent() {
                 </div>
               </div>
               <div><Label>Address</Label><Input className="h-11" value={businessForm.address} onChange={e => setBusinessForm({ ...businessForm, address: e.target.value })} /></div>
-              <Button onClick={() => updateBusinessMutation.mutate()} disabled={updateBusinessMutation.isPending} className="h-11 bg-[rgb(var(--color-primary-gradient))] hover:bg-[rgb(var(--color-primary-600))] gap-2">
+              <Button onClick={() => updateBusinessMutation.mutate()} disabled={updateBusinessMutation.isPending} className="h-11 bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-2">
                 <Save className="w-4 h-4" /> {updateBusinessMutation.isPending ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
