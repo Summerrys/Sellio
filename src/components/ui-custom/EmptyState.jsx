@@ -1,6 +1,5 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import RequirePermission from '@/components/auth/RequirePermission';
 
 export default function EmptyState({ icon: Icon, title, description, actionLabel, onAction }) {
   return (
@@ -15,22 +14,9 @@ export default function EmptyState({ icon: Icon, title, description, actionLabel
         <p className="text-sm text-slate-500 max-w-sm mb-6">{description}</p>
       )}
       {actionLabel && onAction && (
-        <RequirePermission permission="products.create" silent>
-                <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm">
-                  <Upload className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Import</span>
-                </Button>
-                <Button
-                  onClick={handleAdd}
-                  size="sm"
-                  className="text-white gap-1.5"
-                  style={{ background: 'var(--color-primary-gradient)' }}
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="hidden sm:inline">Add Product</span>
-                  <span className="sm:hidden">Add</span>
-                </Button>
-          </RequirePermission>
+        <Button onClick={onAction} className="bg-slate-900 hover:bg-slate-800">
+          {actionLabel}
+        </Button>
       )}
     </div>
   );
