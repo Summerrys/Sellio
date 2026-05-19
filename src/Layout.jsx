@@ -332,10 +332,10 @@ function AppLayout({ children, currentPageName }) {
           className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-30 flex items-stretch"
           style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
-          {/* Left: Dashboard, Orders */}
+          {/* Left: Dashboard, Products */}
           {[
             { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
-            { label: 'Orders', icon: ClipboardList, page: 'Orders' },
+            { label: 'Products', icon: ShoppingBag, page: 'Products' },
           ].map(({ label, icon: Icon, page }) => {
             const isActive = currentPageName === page;
             return (
@@ -371,9 +371,9 @@ function AppLayout({ children, currentPageName }) {
             </button>
           </div>
 
-          {/* Right: Products, Settings */}
+          {/* Right: Orders, Settings */}
           {[
-            { label: 'Products', icon: ShoppingBag, page: 'Products' },
+            { label: 'Orders', icon: ClipboardList, page: 'Orders' },
             { label: 'Settings', icon: Settings, page: 'TenantSettings' },
           ].map(({ label, icon: Icon, page }) => {
             const isActive = currentPageName === page;
