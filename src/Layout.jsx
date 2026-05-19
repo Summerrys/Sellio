@@ -338,7 +338,7 @@ function AppLayout({ children, currentPageName }) {
             <button
               onClick={() => setSellSheetOpen(true)}
               className="flex flex-col items-center gap-0.5 -mt-5"
-              style={{ outline: 'none' }}
+              style={{ background: 'var(--color-primary-gradient)' }}
             >
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg"
