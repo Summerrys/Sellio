@@ -46,8 +46,10 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const [itemName, setItemName] = useState('');
   const [itemPrice, setItemPrice] = useState('');
   const [imageFiles, setImageFiles] = useState([]);
-  // imageUrls: parallel array of uploaded Supabase URLs (null = not yet uploaded)
+  // imageUrls: parallel array of uploaded Supabase public URLs (null = not yet uploaded)
   const [imageUrls, setImageUrls] = useState([]);
+  // imageStoragePaths: parallel array of storage paths for cleanup/move (null = not yet uploaded)
+  const [imageStoragePaths, setImageStoragePaths] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]); // base64 or http for display only
   const [additionalUploading, setAdditionalUploading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -63,10 +65,23 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
 
   const MAX_IMAGES = 5;
 
-  // Upload a file to temp/ in product-images bucket, return { publicUrl, storagePath }
+  // Get or create session ID for this onboarding session
+  const getOnboardingSessionId = () => {
+    let sessionId = localStorage.getItem('onboarding_session_id');
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      localStorage.setItem('onboarding_session_id', sessionId);
+    }
+    return sessionId;
+  };
+
+  // Upload a file to temp/onboarding/{sessionId}/products/ in product-images bucket
+  // TODO: schedule a Supabase Edge Function or cron job to delete files older than 48 hours under product-images/temp/onboarding/
   const uploadToStorage = async (file) => {
     const supabase = await getSupabase();
-    const storagePath = `temp/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const sessionId = getOnboardingSessionId();
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storagePath = `temp/onboarding/${sessionId}/products/${Date.now()}-${safeName}`;
     const { error } = await supabase.storage.from('product-images').upload(storagePath, file, { upsert: true });
     if (error) throw new Error(error.message);
     const { data } = supabase.storage.from('product-images').getPublicUrl(storagePath);
@@ -75,11 +90,15 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
 
   // Remove an image slot: delete from storage and remove from state arrays
   const removeImageSlot = async (idx) => {
-    const urlToDelete = imageUrls[idx];
+    const pathToDelete = imageStoragePaths[idx];
     setImagePreviews(prev => prev.filter((_, i) => i !== idx));
     setImageFiles(prev => prev.filter((_, i) => i !== idx));
     setImageUrls(prev => prev.filter((_, i) => i !== idx));
-    if (urlToDelete) await deleteImageFromStorage(urlToDelete);
+    setImageStoragePaths(prev => prev.filter((_, i) => i !== idx));
+    if (pathToDelete) {
+      const supabase = await getSupabase();
+      await supabase.storage.from('product-images').remove([pathToDelete]).catch(console.error);
+    }
   };
 
   // Handle clicking "+" to add additional images
@@ -101,16 +120,19 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     setImagePreviews(prev => [...prev, preview]);
     setImageFiles(prev => [...prev, null]); // null = already handled
     setImageUrls(prev => [...prev, null]); // placeholder
+    setImageStoragePaths(prev => [...prev, null]); // placeholder
     try {
-      const { publicUrl } = await uploadToStorage(file);
-      // Replace the last slot with the real URL
+      const { publicUrl, storagePath } = await uploadToStorage(file);
+      // Replace the last slot with the real URL and path
       setImagePreviews(prev => { const n = [...prev]; n[n.length - 1] = publicUrl; return n; });
       setImageUrls(prev => { const n = [...prev]; n[n.length - 1] = publicUrl; return n; });
+      setImageStoragePaths(prev => { const n = [...prev]; n[n.length - 1] = storagePath; return n; });
     } catch (err) {
       toast.error('Upload failed: ' + err.message);
       setImagePreviews(prev => prev.slice(0, -1));
       setImageFiles(prev => prev.slice(0, -1));
       setImageUrls(prev => prev.slice(0, -1));
+      setImageStoragePaths(prev => prev.slice(0, -1));
     } finally {
       setAdditionalUploading(false);
     }
@@ -132,6 +154,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     setImageFiles([firstFile]);
     setImagePreviews([firstPreview]);
     setImageUrls([null]); // will be filled after upload
+    setImageStoragePaths([null]); // will be filled after upload
 
     setAiStep('analyzing');
     setAiError('');
@@ -148,8 +171,9 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         }),
       ]);
 
-      // Store the uploaded URL
+      // Store the uploaded URL and path
       setImageUrls([uploadResult.publicUrl]);
+      setImageStoragePaths([uploadResult.storagePath]);
       setImagePreviews([uploadResult.publicUrl]);
       setImageFiles([null]); // already uploaded
 
@@ -216,12 +240,11 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
 
   const handleEditSave = async (newDataUrl) => {
     const idx = editingImageIdx;
-    const oldUrl = imageUrls[idx];
+    const oldPath = imageStoragePaths[idx];
     setEditingImageIdx(null);
 
     if (newDataUrl === null) {
-      // Delete — clean up storage immediately
-      if (oldUrl) await deleteImageFromStorage(oldUrl);
+      // Delete — clean up storage immediately using path
       removeImageSlot(idx);
       return;
     }
@@ -231,7 +254,10 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     setAdditionalUploading(true);
     try {
       // Delete old image before uploading new one
-      if (oldUrl) await deleteImageFromStorage(oldUrl);
+      if (oldPath) {
+        const supabase = await getSupabase();
+        await supabase.storage.from('product-images').remove([oldPath]).catch(console.error);
+      }
 
       const match = newDataUrl.match(/^data:([^;]+);base64,(.+)$/);
       const mimeType = match?.[1] || 'image/jpeg';
@@ -239,9 +265,10 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       const bytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
       const ext = mimeType.split('/')[1] || 'jpg';
       const file = new File([bytes], `edited-${Date.now()}.${ext}`, { type: mimeType });
-      const { publicUrl } = await uploadToStorage(file);
+      const { publicUrl, storagePath } = await uploadToStorage(file);
       setImagePreviews(prev => prev.map((p, i) => i === idx ? publicUrl : p));
       setImageUrls(prev => prev.map((u, i) => i === idx ? publicUrl : u));
+      setImageStoragePaths(prev => prev.map((p, i) => i === idx ? storagePath : p));
     } catch (err) {
       toast.error('Upload failed: ' + err.message);
     } finally {
@@ -297,6 +324,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     setImageFiles([]);
     setImagePreviews([]);
     setImageUrls([]);
+    setImageStoragePaths([]);
   };
 
   const handleEditItemSave = (updatedItem) => {
@@ -313,25 +341,31 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     setUploading(true);
     // Upload any edited images that aren't yet in storage (imageFiles[i] != null)
     let finalUrls = [...imageUrls];
+    let finalPaths = [...imageStoragePaths];
     try {
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i];
         if (!file) continue; // already uploaded
-        const { publicUrl } = await uploadToStorage(file);
+        const { publicUrl, storagePath } = await uploadToStorage(file);
         finalUrls[i] = publicUrl;
+        finalPaths[i] = storagePath;
       }
     } catch (err) {
       console.error('Image upload failed:', err);
     }
 
-    const allUrls = finalUrls.filter(u => u && u.startsWith('http'));
+    const validIndices = finalUrls.reduce((acc, u, i) => { if (u?.startsWith('http')) acc.push(i); return acc; }, []);
+    const allUrls = validIndices.map(i => finalUrls[i]);
+    const allPaths = validIndices.map(i => finalPaths[i]);
     const coverUrl = allUrls[0] || null;
+    const coverPath = allPaths[0] || null;
     const additionalUrls = allUrls.slice(1);
+    const additionalPaths = allPaths.slice(1);
 
     if (editingItemId !== null) {
       const updated = (formData.products || []).map(p =>
         p.id === editingItemId
-          ? { ...p, category: selectedCategory, name: itemName, price: parseFloat(itemPrice), description: itemDescription, image_url: coverUrl, images: additionalUrls }
+          ? { ...p, category: selectedCategory, name: itemName, price: parseFloat(itemPrice), description: itemDescription, image_url: coverUrl, image_temp_path: coverPath, images: additionalUrls, image_temp_paths: additionalPaths }
           : p
       );
       updateFormData({ ...formData, products: updated });
@@ -345,7 +379,9 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         price: parseFloat(itemPrice),
         description: itemDescription,
         image_url: coverUrl,
+        image_temp_path: coverPath,
         images: additionalUrls,
+        image_temp_paths: additionalPaths,
       };
       updateFormData({ ...formData, products: [...(formData.products || []), newItem] });
     }
@@ -355,6 +391,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     setImageFiles([]);
     setImagePreviews([]);
     setImageUrls([]);
+    setImageStoragePaths([]);
     setUploading(false);
   };
 

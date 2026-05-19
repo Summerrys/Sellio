@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, UtensilsCrossed, ShoppingBag, Wrench, X, Edit3, Check, Palette, Pipette } from 'lucide-react';
+import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, UtensilsCrossed, ShoppingBag, Wrench, X, Edit3, Check, Palette, Pipette, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { getSupabase } from '@/lib/supabaseClient';
 import { generateThemeVariables, COLOR_SETS as POPULAR_PALETTES, DEFAULT_GRADIENT, DEFAULT_PRIMARY, DEFAULT_ACCENT } from '../theme/themeUtils';
@@ -29,11 +29,30 @@ const countries = ['Singapore', 'Malaysia'];
 
 
 
+// Get or create session ID for this onboarding session
+const getOnboardingSessionId = () => {
+  let sessionId = localStorage.getItem('onboarding_session_id');
+  if (!sessionId) {
+    sessionId = crypto.randomUUID();
+    localStorage.setItem('onboarding_session_id', sessionId);
+  }
+  return sessionId;
+};
+
 export default function Step1Combined({ formData, updateFormData, nextStep }) {
   const [logoFile, setLogoFile] = React.useState(null);
   const [logoPreview, setLogoPreview] = React.useState(formData.logoUrl || null);
   const [logoError, setLogoError] = React.useState('');
+  const [logoUploading, setLogoUploading] = React.useState(false);
   const fileInputRef = React.useRef(null);
+
+  // Restore logo preview from stored temp path on mount
+  React.useEffect(() => {
+    const storedLogoUrl = localStorage.getItem('onboarding_logo_temp_url');
+    if (storedLogoUrl && !logoPreview) {
+      setLogoPreview(storedLogoUrl);
+    }
+  }, []);
   const [selectedTheme, setSelectedTheme] = useState(formData.theme || '');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [customPrimary, setCustomPrimary] = useState(formData.customPrimary || '#0369A1');
@@ -83,13 +102,41 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
     }
 
     setLogoError('');
-    setLogoFile(file);
-    
+    setLogoUploading(true);
+
+    // Show local preview immediately
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setLogoPreview(reader.result);
-    };
+    reader.onloadend = () => setLogoPreview(reader.result);
     reader.readAsDataURL(file);
+
+    try {
+      // TODO: schedule a Supabase Edge Function or cron job to delete files older than 48 hours under product-images/temp/onboarding/
+      const sessionId = getOnboardingSessionId();
+      const supabaseClient = await getSupabase();
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const storagePath = `temp/onboarding/${sessionId}/logo/${safeName}`;
+
+      const { error } = await supabaseClient.storage
+        .from('product-images')
+        .upload(storagePath, file, { upsert: true });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabaseClient.storage
+        .from('product-images')
+        .getPublicUrl(storagePath);
+
+      // Store both the path and URL for later use
+      localStorage.setItem('onboarding_logo_temp_path', storagePath);
+      localStorage.setItem('onboarding_logo_temp_url', publicUrl);
+      setLogoPreview(publicUrl);
+      updateFormData({ logoUrl: publicUrl, logoTempPath: storagePath });
+    } catch (error) {
+      console.error('Logo upload failed:', error);
+      setLogoError('Upload failed, please try again');
+    } finally {
+      setLogoUploading(false);
+    }
   };
 
   const handleThemeSelect = (palette) => {
@@ -113,34 +160,12 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
 
 
   const onSubmit = async (data) => {
-    let logoUrl = formData.logoUrl;
-    
-    if (logoFile) {
-      try {
-        const supabaseClient = await getSupabase();
-        const timestamp = Date.now();
-        const fileName = `${timestamp}-${logoFile.name}`;
-        const { data: uploadData, error } = await supabaseClient.storage
-          .from('logos')
-          .upload(fileName, logoFile);
-        
-        if (error) throw error;
-        
-        const { data: { publicUrl } } = supabaseClient.storage
-          .from('logos')
-          .getPublicUrl(fileName);
-        logoUrl = publicUrl;
-        
-        localStorage.setItem('business_logo_url', logoUrl);
-        updateFormData({ logoUrl });
-      } catch (error) {
-        console.error('Logo upload failed:', error);
-      }
-    }
+    const logoUrl = formData.logoUrl || '';
 
     let themeData = {
       theme: selectedTheme,
       logoUrl,
+      logoTempPath: formData.logoTempPath || localStorage.getItem('onboarding_logo_temp_path') || '',
     };
 
     if (selectedTheme) {
@@ -237,9 +262,18 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
               onClick={() => fileInputRef.current?.click()}
               className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-slate-400 hover:bg-slate-50 transition-all cursor-pointer"
             >
-              <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-              <p className="text-sm text-slate-600 font-medium">Upload your logo</p>
-              <p className="text-xs text-slate-500 mt-1">JPG, PNG, WEBP up to 5MB</p>
+              {logoUploading ? (
+                <>
+                  <Loader2 className="w-8 h-8 text-slate-400 mx-auto mb-2 animate-spin" />
+                  <p className="text-sm text-slate-500">Uploading...</p>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                  <p className="text-sm text-slate-600 font-medium">Upload your logo</p>
+                  <p className="text-xs text-slate-500 mt-1">JPG, PNG, WEBP up to 5MB</p>
+                </>
+              )}
             </div>
           )}
           {logoError && (
