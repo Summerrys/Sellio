@@ -75,13 +75,18 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     return sessionId;
   };
 
+  // Shared path builder — used by both initial upload and edit/replace so they can never diverge
+  const buildTempPath = (sessionId, filename) => {
+    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    return `temp/onboarding/${sessionId}/products/${Date.now()}-${safeName}`;
+  };
+
   // Upload a file to temp/onboarding/{sessionId}/products/ in product-images bucket
   // TODO: schedule a Supabase Edge Function or cron job to delete files older than 48 hours under product-images/temp/onboarding/
   const uploadToStorage = async (file) => {
     const supabase = await getSupabase();
     const sessionId = getOnboardingSessionId();
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const storagePath = `temp/onboarding/${sessionId}/products/${Date.now()}-${safeName}`;
+    const storagePath = buildTempPath(sessionId, file.name);
     const { error } = await supabase.storage.from('product-images').upload(storagePath, file, { upsert: true });
     if (error) throw new Error(error.message);
     const { data } = supabase.storage.from('product-images').getPublicUrl(storagePath);
@@ -253,9 +258,11 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     setImagePreviews(prev => prev.map((p, i) => i === idx ? newDataUrl : p));
     setAdditionalUploading(true);
     try {
-      // Delete old image before uploading new one
+      const supabase = await getSupabase();
+      const sessionId = getOnboardingSessionId();
+
+      // Delete old image before uploading replacement
       if (oldPath) {
-        const supabase = await getSupabase();
         await supabase.storage.from('product-images').remove([oldPath]).catch(console.error);
       }
 
@@ -264,8 +271,12 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       const base64Data = match?.[2] || newDataUrl.split(',')[1];
       const bytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
       const ext = mimeType.split('/')[1] || 'jpg';
-      const file = new File([bytes], `edited-${Date.now()}.${ext}`, { type: mimeType });
-      const { publicUrl, storagePath } = await uploadToStorage(file);
+      const storagePath = buildTempPath(sessionId, `edited.${ext}`);
+      const file = new File([bytes], `edited.${ext}`, { type: mimeType });
+      const { error: uploadError } = await supabase.storage.from('product-images').upload(storagePath, file, { upsert: true });
+      if (uploadError) throw new Error(uploadError.message);
+      const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(storagePath);
+      const publicUrl = urlData.publicUrl;
       setImagePreviews(prev => prev.map((p, i) => i === idx ? publicUrl : p));
       setImageUrls(prev => prev.map((u, i) => i === idx ? publicUrl : u));
       setImageStoragePaths(prev => prev.map((p, i) => i === idx ? storagePath : p));
