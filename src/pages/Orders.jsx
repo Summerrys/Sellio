@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { getSupabase } from '@/lib/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import db from '@/lib/db';
 import { useTenant } from '../components/tenant/TenantContext';
@@ -49,31 +48,21 @@ export default function Orders() {
     refetchInterval: 5000, // Poll every 5 seconds as backup
   });
 
-  // Real-time subscription via Supabase
+  // Real-time subscription
   useEffect(() => {
     if (!tenantId) return;
-    let channel;
-    (async () => {
-      const supabase = await getSupabase();
-      channel = supabase
-        .channel(`orders-tenant-${tenantId}`)
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'orders',
-          filter: `tenant_id=eq.${tenantId}`,
-        }, (payload) => {
-          queryClient.invalidateQueries({ queryKey: ['orders', tenantId] });
-          if (payload.eventType === 'INSERT' && payload.new?.status === 'pending') {
-            if (soundEnabled && audioRef.current) {
-              audioRef.current.play().catch(() => {});
-            }
-            toast('🔔 New order received!', { duration: 4000 });
-          }
-        })
-        .subscribe();
-    })();
-    return () => { if (channel) channel.unsubscribe(); };
+
+    let unsubFn;
+    db.entities.Order.subscribe((event) => {
+      if (event.data?.tenant_id === tenantId) {
+        queryClient.invalidateQueries({ queryKey: ['orders', tenantId] });
+        if (event.type === 'create' && soundEnabled && audioRef.current) {
+          audioRef.current.play().catch(e => console.log('Audio play failed:', e));
+        }
+      }
+    }).then(fn => { unsubFn = fn; });
+
+    return () => { if (unsubFn) unsubFn(); };
   }, [tenantId, soundEnabled, queryClient]);
 
   // Check for new orders to play sound
