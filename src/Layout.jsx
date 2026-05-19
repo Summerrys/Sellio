@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { TenantProvider, useTenant } from './components/tenant/TenantContext';
 import { ThemeProvider } from './components/theme/ThemeProvider';
@@ -26,7 +26,7 @@ import {
   ArrowLeft,
   Plus
 } from 'lucide-react';
-import SellActionSheet from './components/nav/SellActionSheet';
+import ProductFormDialog from './components/products/ProductFormDialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { base44 } from '@/api/base44Client';
@@ -35,7 +35,7 @@ import { cn } from '@/lib/utils';
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth'];
 
-function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate }) {
+function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, onSell }) {
   const superAdminItems = [];
 
   // Check if user is admin
@@ -89,6 +89,28 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
           <p className="text-xs text-slate-400 capitalize">{tenant.plan} plan</p>
         </div>
       )}
+
+      {/* Sell Button */}
+      <div className={cn("px-3 pt-2 pb-1", collapsed && "flex justify-center")}>
+        <button
+          onClick={onSell}
+          title="New Product"
+          className={cn(
+            "flex items-center gap-2 rounded-xl shadow-md transition-all duration-150 font-semibold text-white",
+            collapsed ? "w-10 h-10 justify-center" : "w-full px-4"
+          )}
+          style={{
+            background: 'var(--color-primary-gradient)',
+            padding: collapsed ? undefined : '0.65rem 1rem',
+            filter: 'brightness(1)',
+          }}
+          onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.12)'}
+          onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+        >
+          <Plus style={{ width: 18, height: 18, flexShrink: 0 }} strokeWidth={2.5} />
+          {!collapsed && <span>Sell</span>}
+        </button>
+      </div>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
@@ -166,10 +188,9 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
 function AppLayout({ children, currentPageName }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [sellSheetOpen, setSellSheetOpen] = useState(false);
+  const [isNewProductOpen, setIsNewProductOpen] = useState(false);
   const { appUser: customUser, clearAppUser } = useAppUser();
   const { user, tenant, isSuperAdmin, isLoading, hasPermission } = useTenant();
-  const navigate = useNavigate();
 
   // Persist scroll position per bottom-tab page
   const scrollPositions = useRef({});
@@ -242,7 +263,7 @@ function AppLayout({ children, currentPageName }) {
           collapsed ? "w-[72px]" : "w-[260px]"
         )}
       >
-        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => {}} />
+        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => {}} onSell={() => setIsNewProductOpen(true)} />
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 transition-colors"
@@ -286,7 +307,7 @@ function AppLayout({ children, currentPageName }) {
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => setMobileOpen(false)} />
+            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => setMobileOpen(false)} onSell={() => { setMobileOpen(false); setIsNewProductOpen(true); }} />
           </aside>
         </div>
       )}
@@ -336,7 +357,7 @@ function AppLayout({ children, currentPageName }) {
           {/* Center: Sell FAB */}
           <div className="flex-1 flex flex-col items-center justify-end pb-1" style={{ minHeight: 60 }}>
             <button
-              onClick={() => setSellSheetOpen(true)}
+              onClick={() => setIsNewProductOpen(true)}
               className="flex flex-col items-center gap-0.5 -mt-5"
               style={{ outline: 'none' }}
             >
@@ -374,11 +395,12 @@ function AppLayout({ children, currentPageName }) {
         </nav>
       )}
 
-      {/* Sell Action Sheet */}
-      <SellActionSheet
-        open={sellSheetOpen}
-        onClose={() => setSellSheetOpen(false)}
-        onNewProduct={() => navigate(createPageUrl('Products') + '?new=1')}
+      {/* Global New Product Modal */}
+      <ProductFormDialog
+        open={isNewProductOpen}
+        onOpenChange={setIsNewProductOpen}
+        product={null}
+        tenantId={tenant?.id}
       />
 
       <RoleSwitcher />
