@@ -14,7 +14,7 @@ export default function EmptyState({ icon: Icon, title, description, actionLabel
         <p className="text-sm text-slate-500 max-w-sm mb-6">{description}</p>
       )}
       {actionLabel && onAction && (
-        <Button onClick={onAction} className="bg-slate-900 hover:bg-slate-800">
+        <Button onClick={onAction} className="text-white border-0" style={{ background: 'var(--color-primary-gradient)' }}>
           {actionLabel}
         </Button>
       )}
