@@ -115,7 +115,7 @@ export default function Dashboard() {
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-slate-900">
-          {tenant?.name || 'Dashboard'} 👋
+          Welcome {tenant?.name || 'Dashboard'} 👋!
         </h1>
         <p className="text-sm text-slate-500 mt-0.5">Today's overview</p>
       </div>
