@@ -294,14 +294,22 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
   };
 
   const handleAddImage = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
     e.target.value = '';
+
+    // Clamp to remaining slots (max 5 additional = 6 total including cover)
+    const MAX_ADDITIONAL = 5;
+    const currentCount = additionalImages.length;
+    const remaining = MAX_ADDITIONAL - currentCount;
+    const filesToProcess = files.slice(0, remaining);
+    if (!filesToProcess.length) return;
+
     setAddingImage(true);
     try {
-      const publicUrl = await uploadToStorage(file);
+      const urls = await Promise.all(filesToProcess.map(f => uploadToStorage(f)));
       setAdditionalImages(prev => {
-        const updated = [...prev, publicUrl];
+        const updated = [...prev, ...urls];
         onAdditionalImagesChange?.(updated);
         return updated;
       });
@@ -497,15 +505,38 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                     <Pencil className="w-4 h-4 text-white" />
                   </div>
+                  {/* Delete button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const url = additionalImages[idx];
+                      setAdditionalImages(prev => {
+                        const updated = prev.filter((_, i) => i !== idx);
+                        onAdditionalImagesChange?.(updated);
+                        return updated;
+                      });
+                      if (url) {
+                        deleteImageFromStorage(url).catch(console.error);
+                      }
+                    }}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-500 transition-colors z-10"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 </div>
               ))}
 
-              {/* "+" add more slot for additional images */}
-              {additionalImages.length < 4 && (
+              {/* "+" add more slot — multiple allows selecting several at once */}
+              {additionalImages.length < 5 ? (
                 <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center hover:border-slate-400 transition-colors col-span-1 cursor-pointer">
                   {addingImage ? <Loader2 className="w-5 h-5 text-slate-400 animate-spin" /> : <Plus className="w-5 h-5 text-slate-400" />}
-                  <input ref={addImageInputRef} type="file" accept="image/*" onChange={handleAddImage} className="hidden" disabled={addingImage} />
+                  <input ref={addImageInputRef} type="file" accept="image/*" multiple onChange={handleAddImage} className="hidden" disabled={addingImage} />
                 </label>
+              ) : (
+                <div className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center col-span-1">
+                  <span className="text-[9px] text-slate-400 text-center px-1">Max 6 images</span>
+                </div>
               )}
             </div>
           </div>
