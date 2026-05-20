@@ -63,7 +63,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const [aiError, setAiError] = useState('');
   const [itemDescription, setItemDescription] = useState('');
 
-  const MAX_IMAGES = 5;
+  const MAX_IMAGES = 10;
 
   // Shared path builder — uses pendingTenantId so all onboarding images are under the correct tenant folder
   const buildTempPath = (tenantId, filename) => {
@@ -95,41 +95,52 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     }
   };
 
-  // Handle clicking "+" to add additional images
+  // Handle clicking "+" to add additional images (multiple at once)
   const handleAddMoreSelect = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (imagePreviews.length >= MAX_IMAGES) {
-      toast.error(`Maximum ${MAX_IMAGES} images allowed`);
-      return;
-    }
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
     e.target.value = '';
+
+    // Clamp to remaining slots (slot 0 is cover, additional = index 1+)
+    const remaining = MAX_IMAGES - imagePreviews.length;
+    const filesToProcess = files.slice(0, remaining);
+    if (!filesToProcess.length) return;
+
     setAdditionalUploading(true);
-    // Show local preview immediately, reserve slot
-    const preview = await new Promise(resolve => {
+
+    // Show local previews immediately for all selected files
+    const previews = await Promise.all(filesToProcess.map(file => new Promise(resolve => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result);
       reader.readAsDataURL(file);
-    });
-    setImagePreviews(prev => [...prev, preview]);
-    setImageFiles(prev => [...prev, null]); // null = already handled
-    setImageUrls(prev => [...prev, null]); // placeholder
-    setImageStoragePaths(prev => [...prev, null]); // placeholder
-    try {
-      const { publicUrl, storagePath } = await uploadToStorage(file);
-      // Replace the last slot with the real URL and path
-      setImagePreviews(prev => { const n = [...prev]; n[n.length - 1] = publicUrl; return n; });
-      setImageUrls(prev => { const n = [...prev]; n[n.length - 1] = publicUrl; return n; });
-      setImageStoragePaths(prev => { const n = [...prev]; n[n.length - 1] = storagePath; return n; });
-    } catch (err) {
-      toast.error('Upload failed: ' + err.message);
-      setImagePreviews(prev => prev.slice(0, -1));
-      setImageFiles(prev => prev.slice(0, -1));
-      setImageUrls(prev => prev.slice(0, -1));
-      setImageStoragePaths(prev => prev.slice(0, -1));
-    } finally {
-      setAdditionalUploading(false);
-    }
+    })));
+
+    // Reserve slots
+    setImagePreviews(prev => [...prev, ...previews]);
+    setImageFiles(prev => [...prev, ...filesToProcess.map(() => null)]);
+    setImageUrls(prev => [...prev, ...filesToProcess.map(() => null)]);
+    setImageStoragePaths(prev => [...prev, ...filesToProcess.map(() => null)]);
+
+    // Upload each file and fill in its slot
+    const baseIndex = imagePreviews.length; // index of first new slot
+    await Promise.all(filesToProcess.map(async (file, i) => {
+      const slotIndex = baseIndex + i;
+      try {
+        const { publicUrl, storagePath } = await uploadToStorage(file);
+        setImagePreviews(prev => { const n = [...prev]; n[slotIndex] = publicUrl; return n; });
+        setImageUrls(prev => { const n = [...prev]; n[slotIndex] = publicUrl; return n; });
+        setImageStoragePaths(prev => { const n = [...prev]; n[slotIndex] = storagePath; return n; });
+      } catch (err) {
+        toast.error(`Upload failed for ${file.name}: ` + err.message);
+        // Remove the failed slot
+        setImagePreviews(prev => prev.filter((_, idx) => idx !== slotIndex));
+        setImageFiles(prev => prev.filter((_, idx) => idx !== slotIndex));
+        setImageUrls(prev => prev.filter((_, idx) => idx !== slotIndex));
+        setImageStoragePaths(prev => prev.filter((_, idx) => idx !== slotIndex));
+      }
+    }));
+
+    setAdditionalUploading(false);
   };
 
   // When a photo is selected for AI analysis (cover slot)
@@ -469,7 +480,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                   <span className="text-xs text-slate-400 mt-0.5">AI generates name, price &amp; category</span>
                 </>
               )}
-              <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" disabled={aiStep === 'analyzing'} />
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" disabled={aiStep === 'analyzing'} />
             </label>
           ) : (
             <>
@@ -530,16 +541,20 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                         </Draggable>
                       ))}
                       {provided.placeholder}
-                      {/* "+" slot — only show if under max */}
-                      {imagePreviews.length < MAX_IMAGES && (
-                        <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors relative">
+                      {/* "+" slot — only show if under max; multiple allows selecting several at once */}
+                      {imagePreviews.length < MAX_IMAGES ? (
+                        <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors relative">
                           {additionalUploading ? (
                             <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
                           ) : (
                             <Plus className="w-5 h-5 text-slate-400" />
                           )}
-                          <input ref={addMoreInputRef} type="file" accept="image/*" onChange={handleAddMoreSelect} className="hidden" disabled={additionalUploading} />
+                          <input ref={addMoreInputRef} type="file" accept="image/*" multiple onChange={handleAddMoreSelect} className="hidden" disabled={additionalUploading} />
                         </label>
+                      ) : (
+                        <div className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center">
+                          <span className="text-[9px] text-slate-400 text-center px-1">Max 10 images</span>
+                        </div>
                       )}
                     </div>
                   )}
