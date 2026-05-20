@@ -7,6 +7,8 @@ import ImageEditModal from '../onboarding/ImageEditModal';
 import { getSupabase } from '@/lib/supabaseClient';
 import { deleteImageFromStorage } from '@/lib/imageStorage';
 
+const MAX_ADDITIONAL = 9; // 9 additional + 1 cover = 10 total
+
 // Expose cleanup for parent to call
 export const cleanupDeletedImages = async (componentRef) => {
   if (componentRef?.current?.deletedImagesRef?.current?.length > 0) {
@@ -18,23 +20,24 @@ export const cleanupDeletedImages = async (componentRef) => {
 };
 
 function AIProductAssistantComponent({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange, onAdditionalImagesChange, additionalImagesOnOpen, onImageDelete, onCategoriesRefresh }, ref) {
-   const [step, setStep] = useState(currentImageUrl ? 'image_only' : 'idle');
-   const [preview, setPreview] = useState(currentImageUrl || null);
-   const [additionalImages, setAdditionalImages] = useState(additionalImagesOnOpen || []);
-   const [result, setResult] = useState(null);
-   const [errorMsg, setErrorMsg] = useState('');
-   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [step, setStep] = useState(currentImageUrl ? 'image_only' : 'idle');
+  const [preview, setPreview] = useState(currentImageUrl || null);
+  const [additionalImages, setAdditionalImages] = useState(additionalImagesOnOpen || []);
+  const [result, setResult] = useState(null);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingImageIndex, setEditingImageIndex] = useState(null); // null = cover, number = additional index
-   const [addingImage, setAddingImage] = useState(false);
+  const [addingImage, setAddingImage] = useState(false);
 
-   const fileInputRef = useRef(null);       // AI analysis upload
-   const plainImageInputRef = useRef(null); // "Add photo without AI"
-   const replaceImageInputRef = useRef(null); // Replace specific image
-   const addImageInputRef = useRef(null); // Add additional images
-   const deletedImagesRef = useRef([]); // Track images to delete on save
-   const uploadedPaths = useRef([]); // Track uploaded storage paths for cancel cleanup
+  const fileInputRef = useRef(null);         // AI analysis cover upload (idle state)
+  const coverReplaceInputRef = useRef(null); // Replace cover (re-triggers AI)
+  const plainImageInputRef = useRef(null);   // "Add photo without AI"
+  const replaceImageInputRef = useRef(null); // Replace additional image
+  const addImageInputRef = useRef(null);     // Add additional images (multiple)
+  const deletedImagesRef = useRef([]);       // Track images to delete on save
+  const uploadedPaths = useRef([]);          // Track uploaded paths for cancel cleanup
 
-  // Track previous value to detect real changes from parent (new product opened)
+  // Sync when parent opens a different product
   const prevImageUrlRef = useRef(currentImageUrl);
   useEffect(() => {
     const prev = prevImageUrlRef.current;
@@ -55,18 +58,15 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     }
   }, [currentImageUrl, additionalImagesOnOpen]);
 
-  const buildPermanentPath = (tenantId, filename) => {
-    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-    return `${tenantId}/products/${Date.now()}-${safeName}`;
-  };
-  // Path: product-images/{tenantId}/products/{filename} ✓
+  // ── Storage helpers ──────────────────────────────────────────────────────────
 
-  const uploadToStorage = async (file) => {
+  const uploadToStorage = async (file, filenameOverride) => {
     const supabase = await getSupabase();
-    const storagePath = buildPermanentPath(tenantId, file.name);
+    const name = filenameOverride || file.name;
+    const safeName = name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storagePath = `${tenantId}/products/${Date.now()}-${safeName}`;
     const { error } = await supabase.storage.from('product-images').upload(storagePath, file, { upsert: true });
     if (error) throw new Error(error.message);
-    // Track this path for cancel cleanup
     uploadedPaths.current.push(storagePath);
     const { data } = supabase.storage.from('product-images').getPublicUrl(storagePath);
     return data.publicUrl;
@@ -82,6 +82,43 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     return uploadToStorage(file);
   };
 
+  // ── AI analysis (cover only) ─────────────────────────────────────────────────
+
+  const runAIOnFile = async (file) => {
+    setErrorMsg('');
+    setResult(null);
+
+    const base64 = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(file);
+    });
+
+    setPreview(base64);
+    setStep('analyzing');
+
+    const [publicUrl, res] = await Promise.all([
+      uploadToStorage(file, 'cover.png'),
+      fetch('https://selliosg.base44.app/api/functions/analyzeProductImage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64 }),
+      }),
+    ]);
+
+    setPreview(publicUrl);
+    onImageChange?.(publicUrl);
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`);
+    if (!data.confidence || data.confidence < 0.3) {
+      throw new Error("Couldn't identify a product in this image. Try a clearer photo.");
+    }
+    return { publicUrl, data };
+  };
+
+  // ── Event handlers ────────────────────────────────────────────────────────────
+
   const reset = () => {
     setStep('idle');
     setPreview(null);
@@ -90,42 +127,14 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // Cover upload from idle state → AI analysis
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (fileInputRef.current) fileInputRef.current.value = '';
-
     setStep('uploading');
-    setErrorMsg('');
-
     try {
-      // Read base64 for AI analysis + upload to storage in parallel
-      const base64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.readAsDataURL(file);
-      });
-
-      setPreview(base64); // temp preview while uploading
-      setStep('analyzing');
-
-      const [publicUrl, res] = await Promise.all([
-        uploadToStorage(file),
-        fetch('https://selliosg.base44.app/api/functions/analyzeProductImage', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64: base64 }),
-        }),
-      ]);
-
-      // Replace temp base64 preview with real URL
-      setPreview(publicUrl);
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`);
-      if (!data.confidence || data.confidence < 0.3) {
-        throw new Error("Couldn't identify a product in this image. Try a clearer photo.");
-      }
+      const { publicUrl, data } = await runAIOnFile(file);
       setResult({
         name: data.name,
         description: data.description,
@@ -142,43 +151,78 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     }
   };
 
+  // Replace cover (from grid thumbnail click) → re-triggers AI
+  const handleCoverReplace = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (coverReplaceInputRef.current) coverReplaceInputRef.current.value = '';
+    setEditModalOpen(false);
+    setEditingImageIndex(null);
+    setStep('uploading');
+    try {
+      const { publicUrl, data } = await runAIOnFile(file);
+      setResult({
+        name: data.name,
+        description: data.description,
+        suggested_category: data.category,
+        estimated_price: data.price,
+        suggested_tags: data.tags || [],
+        confidence: data.confidence,
+        _imageUrl: publicUrl,
+      });
+      setStep('done');
+    } catch (err) {
+      setErrorMsg(err.message || 'AI analysis failed');
+      setStep('error');
+    }
+  };
+
+  // "Add photo without AI" (idle state)
+  const handlePlainImageSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setStep('uploading');
+    try {
+      const publicUrl = await uploadToStorage(file, 'cover.png');
+      onImageChange?.(publicUrl);
+      setPreview(publicUrl);
+      setStep('image_only');
+    } catch (err) {
+      toast.error('Upload failed: ' + err.message);
+      setStep('idle');
+    }
+  };
+
+  // Apply AI results to form
   const handleApply = async () => {
     if (!result) return;
     const suggested = (result.suggested_category || '').toLowerCase().trim();
-    let matchedCategory = null;
     let categoryId = null;
 
     if (suggested && categories?.length) {
-      matchedCategory = categories.find(c => c.name.toLowerCase().trim() === suggested);
+      let matchedCategory = categories.find(c => c.name.toLowerCase().trim() === suggested);
       if (!matchedCategory) matchedCategory = categories.find(c => c.name.toLowerCase().includes(suggested) || suggested.includes(c.name.toLowerCase()));
       if (!matchedCategory) {
         const words = suggested.split(/\s+/);
         matchedCategory = categories.find(c => words.some(w => w.length > 3 && c.name.toLowerCase().includes(w)));
       }
+      if (matchedCategory?.id) {
+        categoryId = matchedCategory.id;
+      }
     }
 
-    if (matchedCategory?.id) {
-      categoryId = matchedCategory.id;
-    } else if (suggested) {
-      // Create new category
+    if (!categoryId && suggested) {
       try {
         const supabase = await (await import('@/lib/supabaseClient')).getSupabase();
         const slug = suggested.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
         const { data: newCat, error } = await supabase
           .from('categories')
-          .insert({
-            tenant_id: tenantId,
-            name: result.suggested_category, // Use original case
-            slug,
-            is_active: true
-          })
+          .insert({ tenant_id: tenantId, name: result.suggested_category, slug, is_active: true })
           .select()
           .single();
-
         if (error) throw error;
         categoryId = newCat.id;
-
-        // Refresh categories list in parent
         if (onCategoriesRefresh) await onCategoriesRefresh();
       } catch (err) {
         console.error('Failed to create category:', err);
@@ -186,7 +230,6 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
       }
     }
 
-    // preview is already the Supabase public URL at this point
     const patch = {
       name: result.name,
       description: result.description,
@@ -203,43 +246,26 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     setResult(null);
   };
 
-  const handlePlainImageSelect = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = '';
-    setStep('uploading');
-    try {
-      const publicUrl = await uploadToStorage(file);
-      onImageChange?.(publicUrl);
-      setPreview(publicUrl);
-      setStep('image_only');
-    } catch (err) {
-      toast.error('Upload failed: ' + err.message);
-      setStep('idle');
-    }
-  };
-
-  // Called when ImageEditModal saves — null means delete
+  // Edit/crop save for both cover and additional images
   const handleEditSave = async (newDataUrl) => {
     const isCover = editingImageIndex === null;
     const oldUrl = isCover ? preview : additionalImages[editingImageIndex];
 
     if (newDataUrl === null) {
-      // Delete — immediately remove from storage and track
+      // Delete
       if (oldUrl) {
         const storagePath = oldUrl.split('/product-images/')[1];
-        if (storagePath && uploadedPaths.current.includes(storagePath)) {
+        if (storagePath) {
           try {
             const supabase = await getSupabase();
             await supabase.storage.from('product-images').remove([storagePath]);
             uploadedPaths.current = uploadedPaths.current.filter(p => p !== storagePath);
           } catch (err) {
-            console.error('Failed to delete image immediately:', err);
+            console.error('Failed to delete image:', err);
           }
         }
         onImageDelete?.(oldUrl);
       }
-
       if (isCover) {
         onImageChange?.('');
         reset();
@@ -252,7 +278,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
       }
       setEditModalOpen(false);
     } else if (newDataUrl.startsWith('data:')) {
-      // Crop result — upload before storing, delete old image
+      // Cropped base64 → upload
       try {
         if (oldUrl) deletedImagesRef.current.push(oldUrl);
         const publicUrl = await uploadBase64ToStorage(newDataUrl);
@@ -273,9 +299,8 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
         toast.error('Upload failed: ' + err.message);
       }
     } else {
-      // Direct URL from replace — delete old image
+      // Direct URL replace
       if (oldUrl && oldUrl !== newDataUrl) deletedImagesRef.current.push(oldUrl);
-
       if (isCover) {
         setPreview(newDataUrl);
         onImageChange?.(newDataUrl);
@@ -293,21 +318,21 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     setEditingImageIndex(null);
   };
 
+  // Add additional images — multiple files, no AI
   const handleAddImage = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     e.target.value = '';
 
-    // Clamp to remaining slots (max 5 additional = 6 total including cover)
-    const MAX_ADDITIONAL = 5;
-    const currentCount = additionalImages.length;
-    const remaining = MAX_ADDITIONAL - currentCount;
+    const remaining = MAX_ADDITIONAL - additionalImages.length;
     const filesToProcess = files.slice(0, remaining);
     if (!filesToProcess.length) return;
 
     setAddingImage(true);
     try {
-      const urls = await Promise.all(filesToProcess.map(f => uploadToStorage(f)));
+      const urls = await Promise.all(
+        filesToProcess.map((f, i) => uploadToStorage(f, `image-${i}.png`))
+      );
       setAdditionalImages(prev => {
         const updated = [...prev, ...urls];
         onAdditionalImagesChange?.(updated);
@@ -320,23 +345,19 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     }
   };
 
+  // Replace an additional image (from ImageEditModal "Replace" button)
   const handleReplaceImageSelect = async (e) => {
     const file = e.target.files?.[0];
-    if (!file || editingImageIndex === null) return;
+    if (!file) return;
     e.target.value = '';
     try {
       const publicUrl = await uploadToStorage(file);
-      if (editingImageIndex === null) {
-        setPreview(publicUrl);
-        onImageChange?.(publicUrl);
-      } else {
-        setAdditionalImages(prev => {
-          const updated = [...prev];
-          updated[editingImageIndex] = publicUrl;
-          onAdditionalImagesChange?.(updated);
-          return updated;
-        });
-      }
+      setAdditionalImages(prev => {
+        const updated = [...prev];
+        updated[editingImageIndex] = publicUrl;
+        onAdditionalImagesChange?.(updated);
+        return updated;
+      });
     } catch (err) {
       toast.error('Upload failed: ' + err.message);
     } finally {
@@ -344,15 +365,27 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     }
   };
 
-  // Expose cleanup methods to parent component
-  useImperativeHandle(ref, () => ({ 
+  // Remove an additional image immediately
+  const handleRemoveAdditional = (idx) => {
+    const url = additionalImages[idx];
+    setAdditionalImages(prev => {
+      const updated = prev.filter((_, i) => i !== idx);
+      onAdditionalImagesChange?.(updated);
+      return updated;
+    });
+    if (url) deleteImageFromStorage(url).catch(console.error);
+  };
+
+  // Expose cleanup methods to parent
+  useImperativeHandle(ref, () => ({
     deletedImagesRef,
     getTempUploadedPaths: () => uploadedPaths.current,
-    clearTempUploadedPaths: () => { uploadedPaths.current = []; }
+    clearTempUploadedPaths: () => { uploadedPaths.current = []; },
   }), []);
 
   const themeColor = 'var(--color-primary-gradient)';
   const hasImage = (step === 'applied' || step === 'image_only') && preview;
+  const totalImages = 1 + additionalImages.length; // cover + additional
 
   return (
     <>
@@ -374,7 +407,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-800">Auto-fill with AI</p>
-                <p className="text-xs text-slate-500 mt-0.5">Upload a product photo — AI will generate the name, description, price & category</p>
+                <p className="text-xs text-slate-500 mt-0.5">Upload a product photo — AI will generate the name, description, price &amp; category</p>
               </div>
               <div className="flex items-center gap-2 mt-1 px-4 py-2 text-white text-sm font-medium rounded-lg" style={{ background: themeColor }}>
                 <Upload className="w-4 h-4" />
@@ -466,31 +499,30 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
           </div>
         )}
 
-        {/* ── APPLIED / IMAGE_ONLY: Step3-style grid ── */}
+        {/* ── APPLIED / IMAGE_ONLY: image grid (same as Step3) ── */}
         {hasImage && (
           <div className="p-3">
             <div className="grid grid-cols-4 gap-3">
-              {/* Main image cell — exactly like Step3 */}
+
+              {/* Cover thumbnail — clicking opens file picker to replace & re-analyze */}
               <div
                 className="relative w-full aspect-square rounded-lg overflow-hidden border-2 group cursor-pointer col-span-1"
                 style={{ borderColor: 'rgb(var(--color-primary))' }}
-                onClick={() => setEditModalOpen(true)}
+                onClick={() => coverReplaceInputRef.current?.click()}
               >
                 <img src={preview} alt="product" className="w-full h-full object-cover" />
-                {/* Cover badge */}
                 <div
                   className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium"
                   style={{ background: themeColor }}
                 >
                   Cover
                 </div>
-                {/* Hover overlay */}
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                   <Pencil className="w-4 h-4 text-white" />
                 </div>
               </div>
 
-              {/* Additional images from array */}
+              {/* Additional image thumbnails */}
               {additionalImages.map((src, idx) => (
                 <div
                   key={`additional-${idx}`}
@@ -501,25 +533,12 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                   }}
                 >
                   <img src={src} alt={`additional-${idx}`} className="w-full h-full object-cover" />
-                  {/* Hover overlay */}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                     <Pencil className="w-4 h-4 text-white" />
                   </div>
-                  {/* Delete button */}
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const url = additionalImages[idx];
-                      setAdditionalImages(prev => {
-                        const updated = prev.filter((_, i) => i !== idx);
-                        onAdditionalImagesChange?.(updated);
-                        return updated;
-                      });
-                      if (url) {
-                        deleteImageFromStorage(url).catch(console.error);
-                      }
-                    }}
+                    onClick={(e) => { e.stopPropagation(); handleRemoveAdditional(idx); }}
                     className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-500 transition-colors z-10"
                   >
                     <X className="w-3 h-3" />
@@ -527,35 +546,32 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                 </div>
               ))}
 
-              {/* "+" add more slot — multiple allows selecting several at once */}
-              {additionalImages.length < 5 ? (
+              {/* "+" slot for additional images (multiple) or "Max" notice */}
+              {additionalImages.length < MAX_ADDITIONAL ? (
                 <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center hover:border-slate-400 transition-colors col-span-1 cursor-pointer">
                   {addingImage ? <Loader2 className="w-5 h-5 text-slate-400 animate-spin" /> : <Plus className="w-5 h-5 text-slate-400" />}
                   <input ref={addImageInputRef} type="file" accept="image/*" multiple onChange={handleAddImage} className="hidden" disabled={addingImage} />
                 </label>
               ) : (
                 <div className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center col-span-1">
-                  <span className="text-[9px] text-slate-400 text-center px-1">Max 6 images</span>
+                  <span className="text-[9px] text-slate-400 text-center px-1">Max 10 images allowed</span>
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* Hidden file input for replacing additional images */}
-        <input
-          ref={replaceImageInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleReplaceImageSelect}
-          className="hidden"
-        />
+        {/* Hidden inputs */}
+        {/* Cover replace → re-triggers AI */}
+        <input ref={coverReplaceInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverReplace} />
+        {/* Additional image replace (from edit modal) */}
+        <input ref={replaceImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleReplaceImageSelect} />
       </div>
 
-      {/* ImageEditModal — handles cover and additional images */}
-      {editModalOpen && (
+      {/* ImageEditModal — only for additional images now (cover uses direct file picker) */}
+      {editModalOpen && editingImageIndex !== null && (
         <ImageEditModal
-          src={editingImageIndex === null ? preview : additionalImages[editingImageIndex]}
+          src={additionalImages[editingImageIndex]}
           themeColor={themeColor}
           onSave={handleEditSave}
           onClose={() => {
