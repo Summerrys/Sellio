@@ -108,14 +108,14 @@ export default function Products() {
           description="Manage your product catalog"
           actions={
             <>
-              <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm">
+              <Button onClick={handleExport} variant="outline" size="sm">
                 <Download className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Import</span>
+                <span className="hidden sm:inline">Export</span>
               </Button>
               <RequirePermission permission="products.create" silent>
-                <Button onClick={handleExport} variant="outline" size="sm">
+                <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm">
                   <Upload className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Export</span>
+                  <span className="hidden sm:inline">Import</span>
                 </Button>
                 <Button
                   onClick={handleAdd}
