@@ -172,7 +172,8 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
 
       if (product?.id) {
         // Edit: keep existing SKU, just update other fields
-        const { sku, current_stock, ...rest } = formData;
+        // eslint-disable-next-line no-unused-vars
+        const { sku, current_stock, inventory, ...rest } = formData;
         const payload = {
           ...rest,
           tenant_id: tenantId,
@@ -198,7 +199,8 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         onOpenChange(false);
       } else {
         // Create: omit SKU — let the DB trigger generate it
-        const { sku, current_stock, ...rest } = formData;
+        // eslint-disable-next-line no-unused-vars
+        const { sku, current_stock, inventory, ...rest } = formData;
         const payload = {
           ...rest,
           tenant_id: tenantId,
