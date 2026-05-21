@@ -22,7 +22,14 @@ const EXAMPLE_ROW = ['Green Tea Latte', 'GTL-001', 'Creamy matcha blend', 'Bever
 export default function Products() {
   const { tenantId, tenant } = useTenant();
   const queryClient = useQueryClient();
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useState(
+    localStorage.getItem('products_view_mode') || 'list'
+  );
+
+  const handleViewToggle = (mode) => {
+    setViewMode(mode);
+    localStorage.setItem('products_view_mode', mode);
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -208,23 +215,33 @@ export default function Products() {
             </Select>
 
             {/* View Toggle */}
-            <div className="flex gap-1 p-1 bg-slate-100 rounded-lg ml-auto">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className={cn("h-8 px-3", viewMode === 'grid' && "bg-white shadow-sm")}
+            <div className="flex gap-1 ml-auto">
+              <button
+                onClick={() => handleViewToggle('grid')}
+                style={{
+                  background: viewMode === 'grid' ? '#f3f0ff' : 'transparent',
+                  color: viewMode === 'grid' ? '#7c3aed' : '#9ca3af',
+                  border: '0.5px solid #e5e7eb',
+                  borderRadius: '8px',
+                  padding: '6px 8px',
+                  cursor: 'pointer',
+                }}
               >
-                <LayoutGrid className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className={cn("h-8 px-3", viewMode === 'list' && "bg-white shadow-sm")}
+                <LayoutGrid size={18} />
+              </button>
+              <button
+                onClick={() => handleViewToggle('list')}
+                style={{
+                  background: viewMode === 'list' ? '#f3f0ff' : 'transparent',
+                  color: viewMode === 'list' ? '#7c3aed' : '#9ca3af',
+                  border: '0.5px solid #e5e7eb',
+                  borderRadius: '8px',
+                  padding: '6px 8px',
+                  cursor: 'pointer',
+                }}
               >
-                <List className="w-4 h-4" />
-              </Button>
+                <List size={18} />
+              </button>
             </div>
           </div>
         </div>
@@ -249,6 +266,7 @@ export default function Products() {
             products={filteredProducts} 
             onEdit={handleEdit}
             currency={tenant?.currency || 'SGD'}
+            viewMode={viewMode}
           />
         )}
 
