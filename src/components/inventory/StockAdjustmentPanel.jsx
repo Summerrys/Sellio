@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../tenant/TenantContext';
 import {
   Sheet,
@@ -40,16 +41,23 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
 
   const adjustMutation = useMutation({
     mutationFn: async () => {
+      const supabase = await getSupabase();
       const quantityChange = adjustmentType === 'restock' || adjustmentType === 'adjustment'
         ? quantity
         : -Math.abs(quantity);
-      
-      const newStock = (product.stock_quantity || 0) + quantityChange;
 
-      // Update product stock
-      await base44.entities.Product.update(product.id, {
-        stock_quantity: Math.max(0, newStock)
-      });
+      const currentStock = product.current_stock ?? product.stock_quantity ?? 0;
+      const newStock = Math.max(0, currentStock + quantityChange);
+
+      // inventory_items is the live source of truth
+      await supabase.from('inventory_items')
+        .update({ current_stock: newStock })
+        .eq('product_id', product.id);
+
+      // Mirror on products table
+      await supabase.from('products')
+        .update({ stock_quantity: newStock })
+        .eq('id', product.id);
 
       // Create inventory log
       await base44.entities.InventoryLog.create({
@@ -58,13 +66,14 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
         product_name: product.name,
         type: adjustmentType,
         quantity_change: quantityChange,
-        quantity_before: product.stock_quantity || 0,
-        quantity_after: Math.max(0, newStock),
+        quantity_before: currentStock,
+        quantity_after: newStock,
         notes,
         performed_by: user?.email || 'Unknown',
       });
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory', tenantId] });
       queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
       queryClient.invalidateQueries({ queryKey: ['inventoryLogs', tenantId] });
       toast.success('Stock updated successfully');
@@ -85,9 +94,10 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
 
   if (!product) return null;
 
+  const currentStock = product.current_stock ?? product.stock_quantity ?? 0;
   const newStock = adjustmentType === 'restock' || adjustmentType === 'adjustment'
-    ? (product.stock_quantity || 0) + quantity
-    : (product.stock_quantity || 0) - Math.abs(quantity);
+    ? currentStock + quantity
+    : currentStock - Math.abs(quantity);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -100,7 +110,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
           {/* Current Stock Display */}
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
             <p className="text-sm text-slate-500 mb-1">Current Stock</p>
-            <p className="text-3xl font-bold text-slate-900">{product.stock_quantity || 0}</p>
+            <p className="text-3xl font-bold text-slate-900">{product.current_stock ?? product.stock_quantity ?? 0}</p>
             {product.image_url && (
               <img src={product.image_url} alt={product.name} className="w-16 h-16 rounded-lg object-cover mt-3" />
             )}
