@@ -178,6 +178,13 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         };
         const { error } = await supabase.from('products').update(payload).eq('id', product.id);
         if (error) throw new Error(error.message);
+
+        // Sync inventory_items
+        await supabase.from('inventory_items').update({
+          current_stock: formData.stock_quantity || 0,
+          low_stock_threshold: formData.low_stock_threshold || 5,
+        }).eq('product_id', product.id);
+
         toast.success('Product updated');
         queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
         if (aiAssistantRef.current) await cleanupDeletedImages(aiAssistantRef.current);
@@ -192,8 +199,17 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
           cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
           compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
         };
-        const { data: inserted, error } = await supabase.from('products').insert(payload).select('id, sku').single();
+        const { data: inserted, error } = await supabase.from('products').insert(payload).select('id, sku, tenant_id, stock_quantity, low_stock_threshold').single();
         if (error) throw new Error(error.message);
+
+        // Create corresponding inventory_items record
+        await supabase.from('inventory_items').insert({
+          tenant_id: inserted.tenant_id,
+          product_id: inserted.id,
+          current_stock: inserted.stock_quantity || 0,
+          low_stock_threshold: inserted.low_stock_threshold || 5,
+          unit: 'pcs',
+        });
 
         // Show the trigger-generated SKU briefly before closing
         setSavedSku(inserted.sku || '');
@@ -216,6 +232,8 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     if (!confirmDelete) { setConfirmDelete(true); return; }
     setDeleting(true);
     try {
+      const supabase = await getSupabase();
+      await supabase.from('inventory_items').delete().eq('product_id', product.id);
       await db.entities.Product.delete(product.id);
       toast.success('Product deleted');
       queryClient.invalidateQueries({ queryKey: ['products', tenantId] });

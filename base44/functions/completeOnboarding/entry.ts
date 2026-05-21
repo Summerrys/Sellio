@@ -342,13 +342,27 @@ Deno.serve(async (req) => {
           slug: toSlug(p.name),
           description: p.description || null,
           price: p.price,
+          stock_quantity: p.stock_quantity || 0,
+          low_stock_threshold: p.low_stock_threshold || 5,
           image_url: productImageMap[p.name] || p.image_url || null,
           images: p.images && p.images.length > 0 ? p.images : null,
           is_active: true,
         }));
-        const { error } = await supabase.from('products').insert(productRows);
+        const { data: insertedProducts, error } = await supabase.from('products').insert(productRows).select('id, stock_quantity, low_stock_threshold');
         if (error) throw error;
         console.log('✓ Step 10 products inserted:', productRows.length);
+
+        // Insert inventory_items for each product
+        const inventoryRows = insertedProducts.map(p => ({
+          tenant_id: newTenantId,
+          product_id: p.id,
+          current_stock: p.stock_quantity || 0,
+          low_stock_threshold: p.low_stock_threshold || 5,
+          unit: 'pcs',
+        }));
+        const { error: invError } = await supabase.from('inventory_items').insert(inventoryRows);
+        if (invError) console.warn('Step 10 inventory_items insert warning (non-fatal):', invError.message);
+        else console.log('✓ Step 10 inventory_items inserted:', inventoryRows.length);
       } catch (e) { return fail(10, 'products', e); }
     } else {
       console.log('✓ Step 10 products skipped (none provided)');
