@@ -16,7 +16,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const CSV_HEADERS = ['Name', 'SKU', 'Description', 'Category', 'Price', 'Cost Price', 'Compare At Price', 'Stock Quantity', 'Low Stock Threshold', 'Track Inventory', 'Active', 'Featured', 'Tags', 'Variants', 'Image URL'];
+const CSV_HEADERS = ['Name', 'SKU', 'Description', 'Category', 'Price', 'Cost Price', 'Compare At Price', 'Stock Quantity', 'Low Stock Threshold', 'Track Inventory', 'Active', 'Featured', 'Tags', 'Variants', 'Image URL', 'Additional Images'];
 
 const variantsToSimpleFormat = (variants) => {
   if (!variants?.length) return '';
@@ -114,20 +114,22 @@ export default function Products() {
 
   const handleExport = () => {
     const rows = products.map(p => [
-      p.name,
+      p.name || '',
       p.sku || '',
       p.description || '',
       categories.find(c => c.id === p.category_id)?.name || '',
-      p.price,
-      p.cost_price || '',
-      p.compare_at_price || '',
-      p.stock_quantity ?? 0,
-      p.low_stock_threshold ?? 5,
-      p.is_active ? 'true' : 'false',
-      p.is_featured ? 'true' : 'false',
+      p.price ?? '',
+      p.cost_price ?? '',
+      p.compare_at_price ?? '',
+      p.stock_quantity !== null && p.stock_quantity !== undefined ? p.stock_quantity : '',
+      p.low_stock_threshold ?? '',
+      String(p.track_inventory ?? false),
+      String(p.is_active ?? true),
+      String(p.is_featured ?? false),
       Array.isArray(p.tags) ? p.tags.join(',') : (p.tags || ''),
       variantsToSimpleFormat(p.variants),
       p.image_url || '',
+      Array.isArray(p.images) && p.images.length > 0 ? p.images.join(';') : '',
     ].map(csvEscape).join(','));
 
     const csv = [CSV_HEADERS.join(','), ...rows].join('\n');

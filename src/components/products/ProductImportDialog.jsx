@@ -80,6 +80,8 @@ const HEADER_MAP = {
   'variants': 'variants',
   'image url': 'image_url',
   'imageurl': 'image_url',
+  'additional images': 'additional_images',
+  'additionalimages': 'additional_images',
 };
 
 const parseCSV = (text) => {
@@ -200,6 +202,9 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
           tags,
           variants: parseVariantsFromSimpleFormat(row.variants || ''),
           image_url: row.image_url?.trim() || null,
+          images: row.additional_images
+            ? row.additional_images.split(';').filter(img => img?.trim())
+            : [],
         };
         // Only include sku if provided — let trigger auto-generate if blank
         if (row.sku?.trim()) payload.sku = row.sku.trim();
