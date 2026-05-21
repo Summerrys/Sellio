@@ -522,20 +522,17 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                               >
                                 <Pencil className="w-4 h-4 text-white" />
                               </div>
-                              {/* Additional images: delete button */}
-                              {idx > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    console.log('Image slot deleted:', imageUrls[idx]);
-                                    removeImageSlot(idx);
-                                  }}
-                                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-500 transition-colors z-10"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              )}
+                              {/* Delete button for all slots */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeImageSlot(idx);
+                                }}
+                                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-500 transition-colors z-10"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
                             </div>
                           )}
                         </Draggable>
