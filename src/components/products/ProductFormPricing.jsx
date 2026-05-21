@@ -46,15 +46,19 @@ export default function ProductFormPricing({ formData, onChange, currency = 'SGD
         />
       </div>
 
-      {formData.price && formData.cost_price && (
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-          <p className="text-sm text-slate-600">
-            Profit Margin: <span className="font-semibold text-green-600">
-              {currency} {(formData.price - formData.cost_price).toFixed(2)}
-            </span> ({(((formData.price - formData.cost_price) / formData.price) * 100).toFixed(1)}%)
-          </p>
-        </div>
-      )}
+      {formData.price > 0 && formData.cost_price > 0 && (() => {
+        const profitMargin = formData.price - formData.cost_price;
+        const profitPercent = ((profitMargin / formData.cost_price) * 100).toFixed(1);
+        const marginColor = profitMargin > 0 ? '#16a34a' : profitMargin < 0 ? '#dc2626' : '#6b7280';
+        const marginLabel = profitMargin > 0 ? 'Profit Margin:' : profitMargin < 0 ? 'Loss per unit:' : 'Break even';
+        return (
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+            <p style={{ fontSize: '13px', color: marginColor }}>
+              {marginLabel}{profitMargin !== 0 && <> <strong>{currency} {Math.abs(profitMargin).toFixed(2)}</strong> ({Math.abs(profitPercent)}%)</>}
+            </p>
+          </div>
+        );
+      })()}
     </div>
   );
 }
