@@ -73,24 +73,27 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD' }) {
               </div>
               
               {/* Stock Badge — only when inventory tracking is enabled */}
-              {product.track_inventory === true && product.stock_quantity !== null && (
-                <div className="text-right">
-                  {product.stock_quantity === 0 ? (
-                    <Badge variant="destructive" className="gap-1">
-                      <AlertCircle className="w-3 h-3" />
-                      Out of Stock
-                    </Badge>
-                  ) : product.stock_quantity <= (product.low_stock_threshold || 5) ? (
-                    <Badge className="bg-amber-100 text-amber-700 border-amber-300">
-                      Low Stock ({product.stock_quantity})
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-slate-600">
-                      {product.stock_quantity} in stock
-                    </Badge>
-                  )}
-                </div>
-              )}
+              {(() => {
+                if (!product.track_inventory) return null;
+                const isOutOfStock = product.stock_quantity === 0;
+                const isLowStock = product.stock_quantity > 0 && product.stock_quantity < product.low_stock_threshold;
+                if (isOutOfStock) return (
+                  <Badge variant="destructive" className="gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Out of Stock
+                  </Badge>
+                );
+                if (isLowStock) return (
+                  <Badge className="bg-amber-100 text-amber-700 border-amber-300">
+                    Low Stock ({product.stock_quantity})
+                  </Badge>
+                );
+                return (
+                  <Badge variant="outline" className="text-slate-600">
+                    {product.stock_quantity} in stock
+                  </Badge>
+                );
+              })()}
             </div>
           </div>
         </Card>

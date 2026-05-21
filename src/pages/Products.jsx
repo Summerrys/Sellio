@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ProductGrid from '../components/products/ProductGrid';
+import ProductList from '../components/products/ProductList';
 import ProductFormDialog from '../components/products/ProductFormDialog.jsx';
 import ProductImportDialog from '../components/products/ProductImportDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -243,6 +244,12 @@ export default function Products() {
               : "Start building your catalog by adding your first product"}
             actionLabel="Add Product"
             onAction={handleAdd}
+          />
+        ) : viewMode === 'list' ? (
+          <ProductList
+            products={filteredProducts}
+            onEdit={handleEdit}
+            currency={tenant?.currency || 'SGD'}
           />
         ) : (
           <ProductGrid 
