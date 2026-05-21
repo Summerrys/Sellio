@@ -129,10 +129,23 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
+  const normalizeLegacyVariants = (variants) => {
+    if (!variants?.length) return [];
+    if (variants[0]?.options) return variants; // already grouped
+    return [{
+      name: 'Options',
+      type: 'addon',
+      options: variants.map(v => ({
+        label: v.name || v.label || '',
+        price_modifier: v.price_modifier || 0,
+      })),
+    }];
+  };
+
   useEffect(() => {
     if (!open) return;
     if (product) {
-      setFormData({ ...EMPTY_FORM, ...product });
+      setFormData({ ...EMPTY_FORM, ...product, variants: normalizeLegacyVariants(product.variants) });
       uploadedImagesRef.current = new Set(product.image_url ? [product.image_url] : []);
       if (product.images?.length) {
         product.images.forEach(url => uploadedImagesRef.current.add(url));

@@ -9,25 +9,76 @@ export default function ProductFormVariants({ formData, onChange }) {
   const [newVariant, setNewVariant] = useState({ name: '', price_modifier: 0 });
   const variants = formData.variants || [];
 
+  const addGroup = () => {
+    onChange({
+      variants: [...variants, { name: '', type: 'other', options: [{ label: '', price_modifier: 0 }] }],
+    });
+  };
+
+  const removeGroup = (groupIndex) => {
+    onChange({ variants: variants.filter((_, i) => i !== groupIndex) });
+  };
+
+  const addOption = (groupIndex) => {
+    const updated = variants.map((g, i) =>
+      i === groupIndex ? { ...g, options: [...g.options, { label: '', price_modifier: 0 }] } : g
+    );
+    onChange({ variants: updated });
+  };
+
+  const removeOption = (groupIndex, optIndex) => {
+    const updated = variants.map((g, i) =>
+      i === groupIndex ? { ...g, options: g.options.filter((_, oi) => oi !== optIndex) } : g
+    );
+    onChange({ variants: updated });
+  };
+
+  const updateGroupName = (groupIndex, value) => {
+    const type =
+      /size/i.test(value) ? 'size' :
+      /colou?r/i.test(value) ? 'color' :
+      /add.?on|topping|extra/i.test(value) ? 'addon' : 'other';
+    const updated = variants.map((g, i) => i === groupIndex ? { ...g, name: value, type } : g);
+    onChange({ variants: updated });
+  };
+
+  const updateGroupType = (groupIndex, value) => {
+    const updated = variants.map((g, i) => i === groupIndex ? { ...g, type: value } : g);
+    onChange({ variants: updated });
+  };
+
+  const updateOptionLabel = (groupIndex, optIndex, value) => {
+    const updated = variants.map((g, i) =>
+      i === groupIndex
+        ? { ...g, options: g.options.map((o, oi) => oi === optIndex ? { ...o, label: value } : o) }
+        : g
+    );
+    onChange({ variants: updated });
+  };
+
+  const updateOptionPrice = (groupIndex, optIndex, value) => {
+    const updated = variants.map((g, i) =>
+      i === groupIndex
+        ? { ...g, options: g.options.map((o, oi) => oi === optIndex ? { ...o, price_modifier: parseFloat(value) || 0 } : o) }
+        : g
+    );
+    onChange({ variants: updated });
+  };
+
+  // Legacy flat-variant helpers (kept for UI compatibility during transition)
   const addVariant = () => {
     if (!newVariant.name.trim()) return;
-    
     onChange({
       variants: [
         ...variants,
-        {
-          name: newVariant.name.trim(),
-          price_modifier: parseFloat(newVariant.price_modifier) || 0,
-        }
-      ]
+        { name: newVariant.name.trim(), price_modifier: parseFloat(newVariant.price_modifier) || 0 },
+      ],
     });
     setNewVariant({ name: '', price_modifier: 0 });
   };
 
   const removeVariant = (index) => {
-    onChange({
-      variants: variants.filter((_, i) => i !== index)
-    });
+    onChange({ variants: variants.filter((_, i) => i !== index) });
   };
 
   return (
