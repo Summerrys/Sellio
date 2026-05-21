@@ -33,12 +33,26 @@ export default function ProductFormBasic({
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label>SKU</Label>
-          <Input
-            value={savedSku !== null && savedSku !== undefined ? savedSku : (formData.sku || '')}
-            readOnly
-            placeholder={isEditMode ? '' : 'Auto-generated on save'}
-            className={`mt-1.5 cursor-default ${savedSku ? 'border-green-400 bg-green-50 text-green-700 font-medium' : 'bg-slate-50 text-slate-500'}`}
-          />
+          {savedSku ? (
+            <Input
+              value={savedSku}
+              readOnly
+              className="mt-1.5 cursor-default border-green-400 bg-green-50 text-green-700 font-mono font-medium"
+            />
+          ) : isEditMode ? (
+            <Input
+              value={formData.sku || ''}
+              readOnly
+              className="mt-1.5 cursor-default bg-slate-50 text-slate-500 font-mono"
+            />
+          ) : (
+            <Input
+              value={formData.sku || ''}
+              onChange={(e) => onChange({ sku: e.target.value.toUpperCase() })}
+              placeholder="Auto-generated on save"
+              className="mt-1.5 font-mono"
+            />
+          )}
         </div>
 
         <div>

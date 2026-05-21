@@ -190,7 +190,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         if (aiAssistantRef.current) await cleanupDeletedImages(aiAssistantRef.current);
         onOpenChange(false);
       } else {
-        // Create: omit SKU — let the DB trigger generate it
+        // Create: include user-typed SKU if provided, else let DB trigger generate it
         const { sku, ...rest } = formData;
         const payload = {
           ...rest,
@@ -198,6 +198,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
           price: parseFloat(formData.price) || 0,
           cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
           compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
+          ...(sku && sku.trim() !== '' ? { sku: sku.trim().toUpperCase() } : {}),
         };
         const { data: inserted, error } = await supabase.from('products').insert(payload).select('id, sku, tenant_id, stock_quantity, low_stock_threshold').single();
         if (error) throw new Error(error.message);
