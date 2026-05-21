@@ -147,7 +147,9 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
 
   useEffect(() => {
     if (!tenantId || !open) return;
-    db.entities.Category.filter({ tenant_id: tenantId }).then(setCategories).catch(() => {});
+    getSupabase().then(supabase =>
+      supabase.from('categories').select('id, name').eq('tenant_id', tenantId).eq('is_active', true).order('name')
+    ).then(({ data }) => setCategories(data || [])).catch(() => {});
   }, [tenantId, open]);
 
   const update = (patch) => setFormData(prev => ({ ...prev, ...patch }));
@@ -362,11 +364,9 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
               formData={formData}
               onChange={update}
               categories={categories}
-              onCategoriesChange={setCategories}
               errors={errors}
               isEditMode={!!product?.id}
               savedSku={savedSku}
-              tenantId={tenantId}
             />
           </Section>
 

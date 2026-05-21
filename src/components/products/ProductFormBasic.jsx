@@ -1,53 +1,20 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Plus, X } from 'lucide-react';
-import { getSupabase } from '@/lib/supabaseClient';
-
-const toSlug = (str) => (str || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 
 export default function ProductFormBasic({ 
   formData, 
   onChange, 
   categories, 
-  onCategoriesChange,
   errors,
   isEditMode,
   savedSku,
-  tenantId,
 }) {
-  const [showAddCategory, setShowAddCategory] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [addingCategory, setAddingCategory] = useState(false);
-
-  const handleAddCategory = async () => {
-    if (!newCategoryName.trim()) return;
-    setAddingCategory(true);
-    try {
-      const supabase = await getSupabase();
-      const { data: newCat, error } = await supabase
-        .from('categories')
-        .insert({
-          tenant_id: tenantId,
-          name: newCategoryName.trim(),
-          slug: toSlug(newCategoryName.trim()),
-          is_active: true,
-        })
-        .select()
-        .single();
-      if (!error && newCat) {
-        onCategoriesChange?.([...categories, newCat]);
-        onChange({ category_id: newCat.id });
-        setShowAddCategory(false);
-        setNewCategoryName('');
-      }
-    } finally {
-      setAddingCategory(false);
-    }
-  };
+  const navigate = useNavigate();
 
   return (
     <div className="space-y-4">
@@ -86,64 +53,31 @@ export default function ProductFormBasic({
 
         <div>
           <Label>Category</Label>
-          <div className="flex gap-2 mt-1.5">
-            <Select
-              key={formData.category_id || 'no-cat'}
-              value={formData.category_id || ''}
-              onValueChange={(v) => onChange({ category_id: v })}
+          <Select
+            key={formData.category_id || 'no-cat'}
+            value={formData.category_id || ''}
+            onValueChange={(v) => onChange({ category_id: v })}
+          >
+            <SelectTrigger className="w-full mt-1.5">
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-slate-400 mt-1">
+            Can't find your category?{' '}
+            <span
+              className="text-violet-600 underline cursor-pointer"
+              onClick={() => navigate(createPageUrl('Categories'))}
             >
-              <SelectTrigger className="flex-1 min-w-0">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="flex-shrink-0"
-              onClick={() => setShowAddCategory(v => !v)}
-            >
-              <Plus className="w-4 h-4" />
-            </Button>
-          </div>
-          {showAddCategory && (
-            <div className="flex gap-2 mt-2 items-center">
-              <Input
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
-                placeholder="New category name"
-                className="flex-1 min-w-0"
-                autoFocus
-              />
-              <Button
-                type="button"
-                size="sm"
-                className="flex-shrink-0 text-white"
-                style={{ background: 'var(--color-primary-gradient)' }}
-                onClick={handleAddCategory}
-                disabled={addingCategory}
-              >
-                Add
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="flex-shrink-0"
-                onClick={() => { setShowAddCategory(false); setNewCategoryName(''); }}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
+              Manage categories
+            </span>
+          </p>
         </div>
       </div>
 
