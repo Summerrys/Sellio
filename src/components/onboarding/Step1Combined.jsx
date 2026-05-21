@@ -29,15 +29,8 @@ const countries = ['Singapore', 'Malaysia'];
 
 
 
-// Get or create session ID for this onboarding session
-const getOnboardingSessionId = () => {
-  let sessionId = localStorage.getItem('onboarding_session_id');
-  if (!sessionId) {
-    sessionId = crypto.randomUUID();
-    localStorage.setItem('onboarding_session_id', sessionId);
-  }
-  return sessionId;
-};
+// Get the shared pending tenant ID — generated once in Onboarding.jsx and persisted
+const getPendingTenantId = () => localStorage.getItem('pending_tenant_id') || crypto.randomUUID();
 
 export default function Step1Combined({ formData, updateFormData, nextStep }) {
   const [logoFile, setLogoFile] = React.useState(null);
@@ -111,10 +104,10 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
 
     try {
       // TODO: schedule a Supabase Edge Function or cron job to delete files older than 48 hours under product-images/temp/onboarding/
-      const sessionId = getOnboardingSessionId();
+      const pendingTenantId = getPendingTenantId();
       const supabaseClient = await getSupabase();
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const storagePath = `temp/onboarding/${sessionId}/logo/${safeName}`;
+      const storagePath = `temp/onboarding/${pendingTenantId}/logo/${safeName}`;
 
       const { error } = await supabaseClient.storage
         .from('product-images')
