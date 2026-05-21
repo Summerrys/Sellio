@@ -167,10 +167,11 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
       const supabase = await getSupabase();
 
       if (product?.id) {
-        // Edit: keep existing SKU, just update other fields
+        // Edit: include user-edited SKU
         const { sku, ...rest } = formData;
         const payload = {
           ...rest,
+          sku: sku?.trim() ? sku.trim().toUpperCase() : (product.sku || undefined),
           tenant_id: tenantId,
           price: parseFloat(formData.price) || 0,
           cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,

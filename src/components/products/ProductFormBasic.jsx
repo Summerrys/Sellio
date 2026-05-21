@@ -39,12 +39,6 @@ export default function ProductFormBasic({
               readOnly
               className="mt-1.5 cursor-default border-green-400 bg-green-50 text-green-700 font-mono font-medium"
             />
-          ) : isEditMode ? (
-            <Input
-              value={formData.sku || ''}
-              readOnly
-              className="mt-1.5 cursor-default bg-slate-50 text-slate-500 font-mono"
-            />
           ) : (
             <Input
               value={formData.sku || ''}
@@ -53,6 +47,7 @@ export default function ProductFormBasic({
               className="mt-1.5 font-mono"
             />
           )}
+          <p className="text-[11px] text-slate-400 mt-0.5">Leave blank to auto-generate • Editable anytime</p>
         </div>
 
         <div>
