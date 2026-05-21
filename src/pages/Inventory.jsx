@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PullToRefresh from '../components/ui-custom/PullToRefresh';
-import { getSupabase } from '@/lib/supabaseClient';
+import db from '@/lib/db';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
@@ -29,73 +29,59 @@ function InventoryContent() {
   const { tenantId } = useTenant();
   const queryClient = useQueryClient();
   const handleRefresh = useCallback(() =>
-    queryClient.invalidateQueries({ queryKey: ['inventory', tenantId] }), [queryClient, tenantId]);
+    queryClient.invalidateQueries({ queryKey: ['products', tenantId] }), [queryClient, tenantId]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [showStockTake, setShowStockTake] = useState(false);
 
-  // Fetch inventory_items joined with products — inventory_items is source of truth
-  const { data: inventoryItems = [], isLoading } = useQuery({
-    queryKey: ['inventory', tenantId],
-    queryFn: async () => {
-      const supabase = await getSupabase();
-      const { data, error } = await supabase
-        .from('inventory_items')
-        .select('*, product:products(id, name, sku, image_url, track_inventory, is_active, low_stock_threshold, stock_quantity)')
-        .eq('tenant_id', tenantId);
-      if (error) throw new Error(error.message);
-      return data || [];
-    },
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['products', tenantId],
+    queryFn: () => db.entities.Product.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
   });
 
-  // Only show items where track_inventory = true
-  const trackedItems = inventoryItems.filter(item => item.product?.track_inventory === true);
+  // Filter tracked products only
+  const trackedProducts = products.filter(p => 
+    p.stock_quantity !== undefined && p.stock_quantity !== null
+  );
 
-  // Stats from inventory_items.current_stock
-  const totalTracked = trackedItems.length;
-  const inStock = trackedItems.filter(item => item.current_stock > (item.low_stock_threshold ?? item.product?.low_stock_threshold ?? 5)).length;
-  const lowStock = trackedItems.filter(item => item.current_stock > 0 && item.current_stock < (item.low_stock_threshold ?? item.product?.low_stock_threshold ?? 5)).length;
-  const outOfStock = trackedItems.filter(item => item.current_stock === 0).length;
+  // Calculate summary stats
+  const totalTracked = trackedProducts.length;
+  const inStock = trackedProducts.filter(p => p.stock_quantity > (p.low_stock_threshold || 5)).length;
+  const lowStock = trackedProducts.filter(p => 
+    p.stock_quantity > 0 && p.stock_quantity <= (p.low_stock_threshold || 5)
+  ).length;
+  const outOfStock = trackedProducts.filter(p => p.stock_quantity === 0).length;
 
-  // Filter
-  const filteredItems = trackedItems.filter(item => {
-    const threshold = item.low_stock_threshold ?? item.product?.low_stock_threshold ?? 5;
-    const matchesSearch = !searchQuery ||
-      item.product?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.product?.sku?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' ||
-      (statusFilter === 'in_stock' && item.current_stock > threshold) ||
-      (statusFilter === 'low_stock' && item.current_stock > 0 && item.current_stock < threshold) ||
-      (statusFilter === 'out_of_stock' && item.current_stock === 0);
+  // Filter products
+  const filteredProducts = trackedProducts.filter(product => {
+    const matchesSearch = !searchQuery || 
+      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.sku?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'in_stock' && product.stock_quantity > (product.low_stock_threshold || 5)) ||
+      (statusFilter === 'low_stock' && product.stock_quantity > 0 && product.stock_quantity <= (product.low_stock_threshold || 5)) ||
+      (statusFilter === 'out_of_stock' && product.stock_quantity === 0);
+
     return matchesSearch && matchesStatus;
   });
 
-  // Sort by stock level ascending
-  const sortedItems = [...filteredItems].sort((a, b) => (a.current_stock || 0) - (b.current_stock || 0));
+  // Sort by stock level (ascending)
+  const sortedProducts = [...filteredProducts].sort((a, b) => 
+    (a.stock_quantity || 0) - (b.stock_quantity || 0)
+  );
 
-  const getStatusBadge = (item) => {
-    const threshold = item.low_stock_threshold ?? item.product?.low_stock_threshold ?? 5;
-    if (item.current_stock === 0) return <Badge className="bg-red-100 text-red-700 border-red-300">Out of Stock</Badge>;
-    if (item.current_stock < threshold) return <Badge className="bg-amber-100 text-amber-700 border-amber-300">Low Stock</Badge>;
+  const getStatusBadge = (product) => {
+    if (product.stock_quantity === 0) {
+      return <Badge className="bg-red-100 text-red-700 border-red-300">Out of Stock</Badge>;
+    }
+    if (product.stock_quantity <= (product.low_stock_threshold || 5)) {
+      return <Badge className="bg-amber-100 text-amber-700 border-amber-300">Low Stock</Badge>;
+    }
     return <Badge className="bg-green-100 text-green-700 border-green-300">In Stock</Badge>;
   };
-
-  // Build a product-shaped object for StockAdjustmentPanel (which expects product + inv data)
-  const buildProductForPanel = (item) => ({
-    ...item.product,
-    inventory_item_id: item.id,
-    current_stock: item.current_stock,
-    low_stock_threshold: item.low_stock_threshold ?? item.product?.low_stock_threshold ?? 5,
-  });
-
-  // trackedProducts shape for StockTakeDialog (needs product list)
-  const trackedProducts = trackedItems.map(item => ({
-    ...item.product,
-    inventory_item_id: item.id,
-    current_stock: item.current_stock,
-  }));
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
@@ -107,7 +93,7 @@ function InventoryContent() {
             <Button
               onClick={() => setShowStockTake(true)}
               className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-2"
-              disabled={trackedItems.length === 0}
+              disabled={trackedProducts.length === 0}
             >
               <ClipboardCheck className="w-4 h-4" />
               Start Stock Take
@@ -185,6 +171,7 @@ function InventoryContent() {
                   className="pl-9 h-11"
                 />
               </div>
+
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full sm:w-40 h-11">
                   <SelectValue />
@@ -201,7 +188,7 @@ function InventoryContent() {
             {/* Inventory Table */}
             {isLoading ? (
               <div className="text-center py-12 text-slate-400">Loading inventory...</div>
-            ) : sortedItems.length === 0 ? (
+            ) : sortedProducts.length === 0 ? (
               <EmptyState
                 icon={Package}
                 title={searchQuery || statusFilter !== 'all' ? "No products found" : "No inventory tracked"}
@@ -213,46 +200,71 @@ function InventoryContent() {
                   <table className="w-full">
                     <thead className="bg-slate-50 border-b border-slate-200">
                       <tr>
-                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">Product</th>
-                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">SKU</th>
-                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">Stock</th>
-                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">Threshold</th>
-                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">Status</th>
-                        <th className="text-right text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">Actions</th>
+                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
+                          Product
+                        </th>
+                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
+                          SKU
+                        </th>
+                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
+                          Stock
+                        </th>
+                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
+                          Threshold
+                        </th>
+                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
+                          Status
+                        </th>
+                        <th className="text-right text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {sortedItems.map((item) => (
-                        <tr
-                          key={item.id}
+                      {sortedProducts.map((product) => (
+                        <tr 
+                          key={product.id} 
                           className="hover:bg-slate-25 transition-colors cursor-pointer"
-                          onClick={() => setSelectedItem(item)}
+                          onClick={() => setSelectedProduct(product)}
                         >
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              {item.product?.image_url ? (
-                                <img src={item.product.image_url} alt={item.product.name} className="w-10 h-10 rounded-lg object-cover" />
+                              {product.image_url ? (
+                                <img
+                                  src={product.image_url}
+                                  alt={product.name}
+                                  className="w-10 h-10 rounded-lg object-cover"
+                                />
                               ) : (
                                 <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
                                   <Package className="w-5 h-5 text-slate-400" />
                                 </div>
                               )}
-                              <p className="font-medium text-slate-900">{item.product?.name}</p>
+                              <p className="font-medium text-slate-900">{product.name}</p>
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-sm text-slate-600">{item.product?.sku || '-'}</td>
+                          <td className="px-6 py-4 text-sm text-slate-600">
+                            {product.sku || '-'}
+                          </td>
                           <td className="px-6 py-4">
-                            <p className="text-lg font-bold text-slate-900">{item.current_stock ?? 0}</p>
+                            <p className="text-lg font-bold text-slate-900">
+                              {product.stock_quantity || 0}
+                            </p>
                           </td>
                           <td className="px-6 py-4 text-sm text-slate-600">
-                            {item.low_stock_threshold ?? item.product?.low_stock_threshold ?? 5}
+                            {product.low_stock_threshold || 5}
                           </td>
-                          <td className="px-6 py-4">{getStatusBadge(item)}</td>
+                          <td className="px-6 py-4">
+                            {getStatusBadge(product)}
+                          </td>
                           <td className="px-6 py-4 text-right">
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={(e) => { e.stopPropagation(); setSelectedItem(item); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedProduct(product);
+                              }}
                             >
                               Adjust
                             </Button>
@@ -273,9 +285,9 @@ function InventoryContent() {
 
         {/* Stock Adjustment Panel */}
         <StockAdjustmentPanel
-          open={!!selectedItem}
-          onOpenChange={(open) => !open && setSelectedItem(null)}
-          product={selectedItem ? buildProductForPanel(selectedItem) : null}
+          open={!!selectedProduct}
+          onOpenChange={(open) => !open && setSelectedProduct(null)}
+          product={selectedProduct}
           tenantId={tenantId}
         />
 

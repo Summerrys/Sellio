@@ -1,30 +1,19 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getSupabase } from '@/lib/supabaseClient';
+import db from '@/lib/db';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Package } from 'lucide-react';
 
 export default function LowStockAlerts({ tenantId }) {
-  const { data: inventoryItems = [] } = useQuery({
-    queryKey: ['inventory', tenantId],
-    queryFn: async () => {
-      const supabase = await getSupabase();
-      const { data, error } = await supabase
-        .from('inventory_items')
-        .select('*, product:products(name, image_url, track_inventory, is_active)')
-        .eq('tenant_id', tenantId);
-      if (error) throw new Error(error.message);
-      return data || [];
-    },
+  const { data: products = [] } = useQuery({
+    queryKey: ['lowStockProducts', tenantId],
+    queryFn: () => db.entities.Product.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
   });
 
-  const lowStockItems = inventoryItems.filter(item =>
-    item.product?.track_inventory &&
-    item.product?.is_active &&
-    item.current_stock > 0 &&
-    item.current_stock < item.low_stock_threshold
+  const lowStockItems = products.filter(p => 
+    (p.stock_quantity || 0) <= (p.low_stock_threshold || 5)
   );
 
   return (
@@ -46,12 +35,12 @@ export default function LowStockAlerts({ tenantId }) {
         </div>
       ) : (
         <div className="space-y-3">
-          {lowStockItems.slice(0, 5).map((item) => (
-            <div key={item.id} className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-xl">
+          {lowStockItems.slice(0, 5).map((product) => (
+            <div key={product.id} className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-xl">
               <div className="flex-1">
-                <p className="font-medium text-slate-900">{item.product?.name}</p>
+                <p className="font-medium text-slate-900">{product.name}</p>
                 <p className="text-sm text-amber-700">
-                  Only {item.current_stock} left
+                  Only {product.stock_quantity || 0} left
                 </p>
               </div>
               <Button size="sm" variant="outline" className="text-xs">

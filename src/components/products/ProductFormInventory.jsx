@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 
 export default function ProductFormInventory({ formData, onChange }) {
-  const trackInventory = formData.track_inventory === true;
+  const trackInventory = formData.stock_quantity !== undefined && formData.stock_quantity !== null;
 
   return (
     <div className="space-y-4">
@@ -17,9 +17,9 @@ export default function ProductFormInventory({ formData, onChange }) {
           checked={trackInventory}
           onCheckedChange={(checked) => {
             if (checked) {
-              onChange({ track_inventory: true, current_stock: formData.current_stock ?? 0, low_stock_threshold: formData.low_stock_threshold ?? 5 });
+              onChange({ stock_quantity: 0, low_stock_threshold: 5 });
             } else {
-              onChange({ track_inventory: false });
+              onChange({ stock_quantity: null, low_stock_threshold: null });
             }
           }}
         />
@@ -32,8 +32,8 @@ export default function ProductFormInventory({ formData, onChange }) {
             <Input
               type="number"
               min="0"
-              value={formData.current_stock ?? 0}
-              onChange={(e) => onChange({ current_stock: parseInt(e.target.value) || 0 })}
+              value={formData.stock_quantity || 0}
+              onChange={(e) => onChange({ stock_quantity: parseInt(e.target.value) || 0 })}
               className="mt-1.5"
             />
           </div>
@@ -43,7 +43,7 @@ export default function ProductFormInventory({ formData, onChange }) {
             <Input
               type="number"
               min="0"
-              value={formData.low_stock_threshold ?? 5}
+              value={formData.low_stock_threshold || 5}
               onChange={(e) => onChange({ low_stock_threshold: parseInt(e.target.value) || 5 })}
               className="mt-1.5"
             />
@@ -54,7 +54,7 @@ export default function ProductFormInventory({ formData, onChange }) {
 
       {!trackInventory && (
         <div className="text-center py-4 text-sm text-slate-500">
-          Inventory tracking disabled — product treated as unlimited stock
+          Inventory tracking disabled - product treated as unlimited stock
         </div>
       )}
     </div>

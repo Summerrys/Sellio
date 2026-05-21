@@ -132,11 +132,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
   useEffect(() => {
     if (!open) return;
     if (product) {
-      // Load stock from inventory_items (joined as product.inventory[0]) as source of truth
-      const inv = product.inventory?.[0];
-      const current_stock = inv?.current_stock ?? product.stock_quantity ?? 0;
-      const low_stock_threshold = inv?.low_stock_threshold ?? product.low_stock_threshold ?? 5;
-      setFormData({ ...EMPTY_FORM, ...product, current_stock, low_stock_threshold });
+      setFormData({ ...EMPTY_FORM, ...product });
       uploadedImagesRef.current = new Set(product.image_url ? [product.image_url] : []);
       if (product.images?.length) {
         product.images.forEach(url => uploadedImagesRef.current.add(url));
@@ -172,25 +168,21 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
 
       if (product?.id) {
         // Edit: keep existing SKU, just update other fields
-        // eslint-disable-next-line no-unused-vars
-        const { sku, current_stock, inventory, ...rest } = formData;
+        const { sku, ...rest } = formData;
         const payload = {
           ...rest,
           tenant_id: tenantId,
           price: parseFloat(formData.price) || 0,
           cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
           compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
-          // Mirror values kept in sync on products table
-          stock_quantity: formData.current_stock ?? 0,
-          low_stock_threshold: formData.low_stock_threshold ?? 5,
         };
         const { error } = await supabase.from('products').update(payload).eq('id', product.id);
         if (error) throw new Error(error.message);
 
-        // inventory_items is the live source of truth
+        // Sync inventory_items
         await supabase.from('inventory_items').update({
-          current_stock: formData.current_stock ?? 0,
-          low_stock_threshold: formData.low_stock_threshold ?? 5,
+          current_stock: formData.stock_quantity || 0,
+          low_stock_threshold: formData.low_stock_threshold || 5,
         }).eq('product_id', product.id);
 
         toast.success('Product updated');
@@ -199,27 +191,23 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         onOpenChange(false);
       } else {
         // Create: omit SKU — let the DB trigger generate it
-        // eslint-disable-next-line no-unused-vars
-        const { sku, current_stock, inventory, ...rest } = formData;
+        const { sku, ...rest } = formData;
         const payload = {
           ...rest,
           tenant_id: tenantId,
           price: parseFloat(formData.price) || 0,
           cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
           compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
-          // Seed values on products table
-          stock_quantity: formData.current_stock ?? 0,
-          low_stock_threshold: formData.low_stock_threshold ?? 5,
         };
-        const { data: inserted, error } = await supabase.from('products').insert(payload).select('id, sku, tenant_id').single();
+        const { data: inserted, error } = await supabase.from('products').insert(payload).select('id, sku, tenant_id, stock_quantity, low_stock_threshold').single();
         if (error) throw new Error(error.message);
 
-        // Create inventory_items as the live source of truth
+        // Create corresponding inventory_items record
         await supabase.from('inventory_items').insert({
           tenant_id: inserted.tenant_id,
           product_id: inserted.id,
-          current_stock: formData.current_stock ?? 0,
-          low_stock_threshold: formData.low_stock_threshold ?? 5,
+          current_stock: inserted.stock_quantity || 0,
+          low_stock_threshold: inserted.low_stock_threshold || 5,
           unit: 'pcs',
         });
 
