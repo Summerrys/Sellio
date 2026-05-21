@@ -58,7 +58,7 @@ export default function ProductFormBasic({
               value={formData.category_id || ''}
               onValueChange={(v) => onChange({ category_id: v })}
             >
-              <SelectTrigger className="flex-1">
+              <SelectTrigger className="flex-1 min-w-0">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
@@ -73,6 +73,7 @@ export default function ProductFormBasic({
               type="button"
               variant="outline"
               size="icon"
+              className="flex-shrink-0"
               onClick={onCreateCategory}
             >
               <Plus className="w-4 h-4" />
