@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ProductGrid from '../components/products/ProductGrid';
-import ProductList from '../components/products/ProductList';
 import ProductFormDialog from '../components/products/ProductFormDialog.jsx';
 import ProductImportDialog from '../components/products/ProductImportDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -23,12 +22,7 @@ const EXAMPLE_ROW = ['Green Tea Latte', 'GTL-001', 'Creamy matcha blend', 'Bever
 export default function Products() {
   const { tenantId, tenant } = useTenant();
   const queryClient = useQueryClient();
-  const [viewMode, setViewMode] = useState(() => localStorage.getItem('products_view_mode') || 'grid');
-
-  const handleSetViewMode = (mode) => {
-    setViewMode(mode);
-    localStorage.setItem('products_view_mode', mode);
-  };
+  const [viewMode, setViewMode] = useState('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -218,7 +212,7 @@ export default function Products() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleSetViewMode('grid')}
+                onClick={() => setViewMode('grid')}
                 className={cn("h-8 px-3", viewMode === 'grid' && "bg-white shadow-sm")}
               >
                 <LayoutGrid className="w-4 h-4" />
@@ -226,7 +220,7 @@ export default function Products() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleSetViewMode('list')}
+                onClick={() => setViewMode('list')}
                 className={cn("h-8 px-3", viewMode === 'list' && "bg-white shadow-sm")}
               >
                 <List className="w-4 h-4" />
@@ -249,12 +243,6 @@ export default function Products() {
               : "Start building your catalog by adding your first product"}
             actionLabel="Add Product"
             onAction={handleAdd}
-          />
-        ) : viewMode === 'list' ? (
-          <ProductList
-            products={filteredProducts}
-            onEdit={handleEdit}
-            currency={tenant?.currency || 'SGD'}
           />
         ) : (
           <ProductGrid 
