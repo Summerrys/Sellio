@@ -7,25 +7,6 @@ import { motion } from 'framer-motion';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { useAppUser } from '@/lib/AppUserContext';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
-import { getSupabase } from '@/lib/supabaseClient';
-
-// Move a file from temp path to permanent path in Supabase Storage.
-// Returns the new permanent public URL, or null on failure (non-blocking).
-const moveStorageFile = async (supabase, tempPath, permanentPath) => {
-  try {
-    const { error: copyError } = await supabase.storage
-      .from('product-images')
-      .copy(tempPath, permanentPath);
-    if (copyError) throw copyError;
-    // Delete temp file after successful copy
-    await supabase.storage.from('product-images').remove([tempPath]).catch(console.error);
-    const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(permanentPath);
-    return publicUrl;
-  } catch (err) {
-    console.error(`Failed to move ${tempPath} → ${permanentPath}:`, err);
-    return null; // Non-blocking: caller should proceed without this image
-  }
-};
 
 export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   const { appUser, updateAppUser } = useAppUser();
@@ -97,57 +78,6 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
       const ownerEmail = storedUser?.email || formData.adminEmail;
       if (!ownerEmail) throw new Error('No owner email found. Please log in.');
 
-      // ── Move images from temp → permanent paths before calling Go Live ──
-      const supabase = await getSupabase();
-      const sessionId = localStorage.getItem('onboarding_session_id');
-
-      // We need a tenantId to build permanent paths, but we don't have one yet.
-      // Use user id as a stable namespace during the move — the edge function will
-      // ultimately control where products are stored in the DB. We use storedUser.id
-      // as a pre-tenant namespace that is stable and unique per onboarding session.
-      const tempTenantNs = storedUser.id;
-
-      // 1. Move logo
-      let permanentLogoUrl = formData.logoUrl || '';
-      const logoTempPath = formData.logoTempPath || localStorage.getItem('onboarding_logo_temp_path') || '';
-      if (logoTempPath && sessionId) {
-        const filename = logoTempPath.split('/').pop();
-        const permanentLogoPath = `${tempTenantNs}/logo/${filename}`;
-        const moved = await moveStorageFile(supabase, logoTempPath, permanentLogoPath);
-        if (moved) permanentLogoUrl = moved;
-      }
-
-      // 2. Move product images
-      const updatedProducts = await Promise.all((formData.products || []).map(async (product) => {
-        const updatedProduct = { ...product };
-
-        // Cover image
-        if (product.image_temp_path) {
-          const filename = product.image_temp_path.split('/').pop();
-          const permanentPath = `${tempTenantNs}/products/${filename}`;
-          const moved = await moveStorageFile(supabase, product.image_temp_path, permanentPath);
-          if (moved) {
-            updatedProduct.image_url = moved;
-          }
-          delete updatedProduct.image_temp_path;
-        }
-
-        // Additional images
-        if (product.image_temp_paths?.length) {
-          const movedAdditional = await Promise.all(product.image_temp_paths.map(async (tempPath, i) => {
-            if (!tempPath) return product.images?.[i] || null;
-            const filename = tempPath.split('/').pop();
-            const permanentPath = `${tempTenantNs}/products/${filename}`;
-            const moved = await moveStorageFile(supabase, tempPath, permanentPath);
-            return moved || product.images?.[i] || null;
-          }));
-          updatedProduct.images = movedAdditional.filter(Boolean);
-          delete updatedProduct.image_temp_paths;
-        }
-
-        return updatedProduct;
-      }));
-
       const res = await fetch('https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1/complete-onboarding', {
         method: 'POST',
         headers: {
@@ -156,7 +86,11 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
         },
         body: JSON.stringify({
           user_id: storedUser.id,
-          formData: { ...formData, ownerEmail, logoUrl: permanentLogoUrl, products: updatedProducts },
+          formData: {
+            ...formData,
+            ownerEmail,
+            pendingTenantId: localStorage.getItem('pending_tenant_id') || formData.pendingTenantId,
+          },
         }),
       });
       const result = await res.json();
@@ -170,10 +104,11 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
       const { tenant_id } = result;
       updateAppUser({ onboarding_completed: true, tenant_id });
 
-      // 3. Clear temp localStorage keys
+      // Clear temp localStorage keys
       localStorage.removeItem('onboarding_session_id');
       localStorage.removeItem('onboarding_logo_temp_path');
       localStorage.removeItem('onboarding_logo_temp_url');
+      localStorage.removeItem('pending_tenant_id');
 
       confetti({ particleCount: 250, spread: 120, origin: { y: 0.6 }, gravity: 0.8, scalar: 1.3 });
       confetti({ particleCount: 150, spread: 70, origin: { x: 0.2, y: 0.8 }, gravity: 0.8 });

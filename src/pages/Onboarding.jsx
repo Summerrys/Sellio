@@ -15,6 +15,15 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState([]);
+  // Generate pendingTenantId once and persist — must survive page reloads so temp storage paths stay consistent
+  const getOrCreatePendingTenantId = () => {
+    const existing = localStorage.getItem('pending_tenant_id');
+    if (existing) return existing;
+    const newId = crypto.randomUUID();
+    localStorage.setItem('pending_tenant_id', newId);
+    return newId;
+  };
+
   const [formData, setFormData] = useState({
     // Step 1 (Business & Theme)
     businessName: '',
@@ -31,7 +40,7 @@ export default function Onboarding() {
     // Step 3 (Menu Setup)
     products: [],
     // Pre-generated tenant ID used for temp storage paths during onboarding
-    pendingTenantId: crypto.randomUUID(),
+    pendingTenantId: getOrCreatePendingTenantId(),
   });
 
   // Load from localStorage on mount (Supabase is the backup, localStorage is primary for speed)
@@ -40,7 +49,9 @@ export default function Onboarding() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setFormData(parsed.formData || {});
+        // Always use the persisted pendingTenantId, never overwrite with a stale saved one
+        const persistedTenantId = localStorage.getItem('pending_tenant_id') || crypto.randomUUID();
+        setFormData({ ...(parsed.formData || {}), pendingTenantId: persistedTenantId });
         setCurrentStep(parsed.currentStep || 1);
       } catch (e) {
         console.error('Failed to parse saved onboarding state');
@@ -102,6 +113,7 @@ export default function Onboarding() {
 
   const handleComplete = () => {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('pending_tenant_id');
     navigate(createPageUrl('Dashboard'));
   };
 
