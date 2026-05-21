@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { useQueryClient } from '@tanstack/react-query';
+import { getSupabase } from '@/lib/supabaseClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -8,23 +8,75 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, Download, CheckCircle, AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const CSV_TEMPLATE_HEADERS = [
-  'name', 'sku', 'description', 'category', 'price', 'costPrice', 
-  'currentStock', 'lowStockThreshold', 'isActive', 'imageUrl'
-];
+const CSV_HEADERS = ['Name', 'SKU', 'Description', 'Category', 'Price', 'Cost Price', 'Compare At Price', 'Stock', 'Low Stock Threshold', 'Active', 'Featured', 'Tags', 'Image URL'];
+const EXAMPLE_ROW = ['Green Tea Latte', 'GTL-001', 'Creamy matcha blend', 'Beverages', '6.50', '2.50', '8.00', '50', '10', 'true', 'false', 'health,matcha,hot', 'https://example.com/green-tea-latte.jpg'];
 
-export default function ProductImportDialog({ open, onOpenChange, tenantId, categories }) {
+const toSlug = (str) => (str || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+const parseBool = (val) => {
+  if (val == null || val === '') return true;
+  const s = String(val).toLowerCase().trim();
+  return s === 'true' || s === 'yes' || s === '1';
+};
+
+// Header normalisation map: CSV column label → internal key
+const HEADER_MAP = {
+  'name': 'name',
+  'sku': 'sku',
+  'description': 'description',
+  'category': 'category',
+  'price': 'price',
+  'cost price': 'cost_price',
+  'costprice': 'cost_price',
+  'compare at price': 'compare_at_price',
+  'compareatprice': 'compare_at_price',
+  'stock': 'stock_quantity',
+  'stock quantity': 'stock_quantity',
+  'currentstock': 'stock_quantity',
+  'low stock threshold': 'low_stock_threshold',
+  'lowstockthreshold': 'low_stock_threshold',
+  'active': 'is_active',
+  'isactive': 'is_active',
+  'featured': 'is_featured',
+  'isfeatured': 'is_featured',
+  'tags': 'tags',
+  'image url': 'image_url',
+  'imageurl': 'image_url',
+};
+
+const parseCSV = (text) => {
+  const lines = text.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const rawHeaders = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  const keys = rawHeaders.map(h => HEADER_MAP[h.toLowerCase()] || h.toLowerCase());
+
+  return lines.slice(1).map(line => {
+    // Handle quoted fields with commas inside
+    const values = [];
+    let cur = '', inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQuote = !inQuote; continue; }
+      if (ch === ',' && !inQuote) { values.push(cur.trim()); cur = ''; continue; }
+      cur += ch;
+    }
+    values.push(cur.trim());
+    const row = {};
+    keys.forEach((key, idx) => { row[key] = values[idx] ?? ''; });
+    return row;
+  });
+};
+
+export default function ProductImportDialog({ open, onOpenChange, tenantId, categories: initialCategories }) {
   const queryClient = useQueryClient();
-  const [step, setStep] = useState('upload'); // upload, preview, importing, complete
-  const [csvData, setCsvData] = useState([]);
+  const [step, setStep] = useState('upload');
   const [validationResults, setValidationResults] = useState([]);
   const [importProgress, setImportProgress] = useState(0);
   const [importSummary, setImportSummary] = useState(null);
+  const [importing, setImporting] = useState(false);
 
   const downloadTemplate = () => {
-    const csv = CSV_TEMPLATE_HEADERS.join(',') + '\n' +
-      'Example Product,SKU001,A sample product,Pizza,12.99,8.00,100,10,true,https://example.com/image.jpg\n';
-    
+    const csv = [CSV_HEADERS.join(','), EXAMPLE_ROW.join(',')].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -34,128 +86,140 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
     window.URL.revokeObjectURL(url);
   };
 
-  const parseCSV = (text) => {
-    const lines = text.split('\n').filter(line => line.trim());
-    const headers = lines[0].split(',').map(h => h.trim());
-    
-    const data = [];
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim());
-      const row = {};
-      headers.forEach((header, idx) => {
-        row[header] = values[idx] || '';
-      });
-      data.push(row);
-    }
-    return data;
-  };
-
   const validateRow = (row, index) => {
     const errors = [];
     const warnings = [];
-
-    // Required fields
-    if (!row.name) errors.push('Name is required');
+    if (!row.name?.trim()) errors.push('Name is required');
     if (!row.price || isNaN(parseFloat(row.price))) errors.push('Valid price is required');
-
-    // Warnings
-    if (!row.imageUrl) warnings.push('No image URL');
-    if (row.category && !categories.find(c => c.name.toLowerCase() === row.category.toLowerCase())) {
-      warnings.push('Category not found');
-    }
-
-    let status = 'valid';
-    if (errors.length > 0) status = 'error';
-    else if (warnings.length > 0) status = 'warning';
-
-    return { row, index, status, errors, warnings };
+    if (!row.image_url) warnings.push('No image URL');
+    return { row, index, status: errors.length ? 'error' : warnings.length ? 'warning' : 'valid', errors, warnings };
   };
 
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        const text = event.target.result;
-        const parsed = parseCSV(text);
-        setCsvData(parsed);
-        
-        const validated = parsed.map((row, idx) => validateRow(row, idx));
-        setValidationResults(validated);
+        const parsed = parseCSV(event.target.result);
+        setValidationResults(parsed.map((row, idx) => validateRow(row, idx)));
         setStep('preview');
-      } catch (error) {
+      } catch {
         toast.error('Failed to parse CSV file');
       }
     };
     reader.readAsText(file);
   };
 
-  const importMutation = useMutation({
-    mutationFn: async () => {
-      const validRows = validationResults.filter(v => v.status !== 'error');
-      const imported = [];
-      const skipped = [];
-      const errors = [];
+  const handleImport = async () => {
+    setStep('importing');
+    setImporting(true);
+    const supabase = await getSupabase();
+    const validRows = validationResults.filter(v => v.status !== 'error');
+    const imported = [];
+    const skipped = [];
 
-      for (let i = 0; i < validRows.length; i++) {
-        const { row } = validRows[i];
-        
-        try {
-          // Find category ID
-          let categoryId = null;
-          if (row.category) {
-            const cat = categories.find(c => c.name.toLowerCase() === row.category.toLowerCase());
-            categoryId = cat?.id;
+    // Build a live category name→id map (includes existing ones)
+    const categoryCache = {};
+    (initialCategories || []).forEach(c => { categoryCache[c.name.toLowerCase()] = c.id; });
+
+    for (let i = 0; i < validRows.length; i++) {
+      const { row } = validRows[i];
+      try {
+        // ── Resolve category ──────────────────────────────────────────────────
+        let categoryId = null;
+        const catName = row.category?.trim();
+        if (catName) {
+          const key = catName.toLowerCase();
+          if (categoryCache[key]) {
+            categoryId = categoryCache[key];
+          } else {
+            // Create new category
+            const { data: newCat } = await supabase
+              .from('categories')
+              .insert({ tenant_id: tenantId, name: catName, slug: toSlug(catName), is_active: true })
+              .select('id')
+              .single();
+            if (newCat?.id) {
+              categoryCache[key] = newCat.id;
+              categoryId = newCat.id;
+            }
           }
-
-          await base44.entities.Product.create({
-            tenant_id: tenantId,
-            name: row.name,
-            sku: row.sku || null,
-            description: row.description || null,
-            category_id: categoryId,
-            price: parseFloat(row.price),
-            cost_price: row.costPrice ? parseFloat(row.costPrice) : null,
-            stock_quantity: row.currentStock ? parseInt(row.currentStock) : 0,
-            low_stock_threshold: row.lowStockThreshold ? parseInt(row.lowStockThreshold) : 5,
-            is_active: row.isActive !== 'false',
-            image_url: row.imageUrl || null,
-          });
-          
-          imported.push(row.name);
-        } catch (error) {
-          errors.push({ name: row.name, error: error.message });
         }
 
-        setImportProgress(Math.round(((i + 1) / validRows.length) * 100));
+        // ── Tags ──────────────────────────────────────────────────────────────
+        let tags = null;
+        if (row.tags?.trim()) {
+          tags = row.tags.split(',').map(t => t.trim()).filter(Boolean);
+        }
+
+        // ── Stock fields ──────────────────────────────────────────────────────
+        const stockQty = row.stock_quantity !== '' ? parseInt(row.stock_quantity) || 0 : 0;
+        const lowStockThreshold = row.low_stock_threshold !== '' ? parseInt(row.low_stock_threshold) || 5 : 5;
+
+        // ── Insert product ────────────────────────────────────────────────────
+        const payload = {
+          tenant_id: tenantId,
+          name: row.name.trim(),
+          description: row.description?.trim() || null,
+          category_id: categoryId,
+          price: parseFloat(row.price),
+          cost_price: row.cost_price?.trim() ? parseFloat(row.cost_price) : null,
+          compare_at_price: row.compare_at_price?.trim() ? parseFloat(row.compare_at_price) : null,
+          stock_quantity: stockQty,
+          low_stock_threshold: lowStockThreshold,
+          is_active: parseBool(row.is_active),
+          is_featured: parseBool(row.is_featured ?? 'false'),
+          tags,
+          image_url: row.image_url?.trim() || null,
+        };
+        // Only include sku if provided — let trigger auto-generate if blank
+        if (row.sku?.trim()) payload.sku = row.sku.trim();
+
+        const { data: inserted, error: prodError } = await supabase
+          .from('products')
+          .insert(payload)
+          .select('id, stock_quantity, low_stock_threshold')
+          .single();
+        if (prodError) throw new Error(prodError.message);
+
+        // ── Create inventory_items record ─────────────────────────────────────
+        await supabase.from('inventory_items').insert({
+          tenant_id: tenantId,
+          product_id: inserted.id,
+          current_stock: inserted.stock_quantity || 0,
+          low_stock_threshold: inserted.low_stock_threshold || 5,
+          unit: 'pcs',
+        });
+
+        imported.push(row.name);
+      } catch (err) {
+        skipped.push({ name: row.name, error: err.message });
       }
 
-      return { imported, skipped, errors };
-    },
-    onSuccess: (result) => {
-      setImportSummary(result);
-      setStep('complete');
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast.success(`Imported ${result.imported.length} products`);
-    },
-    onError: () => {
-      toast.error('Import failed');
-      setStep('preview');
-    },
-  });
+      setImportProgress(Math.round(((i + 1) / validRows.length) * 100));
+    }
 
-  const handleImport = () => {
-    setStep('importing');
-    importMutation.mutate();
+    setImportSummary({ imported, skipped });
+    setStep('complete');
+    setImporting(false);
+    queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
+    queryClient.invalidateQueries({ queryKey: ['categories', tenantId] });
+    toast.success(`${imported.length} products imported`);
   };
 
-  const validCount = validationResults.filter(v => v.status === 'valid' || v.status === 'warning').length;
+  const reset = () => {
+    setStep('upload');
+    setValidationResults([]);
+    setImportProgress(0);
+    setImportSummary(null);
+  };
+
+  const validCount = validationResults.filter(v => v.status !== 'error').length;
   const errorCount = validationResults.filter(v => v.status === 'error').length;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Import Products</DialogTitle>
@@ -166,22 +230,15 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
             <Alert>
               <AlertDescription>
                 Download the CSV template, fill in your product data, then upload it here.
+                Required columns: <strong>Name</strong>, <strong>Price</strong>.
               </AlertDescription>
             </Alert>
-
             <Button onClick={downloadTemplate} variant="outline" className="w-full">
               <Download className="w-4 h-4 mr-2" />
               Download CSV Template
             </Button>
-
             <div className="border-2 border-dashed rounded-lg p-12 text-center hover:bg-slate-50 cursor-pointer transition-colors">
-              <input
-                type="file"
-                accept=".csv"
-                onChange={handleFileUpload}
-                className="hidden"
-                id="csv-upload"
-              />
+              <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" id="csv-upload" />
               <label htmlFor="csv-upload" className="cursor-pointer">
                 <Upload className="w-12 h-12 text-slate-400 mx-auto mb-4" />
                 <p className="text-lg font-medium mb-2">Upload CSV File</p>
@@ -197,11 +254,11 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span className="text-sm">{validCount} Valid</span>
+                  <span className="text-sm">{validCount} will import</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-red-600" />
-                  <span className="text-sm">{errorCount} Errors</span>
+                  <span className="text-sm">{errorCount} will be skipped</span>
                 </div>
               </div>
               <Button onClick={() => setStep('upload')} variant="outline" size="sm">
@@ -223,30 +280,19 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
                 </thead>
                 <tbody>
                   {validationResults.map((result, idx) => (
-                    <tr
-                      key={idx}
-                      className={
-                        result.status === 'error' ? 'bg-red-50' :
-                        result.status === 'warning' ? 'bg-yellow-50' :
-                        'bg-green-50'
-                      }
-                    >
+                    <tr key={idx} className={result.status === 'error' ? 'bg-red-50' : result.status === 'warning' ? 'bg-yellow-50' : 'bg-green-50'}>
                       <td className="p-2">
                         {result.status === 'error' && <AlertCircle className="w-4 h-4 text-red-600" />}
                         {result.status === 'warning' && <AlertTriangle className="w-4 h-4 text-yellow-600" />}
                         {result.status === 'valid' && <CheckCircle className="w-4 h-4 text-green-600" />}
                       </td>
                       <td className="p-2">{result.row.name}</td>
-                      <td className="p-2">{result.row.sku}</td>
-                      <td className="p-2">${result.row.price}</td>
+                      <td className="p-2 text-slate-400 text-xs">{result.row.sku || '(auto)'}</td>
+                      <td className="p-2">{result.row.price}</td>
                       <td className="p-2">{result.row.category}</td>
                       <td className="p-2">
-                        {result.errors.length > 0 && (
-                          <span className="text-red-600 text-xs">{result.errors.join(', ')}</span>
-                        )}
-                        {result.warnings.length > 0 && (
-                          <span className="text-yellow-600 text-xs">{result.warnings.join(', ')}</span>
-                        )}
+                        {result.errors.length > 0 && <span className="text-red-600 text-xs">{result.errors.join(', ')}</span>}
+                        {result.warnings.length > 0 && <span className="text-yellow-600 text-xs">{result.warnings.join(', ')}</span>}
                       </td>
                     </tr>
                   ))}
@@ -255,9 +301,7 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
             </div>
 
             <div className="flex gap-2">
-              <Button onClick={() => setStep('upload')} variant="outline">
-                Cancel
-              </Button>
+              <Button onClick={() => setStep('upload')} variant="outline">Cancel</Button>
               <Button onClick={handleImport} disabled={validCount === 0} className="flex-1">
                 Import {validCount} Products
               </Button>
@@ -279,14 +323,12 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
             <CheckCircle className="w-16 h-16 text-green-600 mx-auto" />
             <h3 className="text-xl font-bold">Import Complete!</h3>
             <div className="space-y-2">
-              <p className="text-green-600 font-medium">✓ {importSummary.imported.length} products imported</p>
-              {importSummary.errors.length > 0 && (
-                <p className="text-red-600">✗ {importSummary.errors.length} failed</p>
+              <p className="text-green-600 font-medium">✓ {importSummary.imported.length} products imported successfully</p>
+              {importSummary.skipped.length > 0 && (
+                <p className="text-amber-600">⚠ {importSummary.skipped.length} skipped due to errors</p>
               )}
             </div>
-            <Button onClick={() => onOpenChange(false)} className="mt-4">
-              Done
-            </Button>
+            <Button onClick={() => { reset(); onOpenChange(false); }} className="mt-4">Done</Button>
           </div>
         )}
       </DialogContent>
