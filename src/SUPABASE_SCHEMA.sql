@@ -179,6 +179,7 @@ CREATE TABLE IF NOT EXISTS public.products (
   tags jsonb DEFAULT '[]',
   variants jsonb DEFAULT '[]',
   suggested_category text,
+  track_inventory boolean DEFAULT false,
   CONSTRAINT products_pkey PRIMARY KEY (id)
 );
 
