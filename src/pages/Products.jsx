@@ -23,7 +23,12 @@ const EXAMPLE_ROW = ['Green Tea Latte', 'GTL-001', 'Creamy matcha blend', 'Bever
 export default function Products() {
   const { tenantId, tenant } = useTenant();
   const queryClient = useQueryClient();
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('products_view_mode') || 'grid');
+
+  const handleSetViewMode = (mode) => {
+    setViewMode(mode);
+    localStorage.setItem('products_view_mode', mode);
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -213,7 +218,7 @@ export default function Products() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setViewMode('grid')}
+                onClick={() => handleSetViewMode('grid')}
                 className={cn("h-8 px-3", viewMode === 'grid' && "bg-white shadow-sm")}
               >
                 <LayoutGrid className="w-4 h-4" />
@@ -221,7 +226,7 @@ export default function Products() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setViewMode('list')}
+                onClick={() => handleSetViewMode('list')}
                 className={cn("h-8 px-3", viewMode === 'list' && "bg-white shadow-sm")}
               >
                 <List className="w-4 h-4" />

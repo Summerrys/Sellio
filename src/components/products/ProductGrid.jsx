@@ -1,103 +1,62 @@
 import React from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Edit2, AlertCircle, Package } from 'lucide-react';
+import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import PriceDisplay from './PriceDisplay';
 
 export default function ProductGrid({ products, onEdit, currency = 'SGD' }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {products.map((product) => (
-        <Card
-          key={product.id}
-          className={cn(
-            "group border-0 shadow-sm hover:shadow-md transition-all overflow-hidden cursor-pointer",
-            !product.is_active && "opacity-60"
-          )}
-          onClick={() => onEdit(product)}
-        >
-          {/* Image */}
-          <div className="aspect-square bg-slate-100 relative overflow-hidden">
-            {product.image_url ? (
-              <img
-                src={product.image_url}
-                alt={product.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Package className="w-12 h-12 text-slate-300" />
-              </div>
-            )}
-            {!product.is_active && (
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                <Badge variant="secondary" className="bg-white text-slate-700">
-                  Inactive
-                </Badge>
-              </div>
-            )}
-            {product.is_featured && (
-              <div className="absolute top-2 left-2">
-                <Badge className="bg-amber-500 text-white border-0">
-                  Featured
-                </Badge>
-              </div>
-            )}
-          </div>
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      {products.map((product) => {
+        const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
+        const isLowStock = product.track_inventory && product.stock_quantity > 0 && product.stock_quantity < product.low_stock_threshold;
 
-          {/* Content */}
-          <div className="p-4">
-            <h3 className="font-semibold text-slate-900 mb-1 truncate">
-              {product.name}
-            </h3>
-            <p className="text-sm text-slate-500 mb-3 line-clamp-2">
-              {product.description || 'No description'}
-            </p>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-lg font-bold text-[rgb(var(--color-primary))]">
-                  <PriceDisplay
-                    price={product.price}
-                    compareAtPrice={product.compare_at_price}
-                    currency={currency}
-                  />
-                </p>
-                {product.cost_price && (
-                  <p className="text-xs text-slate-400">
-                    Cost: {currency} {product.cost_price.toFixed(2)}
-                  </p>
-                )}
-              </div>
-              
-              {/* Stock Badge — only when inventory tracking is enabled */}
-              {(() => {
-                if (!product.track_inventory) return null;
-                const isOutOfStock = product.stock_quantity === 0;
-                const isLowStock = product.stock_quantity > 0 && product.stock_quantity < product.low_stock_threshold;
-                if (isOutOfStock) return (
-                  <Badge variant="destructive" className="gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    Out of Stock
-                  </Badge>
-                );
-                if (isLowStock) return (
-                  <Badge className="bg-amber-100 text-amber-700 border-amber-300">
-                    Low Stock ({product.stock_quantity})
-                  </Badge>
-                );
-                return (
-                  <Badge variant="outline" className="text-slate-600">
-                    {product.stock_quantity} in stock
-                  </Badge>
-                );
-              })()}
+        return (
+          <div
+            key={product.id}
+            onClick={() => onEdit(product)}
+            className={cn(
+              "bg-white rounded-xl border border-slate-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow",
+              !product.is_active && "opacity-60"
+            )}
+          >
+            <div className="aspect-square bg-slate-100 overflow-hidden relative">
+              {product.image_url ? (
+                <img
+                  src={product.image_url}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Package className="w-10 h-10 text-slate-300" />
+                </div>
+              )}
+              {!product.is_active && (
+                <div className="absolute top-2 right-2">
+                  <span className="text-xs bg-slate-700 text-white px-1.5 py-0.5 rounded">Inactive</span>
+                </div>
+              )}
+              {product.is_featured && (
+                <div className="absolute top-2 left-2">
+                  <span className="text-xs bg-amber-500 text-white px-1.5 py-0.5 rounded">Featured</span>
+                </div>
+              )}
+            </div>
+            <div className="p-2">
+              <p className="font-semibold text-sm text-slate-900 line-clamp-1">{product.name}</p>
+              <p className="font-semibold text-sm mt-0.5" style={{ color: 'rgb(var(--color-primary))' }}>
+                <PriceDisplay price={product.price} compareAtPrice={product.compare_at_price} currency={currency} />
+              </p>
+              {isOutOfStock && (
+                <span className="text-xs text-red-600 font-medium">Out of Stock</span>
+              )}
+              {isLowStock && (
+                <span className="text-xs text-amber-600 font-medium">Low Stock ({product.stock_quantity})</span>
+              )}
             </div>
           </div>
-        </Card>
-      ))}
+        );
+      })}
     </div>
   );
 }
