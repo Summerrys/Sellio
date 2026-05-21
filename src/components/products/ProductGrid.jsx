@@ -72,8 +72,8 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD' }) {
                 )}
               </div>
               
-              {/* Stock Badge */}
-              {product.stock_quantity !== undefined && (
+              {/* Stock Badge — only when inventory tracking is enabled */}
+              {product.track_inventory === true && product.stock_quantity !== null && (
                 <div className="text-right">
                   {product.stock_quantity === 0 ? (
                     <Badge variant="destructive" className="gap-1">

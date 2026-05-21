@@ -56,7 +56,7 @@ export default function Products() {
     const matchesStatus = statusFilter === 'all' || 
       (statusFilter === 'active' && product.is_active) ||
       (statusFilter === 'inactive' && !product.is_active) ||
-      (statusFilter === 'low_stock' && product.stock_quantity <= (product.low_stock_threshold || 5));
+      (statusFilter === 'low_stock' && product.track_inventory === true && product.stock_quantity !== null && product.stock_quantity > 0 && product.stock_quantity <= (product.low_stock_threshold || 5));
 
     return matchesSearch && matchesCategory && matchesStatus;
   });
