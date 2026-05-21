@@ -22,14 +22,7 @@ const EXAMPLE_ROW = ['Green Tea Latte', 'GTL-001', 'Creamy matcha blend', 'Bever
 export default function Products() {
   const { tenantId, tenant } = useTenant();
   const queryClient = useQueryClient();
-  const [viewMode, setViewMode] = useState(
-    localStorage.getItem('products_view_mode') || 'list'
-  );
-
-  const handleViewToggle = (mode) => {
-    setViewMode(mode);
-    localStorage.setItem('products_view_mode', mode);
-  };
+  const [viewMode, setViewMode] = useState('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -63,7 +56,7 @@ export default function Products() {
     const matchesStatus = statusFilter === 'all' || 
       (statusFilter === 'active' && product.is_active) ||
       (statusFilter === 'inactive' && !product.is_active) ||
-      (statusFilter === 'low_stock' && product.track_inventory === true && product.stock_quantity !== null && product.stock_quantity > 0 && product.stock_quantity <= (product.low_stock_threshold || 5));
+      (statusFilter === 'low_stock' && product.stock_quantity <= (product.low_stock_threshold || 5));
 
     return matchesSearch && matchesCategory && matchesStatus;
   });
@@ -215,33 +208,23 @@ export default function Products() {
             </Select>
 
             {/* View Toggle */}
-            <div className="flex gap-1 ml-auto">
-              <button
-                onClick={() => handleViewToggle('grid')}
-                style={{
-                  background: viewMode === 'grid' ? '#f3f0ff' : 'transparent',
-                  color: viewMode === 'grid' ? '#7c3aed' : '#9ca3af',
-                  border: '0.5px solid #e5e7eb',
-                  borderRadius: '8px',
-                  padding: '6px 8px',
-                  cursor: 'pointer',
-                }}
+            <div className="flex gap-1 p-1 bg-slate-100 rounded-lg ml-auto">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className={cn("h-8 px-3", viewMode === 'grid' && "bg-white shadow-sm")}
               >
-                <LayoutGrid size={18} />
-              </button>
-              <button
-                onClick={() => handleViewToggle('list')}
-                style={{
-                  background: viewMode === 'list' ? '#f3f0ff' : 'transparent',
-                  color: viewMode === 'list' ? '#7c3aed' : '#9ca3af',
-                  border: '0.5px solid #e5e7eb',
-                  borderRadius: '8px',
-                  padding: '6px 8px',
-                  cursor: 'pointer',
-                }}
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className={cn("h-8 px-3", viewMode === 'list' && "bg-white shadow-sm")}
               >
-                <List size={18} />
-              </button>
+                <List className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         </div>
@@ -261,66 +244,12 @@ export default function Products() {
             actionLabel="Add Product"
             onAction={handleAdd}
           />
-        ) : viewMode === 'grid' ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-            {filteredProducts.map(product => (
-              <div
-                key={product.id}
-                onClick={() => handleEdit(product)}
-                style={{
-                  background: 'white', borderRadius: '12px',
-                  border: '0.5px solid #e5e7eb', overflow: 'hidden', cursor: 'pointer',
-                }}
-              >
-                {product.image_url ? (
-                  <img
-                    src={product.image_url}
-                    alt={product.name}
-                    style={{ width: '100%', aspectRatio: '1', objectFit: 'cover' }}
-                  />
-                ) : (
-                  <div style={{ width: '100%', aspectRatio: '1', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <ShoppingBag style={{ width: 32, height: 32, color: '#cbd5e1' }} />
-                  </div>
-                )}
-                <div style={{ padding: '8px' }}>
-                  <p style={{ fontWeight: '600', fontSize: '13px', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</p>
-                  <p style={{ color: '#7c3aed', fontWeight: '600', fontSize: '13px', margin: 0 }}>{tenant?.currency || 'SGD'} {parseFloat(product.price).toFixed(2)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {filteredProducts.map(product => (
-              <div
-                key={product.id}
-                onClick={() => handleEdit(product)}
-                style={{
-                  display: 'flex', gap: '12px', background: 'white',
-                  borderRadius: '12px', border: '0.5px solid #e5e7eb',
-                  padding: '12px', cursor: 'pointer',
-                }}
-              >
-                {product.image_url ? (
-                  <img
-                    src={product.image_url}
-                    alt={product.name}
-                    style={{ width: '72px', height: '72px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
-                  />
-                ) : (
-                  <div style={{ width: '72px', height: '72px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <ShoppingBag style={{ width: 24, height: 24, color: '#cbd5e1' }} />
-                  </div>
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontWeight: '600', fontSize: '14px', margin: 0 }}>{product.name}</p>
-                  <p style={{ fontSize: '12px', color: '#6b7280', margin: '2px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.description}</p>
-                  <p style={{ color: '#7c3aed', fontWeight: '600', fontSize: '14px', margin: '4px 0 0' }}>{tenant?.currency || 'SGD'} {parseFloat(product.price).toFixed(2)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ProductGrid 
+            products={filteredProducts} 
+            onEdit={handleEdit}
+            currency={tenant?.currency || 'SGD'}
+          />
         )}
 
         {/* Product Form Dialog */}
