@@ -3,23 +3,12 @@ import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import PriceDisplay from './PriceDisplay';
 
-function getStockStatus(product) {
-  if (!product.track_inventory) return { isOutOfStock: false, isLowStock: false, currentStock: null };
-  const inv = product.inventory?.[0];
-  const currentStock = inv?.current_stock ?? product.stock_quantity ?? 0;
-  const threshold = inv?.low_stock_threshold ?? product.low_stock_threshold ?? 5;
-  return {
-    isOutOfStock: currentStock === 0,
-    isLowStock: currentStock > 0 && currentStock < threshold,
-    currentStock,
-  };
-}
-
 export default function ProductList({ products, onEdit, currency = 'SGD' }) {
   return (
     <div className="flex flex-col gap-3">
       {products.map((product) => {
-        const { isOutOfStock, isLowStock, currentStock } = getStockStatus(product);
+        const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
+        const isLowStock = product.track_inventory && product.stock_quantity > 0 && product.stock_quantity < product.low_stock_threshold;
 
         return (
           <div
@@ -57,21 +46,15 @@ export default function ProductList({ products, onEdit, currency = 'SGD' }) {
               {product.description && (
                 <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{product.description}</p>
               )}
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <div className="flex items-center gap-3 mt-1">
                 <p className="font-semibold text-sm" style={{ color: 'rgb(var(--color-primary))' }}>
                   <PriceDisplay price={product.price} compareAtPrice={product.compare_at_price} currency={currency} />
                 </p>
                 {isOutOfStock && (
-                  <span style={{
-                    background: '#fee2e2', color: '#991b1b', fontSize: '11px', fontWeight: '600',
-                    padding: '2px 8px', borderRadius: '999px', border: '1px solid #fca5a5',
-                  }}>Out of Stock</span>
+                  <span className="text-xs text-red-600 font-medium">Out of Stock</span>
                 )}
                 {isLowStock && (
-                  <span style={{
-                    background: '#fef3c7', color: '#92400e', fontSize: '11px', fontWeight: '600',
-                    padding: '2px 8px', borderRadius: '999px', border: '1px solid #fcd34d',
-                  }}>Low Stock ({currentStock})</span>
+                  <span className="text-xs text-amber-600 font-medium">Low Stock ({product.stock_quantity})</span>
                 )}
               </div>
             </div>

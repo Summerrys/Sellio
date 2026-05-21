@@ -2,7 +2,6 @@ import React, { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PullToRefresh from '../components/ui-custom/PullToRefresh';
 import db from '@/lib/db';
-import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
@@ -42,16 +41,7 @@ export default function Products() {
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products', tenantId],
-    queryFn: async () => {
-      const supabase = await getSupabase();
-      const { data, error } = await supabase
-        .from('products')
-        .select('*, inventory:inventory_items(current_stock, low_stock_threshold)')
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false });
-      if (error) throw new Error(error.message);
-      return data || [];
-    },
+    queryFn: () => db.entities.Product.filter({ tenant_id: tenantId }, '-created_date'),
     enabled: !!tenantId,
   });
 
@@ -72,12 +62,7 @@ export default function Products() {
     const matchesStatus = statusFilter === 'all' || 
       (statusFilter === 'active' && product.is_active) ||
       (statusFilter === 'inactive' && !product.is_active) ||
-      (statusFilter === 'low_stock' && (() => {
-        const inv = product.inventory?.[0];
-        const stock = product.track_inventory ? (inv?.current_stock ?? product.stock_quantity ?? 0) : null;
-        const threshold = product.track_inventory ? (inv?.low_stock_threshold ?? product.low_stock_threshold ?? 5) : null;
-        return product.track_inventory && stock !== null && stock > 0 && stock < threshold;
-      })());
+      (statusFilter === 'low_stock' && product.track_inventory === true && product.stock_quantity !== null && product.stock_quantity > 0 && product.stock_quantity <= (product.low_stock_threshold || 5));
 
     return matchesSearch && matchesCategory && matchesStatus;
   });
