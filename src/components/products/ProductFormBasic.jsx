@@ -1,20 +1,54 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
+import { getSupabase } from '@/lib/supabaseClient';
+
+const toSlug = (str) => (str || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 export default function ProductFormBasic({ 
   formData, 
   onChange, 
   categories, 
+  onCategoriesChange,
   errors,
-  onCreateCategory,
   isEditMode,
   savedSku,
+  tenantId,
 }) {
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [addingCategory, setAddingCategory] = useState(false);
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    setAddingCategory(true);
+    try {
+      const supabase = await getSupabase();
+      const { data: newCat, error } = await supabase
+        .from('categories')
+        .insert({
+          tenant_id: tenantId,
+          name: newCategoryName.trim(),
+          slug: toSlug(newCategoryName.trim()),
+          is_active: true,
+        })
+        .select()
+        .single();
+      if (!error && newCat) {
+        onCategoriesChange?.([...categories, newCat]);
+        onChange({ category_id: newCat.id });
+        setShowAddCategory(false);
+        setNewCategoryName('');
+      }
+    } finally {
+      setAddingCategory(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div>
@@ -74,11 +108,42 @@ export default function ProductFormBasic({
               variant="outline"
               size="icon"
               className="flex-shrink-0"
-              onClick={onCreateCategory}
+              onClick={() => setShowAddCategory(v => !v)}
             >
               <Plus className="w-4 h-4" />
             </Button>
           </div>
+          {showAddCategory && (
+            <div className="flex gap-2 mt-2 items-center">
+              <Input
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+                placeholder="New category name"
+                className="flex-1 min-w-0"
+                autoFocus
+              />
+              <Button
+                type="button"
+                size="sm"
+                className="flex-shrink-0 text-white"
+                style={{ background: 'var(--color-primary-gradient)' }}
+                onClick={handleAddCategory}
+                disabled={addingCategory}
+              >
+                Add
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="flex-shrink-0"
+                onClick={() => { setShowAddCategory(false); setNewCategoryName(''); }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 

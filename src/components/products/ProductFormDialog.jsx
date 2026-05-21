@@ -362,10 +362,11 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
               formData={formData}
               onChange={update}
               categories={categories}
+              onCategoriesChange={setCategories}
               errors={errors}
-              onCreateCategory={() => {}}
               isEditMode={!!product?.id}
               savedSku={savedSku}
+              tenantId={tenantId}
             />
           </Section>
 
