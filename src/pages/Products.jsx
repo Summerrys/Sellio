@@ -12,8 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import ProductGrid from '../components/products/ProductGrid';
 import ProductFormDialog from '../components/products/ProductFormDialog.jsx';
 import ProductImportDialog from '../components/products/ProductImportDialog';
-import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const CSV_HEADERS = ['Name', 'SKU', 'Description', 'Category', 'Price', 'Cost Price', 'Compare At Price', 'Stock', 'Low Stock Threshold', 'Active', 'Featured', 'Tags', 'Image URL'];
+const EXAMPLE_ROW = ['Green Tea Latte', 'GTL-001', 'Creamy matcha blend', 'Beverages', '6.50', '2.50', '8.00', '50', '10', 'true', 'false', 'health,matcha,hot', 'https://example.com/green-tea-latte.jpg'];
 
 export default function Products() {
   const { tenantId, tenant } = useTenant();
@@ -67,23 +71,40 @@ export default function Products() {
     setShowDialog(true);
   };
 
-  const handleExport = () => {
-    const csv = [
-      ['Name', 'SKU', 'Description', 'Category', 'Price', 'Cost Price', 'Stock', 'Low Stock Threshold', 'Active', 'Image URL'].join(','),
-      ...filteredProducts.map(p => [
-        p.name,
-        p.sku || '',
-        p.description || '',
-        categories.find(c => c.id === p.category_id)?.name || '',
-        p.price,
-        p.cost_price || '',
-        p.stock_quantity || 0,
-        p.low_stock_threshold || 5,
-        p.is_active,
-        p.image_url || ''
-      ].join(','))
-    ].join('\n');
+  const csvEscape = (val) => {
+    const s = val == null ? '' : String(val);
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+  };
 
+  const handleDownloadTemplate = () => {
+    const csv = [CSV_HEADERS.join(','), EXAMPLE_ROW.join(',')].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'product_import_template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleExport = () => {
+    const rows = products.map(p => [
+      p.name,
+      p.sku || '',
+      p.description || '',
+      categories.find(c => c.id === p.category_id)?.name || '',
+      p.price,
+      p.cost_price || '',
+      p.compare_at_price || '',
+      p.stock_quantity ?? 0,
+      p.low_stock_threshold ?? 5,
+      p.is_active ? 'true' : 'false',
+      p.is_featured ? 'true' : 'false',
+      Array.isArray(p.tags) ? p.tags.join(',') : (p.tags || ''),
+      p.image_url || '',
+    ].map(csvEscape).join(','));
+
+    const csv = [CSV_HEADERS.join(','), ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -108,10 +129,24 @@ export default function Products() {
           description="Manage your product catalog"
           actions={
             <>
-              <Button onClick={handleExport} variant="outline" size="sm">
-                <Download className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Export</span>
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Download className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Download</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleDownloadTemplate}>
+                    <FileDown className="w-4 h-4 mr-2" />
+                    Download Template
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExport}>
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Export All Products
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <RequirePermission permission="products.create" silent>
                 <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm">
                   <Upload className="w-4 h-4 sm:mr-2" />

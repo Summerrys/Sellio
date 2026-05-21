@@ -5,11 +5,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, Download, CheckCircle, AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { Upload, CheckCircle, AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-
-const CSV_HEADERS = ['Name', 'SKU', 'Description', 'Category', 'Price', 'Cost Price', 'Compare At Price', 'Stock', 'Low Stock Threshold', 'Active', 'Featured', 'Tags', 'Image URL'];
-const EXAMPLE_ROW = ['Green Tea Latte', 'GTL-001', 'Creamy matcha blend', 'Beverages', '6.50', '2.50', '8.00', '50', '10', 'true', 'false', 'health,matcha,hot', 'https://example.com/green-tea-latte.jpg'];
 
 const toSlug = (str) => (str || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -74,17 +71,6 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
   const [importProgress, setImportProgress] = useState(0);
   const [importSummary, setImportSummary] = useState(null);
   const [importing, setImporting] = useState(false);
-
-  const downloadTemplate = () => {
-    const csv = [CSV_HEADERS.join(','), EXAMPLE_ROW.join(',')].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'product_import_template.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
 
   const validateRow = (row, index) => {
     const errors = [];
@@ -229,14 +215,10 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
           <div className="space-y-4">
             <Alert>
               <AlertDescription>
-                Download the CSV template, fill in your product data, then upload it here.
+                Download the CSV template from the toolbar (↓ Download button), fill in your product data, then upload it here.
                 Required columns: <strong>Name</strong>, <strong>Price</strong>.
               </AlertDescription>
             </Alert>
-            <Button onClick={downloadTemplate} variant="outline" className="w-full">
-              <Download className="w-4 h-4 mr-2" />
-              Download CSV Template
-            </Button>
             <div className="border-2 border-dashed rounded-lg p-12 text-center hover:bg-slate-50 cursor-pointer transition-colors">
               <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" id="csv-upload" />
               <label htmlFor="csv-upload" className="cursor-pointer">
