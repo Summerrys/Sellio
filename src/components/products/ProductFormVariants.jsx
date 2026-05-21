@@ -1,9 +1,4 @@
 import React, { useState } from 'react';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Plus, X, GripVertical } from 'lucide-react';
 
 export default function ProductFormVariants({ formData, onChange }) {
   const [newVariant, setNewVariant] = useState({ name: '', price_modifier: 0 });
@@ -82,72 +77,81 @@ export default function ProductFormVariants({ formData, onChange }) {
   };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <Label>Product Variants</Label>
-        <p className="text-xs text-slate-500 mt-1">
-          Add options like sizes, colors, or add-ons with price adjustments
-        </p>
-      </div>
+    <div>
+      {variants.map((group, groupIndex) => (
+        <div key={groupIndex} style={{
+          border: '0.5px solid #e5e7eb',
+          borderRadius: '12px',
+          padding: '12px',
+          marginBottom: '12px',
+          background: '#fafafa'
+        }}>
+          {/* Group header */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
+            <input
+              value={group.name}
+              onChange={(e) => updateGroupName(groupIndex, e.target.value)}
+              placeholder="Group name e.g. Size, Add-ons"
+              style={{ flex: 1, fontWeight: '600', fontSize: '13px' }}
+            />
+            <select
+              value={group.type}
+              onChange={(e) => updateGroupType(groupIndex, e.target.value)}
+              style={{ width: '90px', fontSize: '12px', flexShrink: 0 }}
+            >
+              <option value="size">Size</option>
+              <option value="color">Color</option>
+              <option value="addon">Add-on</option>
+              <option value="other">Other</option>
+            </select>
+            <button
+              onClick={() => removeGroup(groupIndex)}
+              style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, fontSize: '16px' }}
+            >✕</button>
+          </div>
 
-      {/* Existing Variants */}
-      {variants.length > 0 && (
-        <div className="space-y-2">
-          {variants.map((variant, index) => (
-            <Card key={index} className="p-3 flex items-center gap-3">
-              <GripVertical className="w-4 h-4 text-slate-400 cursor-move" />
-              <div className="flex-1">
-                <p className="font-medium text-slate-900">{variant.name}</p>
-                <p className="text-sm text-slate-500">
-                  {variant.price_modifier > 0 ? '+' : ''}
-                  {variant.price_modifier.toFixed(2)}
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => removeVariant(index)}
-                className="h-8 w-8"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </Card>
+          {/* Options */}
+          {(group.options || []).map((option, optIndex) => (
+            <div key={optIndex} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
+              <input
+                value={option.label}
+                onChange={(e) => updateOptionLabel(groupIndex, optIndex, e.target.value)}
+                placeholder="Option name"
+                style={{ flex: 1 }}
+              />
+              <span style={{ fontSize: '12px', color: '#6b7280', flexShrink: 0 }}>+SGD</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                value={option.price_modifier || ''}
+                onChange={(e) => updateOptionPrice(groupIndex, optIndex, e.target.value)}
+                placeholder="0"
+                style={{ width: '70px', flexShrink: 0 }}
+              />
+              <button
+                onClick={() => removeOption(groupIndex, optIndex)}
+                style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}
+              >✕</button>
+            </div>
           ))}
-        </div>
-      )}
 
-      {/* Add New Variant */}
-      <div className="flex gap-2">
-        <Input
-          placeholder="Variant name (e.g., Large, Red)"
-          value={newVariant.name}
-          onChange={(e) => setNewVariant({ ...newVariant, name: e.target.value })}
-          onKeyPress={(e) => e.key === 'Enter' && addVariant()}
-        />
-        <Input
-          type="number"
-          step="0.01"
-          placeholder="+0.00"
-          value={newVariant.price_modifier}
-          onChange={(e) => setNewVariant({ ...newVariant, price_modifier: e.target.value })}
-          className="w-24"
-        />
-        <Button
-          type="button"
-          variant="outline"
-          onClick={addVariant}
-          disabled={!newVariant.name.trim()}
-        >
-          <Plus className="w-4 h-4" />
-        </Button>
-      </div>
-
-      {variants.length === 0 && (
-        <div className="text-center py-6 text-sm text-slate-400">
-          No variants added. Products without variants have a single price.
+          <button
+            onClick={() => addOption(groupIndex)}
+            style={{ fontSize: '12px', color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', marginTop: '4px' }}
+          >+ Add option</button>
         </div>
-      )}
+      ))}
+
+      <button
+        onClick={addGroup}
+        style={{
+          width: '100%', padding: '10px',
+          border: '1px dashed #d1d5db',
+          borderRadius: '8px',
+          background: 'none', cursor: 'pointer',
+          color: '#7c3aed', fontSize: '13px', fontWeight: '600'
+        }}
+      >+ Add variant group</button>
     </div>
   );
 }
