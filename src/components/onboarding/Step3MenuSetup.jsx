@@ -491,12 +491,15 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                 const newPreviews = [...imagePreviews];
                 const newFiles = [...imageFiles];
                 const newUrls = [...imageUrls];
+                const newPaths = [...imageStoragePaths];
                 [newPreviews[from], newPreviews[to]] = [newPreviews[to], newPreviews[from]];
                 [newFiles[from], newFiles[to]] = [newFiles[to], newFiles[from]];
                 [newUrls[from], newUrls[to]] = [newUrls[to], newUrls[from]];
+                [newPaths[from], newPaths[to]] = [newPaths[to], newPaths[from]];
                 setImagePreviews(newPreviews);
                 setImageFiles(newFiles);
                 setImageUrls(newUrls);
+                setImageStoragePaths(newPaths);
               }}>
                 <Droppable droppableId="images" direction="horizontal">
                   {(provided) => (
