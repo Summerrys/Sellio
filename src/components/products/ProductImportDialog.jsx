@@ -10,6 +10,44 @@ import { toast } from 'sonner';
 
 const toSlug = (str) => (str || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
+const normalizeLegacyVariants = (variants) => {
+  if (!variants?.length) return [];
+  if (variants[0]?.options) return variants; // already grouped
+  return [{
+    name: 'Options',
+    type: 'other',
+    options: variants.map(v => ({ label: v.name || v.label || '', price_modifier: v.price_modifier || 0 })),
+  }];
+};
+
+const parseVariantsFromSimpleFormat = (str) => {
+  if (!str || str.trim() === '') return [];
+  try {
+    if (str.trim().startsWith('[')) {
+      const parsed = JSON.parse(str);
+      return normalizeLegacyVariants(parsed);
+    }
+  } catch (e) {}
+  return str.split(' | ').map(group => {
+    const colonIndex = group.indexOf(':');
+    if (colonIndex === -1) return null;
+    const groupName = group.substring(0, colonIndex).trim();
+    const optionsStr = group.substring(colonIndex + 1).trim();
+    if (!groupName || !optionsStr) return null;
+    const options = optionsStr.split('|').map(opt => {
+      const trimmed = opt.trim();
+      const priceMatch = trimmed.match(/^(.+)\+(\d+\.?\d*)$/);
+      if (priceMatch) return { label: priceMatch[1].trim(), price_modifier: parseFloat(priceMatch[2]) };
+      return { label: trimmed, price_modifier: 0 };
+    }).filter(o => o.label);
+    const type =
+      /size/i.test(groupName) ? 'size' :
+      /colou?r/i.test(groupName) ? 'color' :
+      /add.?on|topping|extra/i.test(groupName) ? 'addon' : 'other';
+    return { name: groupName, type, options };
+  }).filter(Boolean);
+};
+
 const parseBool = (val) => {
   if (val == null || val === '') return true;
   const s = String(val).toLowerCase().trim();
@@ -32,11 +70,14 @@ const HEADER_MAP = {
   'currentstock': 'stock_quantity',
   'low stock threshold': 'low_stock_threshold',
   'lowstockthreshold': 'low_stock_threshold',
+  'track inventory': 'track_inventory',
+  'trackinventory': 'track_inventory',
   'active': 'is_active',
   'isactive': 'is_active',
   'featured': 'is_featured',
   'isfeatured': 'is_featured',
   'tags': 'tags',
+  'variants': 'variants',
   'image url': 'image_url',
   'imageurl': 'image_url',
 };
@@ -157,6 +198,7 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
           is_active: parseBool(row.is_active),
           is_featured: parseBool(row.is_featured ?? 'false'),
           tags,
+          variants: parseVariantsFromSimpleFormat(row.variants || ''),
           image_url: row.image_url?.trim() || null,
         };
         // Only include sku if provided — let trigger auto-generate if blank

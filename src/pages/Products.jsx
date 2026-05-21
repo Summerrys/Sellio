@@ -16,8 +16,26 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const CSV_HEADERS = ['Name', 'SKU', 'Description', 'Category', 'Price', 'Cost Price', 'Compare At Price', 'Stock', 'Low Stock Threshold', 'Active', 'Featured', 'Tags', 'Image URL'];
-const EXAMPLE_ROW = ['Green Tea Latte', 'GTL-001', 'Creamy matcha blend', 'Beverages', '6.50', '2.50', '8.00', '50', '10', 'true', 'false', 'health,matcha,hot', 'https://example.com/green-tea-latte.jpg'];
+const CSV_HEADERS = ['Name', 'SKU', 'Description', 'Category', 'Price', 'Cost Price', 'Compare At Price', 'Stock Quantity', 'Low Stock Threshold', 'Track Inventory', 'Active', 'Featured', 'Tags', 'Variants', 'Image URL'];
+
+const variantsToSimpleFormat = (variants) => {
+  if (!variants?.length) return '';
+  return variants.map(group => {
+    const options = (group.options || []).map(o =>
+      o.price_modifier > 0
+        ? `${o.label}+${o.price_modifier}`
+        : o.label
+    ).join('|');
+    return `${group.name}:${options}`;
+  }).join(' | ');
+};
+
+const TEMPLATE_ROWS = [
+  '# VARIANTS: GroupName:Option1|Option2+Price | GroupName2:Option1|Option2',
+  'Latte Coffee,,Rich espresso,Beverages,5.50,3.00,6.50,100,10,true,true,false,"coffee,latte",Size:Regular|Large+1.50 | Add-ons:Extra shot+0.50|Oat milk+1.00,',
+  'Cotton T-Shirt,,Cotton tee,Apparel,29.90,15.00,,50,5,true,true,false,"fashion",Size:S|M|L | Color:Black|White|Red,',
+  'Simple Snack,,No variants,Food,9.90,5.00,,200,20,false,true,false,"snack",,',
+];
 
 export default function Products() {
   const { tenantId, tenant } = useTenant();
@@ -84,7 +102,7 @@ export default function Products() {
   };
 
   const handleDownloadTemplate = () => {
-    const csv = [CSV_HEADERS.join(','), EXAMPLE_ROW.join(',')].join('\n');
+    const csv = [CSV_HEADERS.join(','), ...TEMPLATE_ROWS].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -108,6 +126,7 @@ export default function Products() {
       p.is_active ? 'true' : 'false',
       p.is_featured ? 'true' : 'false',
       Array.isArray(p.tags) ? p.tags.join(',') : (p.tags || ''),
+      variantsToSimpleFormat(p.variants),
       p.image_url || '',
     ].map(csvEscape).join(','));
 
