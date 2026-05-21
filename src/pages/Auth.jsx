@@ -10,6 +10,14 @@ const COUNTRY_CODES = [
   { code: '+60', flag: '🇲🇾', name: 'MY', placeholder: '112345678', validate: (p) => /^1\d{8,9}$/.test(p), hint: '9–10 digits, starting with 1' },
 ];
 
+const hashPassword = async (password) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
 export default function Auth() {
   const { setAppUser } = useAppUser();
   const [isLogin, setIsLogin] = useState(true);
@@ -152,13 +160,18 @@ export default function Auth() {
         // Look up email by phone number
         const { data: rows, error: lookupError } = await supabase
           .from('app_users')
-          .select('id, email, full_name, role, onboarding_completed, tenant_id')
+          .select('id, email, full_name, role, onboarding_completed, tenant_id, password_hash')
           .eq('phone', fullPhone)
           .limit(1);
 
         if (lookupError) throw lookupError;
         const appUserRow = rows?.[0];
         if (!appUserRow) throw new Error('No account found for this phone number. Please sign up first.');
+
+        const passwordHash = await hashPassword(formData.password);
+        if (appUserRow.password_hash && passwordHash !== appUserRow.password_hash) {
+          throw new Error('Invalid phone number or password');
+        }
 
         const { error } = await supabase.auth.signInWithPassword({
           email: appUserRow.email,
@@ -191,10 +204,13 @@ export default function Auth() {
         });
         if (signUpError) throw signUpError;
 
+        const passwordHash = await hashPassword(formData.password);
+
         const { error: insertError } = await supabase.from('app_users').insert({
           email: authEmail,
           full_name: formData.full_name,
           phone: fullPhone,
+          password_hash: passwordHash,
           auth_provider: 'phone',
           onboarding_completed: false,
           is_active: true,
