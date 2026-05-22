@@ -145,7 +145,14 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
   useEffect(() => {
     if (!open) return;
     if (product) {
-      setFormData({ ...EMPTY_FORM, ...product, variants: normalizeLegacyVariants(product.variants) });
+      setFormData({
+        ...EMPTY_FORM,
+        ...product,
+        variants: normalizeLegacyVariants(product.variants),
+        track_inventory: product.track_inventory ?? false,
+        stock_quantity: product.stock_quantity ?? 0,
+        low_stock_threshold: product.low_stock_threshold ?? 5,
+      });
       uploadedImagesRef.current = new Set(product.image_url ? [product.image_url] : []);
       if (product.images?.length) {
         product.images.forEach(url => uploadedImagesRef.current.add(url));
@@ -191,6 +198,9 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
           price: parseFloat(formData.price) || 0,
           cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
           compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
+          track_inventory: formData.track_inventory ?? false,
+          stock_quantity: formData.stock_quantity ?? 0,
+          low_stock_threshold: formData.low_stock_threshold ?? 5,
         };
         const { error } = await supabase.from('products').update(payload).eq('id', product.id);
         if (error) throw new Error(error.message);
