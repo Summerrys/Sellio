@@ -6,16 +6,14 @@ import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import StockAdjustmentPanel from '../components/inventory/StockAdjustmentPanel';
 import InventoryLogTable from '../components/inventory/InventoryLogTable';
 import StockTakeDialog from '../components/inventory/StockTakeDialog';
-import { Package, AlertTriangle, CheckCircle, XCircle, Search, ClipboardCheck } from 'lucide-react';
+import { Package, Search, ClipboardCheck } from 'lucide-react';
 
 export default function Inventory() {
   return (
@@ -90,15 +88,6 @@ function InventoryContent() {
     return (a.stock_quantity ?? 0) - (b.stock_quantity ?? 0);
   });
 
-  const getStatusBadge = (product) => {
-    const status = getStockStatus(product);
-    return (
-      <span style={{ background: status.bg, color: status.color, fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '999px' }}>
-        {status.label}
-      </span>
-    );
-  };
-
   return (
     <PullToRefresh onRefresh={handleRefresh}>
     <div className="space-y-6">
@@ -118,55 +107,19 @@ function InventoryContent() {
         />
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-6 border-0 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500 mb-1">Total Tracked</p>
-                <p className="text-3xl font-bold text-slate-900">{totalTracked}</p>
-                {unlimitedCount > 0 && <p className="text-xs text-slate-400 mt-0.5">{unlimitedCount} unlimited</p>}
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
-                <Package className="w-6 h-6 text-slate-600" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6 border-0 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500 mb-1">In Stock</p>
-                <p className="text-3xl font-bold text-green-600">{inStock}</p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6 border-0 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500 mb-1">Low Stock</p>
-                <p className="text-3xl font-bold text-amber-600">{lowStock}</p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-amber-600" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6 border-0 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500 mb-1">Out of Stock</p>
-                <p className="text-3xl font-bold text-red-600">{outOfStock}</p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
-                <XCircle className="w-6 h-6 text-red-600" />
-              </div>
-            </div>
-          </Card>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+          <div style={{ background: 'var(--color-background-secondary, #f1f5f9)', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
+            <p style={{ fontSize: '20px', fontWeight: '700', margin: '0 0 2px', color: '#dc2626' }}>{outOfStock}</p>
+            <p style={{ fontSize: '10px', color: '#6b7280', margin: 0 }}>Out of stock</p>
+          </div>
+          <div style={{ background: 'var(--color-background-secondary, #f1f5f9)', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
+            <p style={{ fontSize: '20px', fontWeight: '700', margin: '0 0 2px', color: '#92400e' }}>{lowStock}</p>
+            <p style={{ fontSize: '10px', color: '#6b7280', margin: 0 }}>Low stock</p>
+          </div>
+          <div style={{ background: 'var(--color-background-secondary, #f1f5f9)', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
+            <p style={{ fontSize: '20px', fontWeight: '700', margin: '0 0 2px', color: '#6b7280' }}>{unlimitedCount}</p>
+            <p style={{ fontSize: '10px', color: '#6b7280', margin: 0 }}>Unlimited</p>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -213,86 +166,68 @@ function InventoryContent() {
                 description={searchQuery || statusFilter !== 'all' ? "Try adjusting your filters" : "Enable inventory tracking on products to see them here"}
               />
             ) : (
-              <Card className="border-0 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-slate-50 border-b border-slate-200">
-                      <tr>
-                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
-                          Product
-                        </th>
-                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
-                          SKU
-                        </th>
-                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
-                          Stock
-                        </th>
-                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
-                          Threshold
-                        </th>
-                        <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
-                          Status
-                        </th>
-                        <th className="text-right text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {sortedProducts.map((product) => (
-                        <tr 
-                          key={product.id} 
-                          className="hover:bg-slate-25 transition-colors cursor-pointer"
-                          onClick={() => setSelectedProduct(product)}
-                        >
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              {product.image_url ? (
-                                <img
-                                  src={product.image_url}
-                                  alt={product.name}
-                                  className="w-10 h-10 rounded-lg object-cover"
-                                />
-                              ) : (
-                                <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-                                  <Package className="w-5 h-5 text-slate-400" />
-                                </div>
-                              )}
-                              <p className="font-medium text-slate-900">{product.name}</p>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-slate-600">
-                            {product.sku || '-'}
-                          </td>
-                          <td className="px-6 py-4">
-                           <p className="text-lg font-bold text-slate-900">
-                             {product.track_inventory ? (product.stock_quantity ?? 0) : '∞'}
-                           </p>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-slate-600">
-                           {product.track_inventory ? (product.low_stock_threshold ?? 5) : '—'}
-                          </td>
-                          <td className="px-6 py-4">
-                            {getStatusBadge(product)}
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedProduct(product);
-                              }}
-                            >
-                              Adjust
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {sortedProducts.map((product) => {
+                  const status = getStockStatus(product);
+                  const stock = product.stock_quantity ?? 0;
+                  const threshold = product.low_stock_threshold ?? 5;
+                  return (
+                    <div
+                      key={product.id}
+                      onClick={() => setSelectedProduct(product)}
+                      style={{
+                        display: 'flex', gap: '12px', alignItems: 'center',
+                        background: 'white',
+                        borderRadius: '12px',
+                        border: '1px solid #e2e8f0',
+                        padding: '10px 12px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {product.image_url
+                        ? <img src={product.image_url} alt={product.name} style={{ width: '52px', height: '52px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />
+                        : <div style={{ width: '52px', height: '52px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>🛍️</div>
+                      }
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontWeight: '600', fontSize: '13px', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#0f172a' }}>
+                          {product.name}
+                        </p>
+                        <p style={{ fontSize: '11px', color: '#6b7280', margin: '0 0 5px' }}>
+                          {product.sku || 'No SKU'}
+                        </p>
+                        {product.track_inventory && (
+                          <div style={{ height: '3px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden', width: '100%' }}>
+                            <div style={{
+                              height: '100%',
+                              width: `${Math.min((stock / Math.max(threshold * 2, 1)) * 100, 100)}%`,
+                              background: stock === 0 ? '#dc2626' : stock < threshold ? '#f59e0b' : '#16a34a',
+                              borderRadius: '999px',
+                              transition: 'width 0.3s ease'
+                            }} />
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                        {product.track_inventory ? (
+                          <>
+                            <p style={{ fontWeight: '700', fontSize: '16px', margin: '0 0 3px', color: status.color }}>{stock}</p>
+                            <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: status.bg, color: status.color, whiteSpace: 'nowrap' }}>
+                              {status.label}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <p style={{ fontWeight: '700', fontSize: '18px', margin: '0 0 3px', color: '#6b7280' }}>∞</p>
+                            <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: '#f3f4f6', color: '#6b7280' }}>
+                              Unlimited
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </TabsContent>
 
