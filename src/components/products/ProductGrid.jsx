@@ -34,11 +34,14 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
               opacity: product.is_active === false ? 0.6 : 1,
             }}
           >
-            <div style={{ width: 72, height: 72, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 72, height: 72, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
               {product.image_url ? (
                 <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 <Package className="w-8 h-8 text-slate-300" />
+              )}
+              {product.is_featured && (
+                <span style={{ position: 'absolute', top: 3, left: 3, background: '#fbbf24', color: 'white', fontSize: 9, fontWeight: 700, padding: '1px 4px', borderRadius: 999 }}>⭐</span>
               )}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -73,7 +76,7 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
           )}
           onClick={() => onEdit(product)}
         >
-          <div className="aspect-square bg-slate-100 relative overflow-hidden">
+          <div className="aspect-square bg-slate-100 relative overflow-hidden" style={{ position: 'relative' }}>
             {product.image_url ? (
               <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
             ) : (
@@ -87,9 +90,7 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
               </div>
             )}
             {product.is_featured && (
-              <div className="absolute top-2 left-2">
-                <Badge className="bg-amber-500 text-white border-0">Featured</Badge>
-              </div>
+              <span style={{ position: 'absolute', top: 8, left: 8, background: '#fbbf24', color: 'white', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 999, zIndex: 1 }}>⭐ Featured</span>
             )}
           </div>
           <div className="p-3">

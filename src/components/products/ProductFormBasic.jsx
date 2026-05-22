@@ -2,6 +2,7 @@ import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -14,10 +15,23 @@ export default function ProductFormBasic({
   isEditMode,
   savedSku,
 }) {
+
   const navigate = useNavigate();
 
   return (
     <div className="space-y-4">
+      {/* Featured toggle */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#fafafa', borderRadius: 10, border: '0.5px solid #e5e7eb' }}>
+        <div>
+          <p style={{ fontWeight: 600, fontSize: 13, margin: 0 }}>⭐ Featured Product</p>
+          <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0' }}>Highlight this product in your storefront</p>
+        </div>
+        <Switch
+          checked={formData.is_featured ?? false}
+          onCheckedChange={(val) => onChange({ is_featured: val })}
+        />
+      </div>
+
       <div>
         <Label>Product Name *</Label>
         <Input
