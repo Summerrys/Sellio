@@ -3,7 +3,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 
 export default function ProductFormInventory({ formData, onChange }) {
-  const trackInventory = formData.stock_quantity !== undefined && formData.stock_quantity !== null;
+  const trackInventory = formData.track_inventory === true;
 
   const [stockInput, setStockInput] = useState(String(formData.stock_quantity ?? 0));
   const [thresholdInput, setThresholdInput] = useState(String(formData.low_stock_threshold ?? 5));
@@ -50,14 +50,14 @@ export default function ProductFormInventory({ formData, onChange }) {
           <p className="text-xs text-slate-500">Monitor stock levels for this product</p>
         </div>
         <Switch
-          checked={trackInventory}
-          onCheckedChange={(checked) => {
-            if (checked) {
-              onChange({ stock_quantity: 0, low_stock_threshold: 5 });
-            } else {
-              onChange({ stock_quantity: null, low_stock_threshold: null });
-            }
-          }}
+         checked={trackInventory}
+         onCheckedChange={(checked) => {
+           if (checked) {
+             onChange({ track_inventory: true, stock_quantity: formData.stock_quantity ?? 0, low_stock_threshold: formData.low_stock_threshold ?? 5 });
+           } else {
+             onChange({ track_inventory: false });
+           }
+         }}
         />
       </div>
 

@@ -151,7 +151,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         ...EMPTY_FORM,
         ...product,
         variants: normalizeLegacyVariants(product.variants),
-        track_inventory: product.track_inventory ?? false,
+        track_inventory: product.track_inventory === true,
         stock_quantity: product.stock_quantity ?? 0,
         low_stock_threshold: product.low_stock_threshold ?? 5,
       });
@@ -206,7 +206,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
           compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
           is_active: formData.is_active ?? true,
           is_featured: formData.is_featured ?? false,
-          track_inventory: formData.track_inventory ?? false,
+          track_inventory: formData.track_inventory === true,
           stock_quantity: formData.stock_quantity ?? 0,
           low_stock_threshold: formData.low_stock_threshold ?? 5,
         };

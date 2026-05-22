@@ -7,8 +7,7 @@ import { cn } from '@/lib/utils';
 import PriceDisplay from './PriceDisplay';
 
 function StockBadge({ product }) {
-  const isTracked = product.stock_quantity !== undefined && product.stock_quantity !== null;
-  if (!isTracked) {
+  if (product.track_inventory !== true) {
     return <Badge variant="outline" className="text-slate-500 border-slate-300">Unlimited</Badge>;
   }
   if (product.stock_quantity === 0) {
