@@ -10,6 +10,7 @@ import SupabaseTest from './pages/SupabaseTest';
 import Splash from './pages/Splash';
 import DataMigration from './pages/DataMigration';
 import AdminRoles from './pages/AdminRoles';
+import Storefront from './pages/Storefront';
 import { useEffect, Suspense } from 'react';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { AppUserProvider } from '@/lib/AppUserContext';
@@ -77,6 +78,8 @@ const AuthenticatedApp = () => {
         <Route path="/SupabaseTest" element={<SupabaseTest />} />
         <Route path="/DataMigration" element={<LayoutWrapper currentPageName="DataMigration"><DataMigration /></LayoutWrapper>} />
         <Route path="/AdminRoles" element={<LayoutWrapper currentPageName="AdminRoles"><AdminRoles /></LayoutWrapper>} />
+        <Route path="/store/:tenantSlug" element={<Storefront />} />
+        <Route path="/order/:tenantSlug/:tableId" element={<Storefront />} />
         <Route path="*" element={<PageNotFound />} />
       </Routes>
     </Suspense>
