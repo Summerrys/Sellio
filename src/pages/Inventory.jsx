@@ -41,46 +41,62 @@ function InventoryContent() {
     enabled: !!tenantId,
   });
 
-  // Filter tracked products only
-  const trackedProducts = products.filter(p => 
-    p.stock_quantity !== undefined && p.stock_quantity !== null
-  );
+  const getStockStatus = (product) => {
+    if (!product.track_inventory) {
+      return { label: 'Unlimited', color: '#6b7280', bg: '#f3f4f6' };
+    }
+    const stock = product.stock_quantity ?? 0;
+    const threshold = product.low_stock_threshold ?? 5;
+    if (stock === 0) return { label: 'Out of Stock', color: '#dc2626', bg: '#fee2e2' };
+    if (stock < threshold) return { label: `Low Stock (${stock})`, color: '#92400e', bg: '#fef3c7' };
+    return { label: `${stock} in stock`, color: '#166534', bg: '#dcfce7' };
+  };
 
-  // Calculate summary stats
+  // All products shown; tracked ones have full status logic
+  const trackedProducts = products.filter(p => p.track_inventory);
+
+  // Calculate summary stats — only count tracked products
   const totalTracked = trackedProducts.length;
-  const inStock = trackedProducts.filter(p => p.stock_quantity > (p.low_stock_threshold || 5)).length;
-  const lowStock = trackedProducts.filter(p => 
-    p.stock_quantity > 0 && p.stock_quantity <= (p.low_stock_threshold || 5)
-  ).length;
-  const outOfStock = trackedProducts.filter(p => p.stock_quantity === 0).length;
+  const outOfStock = trackedProducts.filter(p => (p.stock_quantity ?? 0) === 0).length;
+  const lowStock = trackedProducts.filter(p => {
+    const stock = p.stock_quantity ?? 0;
+    const threshold = p.low_stock_threshold ?? 5;
+    return stock > 0 && stock < threshold;
+  }).length;
+  const inStock = totalTracked - outOfStock - lowStock;
+  const unlimitedCount = products.filter(p => !p.track_inventory).length;
 
   // Filter products
-  const filteredProducts = trackedProducts.filter(product => {
-    const matchesSearch = !searchQuery || 
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = !searchQuery ||
       product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.sku?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'in_stock' && product.stock_quantity > (product.low_stock_threshold || 5)) ||
-      (statusFilter === 'low_stock' && product.stock_quantity > 0 && product.stock_quantity <= (product.low_stock_threshold || 5)) ||
-      (statusFilter === 'out_of_stock' && product.stock_quantity === 0);
+
+    const stock = product.stock_quantity ?? 0;
+    const threshold = product.low_stock_threshold ?? 5;
+    const matchesStatus = statusFilter === 'all' ||
+      (statusFilter === 'unlimited' && !product.track_inventory) ||
+      (statusFilter === 'in_stock' && product.track_inventory && stock > 0 && stock >= threshold) ||
+      (statusFilter === 'low_stock' && product.track_inventory && stock > 0 && stock < threshold) ||
+      (statusFilter === 'out_of_stock' && product.track_inventory && stock === 0);
 
     return matchesSearch && matchesStatus;
   });
 
-  // Sort by stock level (ascending)
-  const sortedProducts = [...filteredProducts].sort((a, b) => 
-    (a.stock_quantity || 0) - (b.stock_quantity || 0)
-  );
+  // Sort: unlimited last, then by stock level ascending
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    if (!a.track_inventory && b.track_inventory) return 1;
+    if (a.track_inventory && !b.track_inventory) return -1;
+    return (a.stock_quantity ?? 0) - (b.stock_quantity ?? 0);
+  });
 
   const getStatusBadge = (product) => {
-    if (product.stock_quantity === 0) {
-      return <Badge className="bg-red-100 text-red-700 border-red-300">Out of Stock</Badge>;
-    }
-    if (product.stock_quantity <= (product.low_stock_threshold || 5)) {
-      return <Badge className="bg-amber-100 text-amber-700 border-amber-300">Low Stock</Badge>;
-    }
-    return <Badge className="bg-green-100 text-green-700 border-green-300">In Stock</Badge>;
+    const status = getStockStatus(product);
+    return (
+      <span style={{ background: status.bg, color: status.color, fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '999px' }}>
+        {status.label}
+      </span>
+    );
   };
 
   return (
@@ -108,6 +124,7 @@ function InventoryContent() {
               <div>
                 <p className="text-sm text-slate-500 mb-1">Total Tracked</p>
                 <p className="text-3xl font-bold text-slate-900">{totalTracked}</p>
+                {unlimitedCount > 0 && <p className="text-xs text-slate-400 mt-0.5">{unlimitedCount} unlimited</p>}
               </div>
               <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
                 <Package className="w-6 h-6 text-slate-600" />
@@ -181,6 +198,7 @@ function InventoryContent() {
                   <SelectItem value="in_stock">In Stock</SelectItem>
                   <SelectItem value="low_stock">Low Stock</SelectItem>
                   <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                  <SelectItem value="unlimited">Unlimited</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -247,12 +265,12 @@ function InventoryContent() {
                             {product.sku || '-'}
                           </td>
                           <td className="px-6 py-4">
-                            <p className="text-lg font-bold text-slate-900">
-                              {product.stock_quantity || 0}
-                            </p>
+                           <p className="text-lg font-bold text-slate-900">
+                             {product.track_inventory ? (product.stock_quantity ?? 0) : '∞'}
+                           </p>
                           </td>
                           <td className="px-6 py-4 text-sm text-slate-600">
-                            {product.low_stock_threshold || 5}
+                           {product.track_inventory ? (product.low_stock_threshold ?? 5) : '—'}
                           </td>
                           <td className="px-6 py-4">
                             {getStatusBadge(product)}

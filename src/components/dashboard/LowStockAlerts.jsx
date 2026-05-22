@@ -12,9 +12,12 @@ export default function LowStockAlerts({ tenantId }) {
     enabled: !!tenantId,
   });
 
-  const lowStockItems = products.filter(p => 
-    (p.stock_quantity || 0) <= (p.low_stock_threshold || 5)
-  );
+  const lowStockItems = products.filter(p => {
+    if (!p.track_inventory) return false;
+    const stock = p.stock_quantity ?? 0;
+    const threshold = p.low_stock_threshold ?? 5;
+    return stock <= threshold;
+  });
 
   return (
     <Card className="p-6 border-0 shadow-sm">
@@ -40,7 +43,7 @@ export default function LowStockAlerts({ tenantId }) {
               <div className="flex-1">
                 <p className="font-medium text-slate-900">{product.name}</p>
                 <p className="text-sm text-amber-700">
-                  Only {product.stock_quantity || 0} left
+                  {(product.stock_quantity ?? 0) === 0 ? 'Out of stock' : `Only ${product.stock_quantity} left`}
                 </p>
               </div>
               <Button size="sm" variant="outline" className="text-xs">
