@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabaseClient';
 import {
   Dialog,
   DialogContent,
@@ -15,13 +15,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useTenant } from '../tenant/TenantContext';
 
 const ZONES = ['Indoor', 'Outdoor', 'Private Room', 'Bar Area', 'Patio', 'VIP Section'];
 
-export default function TableFormDialog({ open, onOpenChange, table, tenantId }) {
+export default function TableFormDialog({ open, onOpenChange, table, tenantId, tenant }) {
   const queryClient = useQueryClient();
-  const { tenant } = useTenant();
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     zone: 'Indoor',
@@ -40,60 +39,58 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId })
         notes: table.notes || '',
       });
     } else {
-      setFormData({
-        name: '',
-        zone: 'Indoor',
-        capacity: 4,
-        status: 'available',
-        notes: '',
-      });
+      setFormData({ name: '', zone: 'Indoor', capacity: 4, status: 'available', notes: '' });
     }
   }, [table, open]);
 
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      if (table) {
-        // Update existing table
-        const updateData = {
-          name: formData.name,
-          zone: formData.zone || null,
-          capacity: parseInt(formData.capacity) || 4,
-          status: formData.status,
-          notes: formData.notes || null,
-        };
-        const res = await base44.functions.invoke('manageTable', { action: 'update', tenant_id: tenantId, table_id: table.id, table_data: updateData });
-        return res.data?.table;
+  const handleSubmit = async () => {
+    if (!tenantId || !tenant?.slug) {
+      toast.error('Store not loaded. Please refresh and try again.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const tableId = table?.id || crypto.randomUUID();
+      const qrCodeUrl = `https://sellio.apptelier.sg/order/${tenant.slug}/${tableId}`;
+
+      const payload = {
+        id: tableId,
+        tenant_id: tenantId,
+        name: formData.name.trim(),
+        zone: formData.zone?.trim() || null,
+        capacity: parseInt(formData.capacity) || 4,
+        status: formData.status || 'available',
+        notes: formData.notes?.trim() || null,
+        qr_code_url: qrCodeUrl,
+      };
+
+      console.log(table ? 'Updating table:' : 'Inserting table:', payload);
+
+      if (table?.id) {
+        const { error } = await supabase
+          .from('tables')
+          .update(payload)
+          .eq('id', table.id)
+          .eq('tenant_id', tenantId);
+        if (error) throw error;
       } else {
-        // Create new table — pre-generate ID so it can be embedded in qr_code_url
-        console.log('Creating table with tenantId:', tenantId, 'slug:', tenant?.slug);
-        if (!tenantId || !tenant?.slug) {
-          throw new Error('Tenant not loaded yet. Please refresh and try again.');
-        }
-        const newTableId = crypto.randomUUID();
-        const qrCodeUrl = `https://sellio.apptelier.sg/order/${tenant.slug}/${newTableId}`;
-        const createData = {
-          id: newTableId,
-          tenant_id: tenantId,
-          name: formData.name,
-          zone: formData.zone || null,
-          capacity: parseInt(formData.capacity) || 4,
-          status: 'available',
-          notes: formData.notes || null,
-          qr_code_url: qrCodeUrl,
-        };
-        const res = await base44.functions.invoke('manageTable', { action: 'create', tenant_id: tenantId, table_data: createData });
-        return res.data?.table;
+        const { error } = await supabase
+          .from('tables')
+          .insert(payload);
+        if (error) throw error;
       }
-    },
-    onSuccess: () => {
+
       queryClient.invalidateQueries({ queryKey: ['tables', tenantId] });
-      toast.success(table ? 'Table updated' : 'Table created with QR code');
+      toast.success(table ? 'Table updated' : 'Table created');
       onOpenChange(false);
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to save table');
-    },
-  });
+    } catch (error) {
+      console.error('Table save error:', error);
+      toast.error(`Failed to save table: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -171,11 +168,11 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId })
             Cancel
           </Button>
           <Button
-            onClick={() => saveMutation.mutate()}
-            disabled={saveMutation.isPending || !formData.name}
+            onClick={handleSubmit}
+            disabled={isLoading || !formData.name}
             className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))]"
           >
-            {saveMutation.isPending ? (
+            {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Saving...

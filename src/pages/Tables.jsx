@@ -333,6 +333,7 @@ export default function Tables() {
           onOpenChange={setShowFormDialog}
           table={selectedTable}
           tenantId={tenantId}
+          tenant={tenant}
         />
 
         <QRCodeGenerator
