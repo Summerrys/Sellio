@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabaseClient';
 import { useTenant } from '../tenant/TenantContext';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { toast } from 'sonner';
@@ -21,36 +21,27 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
 
   const currentStock = product?.stock_quantity || 0;
   const threshold = product?.low_stock_threshold ?? 5;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const newStock = adjustmentType === 'restock'
     ? currentStock + quantity
     : currentStock - quantity;
 
-  const adjustMutation = useMutation({
-    mutationFn: async () => {
+  const handleSubmit = async () => {
+    if (!adjustmentType || quantity <= 0) return;
+    setIsSubmitting(true);
+    try {
       const quantityChange = adjustmentType === 'restock' || adjustmentType === 'adjustment'
         ? quantity
         : -Math.abs(quantity);
+      const finalStock = Math.max(0, currentStock + quantityChange);
 
-      const finalStock = (product.stock_quantity || 0) + quantityChange;
+      const { error: productError } = await supabase
+        .from('products')
+        .update({ stock_quantity: finalStock })
+        .eq('id', product.id);
+      if (productError) throw productError;
 
-      await base44.entities.Product.update(product.id, {
-        stock_quantity: Math.max(0, finalStock)
-      });
-
-      await base44.entities.InventoryLog.create({
-        tenant_id: tenantId,
-        product_id: product.id,
-        product_name: product.name,
-        type: adjustmentType,
-        quantity_change: quantityChange,
-        quantity_before: product.stock_quantity || 0,
-        quantity_after: Math.max(0, finalStock),
-        notes,
-        performed_by: user?.email || 'Unknown',
-      });
-    },
-    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
       queryClient.invalidateQueries({ queryKey: ['inventoryLogs', tenantId] });
       toast.success('Stock updated successfully');
@@ -58,17 +49,19 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
       setAdjustmentType('');
       setQuantity(0);
       setNotes('');
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to update stock');
-    },
-  });
+    } catch (error) {
+      console.error('Stock adjustment error:', error);
+      toast.error(`Failed to update stock: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (!product) return null;
 
-  const canSubmit = adjustmentType && quantity > 0 && !adjustMutation.isPending;
+  const canSubmit = adjustmentType && quantity > 0 && !isSubmitting;
 
-  const buttonLabel = adjustMutation.isPending
+  const buttonLabel = isSubmitting
     ? 'Saving...'
     : !adjustmentType
       ? 'Select adjustment type'
@@ -201,7 +194,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
 
           {/* Submit */}
           <button
-            onClick={() => adjustMutation.mutate()}
+            onClick={handleSubmit}
             disabled={!canSubmit}
             style={{
               width: '100%', padding: '14px',
