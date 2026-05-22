@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import QRCode from 'qrcode';
 import {
   Dialog,
   DialogContent,
@@ -23,7 +22,6 @@ const ZONES = ['Indoor', 'Outdoor', 'Private Room', 'Bar Area', 'Patio', 'VIP Se
 export default function TableFormDialog({ open, onOpenChange, table, tenantId }) {
   const queryClient = useQueryClient();
   const { tenant } = useTenant();
-  const canvasRef = useRef(null);
   const [formData, setFormData] = useState({
     name: '',
     zone: 'Indoor',
@@ -54,39 +52,38 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId })
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const data = {
-        ...formData,
-        tenant_id: tenantId,
-      };
-
-      let createdTable;
       if (table) {
-        const res = await base44.functions.invoke('manageTable', { action: 'update', tenant_id: tenantId, table_id: table.id, table_data: data });
-        createdTable = res.data?.table;
+        // Update existing table
+        const updateData = {
+          name: formData.name,
+          zone: formData.zone || null,
+          capacity: parseInt(formData.capacity) || 4,
+          status: formData.status,
+          notes: formData.notes || null,
+        };
+        const res = await base44.functions.invoke('manageTable', { action: 'update', tenant_id: tenantId, table_id: table.id, table_data: updateData });
+        return res.data?.table;
       } else {
-        const res = await base44.functions.invoke('manageTable', { action: 'create', tenant_id: tenantId, table_data: data });
-        createdTable = res.data?.table;
-      }
-
-      // Generate QR code for new tables
-      if (!table && tenant && canvasRef.current && createdTable?.id) {
-        try {
-          const tableUrl = `${window.location.origin}/CustomerMenu?table=${encodeURIComponent(createdTable.name)}`;
-          
-          await QRCode.toCanvas(canvasRef.current, tableUrl, {
-            width: 400,
-            margin: 2,
-            color: { dark: '#0f172a', light: '#ffffff' },
-          });
-
-          const dataUrl = canvasRef.current.toDataURL('image/png');
-          await base44.functions.invoke('manageTable', { action: 'update', tenant_id: tenantId, table_id: createdTable.id, table_data: { qr_code_url: dataUrl } });
-        } catch (error) {
-          console.error('QR generation error:', error);
+        // Create new table — pre-generate ID so it can be embedded in qr_code_url
+        console.log('Creating table with tenantId:', tenantId, 'slug:', tenant?.slug);
+        if (!tenantId || !tenant?.slug) {
+          throw new Error('Tenant not loaded yet. Please refresh and try again.');
         }
+        const newTableId = crypto.randomUUID();
+        const qrCodeUrl = `https://sellio.apptelier.sg/order/${tenant.slug}/${newTableId}`;
+        const createData = {
+          id: newTableId,
+          tenant_id: tenantId,
+          name: formData.name,
+          zone: formData.zone || null,
+          capacity: parseInt(formData.capacity) || 4,
+          status: 'available',
+          notes: formData.notes || null,
+          qr_code_url: qrCodeUrl,
+        };
+        const res = await base44.functions.invoke('manageTable', { action: 'create', tenant_id: tenantId, table_data: createData });
+        return res.data?.table;
       }
-
-      return createdTable;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tables', tenantId] });
@@ -101,7 +98,6 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId })
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
-        <canvas ref={canvasRef} style={{ display: 'none' }} />
         <DialogHeader>
           <DialogTitle>{table ? 'Edit Table' : 'Add Table'}</DialogTitle>
         </DialogHeader>
