@@ -92,10 +92,12 @@ const EMPTY_FORM = {
   price: '',
   cost_price: '',
   compare_at_price: '',
-  stock_quantity: null,
-  low_stock_threshold: null,
+  stock_quantity: 0,
+  low_stock_threshold: 5,
+  track_inventory: false,
   variants: [],
   is_active: true,
+  is_featured: false,
   image_url: '',
 };
 
@@ -189,15 +191,21 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
       const supabase = await getSupabase();
 
       if (product?.id) {
-        // Edit: include user-edited SKU
-        const { sku, ...rest } = formData;
         const payload = {
-          ...rest,
-          sku: sku?.trim() ? sku.trim().toUpperCase() : (product.sku || undefined),
+          name: formData.name,
+          description: formData.description,
+          category_id: formData.category_id || null,
+          sku: formData.sku?.trim() ? formData.sku.trim().toUpperCase() : (product.sku || undefined),
+          tags: formData.tags,
+          variants: formData.variants,
+          image_url: formData.image_url || null,
+          images: formData.images || [],
           tenant_id: tenantId,
           price: parseFloat(formData.price) || 0,
           cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
           compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
+          is_active: formData.is_active ?? true,
+          is_featured: formData.is_featured ?? false,
           track_inventory: formData.track_inventory ?? false,
           stock_quantity: formData.stock_quantity ?? 0,
           low_stock_threshold: formData.low_stock_threshold ?? 5,
