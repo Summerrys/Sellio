@@ -38,6 +38,44 @@ const STATUS_CONFIG = {
   maintenance: { label: 'Maintenance', color: 'bg-red-100 text-red-700 border-red-300' },
 };
 
+// ── QR helpers ──────────────────────────────────────────────────────────────
+const generateQRDataUrl = async (url) => {
+  try {
+    return await QRCode.toDataURL(url, { width: 400, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
+  } catch (e) {
+    console.error('QR generation failed:', e);
+    return null;
+  }
+};
+
+const saveQRToStorage = async (supabase, tableId, tableName, orderingUrl, tenantId) => {
+  try {
+    const dataUrl = await generateQRDataUrl(orderingUrl);
+    if (!dataUrl) return null;
+
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+
+    const path = `${tenantId}/qr-codes/${tableId}.png`;
+    const { error: uploadError } = await supabase.storage
+      .from('product-images')
+      .upload(path, blob, { contentType: 'image/png', upsert: true });
+
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
+
+    await supabase.from('tables').update({ qr_image_url: urlData.publicUrl }).eq('id', tableId);
+
+    console.log(`✓ QR saved for ${tableName}:`, urlData.publicUrl);
+    return urlData.publicUrl;
+  } catch (e) {
+    console.warn(`QR save warning for ${tableName}:`, e.message);
+    return null;
+  }
+};
+// ────────────────────────────────────────────────────────────────────────────
+
 export default function Tables() {
   const { tenantId, tenant } = useTenant();
   const queryClient = useQueryClient();
@@ -49,7 +87,8 @@ export default function Tables() {
   const [showQRDialog, setShowQRDialog] = useState(false);
   const [selectedTable, setSelectedTable] = useState(null);
   const [tableToDelete, setTableToDelete] = useState(null);
-  const [qrDataUrls, setQrDataUrls] = useState({});
+  const [qrCodes, setQrCodes] = useState({}); // tableId → data URL or static URL
+  const [localTables, setLocalTables] = useState([]); // local copy to patch qr_image_url
 
   const { data: tables = [], isLoading } = useQuery({
     queryKey: ['tables', tenantId],
@@ -67,25 +106,41 @@ export default function Tables() {
     enabled: !!tenantId,
   });
 
-  // Generate QR data URLs for all tables on load
+  // Sync localTables when query data changes
   useEffect(() => {
-    if (!tables.length) return;
-    console.log('Tables loaded:', tables.map(t => ({ name: t.name, qr: t.qr_code_url })));
-    const generate = async () => {
+    setLocalTables(tables);
+  }, [tables]);
+
+  // Hybrid QR load: use saved static URL if available, otherwise generate + save
+  useEffect(() => {
+    if (!localTables.length || !tenantId) return;
+    const loadQRCodes = async () => {
+      const supabase = await getSupabase();
       const map = {};
-      for (const table of tables) {
-        if (table.qr_code_url) {
-          try {
-            map[table.id] = await QRCode.toDataURL(table.qr_code_url, { width: 200, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
-          } catch (e) {
-            console.warn('QR gen failed for', table.name, e);
+      for (const table of localTables) {
+        if (!table.qr_code_url) continue;
+        if (table.qr_image_url) {
+          map[table.id] = table.qr_image_url;
+        } else {
+          const dataUrl = await generateQRDataUrl(table.qr_code_url);
+          if (dataUrl) {
+            map[table.id] = dataUrl;
+            saveQRToStorage(supabase, table.id, table.name, table.qr_code_url, tenantId)
+              .then(savedUrl => {
+                if (savedUrl) {
+                  setQrCodes(prev => ({ ...prev, [table.id]: savedUrl }));
+                  setLocalTables(prev => prev.map(t =>
+                    t.id === table.id ? { ...t, qr_image_url: savedUrl } : t
+                  ));
+                }
+              });
           }
         }
       }
-      setQrDataUrls(map);
+      setQrCodes(map);
     };
-    generate();
-  }, [tables]);
+    loadQRCodes();
+  }, [localTables.map(t => t.id).join(','), tenantId]); // only re-run when table IDs change
 
   const deleteMutation = useMutation({
     mutationFn: (tableId) => base44.functions.invoke('manageTable', { action: 'delete', tenant_id: tenantId, table_id: tableId }),
@@ -132,13 +187,43 @@ export default function Tables() {
     setTableToDelete(table);
   };
 
-  const handleDownloadQR = (tableId, tableName) => {
-    const dataUrl = qrDataUrls[tableId];
-    if (!dataUrl) return;
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = `QR-${tableName}.png`;
-    a.click();
+  const handleDownloadQR = async (table) => {
+    const imageUrl = table.qr_image_url || qrCodes[table.id];
+    if (!imageUrl) {
+      toast.error('QR code not ready yet. Please wait a moment.');
+      return;
+    }
+    if (imageUrl.startsWith('data:')) {
+      const a = document.createElement('a');
+      a.href = imageUrl;
+      a.download = `QR-${table.name}.png`;
+      a.click();
+    } else {
+      try {
+        const res = await fetch(imageUrl);
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `QR-${table.name}.png`;
+        a.click();
+        URL.revokeObjectURL(blobUrl);
+      } catch {
+        window.open(imageUrl, '_blank');
+      }
+    }
+  };
+
+  const handleRegenerateQR = async (table) => {
+    const supabase = await getSupabase();
+    const saved = await saveQRToStorage(supabase, table.id, table.name, table.qr_code_url, tenantId);
+    if (saved) {
+      setQrCodes(prev => ({ ...prev, [table.id]: saved }));
+      setLocalTables(prev => prev.map(t => t.id === table.id ? { ...t, qr_image_url: saved } : t));
+      toast.success(`QR regenerated for ${table.name}`);
+    } else {
+      toast.error('Failed to regenerate QR');
+    }
   };
 
   const statusColors = {
@@ -259,14 +344,18 @@ export default function Tables() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
                   {zoneTables.map(table => {
                     const sc = statusColors[table.status] || statusColors.available;
+                    const localTable = localTables.find(t => t.id === table.id) || table;
                     return (
                       <div key={table.id} style={{ background: 'white', borderRadius: '12px', border: '0.5px solid #e2e8f0', overflow: 'hidden' }}>
                         <div
-                          style={{ padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', minHeight: '100px', cursor: 'pointer' }}
-                          onClick={() => handleDownloadQR(table.id, table.name)}
+                          style={{ padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', minHeight: '100px', cursor: 'pointer', gap: '4px' }}
+                          onClick={() => handleDownloadQR(localTable)}
                         >
-                          {qrDataUrls[table.id]
-                            ? <img src={qrDataUrls[table.id]} style={{ width: '80px', height: '80px' }} alt={`QR ${table.name}`} />
+                          {qrCodes[table.id]
+                            ? <>
+                                <img src={qrCodes[table.id]} style={{ width: '80px', height: '80px' }} alt={`QR ${table.name}`} />
+                                {localTable.qr_image_url && <span style={{ fontSize: '9px', color: '#16a34a' }}>✓ saved</span>}
+                              </>
                             : <QrCode style={{ width: '40px', height: '40px', color: '#cbd5e1' }} />
                           }
                         </div>
@@ -280,7 +369,7 @@ export default function Tables() {
                           <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 8px' }}>{table.capacity} seats</p>
                           <div style={{ display: 'flex', gap: '6px' }}>
                             <button
-                              onClick={() => handleDownloadQR(table.id, table.name)}
+                              onClick={() => handleDownloadQR(localTable)}
                               style={{ flex: 1, padding: '6px', borderRadius: '8px', border: '0.5px solid #e2e8f0', background: 'none', fontSize: '11px', fontWeight: '600', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                             >
                               <Download style={{ width: '13px', height: '13px' }} /> QR
@@ -301,14 +390,18 @@ export default function Tables() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {zoneTables.map(table => {
                     const sc = statusColors[table.status] || statusColors.available;
+                    const localTable = localTables.find(t => t.id === table.id) || table;
                     return (
                       <div key={table.id} style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'white', borderRadius: '12px', border: '0.5px solid #e2e8f0', padding: '12px' }}>
                         <div
-                          style={{ width: '52px', height: '52px', borderRadius: '8px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer' }}
-                          onClick={() => handleDownloadQR(table.id, table.name)}
+                          style={{ width: '52px', height: '52px', borderRadius: '8px', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer', gap: '2px' }}
+                          onClick={() => handleDownloadQR(localTable)}
                         >
-                          {qrDataUrls[table.id]
-                            ? <img src={qrDataUrls[table.id]} style={{ width: '44px', height: '44px' }} alt={`QR ${table.name}`} />
+                          {qrCodes[table.id]
+                            ? <>
+                                <img src={qrCodes[table.id]} style={{ width: '44px', height: '44px' }} alt={`QR ${table.name}`} />
+                                {localTable.qr_image_url && <span style={{ fontSize: '8px', color: '#16a34a', lineHeight: 1 }}>✓</span>}
+                              </>
                             : <QrCode style={{ width: '24px', height: '24px', color: '#cbd5e1' }} />
                           }
                         </div>
@@ -325,7 +418,7 @@ export default function Tables() {
                           </span>
                           <div style={{ display: 'flex', gap: '6px' }}>
                             <button
-                              onClick={() => handleDownloadQR(table.id, table.name)}
+                              onClick={() => handleDownloadQR(localTable)}
                               style={{ width: '28px', height: '28px', borderRadius: '6px', border: '0.5px solid #e2e8f0', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             >
                               <Download style={{ width: '14px', height: '14px', color: '#64748b' }} />

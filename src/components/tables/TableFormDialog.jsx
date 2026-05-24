@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
+import QRCode from 'qrcode';
 import {
   Dialog,
   DialogContent,
@@ -43,6 +44,25 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
     }
   }, [table, open]);
 
+  const saveQRToStorage = async (db, tableId, tableName, orderingUrl) => {
+    try {
+      const dataUrl = await QRCode.toDataURL(orderingUrl, { width: 400, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const path = `${tenantId}/qr-codes/${tableId}.png`;
+      const { error: uploadError } = await db.storage
+        .from('product-images')
+        .upload(path, blob, { contentType: 'image/png', upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = db.storage.from('product-images').getPublicUrl(path);
+      await db.from('tables').update({ qr_image_url: urlData.publicUrl }).eq('id', tableId);
+      return urlData.publicUrl;
+    } catch (e) {
+      console.warn('QR save warning:', e.message);
+      return null;
+    }
+  };
+
   const handleSubmit = async () => {
     if (!tenantId || !tenant?.slug) {
       toast.error('Store not loaded. Please refresh and try again.');
@@ -80,6 +100,8 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
           .from('tables')
           .insert(payload);
         if (error) throw error;
+        // Save QR to storage immediately after creation (non-blocking)
+        saveQRToStorage(db, tableId, formData.name, qrCodeUrl);
       }
 
       queryClient.invalidateQueries({ queryKey: ['tables', tenantId] });
