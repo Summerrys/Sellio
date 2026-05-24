@@ -311,71 +311,70 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                     {Object.keys(localTables.reduce((g, t) => { g[t.zone || 'General'] = true; return g; }, {})).length > 1 && (
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">{zone}</p>
                     )}
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
                       {zoneTables.map(t => (
-                        <div key={t.id}>
-                          {editingId === t.id ? (
-                            <div className="flex flex-col gap-1 bg-white rounded-lg px-2.5 py-1.5 border-2 border-slate-400 shadow-md">
-                              <input
-                                value={editLabel}
-                                onChange={(e) => setEditLabel(e.target.value)}
-                                className="text-xs px-1.5 py-1 border border-slate-200 rounded focus:outline-none"
-                                autoFocus
-                              />
-                              <input
-                                type="number"
-                                value={editPax}
-                                onChange={(e) => setEditPax(e.target.value)}
-                                className="text-xs px-1.5 py-1 border border-slate-200 rounded focus:outline-none"
-                              />
-                              <div className="flex gap-1">
-                                <button onClick={saveEdit} className="flex-1 text-xs px-2 py-0.5 rounded text-white hover:opacity-90" style={{ background: themeColor }}>Save</button>
-                                <button onClick={cancelEdit} className="flex-1 text-xs px-2 py-0.5 rounded bg-slate-300 text-slate-700">Cancel</button>
-                              </div>
+                        editingId === t.id ? (
+                          <div key={t.id} className="flex flex-col gap-1 bg-white rounded-lg px-2.5 py-1.5 border-2 border-slate-400 shadow-md">
+                            <input
+                              value={editLabel}
+                              onChange={(e) => setEditLabel(e.target.value)}
+                              className="text-xs px-1.5 py-1 border border-slate-200 rounded focus:outline-none"
+                              autoFocus
+                            />
+                            <input
+                              type="number"
+                              value={editPax}
+                              onChange={(e) => setEditPax(e.target.value)}
+                              className="text-xs px-1.5 py-1 border border-slate-200 rounded focus:outline-none"
+                            />
+                            <div className="flex gap-1">
+                              <button onClick={saveEdit} className="flex-1 text-xs px-2 py-0.5 rounded text-white hover:opacity-90" style={{ background: themeColor }}>Save</button>
+                              <button onClick={cancelEdit} className="flex-1 text-xs px-2 py-0.5 rounded bg-slate-300 text-slate-700">Cancel</button>
                             </div>
-                          ) : (
-                            <div
-                              className="bg-white rounded-lg border overflow-hidden"
-                              style={{
-                                borderWidth: setupQr ? '2px' : '1px',
-                                borderColor: setupQr ? primaryColor : '#e2e8f0',
-                              }}
-                            >
-                              {/* Top row — name, pax, edit, delete */}
-                              <div className="flex justify-between items-start px-2.5 pt-2 pb-1">
-                                <div>
-                                  <p className="text-xs font-semibold text-slate-700">{t.name}</p>
-                                  <p className="text-xs text-slate-400">{t.capacity} pax</p>
-                                </div>
-                                <div className="flex gap-1 items-center">
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); editLocalTable(t); }}
-                                    className="p-1 hover:opacity-70"
-                                  >
-                                    <Pencil className="w-3.5 h-3.5" style={{ color: primaryColor }} />
-                                  </button>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); removeLocalTable(t.id); }}
-                                    className="p-1 hover:opacity-70"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                                  </button>
-                                </div>
-                              </div>
-                              {/* QR section — only shown when setupQr is checked */}
-                              {setupQr && (
+                          </div>
+                        ) : (
+                          <div
+                            key={t.id}
+                            className="bg-white rounded-lg overflow-hidden"
+                            style={{
+                              border: setupQr ? '1.5px solid' : '0.5px solid',
+                              borderColor: setupQr ? primaryColor : '#e2e8f0',
+                            }}
+                          >
+                            {/* Card top — name, pax, actions */}
+                            <div className="px-2 pt-1.5 pb-1">
+                              <p className="text-xs font-semibold text-slate-700 truncate leading-tight mb-0.5">{t.name}</p>
+                              <p className="text-xs text-slate-400">{t.capacity} pax</p>
+                              <div className="flex justify-end gap-0.5 mt-1">
                                 <button
-                                  onClick={() => handleOpenQRModal(t)}
-                                  className="w-full flex flex-col items-center justify-center py-2 hover:bg-slate-50 transition-colors border-t border-slate-100"
-                                  title="View QR code"
+                                  onClick={(e) => { e.stopPropagation(); editLocalTable(t); }}
+                                  className="w-5 h-5 flex items-center justify-center rounded hover:opacity-70"
+                                  aria-label={`Edit ${t.name}`}
                                 >
-                                  <QrCode className="w-7 h-7 mb-0.5" style={{ color: '#f97316' }} />
-                                  <span className="text-xs text-slate-400">View QR code</span>
+                                  <Pencil className="w-3 h-3" style={{ color: primaryColor }} />
                                 </button>
-                              )}
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); removeLocalTable(t.id); }}
+                                  className="w-5 h-5 flex items-center justify-center rounded hover:opacity-70"
+                                  aria-label={`Delete ${t.name}`}
+                                >
+                                  <Trash2 className="w-3 h-3 text-red-500" />
+                                </button>
+                              </div>
                             </div>
-                          )}
-                        </div>
+                            {/* QR section — only when setupQr is checked */}
+                            {setupQr && (
+                              <button
+                                onClick={() => handleOpenQRModal(t)}
+                                className="w-full flex items-center justify-center py-1.5 hover:bg-slate-50 transition-colors"
+                                style={{ borderTop: '0.5px solid #f1f5f9' }}
+                                aria-label={`View QR code for ${t.name}`}
+                              >
+                                <QrCode className="w-4 h-4" style={{ color: '#f97316' }} />
+                              </button>
+                            )}
+                          </div>
+                        )
                       ))}
                     </div>
                   </div>
