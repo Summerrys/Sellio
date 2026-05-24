@@ -174,7 +174,14 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     ).then(({ data }) => setCategories(data || [])).catch(() => {});
   }, [tenantId, open]);
 
-  const update = (patch) => setFormData(prev => ({ ...prev, ...patch }));
+  const update = (patch) => setFormData(prev => {
+    const next = { ...prev, ...patch };
+    // Auto-sync slug when name changes (new products only)
+    if (patch.name !== undefined && !product?.id) {
+      next.slug = toSlug(patch.name);
+    }
+    return next;
+  });
 
   const validate = () => {
     const errs = {};
@@ -193,6 +200,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
       if (product?.id) {
         const payload = {
           name: formData.name,
+          slug: toSlug(formData.name),
           description: formData.description,
           category_id: formData.category_id || null,
           sku: formData.sku?.trim() ? formData.sku.trim().toUpperCase() : (product.sku || undefined),
@@ -228,11 +236,12 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         const { sku, ...rest } = formData;
         const payload = {
           ...rest,
+          slug: toSlug(formData.name),
           tenant_id: tenantId,
           price: parseFloat(formData.price) || 0,
           cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
           compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
-          ...(sku && sku.trim() !== '' ? { sku: sku.trim().toUpperCase() } : {}),
+          // Do NOT include sku — let DB trigger generate it
         };
         const { data: inserted, error } = await supabase.from('products').insert(payload).select('id, sku, tenant_id, stock_quantity, low_stock_threshold').single();
         if (error) throw new Error(error.message);
