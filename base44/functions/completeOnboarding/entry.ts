@@ -372,17 +372,19 @@ Deno.serve(async (req) => {
     if (isFnB) {
       const tableRows = [];
       if (formData.tables?.length > 0) {
-        for (const t of formData.tables) {
-          const tableId = crypto.randomUUID();
-          tableRows.push({
-            id: tableId,
-            tenant_id: newTenantId,
-            name: t.label || t.name,
-            capacity: t.pax || t.capacity || 2,
-            status: 'available',
-            qr_code_url: `https://sellio.apptelier.sg/order/${tenantSlug}/${tableId}`,
-          });
-        }
+      for (const t of formData.tables) {
+        const tableId = crypto.randomUUID();
+        tableRows.push({
+          id: tableId,
+          tenant_id: newTenantId,
+          name: t.label || t.name,
+          capacity: parseInt(t.pax) || parseInt(t.capacity) || 2,
+          zone: t.zone || null,
+          status: 'available',
+          sort_order: tableRows.length,
+          qr_code_url: `https://sellio.apptelier.sg/order/${tenantSlug}/${tableId}`,
+        });
+      }
       } else if (formData.tableCount > 0) {
         for (let i = 0; i < formData.tableCount; i++) {
           const tableId = crypto.randomUUID();

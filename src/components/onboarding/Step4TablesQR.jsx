@@ -5,29 +5,17 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowRight, ArrowLeft, QrCode, Table2, Plus, Trash2, Download, Edit2, Printer } from 'lucide-react';
+import { ArrowRight, ArrowLeft, QrCode, Table2, Download, Printer } from 'lucide-react';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 import QR from 'qrcode';
 import QRCodeModal from './QRCodeModal';
 
-function generateDefaultTables(count, prefix, pax = 2) {
-  return Array.from({ length: count }, (_, i) => ({
-    id: Date.now() + i,
-    label: `${prefix} ${i + 1}`,
-    pax: parseInt(pax) || 2,
-  }));
-}
-
 export default function Step4TablesQR({ formData, updateFormData, nextStep, prevStep }) {
   const [setupTables, setSetupTables] = useState(formData.tables && formData.tables.length > 0);
   const [setupQr, setSetupQr] = useState(!!formData.singleQrLabel || false);
-  const [tables, setTables] = useState(formData.tables || []);
-  const [tableCount, setTableCount] = useState('');
-  const [tablePrefix, setTablePrefix] = useState('Table');
-  const [tablePax, setTablePax] = useState('');
-  const [newLabel, setNewLabel] = useState('');
-  const [newPax, setNewPax] = useState('');
+  const [localTables, setLocalTables] = useState(formData.tables || []);
+  const [generateForm, setGenerateForm] = useState({ prefix: '', qty: '', pax: '', zone: '' });
   const [editingId, setEditingId] = useState(null);
   const [editLabel, setEditLabel] = useState('');
   const [editPax, setEditPax] = useState('2');
@@ -52,7 +40,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   useEffect(() => {
     const generateQRCodes = async () => {
       const newQRCodes = {};
-      for (const table of tables) {
+      for (const table of localTables) {
         if (!qrCodes[table.id] && setupQr) {
           try {
             const qrData = await QR.toDataURL(`${window.location.origin}/CustomerMenu?table=${encodeURIComponent(table.label)}`, {
@@ -71,10 +59,10 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
       }
     };
 
-    if (setupQr && tables.length > 0) {
+    if (setupQr && localTables.length > 0) {
       generateQRCodes();
     }
-  }, [tables, setupQr, qrCodes]);
+  }, [localTables, setupQr, qrCodes]);
 
   // Generate single online menu QR
   useEffect(() => {
@@ -101,52 +89,35 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const themeColor = chosenColor || 'linear-gradient(to right, #3b82f6, #9333ea)';
   const { primary: primaryColor } = getThemeCSSColors(formData);
 
-  const bulkAdd = () => {
-    const n = parseInt(tableCount);
-    if (!n || n < 1) return;
-    const generated = generateDefaultTables(n, tablePrefix.trim() || 'Table', tablePax);
-    setTables(prev => [...prev, ...generated]);
-    setTableCount('');
-    setTablePax('');
-    toast.success(`Generated ${n} table${n > 1 ? 's' : ''}`);
+  const handleGenerate = () => {
+    if (!generateForm.prefix || !generateForm.qty) return;
+    const newTables = Array.from({ length: generateForm.qty }, (_, i) => ({
+      id: crypto.randomUUID(),
+      name: `${generateForm.prefix} ${i + 1}`,
+      capacity: generateForm.pax || 2,
+      zone: generateForm.zone?.trim() || null,
+      status: 'available',
+    }));
+    setLocalTables(prev => [...prev, ...newTables]);
+    setGenerateForm({ prefix: '', qty: '', pax: '', zone: '' });
   };
 
-  const addSingle = () => {
-    if (!newLabel.trim()) return;
-    setTables(prev => [...prev, { id: Date.now(), label: newLabel.trim(), pax: parseInt(newPax) || 2 }]);
-    setNewLabel('');
-    setNewPax('');
-    toast.success(`Table "${newLabel.trim()}" added`);
-  };
-
-  const startEdit = (table) => {
+  const editLocalTable = (table) => {
     setEditingId(table.id);
-    setEditLabel(table.label);
-    setEditPax(String(table.pax));
+    setEditLabel(table.name);
+    setEditPax(String(table.capacity || 2));
   };
 
   const saveEdit = () => {
     if (!editLabel.trim()) return;
-    setTables(prev => prev.map(t => t.id === editingId ? { ...t, label: editLabel.trim(), pax: parseInt(editPax) || 2 } : t));
-    setQrCodes(prev => {
-      const newCodes = { ...prev };
-      delete newCodes[editingId];
-      return newCodes;
-    });
+    setLocalTables(prev => prev.map(t => t.id === editingId ? { ...t, name: editLabel.trim(), capacity: parseInt(editPax) || 2 } : t));
     setEditingId(null);
   };
 
-  const cancelEdit = () => {
-    setEditingId(null);
-  };
+  const cancelEdit = () => setEditingId(null);
 
-  const removeTable = (id) => {
-    setTables(prev => prev.filter(t => t.id !== id));
-    setQrCodes(prev => {
-      const newCodes = { ...prev };
-      delete newCodes[id];
-      return newCodes;
-    });
+  const removeLocalTable = (id) => {
+    setLocalTables(prev => prev.filter(t => t.id !== id));
   };
 
   const handleBulkDownload = async () => {
@@ -161,7 +132,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   };
 
   const performBulkDownload = () => {
-    tables.forEach((table, idx) => {
+    localTables.forEach((table, idx) => {
       if (qrCodes[table.id]) {
         const link = document.createElement('a');
         link.href = qrCodes[table.id];
@@ -205,7 +176,13 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
       ...formData,
       setupTables,
       setupQr,
-      tables: setupTables ? tables : [],
+      tables: setupTables ? localTables.map(t => ({
+        id: t.id,
+        name: t.name,
+        capacity: t.capacity,
+        zone: t.zone || null,
+        status: 'available',
+      })) : [],
       qrCodes: setupQr ? qrCodes : {},
     };
     if (setupQr && !setupTables) {
@@ -216,7 +193,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
     nextStep();
   };
 
-  const canContinue = (setupTables && tables.length > 0) || (setupQr && !setupTables) || (!setupTables && !setupQr);
+  const canContinue = (setupTables && localTables.length > 0) || (setupQr && !setupTables) || (!setupTables && !setupQr);
 
   return (
     <Card className="p-3 sm:p-5 bg-white border-0 shadow-lg w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
@@ -254,201 +231,120 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
       {/* Tables setup */}
       {setupTables && (
         <div className="space-y-3 mb-4 pb-4 border-b border-slate-200">
+          {/* Quick Generate (unified form with zone) */}
           <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-200">
             <Label className="text-xs font-semibold text-slate-700 mb-2 block">Quick Generate Tables</Label>
-            <div className="flex flex-col gap-2">
-              <div className="flex gap-2">
-                <Input
-                  value={tablePrefix}
-                  onChange={(e) => setTablePrefix(e.target.value)}
-                  placeholder="Prefix"
-                  className="h-9 text-sm flex-1"
-                />
-                <Input
-                  type="number"
-                  value={tableCount}
-                  onChange={(e) => setTableCount(e.target.value)}
-                  placeholder="Qty"
-                  className="h-9 text-sm w-16"
-                  min="1"
-                  max="100"
-                />
-                <Input
-                  type="number"
-                  value={tablePax}
-                  onChange={(e) => setTablePax(e.target.value)}
-                  placeholder="Pax"
-                  className="h-9 text-sm w-16"
-                  min="1"
-                  max="20"
-                />
-              </div>
-              <button
-                onClick={bulkAdd}
-                disabled={!tableCount || parseInt(tableCount) < 1}
-                className="px-4 h-9 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:opacity-90"
-                style={{ background: themeColor }}
-              >
-                Generate
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-2.5 border border-slate-200">
-            <Label className="text-xs font-semibold text-slate-700 mb-2 block">Add Individual Table / Zone</Label>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 mb-2">
               <Input
-                value={newLabel}
-                onChange={(e) => setNewLabel(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && addSingle()}
-                placeholder="e.g. VIP Room, Bar Seat 1"
-                className="h-9 text-sm flex-1 min-w-[150px]"
+                value={generateForm.prefix}
+                onChange={e => setGenerateForm(p => ({ ...p, prefix: e.target.value }))}
+                placeholder="Name e.g. Table, Seat"
+                className="h-9 text-sm flex-2"
+                style={{ flex: 2 }}
               />
               <Input
                 type="number"
-                value={newPax}
-                onChange={(e) => setNewPax(e.target.value)}
-                placeholder="e.g. 4"
-                className="h-9 text-sm w-20"
-                min="1"
-                max="20"
+                inputMode="numeric"
+                value={generateForm.qty}
+                onChange={e => setGenerateForm(p => ({ ...p, qty: parseInt(e.target.value) || '' }))}
+                placeholder="Qty"
+                className="h-9 text-sm w-16"
               />
-              <button
-                onClick={addSingle}
-                disabled={!newLabel.trim()}
-                className="px-4 h-9 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:opacity-90"
-                style={{ background: themeColor }}
-              >
-                <Plus className="w-4 h-4" />
-              </button>
+              <Input
+                type="number"
+                inputMode="numeric"
+                value={generateForm.pax}
+                onChange={e => setGenerateForm(p => ({ ...p, pax: parseInt(e.target.value) || '' }))}
+                placeholder="Pax"
+                className="h-9 text-sm w-16"
+              />
             </div>
+            <Input
+              value={generateForm.zone}
+              onChange={e => setGenerateForm(p => ({ ...p, zone: e.target.value }))}
+              placeholder="Zone (optional) e.g. Indoor, VIP, Outdoor"
+              className="h-9 text-sm mb-2"
+            />
+            <button
+              onClick={handleGenerate}
+              disabled={!generateForm.prefix || !generateForm.qty}
+              className="w-full h-9 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:opacity-90"
+              style={{ background: themeColor }}
+            >
+              Generate
+            </button>
           </div>
 
-          {tables.length > 0 && (
-           <div className="bg-white rounded-lg border border-slate-200 p-2.5">
-             <p className="text-xs font-semibold text-slate-700 mb-2">{tables.length} table{tables.length > 1 ? 's' : ''} added</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
-                {tables.map((t) => (
-                  <div key={t.id}>
-                    {editingId === t.id ? (
-                      <div className="flex flex-col gap-1 bg-white rounded-lg px-2.5 py-1.5 border-2 border-slate-400 shadow-md">
-                        <input
-                          value={editLabel}
-                          onChange={(e) => setEditLabel(e.target.value)}
-                          className="text-xs px-1.5 py-1 border border-slate-200 rounded focus:outline-none focus:ring-2 focus:ring-slate-400"
-                          autoFocus
-                        />
-                        <input
-                          type="number"
-                          value={editPax}
-                          onChange={(e) => setEditPax(e.target.value)}
-                          min="1"
-                          max="20"
-                          className="text-xs px-1.5 py-1 border border-slate-200 rounded focus:outline-none focus:ring-2 focus:ring-slate-400"
-                        />
-                        <div className="flex gap-1">
-                          <button
-                            onClick={saveEdit}
-                            className="flex-1 text-xs px-2 py-0.5 rounded text-white hover:opacity-90"
-                            style={{ background: themeColor }}
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="flex-1 text-xs px-2 py-0.5 rounded bg-slate-300 text-slate-700 hover:bg-slate-400"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div 
-                        className="flex flex-col gap-2 bg-white rounded-lg p-2.5 border-2 border-slate-200 shadow-sm group transition-all cursor-pointer" 
-                        onClick={() => startEdit(t)}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = primaryColor;
-                          e.currentTarget.style.boxShadow = `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 0 0 3px ${primaryColor}20`;
-                        }} 
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = '#e2e8f0';
-                          e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-semibold text-slate-700 truncate">{t.label}</p>
-                            <p className="text-xs text-slate-500">{t.pax || 2} pax</p>
-                          </div>
-                          <div className="flex gap-1 flex-shrink-0">
-                            <button
-                                onClick={() => startEdit(t)}
-                                className="transition-all p-1 hover:opacity-80 hover:scale-125"
-                                style={{ color: primaryColor }}
-                                title="Edit table"
-                             >
-                                <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                                onClick={() => removeTable(t.id)}
-                                className="transition-all p-1 hover:opacity-80 hover:scale-125"
-                                style={{ color: '#ef4444' }}
-                             >
-                                <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                        {setupQr && qrCodes[t.id] && (
-                          <div className="flex justify-center">
-                            <button
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               setSelectedQR(t);
-                               setQRModalOpen(true);
-                             }}
-                             className="transition-all p-1 hover:opacity-80 hover:scale-125"
-                             style={{ color: '#f97316' }}
-                             title="View QR code"
-                            >
-                             <QrCode className="w-5 h-5" />
-                            </button>
-                          </div>
-                        )}
-
-                      </div>
+          {/* Tables list grouped by zone */}
+          {localTables.length > 0 && (
+            <div className="bg-white rounded-lg border border-slate-200 p-2.5">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-slate-700">{localTables.length} table{localTables.length > 1 ? 's' : ''} added</p>
+                <button onClick={() => setLocalTables([])} className="text-xs text-red-400 hover:text-red-600">Clear all</button>
+              </div>
+              <div className="max-h-56 overflow-y-auto space-y-3">
+                {Object.entries(
+                  localTables.reduce((groups, table) => {
+                    const zone = table.zone || 'General';
+                    if (!groups[zone]) groups[zone] = [];
+                    groups[zone].push(table);
+                    return groups;
+                  }, {})
+                ).map(([zone, zoneTables]) => (
+                  <div key={zone}>
+                    {Object.keys(localTables.reduce((g, t) => { g[t.zone || 'General'] = true; return g; }, {})).length > 1 && (
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">{zone}</p>
                     )}
+                    <div className="grid grid-cols-2 gap-2">
+                      {zoneTables.map(t => (
+                        <div key={t.id}>
+                          {editingId === t.id ? (
+                            <div className="flex flex-col gap-1 bg-white rounded-lg px-2.5 py-1.5 border-2 border-slate-400 shadow-md">
+                              <input
+                                value={editLabel}
+                                onChange={(e) => setEditLabel(e.target.value)}
+                                className="text-xs px-1.5 py-1 border border-slate-200 rounded focus:outline-none"
+                                autoFocus
+                              />
+                              <input
+                                type="number"
+                                value={editPax}
+                                onChange={(e) => setEditPax(e.target.value)}
+                                className="text-xs px-1.5 py-1 border border-slate-200 rounded focus:outline-none"
+                              />
+                              <div className="flex gap-1">
+                                <button onClick={saveEdit} className="flex-1 text-xs px-2 py-0.5 rounded text-white hover:opacity-90" style={{ background: themeColor }}>Save</button>
+                                <button onClick={cancelEdit} className="flex-1 text-xs px-2 py-0.5 rounded bg-slate-300 text-slate-700">Cancel</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="bg-slate-50 rounded-lg px-2.5 py-2 border border-slate-200 flex justify-between items-center">
+                              <div>
+                                <p className="text-xs font-semibold text-slate-700">{t.name}</p>
+                                <p className="text-xs text-slate-400">{t.capacity} pax</p>
+                              </div>
+                              <div className="flex gap-1">
+                                <button onClick={() => editLocalTable(t)} className="p-1 hover:opacity-70" style={{ color: primaryColor }}>✎</button>
+                                <button onClick={() => removeLocalTable(t.id)} className="p-1 hover:opacity-70 text-red-500">🗑</button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
-              {tables.length > 0 && (
-                <div className="flex gap-2 mt-2">
-                  {setupQr && Object.keys(qrCodes).length > 0 && (
-                    <button
-                      onClick={handleBulkDownload}
-                      className="text-xs px-3 py-1 rounded text-white hover:opacity-90 transition-colors flex items-center gap-1"
-                      style={{ background: themeColor }}
-                    >
-                      <Download className="w-3 h-3" /> Download All
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setTables([])}
-                    className="text-xs text-red-400 hover:text-red-600 transition-colors flex-1 text-right"
-                  >
-                    Clear all
-                  </button>
-                </div>
-              )}
             </div>
           )}
 
-          {tables.length === 0 && (
-           <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-             ⚠️ Please add at least one table to continue.
-           </p>
+          {localTables.length === 0 && (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              ⚠️ Please add at least one table to continue.
+            </p>
           )}
-          </div>
-          )}
+        </div>
+      )}
 
 
 

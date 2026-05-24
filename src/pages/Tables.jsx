@@ -236,17 +236,37 @@ export default function Tables() {
             onAction={handleAdd}
           />
         ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredTables.map((table) => (
-              <TableCard
-                key={table.id}
-                table={table}
-                onEdit={() => handleEdit(table)}
-                onQR={() => handleShowQR(table)}
-                onDelete={() => handleDelete(table)}
-              />
-            ))}
-          </div>
+          (() => {
+            const grouped = filteredTables.reduce((groups, table) => {
+              const zone = table.zone || 'General';
+              if (!groups[zone]) groups[zone] = [];
+              groups[zone].push(table);
+              return groups;
+            }, {});
+            const hasMultipleZones = Object.keys(grouped).length > 1;
+            return Object.entries(grouped).map(([zone, zoneTables]) => (
+              <div key={zone} className="mb-5">
+                {hasMultipleZones && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{zone}</p>
+                    <div className="flex-1 h-px bg-slate-200" />
+                    <p className="text-xs text-slate-400">{zoneTables.length} tables</p>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {zoneTables.map((table) => (
+                    <TableCard
+                      key={table.id}
+                      table={table}
+                      onEdit={() => handleEdit(table)}
+                      onQR={() => handleShowQR(table)}
+                      onDelete={() => handleDelete(table)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ));
+          })()
         ) : (
           <Card className="border-0 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
