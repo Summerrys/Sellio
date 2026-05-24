@@ -41,16 +41,16 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
     const generateQRCodes = async () => {
       const newQRCodes = {};
       for (const table of localTables) {
-        if (!qrCodes[table.id] && setupQr) {
+        if (!qrCodes[table.id] && setupQr && table.qr_code_url) {
           try {
-            const qrData = await QR.toDataURL(`${window.location.origin}/CustomerMenu?table=${encodeURIComponent(table.label)}`, {
+            const qrData = await QR.toDataURL(table.qr_code_url, {
               width: 300,
               margin: 2,
               color: { dark: '#000000', light: '#ffffff' },
             });
             newQRCodes[table.id] = qrData;
           } catch (err) {
-            console.error('QR generation failed:', err);
+            console.error('QR generation failed for', table.name, err);
           }
         }
       }
@@ -59,22 +59,23 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
       }
     };
 
-    if (setupQr && localTables.length > 0) {
-      generateQRCodes();
-    }
-  }, [localTables, setupQr, qrCodes]);
+    if (setupQr && localTables.length > 0) generateQRCodes();
+  }, [localTables, setupQr]);
 
   // Generate single online menu QR
   useEffect(() => {
     const generateSingleQR = async () => {
-      if (setupQr && !setupTables && singleQrLabel) {
+      if (setupQr && !setupTables) {
+        const businessName = formData.businessName || '';
+        const tenantSlug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const storeUrl = `https://sellio.apptelier.sg/store/${tenantSlug}`;
         try {
-          const qrData = await QR.toDataURL(`${window.location.origin}/CustomerMenu`, {
+          const qrData = await QR.toDataURL(storeUrl, {
             width: 300,
             margin: 2,
             color: { dark: '#000000', light: '#ffffff' },
           });
-          setQrCodes(prev => ({ ...prev, 'single': qrData }));
+          setQrCodes(prev => ({ ...prev, single: qrData }));
           setSingleQrGenerated(true);
         } catch (err) {
           console.error('Single QR generation failed:', err);
@@ -83,7 +84,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
     };
 
     generateSingleQR();
-  }, [setupQr, setupTables, singleQrLabel]);
+  }, [setupQr, setupTables, formData.businessName]);
 
   const chosenColor = formData?.theme ? (formData?.themeColors?.dark || formData?.customPrimary) : null;
   const themeColor = chosenColor || 'linear-gradient(to right, #3b82f6, #9333ea)';
@@ -144,7 +145,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
       if (qrCodes[table.id]) {
         const link = document.createElement('a');
         link.href = qrCodes[table.id];
-        link.download = `${idx + 1}_${table.label.replace(/\s+/g, '_')}_QR.png`;
+        link.download = `${idx + 1}_${table.name.replace(/\s+/g, '_')}_QR.png`;
         link.click();
       }
     });
@@ -332,7 +333,16 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                                 <p className="text-xs font-semibold text-slate-700">{t.name}</p>
                                 <p className="text-xs text-slate-400">{t.capacity} pax</p>
                               </div>
-                              <div className="flex gap-1">
+                              <div className="flex gap-1 items-center">
+                                {setupQr && (
+                                  <button
+                                    onClick={() => { setSelectedQR(t); setQRModalOpen(true); }}
+                                    className="p-1 hover:opacity-70"
+                                    title="View QR code"
+                                  >
+                                    <QrCode className="w-4 h-4" style={{ color: primaryColor }} />
+                                  </button>
+                                )}
                                 <button onClick={() => editLocalTable(t)} className="p-1 hover:opacity-70" style={{ color: primaryColor }}>✎</button>
                                 <button onClick={() => removeLocalTable(t.id)} className="p-1 hover:opacity-70 text-red-500">🗑</button>
                               </div>
