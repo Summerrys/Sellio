@@ -17,7 +17,7 @@ const STATUS_CONFIG = {
   maintenance: { label: 'Maintenance', color: 'bg-red-100 text-red-700 border-red-300' },
 };
 
-export default function TableCard({ table, onEdit, onQR, onDelete }) {
+export default function TableCard({ table, qrDataUrl, onEdit, onQR, onDelete }) {
   const status = STATUS_CONFIG[table.status] || STATUS_CONFIG.available;
 
   return (
@@ -42,15 +42,17 @@ export default function TableCard({ table, onEdit, onQR, onDelete }) {
       </div>
 
       {/* QR Code Preview */}
-      {table.qr_code_url && (
-        <div className="mb-4 bg-white border border-slate-200 rounded-lg p-3 flex items-center justify-center">
+      <div className="mb-4 bg-white border border-slate-200 rounded-lg p-3 flex items-center justify-center min-h-[88px]">
+        {qrDataUrl ? (
           <img
-            src={table.qr_code_url}
+            src={qrDataUrl}
             alt={`QR code for ${table.name}`}
             className="w-20 h-20"
           />
-        </div>
-      )}
+        ) : (
+          <QrCode className="w-10 h-10 text-slate-200" />
+        )}
+      </div>
 
       {/* Actions */}
       <div className="flex gap-2">

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import db from '@/lib/db';
 import { base44 } from '@/api/base44Client';
@@ -48,6 +49,7 @@ export default function Tables() {
   const [showQRDialog, setShowQRDialog] = useState(false);
   const [selectedTable, setSelectedTable] = useState(null);
   const [tableToDelete, setTableToDelete] = useState(null);
+  const [qrDataUrls, setQrDataUrls] = useState({});
 
   const { data: tables = [], isLoading } = useQuery({
     queryKey: ['tables', tenantId],
@@ -64,6 +66,24 @@ export default function Tables() {
     },
     enabled: !!tenantId,
   });
+
+  // Generate QR data URLs for all tables on load
+  useEffect(() => {
+    if (!tables.length || !tenant?.slug) return;
+    const generate = async () => {
+      const map = {};
+      for (const table of tables) {
+        const url = `https://${tenant.slug}.apptelier.sg/order?table=${table.id}`;
+        try {
+          map[table.id] = await QRCode.toDataURL(url, { width: 200, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
+        } catch (e) {
+          console.error('QR gen error', e);
+        }
+      }
+      setQrDataUrls(map);
+    };
+    generate();
+  }, [tables, tenant?.slug]);
 
   const deleteMutation = useMutation({
     mutationFn: (tableId) => base44.functions.invoke('manageTable', { action: 'delete', tenant_id: tenantId, table_id: tableId }),
@@ -258,6 +278,7 @@ export default function Tables() {
                     <TableCard
                       key={table.id}
                       table={table}
+                      qrDataUrl={qrDataUrls[table.id]}
                       onEdit={() => handleEdit(table)}
                       onQR={() => handleShowQR(table)}
                       onDelete={() => handleDelete(table)}
@@ -311,14 +332,14 @@ export default function Tables() {
                           <Badge className={status.color}>{status.label}</Badge>
                         </td>
                         <td className="px-6 py-4">
-                          {table.qr_code_url ? (
+                          {qrDataUrls[table.id] ? (
                             <img
-                              src={table.qr_code_url}
+                              src={qrDataUrls[table.id]}
                               alt="QR"
                               className="w-12 h-12 rounded border border-slate-200"
                             />
                           ) : (
-                            <span className="text-sm text-slate-400">Not generated</span>
+                            <span className="text-sm text-slate-400">Generating...</span>
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
