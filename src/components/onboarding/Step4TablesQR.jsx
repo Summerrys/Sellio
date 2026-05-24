@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowRight, ArrowLeft, QrCode, Table2, Download, Printer, Pencil, Trash2 } from 'lucide-react';
+import { ArrowRight, ArrowLeft, QrCode, Table2, Download, Printer, Pencil, Trash2, Check, X } from 'lucide-react';
 
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
@@ -338,16 +338,18 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                               <div className="flex gap-1">
                                 <button
                                   onClick={saveEdit}
-                                  className="flex-1 text-xs py-1 rounded text-white font-medium hover:opacity-90"
+                                  className="flex-1 text-xs py-1 rounded text-white font-medium hover:opacity-90 flex items-center justify-center"
                                   style={{ background: themeColor }}
+                                  aria-label="Save"
                                 >
-                                  Save
+                                  <Check className="w-3.5 h-3.5" />
                                 </button>
                                 <button
                                   onClick={cancelEdit}
-                                  className="flex-1 text-xs py-1 rounded bg-slate-200 text-slate-600 hover:bg-slate-300"
+                                  className="flex-1 text-xs py-1 rounded bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center"
+                                  aria-label="Cancel"
                                 >
-                                  ✕
+                                  <X className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             </div>
@@ -355,11 +357,12 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                         ) : (
                           <div
                             key={t.id}
-                            className="bg-white rounded-lg overflow-hidden"
+                            className="bg-white rounded-lg overflow-hidden cursor-pointer"
                             style={{
                               border: setupQr ? '1.5px solid' : '0.5px solid',
                               borderColor: setupQr ? primaryColor : '#e2e8f0',
                             }}
+                            onClick={() => editLocalTable(t)}
                           >
                             {/* Card top — name, pax, actions */}
                             <div className="px-2 pt-1.5 pb-1">
@@ -385,7 +388,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                             {/* QR section — only when setupQr is checked */}
                             {setupQr && (
                               <button
-                                onClick={() => handleOpenQRModal(t)}
+                                onClick={(e) => { e.stopPropagation(); handleOpenQRModal(t); }}
                                 className="w-full flex items-center justify-center py-1.5 hover:bg-slate-50 transition-colors"
                                 style={{ borderTop: '0.5px solid #f1f5f9' }}
                                 aria-label={`View QR code for ${t.name}`}
