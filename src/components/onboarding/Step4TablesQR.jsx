@@ -314,22 +314,42 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                     <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
                       {zoneTables.map(t => (
                         editingId === t.id ? (
-                          <div key={t.id} className="flex flex-col gap-1 bg-white rounded-lg px-2.5 py-1.5 border-2 border-slate-400 shadow-md">
-                            <input
-                              value={editLabel}
-                              onChange={(e) => setEditLabel(e.target.value)}
-                              className="text-xs px-1.5 py-1 border border-slate-200 rounded focus:outline-none"
-                              autoFocus
-                            />
-                            <input
-                              type="number"
-                              value={editPax}
-                              onChange={(e) => setEditPax(e.target.value)}
-                              className="text-xs px-1.5 py-1 border border-slate-200 rounded focus:outline-none"
-                            />
-                            <div className="flex gap-1">
-                              <button onClick={saveEdit} className="flex-1 text-xs px-2 py-0.5 rounded text-white hover:opacity-90" style={{ background: themeColor }}>Save</button>
-                              <button onClick={cancelEdit} className="flex-1 text-xs px-2 py-0.5 rounded bg-slate-300 text-slate-700">Cancel</button>
+                          <div
+                            key={t.id}
+                            className="bg-white rounded-lg overflow-hidden"
+                            style={{ border: '1.5px solid #94a3b8', gridColumn: 'span 1' }}
+                          >
+                            <div className="p-2 flex flex-col gap-1.5">
+                              <input
+                                value={editLabel}
+                                onChange={(e) => setEditLabel(e.target.value)}
+                                className="w-full text-xs px-2 py-1 border border-slate-200 rounded focus:outline-none focus:border-slate-400"
+                                placeholder="Name"
+                                autoFocus
+                                onKeyDown={(e) => e.key === 'Enter' && saveEdit()}
+                              />
+                              <input
+                                type="number"
+                                value={editPax}
+                                onChange={(e) => setEditPax(e.target.value)}
+                                className="w-full text-xs px-2 py-1 border border-slate-200 rounded focus:outline-none focus:border-slate-400"
+                                placeholder="Pax"
+                              />
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={saveEdit}
+                                  className="flex-1 text-xs py-1 rounded text-white font-medium hover:opacity-90"
+                                  style={{ background: themeColor }}
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={cancelEdit}
+                                  className="flex-1 text-xs py-1 rounded bg-slate-200 text-slate-600 hover:bg-slate-300"
+                                >
+                                  ✕
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ) : (
