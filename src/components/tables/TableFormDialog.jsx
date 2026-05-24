@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabase } from '@/lib/supabaseClient';
 import {
   Dialog,
   DialogContent,
@@ -51,6 +51,7 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
 
     setIsLoading(true);
     try {
+      const db = await getSupabase();
       const tableId = table?.id || crypto.randomUUID();
       const qrCodeUrl = `https://sellio.apptelier.sg/order/${tenant.slug}/${tableId}`;
 
@@ -68,14 +69,14 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
       console.log(table ? 'Updating table:' : 'Inserting table:', payload);
 
       if (table?.id) {
-        const { error } = await supabase
+        const { error } = await db
           .from('tables')
           .update(payload)
           .eq('id', table.id)
           .eq('tenant_id', tenantId);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await db
           .from('tables')
           .insert(payload);
         if (error) throw error;
