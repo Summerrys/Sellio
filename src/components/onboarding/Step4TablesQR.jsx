@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowRight, ArrowLeft, QrCode, Table2, Download, Printer, Pencil, Trash2 } from 'lucide-react';
+
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 import QR from 'qrcode';
@@ -333,28 +334,45 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                               </div>
                             </div>
                           ) : (
-                            <div className="bg-slate-50 rounded-lg px-2.5 py-2 border border-slate-200 flex justify-between items-center">
-                              <div>
-                                <p className="text-xs font-semibold text-slate-700">{t.name}</p>
-                                <p className="text-xs text-slate-400">{t.capacity} pax</p>
-                              </div>
-                              <div className="flex gap-1 items-center">
-                                {setupQr && (
+                            <div
+                              className="bg-white rounded-lg border overflow-hidden"
+                              style={{
+                                borderWidth: setupQr ? '2px' : '1px',
+                                borderColor: setupQr ? primaryColor : '#e2e8f0',
+                              }}
+                            >
+                              {/* Top row — name, pax, edit, delete */}
+                              <div className="flex justify-between items-start px-2.5 pt-2 pb-1">
+                                <div>
+                                  <p className="text-xs font-semibold text-slate-700">{t.name}</p>
+                                  <p className="text-xs text-slate-400">{t.capacity} pax</p>
+                                </div>
+                                <div className="flex gap-1 items-center">
                                   <button
-                                    onClick={() => handleOpenQRModal(t)}
+                                    onClick={(e) => { e.stopPropagation(); editLocalTable(t); }}
                                     className="p-1 hover:opacity-70"
-                                    title="View QR code"
                                   >
-                                    <QrCode className="w-4 h-4" style={{ color: primaryColor }} />
+                                    <Pencil className="w-3.5 h-3.5" style={{ color: primaryColor }} />
                                   </button>
-                                )}
-                                <button onClick={() => editLocalTable(t)} className="p-1 hover:opacity-70">
-                                  <Pencil className="w-4 h-4" style={{ color: primaryColor }} />
-                                </button>
-                                <button onClick={() => removeLocalTable(t.id)} className="p-1 hover:opacity-70">
-                                  <Trash2 className="w-4 h-4 text-red-500" />
-                                </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); removeLocalTable(t.id); }}
+                                    className="p-1 hover:opacity-70"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                  </button>
+                                </div>
                               </div>
+                              {/* QR section — only shown when setupQr is checked */}
+                              {setupQr && (
+                                <button
+                                  onClick={() => handleOpenQRModal(t)}
+                                  className="w-full flex flex-col items-center justify-center py-2 hover:bg-slate-50 transition-colors border-t border-slate-100"
+                                  title="View QR code"
+                                >
+                                  <QrCode className="w-7 h-7 mb-0.5" style={{ color: '#f97316' }} />
+                                  <span className="text-xs text-slate-400">View QR code</span>
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
