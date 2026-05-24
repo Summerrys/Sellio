@@ -69,21 +69,23 @@ export default function Tables() {
 
   // Generate QR data URLs for all tables on load
   useEffect(() => {
-    if (!tables.length || !tenant?.slug) return;
+    if (!tables.length) return;
+    console.log('Tables loaded:', tables.map(t => ({ name: t.name, qr: t.qr_code_url })));
     const generate = async () => {
       const map = {};
       for (const table of tables) {
-        const url = `https://${tenant.slug}.apptelier.sg/order?table=${table.id}`;
-        try {
-          map[table.id] = await QRCode.toDataURL(url, { width: 200, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
-        } catch (e) {
-          console.error('QR gen error', e);
+        if (table.qr_code_url) {
+          try {
+            map[table.id] = await QRCode.toDataURL(table.qr_code_url, { width: 200, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
+          } catch (e) {
+            console.warn('QR gen failed for', table.name, e);
+          }
         }
       }
       setQrDataUrls(map);
     };
     generate();
-  }, [tables, tenant?.slug]);
+  }, [tables]);
 
   const deleteMutation = useMutation({
     mutationFn: (tableId) => base44.functions.invoke('manageTable', { action: 'delete', tenant_id: tenantId, table_id: tableId }),

@@ -91,13 +91,21 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
 
   const handleGenerate = () => {
     if (!generateForm.prefix || !generateForm.qty) return;
-    const newTables = Array.from({ length: generateForm.qty }, (_, i) => ({
-      id: crypto.randomUUID(),
-      name: `${generateForm.prefix} ${i + 1}`,
-      capacity: generateForm.pax || 2,
-      zone: generateForm.zone?.trim() || null,
-      status: 'available',
-    }));
+    const pendingTenantId = localStorage.getItem('pending_tenant_id');
+    const businessName = formData.businessName || '';
+    const tenantSlug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+    const newTables = Array.from({ length: generateForm.qty }, (_, i) => {
+      const tableId = crypto.randomUUID();
+      return {
+        id: tableId,
+        name: `${generateForm.prefix} ${i + 1}`,
+        capacity: generateForm.pax || 2,
+        zone: generateForm.zone?.trim() || null,
+        status: 'available',
+        qr_code_url: `https://sellio.apptelier.sg/order/${tenantSlug}/${tableId}`,
+      };
+    });
     setLocalTables(prev => [...prev, ...newTables]);
     setGenerateForm({ prefix: '', qty: '', pax: '', zone: '' });
   };
@@ -182,6 +190,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
         capacity: t.capacity,
         zone: t.zone || null,
         status: 'available',
+        qr_code_url: t.qr_code_url || null,
       })) : [],
       qrCodes: setupQr ? qrCodes : {},
     };

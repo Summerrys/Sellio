@@ -373,7 +373,8 @@ Deno.serve(async (req) => {
       const tableRows = [];
       if (formData.tables?.length > 0) {
       for (const t of formData.tables) {
-        const tableId = crypto.randomUUID();
+        const tableId = t.id || crypto.randomUUID();
+        const qrUrl = t.qr_code_url || `https://sellio.apptelier.sg/order/${tenantSlug}/${tableId}`;
         tableRows.push({
           id: tableId,
           tenant_id: newTenantId,
@@ -382,7 +383,7 @@ Deno.serve(async (req) => {
           zone: t.zone || null,
           status: 'available',
           sort_order: tableRows.length,
-          qr_code_url: `https://sellio.apptelier.sg/order/${tenantSlug}/${tableId}`,
+          qr_code_url: qrUrl,
         });
       }
       } else if (formData.tableCount > 0) {
