@@ -11,16 +11,10 @@ export default function QRCodeModal({ isOpen, onClose, table, qrDataUrl, themeCo
     printWindow.document.write(`
       <html>
         <head>
-          <title>Print ${table.label} QR Code</title>
-          <style>
-            body { margin: 20px; text-align: center; font-family: Arial, sans-serif; }
-            img { max-width: 400px; margin: 20px 0; }
-            p { font-size: 18px; font-weight: bold; margin: 10px 0; }
-          </style>
-        </head>
-        <body>
-          <p>${table.label}</p>
-          <p>${table.pax} pax</p>
+          <title>Print ${table.name} QR Code</title>
+...
+          <p>${table.name}</p>
+          <p>${table.capacity} pax</p>
           <img src="${qrDataUrl}" alt="QR Code" />
         </body>
       </html>
@@ -32,7 +26,7 @@ export default function QRCodeModal({ isOpen, onClose, table, qrDataUrl, themeCo
   const handleDownload = () => {
     const link = document.createElement('a');
     link.href = qrDataUrl;
-    link.download = `${table.label.replace(/\s+/g, '_')}_QR.png`;
+    link.download = `${table.name.replace(/\s+/g, '_')}_QR.png`;
     link.click();
   };
 
@@ -40,14 +34,14 @@ export default function QRCodeModal({ isOpen, onClose, table, qrDataUrl, themeCo
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{table.label} - QR Code</DialogTitle>
+          <DialogTitle>{table.name} - QR Code</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col items-center gap-4 py-4">
           <div className="p-4 bg-white rounded-lg border border-slate-200">
             {qrDataUrl && <img src={qrDataUrl} alt="QR Code" className="w-64 h-64" />}
           </div>
           <div className="text-center">
-            <p className="text-sm text-slate-600">{table.pax} pax</p>
+            <p className="text-sm text-slate-600">{table.capacity} pax</p>
           </div>
           <div className="flex gap-2 w-full">
             <button

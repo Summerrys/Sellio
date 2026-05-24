@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowRight, ArrowLeft, QrCode, Table2, Download, Printer } from 'lucide-react';
+import { ArrowRight, ArrowLeft, QrCode, Table2, Download, Printer, Pencil, Trash2 } from 'lucide-react';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 import QR from 'qrcode';
@@ -124,6 +124,11 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   };
 
   const cancelEdit = () => setEditingId(null);
+
+  const handleOpenQRModal = (table) => {
+    setSelectedQR(table);
+    setQRModalOpen(true);
+  };
 
   const removeLocalTable = (id) => {
     setLocalTables(prev => prev.filter(t => t.id !== id));
@@ -336,15 +341,19 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                               <div className="flex gap-1 items-center">
                                 {setupQr && (
                                   <button
-                                    onClick={() => { setSelectedQR(t); setQRModalOpen(true); }}
+                                    onClick={() => handleOpenQRModal(t)}
                                     className="p-1 hover:opacity-70"
                                     title="View QR code"
                                   >
                                     <QrCode className="w-4 h-4" style={{ color: primaryColor }} />
                                   </button>
                                 )}
-                                <button onClick={() => editLocalTable(t)} className="p-1 hover:opacity-70" style={{ color: primaryColor }}>✎</button>
-                                <button onClick={() => removeLocalTable(t.id)} className="p-1 hover:opacity-70 text-red-500">🗑</button>
+                                <button onClick={() => editLocalTable(t)} className="p-1 hover:opacity-70">
+                                  <Pencil className="w-4 h-4" style={{ color: primaryColor }} />
+                                </button>
+                                <button onClick={() => removeLocalTable(t.id)} className="p-1 hover:opacity-70">
+                                  <Trash2 className="w-4 h-4 text-red-500" />
+                                </button>
                               </div>
                             </div>
                           )}
@@ -416,7 +425,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
       {selectedQR && (
         <QRCodeModal
           isOpen={qrModalOpen}
-          onClose={() => setQRModalOpen(false)}
+          onClose={() => { setQRModalOpen(false); setSelectedQR(null); }}
           table={selectedQR}
           qrDataUrl={qrCodes[selectedQR.id]}
           themeColor={themeColor}
