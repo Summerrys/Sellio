@@ -10,7 +10,6 @@ import { ArrowRight, ArrowLeft, QrCode, Table2, Download, Printer, Pencil, Trash
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 import QR from 'qrcode';
-import QRCodeModal from './QRCodeModal';
 
 export default function Step4TablesQR({ formData, updateFormData, nextStep, prevStep }) {
   const [setupTables, setSetupTables] = useState(formData.tables && formData.tables.length > 0);
@@ -460,14 +459,33 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
 
 
 
-      {selectedQR && (
-        <QRCodeModal
-          isOpen={qrModalOpen}
-          onClose={() => { setQRModalOpen(false); setSelectedQR(null); }}
-          table={selectedQR}
-          qrDataUrl={qrCodes[selectedQR.id]}
-          themeColor={themeColor}
-        />
+      {selectedQR && qrModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => { setQRModalOpen(false); setSelectedQR(null); }}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-slate-900 text-base">{selectedQR.name} — QR Code</h3>
+              <button onClick={() => { setQRModalOpen(false); setSelectedQR(null); }} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="flex flex-col items-center gap-3">
+              <div className="p-3 bg-white rounded-lg border border-slate-200">
+                {qrCodes[selectedQR.id] && <img src={qrCodes[selectedQR.id]} alt="QR Code" className="w-48 h-48" />}
+              </div>
+              <p className="text-sm text-slate-500">{selectedQR.capacity} pax</p>
+              <div className="flex gap-2 w-full">
+                <button
+                  onClick={() => { const link = document.createElement('a'); link.href = qrCodes[selectedQR.id]; link.download = `${selectedQR.name.replace(/\s+/g, '_')}_QR.png`; link.click(); }}
+                  className="flex-1 px-3 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 flex items-center gap-2 justify-center"
+                  style={{ background: themeColor }}
+                ><Download className="w-4 h-4" /> Download</button>
+                <button
+                  onClick={() => { const w = window.open(); w.document.write(`<html><head><title>${selectedQR.name}</title></head><body style="text-align:center;font-family:Arial"><h2>${selectedQR.name}</h2><p>${selectedQR.capacity} pax</p><img src="${qrCodes[selectedQR.id]}" /></body></html>`); w.document.close(); setTimeout(() => w.print(), 250); }}
+                  className="flex-1 px-3 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 flex items-center gap-2 justify-center"
+                  style={{ background: themeColor }}
+                ><Printer className="w-4 h-4" /> Print</button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="flex gap-2 sm:gap-3 pt-3 sm:pt-4">
