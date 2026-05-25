@@ -419,11 +419,6 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
             />
           </Section>
 
-          {/* Inventory */}
-          <Section title="Inventory" defaultOpen={false}>
-            <ProductFormInventory formData={formData} onChange={update} />
-          </Section>
-
           {/* Variants */}
           <Section title="Variants & Add-ons" defaultOpen={false}>
             <ProductFormVariants formData={formData} onChange={update} />
