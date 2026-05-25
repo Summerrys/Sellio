@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import db from '@/lib/db';
+import { getSupabase } from '@/lib/supabaseClient';
 import { base44 } from '@/api/base44Client';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
@@ -52,14 +53,25 @@ function TenantSettingsContent() {
   });
 
   const updateBusinessMutation = useMutation({
-    mutationFn: () => db.entities.Tenant.update(tenantId, businessForm),
+    mutationFn: async () => {
+      const supabase = await getSupabase();
+      const { error } = await supabase.from('tenants').update(businessForm).eq('id', tenantId);
+      if (error) throw error;
+    },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['currentTenant'] }); toast.success('Settings saved'); },
   });
 
   const saveRoleMutation = useMutation({
-    mutationFn: (data) => editingRole
-      ? db.entities.Role.update(editingRole.id, data)
-      : db.entities.Role.create({ ...data, tenant_id: tenantId, slug: data.name.toLowerCase().replace(/\s+/g, '-') }),
+    mutationFn: async (data) => {
+      const supabase = await getSupabase();
+      if (editingRole) {
+        const { error } = await supabase.from('roles').update({ name: data.name, slug: data.name.toLowerCase().replace(/\s+/g, '-'), permissions: data.permissions, description: data.description }).eq('id', editingRole.id).eq('tenant_id', tenantId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('roles').insert({ ...data, tenant_id: tenantId, slug: data.name.toLowerCase().replace(/\s+/g, '-') });
+        if (error) throw error;
+      }
+    },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['settingsRoles'] }); closeRoleForm(); },
   });
 

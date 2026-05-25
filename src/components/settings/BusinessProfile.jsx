@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import db from '@/lib/db';
-import { base44 } from '@/api/base44Client';
+import { getSupabase } from '@/lib/supabaseClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,7 +23,9 @@ export default function BusinessProfile({ tenant }) {
 
   const updateMutation = useMutation({
     mutationFn: async (data) => {
-      return db.entities.Tenant.update(tenant.id, data);
+      const supabase = await getSupabase();
+      const { error } = await supabase.from('tenants').update(data).eq('id', tenant.id);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenant'] });
@@ -40,7 +42,12 @@ export default function BusinessProfile({ tenant }) {
 
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const supabase = await getSupabase();
+      const path = `logos/${tenant.id}-${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage.from('product-images').upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
+      const file_url = urlData.publicUrl;
       setFormData({ ...formData, logo_url: file_url });
       await updateMutation.mutateAsync({ logo_url: file_url });
       toast.success('Logo uploaded');

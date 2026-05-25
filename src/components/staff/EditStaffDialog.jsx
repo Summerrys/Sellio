@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import db from '@/lib/db';
+import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../tenant/TenantContext';
 import {
   Dialog,
@@ -57,11 +58,13 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
   const updateMutation = useMutation({
     mutationFn: async (data) => {
       const role = roles.find(r => r.id === data.role_id);
-      return db.entities.TenantUser.update(staff.id, {
+      const supabase = await getSupabase();
+      const { error } = await supabase.from('tenant_users').update({
         role_id: data.role_id,
         role_name: role?.name || staff.role_name,
         status: data.status,
-      });
+      }).eq('id', staff.id).eq('tenant_id', tenantId);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff', tenantId] });

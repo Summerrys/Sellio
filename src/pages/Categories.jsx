@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import db from '@/lib/db';
+import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PermissionGate from '../components/tenant/PermissionGate';
@@ -43,9 +44,16 @@ function CategoriesContent() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: (data) => editing
-      ? db.entities.Category.update(editing.id, data)
-      : db.entities.Category.create({ ...data, tenant_id: tenantId, slug: data.name.toLowerCase().replace(/\s+/g, '-') }),
+    mutationFn: async (data) => {
+      const supabase = await getSupabase();
+      if (editing) {
+        const { error } = await supabase.from('categories').update(data).eq('id', editing.id).eq('tenant_id', tenantId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('categories').insert({ ...data, tenant_id: tenantId, slug: data.name.toLowerCase().replace(/\s+/g, '-') });
+        if (error) throw error;
+      }
+    },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['categories'] }); close(); },
   });
 

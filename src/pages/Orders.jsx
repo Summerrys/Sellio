@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import db from '@/lib/db';
+import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
@@ -79,7 +80,8 @@ export default function Orders() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }) => {
-      return db.entities.Order.update(orderId, { status });
+      const supabase = await getSupabase();
+      await supabase.from('orders').update({ status }).eq('id', orderId).eq('tenant_id', tenantId);
     },
     onMutate: async ({ orderId, status }) => {
       await queryClient.cancelQueries({ queryKey: ['orders', tenantId, statusFilter] });
@@ -101,7 +103,8 @@ export default function Orders() {
 
   const cancelOrderMutation = useMutation({
     mutationFn: async (orderId) => {
-      return db.entities.Order.update(orderId, { status: 'cancelled' });
+      const supabase = await getSupabase();
+      await supabase.from('orders').update({ status: 'cancelled' }).eq('id', orderId).eq('tenant_id', tenantId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders', tenantId] });

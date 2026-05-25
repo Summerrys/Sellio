@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import db from '@/lib/db';
+import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant, ALL_PERMISSIONS, PERMISSION_GROUPS, ROLE_TEMPLATES, INDUSTRY_ROLES } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
@@ -37,9 +38,16 @@ export default function RoleManagement() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: (data) => editing
-      ? db.entities.Role.update(editing.id, data)
-      : db.entities.Role.create({ ...data, tenant_id: tenantId, slug: data.name.toLowerCase().replace(/\s+/g, '-') }),
+    mutationFn: async (data) => {
+      const supabase = await getSupabase();
+      if (editing) {
+        const { error } = await supabase.from('roles').update({ name: data.name, slug: data.name.toLowerCase().replace(/\s+/g, '-'), permissions: data.permissions, description: data.description }).eq('id', editing.id).eq('tenant_id', tenantId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('roles').insert({ ...data, tenant_id: tenantId, slug: data.name.toLowerCase().replace(/\s+/g, '-') });
+        if (error) throw error;
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allRoles'] });
       close();
