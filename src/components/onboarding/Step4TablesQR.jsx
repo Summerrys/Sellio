@@ -308,9 +308,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                   }, {})
                 ).map(([zone, zoneTables]) => (
                   <div key={zone}>
-                    {Object.keys(localTables.reduce((g, t) => { g[t.zone || 'General'] = true; return g; }, {})).length > 1 && (
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">{zone}</p>
-                    )}
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">{zone}</p>
                     <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
                       {zoneTables.map(t => (
                         editingId === t.id ? (
