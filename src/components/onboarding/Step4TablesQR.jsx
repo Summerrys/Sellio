@@ -16,7 +16,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const [setupTables, setSetupTables] = useState(formData.tables && formData.tables.length > 0);
   const [setupQr, setSetupQr] = useState(!!formData.singleQrLabel || false);
   const [localTables, setLocalTables] = useState(formData.tables || []);
-  const [generateForm, setGenerateForm] = useState({ prefix: '', qty: '', pax: '', zone: '' });
+  const [generateForm, setGenerateForm] = useState({ zone: '', qty: '', pax: '' });
   const [editingId, setEditingId] = useState(null);
   const [editLabel, setEditLabel] = useState('');
   const [editPax, setEditPax] = useState('2');
@@ -92,24 +92,30 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const { primary: primaryColor } = getThemeCSSColors(formData);
 
   const handleGenerate = () => {
-    if (!generateForm.prefix || !generateForm.qty) return;
+    if (!generateForm.zone?.trim() || !generateForm.qty) return;
+
     const pendingTenantId = localStorage.getItem('pending_tenant_id');
     const businessName = formData.businessName || '';
     const tenantSlug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-    const newTables = Array.from({ length: generateForm.qty }, (_, i) => {
+    const existingInZone = localTables.filter(
+      t => (t.zone || '').toLowerCase() === generateForm.zone.trim().toLowerCase()
+    ).length;
+
+    const newTables = Array.from({ length: parseInt(generateForm.qty) }, (_, i) => {
       const tableId = crypto.randomUUID();
+      const tableNumber = existingInZone + i + 1;
       return {
         id: tableId,
-        name: `${generateForm.prefix} ${i + 1}`,
-        capacity: generateForm.pax || 2,
-        zone: generateForm.zone?.trim() || null,
+        name: `Table ${tableNumber}`,
+        capacity: parseInt(generateForm.pax) || 2,
+        zone: generateForm.zone.trim(),
         status: 'available',
         qr_code_url: `https://sellio.apptelier.sg/order/${tenantSlug}/${tableId}`,
       };
     });
     setLocalTables(prev => [...prev, ...newTables]);
-    setGenerateForm({ prefix: '', qty: '', pax: '', zone: '' });
+    setGenerateForm({ zone: '', qty: '', pax: '' });
   };
 
   const editLocalTable = (table) => {
@@ -252,16 +258,16 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
             <Label className="text-xs font-semibold text-slate-700 mb-2 block">Quick Generate Tables</Label>
             <div className="flex gap-2 mb-2">
               <Input
-                value={generateForm.prefix}
-                onChange={e => setGenerateForm(p => ({ ...p, prefix: e.target.value }))}
-                placeholder="Name e.g. Table, Seat"
-                className="h-9 text-sm flex-2"
+                value={generateForm.zone}
+                onChange={e => setGenerateForm(p => ({ ...p, zone: e.target.value }))}
+                placeholder="Zone e.g. VIP, Indoor, Bar"
+                className="h-9 text-sm"
                 style={{ flex: 2 }}
               />
               <Input
                 type="number"
                 inputMode="numeric"
-                value={generateForm.qty}
+                value={generateForm.qty || ''}
                 onChange={e => setGenerateForm(p => ({ ...p, qty: parseInt(e.target.value) || '' }))}
                 placeholder="Qty"
                 className="h-9 text-sm w-16"
@@ -269,21 +275,15 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
               <Input
                 type="number"
                 inputMode="numeric"
-                value={generateForm.pax}
+                value={generateForm.pax || ''}
                 onChange={e => setGenerateForm(p => ({ ...p, pax: parseInt(e.target.value) || '' }))}
                 placeholder="Pax"
                 className="h-9 text-sm w-16"
               />
             </div>
-            <Input
-              value={generateForm.zone}
-              onChange={e => setGenerateForm(p => ({ ...p, zone: e.target.value }))}
-              placeholder="Zone (optional) e.g. Indoor, VIP, Outdoor"
-              className="h-9 text-sm mb-2"
-            />
             <button
               onClick={handleGenerate}
-              disabled={!generateForm.prefix || !generateForm.qty}
+              disabled={!generateForm.zone?.trim() || !generateForm.qty}
               className="w-full h-9 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:opacity-90"
               style={{ background: themeColor }}
             >
