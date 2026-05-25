@@ -4,7 +4,6 @@ import PullToRefresh from '../components/ui-custom/PullToRefresh';
 import db from '@/lib/db';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
-import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +13,7 @@ import ProductFormDialog from '../components/products/ProductFormDialog.jsx';
 import ProductImportDialog from '../components/products/ProductImportDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 const CSV_HEADERS = ['Name', 'SKU', 'Description', 'Category', 'Price', 'Cost Price', 'Compare At Price', 'Stock Quantity', 'Low Stock Threshold', 'Track Inventory', 'Active', 'Featured', 'Tags', 'Variants', 'Image URL', 'Additional Images'];
@@ -41,6 +40,7 @@ const TEMPLATE_ROWS = [
 export default function Products() {
   const { tenantId, tenant } = useTenant();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState(
     localStorage.getItem('products_view_mode') || 'list'
   );
@@ -153,17 +153,18 @@ export default function Products() {
     <RequirePermission permission="products.view">
       <PullToRefresh onRefresh={handleRefresh}>
       <div className="space-y-6">
-        <PageHeader
-          title="Products"
-          description="Manage your product catalog"
-          actions={
-            <>
-              <Link to="/Inventory">
-                <Button variant="outline" size="sm">
-                  <Package className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Inventory</span>
-                </Button>
-              </Link>
+        <div className="flex flex-col gap-3 mb-6">
+          <div className="flex items-center justify-between mb-1">
+            <h1 className="text-2xl font-bold text-slate-900">Products</h1>
+            <button
+              onClick={() => navigate('/Inventory')}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-slate-300 rounded-full text-slate-600 hover:border-purple-400 hover:text-purple-600 transition-colors"
+            >
+              <Package className="w-4 h-4" /> Inventory
+            </button>
+          </div>
+          <p className="text-sm text-slate-500 -mt-3">Manage your product catalog</p>
+          <div className="flex flex-wrap items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
@@ -198,9 +199,8 @@ export default function Products() {
                   <span className="sm:hidden">Add</span>
                 </Button>
               </RequirePermission>
-            </>
-          }
-        />
+          </div>
+        </div>
 
         {/* Filters and View Toggle */}
         <div className="flex flex-col gap-3">
