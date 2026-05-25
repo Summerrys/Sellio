@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabase } from '@/lib/supabaseClient';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 
 export default function StockAdjustmentPanel({ open, onOpenChange, product, tenantId, onSuccess, onClose }) {
@@ -32,6 +32,8 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
     setIsSubmitting(true);
     try {
       const inv = product?.inventory?.[0];
+
+      const supabase = await getSupabase();
 
       if (inv?.id) {
         const { error } = await supabase
