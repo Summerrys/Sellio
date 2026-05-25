@@ -578,21 +578,29 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
 
           {/* AI result banner */}
           {aiStep === 'done' && aiResult && (
-            <div className="mt-3 p-3 rounded-xl bg-green-50 border border-green-200">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="w-4 h-4 text-green-600" />
-                <p className="text-sm font-semibold text-green-800">AI suggestions ready</p>
-                <button onClick={dismissAi} className="ml-auto text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+            aiResult._incomplete ? (
+              <div className="mt-3 flex items-start gap-3 p-3 rounded-xl bg-amber-50 border border-amber-200">
+                <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-800 flex-1">AI couldn't identify this product clearly. You can still fill in the details manually.</p>
+                <button onClick={dismissAi} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
               </div>
-              <p className="text-sm font-bold text-slate-900">{aiResult.name}</p>
-              <p className="text-xs text-slate-500 mb-3">{aiResult.suggested_category} · {formData.currency || '$'}{aiResult.estimated_price?.toFixed(2)}</p>
-              <div className="flex gap-2">
-                <Button type="button" size="sm" onClick={applyAiResult} className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-1.5">
-                  <Check className="w-4 h-4" /> Apply to fields
-                </Button>
-                <Button type="button" size="sm" variant="outline" onClick={dismissAi}>Dismiss</Button>
+            ) : (
+              <div className="mt-3 p-3 rounded-xl bg-green-50 border border-green-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-4 h-4 text-green-600" />
+                  <p className="text-sm font-semibold text-green-800">AI suggestions ready</p>
+                  <button onClick={dismissAi} className="ml-auto text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+                </div>
+                <p className="text-sm font-bold text-slate-900">{aiResult.name}</p>
+                <p className="text-xs text-slate-500 mb-3">{aiResult.suggested_category} · {formData.currency || '$'}{aiResult.estimated_price?.toFixed(2)}</p>
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" onClick={applyAiResult} className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-1.5">
+                    <Check className="w-4 h-4" /> Apply to fields
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={dismissAi}>Dismiss</Button>
+                </div>
               </div>
-            </div>
+            )
           )}
 
           {/* AI error banner */}
