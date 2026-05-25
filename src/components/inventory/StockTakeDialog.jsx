@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../tenant/TenantContext';
 import {
   Dialog,
@@ -34,24 +34,31 @@ export default function StockTakeDialog({ open, onOpenChange, products, tenantId
 
   const reconcileMutation = useMutation({
     mutationFn: async () => {
-      // Update all products with discrepancies
+      const supabase = await getSupabase();
       for (const item of discrepancies) {
-        await base44.entities.Product.update(item.id, {
-          stock_quantity: item.counted
-        });
+        const { error: productError } = await supabase
+          .from('products')
+          .update({ stock_quantity: item.counted, updated_date: new Date().toISOString() })
+          .eq('id', item.id)
+          .eq('tenant_id', tenantId);
+        if (productError) throw productError;
 
-        // Create log entry
-        await base44.entities.InventoryLog.create({
-          tenant_id: tenantId,
-          product_id: item.id,
-          product_name: item.name,
-          type: 'adjustment',
-          quantity_change: item.difference,
-          quantity_before: item.expected,
-          quantity_after: item.counted,
-          notes: `Stock take: ${notes}`,
-          performed_by: user?.email || 'Unknown',
-        });
+        const { error: logError } = await supabase
+          .from('inventory_logs')
+          .insert({
+            id: crypto.randomUUID(),
+            tenant_id: tenantId,
+            product_id: item.id,
+            product_name: item.name,
+            type: 'adjustment',
+            quantity_change: item.difference,
+            quantity_before: item.expected,
+            quantity_after: item.counted,
+            notes: `Stock take: ${notes}`,
+            performed_by: user?.email || 'Unknown',
+            created_date: new Date().toISOString(),
+          });
+        if (logError) throw logError;
       }
     },
     onSuccess: () => {

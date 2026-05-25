@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { getSupabase } from '@/lib/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -26,9 +26,17 @@ export default function InventoryLogTable({ tenantId, productId = null, limit = 
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ['inventoryLogs', tenantId, productId],
     queryFn: async () => {
-      const query = { tenant_id: tenantId };
-      if (productId) query.product_id = productId;
-      return base44.entities.InventoryLog.filter(query, '-created_date', limit);
+      const supabase = await getSupabase();
+      let q = supabase
+        .from('inventory_logs')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('created_date', { ascending: false })
+        .limit(limit);
+      if (productId) q = q.eq('product_id', productId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!tenantId,
   });
