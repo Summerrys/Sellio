@@ -10,13 +10,15 @@ function StockBadge({ product }) {
   if (product.track_inventory !== true) {
     return <Badge variant="outline" className="text-slate-500 border-slate-300">Unlimited</Badge>;
   }
-  if (product.stock_quantity === 0) {
+  const stock = product.inventory_items?.[0]?.current_stock ?? product.stock_quantity ?? 0;
+  const threshold = product.inventory_items?.[0]?.low_stock_threshold ?? product.low_stock_threshold ?? 5;
+  if (stock === 0) {
     return <Badge className="bg-red-100 text-red-700 border-red-300 gap-1"><AlertCircle className="w-3 h-3" />Out of Stock</Badge>;
   }
-  if (product.stock_quantity <= (product.low_stock_threshold || 5)) {
-    return <Badge className="bg-amber-100 text-amber-700 border-amber-300">Low Stock ({product.stock_quantity})</Badge>;
+  if (stock <= threshold) {
+    return <Badge className="bg-amber-100 text-amber-700 border-amber-300">Low Stock ({stock})</Badge>;
   }
-  return <Badge className="bg-green-100 text-green-700 border-green-300">{product.stock_quantity} in stock</Badge>;
+  return <Badge className="bg-green-100 text-green-700 border-green-300">{stock} in stock</Badge>;
 }
 
 export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMode = 'list' }) {

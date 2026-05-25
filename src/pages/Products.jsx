@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PullToRefresh from '../components/ui-custom/PullToRefresh';
-import db from '@/lib/db';
+import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import EmptyState from '../components/ui-custom/EmptyState';
@@ -61,13 +61,30 @@ export default function Products() {
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products', tenantId],
-    queryFn: () => db.entities.Product.filter({ tenant_id: tenantId }, '-created_date'),
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase
+        .from('products')
+        .select('*, inventory_items(current_stock, low_stock_threshold)')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
     enabled: !!tenantId,
   });
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', tenantId],
-    queryFn: () => db.entities.Category.filter({ tenant_id: tenantId }),
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data } = await supabase
+        .from('categories')
+        .select('id, name')
+        .eq('tenant_id', tenantId)
+        .order('name');
+      return data || [];
+    },
     enabled: !!tenantId,
   });
 
@@ -82,7 +99,11 @@ export default function Products() {
     const matchesStatus = statusFilter === 'all' || 
       (statusFilter === 'active' && product.is_active) ||
       (statusFilter === 'inactive' && !product.is_active) ||
-      (statusFilter === 'low_stock' && product.stock_quantity <= (product.low_stock_threshold || 5));
+      (statusFilter === 'low_stock' && (() => {
+        const stock = product.inventory_items?.[0]?.current_stock ?? product.stock_quantity ?? 0;
+        const threshold = product.inventory_items?.[0]?.low_stock_threshold ?? product.low_stock_threshold ?? 5;
+        return stock <= threshold;
+      })());
 
     return matchesSearch && matchesCategory && matchesStatus;
   });
