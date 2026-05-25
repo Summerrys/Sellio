@@ -2,7 +2,6 @@ import React, { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PullToRefresh from '../components/ui-custom/PullToRefresh';
 import { getSupabase } from '@/lib/supabaseClient';
-import { db } from '@/lib/db';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import EmptyState from '../components/ui-custom/EmptyState';
@@ -63,20 +62,18 @@ export default function Products() {
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products', tenantId],
     queryFn: async () => {
-      const [rawProducts, supabase] = await Promise.all([
-        db.entities.Product.filter({ tenant_id: tenantId }),
-        getSupabase(),
+      const supabase = await getSupabase();
+      const [{ data: rawProducts, error }, { data: inventoryItems }] = await Promise.all([
+        supabase.from('products').select('*').eq('tenant_id', tenantId).order('created_date', { ascending: false }),
+        supabase.from('inventory_items').select('product_id, current_stock, low_stock_threshold').eq('tenant_id', tenantId),
       ]);
-      const { data: inventoryItems } = await supabase
-        .from('inventory_items')
-        .select('product_id, current_stock, low_stock_threshold')
-        .eq('tenant_id', tenantId);
-      return rawProducts.map(p => {
+      if (error) throw error;
+      return (rawProducts || []).map(p => {
         const inv = inventoryItems?.find(i => i.product_id === p.id);
         return {
           ...p,
-          current_stock: inv?.current_stock ?? p.stock_quantity ?? 0,
-          low_stock_threshold: inv?.low_stock_threshold ?? p.low_stock_threshold ?? 10,
+          current_stock: inv?.current_stock ?? 0,
+          low_stock_threshold: inv?.low_stock_threshold ?? 10,
         };
       });
     },

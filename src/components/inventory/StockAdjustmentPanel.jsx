@@ -40,16 +40,11 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
           .from('inventory_items')
           .update({
             current_stock: newStock,
-            last_restock_date: newStock > currentStock ? new Date().toISOString() : undefined,
+            last_restock_date: new Date().toISOString(),
           })
           .eq('id', inv.id);
         if (error) throw error;
       }
-
-      await supabase
-        .from('products')
-        .update({ stock_quantity: newStock })
-        .eq('id', product.id);
 
       queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
       queryClient.invalidateQueries({ queryKey: ['inventoryLogs', tenantId] });
