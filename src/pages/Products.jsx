@@ -63,11 +63,13 @@ export default function Products() {
     queryKey: ['products', tenantId],
     queryFn: async () => {
       const supabase = await getSupabase();
+      console.log('[Products] tenantId:', tenantId);
       const { data, error } = await supabase
         .from('products')
         .select('*, inventory_items(current_stock, low_stock_threshold)')
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
+      console.log('[Products] data:', data, 'error:', error);
       if (error) throw error;
       return data || [];
     },
