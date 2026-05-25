@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { X, ChevronDown, ChevronUp, Loader2, Trash2 } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Loader2, Trash2, PackagePlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import db from '@/lib/db';
@@ -64,6 +64,7 @@ import ProductFormPricing from './ProductFormPricing';
 import ProductFormInventory from './ProductFormInventory';
 import ProductFormVariants from './ProductFormVariants';
 import AIProductAssistant, { cleanupDeletedImages } from './AIProductAssistant';
+import StockAdjustmentPanel from '../inventory/StockAdjustmentPanel';
 import { Pencil, Plus } from 'lucide-react';
 
 const deleteImageFromStorage = async (imageUrl) => {
@@ -130,6 +131,8 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     const [errors, setErrors] = useState({});
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [showStockPanel, setShowStockPanel] = useState(false);
+    const [currentStock, setCurrentStock] = useState(0);
 
   const normalizeLegacyVariants = (variants) => {
     if (!variants?.length) return [];
@@ -173,6 +176,19 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
       supabase.from('categories').select('id, name').eq('tenant_id', tenantId).eq('is_active', true).order('name')
     ).then(({ data }) => setCategories(data || [])).catch(() => {});
   }, [tenantId, open]);
+
+  useEffect(() => {
+    if (!open || !product?.id || !tenantId) return;
+    getSupabase().then(async (supabase) => {
+      const { data } = await supabase
+        .from('inventory_items')
+        .select('current_stock')
+        .eq('product_id', product.id)
+        .eq('tenant_id', tenantId)
+        .single();
+      if (data) setCurrentStock(data.current_stock ?? 0);
+    }).catch(() => {});
+  }, [open, product?.id, tenantId]);
 
   const update = (patch) => setFormData(prev => {
     const next = { ...prev, ...patch };
@@ -408,6 +424,20 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
               isEditMode={!!product?.id}
               savedSku={savedSku}
             />
+            {product?.id && (
+              <div className="flex items-center justify-between mt-1.5 px-1">
+                <span className="text-xs text-slate-500">
+                  Current stock: <span className="font-medium text-slate-700">{currentStock} units</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowStockPanel(true)}
+                  className="text-xs font-medium text-purple-600 hover:text-purple-700 flex items-center gap-1"
+                >
+                  <PackagePlus className="w-3.5 h-3.5" /> Adjust stock
+                </button>
+              </div>
+            )}
           </Section>
 
           {/* Pricing */}
@@ -459,6 +489,33 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
       </div>
 
 
+      {showStockPanel && product?.id && (
+        <StockAdjustmentPanel
+          open={showStockPanel}
+          onOpenChange={setShowStockPanel}
+          product={{
+            id: product.id,
+            name: formData.name,
+            image_url: formData.image_url,
+            sku: formData.sku || product.sku,
+            stock_quantity: currentStock,
+            inventory: [{ current_stock: currentStock, low_stock_threshold: formData.low_stock_threshold ?? 5 }],
+          }}
+          tenantId={tenantId}
+          onSuccess={() => {
+            setCurrentStock(prev => prev); // will re-fetch on next open; update optimistically via onSuccess
+            getSupabase().then(async (supabase) => {
+              const { data } = await supabase
+                .from('inventory_items')
+                .select('current_stock')
+                .eq('product_id', product.id)
+                .eq('tenant_id', tenantId)
+                .single();
+              if (data) setCurrentStock(data.current_stock ?? 0);
+            }).catch(() => {});
+          }}
+        />
+      )}
     </>
   );
 }
