@@ -423,21 +423,10 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
               errors={errors}
               isEditMode={!!product?.id}
               savedSku={savedSku}
+              currentStock={product?.id ? currentStock : null}
+              customPrimary={tenant?.primary_color || '#7c3aed'}
+              onAdjustStock={product?.id ? () => setShowStockPanel(true) : undefined}
             />
-            {product?.id && (
-              <div className="flex items-center justify-between mt-1.5 px-1">
-                <span className="text-xs text-slate-500">
-                  Current stock: <span className="font-medium text-slate-700">{currentStock} units</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowStockPanel(true)}
-                  className="text-xs font-medium text-purple-600 hover:text-purple-700 flex items-center gap-1"
-                >
-                  <PackagePlus className="w-3.5 h-3.5" /> Adjust stock
-                </button>
-              </div>
-            )}
           </Section>
 
           {/* Pricing */}
