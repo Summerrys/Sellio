@@ -34,17 +34,21 @@ const getPendingTenantId = () => localStorage.getItem('pending_tenant_id') || cr
 
 export default function Step1Combined({ formData, updateFormData, nextStep }) {
   const [logoFile, setLogoFile] = React.useState(null);
-  const [logoPreview, setLogoPreview] = React.useState(formData.logoUrl || null);
+  const [logoPreview, setLogoPreview] = React.useState(null);
   const [logoError, setLogoError] = React.useState('');
   const [logoUploading, setLogoUploading] = React.useState(false);
   const fileInputRef = React.useRef(null);
 
-  // Restore logo preview from stored temp path on mount
+  // Restore logo preview from stored temp path on mount — validate URL before showing
   React.useEffect(() => {
-    const storedLogoUrl = localStorage.getItem('onboarding_logo_temp_url');
-    if (storedLogoUrl && !logoPreview) {
-      setLogoPreview(storedLogoUrl);
-    }
+    const storedUrl = localStorage.getItem('onboarding_logo_temp_url') || formData.logoUrl;
+    if (!storedUrl) return;
+    fetch(storedUrl, { method: 'HEAD' })
+      .then(res => { if (res.ok) setLogoPreview(storedUrl); else throw new Error(); })
+      .catch(() => {
+        localStorage.removeItem('onboarding_logo_temp_url');
+        localStorage.removeItem('onboarding_logo_temp_path');
+      });
   }, []);
   const [selectedTheme, setSelectedTheme] = useState(formData.theme || '');
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -242,8 +246,10 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                  className="absolute top-0 right-0 h-6 w-6 text-slate-400 hover:text-red-500 bg-white/80 hover:bg-white rounded-bl-lg p-0"
                  onClick={(e) => {
                    e.stopPropagation();
+                   localStorage.removeItem('onboarding_logo_temp_url');
+                   localStorage.removeItem('onboarding_logo_temp_path');
                    setLogoPreview(null);
-                   setValue('logo', null);
+                   updateFormData({ logoUrl: '', logoTempPath: '' });
                  }}
                >
                  <X className="w-3 h-3" />
