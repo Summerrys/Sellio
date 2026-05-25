@@ -10,8 +10,8 @@ function StockBadge({ product }) {
   if (product.track_inventory !== true) {
     return <Badge variant="outline" className="text-slate-500 border-slate-300">Unlimited</Badge>;
   }
-  const stock = product.inventory_items?.[0]?.current_stock ?? product.stock_quantity ?? 0;
-  const threshold = product.inventory_items?.[0]?.low_stock_threshold ?? product.low_stock_threshold ?? 5;
+  const stock = product.current_stock ?? product.stock_quantity ?? 0;
+  const threshold = product.low_stock_threshold ?? 10;
   if (stock === 0) {
     return <Badge className="bg-red-100 text-red-700 border-red-300 gap-1"><AlertCircle className="w-3 h-3" />Out of Stock</Badge>;
   }

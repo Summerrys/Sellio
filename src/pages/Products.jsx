@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PullToRefresh from '../components/ui-custom/PullToRefresh';
 import { getSupabase } from '@/lib/supabaseClient';
+import { db } from '@/lib/db';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import EmptyState from '../components/ui-custom/EmptyState';
@@ -62,16 +63,22 @@ export default function Products() {
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products', tenantId],
     queryFn: async () => {
-      const supabase = await getSupabase();
-      console.log('[Products] tenantId:', tenantId);
-      const { data, error } = await supabase
-        .from('products')
-        .select('*, inventory_items(current_stock, low_stock_threshold)')
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false });
-      console.log('[Products] data:', data, 'error:', error);
-      if (error) throw error;
-      return data || [];
+      const [rawProducts, supabase] = await Promise.all([
+        db.entities.Product.filter({ tenant_id: tenantId }),
+        getSupabase(),
+      ]);
+      const { data: inventoryItems } = await supabase
+        .from('inventory_items')
+        .select('product_id, current_stock, low_stock_threshold')
+        .eq('tenant_id', tenantId);
+      return rawProducts.map(p => {
+        const inv = inventoryItems?.find(i => i.product_id === p.id);
+        return {
+          ...p,
+          current_stock: inv?.current_stock ?? p.stock_quantity ?? 0,
+          low_stock_threshold: inv?.low_stock_threshold ?? p.low_stock_threshold ?? 10,
+        };
+      });
     },
     enabled: !!tenantId,
   });
@@ -101,11 +108,7 @@ export default function Products() {
     const matchesStatus = statusFilter === 'all' || 
       (statusFilter === 'active' && product.is_active) ||
       (statusFilter === 'inactive' && !product.is_active) ||
-      (statusFilter === 'low_stock' && (() => {
-        const stock = product.inventory_items?.[0]?.current_stock ?? product.stock_quantity ?? 0;
-        const threshold = product.inventory_items?.[0]?.low_stock_threshold ?? product.low_stock_threshold ?? 5;
-        return stock <= threshold;
-      })());
+      (statusFilter === 'low_stock' && product.current_stock <= product.low_stock_threshold);
 
     return matchesSearch && matchesCategory && matchesStatus;
   });
