@@ -70,7 +70,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
 
   return (
     <Sheet open={open} onOpenChange={(val) => { if (!val) handleClose(); }}>
-      <SheetContent side="bottom" className="p-0 rounded-t-[20px] max-h-[92vh] overflow-y-auto">
+      <SheetContent side="bottom" className="p-0 rounded-t-[20px] max-h-[92vh] overflow-y-auto [&>button]:hidden">
         <div style={{ borderRadius: '20px 20px 0 0', background: 'white', overflow: 'hidden' }}>
 
           {/* Header */}
@@ -116,6 +116,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
                     border: 'none', background: 'none', width: '120px',
                     color: stockColor,
                     outline: 'none', padding: 0,
+                    WebkitAppearance: 'none', MozAppearance: 'textfield', appearance: 'textfield',
                   }}
                 />
                 <p style={{ fontSize: '12px', color: '#6b7280', margin: '2px 0 0' }}>units</p>
