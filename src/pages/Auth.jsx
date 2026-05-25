@@ -115,7 +115,7 @@ export default function Auth() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/Auth`,
+          redirectTo: 'https://sellio.apptelier.sg/Auth',
         },
       });
       if (error) throw error;
