@@ -54,6 +54,15 @@
   }
 }
 
+/* Hide spinner arrows on number/text inputs */
+input[type="text"]::-webkit-inner-spin-button,
+input[type="text"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 /* Scrollbar styles — desktop only */
 @media (min-width: 1024px) {
   ::-webkit-scrollbar {

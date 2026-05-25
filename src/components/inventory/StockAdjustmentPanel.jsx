@@ -107,8 +107,9 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
 
               <div style={{ textAlign: 'center', minWidth: '80px' }}>
                 <input
-                  type="number"
+                  type="text"
                   inputMode="numeric"
+                  pattern="[0-9]*"
                   value={newStock}
                   onChange={e => setNewStock(Math.max(0, parseInt(e.target.value) || 0))}
                   style={{
@@ -116,7 +117,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
                     border: 'none', background: 'none', width: '120px',
                     color: stockColor,
                     outline: 'none', padding: 0,
-                    WebkitAppearance: 'none', MozAppearance: 'textfield', appearance: 'textfield',
+                    WebkitAppearance: 'none', MozAppearance: 'textfield', appearance: 'none',
                   }}
                 />
                 <p style={{ fontSize: '12px', color: '#6b7280', margin: '2px 0 0' }}>units</p>
