@@ -39,6 +39,7 @@ const TEMPLATE_ROWS = [
 
 export default function Products() {
   const { tenantId, tenant } = useTenant();
+  const primaryColor = tenant?.theme_config?.primary_color || '#7c3aed';
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState(
@@ -181,7 +182,20 @@ export default function Products() {
             <h1 className="text-2xl font-bold text-slate-900">Products</h1>
             <button
               onClick={() => navigate('/Inventory')}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-slate-300 rounded-full text-slate-600 hover:border-purple-400 hover:text-purple-600 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors"
+              style={{
+                border: `1.5px solid ${primaryColor}`,
+                color: primaryColor,
+                background: `${primaryColor}15`,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = primaryColor;
+                e.currentTarget.style.color = '#fff';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = `${primaryColor}15`;
+                e.currentTarget.style.color = primaryColor;
+              }}
             >
               <Package className="w-4 h-4" /> Inventory
             </button>

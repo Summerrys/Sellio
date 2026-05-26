@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import StockAdjustmentPanel from '../components/inventory/StockAdjustmentPanel';
 import InventoryLogTable from '../components/inventory/InventoryLogTable';
+import StockHistoryList from '../components/inventory/StockHistoryList';
 import StockTakeDialog from '../components/inventory/StockTakeDialog';
-import { Package, Search, ClipboardList, LayoutGrid, List } from 'lucide-react';
+import { Package, Search, ClipboardList, LayoutGrid, List, TrendingUp, TrendingDown } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Switch } from '@/components/ui/switch';
 
@@ -23,7 +24,8 @@ export default function Inventory() {
 }
 
 function InventoryContent() {
-  const { tenantId } = useTenant();
+  const { tenantId, tenant } = useTenant();
+  const primaryColor = tenant?.theme_config?.primary_color || '#7c3aed';
   const queryClient = useQueryClient();
   const handleRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['inventoryMerged', tenantId] });
@@ -134,7 +136,20 @@ function InventoryContent() {
           <button
             onClick={handleStartStockTake}
             disabled={trackedProducts.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-slate-300 rounded-full text-slate-600 hover:border-purple-400 hover:text-purple-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              border: `1.5px solid ${primaryColor}`,
+              color: primaryColor,
+              background: `${primaryColor}15`,
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = primaryColor;
+              e.currentTarget.style.color = '#fff';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = `${primaryColor}15`;
+              e.currentTarget.style.color = primaryColor;
+            }}
           >
             <ClipboardList className="w-4 h-4" /> Stock Take
           </button>
@@ -398,7 +413,7 @@ function InventoryContent() {
           </TabsContent>
 
           <TabsContent value="logs">
-            <InventoryLogTable tenantId={tenantId} />
+            <StockHistoryList tenantId={tenantId} />
           </TabsContent>
         </Tabs>
 

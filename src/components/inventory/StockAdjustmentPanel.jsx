@@ -73,8 +73,21 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
         .eq('id', productId)
         .eq('tenant_id', tenantId);
 
+      // Insert stock history record
+      await supabase.from('stock_history').insert({
+        tenant_id: tenantId,
+        product_id: productId,
+        product_name: product?.name || null,
+        old_stock: currentStock,
+        new_stock: newStock,
+        change_amount: newStock - currentStock,
+        notes: notes || null,
+        changed_by: null,
+      });
+
       queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
       queryClient.invalidateQueries({ queryKey: ['inventoryLogs', tenantId] });
+      queryClient.invalidateQueries({ queryKey: ['stockHistory', tenantId] });
 
       onSuccess?.();
       handleClose();
