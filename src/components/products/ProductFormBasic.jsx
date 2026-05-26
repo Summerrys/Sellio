@@ -18,6 +18,8 @@ export default function ProductFormBasic({
   currentStock,
   customPrimary,
   onAdjustStock,
+  trackInventory,
+  onTrackInventoryChange,
 }) {
 
   const navigate = useNavigate();
@@ -53,7 +55,7 @@ export default function ProductFormBasic({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Label className="text-sm font-medium text-slate-700">SKU</Label>
-            {currentStock !== null && currentStock !== undefined && isEditMode && (
+            {trackInventory && currentStock !== null && currentStock !== undefined && isEditMode && (
               <span
                 className="text-xs font-medium px-2 py-0.5 rounded-full"
                 style={{ backgroundColor: `${customPrimary || '#7c3aed'}20`, color: customPrimary || '#7c3aed' }}
@@ -66,36 +68,36 @@ export default function ProductFormBasic({
             <Input
               value={savedSku}
               readOnly
-              className="mt-1.5 cursor-default border-green-400 bg-green-50 text-green-700 font-mono font-medium"
+              className="h-10 cursor-default border-green-400 bg-green-50 text-green-700 font-mono font-medium"
             />
           ) : (
             <Input
               value={formData.sku || ''}
               onChange={(e) => onChange({ sku: e.target.value.toUpperCase() })}
               placeholder="Auto-generated on save"
-              className="mt-1.5 font-mono"
+              className="h-10 font-mono"
             />
           )}
-          <p className="text-[11px] text-slate-400 mt-0.5">Leave blank to auto-generate • Editable anytime</p>
-          {isEditMode && onAdjustStock && (
-            <div className="flex items-center gap-1 mt-1">
-              <PackagePlus className="w-3.5 h-3.5 text-slate-400" />
+          <div className="mt-1 space-y-0.5">
+            <p className="text-[11px] text-slate-400">Leave blank to auto-generate • Editable anytime</p>
+            {trackInventory && isEditMode && onAdjustStock && (
               <button type="button" onClick={onAdjustStock}
-                className="text-xs text-slate-400 hover:text-purple-600 transition-colors">
-                Adjust stock
+                className="flex items-center gap-1 text-xs"
+                style={{ color: customPrimary || '#7c3aed' }}>
+                <PackagePlus className="w-3.5 h-3.5" /> Adjust stock
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <div>
-          <Label>Category</Label>
+          <Label className="text-sm font-medium text-slate-700 mb-1 block">Category</Label>
           <Select
             key={formData.category_id || 'no-cat'}
             value={formData.category_id || ''}
             onValueChange={(v) => onChange({ category_id: v })}
           >
-            <SelectTrigger className="w-full mt-1.5">
+            <SelectTrigger className="w-full h-10">
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
@@ -109,13 +111,26 @@ export default function ProductFormBasic({
           <p className="text-[11px] text-slate-400 mt-1">
             Can't find your category?{' '}
             <span
-              className="text-violet-600 underline cursor-pointer"
+              className="cursor-pointer underline"
+              style={{ color: customPrimary || '#7c3aed' }}
               onClick={() => navigate(createPageUrl('Categories'))}
             >
               Manage categories
             </span>
           </p>
         </div>
+      </div>
+
+      {/* Track Inventory toggle */}
+      <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+        <div>
+          <p className="text-sm font-medium text-slate-700">Track Inventory</p>
+          <p className="text-xs text-slate-400">Monitor stock levels for this product</p>
+        </div>
+        <Switch
+          checked={trackInventory ?? false}
+          onCheckedChange={onTrackInventoryChange}
+        />
       </div>
 
       <div>

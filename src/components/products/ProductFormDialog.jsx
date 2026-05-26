@@ -426,6 +426,17 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
               currentStock={product?.id ? currentStock : null}
               customPrimary={tenant?.primary_color || '#7c3aed'}
               onAdjustStock={product?.id ? () => setShowStockPanel(true) : undefined}
+              trackInventory={formData.track_inventory}
+              onTrackInventoryChange={async (val) => {
+                update({ track_inventory: val });
+                if (product?.id) {
+                  const supabase = await getSupabase();
+                  await supabase.from('inventory_items')
+                    .update({ track_inventory: val })
+                    .eq('product_id', product.id)
+                    .eq('tenant_id', tenantId);
+                }
+              }}
             />
           </Section>
 
