@@ -71,6 +71,22 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
         .eq('id', productId)
         .eq('tenant_id', tenantId);
 
+      // Insert into stock_history table (non-fatal)
+      try {
+        await supabase.from('stock_history').insert({
+          tenant_id: tenantId,
+          product_id: productId,
+          product_name: product?.name || null,
+          old_stock: currentStock,
+          new_stock: newStock,
+          change_amount: newStock - currentStock,
+          notes: notes?.trim() || null,
+          changed_by: (await supabase.auth.getUser())?.data?.user?.email || null,
+        });
+      } catch (historyErr) {
+        console.warn('stock_history insert failed (non-fatal):', historyErr.message);
+      }
+
       // Log to localStorage history
       const history = JSON.parse(localStorage.getItem('stock_history') || '[]');
       history.unshift({
