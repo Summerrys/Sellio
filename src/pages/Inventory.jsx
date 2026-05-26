@@ -34,7 +34,12 @@ function InventoryContent() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showStockTake, setShowStockTake] = useState(false);
-  const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('inventory_view_mode') || 'list');
+
+  const handleViewToggle = (mode) => {
+    setViewMode(mode);
+    localStorage.setItem('inventory_view_mode', mode);
+  };
 
   // Fetch products + inventory merged
   const { data: mergedProducts = [], isLoading } = useQuery({
@@ -76,8 +81,8 @@ function InventoryContent() {
   };
 
   const trackedProducts = mergedProducts.filter(p => p.track_inventory);
-  const outOfStock = trackedProducts.filter(p => p.current_stock === 0).length;
-  const lowStock = trackedProducts.filter(p => p.current_stock > 0 && p.current_stock <= p.low_stock_threshold).length;
+  const outOfStock = mergedProducts.filter(p => p.track_inventory && p.current_stock === 0).length;
+  const lowStock = mergedProducts.filter(p => p.track_inventory && p.current_stock > 0 && p.current_stock <= p.low_stock_threshold).length;
   const unlimitedCount = mergedProducts.filter(p => !p.track_inventory).length;
 
   const filteredProducts = mergedProducts.filter(product => {
@@ -158,20 +163,33 @@ function InventoryContent() {
           </TabsList>
 
           <TabsContent value="inventory" className="space-y-4">
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1 sm:max-w-xs">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                  placeholder="Search products..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-11"
-                />
-              </div>
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-11"
+              />
+            </div>
+
+            {/* Filters + View toggle */}
+            <div className="flex gap-2 items-center flex-wrap">
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="flex-1 min-w-[120px] h-11">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map(cat => (
+                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-36 h-11">
+                <SelectTrigger className="flex-1 min-w-[110px] h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -183,31 +201,32 @@ function InventoryContent() {
                 </SelectContent>
               </Select>
 
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-full sm:w-40 h-11">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map(cat => (
-                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* View toggle */}
-              <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden h-11 flex-shrink-0">
+              <div className="flex gap-1 ml-auto">
                 <button
-                  onClick={() => setViewMode('list')}
-                  className={`flex-1 flex items-center justify-center px-3 h-full transition-colors ${viewMode === 'list' ? 'bg-slate-900 text-white' : 'text-slate-400 hover:text-slate-600'}`}
+                  onClick={() => handleViewToggle('list')}
+                  style={{
+                    background: viewMode === 'list' ? '#f3f0ff' : 'transparent',
+                    color: viewMode === 'list' ? '#7c3aed' : '#9ca3af',
+                    border: '0.5px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '6px 8px',
+                    cursor: 'pointer',
+                  }}
                 >
-                  <List className="w-4 h-4" />
+                  <List size={18} />
                 </button>
                 <button
-                  onClick={() => setViewMode('grid')}
-                  className={`flex-1 flex items-center justify-center px-3 h-full transition-colors ${viewMode === 'grid' ? 'bg-slate-900 text-white' : 'text-slate-400 hover:text-slate-600'}`}
+                  onClick={() => handleViewToggle('grid')}
+                  style={{
+                    background: viewMode === 'grid' ? '#f3f0ff' : 'transparent',
+                    color: viewMode === 'grid' ? '#7c3aed' : '#9ca3af',
+                    border: '0.5px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '6px 8px',
+                    cursor: 'pointer',
+                  }}
                 >
-                  <LayoutGrid className="w-4 h-4" />
+                  <LayoutGrid size={18} />
                 </button>
               </div>
             </div>
@@ -311,14 +330,6 @@ function InventoryContent() {
                           </div>
                         )}
                       </div>
-                      {/* Track toggle */}
-                      <div className="flex flex-col items-center gap-1 flex-shrink-0">
-                        <Switch
-                          checked={!!product.track_inventory}
-                          onCheckedChange={(v) => handleToggleTracking(product.id, v)}
-                        />
-                        <span style={{ fontSize: '9px', color: '#9ca3af' }}>Track</span>
-                      </div>
                       <div style={{ flexShrink: 0, textAlign: 'right' }}>
                         {product.track_inventory ? (
                           <>
@@ -338,6 +349,14 @@ function InventoryContent() {
                             </span>
                           </>
                         )}
+                      </div>
+                      {/* Track toggle — far right */}
+                      <div className="flex flex-col items-center gap-0.5 flex-shrink-0 ml-2">
+                        <Switch
+                          checked={!!product.track_inventory}
+                          onCheckedChange={(v) => handleToggleTracking(product.id, v)}
+                        />
+                        <span className="hidden sm:block" style={{ fontSize: '9px', color: '#9ca3af' }}>Track</span>
                       </div>
                     </div>
                   );
