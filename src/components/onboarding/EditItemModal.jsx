@@ -31,7 +31,9 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
 
   const uploadToStorage = async (file) => {
      const supabase = await getSupabase();
-     const storagePath = `temp/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+     const pendingTenantId = localStorage.getItem('pending_tenant_id');
+     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+     const storagePath = `temp/onboarding/${pendingTenantId}/products/${Date.now()}-${safeName}`;
      const { error } = await supabase.storage.from('product-images').upload(storagePath, file, { upsert: true });
      if (error) throw new Error(error.message);
      const { data } = supabase.storage.from('product-images').getPublicUrl(storagePath);
