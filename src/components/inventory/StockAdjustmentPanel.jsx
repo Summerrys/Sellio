@@ -31,18 +31,38 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
     if (newStock === currentStock) return;
     setIsSubmitting(true);
     try {
-      const inv = product?.inventory?.[0];
-
       const supabase = await getSupabase();
+      const productId = product?.id;
 
-      if (inv?.id) {
+      // Check if an inventory_items row exists for this product
+      const { data: existing } = await supabase
+        .from('inventory_items')
+        .select('id')
+        .eq('product_id', productId)
+        .eq('tenant_id', tenantId)
+        .maybeSingle();
+
+      if (existing) {
         const { error } = await supabase
           .from('inventory_items')
           .update({
             current_stock: newStock,
             last_restock_date: new Date().toISOString(),
           })
-          .eq('id', inv.id);
+          .eq('id', existing.id)
+          .eq('tenant_id', tenantId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('inventory_items')
+          .insert({
+            tenant_id: tenantId,
+            product_id: productId,
+            current_stock: newStock,
+            low_stock_threshold: 5,
+            unit: 'pcs',
+            last_restock_date: new Date().toISOString(),
+          });
         if (error) throw error;
       }
 
