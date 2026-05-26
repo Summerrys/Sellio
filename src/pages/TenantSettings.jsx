@@ -24,8 +24,8 @@ export default function TenantSettings() {
   return (
     <RequirePermission permission="settings.view">
       <TenantSettingsContent />
-    </RequirePermission>);
-
+    </RequirePermission>
+  );
 }
 
 function TenantSettingsContent() {
@@ -49,7 +49,7 @@ function TenantSettingsContent() {
   const { data: roles = [] } = useQuery({
     queryKey: ['settingsRoles', tenantId],
     queryFn: () => db.entities.Role.filter({ tenant_id: tenantId }),
-    enabled: !!tenantId
+    enabled: !!tenantId,
   });
 
   const updateBusinessMutation = useMutation({
@@ -58,7 +58,7 @@ function TenantSettingsContent() {
       const { error } = await supabase.from('tenants').update(businessForm).eq('id', tenantId);
       if (error) throw error;
     },
-    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ['currentTenant'] });toast.success('Settings saved');}
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['currentTenant'] }); toast.success('Settings saved'); },
   });
 
   const saveRoleMutation = useMutation({
@@ -72,12 +72,12 @@ function TenantSettingsContent() {
         if (error) throw error;
       }
     },
-    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ['settingsRoles'] });closeRoleForm();}
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['settingsRoles'] }); closeRoleForm(); },
   });
 
   const deleteRoleMutation = useMutation({
     mutationFn: (id) => db.entities.Role.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settingsRoles'] })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settingsRoles'] }),
   });
 
   const openRoleForm = (role) => {
@@ -85,14 +85,14 @@ function TenantSettingsContent() {
     setRoleForm(role ? { name: role.name, description: role.description || '', permissions: role.permissions || [] } : { name: '', description: '', permissions: [] });
     setShowRoleForm(true);
   };
-  const closeRoleForm = () => {setShowRoleForm(false);setEditingRole(null);};
+  const closeRoleForm = () => { setShowRoleForm(false); setEditingRole(null); };
 
   const togglePermission = (perm) => {
-    setRoleForm((prev) => ({
+    setRoleForm(prev => ({
       ...prev,
-      permissions: prev.permissions.includes(perm) ?
-      prev.permissions.filter((p) => p !== perm) :
-      [...prev.permissions, perm]
+      permissions: prev.permissions.includes(perm)
+        ? prev.permissions.filter(p => p !== perm)
+        : [...prev.permissions, perm],
     }));
   };
 
@@ -103,7 +103,7 @@ function TenantSettingsContent() {
         ...roleForm,
         name: roleForm.name || template.name,
         description: roleForm.description || template.description,
-        permissions: template.permissions
+        permissions: template.permissions,
       });
     }
   };
@@ -123,9 +123,9 @@ function TenantSettingsContent() {
           <TabsTrigger value="business" className="rounded-lg gap-1.5 flex-1 sm:flex-none">
             <Building2 className="w-4 h-4" /> <span className="hidden xs:inline">Business</span><span className="xs:hidden text-xs">Biz</span>
           </TabsTrigger>
-          
-
-          
+          <TabsTrigger value="theme" className="rounded-lg gap-1.5 flex-1 sm:flex-none">
+            <Palette className="w-4 h-4" /> Theme
+          </TabsTrigger>
           <TabsTrigger value="roles" className="rounded-lg gap-1.5 flex-1 sm:flex-none">
             <Shield className="w-4 h-4" /> <span className="hidden xs:inline">Roles & Permissions</span><span className="xs:hidden text-xs">Roles</span>
           </TabsTrigger>
@@ -134,19 +134,19 @@ function TenantSettingsContent() {
         <TabsContent value="business">
           <Card className="border-0 shadow-sm p-6 max-w-2xl">
             <div className="space-y-4">
-              <div><Label>Business Name</Label><Input className="h-11" value={businessForm.name} onChange={(e) => setBusinessForm({ ...businessForm, name: e.target.value })} /></div>
+              <div><Label>Business Name</Label><Input className="h-11" value={businessForm.name} onChange={e => setBusinessForm({ ...businessForm, name: e.target.value })} /></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div><Label>Phone</Label><Input className="h-11" value={businessForm.phone} onChange={(e) => setBusinessForm({ ...businessForm, phone: e.target.value })} /></div>
+                <div><Label>Phone</Label><Input className="h-11" value={businessForm.phone} onChange={e => setBusinessForm({ ...businessForm, phone: e.target.value })} /></div>
                 <div><Label>Currency</Label>
-                  <Select value={businessForm.currency} onValueChange={(v) => setBusinessForm({ ...businessForm, currency: v })}>
+                  <Select value={businessForm.currency} onValueChange={v => setBusinessForm({ ...businessForm, currency: v })}>
                     <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {['SGD', 'USD', 'EUR', 'GBP', 'MYR', 'THB', 'IDR', 'PHP'].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      {['SGD', 'USD', 'EUR', 'GBP', 'MYR', 'THB', 'IDR', 'PHP'].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
-              <div><Label>Address</Label><Input className="h-11" value={businessForm.address} onChange={(e) => setBusinessForm({ ...businessForm, address: e.target.value })} /></div>
+              <div><Label>Address</Label><Input className="h-11" value={businessForm.address} onChange={e => setBusinessForm({ ...businessForm, address: e.target.value })} /></div>
               <Button onClick={() => updateBusinessMutation.mutate()} disabled={updateBusinessMutation.isPending} className="h-11 bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-2">
                 <Save className="w-4 h-4" /> {updateBusinessMutation.isPending ? 'Saving...' : 'Save Changes'}
               </Button>
@@ -163,8 +163,8 @@ function TenantSettingsContent() {
                 <Button
                   variant="outline"
                   className="mt-3 h-11 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
-                  onClick={() => {setDeleteConfirmText('');setShowDeleteConfirm(true);}}>
-                  
+                  onClick={() => { setDeleteConfirmText(''); setShowDeleteConfirm(true); }}
+                >
                   Delete Account
                 </Button>
               </div>
@@ -184,29 +184,29 @@ function TenantSettingsContent() {
             <Button onClick={() => openRoleForm(null)} size="sm" className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-1"><Plus className="w-3.5 h-3.5" /> New Role</Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {roles.map((role) =>
-            <Card key={role.id} className="border-0 shadow-sm p-5 group">
+            {roles.map(role => (
+              <Card key={role.id} className="border-0 shadow-sm p-5 group">
                 <div className="flex items-start justify-between">
                   <div>
                     <h4 className="text-sm font-semibold text-slate-900">{role.name}</h4>
                     <p className="text-xs text-slate-400 mt-0.5">{role.permissions?.length || 0} permissions</p>
                     {role.description && <p className="text-xs text-slate-500 mt-2">{role.description}</p>}
                   </div>
-                  {!role.is_system &&
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {!role.is_system && (
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openRoleForm(role)}><Pencil className="w-3 h-3" /></Button>
                       <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500" onClick={() => deleteRoleMutation.mutate(role.id)}><Trash2 className="w-3 h-3" /></Button>
                     </div>
-                }
+                  )}
                 </div>
               </Card>
-            )}
+            ))}
           </div>
         </TabsContent>
       </Tabs>
 
       {/* Account Deletion Dialog */}
-      <Dialog open={showDeleteConfirm} onOpenChange={(open) => {if (!isDeleting) setShowDeleteConfirm(open);}}>
+      <Dialog open={showDeleteConfirm} onOpenChange={(open) => { if (!isDeleting) setShowDeleteConfirm(open); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
@@ -229,10 +229,10 @@ function TenantSettingsContent() {
               <Input
                 className="mt-1 h-11"
                 value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                onChange={e => setDeleteConfirmText(e.target.value)}
                 placeholder="Type DELETE"
-                disabled={isDeleting} />
-              
+                disabled={isDeleting}
+              />
             </div>
           </div>
           <DialogFooter className="gap-2">
@@ -248,7 +248,7 @@ function TenantSettingsContent() {
                   const res = await base44.functions.invoke('deleteTenantWithCascade', { tenant_id: tenantId });
                   if (res.data?.success) {
                     toast.success('Account deleted. Redirecting...');
-                    setTimeout(() => {window.location.href = '/';}, 1500);
+                    setTimeout(() => { window.location.href = '/'; }, 1500);
                   } else {
                     throw new Error(res.data?.error || 'Deletion failed');
                   }
@@ -256,8 +256,8 @@ function TenantSettingsContent() {
                   toast.error(err.message || 'Failed to delete account. Please contact support.');
                   setIsDeleting(false);
                 }
-              }}>
-              
+              }}
+            >
               {isDeleting ? <><Loader2 className="w-4 h-4 animate-spin" /> Deleting...</> : 'Delete Permanently'}
             </Button>
           </DialogFooter>
@@ -269,8 +269,8 @@ function TenantSettingsContent() {
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingRole ? 'Edit Role' : 'New Role'}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
-            <div><Label>Name</Label><Input value={roleForm.name} onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })} /></div>
-            <div><Label>Description</Label><Input value={roleForm.description} onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })} /></div>
+            <div><Label>Name</Label><Input value={roleForm.name} onChange={e => setRoleForm({ ...roleForm, name: e.target.value })} /></div>
+            <div><Label>Description</Label><Input value={roleForm.description} onChange={e => setRoleForm({ ...roleForm, description: e.target.value })} /></div>
             <div>
               <div className="flex items-center justify-between mb-3">
                 <Label>Permissions</Label>
@@ -279,53 +279,53 @@ function TenantSettingsContent() {
                     <SelectValue placeholder="Use template" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(ROLE_TEMPLATES).map(([key, template]) =>
-                    <SelectItem key={key} value={key} className="text-xs">
+                    {Object.entries(ROLE_TEMPLATES).map(([key, template]) => (
+                      <SelectItem key={key} value={key} className="text-xs">
                         {template.name}
                       </SelectItem>
-                    )}
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               
               <div className="space-y-4 max-h-96 overflow-y-auto border border-slate-100 rounded-xl p-4">
-                {Object.entries(PERMISSION_GROUPS).map(([groupKey, group]) =>
-                <div key={groupKey} className="space-y-2">
+                {Object.entries(PERMISSION_GROUPS).map(([groupKey, group]) => (
+                  <div key={groupKey} className="space-y-2">
                     <div className="flex items-center justify-between sticky top-0 bg-white py-1">
                       <h5 className="text-xs font-semibold uppercase tracking-wider text-slate-700">{group.label}</h5>
                       <div className="flex gap-1">
                         <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 text-xs"
-                        onClick={() => {
-                          const allSelected = group.permissions.every((p) => roleForm.permissions.includes(p));
-                          setRoleForm((prev) => ({
-                            ...prev,
-                            permissions: allSelected ?
-                            prev.permissions.filter((p) => !group.permissions.includes(p)) :
-                            [...new Set([...prev.permissions, ...group.permissions])]
-                          }));
-                        }}>
-                        
-                          {group.permissions.every((p) => roleForm.permissions.includes(p)) ? 'Deselect All' : 'Select All'}
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-xs"
+                          onClick={() => {
+                            const allSelected = group.permissions.every(p => roleForm.permissions.includes(p));
+                            setRoleForm(prev => ({
+                              ...prev,
+                              permissions: allSelected
+                                ? prev.permissions.filter(p => !group.permissions.includes(p))
+                                : [...new Set([...prev.permissions, ...group.permissions])]
+                            }));
+                          }}
+                        >
+                          {group.permissions.every(p => roleForm.permissions.includes(p)) ? 'Deselect All' : 'Select All'}
                         </Button>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2 pl-2">
-                      {group.permissions.map((permKey) =>
-                    <label key={permKey} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1.5 rounded">
-                          <Checkbox
-                        checked={roleForm.permissions.includes(permKey)}
-                        onCheckedChange={() => togglePermission(permKey)} />
-                      
+                      {group.permissions.map(permKey => (
+                        <label key={permKey} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1.5 rounded">
+                          <Checkbox 
+                            checked={roleForm.permissions.includes(permKey)} 
+                            onCheckedChange={() => togglePermission(permKey)} 
+                          />
                           <span className="text-xs text-slate-600">{ALL_PERMISSIONS[permKey]}</span>
                         </label>
-                    )}
+                      ))}
                     </div>
                   </div>
-                )}
+                ))}
               </div>
               
               <div className="mt-3 text-xs text-slate-400">
@@ -341,6 +341,6 @@ function TenantSettingsContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </PermissionGate>);
-
+    </PermissionGate>
+  );
 }
