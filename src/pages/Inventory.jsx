@@ -35,6 +35,7 @@ function InventoryContent() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showStockTake, setShowStockTake] = useState(false);
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('inventory_view_mode') || 'list');
+  const [editingThreshold, setEditingThreshold] = useState(null);
 
   const handleViewToggle = (mode) => {
     setViewMode(mode);
@@ -203,19 +204,6 @@ function InventoryContent() {
 
               <div className="flex gap-1 ml-auto">
                 <button
-                  onClick={() => handleViewToggle('list')}
-                  style={{
-                    background: viewMode === 'list' ? '#f3f0ff' : 'transparent',
-                    color: viewMode === 'list' ? '#7c3aed' : '#9ca3af',
-                    border: '0.5px solid #e5e7eb',
-                    borderRadius: '8px',
-                    padding: '6px 8px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <List size={18} />
-                </button>
-                <button
                   onClick={() => handleViewToggle('grid')}
                   style={{
                     background: viewMode === 'grid' ? '#f3f0ff' : 'transparent',
@@ -227,6 +215,19 @@ function InventoryContent() {
                   }}
                 >
                   <LayoutGrid size={18} />
+                </button>
+                <button
+                  onClick={() => handleViewToggle('list')}
+                  style={{
+                    background: viewMode === 'list' ? '#f3f0ff' : 'transparent',
+                    color: viewMode === 'list' ? '#7c3aed' : '#9ca3af',
+                    border: '0.5px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '6px 8px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <List size={18} />
                 </button>
               </div>
             </div>
@@ -319,15 +320,46 @@ function InventoryContent() {
                           {product.sku || 'No SKU'}
                         </p>
                         {product.track_inventory && (
-                          <div style={{ height: '3px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden', width: '100%' }}>
-                            <div style={{
-                              height: '100%',
-                              width: `${Math.min((stock / Math.max(threshold * 2, 1)) * 100, 100)}%`,
-                              background: stock === 0 ? '#dc2626' : stock < threshold ? '#f59e0b' : '#16a34a',
-                              borderRadius: '999px',
-                              transition: 'width 0.3s ease'
-                            }} />
-                          </div>
+                          <>
+                            <div style={{ height: '3px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden', width: '100%' }}>
+                              <div style={{
+                                height: '100%',
+                                width: `${Math.min((stock / Math.max(threshold * 2, 1)) * 100, 100)}%`,
+                                background: stock === 0 ? '#dc2626' : stock < threshold ? '#f59e0b' : '#16a34a',
+                                borderRadius: '999px',
+                                transition: 'width 0.3s ease'
+                              }} />
+                            </div>
+                            <div className="flex items-center gap-1 mt-1">
+                              <span className="text-xs text-slate-400">Alert at</span>
+                              {editingThreshold === product.id ? (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  defaultValue={product.low_stock_threshold}
+                                  className="w-14 h-6 text-xs border border-slate-300 rounded px-1"
+                                  autoFocus
+                                  onBlur={async (e) => {
+                                    const newThreshold = parseInt(e.target.value) || 0;
+                                    const supabase = await getSupabase();
+                                    await Promise.all([
+                                      supabase.from('inventory_items').update({ low_stock_threshold: newThreshold, updated_date: new Date().toISOString() }).eq('product_id', product.id).eq('tenant_id', tenantId),
+                                      supabase.from('products').update({ low_stock_threshold: newThreshold, updated_date: new Date().toISOString() }).eq('id', product.id).eq('tenant_id', tenantId),
+                                    ]);
+                                    setEditingThreshold(null);
+                                    queryClient.invalidateQueries({ queryKey: ['inventoryMerged', tenantId] });
+                                  }}
+                                />
+                              ) : (
+                                <button
+                                  onClick={() => setEditingThreshold(product.id)}
+                                  className="text-xs font-medium text-slate-500 hover:text-purple-600 underline underline-offset-2"
+                                >
+                                  {product.low_stock_threshold} units
+                                </button>
+                              )}
+                            </div>
+                          </>
                         )}
                       </div>
                       <div style={{ flexShrink: 0, textAlign: 'right' }}>
