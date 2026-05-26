@@ -6,21 +6,19 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 export default function StockAdjustmentPanel({ open, onOpenChange, product, tenantId, onSuccess, onClose }) {
   const queryClient = useQueryClient();
 
-  const currentStock = product?.inventory?.[0]?.current_stock ?? product?.stock_quantity ?? 0;
-  const threshold = product?.inventory?.[0]?.low_stock_threshold ?? product?.low_stock_threshold ?? 5;
+  const currentStock = product?.current_stock ?? product?.inventory?.[0]?.current_stock ?? product?.stock_quantity ?? 0;
+  const threshold = product?.low_stock_threshold ?? product?.inventory?.[0]?.low_stock_threshold ?? 5;
 
-  const [newStock, setNewStock] = useState(currentStock);
+  const [newStock, setNewStock] = useState(currentStock ?? 0);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Reset state when product changes or modal opens
   useEffect(() => {
-    if (open) {
-      setNewStock(product?.inventory?.[0]?.current_stock ?? product?.stock_quantity ?? 0);
-      setNotes('');
-      setIsSubmitting(false);
-    }
-  }, [open, product]);
+    setNewStock(currentStock ?? 0);
+    setNotes('');
+    setIsSubmitting(false);
+  }, [currentStock, open]);
 
   const handleClose = () => {
     onOpenChange(false);
