@@ -1,28 +1,14 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { getSupabase } from '@/lib/supabaseClient';
+import React, { useState, useEffect } from 'react';
 import { FileText } from 'lucide-react';
 import { format } from 'date-fns';
 
-export default function StockHistoryList({ tenantId }) {
-  const { data: history = [], isLoading } = useQuery({
-    queryKey: ['stockHistory', tenantId],
-    queryFn: async () => {
-      const supabase = await getSupabase();
-      const { data } = await supabase
-        .from('stock_history')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .order('created_date', { ascending: false })
-        .limit(100);
-      return data || [];
-    },
-    enabled: !!tenantId,
-  });
+export default function StockHistoryList() {
+  const [history, setHistory] = useState([]);
 
-  if (isLoading) {
-    return <div className="text-center py-8 text-slate-400">Loading history...</div>;
-  }
+  useEffect(() => {
+    const data = JSON.parse(localStorage.getItem('stock_history') || '[]');
+    setHistory(data);
+  }, []);
 
   if (history.length === 0) {
     return (
@@ -36,7 +22,7 @@ export default function StockHistoryList({ tenantId }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
       {history.map((entry) => {
-        const isPositive = entry.change_amount > 0;
+        const isPositive = entry.change > 0;
         return (
           <div
             key={entry.id}
@@ -50,20 +36,12 @@ export default function StockHistoryList({ tenantId }) {
               gap: '12px',
             }}
           >
-            {/* Change badge */}
-            <div style={{
-              flexShrink: 0,
-              minWidth: '52px',
-              textAlign: 'center',
-              padding: '4px 8px',
-              borderRadius: '8px',
-              background: isPositive ? '#dcfce7' : '#fee2e2',
-              color: isPositive ? '#166534' : '#991b1b',
-              fontWeight: '700',
-              fontSize: '14px',
-            }}>
-              {isPositive ? `+${entry.change_amount}` : entry.change_amount}
-            </div>
+            {/* Product image */}
+            {entry.product_image ? (
+              <img src={entry.product_image} alt={entry.product_name} style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />
+            ) : (
+              <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>🛍️</div>
+            )}
 
             {/* Details */}
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -77,13 +55,24 @@ export default function StockHistoryList({ tenantId }) {
               )}
               <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>
                 {entry.old_stock} → {entry.new_stock} units
-                {entry.changed_by ? ` · ${entry.changed_by}` : ''}
               </p>
             </div>
 
-            {/* Timestamp */}
-            <div style={{ flexShrink: 0, fontSize: '11px', color: '#9ca3af', textAlign: 'right' }}>
-              {entry.created_date ? format(new Date(entry.created_date), 'MMM d, HH:mm') : ''}
+            {/* Change badge + timestamp */}
+            <div style={{ flexShrink: 0, textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+              <span style={{
+                padding: '3px 8px',
+                borderRadius: '8px',
+                background: isPositive ? '#dcfce7' : '#fee2e2',
+                color: isPositive ? '#166534' : '#991b1b',
+                fontWeight: '700',
+                fontSize: '13px',
+              }}>
+                {isPositive ? `+${entry.change}` : entry.change}
+              </span>
+              <span style={{ fontSize: '10px', color: '#9ca3af' }}>
+                {entry.timestamp ? format(new Date(entry.timestamp), 'MMM d, HH:mm') : ''}
+              </span>
             </div>
           </div>
         );
