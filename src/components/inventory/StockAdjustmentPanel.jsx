@@ -117,7 +117,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
 
   if (!product) return null;
 
-  const stockColor = newStock === 0 ? '#dc2626' : newStock <= threshold ? '#f59e0b' : '#16a34a';
+  const stockColor = newStock === 0 ? '#dc2626' : newStock < threshold ? '#f59e0b' : '#16a34a';
 
   return (
     <Sheet open={open} onOpenChange={(val) => { if (!val) handleClose(); }}>
