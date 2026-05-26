@@ -231,17 +231,9 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
           is_active: formData.is_active ?? true,
           is_featured: formData.is_featured ?? false,
           track_inventory: formData.track_inventory === true,
-          stock_quantity: formData.stock_quantity ?? 0,
-          low_stock_threshold: formData.low_stock_threshold ?? 5,
         };
         const { error } = await supabase.from('products').update(payload).eq('id', product.id);
         if (error) throw new Error(error.message);
-
-        // Sync inventory_items
-        await supabase.from('inventory_items').update({
-          current_stock: formData.stock_quantity || 0,
-          low_stock_threshold: formData.low_stock_threshold || 5,
-        }).eq('product_id', product.id);
 
         toast.success('Product updated');
         queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
