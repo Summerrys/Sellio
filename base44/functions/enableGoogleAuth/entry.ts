@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
       external_google_enabled: true,
       external_google_client_id: googleClientId,
       external_google_secret: googleClientSecret,
-      additional_redirect_urls: "https://selliosg.base44.app/**,https://sellio.apptelier.sg/**",
+      additional_redirect_urls: "https://selliosg.base44.app/**,https://sellio.apptelier.sg/**,https://gzktuteedbtnaxfdylyu.supabase.co/auth/v1/callback",
     }),
   });
 
