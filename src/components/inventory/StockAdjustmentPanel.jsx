@@ -66,6 +66,13 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
         if (error) throw error;
       }
 
+      // Mirror to products table
+      await supabase
+        .from('products')
+        .update({ stock_quantity: newStock })
+        .eq('id', productId)
+        .eq('tenant_id', tenantId);
+
       queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
       queryClient.invalidateQueries({ queryKey: ['inventoryLogs', tenantId] });
 

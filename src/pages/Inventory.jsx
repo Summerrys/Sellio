@@ -26,8 +26,10 @@ export default function Inventory() {
 function InventoryContent() {
   const { tenantId } = useTenant();
   const queryClient = useQueryClient();
-  const handleRefresh = useCallback(() =>
-    queryClient.invalidateQueries({ queryKey: ['products', tenantId] }), [queryClient, tenantId]);
+  const handleRefresh = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
+    queryClient.invalidateQueries({ queryKey: ['inventoryItems', tenantId] });
+  }, [queryClient, tenantId]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -39,43 +41,65 @@ function InventoryContent() {
     enabled: !!tenantId,
   });
 
+  const { data: inventoryItems = [] } = useQuery({
+    queryKey: ['inventoryItems', tenantId],
+    queryFn: async () => {
+      const { getSupabase } = await import('@/lib/supabaseClient');
+      const supabase = await getSupabase();
+      const { data } = await supabase
+        .from('inventory_items')
+        .select('product_id, current_stock, low_stock_threshold')
+        .eq('tenant_id', tenantId);
+      return data || [];
+    },
+    enabled: !!tenantId,
+  });
+
+  // Build a lookup map: product_id -> inventory row
+  const inventoryMap = Object.fromEntries(inventoryItems.map(i => [i.product_id, i]));
+
+  // Merge inventory_items.current_stock into each product
+  const productsWithStock = products.map(p => ({
+    ...p,
+    current_stock: inventoryMap[p.id]?.current_stock ?? p.stock_quantity ?? 0,
+    low_stock_threshold: inventoryMap[p.id]?.low_stock_threshold ?? p.low_stock_threshold ?? 5,
+  }));
+
   const getStockStatus = (product) => {
     if (!product.track_inventory) {
       return { label: 'Unlimited', color: '#6b7280', bg: '#f3f4f6' };
     }
-    const stock = product.stock_quantity ?? 0;
-    const threshold = product.low_stock_threshold ?? 5;
+    const stock = product.current_stock;
+    const threshold = product.low_stock_threshold;
     if (stock === 0) return { label: 'Out of Stock', color: '#dc2626', bg: '#fee2e2' };
-    if (stock < threshold) return { label: `Low Stock (${stock})`, color: '#92400e', bg: '#fef3c7' };
+    if (stock <= threshold) return { label: `Low Stock (${stock})`, color: '#92400e', bg: '#fef3c7' };
     return { label: `${stock} in stock`, color: '#166534', bg: '#dcfce7' };
   };
 
   // All products shown; tracked ones have full status logic
-  const trackedProducts = products.filter(p => p.track_inventory);
+  const trackedProducts = productsWithStock.filter(p => p.track_inventory);
 
   // Calculate summary stats — only count tracked products
   const totalTracked = trackedProducts.length;
-  const outOfStock = trackedProducts.filter(p => (p.stock_quantity ?? 0) === 0).length;
+  const outOfStock = trackedProducts.filter(p => p.current_stock === 0).length;
   const lowStock = trackedProducts.filter(p => {
-    const stock = p.stock_quantity ?? 0;
-    const threshold = p.low_stock_threshold ?? 5;
-    return stock > 0 && stock < threshold;
+    return p.current_stock > 0 && p.current_stock <= p.low_stock_threshold;
   }).length;
   const inStock = totalTracked - outOfStock - lowStock;
-  const unlimitedCount = products.filter(p => !p.track_inventory).length;
+  const unlimitedCount = productsWithStock.filter(p => !p.track_inventory).length;
 
   // Filter products
-  const filteredProducts = products.filter(product => {
+  const filteredProducts = productsWithStock.filter(product => {
     const matchesSearch = !searchQuery ||
       product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.sku?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const stock = product.stock_quantity ?? 0;
-    const threshold = product.low_stock_threshold ?? 5;
+    const stock = product.current_stock;
+    const threshold = product.low_stock_threshold;
     const matchesStatus = statusFilter === 'all' ||
       (statusFilter === 'unlimited' && !product.track_inventory) ||
-      (statusFilter === 'in_stock' && product.track_inventory && stock > 0 && stock >= threshold) ||
-      (statusFilter === 'low_stock' && product.track_inventory && stock > 0 && stock < threshold) ||
+      (statusFilter === 'in_stock' && product.track_inventory && stock > 0 && stock > threshold) ||
+      (statusFilter === 'low_stock' && product.track_inventory && stock > 0 && stock <= threshold) ||
       (statusFilter === 'out_of_stock' && product.track_inventory && stock === 0);
 
     return matchesSearch && matchesStatus;
@@ -85,7 +109,7 @@ function InventoryContent() {
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     if (!a.track_inventory && b.track_inventory) return 1;
     if (a.track_inventory && !b.track_inventory) return -1;
-    return (a.stock_quantity ?? 0) - (b.stock_quantity ?? 0);
+    return a.current_stock - b.current_stock;
   });
 
   return (
@@ -169,8 +193,8 @@ function InventoryContent() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {sortedProducts.map((product) => {
                   const status = getStockStatus(product);
-                  const stock = product.stock_quantity ?? 0;
-                  const threshold = product.low_stock_threshold ?? 5;
+                  const stock = product.current_stock;
+                  const threshold = product.low_stock_threshold;
                   return (
                     <div
                       key={product.id}
@@ -242,13 +266,17 @@ function InventoryContent() {
           onOpenChange={(open) => !open && setSelectedProduct(null)}
           product={selectedProduct}
           tenantId={tenantId}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
+            queryClient.invalidateQueries({ queryKey: ['inventoryItems', tenantId] });
+          }}
         />
 
         {/* Stock Take Dialog */}
         <StockTakeDialog
           open={showStockTake}
           onOpenChange={setShowStockTake}
-          products={trackedProducts}
+          products={trackedProducts.map(p => ({ ...p, stock_quantity: p.current_stock }))}
           tenantId={tenantId}
         />
       </div>
