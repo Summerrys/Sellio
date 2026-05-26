@@ -123,9 +123,9 @@ function TenantSettingsContent() {
           <TabsTrigger value="business" className="rounded-lg gap-1.5 flex-1 sm:flex-none">
             <Building2 className="w-4 h-4" /> <span className="hidden xs:inline">Business</span><span className="xs:hidden text-xs">Biz</span>
           </TabsTrigger>
-          <TabsTrigger value="theme" className="rounded-lg gap-1.5 flex-1 sm:flex-none hidden">
-            <Palette className="w-4 h-4" /> Theme
-          </TabsTrigger>
+          
+
+          
           <TabsTrigger value="roles" className="rounded-lg gap-1.5 flex-1 sm:flex-none">
             <Shield className="w-4 h-4" /> <span className="hidden xs:inline">Roles & Permissions</span><span className="xs:hidden text-xs">Roles</span>
           </TabsTrigger>
