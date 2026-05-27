@@ -467,8 +467,8 @@ export default function Tables() {
                                   const badge = QR_STATUS_BADGE[table.status] || QR_STATUS_BADGE.available;
                                   const BadgeIcon = badge.Icon;
                                   return (
-                                    <span className="text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm"
-                                      style={{ background: badge.bg, color: badge.color, fontSize: '8px' }}>
+                                    <span className="text-xs font-medium rounded-full flex items-center gap-1 shadow-sm"
+                                      style={{ background: badge.bg, color: badge.color, fontSize: '7px', padding: '1px 5px', maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden' }}>
                                       <BadgeIcon style={{ width: '8px', height: '8px' }} />
                                       {badge.label}
                                     </span>
@@ -498,14 +498,14 @@ export default function Tables() {
                             {STATUS_OPTIONS.map(({ key, label, Icon, activeBg, inactiveBg, inactiveColor }) => (
                               <button key={key}
                                 onClick={() => handleStatusChange(table, key)}
-                                className="flex flex-col items-center py-1.5 px-1 rounded-lg transition-all active:scale-95"
+                                className="flex flex-col items-center py-1 px-0.5 rounded-lg transition-all active:scale-95 overflow-hidden"
                                 style={table.status === key
                                   ? { background: activeBg, color: '#fff' }
                                   : { background: inactiveBg, color: inactiveColor }
                                 }
                               >
                                 <Icon className="w-3.5 h-3.5" />
-                                <span className="text-[9px] font-medium mt-0.5 leading-none">{label}</span>
+                                <span className="font-medium mt-0.5 leading-none truncate w-full text-center" style={{ fontSize: '8px' }}>{label}</span>
                               </button>
                             ))}
                           </div>
@@ -548,7 +548,7 @@ export default function Tables() {
                                   const BadgeIcon = badge.Icon;
                                   return (
                                     <span className="rounded-full flex items-center gap-0.5 shadow-sm"
-                                      style={{ background: badge.bg, color: badge.color, fontSize: '7px', fontWeight: '600', padding: '1px 4px' }}>
+                                      style={{ background: badge.bg, color: badge.color, fontSize: '7px', fontWeight: '600', padding: '1px 4px', maxWidth: '52px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                                       <BadgeIcon style={{ width: '7px', height: '7px' }} />
                                       {badge.label}
                                     </span>
@@ -593,14 +593,14 @@ export default function Tables() {
                             {STATUS_OPTIONS.map(({ key, label, Icon, activeBg, inactiveBg, inactiveColor }) => (
                               <button key={key}
                                 onClick={() => handleStatusChange(table, key)}
-                                className="flex flex-col items-center py-1.5 px-1 rounded-lg transition-all active:scale-95"
+                                className="flex flex-col items-center py-1 px-0.5 rounded-lg transition-all active:scale-95 overflow-hidden"
                                 style={table.status === key
                                   ? { background: activeBg, color: '#fff' }
                                   : { background: inactiveBg, color: inactiveColor }
                                 }
                               >
                                 <Icon className="w-3.5 h-3.5" />
-                                <span className="text-[9px] font-medium mt-0.5 leading-none">{label}</span>
+                                <span className="font-medium mt-0.5 leading-none truncate w-full text-center" style={{ fontSize: '8px' }}>{label}</span>
                               </button>
                             ))}
                           </div>
