@@ -355,7 +355,7 @@ function InventoryContent() {
                                     type="number"
                                     min="0"
                                     defaultValue={product.low_stock_threshold}
-                                    className="w-12 h-5 text-xs border border-purple-300 rounded px-1 focus:outline-none focus:ring-1 focus:ring-purple-400"
+                                    className="w-12 h-5 text-xs border border-slate-300 rounded px-1 focus:outline-none focus:ring-1 focus:ring-slate-400"
                                     autoFocus
                                     onBlur={async (e) => {
                                       const val = parseInt(e.target.value) || 0;

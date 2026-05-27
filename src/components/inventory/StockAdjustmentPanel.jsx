@@ -257,7 +257,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
               style={{
                 width: '100%', padding: '15px',
                 background: newStock === currentStock ? '#e2e8f0'
-                          : newStock > currentStock ? (primaryColor || '#16a34a') : '#dc2626',
+                          : newStock > currentStock ? (primaryColor || 'var(--color-primary-gradient)') : '#dc2626',
                 color: newStock === currentStock ? '#94a3b8' : 'white',
                 border: 'none', borderRadius: '14px',
                 fontSize: '15px', fontWeight: '700',

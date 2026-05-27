@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../tenant/TenantContext';
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -18,7 +19,11 @@ import { toast } from 'sonner';
 
 export default function StockTakeDialog({ open, onOpenChange, products, tenantId }) {
   const queryClient = useQueryClient();
-  const { user } = useTenant();
+  const { user, tenant } = useTenant();
+  const primaryColor = tenant?.theme_config?.primary_color || null;
+  const primaryBtnStyle = primaryColor
+    ? { background: primaryColor, color: '#fff' }
+    : { background: 'var(--color-primary-gradient)', color: '#fff' };
   const [step, setStep] = useState('count'); // 'count' or 'review'
   const [counts, setCounts] = useState({});
   const [notes, setNotes] = useState('');
@@ -97,8 +102,8 @@ export default function StockTakeDialog({ open, onOpenChange, products, tenantId
 
         {step === 'count' ? (
           <div className="space-y-4 py-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-700">
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+              <p className="text-sm text-slate-600">
                 Enter the actual physical count for each product. Items with no changes will be skipped.
               </p>
             </div>
@@ -171,7 +176,7 @@ export default function StockTakeDialog({ open, onOpenChange, products, tenantId
             <Button
               onClick={() => setStep('review')}
               disabled={Object.keys(counts).length === 0}
-              className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))]"
+              style={primaryBtnStyle}
             >
               Review ({discrepancies.length} changes)
             </Button>
@@ -183,7 +188,7 @@ export default function StockTakeDialog({ open, onOpenChange, products, tenantId
               <Button
                 onClick={() => reconcileMutation.mutate()}
                 disabled={reconcileMutation.isPending}
-                className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))]"
+                style={primaryBtnStyle}
               >
                 {reconcileMutation.isPending ? (
                   <>
