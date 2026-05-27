@@ -71,32 +71,25 @@ function CategoriesContent() {
     <PermissionGate permission="categories.read">
       <PageHeader title="Categories" description="Organize your products into categories"
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex gap-1">
-              <button onClick={() => handleViewToggle('grid')}
-                style={{
-                  background: viewMode === 'grid' ? 'rgba(var(--color-primary), 0.08)' : 'transparent',
-                  color: viewMode === 'grid' ? 'rgb(var(--color-primary))' : '#9ca3af',
-                  border: '0.5px solid #e5e7eb', borderRadius: '8px', padding: '6px 8px', cursor: 'pointer',
-                }}>
+              <button onClick={() => handleViewToggle('grid')} style={{ background: viewMode === 'grid' ? 'rgba(var(--color-primary), 0.08)' : 'transparent', color: viewMode === 'grid' ? 'rgb(var(--color-primary))' : '#9ca3af', border: '0.5px solid #e5e7eb', borderRadius: '8px', padding: '6px 8px', cursor: 'pointer' }}>
                 <LayoutGrid size={18} />
               </button>
-              <button onClick={() => handleViewToggle('list')}
-                style={{
-                  background: viewMode === 'list' ? 'rgba(var(--color-primary), 0.08)' : 'transparent',
-                  color: viewMode === 'list' ? 'rgb(var(--color-primary))' : '#9ca3af',
-                  border: '0.5px solid #e5e7eb', borderRadius: '8px', padding: '6px 8px', cursor: 'pointer',
-                }}>
+              <button onClick={() => handleViewToggle('list')} style={{ background: viewMode === 'list' ? 'rgba(var(--color-primary), 0.08)' : 'transparent', color: viewMode === 'list' ? 'rgb(var(--color-primary))' : '#9ca3af', border: '0.5px solid #e5e7eb', borderRadius: '8px', padding: '6px 8px', cursor: 'pointer' }}>
                 <List size={18} />
               </button>
             </div>
-            <button
+            <Button
               onClick={() => open(null)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white"
+              size="sm"
+              className="text-white gap-1.5"
               style={{ background: 'var(--color-primary-gradient)' }}
             >
-              <Plus className="w-4 h-4" /> Add Category
-            </button>
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Add Category</span>
+              <span className="sm:hidden">Add</span>
+            </Button>
           </div>
         }
       />
