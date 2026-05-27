@@ -11,7 +11,7 @@ import StockAdjustmentPanel from '../components/inventory/StockAdjustmentPanel';
 import InventoryLogTable from '../components/inventory/InventoryLogTable';
 import StockHistoryList from '../components/inventory/StockHistoryList';
 import StockTakeDialog from '../components/inventory/StockTakeDialog';
-import { Package, Search, ClipboardList, LayoutGrid, List } from 'lucide-react';
+import { Package, Search, ClipboardList, LayoutGrid, List, Activity, ChevronRight } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Switch } from '@/components/ui/switch';
 
@@ -283,8 +283,11 @@ function InventoryContent() {
                           <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: '#f3f4f6', color: '#6b7280' }}>Unlimited</span>
                         )}
                       </div>
-                      <div className="flex items-center justify-between pt-1 border-t border-slate-100" onClick={e => e.stopPropagation()}>
-                        <span className="text-xs text-slate-400">Track</span>
+                      <div className="flex items-center justify-between px-1 mt-2" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-1.5">
+                          <Activity className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="text-xs text-slate-400">Track stock</span>
+                        </div>
                         <Switch
                           checked={!!product.track_inventory}
                           onCheckedChange={(v) => handleToggleTracking(product.id, v)}
@@ -315,11 +318,24 @@ function InventoryContent() {
                         <p style={{ fontWeight: '600', fontSize: '13px', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#0f172a' }}>
                           {product.name}
                         </p>
-                        <p style={{ fontSize: '11px', color: '#6b7280', margin: '0 0 5px' }}>
-                          {product.sku || 'No SKU'}
-                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-slate-400">{product.sku || 'No SKU'}</span>
+                          {product.track_inventory ? (
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                              stock === 0 ? 'bg-red-100 text-red-600' :
+                              stock < threshold ? 'bg-amber-100 text-amber-600' :
+                              'bg-green-100 text-green-600'
+                            }`}>
+                              {stock === 0 ? 'Out of stock' :
+                               stock < threshold ? `Low (${stock})` :
+                               `${stock} in stock`}
+                            </span>
+                          ) : (
+                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">Unlimited</span>
+                          )}
+                        </div>
                         {product.track_inventory && (
-                          <div style={{ height: '3px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden', width: '100%' }}>
+                          <div style={{ height: '3px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden', width: '100%', marginTop: '6px' }}>
                             <div style={{
                               height: '100%',
                               width: `${Math.min((stock / Math.max(threshold * 2, 1)) * 100, 100)}%`,
@@ -330,30 +346,14 @@ function InventoryContent() {
                           </div>
                         )}
                       </div>
-                      <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                        {product.track_inventory ? (
-                          <>
-                            <p style={{ fontWeight: '700', fontSize: '16px', margin: '0 0 3px', color: status.color }}>{stock}</p>
-                            <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: status.bg, color: status.color, whiteSpace: 'nowrap' }}>
-                              {status.label}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <p style={{ fontWeight: '700', fontSize: '18px', margin: '0 0 3px', color: '#6b7280' }}>∞</p>
-                            <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: '#f3f4f6', color: '#6b7280' }}>
-                              Unlimited
-                            </span>
-                          </>
-                        )}
-                      </div>
-                      {/* Track toggle — far right */}
-                      <div className="flex flex-col items-center gap-0.5 flex-shrink-0 ml-2" onClick={e => e.stopPropagation()}>
-                        <Switch
-                          checked={!!product.track_inventory}
-                          onCheckedChange={(v) => handleToggleTracking(product.id, v)}
-                        />
-                        <span className="hidden sm:block" style={{ fontSize: '9px', color: '#9ca3af' }}>Track</span>
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        <ChevronRight className="w-4 h-4 text-slate-300" />
+                        <div onClick={e => e.stopPropagation()}>
+                          <Switch
+                            checked={!!product.track_inventory}
+                            onCheckedChange={(v) => handleToggleTracking(product.id, v)}
+                          />
+                        </div>
                       </div>
                     </div>
                   );
