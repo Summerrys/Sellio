@@ -25,7 +25,7 @@ export default function Inventory() {
 
 function InventoryContent() {
   const { tenantId, tenant } = useTenant();
-  const primaryColor = tenant?.theme_config?.primary_color || '#7c3aed';
+  const primaryColor = tenant?.theme_config?.primary_color || null;
   const queryClient = useQueryClient();
   const handleRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['inventoryMerged', tenantId] });
@@ -137,18 +137,19 @@ function InventoryContent() {
             onClick={handleStartStockTake}
             disabled={trackedProducts.length === 0}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{
-              border: `1.5px solid ${primaryColor}`,
-              color: primaryColor,
-              background: `${primaryColor}15`,
-            }}
+            style={primaryColor
+              ? { border: `1.5px solid ${primaryColor}`, color: primaryColor, background: `${primaryColor}15` }
+              : { border: '1.5px solid rgb(var(--color-primary))', color: 'rgb(var(--color-primary))', background: 'rgba(var(--color-primary),0.08)' }
+            }
             onMouseEnter={e => {
-              e.currentTarget.style.background = primaryColor;
+              e.currentTarget.style.background = primaryColor || 'rgb(var(--color-primary))';
               e.currentTarget.style.color = '#fff';
+              e.currentTarget.style.border = `1.5px solid ${primaryColor || 'rgb(var(--color-primary))'}`;
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.background = `${primaryColor}15`;
-              e.currentTarget.style.color = primaryColor;
+              e.currentTarget.style.background = primaryColor ? `${primaryColor}15` : 'rgba(var(--color-primary),0.08)';
+              e.currentTarget.style.color = primaryColor || 'rgb(var(--color-primary))';
+              e.currentTarget.style.border = `1.5px solid ${primaryColor || 'rgb(var(--color-primary))'}`;
             }}
           >
             <ClipboardList className="w-4 h-4" /> Stock Take
@@ -221,8 +222,8 @@ function InventoryContent() {
                 <button
                   onClick={() => handleViewToggle('grid')}
                   style={{
-                    background: viewMode === 'grid' ? '#f3f0ff' : 'transparent',
-                    color: viewMode === 'grid' ? '#7c3aed' : '#9ca3af',
+                    background: viewMode === 'grid' ? (primaryColor ? `${primaryColor}15` : 'rgba(var(--color-primary),0.08)') : 'transparent',
+                    color: viewMode === 'grid' ? (primaryColor || 'rgb(var(--color-primary))') : '#9ca3af',
                     border: '0.5px solid #e5e7eb',
                     borderRadius: '8px',
                     padding: '6px 8px',
@@ -234,8 +235,8 @@ function InventoryContent() {
                 <button
                   onClick={() => handleViewToggle('list')}
                   style={{
-                    background: viewMode === 'list' ? '#f3f0ff' : 'transparent',
-                    color: viewMode === 'list' ? '#7c3aed' : '#9ca3af',
+                    background: viewMode === 'list' ? (primaryColor ? `${primaryColor}15` : 'rgba(var(--color-primary),0.08)') : 'transparent',
+                    color: viewMode === 'list' ? (primaryColor || 'rgb(var(--color-primary))') : '#9ca3af',
                     border: '0.5px solid #e5e7eb',
                     borderRadius: '8px',
                     padding: '6px 8px',
@@ -287,7 +288,7 @@ function InventoryContent() {
                               <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: status.bg, color: status.color }}>{status.label}</span>
                               <button
                                 onClick={() => setSelectedProduct(product)}
-                                style={{ fontSize: '11px', color: 'rgb(var(--color-primary))', fontWeight: '600', background: 'none', border: 'none', cursor: 'pointer', padding: '0' }}
+                                style={{ fontSize: '11px', color: primaryColor || 'rgb(var(--color-primary))', fontWeight: '600', background: 'none', border: 'none', cursor: 'pointer', padding: '0' }}
                               >
                                 Adjust
                               </button>
@@ -371,7 +372,10 @@ function InventoryContent() {
                                   <button
                                     onClick={() => setEditingThreshold(product.id)}
                                     className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
-                                    style={{ background: `${primaryColor}15`, color: primaryColor }}
+                                    style={primaryColor
+                                      ? { background: `${primaryColor}15`, color: primaryColor }
+                                      : { background: 'rgba(var(--color-primary),0.08)', color: 'rgb(var(--color-primary))' }
+                                    }
                                   >
                                     <Pencil className="w-2.5 h-2.5" />
                                     {product.low_stock_threshold} units

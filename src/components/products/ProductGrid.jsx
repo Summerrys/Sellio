@@ -18,7 +18,7 @@ function StockBadge({ product }) {
   if (stock > 0 && stock < threshold) {
     return <Badge className="bg-amber-100 text-amber-700 border-amber-300">Low Stock ({stock})</Badge>;
   }
-  return <Badge className="bg-green-100 text-green-700 border-green-300">{stock} in stock</Badge>;
+  return <Badge className="bg-green-100 text-green-700 border-green-300" style={{ color: '#166534' }}>{stock} in stock</Badge>;
 }
 
 export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMode = 'list' }) {

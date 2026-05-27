@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { useTenant } from '@/components/tenant/TenantContext';
 
 export default function StockAdjustmentPanel({ open, onOpenChange, product, tenantId, onSuccess, onClose }) {
+  const { tenant } = useTenant();
+  const primaryColor = tenant?.theme_config?.primary_color || null;
   const queryClient = useQueryClient();
 
   const currentStock = product?.current_stock ?? product?.inventory?.[0]?.current_stock ?? product?.stock_quantity ?? 0;
@@ -254,7 +257,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
               style={{
                 width: '100%', padding: '15px',
                 background: newStock === currentStock ? '#e2e8f0'
-                          : newStock > currentStock ? '#16a34a' : '#dc2626',
+                          : newStock > currentStock ? (primaryColor || '#16a34a') : '#dc2626',
                 color: newStock === currentStock ? '#94a3b8' : 'white',
                 border: 'none', borderRadius: '14px',
                 fontSize: '15px', fontWeight: '700',

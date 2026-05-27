@@ -39,7 +39,7 @@ const TEMPLATE_ROWS = [
 
 export default function Products() {
   const { tenantId, tenant } = useTenant();
-  const primaryColor = tenant?.theme_config?.primary_color || '#7c3aed';
+  const primaryColor = tenant?.theme_config?.primary_color || null;
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState(
@@ -183,18 +183,19 @@ export default function Products() {
             <button
               onClick={() => navigate('/Inventory')}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors"
-              style={{
-                border: `1.5px solid ${primaryColor}`,
-                color: primaryColor,
-                background: `${primaryColor}15`,
-              }}
+              style={primaryColor
+                ? { border: `1.5px solid ${primaryColor}`, color: primaryColor, background: `${primaryColor}15` }
+                : { border: '1.5px solid rgb(var(--color-primary))', color: 'rgb(var(--color-primary))', background: 'rgba(var(--color-primary),0.08)' }
+              }
               onMouseEnter={e => {
-                e.currentTarget.style.background = primaryColor;
+                e.currentTarget.style.background = primaryColor || 'rgb(var(--color-primary))';
                 e.currentTarget.style.color = '#fff';
+                e.currentTarget.style.border = `1.5px solid ${primaryColor || 'rgb(var(--color-primary))'}`;
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.background = `${primaryColor}15`;
-                e.currentTarget.style.color = primaryColor;
+                e.currentTarget.style.background = primaryColor ? `${primaryColor}15` : 'rgba(var(--color-primary),0.08)';
+                e.currentTarget.style.color = primaryColor || 'rgb(var(--color-primary))';
+                e.currentTarget.style.border = `1.5px solid ${primaryColor || 'rgb(var(--color-primary))'}`;
               }}
             >
               <Package className="w-4 h-4" /> Inventory
@@ -284,8 +285,8 @@ export default function Products() {
               <button
                 onClick={() => handleViewToggle('grid')}
                 style={{
-                  background: viewMode === 'grid' ? '#f3f0ff' : 'transparent',
-                  color: viewMode === 'grid' ? '#7c3aed' : '#9ca3af',
+                  background: viewMode === 'grid' ? (primaryColor ? `${primaryColor}15` : 'rgba(var(--color-primary),0.08)') : 'transparent',
+                  color: viewMode === 'grid' ? (primaryColor || 'rgb(var(--color-primary))') : '#9ca3af',
                   border: '0.5px solid #e5e7eb',
                   borderRadius: '8px',
                   padding: '6px 8px',
@@ -297,8 +298,8 @@ export default function Products() {
               <button
                 onClick={() => handleViewToggle('list')}
                 style={{
-                  background: viewMode === 'list' ? '#f3f0ff' : 'transparent',
-                  color: viewMode === 'list' ? '#7c3aed' : '#9ca3af',
+                  background: viewMode === 'list' ? (primaryColor ? `${primaryColor}15` : 'rgba(var(--color-primary),0.08)') : 'transparent',
+                  color: viewMode === 'list' ? (primaryColor || 'rgb(var(--color-primary))') : '#9ca3af',
                   border: '0.5px solid #e5e7eb',
                   borderRadius: '8px',
                   padding: '6px 8px',
