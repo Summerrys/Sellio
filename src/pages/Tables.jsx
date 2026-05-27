@@ -27,7 +27,7 @@ import TableFormDialog from '../components/tables/TableFormDialog';
 import TableCard from '../components/tables/TableCard';
 import QRCodeGenerator from '../components/tables/QRCodeGenerator';
 import BulkQRActions from '../components/tables/BulkQRActions';
-import { QrCode, Plus, Search, LayoutGrid, List, Trash2, Download, Pencil } from 'lucide-react';
+import { QrCode, Plus, Search, LayoutGrid, List, Trash2, Download, Pencil, CheckCircle2, Users, Clock, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -249,17 +249,18 @@ export default function Tables() {
   };
 
   const STATUS_OPTIONS = [
-    { key: 'available',   label: 'Available', icon: '✓',  activeBg: '#16A34A', inactiveBg: '#F0FDF4', inactiveColor: '#86EFAC' },
-    { key: 'occupied',    label: 'Occupied',  icon: '●',  activeBg: '#DC2626', inactiveBg: '#FEF2F2', inactiveColor: '#FCA5A5' },
-    { key: 'reserved',    label: 'Reserved',  icon: '⏰', activeBg: '#D97706', inactiveBg: '#FFFBEB', inactiveColor: '#FCD34D' },
-    { key: 'maintenance', label: 'Maint.',    icon: '🔧', activeBg: '#475569', inactiveBg: '#F8FAFC', inactiveColor: '#CBD5E1' },
+    { key: 'available',   label: 'Available', Icon: CheckCircle2, activeBg: '#16A34A', inactiveBg: '#F0FDF4', inactiveColor: '#86EFAC' },
+    { key: 'occupied',    label: 'Occupied',  Icon: Users,        activeBg: '#DC2626', inactiveBg: '#FEF2F2', inactiveColor: '#FCA5A5' },
+    { key: 'reserved',    label: 'Reserved',  Icon: Clock,        activeBg: '#D97706', inactiveBg: '#FFFBEB', inactiveColor: '#FCD34D' },
+    { key: 'maintenance', label: 'Maint.',    Icon: Wrench,       activeBg: '#475569', inactiveBg: '#F8FAFC', inactiveColor: '#CBD5E1' },
   ];
 
-  const getStampColor = (status) => ({
-    occupied:    { bg: 'rgba(220,38,38,0.15)',  border: '#DC2626', color: '#DC2626',  text: 'IN USE' },
-    reserved:    { bg: 'rgba(217,119,6,0.15)',  border: '#D97706', color: '#D97706',  text: 'RESERVED' },
-    maintenance: { bg: 'rgba(71,85,105,0.15)',  border: '#475569', color: '#475569',  text: 'MAINT.' },
-  }[status] || null);
+  const QR_STATUS_BADGE = {
+    available:   { label: '✓ Scan to order', bg: '#F0FDF4', color: '#16A34A', Icon: CheckCircle2 },
+    occupied:    { label: 'In use',           bg: '#FEF2F2', color: '#DC2626', Icon: Users },
+    reserved:    { label: 'Reserved',         bg: '#FFFBEB', color: '#D97706', Icon: Clock },
+    maintenance: { label: 'Unavailable',      bg: '#F8FAFC', color: '#475569', Icon: Wrench },
+  };
 
   const handleStatusChange = async (table, newStatus) => {
     const supabase = await getSupabase();
@@ -401,21 +402,21 @@ export default function Tables() {
                         >
                           {qrCodes[table.id] ? (
                             <div className="relative w-20 h-20">
-                              <img src={qrCodes[table.id]} className="w-full h-full object-contain" alt={`QR ${table.name}`} />
-                              {(() => {
-                                const stamp = getStampColor(table.status);
-                                return stamp ? (
-                                  <div className="absolute inset-0 flex items-center justify-center" style={{ background: stamp.bg }}>
-                                    <div className="border-2 rounded px-1.5 py-0.5" style={{ borderColor: stamp.border, color: stamp.color, transform: 'rotate(-20deg)' }}>
-                                      <span style={{ fontSize: '9px', fontWeight: '900', letterSpacing: '0.1em' }}>{stamp.text}</span>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="absolute bottom-0 left-0 right-0 flex justify-center">
-                                    <span style={{ fontSize: '8px', fontWeight: '600', color: '#16a34a', background: '#f0fdf4', borderRadius: '999px', padding: '1px 6px' }}>✓ Scan to order</span>
-                                  </div>
-                                );
-                              })()}
+                              <img src={qrCodes[table.id]} className="w-full h-full object-contain" alt={`QR ${table.name}`}
+                                style={{ opacity: table.status === 'available' ? 1 : 0.45 }} />
+                              <div className="absolute bottom-0 left-0 right-0 flex justify-center">
+                                {(() => {
+                                  const badge = QR_STATUS_BADGE[table.status] || QR_STATUS_BADGE.available;
+                                  const BadgeIcon = badge.Icon;
+                                  return (
+                                    <span className="text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm"
+                                      style={{ background: badge.bg, color: badge.color, fontSize: '8px' }}>
+                                      <BadgeIcon style={{ width: '8px', height: '8px' }} />
+                                      {badge.label}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
                             </div>
                           ) : (
                             <QrCode style={{ width: '40px', height: '40px', color: '#cbd5e1' }} />
@@ -436,21 +437,20 @@ export default function Tables() {
                             ) : null;
                           })()}
                           <div className="grid grid-cols-4 gap-1 mt-2" onClick={e => e.stopPropagation()}>
-                            {STATUS_OPTIONS.map(s => (
-                              <button
-                                key={s.key}
-                                onClick={() => handleStatusChange(table, s.key)}
+                            {STATUS_OPTIONS.map(({ key, label, Icon, activeBg, inactiveBg, inactiveColor }) => (
+                              <button key={key}
+                                onClick={() => handleStatusChange(table, key)}
                                 className="flex flex-col items-center py-1.5 px-1 rounded-lg transition-all active:scale-95"
-                                style={table.status === s.key
-                                  ? { background: s.activeBg, color: '#fff' }
-                                  : { background: s.inactiveBg, color: s.inactiveColor }
+                                style={table.status === key
+                                  ? { background: activeBg, color: '#fff' }
+                                  : { background: inactiveBg, color: inactiveColor }
                                 }
                               >
-                                <span className="text-sm leading-none">{s.icon}</span>
-                                <span style={{ fontSize: '8px', fontWeight: '500', marginTop: '2px', lineHeight: 1 }}>{s.label}</span>
+                                <Icon className="w-3.5 h-3.5" />
+                                <span className="text-[9px] font-medium mt-0.5 leading-none">{label}</span>
                               </button>
                             ))}
-                                </div>
+                          </div>
                                 <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
                             <button
                               onClick={() => handleDownloadQR(localTable)}
@@ -483,17 +483,20 @@ export default function Tables() {
                         >
                           {qrCodes[table.id] ? (
                             <>
-                              <img src={qrCodes[table.id]} style={{ width: '56px', height: '56px', objectFit: 'contain' }} alt={`QR ${table.name}`} />
-                              {(() => {
-                                const stamp = getStampColor(table.status);
-                                return stamp ? (
-                                  <div className="absolute inset-0 flex items-center justify-center" style={{ background: stamp.bg }}>
-                                    <div className="border rounded px-1" style={{ borderColor: stamp.border, color: stamp.color, transform: 'rotate(-20deg)' }}>
-                                      <span style={{ fontSize: '7px', fontWeight: '900', letterSpacing: '0.05em' }}>{stamp.text}</span>
-                                    </div>
-                                  </div>
-                                ) : null;
-                              })()}
+                              <img src={qrCodes[table.id]} style={{ width: '56px', height: '56px', objectFit: 'contain', opacity: table.status === 'available' ? 1 : 0.45 }} alt={`QR ${table.name}`} />
+                              <div className="absolute bottom-0 left-0 right-0 flex justify-center">
+                                {(() => {
+                                  const badge = QR_STATUS_BADGE[table.status] || QR_STATUS_BADGE.available;
+                                  const BadgeIcon = badge.Icon;
+                                  return (
+                                    <span className="rounded-full flex items-center gap-0.5 shadow-sm"
+                                      style={{ background: badge.bg, color: badge.color, fontSize: '7px', fontWeight: '600', padding: '1px 4px' }}>
+                                      <BadgeIcon style={{ width: '7px', height: '7px' }} />
+                                      {badge.label}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
                             </>
                           ) : (
                             <div style={{ width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -529,18 +532,17 @@ export default function Tables() {
                             </div>
                           </div>
                           <div className="grid grid-cols-4 gap-1" onClick={e => e.stopPropagation()}>
-                            {STATUS_OPTIONS.map(s => (
-                              <button
-                                key={s.key}
-                                onClick={() => handleStatusChange(table, s.key)}
+                            {STATUS_OPTIONS.map(({ key, label, Icon, activeBg, inactiveBg, inactiveColor }) => (
+                              <button key={key}
+                                onClick={() => handleStatusChange(table, key)}
                                 className="flex flex-col items-center py-1.5 px-1 rounded-lg transition-all active:scale-95"
-                                style={table.status === s.key
-                                  ? { background: s.activeBg, color: '#fff' }
-                                  : { background: s.inactiveBg, color: s.inactiveColor }
+                                style={table.status === key
+                                  ? { background: activeBg, color: '#fff' }
+                                  : { background: inactiveBg, color: inactiveColor }
                                 }
                               >
-                                <span className="text-sm leading-none">{s.icon}</span>
-                                <span style={{ fontSize: '8px', fontWeight: '500', marginTop: '2px', lineHeight: 1 }}>{s.label}</span>
+                                <Icon className="w-3.5 h-3.5" />
+                                <span className="text-[9px] font-medium mt-0.5 leading-none">{label}</span>
                               </button>
                             ))}
                           </div>
