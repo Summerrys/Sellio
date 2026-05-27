@@ -16,23 +16,31 @@ import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 
 const featureCards = [
-  { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view', color: 'bg-blue-50 text-blue-600 border-blue-100' },
-  { label: 'Products', icon: ShoppingBag, page: 'Products', permission: 'products.view', color: 'bg-purple-50 text-purple-600 border-purple-100' },
-  { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view', color: 'bg-pink-50 text-pink-600 border-pink-100' },
-  { label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view', color: 'bg-teal-50 text-teal-600 border-teal-100' },
-  { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view', color: 'bg-amber-50 text-amber-600 border-amber-100' },
-  { label: 'Staff', icon: Users, page: 'Staff', permission: 'staff.view', color: 'bg-green-50 text-green-600 border-green-100' },
-  { label: 'Roles', icon: Shield, page: 'RoleManagement', permission: 'roles.view', color: 'bg-indigo-50 text-indigo-600 border-indigo-100' },
-  { label: 'Reports', icon: BarChart2, page: 'Reports', permission: 'reports.view', color: 'bg-rose-50 text-rose-600 border-rose-100' },
-  { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view', color: 'bg-slate-50 text-slate-600 border-slate-200' },
+  { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view' },
+  { label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view' },
+  { label: 'Products', icon: ShoppingBag, page: 'Products', permission: 'products.view' },
+  { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view' },
+  { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view' },
+  { label: 'Staff', icon: Users, page: 'Staff', permission: 'staff.view' },
+  { label: 'Roles', icon: Shield, page: 'RoleManagement', permission: 'roles.view' },
+  { label: 'Reports', icon: BarChart2, page: 'Reports', permission: 'reports.view' },
+  { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view' },
 ];
 
-function StatCard({ icon: Icon, label, value, subtext, color, onClick }) {
+function getTimeGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function StatCard({ icon: Icon, label, value, subtext, color, onClick, urgentCard }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        'w-full text-left p-4 rounded-2xl border bg-white shadow-sm flex items-center gap-3 active:scale-95 transition-transform',
+        'w-full text-left p-4 rounded-2xl border shadow-sm flex items-center gap-3 active:scale-95 transition-transform',
+        urgentCard ? 'bg-amber-50 border-amber-200' : 'bg-white',
         onClick && 'hover:shadow-md cursor-pointer'
       )}
     >
@@ -42,24 +50,24 @@ function StatCard({ icon: Icon, label, value, subtext, color, onClick }) {
       <div className="min-w-0 flex-1">
         <p className="text-xs text-slate-500 font-medium">{label}</p>
         <p className="text-xl font-bold text-slate-900 leading-tight">{value}</p>
-        {subtext && <p className="text-xs text-slate-400 truncate">{subtext}</p>}
+        {subtext && <p className="text-xs text-slate-400 leading-tight">{subtext}</p>}
       </div>
       {onClick && <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0" />}
     </button>
   );
 }
 
-function FeatureCard({ icon: Icon, label, color, onClick }) {
+function FeatureCard({ icon: Icon, label, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={cn(
-        'flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border bg-white shadow-sm active:scale-95 transition-transform hover:shadow-md',
-        'aspect-square'
-      )}
+      className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border bg-white shadow-sm active:scale-95 transition-transform hover:shadow-md aspect-square"
     >
-      <div className={cn('w-11 h-11 rounded-xl flex items-center justify-center border', color)}>
-        <Icon className="w-5 h-5" />
+      <div
+        className="w-11 h-11 rounded-xl flex items-center justify-center"
+        style={{ background: 'rgba(var(--color-primary), 0.10)' }}
+      >
+        <Icon className="w-5 h-5" style={{ color: 'rgb(var(--color-primary))' }} />
       </div>
       <span className="text-xs font-semibold text-slate-700 text-center leading-tight">{label}</span>
     </button>
@@ -110,14 +118,17 @@ export default function Dashboard() {
     !f.permission || hasPermission(f.permission)
   );
 
+  const greeting = getTimeGreeting();
+  const todayLabel = new Date().toLocaleDateString('en-SG', { weekday: 'long', day: 'numeric', month: 'long' });
+
   return (
     <div className="space-y-6 pb-8">
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-slate-900">
-          Welcome {tenant?.name || 'Dashboard'} 👋!
+          {greeting}, {tenant?.name || 'there'} 👋!
         </h1>
-        <p className="text-sm text-slate-500 mt-0.5">Today's overview</p>
+        <p className="text-sm text-slate-500 mt-0.5">Today's overview · <span className="text-slate-400">{todayLabel}</span></p>
       </div>
 
       {/* Stats Row */}
@@ -149,7 +160,8 @@ export default function Dashboard() {
             label="Low Stock"
             value={lowStockCount}
             subtext={lowStockCount > 0 ? 'Need restock' : 'Well stocked'}
-            color={lowStockCount > 0 ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'}
+            color={lowStockCount > 0 ? 'bg-amber-100 text-amber-600' : 'bg-green-50 text-green-600'}
+            urgentCard={lowStockCount > 0}
             onClick={() => navigate(createPageUrl('Inventory'))}
           />
         </RequirePermission>
@@ -175,7 +187,6 @@ export default function Dashboard() {
               key={f.page}
               icon={f.icon}
               label={f.label}
-              color={f.color}
               onClick={() => navigate(createPageUrl(f.page))}
             />
           ))}
