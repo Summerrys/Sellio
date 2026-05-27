@@ -244,9 +244,9 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
             <div className="border-t border-slate-100 pt-4 mt-2 w-full">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <BellRing className="w-4 h-4 text-slate-400" />
+                  <BellRing className="w-4 h-4" style={{ color: 'rgb(var(--color-primary))' }} />
                   <div>
-                    <p className="text-sm font-medium text-slate-700">Low stock alert</p>
+                    <p className="text-sm font-medium" style={{ color: 'rgb(var(--color-primary))' }}>Low stock alert</p>
                     <p className="text-xs text-slate-400">Notify when stock falls below</p>
                   </div>
                 </div>
