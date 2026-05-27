@@ -58,7 +58,7 @@ export default function ProductFormBasic({
             {trackInventory && currentStock !== null && currentStock !== undefined && isEditMode && (
               <span
                 className="text-xs font-medium px-2 py-0.5 rounded-full"
-                style={{ backgroundColor: 'rgb(var(--color-primary-50))', color: 'rgb(var(--color-primary-700))' }}
+                style={{ backgroundColor: 'rgb(var(--color-primary-50))', color: 'rgb(var(--color-primary-70))' }}
               >
                 {currentStock} in stock
               </span>
