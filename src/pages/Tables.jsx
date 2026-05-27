@@ -27,7 +27,7 @@ import TableFormDialog from '../components/tables/TableFormDialog';
 import TableCard from '../components/tables/TableCard';
 import QRCodeGenerator from '../components/tables/QRCodeGenerator';
 import BulkQRActions from '../components/tables/BulkQRActions';
-import { QrCode, Plus, Search, LayoutGrid, List, Trash2, Download, Pencil, CheckCircle2, Users, Clock, Wrench } from 'lucide-react';
+import { QrCode, Plus, Search, LayoutGrid, List, Trash2, Download, Pencil, CheckCircle2, Users, Clock, Wrench, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -406,18 +406,31 @@ export default function Tables() {
             <div key={zone} style={{ marginBottom: '20px' }}>
               <div className="flex items-center gap-2 mb-3">
                 {editingZone === zone ? (
-                  <input
-                    autoFocus
-                    value={editingZoneName}
-                    onChange={e => setEditingZoneName(e.target.value)}
-                    onBlur={() => handleZoneRename(zone, editingZoneName)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') handleZoneRename(zone, editingZoneName);
-                      if (e.key === 'Escape') setEditingZone(null);
-                    }}
-                    className="text-sm font-semibold border-b-2 outline-none bg-transparent"
-                    style={{ borderColor: 'rgb(var(--color-primary))', color: 'rgb(var(--color-primary))' }}
-                  />
+                  <>
+                    <input
+                      autoFocus
+                      value={editingZoneName}
+                      onChange={e => setEditingZoneName(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleZoneRename(zone, editingZoneName);
+                        if (e.key === 'Escape') setEditingZone(null);
+                      }}
+                      className="text-sm font-semibold border-b-2 outline-none bg-transparent"
+                      style={{ borderColor: 'rgb(var(--color-primary))', color: 'rgb(var(--color-primary))' }}
+                    />
+                    <button
+                      onMouseDown={e => { e.preventDefault(); handleZoneRename(zone, editingZoneName); }}
+                      className="p-0.5 rounded hover:bg-green-100 transition-colors text-green-600"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onMouseDown={e => { e.preventDefault(); setEditingZone(null); }}
+                      className="p-0.5 rounded hover:bg-red-100 transition-colors text-red-500"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </>
                 ) : (
                   <>
                     <h3 className="text-sm font-semibold" style={{ color: 'rgb(var(--color-primary))' }}>{zone}</h3>
