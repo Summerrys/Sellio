@@ -17,10 +17,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function TableFormDialog({ open, onOpenChange, table, tenantId, tenant }) {
+export default function TableFormDialog({ open, onOpenChange, table, tenantId, tenant, allTables = [] }) {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
-  const [existingZones, setExistingZones] = useState([]);
   const [newZoneName, setNewZoneName] = useState('');
   const [formData, setFormData] = useState({
     name: '',
@@ -30,21 +29,7 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
     notes: '',
   });
 
-  // Fetch existing zones when dialog opens
-  useEffect(() => {
-    if (!open || !tenantId) return;
-    const fetchZones = async () => {
-      const supabase = await getSupabase();
-      const { data: zoneData } = await supabase
-        .from('tables')
-        .select('zone')
-        .eq('tenant_id', tenantId)
-        .not('zone', 'is', null);
-      const zones = [...new Set(zoneData?.map(t => t.zone).filter(Boolean))];
-      setExistingZones(zones);
-    };
-    fetchZones();
-  }, [open, tenantId]);
+  const existingZones = [...new Set(allTables.map(t => t.zone).filter(Boolean))].sort();
 
   useEffect(() => {
     if (table) {
@@ -60,11 +45,6 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
     }
     setNewZoneName('');
   }, [table, open]);
-
-  const handleZoneChange = (value) => {
-    setFormData({ ...formData, zone: value });
-    if (value !== '__new__') setNewZoneName('');
-  };
 
   const saveQRToStorage = async (db, tableId, tableName, orderingUrl) => {
     try {
@@ -171,11 +151,18 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
 
             <div>
               <Label>Section/Zone</Label>
-              <Select value={formData.zone} onValueChange={handleZoneChange}>
+              <Select
+                value={formData.zone === '__new__' ? '__new__' : (formData.zone || '')}
+                onValueChange={(v) => {
+                  setFormData(f => ({ ...f, zone: v }));
+                  if (v !== '__new__') setNewZoneName('');
+                }}
+              >
                 <SelectTrigger className="mt-1.5">
-                  <SelectValue placeholder="Select zone" />
+                  <SelectValue placeholder="Select or create zone" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={null}>No zone</SelectItem>
                   {existingZones.map(zone => (
                     <SelectItem key={zone} value={zone}>{zone}</SelectItem>
                   ))}

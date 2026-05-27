@@ -154,17 +154,15 @@ export default function Tables() {
     },
   });
 
-  // Get unique zones
-  const zones = [...new Set(tables.map(t => t.zone))].filter(Boolean);
+  // Get unique zones from data
+  const zones = [...new Set(tables.map(t => t.zone || 'Unassigned'))].sort();
 
   // Filter tables
   const filteredTables = tables.filter(table => {
     const matchesSearch = !searchQuery || 
       table.name?.toLowerCase().includes(searchQuery.toLowerCase());
-    
     const matchesStatus = statusFilter === 'all' || table.status === statusFilter;
-    const matchesZone = zoneFilter === 'all' || table.zone === zoneFilter;
-
+    const matchesZone = zoneFilter === 'all' || (t => (t.zone || 'Unassigned') === zoneFilter)(table);
     return matchesSearch && matchesStatus && matchesZone;
   });
 
@@ -227,10 +225,10 @@ export default function Tables() {
   };
 
   const STATUS_OPTIONS = [
-    { key: 'available',   label: 'Available', bg: '#DCFCE7', color: '#15803D', activeBg: '#16A34A' },
-    { key: 'occupied',    label: 'Occupied',  bg: '#FEE2E2', color: '#DC2626', activeBg: '#DC2626' },
-    { key: 'reserved',    label: 'Reserved',  bg: '#FEF3C7', color: '#B45309', activeBg: '#D97706' },
-    { key: 'maintenance', label: 'Maint.',    bg: '#F1F5F9', color: '#64748B', activeBg: '#475569' },
+    { key: 'available',   label: 'Available', activeBg: '#16A34A', inactiveBg: '#DCFCE7', inactiveColor: '#15803D' },
+    { key: 'occupied',    label: 'Occupied',  activeBg: '#DC2626', inactiveBg: '#FEE2E2', inactiveColor: '#DC2626' },
+    { key: 'reserved',    label: 'Reserved',  activeBg: '#D97706', inactiveBg: '#FEF3C7', inactiveColor: '#B45309' },
+    { key: 'maintenance', label: 'Maint.',    activeBg: '#475569', inactiveBg: '#F1F5F9', inactiveColor: '#64748B' },
   ];
 
   const handleStatusChange = async (table, newStatus) => {
@@ -295,7 +293,7 @@ export default function Tables() {
             onChange={e => setZoneFilter(e.target.value)}
             style={{ flex: 1, fontSize: '13px', height: '36px', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '0 8px', background: 'white' }}
           >
-            <option value="">All Zones</option>
+            <option value="all">All Zones</option>
             {zones.map(zone => <option key={zone} value={zone}>{zone}</option>)}
           </select>
           <select
@@ -334,23 +332,17 @@ export default function Tables() {
             <p style={{ color: '#94a3b8', margin: 0 }}>{searchQuery || zoneFilter || statusFilter ? 'No tables found' : 'No tables yet'}</p>
           </div>
         ) : (() => {
-          const grouped = filteredTables.reduce((groups, table) => {
-            const zone = table.zone || 'General';
-            if (!groups[zone]) groups[zone] = [];
-            groups[zone].push(table);
-            return groups;
-          }, {});
-          const hasMultipleZones = Object.keys(grouped).length > 1;
+          const filteredZones = [...new Set(filteredTables.map(t => t.zone || 'Unassigned'))].sort();
 
-          return Object.entries(grouped).map(([zone, zoneTables]) => (
+          return filteredZones.map(zone => {
+            const zoneTables = filteredTables.filter(t => (t.zone || 'Unassigned') === zone);
+            return (
             <div key={zone} style={{ marginBottom: '20px' }}>
-              {hasMultipleZones && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                  <p style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>{zone}</p>
-                  <div style={{ flex: 1, height: '0.5px', background: '#e2e8f0' }} />
-                  <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>{zoneTables.length} tables</p>
-                </div>
-              )}
+              <div className="flex items-center gap-2 mb-3">
+                <h3 className="text-sm font-semibold" style={{ color: 'rgb(var(--color-primary))' }}>{zone}</h3>
+                <div className="flex-1 h-px bg-slate-200" />
+                <span className="text-xs text-slate-400">{zoneTables.length} tables</span>
+              </div>
 
               {viewMode === 'grid' ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
@@ -382,15 +374,15 @@ export default function Tables() {
                                 onClick={() => handleStatusChange(table, s.key)}
                                 className="flex-1 text-[10px] font-medium py-1 rounded-lg transition-all active:scale-95"
                                 style={table.status === s.key
-                                  ? { background: s.activeBg, color: '#fff' }
-                                  : { background: s.bg, color: s.color }
+                                 ? { background: s.activeBg, color: '#fff' }
+                                 : { background: s.inactiveBg, color: s.inactiveColor }
                                 }
-                              >
+                                >
                                 {s.label}
-                              </button>
-                            ))}
-                          </div>
-                          <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                                </button>
+                                ))}
+                                </div>
+                                <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
                             <button
                               onClick={() => handleDownloadQR(localTable)}
                               style={{ flex: 1, padding: '6px', borderRadius: '8px', border: '0.5px solid #e2e8f0', background: 'none', fontSize: '11px', fontWeight: '600', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
@@ -454,7 +446,7 @@ export default function Tables() {
                                 className="flex-1 text-[10px] font-medium py-1 rounded-lg transition-all active:scale-95"
                                 style={table.status === s.key
                                   ? { background: s.activeBg, color: '#fff' }
-                                  : { background: s.bg, color: s.color }
+                                  : { background: s.inactiveBg, color: s.inactiveColor }
                                 }
                               >
                                 {s.label}
@@ -468,7 +460,8 @@ export default function Tables() {
                 </div>
               )}
             </div>
-          ));
+            );
+          });
         })()}
 
         {/* Dialogs */}
@@ -478,6 +471,7 @@ export default function Tables() {
           table={selectedTable}
           tenantId={tenantId}
           tenant={tenant}
+          allTables={tables}
         />
 
         <QRCodeGenerator
