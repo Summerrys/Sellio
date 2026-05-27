@@ -18,7 +18,6 @@ import {
   ChevronRight,
   Building2,
   BarChart3,
-  Shield,
   LogOut,
   Menu,
   X,
@@ -46,16 +45,14 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
 
   // Tenant menu with permission requirements
   const allTenantItems = [
-    { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard', permission: null }, // Always show
-    { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view' },
+    { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard', permission: null },
     { label: 'Products', icon: ShoppingBag, page: 'Products', permission: 'products.view' },
     { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view' },
-    { label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view' },
+    { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view' },
     { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view' },
-    { label: 'Staff', icon: Users, page: 'Staff', permission: 'staff.view' },
-    { label: 'Roles', icon: Shield, page: 'RoleManagement', permission: 'roles.view' },
+    ...(/f&b|cafe|restaurant|food/i.test(tenant?.industry) ? [{ label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view' }] : []),
+    { label: 'User Management', icon: Users, page: 'UserManagement', permission: 'staff.view' },
     { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view' },
-    ...(isAdmin ? [{ label: 'User Management', icon: Users, page: 'UserManagement', permission: null }] : []),
   ];
 
   // Filter tenant items based on permissions

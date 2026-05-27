@@ -1,229 +1,377 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import db from '@/lib/db';
+import { getSupabase } from '@/lib/supabaseClient';
+import { useTenant, ALL_PERMISSIONS, PERMISSION_GROUPS, ROLE_TEMPLATES, INDUSTRY_ROLES } from '../components/tenant/TenantContext';
+import RequirePermission from '../components/auth/RequirePermission';
+import PageHeader from '../components/ui-custom/PageHeader';
+import EmptyState from '../components/ui-custom/EmptyState';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Users, Shield, User, Mail, Calendar } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import InviteStaffDialog from '../components/staff/InviteStaffDialog';
+import CreateStaffDialog from '../components/staff/CreateStaffDialog';
+import EditStaffDialog from '../components/staff/EditStaffDialog';
+import StaffTable from '../components/staff/StaffTable';
+import StaffCards from '../components/staff/StaffCards';
+import { Shield, Plus, Pencil, Trash2, Copy, Users, CheckCircle2, UserPlus, Search, LayoutGrid, List } from 'lucide-react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 export default function UserManagement() {
-  const queryClient = useQueryClient();
-  const [currentUser] = useState(() => JSON.parse(localStorage.getItem('app_user') || '{}'));
-
-  // Fetch all users
-  const { data: users = [], isLoading } = useQuery({
-    queryKey: ['app-users'],
-    queryFn: async () => {
-      const result = await base44.asServiceRole.entities.AppUser.list();
-      return result;
-    }
-  });
-
-  // Update role mutation
-  const updateRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }) => {
-      const functionUrl = `${window.location.origin}/api/functions/updateUserRole`;
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, role })
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['app-users'] });
-      toast.success('User role updated successfully');
-    },
-    onError: (error) => {
-      toast.error('Failed to update role');
-    }
-  });
-
-  // Toggle status mutation
-  const toggleStatusMutation = useMutation({
-    mutationFn: async ({ userId, is_active }) => {
-      const functionUrl = `${window.location.origin}/api/functions/toggleUserStatus`;
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, is_active })
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['app-users'] });
-      toast.success('User status updated successfully');
-    },
-    onError: (error) => {
-      toast.error('Failed to update status');
-    }
-  });
-
-  // Check if current user is admin
-  if (currentUser.role !== 'admin') {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card className="max-w-md">
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <Shield className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-              <p className="text-slate-500">You need admin privileges to access this page.</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const [activeTab, setActiveTab] = useState('staff');
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">User Management</h1>
-          <p className="text-slate-500 mt-1">Manage user roles and permissions</p>
-        </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-lg border border-blue-200">
-          <Users className="w-5 h-5 text-blue-600" />
-          <span className="font-semibold text-blue-900">{users.length} Users</span>
-        </div>
+    <div className="space-y-6">
+      <PageHeader title="User Management" description="Manage your staff and roles" />
+      <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+        <button
+          onClick={() => setActiveTab('staff')}
+          className="flex-1 h-9 rounded-lg text-sm font-medium transition-all"
+          style={activeTab === 'staff'
+            ? { background: 'var(--color-primary-gradient)', color: '#fff' }
+            : { background: 'transparent', color: '#64748b' }
+          }
+        >
+          Staff
+        </button>
+        <button
+          onClick={() => setActiveTab('roles')}
+          className="flex-1 h-9 rounded-lg text-sm font-medium transition-all"
+          style={activeTab === 'roles'
+            ? { background: 'var(--color-primary-gradient)', color: '#fff' }
+            : { background: 'transparent', color: '#64748b' }
+          }
+        >
+          Roles
+        </button>
       </div>
+      {activeTab === 'staff' && <StaffContent />}
+      {activeTab === 'roles' && <RolesContent />}
+    </div>
+  );
+}
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <Shield className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">Admins</p>
-                <p className="text-2xl font-bold">{users.filter(u => u.role === 'admin').length}</p>
-              </div>
+function StaffContent() {
+  const { tenantId } = useTenant();
+  const queryClient = useQueryClient();
+  const [viewMode, setViewMode] = useState('table');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState(null);
+
+  const { data: staff = [], isLoading } = useQuery({
+    queryKey: ['staff', tenantId],
+    queryFn: () => db.entities.TenantUser.filter({ tenant_id: tenantId }),
+    enabled: !!tenantId,
+  });
+
+  const { data: roles = [] } = useQuery({
+    queryKey: ['roles', tenantId],
+    queryFn: () => db.entities.Role.filter({ tenant_id: tenantId }),
+    enabled: !!tenantId,
+  });
+
+  const filteredStaff = staff.filter(member => {
+    const matchesSearch = !searchQuery || member.user_email?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || member.status === statusFilter;
+    const matchesRole = roleFilter === 'all' || member.role_id === roleFilter;
+    return matchesSearch && matchesStatus && matchesRole;
+  });
+
+  return (
+    <RequirePermission permission="staff.view">
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto">
+            <div className="relative flex-1 sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input placeholder="Search staff..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <User className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">Users</p>
-                <p className="text-2xl font-bold">{users.filter(u => u.role === 'user').length}</p>
-              </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="invited">Invited</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                {roles.map(role => <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1 p-1 bg-slate-100 rounded-lg">
+              <Button variant="ghost" size="sm" onClick={() => setViewMode('table')} className={cn("h-8 px-3", viewMode === 'table' && "bg-white shadow-sm")}>
+                <List className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setViewMode('cards')} className={cn("h-8 px-3", viewMode === 'cards' && "bg-white shadow-sm")}>
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <Users className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">Active</p>
-                <p className="text-2xl font-bold">{users.filter(u => u.is_active).length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <RequirePermission permission="staff.create" silent>
+              <Button onClick={() => setInviteDialogOpen(true)} size="sm" className="text-white gap-1.5" style={{ background: 'var(--color-primary-gradient)' }}>
+                <UserPlus className="w-4 h-4" />
+                <span className="hidden sm:inline">Add Staff</span>
+                <span className="sm:hidden">Add</span>
+              </Button>
+            </RequirePermission>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="text-center py-12 text-slate-400">Loading staff...</div>
+        ) : filteredStaff.length === 0 ? (
+          <EmptyState icon={Users} title={searchQuery || statusFilter !== 'all' || roleFilter !== 'all' ? "No staff found" : "No staff members yet"} description={searchQuery || statusFilter !== 'all' || roleFilter !== 'all' ? "Try adjusting your filters" : "Invite your first team member to get started"} actionLabel="Add Staff" onAction={() => setInviteDialogOpen(true)} />
+        ) : viewMode === 'table' ? (
+          <StaffTable staff={filteredStaff} onEdit={setEditingStaff} />
+        ) : (
+          <StaffCards staff={filteredStaff} onEdit={setEditingStaff} />
+        )}
+
+        <CreateStaffDialog open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={() => { setCreateOpen(false); queryClient.invalidateQueries({ queryKey: ['staff'] }); }} />
+        <InviteStaffDialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen} tenantId={tenantId} />
+        <EditStaffDialog open={!!editingStaff} onOpenChange={(open) => !open && setEditingStaff(null)} staff={editingStaff} tenantId={tenantId} />
       </div>
+    </RequirePermission>
+  );
+}
 
-      {/* Users List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Users</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8 text-slate-500">Loading users...</div>
-          ) : users.length === 0 ? (
-            <div className="text-center py-8 text-slate-500">No users found</div>
-          ) : (
-            <div className="space-y-3">
-              {users.map((user) => (
-                <div
-                  key={user.id}
-                  className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
-                      <span className="text-white font-semibold text-lg">
-                        {user.full_name?.charAt(0)?.toUpperCase() || user.email.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
+function RolesContent() {
+  const { tenantId, tenant } = useTenant();
+  const queryClient = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({ name: '', description: '', permissions: [] });
+  const [selectedRole, setSelectedRole] = useState(null);
+
+  const { data: roles = [] } = useQuery({
+    queryKey: ['allRoles', tenantId],
+    queryFn: () => db.entities.Role.filter({ tenant_id: tenantId }),
+    enabled: !!tenantId,
+  });
+
+  const { data: tenantUsers = [] } = useQuery({
+    queryKey: ['roleUsers', tenantId],
+    queryFn: () => db.entities.TenantUser.filter({ tenant_id: tenantId }),
+    enabled: !!tenantId,
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async (data) => {
+      const supabase = await getSupabase();
+      if (editing) {
+        const { error } = await supabase.from('roles').update({ name: data.name, slug: data.name.toLowerCase().replace(/\s+/g, '-'), permissions: data.permissions, description: data.description }).eq('id', editing.id).eq('tenant_id', tenantId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('roles').insert({ ...data, tenant_id: tenantId, slug: data.name.toLowerCase().replace(/\s+/g, '-') });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['allRoles'] }); close(); toast.success(editing ? 'Role updated' : 'Role created'); },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => db.entities.Role.delete(id),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['allRoles'] }); toast.success('Role deleted'); },
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: (role) => db.entities.Role.create({ tenant_id: tenantId, name: `${role.name} (Copy)`, slug: `${role.slug}-copy-${Date.now()}`, description: role.description, permissions: role.permissions || [], is_system: false }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['allRoles'] }); toast.success('Role duplicated'); },
+  });
+
+  const open = (role) => {
+    setEditing(role || null);
+    setForm(role ? { name: role.name, description: role.description || '', permissions: role.permissions || [] } : { name: '', description: '', permissions: [] });
+    setShowForm(true);
+  };
+
+  const close = () => { setShowForm(false); setEditing(null); setForm({ name: '', description: '', permissions: [] }); };
+
+  const togglePermission = (perm) => {
+    setForm(prev => ({ ...prev, permissions: prev.permissions.includes(perm) ? prev.permissions.filter(p => p !== perm) : [...prev.permissions, perm] }));
+  };
+
+  const applyTemplate = (templateKey) => {
+    const template = ROLE_TEMPLATES[templateKey];
+    if (template) setForm({ name: form.name || template.name, description: form.description || template.description, permissions: template.permissions });
+  };
+
+  const getUserCount = (roleId) => tenantUsers.filter(u => u.role_id === roleId).length;
+
+  return (
+    <RequirePermission permission="roles.view">
+      <div className="space-y-4">
+        <div className="flex justify-end">
+          <RequirePermission permission="roles.create" silent>
+            <Button onClick={() => open(null)} size="sm" className="text-white gap-1.5" style={{ background: 'var(--color-primary-gradient)' }}>
+              <Plus className="w-4 h-4" /> Create Role
+            </Button>
+          </RequirePermission>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-3">
+            {roles.map(role => {
+              const userCount = getUserCount(role.id);
+              return (
+                <Card key={role.id} className="border-0 shadow-sm p-5 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedRole(role)}>
+                  <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-slate-900">{user.full_name || 'No Name'}</h3>
-                        <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                          {user.role === 'admin' ? (
-                            <><Shield className="w-3 h-3 mr-1" /> Admin</>
-                          ) : (
-                            <><User className="w-3 h-3 mr-1" /> User</>
-                          )}
-                        </Badge>
-                        {!user.is_active && (
-                          <Badge variant="destructive">Inactive</Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-slate-500">
-                        <div className="flex items-center gap-1">
-                          <Mail className="w-3.5 h-3.5" />
-                          {user.email}
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                          <Shield className="w-5 h-5 text-slate-600" />
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5" />
-                          Joined {format(new Date(user.created_date), 'MMM d, yyyy')}
+                        <div>
+                          <h3 className="text-sm font-semibold text-slate-900">{role.name}</h3>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-slate-400">{role.permissions?.length || 0} permissions</span>
+                            <span className="text-xs text-slate-300">•</span>
+                            <span className="text-xs text-slate-400 flex items-center gap-1"><Users className="w-3 h-3" /> {userCount} user{userCount !== 1 ? 's' : ''}</span>
+                          </div>
                         </div>
                       </div>
+                      {role.description && <p className="text-xs text-slate-500 ml-13">{role.description}</p>}
+                      {role.is_system && (
+                        <Badge className="mt-2 text-xs bg-white border" style={{ borderColor: 'rgb(var(--color-primary))', color: 'rgb(var(--color-primary))' }}>Default Role</Badge>
+                      )}
+                    </div>
+                    <div className="flex gap-1">
+                      <RequirePermission permission="roles.create" silent>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" style={{ color: 'rgb(var(--color-primary))' }} onClick={(e) => { e.stopPropagation(); duplicateMutation.mutate(role); }} title="Duplicate">
+                          <Copy className="w-3.5 h-3.5" />
+                        </Button>
+                      </RequirePermission>
+                      <RequirePermission permission="roles.edit" silent>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" style={{ color: 'rgb(var(--color-primary))' }} onClick={(e) => { e.stopPropagation(); open(role); }}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                      </RequirePermission>
+                      {!role.is_system && (
+                        <RequirePermission permission="roles.delete" silent>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this role?')) deleteMutation.mutate(role.id); }}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </RequirePermission>
+                      )}
                     </div>
                   </div>
+                </Card>
+              );
+            })}
+          </div>
 
-                  {user.id !== currentUser.id && (
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-slate-500">Role:</span>
-                        <Select
-                          value={user.role}
-                          onValueChange={(role) => updateRoleMutation.mutate({ userId: user.id, role })}
-                        >
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="user">User</SelectItem>
-                          </SelectContent>
-                        </Select>
+          <Card className="border-0 shadow-sm p-5 lg:sticky lg:top-6 h-fit">
+            {selectedRole ? (
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 mb-4">{selectedRole.name}</h3>
+                <div className="space-y-3">
+                  {Object.entries(PERMISSION_GROUPS).map(([key, group]) => {
+                    const rolePerms = selectedRole.permissions || [];
+                    const groupPerms = group.permissions.filter(p => rolePerms.includes(p));
+                    if (groupPerms.length === 0) return null;
+                    return (
+                      <div key={key}>
+                        <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">{group.label}</p>
+                        <div className="space-y-1">
+                          {groupPerms.map(perm => (
+                            <div key={perm} className="flex items-center gap-2 text-xs text-slate-600">
+                              <CheckCircle2 className="w-3 h-3 text-green-500" />
+                              {ALL_PERMISSIONS[perm]}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-slate-500">Active:</span>
-                        <Switch
-                          checked={user.is_active}
-                          onCheckedChange={(is_active) => 
-                            toggleStatusMutation.mutate({ userId: user.id, is_active })
-                          }
-                        />
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-sm text-slate-400">Select a role to view permissions</div>
+            )}
+          </Card>
+        </div>
+
+        <Dialog open={showForm} onOpenChange={setShowForm}>
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>{editing ? 'Edit Role' : 'Create New Role'}</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Role Name</Label>
+                  <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g., Kitchen Staff" />
+                </div>
+                <div>
+                  <Label>Template</Label>
+                  <Select onValueChange={applyTemplate}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Start from template" /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(ROLE_TEMPLATES).filter(([key]) => {
+                        const industry = tenant?.industry || 'other';
+                        const availableRoles = INDUSTRY_ROLES[industry] || INDUSTRY_ROLES.other;
+                        return key !== 'superadmin' && availableRoles.includes(key);
+                      }).map(([key, template]) => (
+                        <SelectItem key={key} value={key}>{template.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label>Description</Label>
+                <Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="What this role can do" rows={2} />
+              </div>
+              <div>
+                <Label className="mb-3 block">Permissions ({form.permissions.length} selected)</Label>
+                <div className="space-y-4 max-h-96 overflow-y-auto border border-slate-100 rounded-xl p-4">
+                  {Object.entries(PERMISSION_GROUPS).map(([groupKey, group]) => (
+                    <div key={groupKey} className="space-y-2">
+                      <div className="flex items-center justify-between sticky top-0 bg-white py-1">
+                        <h5 className="text-xs font-semibold uppercase tracking-wider text-slate-700">{group.label}</h5>
+                        <Button type="button" variant="ghost" size="sm" className="h-6 text-xs" onClick={() => {
+                          const allSelected = group.permissions.every(p => form.permissions.includes(p));
+                          setForm(prev => ({ ...prev, permissions: allSelected ? prev.permissions.filter(p => !group.permissions.includes(p)) : [...new Set([...prev.permissions, ...group.permissions])] }));
+                        }}>
+                          {group.permissions.every(p => form.permissions.includes(p)) ? 'Deselect' : 'Select All'}
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 pl-2">
+                        {group.permissions.map(permKey => (
+                          <label key={permKey} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1.5 rounded">
+                            <Checkbox checked={form.permissions.includes(permKey)} onCheckedChange={() => togglePermission(permKey)} />
+                            <span className="text-xs text-slate-600">{ALL_PERMISSIONS[permKey]}</span>
+                          </label>
+                        ))}
                       </div>
                     </div>
-                  )}
-                  {user.id === currentUser.id && (
-                    <Badge variant="outline" className="ml-4">You</Badge>
-                  )}
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={close}>Cancel</Button>
+              <Button onClick={() => saveMutation.mutate(form)} disabled={!form.name || saveMutation.isPending} className="text-white" style={{ background: 'var(--color-primary-gradient)' }}>
+                {saveMutation.isPending ? 'Saving...' : editing ? 'Update Role' : 'Create Role'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </RequirePermission>
   );
 }

@@ -15,6 +15,7 @@ import { useEffect, Suspense } from 'react';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { AppUserProvider } from '@/lib/AppUserContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import UserManagement from './pages/UserManagement';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -78,6 +79,7 @@ const AuthenticatedApp = () => {
         <Route path="/SupabaseTest" element={<SupabaseTest />} />
         <Route path="/DataMigration" element={<LayoutWrapper currentPageName="DataMigration"><DataMigration /></LayoutWrapper>} />
         <Route path="/AdminRoles" element={<LayoutWrapper currentPageName="AdminRoles"><AdminRoles /></LayoutWrapper>} />
+        <Route path="/UserManagement" element={<LayoutWrapper currentPageName="UserManagement"><UserManagement /></LayoutWrapper>} />
         <Route path="/store/:tenantSlug" element={<Storefront />} />
         <Route path="/order/:tenantSlug/:tableId" element={<Storefront />} />
         <Route path="*" element={<PageNotFound />} />
