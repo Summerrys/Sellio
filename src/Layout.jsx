@@ -25,7 +25,8 @@ import {
   QrCode,
   ArrowLeft,
   Plus,
-  AlertCircle
+  AlertCircle,
+  Clock
 } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import ProductFormDialog from './components/products/ProductFormDialog';
@@ -94,14 +95,19 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
             const daysLeft = hoursLeft !== null ? Math.floor(hoursLeft / 24) : null;
             if (subscription?.status === 'trial' && hoursLeft !== null) {
               return (
-                <div className="mt-1">
-                  {hoursLeft <= 24 ? (
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-600 flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3" /> Trial ends in {hoursLeft}h
-                    </span>
-                  ) : (
-                    <span className="text-xs text-slate-400">Trial: {daysLeft}d left</span>
-                  )}
+                <div className="mt-1 flex items-center gap-1.5">
+                  <span
+                    className="text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1"
+                    style={{
+                      background: hoursLeft <= 24
+                        ? 'linear-gradient(90deg, #ef4444, #dc2626)'
+                        : 'var(--color-primary-gradient)',
+                      color: '#fff',
+                    }}
+                  >
+                    <Clock className="w-3 h-3" />
+                    {hoursLeft <= 24 ? `${hoursLeft}h left` : `Trial: ${daysLeft}d left`}
+                  </span>
                 </div>
               );
             }
