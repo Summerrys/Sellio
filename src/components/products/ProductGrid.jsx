@@ -15,7 +15,7 @@ function StockBadge({ product }) {
   if (stock === 0) {
     return <Badge className="bg-red-100 text-red-700 border-red-300 gap-1"><AlertCircle className="w-3 h-3" />Out of Stock</Badge>;
   }
-  if (stock <= threshold) {
+  if (stock > 0 && stock < threshold) {
     return <Badge className="bg-amber-100 text-amber-700 border-amber-300">Low Stock ({stock})</Badge>;
   }
   return <Badge className="bg-green-100 text-green-700 border-green-300">{stock} in stock</Badge>;

@@ -11,7 +11,7 @@ import StockAdjustmentPanel from '../components/inventory/StockAdjustmentPanel';
 import InventoryLogTable from '../components/inventory/InventoryLogTable';
 import StockHistoryList from '../components/inventory/StockHistoryList';
 import StockTakeDialog from '../components/inventory/StockTakeDialog';
-import { Package, Search, ClipboardList, LayoutGrid, List, TrendingUp, TrendingDown } from 'lucide-react';
+import { Package, Search, ClipboardList, LayoutGrid, List, TrendingUp, TrendingDown, BellRing, Pencil } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Switch } from '@/components/ui/switch';
 
@@ -79,13 +79,13 @@ function InventoryContent() {
     const stock = product.current_stock;
     const threshold = product.low_stock_threshold;
     if (stock === 0) return { label: 'Out of Stock', color: '#dc2626', bg: '#fee2e2' };
-    if (stock <= threshold) return { label: `Low Stock (${stock})`, color: '#92400e', bg: '#fef3c7' };
+    if (stock > 0 && stock < threshold) return { label: `Low Stock (${stock})`, color: '#92400e', bg: '#fef3c7' };
     return { label: `${stock} in stock`, color: '#166534', bg: '#dcfce7' };
   };
 
   const trackedProducts = mergedProducts.filter(p => p.track_inventory);
   const outOfStock = mergedProducts.filter(p => p.track_inventory && p.current_stock === 0).length;
-  const lowStock = mergedProducts.filter(p => p.track_inventory && p.current_stock > 0 && p.current_stock <= p.low_stock_threshold).length;
+  const lowStock = mergedProducts.filter(p => p.track_inventory && p.current_stock > 0 && p.current_stock < p.low_stock_threshold).length;
   const unlimitedCount = mergedProducts.filter(p => !p.track_inventory).length;
 
   const filteredProducts = mergedProducts.filter(product => {
@@ -98,7 +98,7 @@ function InventoryContent() {
     const matchesStatus = statusFilter === 'all' ||
       (statusFilter === 'unlimited' && !product.track_inventory) ||
       (statusFilter === 'in_stock' && product.track_inventory && stock > 0 && stock > threshold) ||
-      (statusFilter === 'low_stock' && product.track_inventory && stock > 0 && stock <= threshold) ||
+      (statusFilter === 'low_stock' && product.track_inventory && stock > 0 && stock < threshold) ||
       (statusFilter === 'out_of_stock' && product.track_inventory && stock === 0);
 
     const matchesCategory = categoryFilter === 'all' || product.category_id === categoryFilter;
@@ -345,34 +345,39 @@ function InventoryContent() {
                                 transition: 'width 0.3s ease'
                               }} />
                             </div>
-                            <div className="flex items-center gap-1 mt-1">
-                              <span className="text-xs text-slate-400">Alert at</span>
-                              {editingThreshold === product.id ? (
-                                <input
-                                  type="number"
-                                  min="0"
-                                  defaultValue={product.low_stock_threshold}
-                                  className="w-14 h-6 text-xs border border-slate-300 rounded px-1"
-                                  autoFocus
-                                  onBlur={async (e) => {
-                                    const newThreshold = parseInt(e.target.value) || 0;
-                                    const supabase = await getSupabase();
-                                    await Promise.all([
-                                      supabase.from('inventory_items').update({ low_stock_threshold: newThreshold, updated_date: new Date().toISOString() }).eq('product_id', product.id).eq('tenant_id', tenantId),
-                                      supabase.from('products').update({ low_stock_threshold: newThreshold, updated_date: new Date().toISOString() }).eq('id', product.id).eq('tenant_id', tenantId),
-                                    ]);
-                                    setEditingThreshold(null);
-                                    queryClient.invalidateQueries({ queryKey: ['inventoryMerged', tenantId] });
-                                  }}
-                                />
-                              ) : (
-                                <button
-                                  onClick={() => setEditingThreshold(product.id)}
-                                  className="text-xs font-medium text-slate-500 hover:text-purple-600 underline underline-offset-2"
-                                >
-                                  {product.low_stock_threshold} units
-                                </button>
-                              )}
+                            <div className="flex items-center justify-between mt-1.5">
+                              <div className="flex items-center gap-1.5">
+                                <BellRing className="w-3 h-3 text-slate-400" />
+                                <span className="text-xs text-slate-400">Low stock alert below</span>
+                                {editingThreshold === product.id ? (
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    defaultValue={product.low_stock_threshold}
+                                    className="w-12 h-5 text-xs border border-purple-300 rounded px-1 focus:outline-none focus:ring-1 focus:ring-purple-400"
+                                    autoFocus
+                                    onBlur={async (e) => {
+                                      const val = parseInt(e.target.value) || 0;
+                                      const supabase = await getSupabase();
+                                      await Promise.all([
+                                        supabase.from('inventory_items').update({ low_stock_threshold: val, updated_date: new Date().toISOString() }).eq('product_id', product.id).eq('tenant_id', tenantId),
+                                        supabase.from('products').update({ low_stock_threshold: val, updated_date: new Date().toISOString() }).eq('id', product.id).eq('tenant_id', tenantId),
+                                      ]);
+                                      setEditingThreshold(null);
+                                      queryClient.invalidateQueries({ queryKey: ['inventoryMerged', tenantId] });
+                                    }}
+                                  />
+                                ) : (
+                                  <button
+                                    onClick={() => setEditingThreshold(product.id)}
+                                    className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+                                    style={{ background: `${primaryColor}15`, color: primaryColor }}
+                                  >
+                                    <Pencil className="w-2.5 h-2.5" />
+                                    {product.low_stock_threshold} units
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </>
                         )}
