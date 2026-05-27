@@ -225,11 +225,17 @@ export default function Tables() {
   };
 
   const STATUS_OPTIONS = [
-    { key: 'available',   label: 'Available', activeBg: '#16A34A', inactiveBg: '#DCFCE7', inactiveColor: '#15803D' },
-    { key: 'occupied',    label: 'Occupied',  activeBg: '#DC2626', inactiveBg: '#FEE2E2', inactiveColor: '#DC2626' },
-    { key: 'reserved',    label: 'Reserved',  activeBg: '#D97706', inactiveBg: '#FEF3C7', inactiveColor: '#B45309' },
-    { key: 'maintenance', label: 'Maint.',    activeBg: '#475569', inactiveBg: '#F1F5F9', inactiveColor: '#64748B' },
+    { key: 'available',   label: 'Available', icon: '✓',  activeBg: '#16A34A', inactiveBg: '#F0FDF4', inactiveColor: '#86EFAC' },
+    { key: 'occupied',    label: 'Occupied',  icon: '●',  activeBg: '#DC2626', inactiveBg: '#FEF2F2', inactiveColor: '#FCA5A5' },
+    { key: 'reserved',    label: 'Reserved',  icon: '⏰', activeBg: '#D97706', inactiveBg: '#FFFBEB', inactiveColor: '#FCD34D' },
+    { key: 'maintenance', label: 'Maint.',    icon: '🔧', activeBg: '#475569', inactiveBg: '#F8FAFC', inactiveColor: '#CBD5E1' },
   ];
+
+  const getStampColor = (status) => ({
+    occupied:    { bg: 'rgba(220,38,38,0.15)',  border: '#DC2626', color: '#DC2626',  text: 'IN USE' },
+    reserved:    { bg: 'rgba(217,119,6,0.15)',  border: '#D97706', color: '#D97706',  text: 'RESERVED' },
+    maintenance: { bg: 'rgba(71,85,105,0.15)',  border: '#475569', color: '#475569',  text: 'MAINT.' },
+  }[status] || null);
 
   const handleStatusChange = async (table, newStatus) => {
     const supabase = await getSupabase();
@@ -351,36 +357,52 @@ export default function Tables() {
                     return (
                       <div key={table.id} style={{ background: 'white', borderRadius: '12px', border: '0.5px solid #e2e8f0', overflow: 'hidden' }}>
                         <div
-                          style={{ padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', minHeight: '100px', cursor: 'pointer', gap: '4px' }}
+                          className="relative"
+                          style={{ padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', cursor: 'pointer' }}
                           onClick={() => handleDownloadQR(localTable)}
                         >
-                          {qrCodes[table.id]
-                            ? <>
-                                <img src={qrCodes[table.id]} style={{ width: '80px', height: '80px' }} alt={`QR ${table.name}`} />
-                                {localTable.qr_image_url && <span style={{ fontSize: '9px', color: '#16a34a' }}>✓ saved</span>}
-                              </>
-                            : <QrCode style={{ width: '40px', height: '40px', color: '#cbd5e1' }} />
-                          }
+                          {qrCodes[table.id] ? (
+                            <div className="relative w-20 h-20">
+                              <img src={qrCodes[table.id]} className="w-full h-full object-contain" alt={`QR ${table.name}`} />
+                              {(() => {
+                                const stamp = getStampColor(table.status);
+                                return stamp ? (
+                                  <div className="absolute inset-0 flex items-center justify-center" style={{ background: stamp.bg }}>
+                                    <div className="border-2 rounded px-1.5 py-0.5" style={{ borderColor: stamp.border, color: stamp.color, transform: 'rotate(-20deg)' }}>
+                                      <span style={{ fontSize: '9px', fontWeight: '900', letterSpacing: '0.1em' }}>{stamp.text}</span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="absolute bottom-0 left-0 right-0 flex justify-center">
+                                    <span style={{ fontSize: '8px', fontWeight: '600', color: '#16a34a', background: '#f0fdf4', borderRadius: '999px', padding: '1px 6px' }}>✓ Scan to order</span>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          ) : (
+                            <QrCode style={{ width: '40px', height: '40px', color: '#cbd5e1' }} />
+                          )}
                         </div>
                         <div style={{ padding: '10px 12px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
                             <p style={{ fontWeight: '700', fontSize: '14px', margin: 0, color: '#0f172a' }}>{table.name}</p>
                             <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{table.capacity} seats</p>
                           </div>
-                          <div className="flex gap-1 mt-2" onClick={e => e.stopPropagation()}>
+                          <div className="grid grid-cols-4 gap-1 mt-2" onClick={e => e.stopPropagation()}>
                             {STATUS_OPTIONS.map(s => (
                               <button
                                 key={s.key}
                                 onClick={() => handleStatusChange(table, s.key)}
-                                className="flex-1 text-[10px] font-medium py-1 rounded-lg transition-all active:scale-95"
+                                className="flex flex-col items-center py-1.5 px-1 rounded-lg transition-all active:scale-95"
                                 style={table.status === s.key
-                                 ? { background: s.activeBg, color: '#fff' }
-                                 : { background: s.inactiveBg, color: s.inactiveColor }
+                                  ? { background: s.activeBg, color: '#fff' }
+                                  : { background: s.inactiveBg, color: s.inactiveColor }
                                 }
-                                >
-                                {s.label}
-                                </button>
-                                ))}
+                              >
+                                <span className="text-sm leading-none">{s.icon}</span>
+                                <span style={{ fontSize: '8px', fontWeight: '500', marginTop: '2px', lineHeight: 1 }}>{s.label}</span>
+                              </button>
+                            ))}
                                 </div>
                                 <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
                             <button
@@ -408,19 +430,32 @@ export default function Tables() {
                     return (
                       <div key={table.id} style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'white', borderRadius: '12px', border: '0.5px solid #e2e8f0', padding: '12px' }}>
                         <div
-                          style={{ width: '52px', height: '52px', borderRadius: '8px', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer', gap: '2px' }}
+                          className="relative"
+                          style={{ width: '56px', height: '56px', borderRadius: '8px', background: '#f8fafc', flexShrink: 0, cursor: 'pointer', overflow: 'hidden' }}
                           onClick={() => handleDownloadQR(localTable)}
                         >
-                          {qrCodes[table.id]
-                            ? <>
-                                <img src={qrCodes[table.id]} style={{ width: '44px', height: '44px' }} alt={`QR ${table.name}`} />
-                                {localTable.qr_image_url && <span style={{ fontSize: '8px', color: '#16a34a', lineHeight: 1 }}>✓</span>}
-                              </>
-                            : <QrCode style={{ width: '24px', height: '24px', color: '#cbd5e1' }} />
-                          }
+                          {qrCodes[table.id] ? (
+                            <>
+                              <img src={qrCodes[table.id]} style={{ width: '56px', height: '56px', objectFit: 'contain' }} alt={`QR ${table.name}`} />
+                              {(() => {
+                                const stamp = getStampColor(table.status);
+                                return stamp ? (
+                                  <div className="absolute inset-0 flex items-center justify-center" style={{ background: stamp.bg }}>
+                                    <div className="border rounded px-1" style={{ borderColor: stamp.border, color: stamp.color, transform: 'rotate(-20deg)' }}>
+                                      <span style={{ fontSize: '7px', fontWeight: '900', letterSpacing: '0.05em' }}>{stamp.text}</span>
+                                    </div>
+                                  </div>
+                                ) : null;
+                              })()}
+                            </>
+                          ) : (
+                            <div style={{ width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <QrCode style={{ width: '24px', height: '24px', color: '#cbd5e1' }} />
+                            </div>
+                          )}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                             <p style={{ fontWeight: '600', fontSize: '14px', margin: 0, color: '#0f172a' }}>{table.name}</p>
                             <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{table.capacity} seats</p>
                             <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
@@ -438,18 +473,19 @@ export default function Tables() {
                               </button>
                             </div>
                           </div>
-                          <div className="flex gap-1 mt-2" onClick={e => e.stopPropagation()}>
+                          <div className="grid grid-cols-4 gap-1" onClick={e => e.stopPropagation()}>
                             {STATUS_OPTIONS.map(s => (
                               <button
                                 key={s.key}
                                 onClick={() => handleStatusChange(table, s.key)}
-                                className="flex-1 text-[10px] font-medium py-1 rounded-lg transition-all active:scale-95"
+                                className="flex flex-col items-center py-1.5 px-1 rounded-lg transition-all active:scale-95"
                                 style={table.status === s.key
                                   ? { background: s.activeBg, color: '#fff' }
                                   : { background: s.inactiveBg, color: s.inactiveColor }
                                 }
                               >
-                                {s.label}
+                                <span className="text-sm leading-none">{s.icon}</span>
+                                <span style={{ fontSize: '8px', fontWeight: '500', marginTop: '2px', lineHeight: 1 }}>{s.label}</span>
                               </button>
                             ))}
                           </div>
