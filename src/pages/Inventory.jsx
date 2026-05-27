@@ -285,8 +285,8 @@ function InventoryContent() {
                       </div>
                       <div className="flex items-center justify-between px-1 mt-2" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1.5">
-                          <Activity className="w-3.5 h-3.5 text-slate-400" />
-                          <span className="text-xs text-slate-400">Track stock</span>
+                          <Activity className="w-3.5 h-3.5" style={{ color: 'rgb(var(--color-primary))' }} />
+                          <span className="text-xs font-medium" style={{ color: 'rgb(var(--color-primary))' }}>Track stock</span>
                         </div>
                         <Switch
                           checked={!!product.track_inventory}
@@ -347,7 +347,7 @@ function InventoryContent() {
                         )}
                       </div>
                       <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        <ChevronRight className="w-4 h-4 text-slate-300" />
+                        <ChevronRight className="w-4 h-4" style={{ color: 'rgb(var(--color-primary))' }} />
                         <div onClick={e => e.stopPropagation()}>
                           <Switch
                             checked={!!product.track_inventory}
