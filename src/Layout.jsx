@@ -24,8 +24,10 @@ import {
   X,
   QrCode,
   ArrowLeft,
-  Plus
+  Plus,
+  AlertCircle
 } from 'lucide-react';
+import { getSupabase } from '@/lib/supabaseClient';
 import ProductFormDialog from './components/products/ProductFormDialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -35,7 +37,7 @@ import { cn } from '@/lib/utils';
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth'];
 
-function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, onSell }) {
+function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription }) {
   const superAdminItems = [];
 
   // Check if user is admin
@@ -86,31 +88,27 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
       {tenant && !collapsed && (
         <div className="mx-3 mt-4 mb-2 p-3 rounded-xl bg-slate-50 border border-slate-100">
           <p className="text-xs font-medium text-slate-900 truncate">{tenant.name}</p>
-          <p className="text-xs text-slate-400 capitalize">{tenant.plan} plan</p>
+          {(() => {
+            const trialEnd = subscription?.current_period_end;
+            const hoursLeft = trialEnd ? Math.max(0, Math.floor((new Date(trialEnd) - new Date()) / (1000 * 60 * 60))) : null;
+            const daysLeft = hoursLeft !== null ? Math.floor(hoursLeft / 24) : null;
+            if (subscription?.status === 'trial' && hoursLeft !== null) {
+              return (
+                <div className="mt-1">
+                  {hoursLeft <= 24 ? (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-600 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> Trial ends in {hoursLeft}h
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-400">Trial: {daysLeft}d left</span>
+                  )}
+                </div>
+              );
+            }
+            return <span className="text-xs text-slate-400 capitalize">{subscription?.tier || tenant.plan || 'Free'} Plan</span>;
+          })()}
         </div>
       )}
-
-      {/* Sell Button */}
-      <div className={cn("px-3 pt-2 pb-1", collapsed && "flex justify-center")}>
-        <button
-          onClick={onSell}
-          title="New Product"
-          className={cn(
-            "flex items-center gap-2 rounded-xl shadow-md transition-all duration-150 font-semibold text-white",
-            collapsed ? "w-10 h-10 justify-center" : "w-full px-4"
-          )}
-          style={{
-            background: 'var(--color-primary-gradient)',
-            padding: collapsed ? undefined : '0.65rem 1rem',
-            filter: 'brightness(1)',
-          }}
-          onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.12)'}
-          onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
-        >
-          <Plus style={{ width: 18, height: 18, flexShrink: 0 }} strokeWidth={2.5} />
-          {!collapsed && <span>Sell</span>}
-        </button>
-      </div>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
@@ -189,8 +187,19 @@ function AppLayout({ children, currentPageName }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isNewProductOpen, setIsNewProductOpen] = useState(false);
+  const [subscription, setSubscription] = useState(null);
+  const [showTrialBanner, setShowTrialBanner] = useState(true);
   const { appUser: customUser, clearAppUser } = useAppUser();
   const { user, tenant, isSuperAdmin, isLoading, hasPermission } = useTenant();
+
+  const tenantId = tenant?.id;
+  useEffect(() => {
+    if (!tenantId) return;
+    getSupabase().then(supabase =>
+      supabase.from('subscriptions').select('current_period_end, status, tier').eq('tenant_id', tenantId).maybeSingle()
+        .then(({ data }) => setSubscription(data))
+    );
+  }, [tenantId]);
 
   // Persist scroll position per bottom-tab page
   const scrollPositions = useRef({});
@@ -263,7 +272,7 @@ function AppLayout({ children, currentPageName }) {
           collapsed ? "w-[72px]" : "w-[260px]"
         )}
       >
-        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => {}} onSell={() => setIsNewProductOpen(true)} />
+        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => {}} subscription={subscription} />
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 transition-colors"
@@ -307,7 +316,7 @@ function AppLayout({ children, currentPageName }) {
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => setMobileOpen(false)} onSell={() => { setMobileOpen(false); setIsNewProductOpen(true); }} />
+            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => setMobileOpen(false)} subscription={subscription} />
           </aside>
         </div>
       )}
@@ -321,6 +330,22 @@ function AppLayout({ children, currentPageName }) {
         )}
         style={{ paddingBottom: currentPageName !== 'Onboarding' ? 'calc(env(safe-area-inset-bottom, 0px) + 72px)' : undefined }}
       >
+        {(() => {
+          const trialEnd = subscription?.current_period_end;
+          const hoursLeft = trialEnd ? Math.max(0, Math.floor((new Date(trialEnd) - new Date()) / (1000 * 60 * 60))) : null;
+          return showTrialBanner && subscription?.status === 'trial' && hoursLeft !== null && hoursLeft <= 24 ? (
+            <div className="w-full px-4 py-2 flex items-center justify-between text-sm font-medium text-white"
+              style={{ background: 'linear-gradient(90deg, #ef4444, #dc2626)' }}>
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                Your free trial ends in {hoursLeft} hours — upgrade to keep your data
+              </div>
+              <button onClick={() => setShowTrialBanner(false)} className="text-white/70 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : null;
+        })()}
         <div className="p-2 sm:p-6 lg:p-8 max-w-[1280px] mx-auto overflow-x-hidden">
           {children}
         </div>
