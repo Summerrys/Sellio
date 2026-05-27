@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Grid3X3, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Grid3X3, Plus, Pencil, Trash2, LayoutGrid, List } from 'lucide-react';
 
 export default function Categories() {
   return (
@@ -30,6 +30,8 @@ function CategoriesContent() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: '', description: '', is_active: true, sort_order: 0 });
+  const [viewMode, setViewMode] = useState(localStorage.getItem('categories_view_mode') || 'grid');
+  const handleViewToggle = (mode) => { setViewMode(mode); localStorage.setItem('categories_view_mode', mode); };
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', tenantId],
@@ -68,29 +70,91 @@ function CategoriesContent() {
   return (
     <PermissionGate permission="categories.read">
       <PageHeader title="Categories" description="Organize your products into categories"
-        actions={<Button onClick={() => open(null)} className="bg-slate-900 hover:bg-slate-800 gap-2"><Plus className="w-4 h-4" /> Add Category</Button>}
+        actions={
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1">
+              <button onClick={() => handleViewToggle('grid')}
+                style={{
+                  background: viewMode === 'grid' ? 'rgba(var(--color-primary), 0.08)' : 'transparent',
+                  color: viewMode === 'grid' ? 'rgb(var(--color-primary))' : '#9ca3af',
+                  border: '0.5px solid #e5e7eb', borderRadius: '8px', padding: '6px 8px', cursor: 'pointer',
+                }}>
+                <LayoutGrid size={18} />
+              </button>
+              <button onClick={() => handleViewToggle('list')}
+                style={{
+                  background: viewMode === 'list' ? 'rgba(var(--color-primary), 0.08)' : 'transparent',
+                  color: viewMode === 'list' ? 'rgb(var(--color-primary))' : '#9ca3af',
+                  border: '0.5px solid #e5e7eb', borderRadius: '8px', padding: '6px 8px', cursor: 'pointer',
+                }}>
+                <List size={18} />
+              </button>
+            </div>
+            <button
+              onClick={() => open(null)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white"
+              style={{ background: 'var(--color-primary-gradient)' }}
+            >
+              <Plus className="w-4 h-4" /> Add Category
+            </button>
+          </div>
+        }
       />
 
       {categories.length === 0 ? (
         <Card className="border-0 shadow-sm"><EmptyState icon={Grid3X3} title="No categories" description="Create categories to organize your products." actionLabel="Add Category" onAction={() => open(null)} /></Card>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      ) : viewMode === 'grid' ? (
+        <div className="grid grid-cols-2 gap-4">
           {categories.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)).map(cat => {
             const count = products.filter(p => p.category_id === cat.id).length;
             return (
-              <Card key={cat.id} className="border-0 shadow-sm p-6 group hover:shadow-md transition-shadow">
+              <Card key={cat.id} className="border-0 shadow-sm p-4 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900">{cat.name}</h3>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-slate-900 truncate">{cat.name}</h3>
                     <p className="text-xs text-slate-400 mt-1">{count} product{count !== 1 ? 's' : ''}</p>
                     {cat.description && <p className="text-xs text-slate-500 mt-2 line-clamp-2">{cat.description}</p>}
+                    {!cat.is_active && <span className="inline-block mt-2 text-xs text-slate-400 bg-slate-50 px-2 py-0.5 rounded">Inactive</span>}
                   </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => open(cat)}><Pencil className="w-3 h-3" /></Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500" onClick={() => deleteMutation.mutate(cat.id)}><Trash2 className="w-3 h-3" /></Button>
+                  <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                    <button onClick={() => open(cat)}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-colors"
+                      style={{ color: 'rgb(var(--color-primary))' }}>
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => deleteMutation.mutate(cat.id)}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors text-red-400 hover:text-red-500">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-                {!cat.is_active && <span className="inline-block mt-3 text-xs text-slate-400 bg-slate-50 px-2 py-0.5 rounded">Inactive</span>}
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {categories.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)).map(cat => {
+            const count = products.filter(p => p.category_id === cat.id).length;
+            return (
+              <Card key={cat.id} className="border-0 shadow-sm px-4 py-3 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-slate-900">{cat.name}</h3>
+                    <p className="text-xs text-slate-400">{count} product{count !== 1 ? 's' : ''}{!cat.is_active ? ' · Inactive' : ''}</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button onClick={() => open(cat)}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-colors"
+                      style={{ color: 'rgb(var(--color-primary))' }}>
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => deleteMutation.mutate(cat.id)}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors text-red-400 hover:text-red-500">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               </Card>
             );
           })}
