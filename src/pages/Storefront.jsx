@@ -79,23 +79,53 @@ export default function Storefront() {
   const currency = tenant?.currency || 'SGD';
   const isFnB = /f&b|cafe|restaurant|food|beverage/i.test(tenant?.industry || '');
 
-  // Auto-mark table as occupied when customer lands on ordering page
+  // Init table session when customer lands on ordering page
   useEffect(() => {
-    const markOccupied = async () => {
+    const initSession = async () => {
       if (!tableId || !tenantSlug) return;
       const supabase = await getSupabase();
       const { data: tenantData } = await supabase
         .from('tenants').select('id').eq('slug', tenantSlug).single();
       if (!tenantData) return;
-      await supabase
-        .from('tables')
-        .update({ status: 'occupied' })
-        .eq('id', tableId)
-        .eq('tenant_id', tenantData.id)
-        .eq('status', 'available');
+      const tenantId = tenantData.id;
+
+      const { data: existingSession } = await supabase
+        .from('table_sessions')
+        .select('id')
+        .eq('table_id', tableId)
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (!existingSession) {
+        const { data: newSession } = await supabase
+          .from('table_sessions')
+          .insert({
+            tenant_id: tenantId,
+            table_id: tableId,
+            table_name: table?.name || null,
+            status: 'active',
+            started_at: new Date().toISOString(),
+            order_ids: [],
+            total_amount: 0,
+          })
+          .select()
+          .single();
+
+        await supabase
+          .from('tables')
+          .update({
+            status: 'occupied',
+            current_order_id: newSession?.id || null,
+            updated_date: new Date().toISOString(),
+          })
+          .eq('id', tableId)
+          .eq('tenant_id', tenantId)
+          .eq('status', 'available');
+      }
     };
-    markOccupied();
-  }, [tableId]);
+    initSession();
+  }, [tableId, tenantSlug, table?.name]);
 
   useEffect(() => {
     if (!tenant) return;

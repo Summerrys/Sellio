@@ -106,6 +106,30 @@ export default function Tables() {
     enabled: !!tenantId,
   });
 
+  const { data: activeSessions = [] } = useQuery({
+    queryKey: ['table_sessions_active', tenantId],
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data } = await supabase
+        .from('table_sessions')
+        .select('table_id, total_amount, started_at, status')
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active');
+      return data || [];
+    },
+    enabled: !!tenantId,
+    refetchInterval: 30000,
+  });
+
+  const formatDuration = (startedAt) => {
+    if (!startedAt) return '';
+    const mins = Math.floor((Date.now() - new Date(startedAt)) / 60000);
+    if (mins < 60) return `${mins}m`;
+    return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+  };
+
+  const currency = tenant?.currency || 'SGD';
+
   // Sync localTables when query data changes
   useEffect(() => {
     setLocalTables(tables);
@@ -244,6 +268,20 @@ export default function Tables() {
       .update({ status: newStatus, updated_date: new Date().toISOString() })
       .eq('id', table.id)
       .eq('tenant_id', tenantId);
+
+    if (newStatus === 'available') {
+      await supabase
+        .from('table_sessions')
+        .update({
+          status: 'completed',
+          ended_at: new Date().toISOString(),
+          updated_date: new Date().toISOString(),
+        })
+        .eq('table_id', table.id)
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active');
+    }
+
     queryClient.invalidateQueries({ queryKey: ['tables', tenantId] });
   };
 
@@ -388,6 +426,15 @@ export default function Tables() {
                             <p style={{ fontWeight: '700', fontSize: '14px', margin: 0, color: '#0f172a' }}>{table.name}</p>
                             <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{table.capacity} seats</p>
                           </div>
+                          {table.status === 'occupied' && (() => {
+                            const activeSession = activeSessions.find(s => s.table_id === table.id);
+                            return activeSession ? (
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
+                                <span>⏱ {formatDuration(activeSession.started_at)}</span>
+                                <span style={{ fontWeight: '600', color: '#0f172a' }}>{currency} {(activeSession.total_amount || 0).toFixed(2)}</span>
+                              </div>
+                            ) : null;
+                          })()}
                           <div className="grid grid-cols-4 gap-1 mt-2" onClick={e => e.stopPropagation()}>
                             {STATUS_OPTIONS.map(s => (
                               <button
@@ -455,9 +502,17 @@ export default function Tables() {
                           )}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
                             <p style={{ fontWeight: '600', fontSize: '14px', margin: 0, color: '#0f172a' }}>{table.name}</p>
                             <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{table.capacity} seats</p>
+                            {table.status === 'occupied' && (() => {
+                              const activeSession = activeSessions.find(s => s.table_id === table.id);
+                              return activeSession ? (
+                                <span style={{ fontSize: '10px', color: '#DC2626', fontWeight: '600' }}>
+                                  ⏱ {formatDuration(activeSession.started_at)} · {currency} {(activeSession.total_amount || 0).toFixed(2)}
+                                </span>
+                              ) : null;
+                            })()}
                             <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
                               <button
                                 onClick={() => handleDownloadQR(localTable)}
