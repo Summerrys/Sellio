@@ -11,7 +11,7 @@ import StockAdjustmentPanel from '../components/inventory/StockAdjustmentPanel';
 import InventoryLogTable from '../components/inventory/InventoryLogTable';
 import StockHistoryList from '../components/inventory/StockHistoryList';
 import StockTakeDialog from '../components/inventory/StockTakeDialog';
-import { Package, Search, ClipboardList, LayoutGrid, List, TrendingUp, TrendingDown, BellRing, Pencil } from 'lucide-react';
+import { Package, Search, ClipboardList, LayoutGrid, List } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Switch } from '@/components/ui/switch';
 
@@ -36,7 +36,6 @@ function InventoryContent() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showStockTake, setShowStockTake] = useState(false);
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('inventory_view_mode') || 'list');
-  const [editingThreshold, setEditingThreshold] = useState(null);
 
   const handleViewToggle = (mode) => {
     setViewMode(mode);
@@ -330,51 +329,15 @@ function InventoryContent() {
                           {product.sku || 'No SKU'}
                         </p>
                         {product.track_inventory && (
-                          <>
-                            <div style={{ height: '3px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden', width: '100%' }}>
-                              <div style={{
-                                height: '100%',
-                                width: `${Math.min((stock / Math.max(threshold * 2, 1)) * 100, 100)}%`,
-                                background: stock === 0 ? '#dc2626' : stock < threshold ? '#f59e0b' : '#16a34a',
-                                borderRadius: '999px',
-                                transition: 'width 0.3s ease'
-                              }} />
-                            </div>
-                            <div className="flex items-center justify-between mt-1.5">
-                              <div className="flex items-center gap-1.5">
-                                <BellRing className="w-3 h-3 text-slate-400" />
-                                <span className="text-xs text-slate-400">Low stock alert below</span>
-                                {editingThreshold === product.id ? (
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    defaultValue={product.low_stock_threshold}
-                                    className="w-12 h-5 text-xs border border-slate-300 rounded px-1 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                                    autoFocus
-                                    onBlur={async (e) => {
-                                      const val = parseInt(e.target.value) || 0;
-                                      const supabase = await getSupabase();
-                                      await Promise.all([
-                                        supabase.from('inventory_items').update({ low_stock_threshold: val, updated_date: new Date().toISOString() }).eq('product_id', product.id).eq('tenant_id', tenantId),
-                                        supabase.from('products').update({ low_stock_threshold: val, updated_date: new Date().toISOString() }).eq('id', product.id).eq('tenant_id', tenantId),
-                                      ]);
-                                      setEditingThreshold(null);
-                                      queryClient.invalidateQueries({ queryKey: ['inventoryMerged', tenantId] });
-                                    }}
-                                  />
-                                ) : (
-                                  <button
-                                    onClick={() => setEditingThreshold(product.id)}
-                                    className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
-                                    style={{ background: 'rgba(var(--color-primary), 0.08)', color: 'rgb(var(--color-primary))' }}
-                                  >
-                                    <Pencil className="w-2.5 h-2.5" />
-                                    {product.low_stock_threshold} units
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </>
+                          <div style={{ height: '3px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden', width: '100%' }}>
+                            <div style={{
+                              height: '100%',
+                              width: `${Math.min((stock / Math.max(threshold * 2, 1)) * 100, 100)}%`,
+                              background: stock === 0 ? '#dc2626' : stock < threshold ? '#f59e0b' : '#16a34a',
+                              borderRadius: '999px',
+                              transition: 'width 0.3s ease'
+                            }} />
+                          </div>
                         )}
                       </div>
                       <div style={{ flexShrink: 0, textAlign: 'right' }}>
@@ -423,6 +386,7 @@ function InventoryContent() {
           onOpenChange={(open) => !open && setSelectedProduct(null)}
           product={selectedProduct}
           tenantId={tenantId}
+          initialThreshold={selectedProduct?.low_stock_threshold}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['inventoryMerged', tenantId] });
           }}

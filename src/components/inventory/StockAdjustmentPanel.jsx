@@ -2,23 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { BellRing } from 'lucide-react';
 
-export default function StockAdjustmentPanel({ open, onOpenChange, product, tenantId, onSuccess, onClose }) {
+export default function StockAdjustmentPanel({ open, onOpenChange, product, tenantId, onSuccess, onClose, initialThreshold }) {
   const queryClient = useQueryClient();
 
   const currentStock = product?.current_stock ?? product?.inventory?.[0]?.current_stock ?? product?.stock_quantity ?? 0;
-  const threshold = product?.low_stock_threshold ?? product?.inventory?.[0]?.low_stock_threshold ?? 5;
 
   const [newStock, setNewStock] = useState(currentStock ?? 0);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [threshold, setThreshold] = useState(initialThreshold ?? product?.low_stock_threshold ?? product?.inventory?.[0]?.low_stock_threshold ?? 5);
 
   // Reset state when product changes or modal opens
   useEffect(() => {
     setNewStock(currentStock ?? 0);
     setNotes('');
     setIsSubmitting(false);
-  }, [currentStock, open]);
+    setThreshold(initialThreshold ?? product?.low_stock_threshold ?? product?.inventory?.[0]?.low_stock_threshold ?? 5);
+  }, [currentStock, open, initialThreshold]);
 
   const handleClose = () => {
     onOpenChange(false);
@@ -43,33 +45,19 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
       if (existing) {
         const { error } = await supabase
           .from('inventory_items')
-          .update({
-            current_stock: newStock,
-            last_restock_date: new Date().toISOString(),
-          })
+          .update({ current_stock: newStock, low_stock_threshold: threshold, last_restock_date: new Date().toISOString() })
           .eq('id', existing.id)
           .eq('tenant_id', tenantId);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('inventory_items')
-          .insert({
-            tenant_id: tenantId,
-            product_id: productId,
-            current_stock: newStock,
-            low_stock_threshold: 5,
-            unit: 'pcs',
-            last_restock_date: new Date().toISOString(),
-          });
+          .insert({ tenant_id: tenantId, product_id: productId, current_stock: newStock, low_stock_threshold: threshold, unit: 'pcs', last_restock_date: new Date().toISOString() });
         if (error) throw error;
       }
 
       // Mirror to products table
-      await supabase
-        .from('products')
-        .update({ stock_quantity: newStock })
-        .eq('id', productId)
-        .eq('tenant_id', tenantId);
+      await supabase.from('products').update({ stock_quantity: newStock, low_stock_threshold: threshold }).eq('id', productId).eq('tenant_id', tenantId);
 
       // Insert into stock_history table (non-fatal)
       try {
@@ -245,6 +233,26 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
                   background: '#f8fafc', outline: 'none', boxSizing: 'border-box'
                 }}
               />
+            </div>
+
+            {/* Low stock threshold */}
+            <div className="border-t border-slate-100 pt-4 mt-2 w-full">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BellRing className="w-4 h-4 text-slate-400" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">Low stock alert</p>
+                    <p className="text-xs text-slate-400">Notify when stock falls below</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setThreshold(t => Math.max(0, t - 1))}
+                    className="w-7 h-7 rounded-full border border-slate-200 text-slate-500 flex items-center justify-center text-sm">−</button>
+                  <span className="w-8 text-center text-sm font-semibold text-slate-700">{threshold}</span>
+                  <button onClick={() => setThreshold(t => t + 1)}
+                    className="w-7 h-7 rounded-full border border-slate-200 text-slate-500 flex items-center justify-center text-sm">+</button>
+                </div>
+              </div>
             </div>
 
             {/* Save button */}

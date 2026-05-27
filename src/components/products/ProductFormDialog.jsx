@@ -493,6 +493,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
             stock_quantity: currentStock,
             inventory: [{ current_stock: currentStock, low_stock_threshold: formData.low_stock_threshold ?? 5 }],
           }}
+          initialThreshold={formData.low_stock_threshold ?? 5}
           tenantId={tenantId}
           onSuccess={() => {
             setCurrentStock(prev => prev); // will re-fetch on next open; update optimistically via onSuccess
