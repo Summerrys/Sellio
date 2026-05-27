@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import db from '@/lib/db';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../tenant/TenantContext';
+import { generateThemeVariables } from '../theme/themeUtils';
 
 const toSlug = (str) => (str || 'product').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -133,6 +134,18 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     const [deleting, setDeleting] = useState(false);
     const [showStockPanel, setShowStockPanel] = useState(false);
     const [currentStock, setCurrentStock] = useState(0);
+
+  useEffect(() => {
+    if (tenant?.theme_config) {
+      const primary = tenant.theme_config.primary_color || '#3b82f6';
+      const accent = tenant.theme_config.accent_color || '#9333ea';
+      const variables = generateThemeVariables(primary, accent);
+      const root = document.documentElement;
+      Object.entries(variables).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
+    }
+  }, [tenant?.theme_config]);
 
   const normalizeLegacyVariants = (variants) => {
     if (!variants?.length) return [];
