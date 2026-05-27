@@ -226,22 +226,18 @@ export default function Tables() {
     }
   };
 
-  const STATUS_CYCLE = ['available', 'occupied', 'reserved', 'maintenance'];
-  const STATUS_STYLES = {
-    available:   { bg: '#DCFCE7', color: '#15803D' },
-    occupied:    { bg: '#FEE2E2', color: '#DC2626' },
-    reserved:    { bg: '#FEF3C7', color: '#B45309' },
-    maintenance: { bg: '#F1F5F9', color: '#64748B' },
-  };
+  const STATUS_OPTIONS = [
+    { key: 'available',   label: 'Available', bg: '#DCFCE7', color: '#15803D', activeBg: '#16A34A' },
+    { key: 'occupied',    label: 'Occupied',  bg: '#FEE2E2', color: '#DC2626', activeBg: '#DC2626' },
+    { key: 'reserved',    label: 'Reserved',  bg: '#FEF3C7', color: '#B45309', activeBg: '#D97706' },
+    { key: 'maintenance', label: 'Maint.',    bg: '#F1F5F9', color: '#64748B', activeBg: '#475569' },
+  ];
 
-  const handleStatusCycle = async (table, e) => {
-    e.stopPropagation();
-    const currentIndex = STATUS_CYCLE.indexOf(table.status);
-    const nextStatus = STATUS_CYCLE[(currentIndex + 1) % STATUS_CYCLE.length];
+  const handleStatusChange = async (table, newStatus) => {
     const supabase = await getSupabase();
     await supabase
       .from('tables')
-      .update({ status: nextStatus, updated_date: new Date().toISOString() })
+      .update({ status: newStatus, updated_date: new Date().toISOString() })
       .eq('id', table.id)
       .eq('tenant_id', tenantId);
     queryClient.invalidateQueries({ queryKey: ['tables', tenantId] });
@@ -375,19 +371,26 @@ export default function Tables() {
                           }
                         </div>
                         <div style={{ padding: '10px 12px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
                             <p style={{ fontWeight: '700', fontSize: '14px', margin: 0, color: '#0f172a' }}>{table.name}</p>
-                            <button
-                              onClick={(e) => handleStatusCycle(table, e)}
-                              className="text-xs font-medium px-2.5 py-1 rounded-full transition-all active:scale-95"
-                              style={{ background: STATUS_STYLES[table.status]?.bg, color: STATUS_STYLES[table.status]?.color, flexShrink: 0 }}
-                              title="Tap to change status"
-                            >
-                              {table.status}
-                            </button>
+                            <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{table.capacity} seats</p>
                           </div>
-                          <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 8px' }}>{table.capacity} seats</p>
-                          <div style={{ display: 'flex', gap: '6px' }}>
+                          <div className="flex gap-1 mt-2" onClick={e => e.stopPropagation()}>
+                            {STATUS_OPTIONS.map(s => (
+                              <button
+                                key={s.key}
+                                onClick={() => handleStatusChange(table, s.key)}
+                                className="flex-1 text-[10px] font-medium py-1 rounded-lg transition-all active:scale-95"
+                                style={table.status === s.key
+                                  ? { background: s.activeBg, color: '#fff' }
+                                  : { background: s.bg, color: s.color }
+                                }
+                              >
+                                {s.label}
+                              </button>
+                            ))}
+                          </div>
+                          <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
                             <button
                               onClick={() => handleDownloadQR(localTable)}
                               style={{ flex: 1, padding: '6px', borderRadius: '8px', border: '0.5px solid #e2e8f0', background: 'none', fontSize: '11px', fontWeight: '600', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
@@ -425,34 +428,38 @@ export default function Tables() {
                           }
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
                             <p style={{ fontWeight: '600', fontSize: '14px', margin: 0, color: '#0f172a' }}>{table.name}</p>
-                            {table.zone && <span style={{ fontSize: '10px', color: '#94a3b8', background: '#f1f5f9', padding: '1px 6px', borderRadius: '999px' }}>{table.zone}</span>}
+                            <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{table.capacity} seats</p>
+                            <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
+                              <button
+                                onClick={() => handleDownloadQR(localTable)}
+                                style={{ width: '28px', height: '28px', borderRadius: '6px', border: '0.5px solid #e2e8f0', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              >
+                                <Download style={{ width: '14px', height: '14px', color: '#64748b' }} />
+                              </button>
+                              <button
+                                onClick={() => handleEdit(table)}
+                                style={{ width: '28px', height: '28px', borderRadius: '6px', border: '0.5px solid #e2e8f0', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              >
+                                <Pencil style={{ width: '14px', height: '14px', color: '#64748b' }} />
+                              </button>
+                            </div>
                           </div>
-                          <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{table.capacity} seats</p>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
-                          <button
-                            onClick={(e) => handleStatusCycle(table, e)}
-                            className="text-xs font-medium px-2.5 py-1 rounded-full transition-all active:scale-95"
-                            style={{ background: STATUS_STYLES[table.status]?.bg, color: STATUS_STYLES[table.status]?.color }}
-                            title="Tap to change status"
-                          >
-                            {table.status}
-                          </button>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <button
-                              onClick={() => handleDownloadQR(localTable)}
-                              style={{ width: '28px', height: '28px', borderRadius: '6px', border: '0.5px solid #e2e8f0', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            >
-                              <Download style={{ width: '14px', height: '14px', color: '#64748b' }} />
-                            </button>
-                            <button
-                              onClick={() => handleEdit(table)}
-                              style={{ width: '28px', height: '28px', borderRadius: '6px', border: '0.5px solid #e2e8f0', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            >
-                              <Pencil style={{ width: '14px', height: '14px', color: '#64748b' }} />
-                            </button>
+                          <div className="flex gap-1 mt-2" onClick={e => e.stopPropagation()}>
+                            {STATUS_OPTIONS.map(s => (
+                              <button
+                                key={s.key}
+                                onClick={() => handleStatusChange(table, s.key)}
+                                className="flex-1 text-[10px] font-medium py-1 rounded-lg transition-all active:scale-95"
+                                style={table.status === s.key
+                                  ? { background: s.activeBg, color: '#fff' }
+                                  : { background: s.bg, color: s.color }
+                                }
+                              >
+                                {s.label}
+                              </button>
+                            ))}
                           </div>
                         </div>
                       </div>

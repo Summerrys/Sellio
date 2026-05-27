@@ -17,32 +17,54 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const ZONES = ['Indoor', 'Outdoor', 'Private Room', 'Bar Area', 'Patio', 'VIP Section'];
-
 export default function TableFormDialog({ open, onOpenChange, table, tenantId, tenant }) {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
+  const [existingZones, setExistingZones] = useState([]);
+  const [newZoneName, setNewZoneName] = useState('');
   const [formData, setFormData] = useState({
     name: '',
-    zone: 'Indoor',
+    zone: '',
     capacity: 4,
     status: 'available',
     notes: '',
   });
 
+  // Fetch existing zones when dialog opens
+  useEffect(() => {
+    if (!open || !tenantId) return;
+    const fetchZones = async () => {
+      const supabase = await getSupabase();
+      const { data: zoneData } = await supabase
+        .from('tables')
+        .select('zone')
+        .eq('tenant_id', tenantId)
+        .not('zone', 'is', null);
+      const zones = [...new Set(zoneData?.map(t => t.zone).filter(Boolean))];
+      setExistingZones(zones);
+    };
+    fetchZones();
+  }, [open, tenantId]);
+
   useEffect(() => {
     if (table) {
       setFormData({
         name: table.name || '',
-        zone: table.zone || 'Indoor',
+        zone: table.zone || '',
         capacity: table.capacity || 4,
         status: table.status || 'available',
         notes: table.notes || '',
       });
     } else {
-      setFormData({ name: '', zone: 'Indoor', capacity: 4, status: 'available', notes: '' });
+      setFormData({ name: '', zone: '', capacity: 4, status: 'available', notes: '' });
     }
+    setNewZoneName('');
   }, [table, open]);
+
+  const handleZoneChange = (value) => {
+    setFormData({ ...formData, zone: value });
+    if (value !== '__new__') setNewZoneName('');
+  };
 
   const saveQRToStorage = async (db, tableId, tableName, orderingUrl) => {
     try {
@@ -75,11 +97,13 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
       const tableId = table?.id || crypto.randomUUID();
       const qrCodeUrl = `https://sellio.apptelier.sg/order/${tenant.slug}/${tableId}`;
 
+      const resolvedZone = formData.zone === '__new__' ? newZoneName.trim() || null : formData.zone?.trim() || null;
+
       const payload = {
         id: tableId,
         tenant_id: tenantId,
         name: formData.name.trim(),
-        zone: formData.zone?.trim() || null,
+        zone: resolvedZone,
         capacity: parseInt(formData.capacity) || 4,
         status: formData.status || 'available',
         notes: formData.notes?.trim() || null,
@@ -147,16 +171,25 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
 
             <div>
               <Label>Section/Zone</Label>
-              <Select value={formData.zone} onValueChange={(value) => setFormData({ ...formData, zone: value })}>
+              <Select value={formData.zone} onValueChange={handleZoneChange}>
                 <SelectTrigger className="mt-1.5">
-                  <SelectValue />
+                  <SelectValue placeholder="Select zone" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ZONES.map(zone => (
+                  {existingZones.map(zone => (
                     <SelectItem key={zone} value={zone}>{zone}</SelectItem>
                   ))}
+                  <SelectItem value="__new__">＋ Create new zone</SelectItem>
                 </SelectContent>
               </Select>
+              {formData.zone === '__new__' && (
+                <Input
+                  placeholder="Enter zone name e.g. Outdoor, VIP, Bar"
+                  className="mt-2"
+                  value={newZoneName}
+                  onChange={e => setNewZoneName(e.target.value)}
+                />
+              )}
             </div>
           </div>
 
