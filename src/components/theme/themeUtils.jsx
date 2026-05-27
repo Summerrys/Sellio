@@ -62,7 +62,11 @@ export function generateThemeVariables(darkHex, lightHex) {
   const isDefault = darkHex === DEFAULT_PRIMARY && lightHex === DEFAULT_ACCENT;
   const dark   = hexToRgb(darkHex);
   const light  = hexToRgb(lightHex);
-  const shades = generateShades(lightHex, darkHex);
+
+  // For default theme, generate shades from blue → light blue
+  // instead of blue → purple (which produces muddy/saturated tints)
+  const shadeLight = isDefault ? '#EFF6FF' : lightHex;
+  const shades = generateShades(shadeLight, darkHex);
 
   return {
     '--color-primary':          `${dark.r} ${dark.g} ${dark.b}`,
