@@ -58,7 +58,7 @@ export default function ProductFormBasic({
             {trackInventory && currentStock !== null && currentStock !== undefined && isEditMode && (
               <span
                 className="text-xs font-medium px-2 py-0.5 rounded-full"
-                style={{ backgroundColor: `${customPrimary || '#7c3aed'}20`, color: customPrimary || '#7c3aed' }}
+                style={{ backgroundColor: 'rgba(var(--color-primary), 0.1)', color: 'rgb(var(--color-primary))' }}
               >
                 {currentStock} in stock
               </span>
@@ -83,8 +83,8 @@ export default function ProductFormBasic({
             {trackInventory && isEditMode && onAdjustStock && (
               <button type="button" onClick={onAdjustStock}
                 className="flex items-center gap-1 text-xs"
-                style={{ color: customPrimary || '#7c3aed' }}>
-                <PackagePlus className="w-3.5 h-3.5" /> Adjust stock
+                style={{ color: 'rgb(var(--color-primary))' }}>
+                <PackagePlus className="w-3.5 h-3.5" style={{ color: 'rgb(var(--color-primary))' }} /> <span className="font-medium" style={{ color: 'rgb(var(--color-primary))' }}>Adjust stock</span>
               </button>
             )}
           </div>
@@ -112,7 +112,7 @@ export default function ProductFormBasic({
             Can't find your category?{' '}
             <span
               className="cursor-pointer underline"
-              style={{ color: customPrimary || '#7c3aed' }}
+              style={{ color: 'rgb(var(--color-primary))' }}
               onClick={() => navigate(createPageUrl('Categories'))}
             >
               Manage categories

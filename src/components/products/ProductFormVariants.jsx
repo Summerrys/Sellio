@@ -137,7 +137,7 @@ export default function ProductFormVariants({ formData, onChange }) {
 
           <button
             onClick={() => addOption(groupIndex)}
-            style={{ fontSize: '12px', color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', marginTop: '4px' }}
+            style={{ fontSize: '12px', color: 'rgb(var(--color-primary))', fontWeight: '500', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', marginTop: '4px' }}
           >+ Add option</button>
         </div>
       ))}
@@ -146,10 +146,10 @@ export default function ProductFormVariants({ formData, onChange }) {
         onClick={addGroup}
         style={{
           width: '100%', padding: '10px',
-          border: '1px dashed #d1d5db',
+          border: '1px dashed rgb(var(--color-primary))',
           borderRadius: '8px',
           background: 'none', cursor: 'pointer',
-          color: '#7c3aed', fontSize: '13px', fontWeight: '600'
+          color: 'rgb(var(--color-primary))', fontSize: '13px', fontWeight: '600'
         }}
       >+ Add variant group</button>
     </div>
