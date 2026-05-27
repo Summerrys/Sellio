@@ -89,6 +89,8 @@ export default function Tables() {
   const [tableToDelete, setTableToDelete] = useState(null);
   const [qrCodes, setQrCodes] = useState({}); // tableId → data URL or static URL
   const [localTables, setLocalTables] = useState([]); // local copy to patch qr_image_url
+  const [editingZone, setEditingZone] = useState(null);
+  const [editingZoneName, setEditingZoneName] = useState('');
 
   const { data: tables = [], isLoading } = useQuery({
     queryKey: ['tables', tenantId],
@@ -262,6 +264,25 @@ export default function Tables() {
     maintenance: { label: 'Unavailable',      bg: '#F8FAFC', color: '#475569', Icon: Wrench },
   };
 
+  const handleZoneRename = async (oldZone, newZone) => {
+    if (!newZone.trim() || newZone === oldZone) {
+      setEditingZone(null);
+      return;
+    }
+    const supabase = await getSupabase();
+    const query = supabase
+      .from('tables')
+      .update({ zone: newZone.trim(), updated_date: new Date().toISOString() })
+      .eq('tenant_id', tenantId);
+    if (oldZone === 'Unassigned') {
+      await query.is('zone', null);
+    } else {
+      await query.eq('zone', oldZone);
+    }
+    setEditingZone(null);
+    queryClient.invalidateQueries({ queryKey: ['tables', tenantId] });
+  };
+
   const handleStatusChange = async (table, newStatus) => {
     const supabase = await getSupabase();
     await supabase
@@ -384,9 +405,33 @@ export default function Tables() {
             return (
             <div key={zone} style={{ marginBottom: '20px' }}>
               <div className="flex items-center gap-2 mb-3">
-                <h3 className="text-sm font-semibold" style={{ color: 'rgb(var(--color-primary))' }}>{zone}</h3>
+                {editingZone === zone ? (
+                  <input
+                    autoFocus
+                    value={editingZoneName}
+                    onChange={e => setEditingZoneName(e.target.value)}
+                    onBlur={() => handleZoneRename(zone, editingZoneName)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleZoneRename(zone, editingZoneName);
+                      if (e.key === 'Escape') setEditingZone(null);
+                    }}
+                    className="text-sm font-semibold border-b-2 outline-none bg-transparent"
+                    style={{ borderColor: 'rgb(var(--color-primary))', color: 'rgb(var(--color-primary))' }}
+                  />
+                ) : (
+                  <>
+                    <h3 className="text-sm font-semibold" style={{ color: 'rgb(var(--color-primary))' }}>{zone}</h3>
+                    <button
+                      onClick={() => { setEditingZone(zone); setEditingZoneName(zone === 'Unassigned' ? '' : zone); }}
+                      className="p-0.5 rounded hover:bg-slate-100 transition-colors"
+                      style={{ color: 'rgb(var(--color-primary))' }}
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                  </>
+                )}
                 <div className="flex-1 h-px bg-slate-200" />
-                <span className="text-xs text-slate-400">{zoneTables.length} tables</span>
+                <span className="text-xs text-slate-400">{tables.filter(t => (t.zone || 'Unassigned') === zone).length} tables</span>
               </div>
 
               {viewMode === 'grid' ? (
