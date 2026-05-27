@@ -28,7 +28,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
   };
 
   const handleSubmit = async () => {
-    if (newStock === currentStock) return;
+    if (newStock === currentStock && threshold === (initialThreshold ?? 5)) return;
     setIsSubmitting(true);
     try {
       const supabase = await getSupabase();
@@ -45,7 +45,12 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
       if (existing) {
         const { error } = await supabase
           .from('inventory_items')
-          .update({ current_stock: newStock, low_stock_threshold: threshold, last_restock_date: new Date().toISOString() })
+          .update({
+            current_stock: newStock,
+            low_stock_threshold: threshold,
+            last_restock_date: new Date().toISOString(),
+            updated_date: new Date().toISOString(),
+          })
           .eq('id', existing.id)
           .eq('tenant_id', tenantId);
         if (error) throw error;
@@ -57,7 +62,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
       }
 
       // Mirror to products table
-      await supabase.from('products').update({ stock_quantity: newStock, low_stock_threshold: threshold }).eq('id', productId).eq('tenant_id', tenantId);
+      await supabase.from('products').update({ stock_quantity: newStock, low_stock_threshold: threshold, updated_date: new Date().toISOString() }).eq('id', productId).eq('tenant_id', tenantId);
 
       // Insert into stock_history table (non-fatal)
       try {
@@ -256,25 +261,31 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
             </div>
 
             {/* Save button */}
-            <button
-              onClick={handleSubmit}
-              disabled={newStock === currentStock || isSubmitting}
-              style={{
-                width: '100%', padding: '15px',
-                background: newStock === currentStock ? '#e2e8f0'
-                          : newStock > currentStock ? 'var(--color-primary-gradient)' : '#dc2626',
-                color: newStock === currentStock ? '#94a3b8' : 'white',
-                border: 'none', borderRadius: '14px',
-                fontSize: '15px', fontWeight: '700',
-                cursor: newStock === currentStock ? 'not-allowed' : 'pointer',
-                transition: 'all 0.15s ease'
-              }}>
-              {isSubmitting ? 'Saving...'
-               : newStock === currentStock ? 'No changes made'
-               : newStock > currentStock
-                 ? `Save — add ${newStock - currentStock} units`
-                 : `Save — remove ${currentStock - newStock} units`}
-            </button>
+            {(() => {
+              const noChange = newStock === currentStock && threshold === (initialThreshold ?? 5);
+              const stockIncreased = newStock > currentStock;
+              const stockDecreased = newStock < currentStock;
+              return (
+                <button
+                  onClick={handleSubmit}
+                  disabled={noChange || isSubmitting}
+                  style={{
+                    width: '100%', padding: '15px',
+                    background: noChange ? '#e2e8f0' : stockDecreased ? '#dc2626' : 'var(--color-primary-gradient)',
+                    color: noChange ? '#94a3b8' : 'white',
+                    border: 'none', borderRadius: '14px',
+                    fontSize: '15px', fontWeight: '700',
+                    cursor: noChange ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}>
+                  {isSubmitting ? 'Saving...'
+                   : noChange ? 'No changes made'
+                   : stockIncreased ? `Save — add ${newStock - currentStock} units`
+                   : stockDecreased ? `Save — remove ${currentStock - newStock} units`
+                   : 'Save changes'}
+                </button>
+              );
+            })()}
 
           </div>
         </div>
