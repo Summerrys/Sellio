@@ -117,9 +117,11 @@ export default function Dashboard() {
     enabled: !!tenantId,
   });
 
-  const lowStockCount = products.filter(p =>
-    (p.stock_quantity || 0) <= (p.low_stock_threshold || 5)
-  ).length;
+  const lowStockCount = products.filter(p => {
+    const stock = p.stock_quantity || 0;
+    const threshold = p.low_stock_threshold || 5;
+    return stock > 0 && stock < threshold;
+  }).length;
 
   const { data: staff = [] } = useQuery({
     queryKey: ['dashboardStaff', tenantId],
