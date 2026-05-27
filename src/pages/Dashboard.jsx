@@ -19,11 +19,11 @@ const featureCards = [
   { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view' },
   { label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view' },
   { label: 'Products', icon: ShoppingBag, page: 'Products', permission: 'products.view' },
-  { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view' },
   { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view' },
+  { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view' },
+  { label: 'Reports', icon: BarChart2, page: 'Reports', permission: 'reports.view' },
   { label: 'Staff', icon: Users, page: 'Staff', permission: 'staff.view' },
   { label: 'Roles', icon: Shield, page: 'RoleManagement', permission: 'roles.view' },
-  { label: 'Reports', icon: BarChart2, page: 'Reports', permission: 'reports.view' },
   { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view' },
 ];
 
@@ -61,15 +61,30 @@ function FeatureCard({ icon: Icon, label, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border bg-white shadow-sm active:scale-95 transition-transform hover:shadow-md aspect-square"
+      className="flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform"
+      style={{ width: '72px', height: '80px', flexShrink: 0 }}
     >
       <div
-        className="w-11 h-11 rounded-xl flex items-center justify-center"
-        style={{ background: 'rgba(var(--color-primary), 0.10)' }}
+        className="flex items-center justify-center rounded-[12px]"
+        style={{
+          width: '44px',
+          height: '44px',
+          background: 'rgba(var(--color-primary), 0.10)',
+        }}
       >
         <Icon className="w-5 h-5" style={{ color: 'rgb(var(--color-primary))' }} />
       </div>
-      <span className="text-xs font-semibold text-slate-700 text-center leading-tight">{label}</span>
+      <span
+        className="truncate text-center leading-tight"
+        style={{
+          fontSize: '10px',
+          fontWeight: 500,
+          color: '#475569',
+          width: '72px',
+        }}
+      >
+        {label}
+      </span>
     </button>
   );
 }
@@ -181,15 +196,25 @@ export default function Dashboard() {
       {/* Feature Grid */}
       <div>
         <h2 className="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wide">Quick Access</h2>
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
-          {visibleFeatures.map(f => (
-            <FeatureCard
-              key={f.page}
-              icon={f.icon}
-              label={f.label}
-              onClick={() => navigate(createPageUrl(f.page))}
-            />
-          ))}
+        <div className="overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <style>{`
+            div:has(> button:first-child) {
+              -webkit-overflow-scrolling: touch;
+            }
+            div:has(> button:first-child)::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
+          <div className="flex gap-[10px] p-[4px_0]" style={{ width: 'fit-content' }}>
+            {visibleFeatures.map(f => (
+              <FeatureCard
+                key={f.page}
+                icon={f.icon}
+                label={f.label}
+                onClick={() => navigate(createPageUrl(f.page))}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
