@@ -259,7 +259,9 @@ function InventoryContent() {
                   return (
                     <div
                       key={product.id}
-                      style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}
+                      onClick={() => setSelectedProduct(product)}
+                      className="bg-white border border-slate-200 rounded-xl overflow-hidden cursor-pointer hover:border-slate-300 hover:shadow-sm transition-all active:scale-[0.99]"
+                      style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}
                     >
                       {product.image_url
                         ? <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '80px', borderRadius: '8px', objectFit: 'cover' }} />
@@ -271,27 +273,17 @@ function InventoryContent() {
                       </div>
                       <div className="flex items-center justify-between">
                         {product.track_inventory ? (
-                          <div style={{ textAlign: 'right', flex: 1 }}>
-                            {product.track_inventory && (
-                              <div style={{ height: '3px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden', marginBottom: '4px' }}>
-                                <div style={{ height: '100%', width: `${Math.min((stock / Math.max(threshold * 2, 1)) * 100, 100)}%`, background: stock === 0 ? '#dc2626' : stock < threshold ? '#f59e0b' : '#16a34a', borderRadius: '999px' }} />
-                              </div>
-                            )}
-                            <div className="flex items-center justify-between">
-                              <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: status.bg, color: status.color }}>{status.label}</span>
-                              <button
-                                onClick={() => setSelectedProduct(product)}
-                                style={{ fontSize: '11px', color: 'rgb(var(--color-primary))', fontWeight: '600', background: 'none', border: 'none', cursor: 'pointer', padding: '0' }}
-                              >
-                                Adjust
-                              </button>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ height: '3px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden', marginBottom: '4px' }}>
+                              <div style={{ height: '100%', width: `${Math.min((stock / Math.max(threshold * 2, 1)) * 100, 100)}%`, background: stock === 0 ? '#dc2626' : stock < threshold ? '#f59e0b' : '#16a34a', borderRadius: '999px' }} />
                             </div>
+                            <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: status.bg, color: status.color }}>{status.label}</span>
                           </div>
                         ) : (
                           <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: '#f3f4f6', color: '#6b7280' }}>Unlimited</span>
                         )}
                       </div>
-                      <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-100" onClick={e => e.stopPropagation()}>
                         <span className="text-xs text-slate-400">Track</span>
                         <Switch
                           checked={!!product.track_inventory}
@@ -311,11 +303,9 @@ function InventoryContent() {
                   return (
                     <div
                       key={product.id}
-                      style={{
-                        display: 'flex', gap: '12px', alignItems: 'center',
-                        background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0',
-                        padding: '10px 12px',
-                      }}
+                      onClick={() => setSelectedProduct(product)}
+                      className="bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-slate-300 hover:shadow-sm transition-all active:scale-[0.99]"
+                      style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '10px 12px' }}
                     >
                       {product.image_url
                         ? <img src={product.image_url} alt={product.name} style={{ width: '52px', height: '52px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />
@@ -344,10 +334,7 @@ function InventoryContent() {
                         {product.track_inventory ? (
                           <>
                             <p style={{ fontWeight: '700', fontSize: '16px', margin: '0 0 3px', color: status.color }}>{stock}</p>
-                            <span
-                              onClick={() => setSelectedProduct(product)}
-                              style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: status.bg, color: status.color, whiteSpace: 'nowrap', cursor: 'pointer' }}
-                            >
+                            <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: status.bg, color: status.color, whiteSpace: 'nowrap' }}>
                               {status.label}
                             </span>
                           </>
@@ -361,7 +348,7 @@ function InventoryContent() {
                         )}
                       </div>
                       {/* Track toggle — far right */}
-                      <div className="flex flex-col items-center gap-0.5 flex-shrink-0 ml-2">
+                      <div className="flex flex-col items-center gap-0.5 flex-shrink-0 ml-2" onClick={e => e.stopPropagation()}>
                         <Switch
                           checked={!!product.track_inventory}
                           onCheckedChange={(v) => handleToggleTracking(product.id, v)}
