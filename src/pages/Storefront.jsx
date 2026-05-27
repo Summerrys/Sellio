@@ -79,6 +79,24 @@ export default function Storefront() {
   const currency = tenant?.currency || 'SGD';
   const isFnB = /f&b|cafe|restaurant|food|beverage/i.test(tenant?.industry || '');
 
+  // Auto-mark table as occupied when customer lands on ordering page
+  useEffect(() => {
+    const markOccupied = async () => {
+      if (!tableId || !tenantSlug) return;
+      const supabase = await getSupabase();
+      const { data: tenantData } = await supabase
+        .from('tenants').select('id').eq('slug', tenantSlug).single();
+      if (!tenantData) return;
+      await supabase
+        .from('tables')
+        .update({ status: 'occupied' })
+        .eq('id', tableId)
+        .eq('tenant_id', tenantData.id)
+        .eq('status', 'available');
+    };
+    markOccupied();
+  }, [tableId]);
+
   useEffect(() => {
     if (!tenant) return;
     document.documentElement.style.setProperty('--sf-primary', primaryColor);

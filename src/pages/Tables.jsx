@@ -226,11 +226,25 @@ export default function Tables() {
     }
   };
 
-  const statusColors = {
-    available: { color: '#16a34a', bg: '#dcfce7' },
-    occupied: { color: '#92400e', bg: '#fef3c7' },
-    reserved: { color: '#1d4ed8', bg: '#dbeafe' },
-    maintenance: { color: '#dc2626', bg: '#fee2e2' },
+  const STATUS_CYCLE = ['available', 'occupied', 'reserved', 'maintenance'];
+  const STATUS_STYLES = {
+    available:   { bg: '#DCFCE7', color: '#15803D' },
+    occupied:    { bg: '#FEE2E2', color: '#DC2626' },
+    reserved:    { bg: '#FEF3C7', color: '#B45309' },
+    maintenance: { bg: '#F1F5F9', color: '#64748B' },
+  };
+
+  const handleStatusCycle = async (table, e) => {
+    e.stopPropagation();
+    const currentIndex = STATUS_CYCLE.indexOf(table.status);
+    const nextStatus = STATUS_CYCLE[(currentIndex + 1) % STATUS_CYCLE.length];
+    const supabase = await getSupabase();
+    await supabase
+      .from('tables')
+      .update({ status: nextStatus, updated_date: new Date().toISOString() })
+      .eq('id', table.id)
+      .eq('tenant_id', tenantId);
+    queryClient.invalidateQueries({ queryKey: ['tables', tenantId] });
   };
 
   return (
@@ -243,7 +257,9 @@ export default function Tables() {
           actions={
             <Button
               onClick={handleAdd}
-              className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))] gap-2"
+              size="sm"
+              className="text-white gap-1.5"
+              style={{ background: 'var(--color-primary-gradient)' }}
             >
               <Plus className="w-4 h-4" /> Add Table
             </Button>
@@ -253,7 +269,7 @@ export default function Tables() {
         {/* Stats row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px', marginTop: '16px' }}>
           {[
-            { label: 'Total', value: tables.length, color: '#0f172a', bg: '#f1f5f9' },
+            { label: 'Total', value: tables.length, color: 'rgb(var(--color-primary))', bg: '#f1f5f9' },
             { label: 'Available', value: tables.filter(t => t.status === 'available').length, color: '#16a34a', bg: '#dcfce7' },
             { label: 'Occupied', value: tables.filter(t => t.status === 'occupied').length, color: '#92400e', bg: '#fef3c7' },
             { label: 'Reserved', value: tables.filter(t => t.status === 'reserved').length, color: '#1d4ed8', bg: '#dbeafe' },
@@ -343,7 +359,6 @@ export default function Tables() {
               {viewMode === 'grid' ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
                   {zoneTables.map(table => {
-                    const sc = statusColors[table.status] || statusColors.available;
                     const localTable = localTables.find(t => t.id === table.id) || table;
                     return (
                       <div key={table.id} style={{ background: 'white', borderRadius: '12px', border: '0.5px solid #e2e8f0', overflow: 'hidden' }}>
@@ -362,9 +377,14 @@ export default function Tables() {
                         <div style={{ padding: '10px 12px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
                             <p style={{ fontWeight: '700', fontSize: '14px', margin: 0, color: '#0f172a' }}>{table.name}</p>
-                            <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: sc.bg, color: sc.color, flexShrink: 0 }}>
+                            <button
+                              onClick={(e) => handleStatusCycle(table, e)}
+                              className="text-xs font-medium px-2.5 py-1 rounded-full transition-all active:scale-95"
+                              style={{ background: STATUS_STYLES[table.status]?.bg, color: STATUS_STYLES[table.status]?.color, flexShrink: 0 }}
+                              title="Tap to change status"
+                            >
                               {table.status}
-                            </span>
+                            </button>
                           </div>
                           <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 8px' }}>{table.capacity} seats</p>
                           <div style={{ display: 'flex', gap: '6px' }}>
@@ -389,7 +409,6 @@ export default function Tables() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {zoneTables.map(table => {
-                    const sc = statusColors[table.status] || statusColors.available;
                     const localTable = localTables.find(t => t.id === table.id) || table;
                     return (
                       <div key={table.id} style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'white', borderRadius: '12px', border: '0.5px solid #e2e8f0', padding: '12px' }}>
@@ -413,9 +432,14 @@ export default function Tables() {
                           <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{table.capacity} seats</p>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
-                          <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 8px', borderRadius: '999px', background: sc.bg, color: sc.color }}>
+                          <button
+                            onClick={(e) => handleStatusCycle(table, e)}
+                            className="text-xs font-medium px-2.5 py-1 rounded-full transition-all active:scale-95"
+                            style={{ background: STATUS_STYLES[table.status]?.bg, color: STATUS_STYLES[table.status]?.color }}
+                            title="Tap to change status"
+                          >
                             {table.status}
-                          </span>
+                          </button>
                           <div style={{ display: 'flex', gap: '6px' }}>
                             <button
                               onClick={() => handleDownloadQR(localTable)}

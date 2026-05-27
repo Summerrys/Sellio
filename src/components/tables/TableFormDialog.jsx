@@ -193,7 +193,8 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
           <Button
             onClick={handleSubmit}
             disabled={isLoading || !formData.name}
-            className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))]"
+            className="w-full text-white"
+            style={{ background: 'var(--color-primary-gradient)' }}
           >
             {isLoading ? (
               <>
