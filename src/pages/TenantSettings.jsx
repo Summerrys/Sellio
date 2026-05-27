@@ -30,10 +30,6 @@ export default function TenantSettings() {
 
 function TenantSettingsContent() {
   const { tenantId, tenant } = useTenant();
-  const primaryColor = tenant?.theme_config?.primary_color || null;
-  const primaryBtnStyle = primaryColor
-    ? { background: primaryColor, color: '#fff' }
-    : { background: 'var(--color-primary-gradient)', color: '#fff' };
   const queryClient = useQueryClient();
 
   const [businessForm, setBusinessForm] = useState({ name: '', phone: '', address: '', currency: 'SGD', timezone: 'Asia/Singapore' });
@@ -119,7 +115,7 @@ function TenantSettingsContent() {
       <Tabs defaultValue="business">
         <style>{`
           .settings-tabs [data-state=active] {
-            background: ${primaryColor ? primaryColor : 'var(--color-primary-gradient, rgb(var(--color-primary)))'} !important;
+            background: var(--color-primary-gradient) !important;
             color: white !important;
           }
         `}</style>
@@ -151,7 +147,7 @@ function TenantSettingsContent() {
                 </div>
               </div>
               <div><Label>Address</Label><Input className="h-11" value={businessForm.address} onChange={e => setBusinessForm({ ...businessForm, address: e.target.value })} /></div>
-              <Button onClick={() => updateBusinessMutation.mutate()} disabled={updateBusinessMutation.isPending} className="h-11 gap-2" style={primaryBtnStyle}>
+              <Button onClick={() => updateBusinessMutation.mutate()} disabled={updateBusinessMutation.isPending} className="h-11 gap-2" style={{ background: 'var(--color-primary-gradient)', color: '#fff' }}>
                 <Save className="w-4 h-4" /> {updateBusinessMutation.isPending ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
@@ -185,7 +181,7 @@ function TenantSettingsContent() {
         <TabsContent value="roles">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-slate-900">Roles</h3>
-            <Button onClick={() => openRoleForm(null)} size="sm" className="gap-1" style={primaryBtnStyle}><Plus className="w-3.5 h-3.5" /> New Role</Button>
+            <Button onClick={() => openRoleForm(null)} size="sm" className="gap-1" style={{ background: 'var(--color-primary-gradient)', color: '#fff' }}><Plus className="w-3.5 h-3.5" /> New Role</Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {roles.map(role => (
@@ -339,7 +335,7 @@ function TenantSettingsContent() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeRoleForm}>Cancel</Button>
-            <Button onClick={() => saveRoleMutation.mutate(roleForm)} disabled={!roleForm.name || saveRoleMutation.isPending} style={primaryBtnStyle}>
+            <Button onClick={() => saveRoleMutation.mutate(roleForm)} disabled={!roleForm.name || saveRoleMutation.isPending} style={{ background: 'var(--color-primary-gradient)', color: '#fff' }}>
               {saveRoleMutation.isPending ? 'Saving...' : editingRole ? 'Update' : 'Create'}
             </Button>
           </DialogFooter>
