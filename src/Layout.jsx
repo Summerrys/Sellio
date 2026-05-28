@@ -36,6 +36,7 @@ import { useAppUser } from '@/lib/AppUserContext';
 import { cn } from '@/lib/utils';
 import UpgradeWall from './components/subscription/UpgradeWall';
 import PricingModal from './components/subscription/PricingModal';
+import TrialReminderModal from './components/subscription/TrialReminderModal';
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth'];
 
@@ -193,8 +194,10 @@ function AppLayout({ children, currentPageName }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isNewProductOpen, setIsNewProductOpen] = useState(false);
   const [subscription, setSubscription] = useState(null);
-  const [showTrialBanner, setShowTrialBanner] = useState(true);
   const [showPricingModal, setShowPricingModal] = useState(false);
+  const [showTrialModal, setShowTrialModal] = useState(false);
+
+  const BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
   const { appUser: customUser, clearAppUser } = useAppUser();
   const { user, tenant, isSuperAdmin, isLoading, hasPermission } = useTenant();
 
@@ -206,6 +209,16 @@ function AppLayout({ children, currentPageName }) {
         .then(({ data }) => setSubscription(data))
     );
   }, [tenantId]);
+
+  useEffect(() => {
+    if (!subscription || subscription.status !== 'trial') return;
+    if (sessionStorage.getItem('trial_modal_dismissed')) return;
+    if (BYPASS_EMAILS.includes((user?.email || '').toLowerCase())) return;
+    const trialEnd = subscription.current_period_end;
+    if (!trialEnd) return;
+    const hoursLeft = Math.max(0, Math.floor((new Date(trialEnd) - new Date()) / (1000 * 60 * 60)));
+    if (hoursLeft <= 24) setShowTrialModal(true);
+  }, [subscription, user]);
 
   const isLocked = subscription && (
     subscription.status === 'cancelled' ||
@@ -346,35 +359,7 @@ function AppLayout({ children, currentPageName }) {
         )}
         style={{ paddingBottom: currentPageName !== 'Onboarding' ? 'calc(env(safe-area-inset-bottom, 0px) + 72px)' : undefined }}
       >
-        {(() => {
-          const trialEnd = subscription?.current_period_end;
-          const hoursLeft = trialEnd ? Math.max(0, Math.floor((new Date(trialEnd) - new Date()) / (1000 * 60 * 60))) : null;
-          const daysLeft = hoursLeft !== null ? Math.floor(hoursLeft / 24) : null;
-          if (!showTrialBanner || subscription?.status !== 'trial' || hoursLeft === null) return null;
-          const isUrgent = hoursLeft <= 24;
-          return (
-            <div className="w-full px-4 py-2 flex items-center justify-between text-sm font-medium text-white"
-              style={{ background: isUrgent ? 'linear-gradient(90deg, #ef4444, #dc2626)' : 'linear-gradient(90deg, #f59e0b, #d97706)' }}>
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4" />
-                {isUrgent
-                  ? `Your free trial ends in ${hoursLeft} hours — upgrade to keep your data`
-                  : `Your free trial ends in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowPricingModal(true)}
-                  className="text-xs font-semibold bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition-colors"
-                >
-                  Upgrade Now
-                </button>
-                <button onClick={() => setShowTrialBanner(false)} className="text-white/70 hover:text-white">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          );
-        })()}
+
         <div className="p-2 sm:p-6 lg:p-8 max-w-[1280px] mx-auto overflow-x-hidden">
           {children}
         </div>
@@ -459,6 +444,13 @@ function AppLayout({ children, currentPageName }) {
 
       <RoleSwitcher />
       <PricingModal open={showPricingModal} onOpenChange={setShowPricingModal} tenantId={tenantId} />
+      {showTrialModal && (
+        <TrialReminderModal
+          hoursLeft={Math.max(0, Math.floor((new Date(subscription.current_period_end) - new Date()) / (1000 * 60 * 60)))}
+          onUpgrade={() => { setShowTrialModal(false); setShowPricingModal(true); }}
+          onDismiss={() => { sessionStorage.setItem('trial_modal_dismissed', 'true'); setShowTrialModal(false); }}
+        />
+      )}
     </div>
   );
 }
