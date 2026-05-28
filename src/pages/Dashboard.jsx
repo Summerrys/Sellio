@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import db from '@/lib/db';
+import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import RecentOrders from '../components/dashboard/RecentOrders';
@@ -95,7 +95,11 @@ export default function Dashboard() {
 
   const { data: todayOrders = [] } = useQuery({
     queryKey: ['todayOrders', tenantId],
-    queryFn: () => db.entities.Order.filter({ tenant_id: tenantId }),
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data } = await supabase.from('orders').select('*').eq('tenant_id', tenantId);
+      return data || [];
+    },
     enabled: !!tenantId,
     refetchInterval: 30000,
   });
@@ -113,7 +117,19 @@ export default function Dashboard() {
 
   const { data: products = [] } = useQuery({
     queryKey: ['dashboardProducts', tenantId],
-    queryFn: () => db.entities.Product.filter({ tenant_id: tenantId }),
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const [{ data: prods }, { data: invItems }] = await Promise.all([
+        supabase.from('products').select('id, track_inventory').eq('tenant_id', tenantId),
+        supabase.from('inventory_items').select('product_id, current_stock, low_stock_threshold').eq('tenant_id', tenantId),
+      ]);
+      const invMap = Object.fromEntries((invItems || []).map(i => [i.product_id, i]));
+      return (prods || []).map(p => ({
+        ...p,
+        stock_quantity: invMap[p.id]?.current_stock ?? 0,
+        low_stock_threshold: invMap[p.id]?.low_stock_threshold ?? 5,
+      }));
+    },
     enabled: !!tenantId,
   });
 
@@ -125,7 +141,11 @@ export default function Dashboard() {
 
   const { data: staff = [] } = useQuery({
     queryKey: ['dashboardStaff', tenantId],
-    queryFn: () => db.entities.TenantUser.filter({ tenant_id: tenantId, status: 'active' }),
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data } = await supabase.from('tenant_users').select('id').eq('tenant_id', tenantId).eq('status', 'active');
+      return data || [];
+    },
     enabled: !!tenantId,
   });
 
