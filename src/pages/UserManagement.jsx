@@ -157,7 +157,7 @@ function StaffContent() {
         {/* Filter Row */}
         <div className="flex gap-2 items-center">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="flex-1 h-11"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="flex-1" style={{ height: 36, background: 'white', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', borderRadius: 8 }}><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
@@ -166,15 +166,15 @@ function StaffContent() {
             </SelectContent>
           </Select>
           <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="flex-1 h-11"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="flex-1" style={{ height: 36, background: 'white', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', borderRadius: 8 }}><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
               {roles.map(role => <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          <div className="flex gap-1 flex-shrink-0 ml-auto">
-            <button onClick={() => setViewMode('cards')} style={{ background: viewMode === 'cards' ? 'rgba(var(--color-primary),0.08)' : 'transparent', color: viewMode === 'cards' ? 'rgb(var(--color-primary))' : '#9ca3af', border: '0.5px solid #e5e7eb', borderRadius: 8, padding: '6px 8px', cursor: 'pointer' }}><LayoutGrid size={18} /></button>
-            <button onClick={() => setViewMode('table')} style={{ background: viewMode === 'table' ? 'rgba(var(--color-primary),0.08)' : 'transparent', color: viewMode === 'table' ? 'rgb(var(--color-primary))' : '#9ca3af', border: '0.5px solid #e5e7eb', borderRadius: 8, padding: '6px 8px', cursor: 'pointer' }}><List size={18} /></button>
+          <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', borderRadius: 8, padding: 3, flexShrink: 0, marginLeft: 'auto' }}>
+            <button onClick={() => setViewMode('cards')} style={{ width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer', background: viewMode === 'cards' ? 'white' : 'transparent', boxShadow: viewMode === 'cards' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: viewMode === 'cards' ? '#6366f1' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LayoutGrid size={16} /></button>
+            <button onClick={() => setViewMode('table')} style={{ width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer', background: viewMode === 'table' ? 'white' : 'transparent', boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: viewMode === 'table' ? '#6366f1' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><List size={16} /></button>
           </div>
         </div>
 
