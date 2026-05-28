@@ -123,13 +123,36 @@ function StaffContent() {
   return (
     <RequirePermission permission="staff.view">
       <div className="space-y-4">
+        {/* Action Buttons Row */}
+        <RequirePermission permission="staff.create" silent>
+          <div className="flex flex-wrap gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Download className="w-4 h-4 mr-2" />Download
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleDownloadTemplate}><FileDown className="w-4 h-4 mr-2" />Download Template</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExport}><FileSpreadsheet className="w-4 h-4 mr-2" />Export All Staff</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />Import
+            </Button>
+            <Button onClick={() => setInviteDialogOpen(true)} size="sm" className="text-white gap-1.5" style={{ background: 'var(--color-primary-gradient)' }}>
+              <UserPlus className="w-4 h-4" />Add Staff
+            </Button>
+          </div>
+        </RequirePermission>
+
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input placeholder="Search staff..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 h-11" />
         </div>
 
-        {/* Filters + View Toggle + Actions */}
+        {/* Filter Row */}
         <div className="flex gap-2 items-center">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="flex-1 h-11"><SelectValue /></SelectTrigger>
@@ -147,29 +170,10 @@ function StaffContent() {
               {roles.map(role => <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          <div className="flex gap-1 flex-shrink-0">
+          <div className="flex gap-1 flex-shrink-0 ml-auto">
             <button onClick={() => setViewMode('table')} style={{ background: viewMode === 'table' ? 'rgba(var(--color-primary),0.08)' : 'transparent', color: viewMode === 'table' ? 'rgb(var(--color-primary))' : '#9ca3af', border: '0.5px solid #e5e7eb', borderRadius: 8, padding: '6px 8px', cursor: 'pointer' }}><List size={18} /></button>
             <button onClick={() => setViewMode('cards')} style={{ background: viewMode === 'cards' ? 'rgba(var(--color-primary),0.08)' : 'transparent', color: viewMode === 'cards' ? 'rgb(var(--color-primary))' : '#9ca3af', border: '0.5px solid #e5e7eb', borderRadius: 8, padding: '6px 8px', cursor: 'pointer' }}><LayoutGrid size={18} /></button>
           </div>
-          <RequirePermission permission="staff.create" silent>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="flex-shrink-0">
-                  <Download className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Download</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleDownloadTemplate}><FileDown className="w-4 h-4 mr-2" />Download Template</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExport}><FileSpreadsheet className="w-4 h-4 mr-2" />Export All Staff</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button variant="outline" size="sm" className="flex-shrink-0" onClick={() => setImportOpen(true)}>
-              <Upload className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Import</span>
-            </Button>
-            <Button onClick={() => setInviteDialogOpen(true)} size="sm" className="text-white gap-1.5 whitespace-nowrap flex-shrink-0" style={{ background: 'var(--color-primary-gradient)' }}>
-              <UserPlus className="w-4 h-4" /><span className="hidden sm:inline">Add Staff</span><span className="sm:hidden">Add</span>
-            </Button>
-          </RequirePermission>
         </div>
 
         {isLoading ? (
