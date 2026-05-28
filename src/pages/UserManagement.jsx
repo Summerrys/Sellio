@@ -260,11 +260,62 @@ function RolesContent() {
 
   const getUserCount = (roleId) => tenantUsers.filter(u => u.role_id === roleId).length;
 
+  const DEFAULT_ROLE_NAMES = ['Manager', 'Cashier', 'Kitchen Staff', 'Inventory Staff'];
+  const existingRoleNames = roles.map(r => r.name);
+  const allDefaultsExist = DEFAULT_ROLE_NAMES.every(n => existingRoleNames.includes(n));
+
+  const [seedingRoles, setSeedingRoles] = useState(false);
+
+  const handleSetupDefaultRoles = async () => {
+    setSeedingRoles(true);
+    try {
+      const supabase = await getSupabase();
+      const defaultRoles = [
+        {
+          tenant_id: tenantId, name: 'Manager', slug: 'manager',
+          description: 'Day-to-day operations management', is_system: false,
+          permissions: ['orders.view','orders.create','orders.edit','orders.cancel','products.view','products.create','products.edit','products.delete','categories.view','categories.create','categories.edit','categories.delete','inventory.view','inventory.edit','tables.view','tables.create','tables.edit','tables.delete','staff.view','staff.create','staff.edit','reports.view','settings.view'],
+        },
+        {
+          tenant_id: tenantId, name: 'Cashier', slug: 'cashier',
+          description: 'Front-of-house POS and order taking', is_system: false,
+          permissions: ['orders.view','orders.create','orders.edit','products.view','tables.view','tables.edit','inventory.view'],
+        },
+        {
+          tenant_id: tenantId, name: 'Kitchen Staff', slug: 'kitchen-staff',
+          description: 'Back-of-house order visibility', is_system: false,
+          permissions: ['orders.view','products.view'],
+        },
+        {
+          tenant_id: tenantId, name: 'Inventory Staff', slug: 'inventory-staff',
+          description: 'Stock and inventory management', is_system: false,
+          permissions: ['products.view','inventory.view','inventory.edit','categories.view'],
+        },
+      ];
+      const toInsert = defaultRoles.filter(r => !existingRoleNames.includes(r.name));
+      if (toInsert.length > 0) {
+        const { error } = await supabase.from('roles').insert(toInsert);
+        if (error) throw error;
+      }
+      queryClient.invalidateQueries({ queryKey: ['allRoles', tenantId] });
+      toast.success('Default roles created successfully');
+    } catch {
+      toast.error('Failed to create default roles');
+    } finally {
+      setSeedingRoles(false);
+    }
+  };
+
   return (
     <RequirePermission permission="roles.view">
       <div className="space-y-4">
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
           <RequirePermission permission="roles.create" silent>
+            {!allDefaultsExist && (
+              <Button onClick={handleSetupDefaultRoles} disabled={seedingRoles} variant="outline" size="sm" className="gap-1.5">
+                <Shield className="w-4 h-4" /> {seedingRoles ? 'Setting up...' : 'Setup Default Roles'}
+              </Button>
+            )}
             <Button onClick={() => open(null)} size="sm" className="text-white gap-1.5" style={{ background: 'var(--color-primary-gradient)' }}>
               <Plus className="w-4 h-4" /> Create Role
             </Button>
