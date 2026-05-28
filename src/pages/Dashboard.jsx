@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import db from '@/lib/db';
+import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import RecentOrders from '../components/dashboard/RecentOrders';
@@ -93,9 +94,25 @@ export default function Dashboard() {
     enabled: !!tenantId,
   });
 
-  const lowStockCount = products.filter(p =>
-    (p.stock_quantity || 0) <= (p.low_stock_threshold || 5)
-  ).length;
+  const { data: inventoryItems = [] } = useQuery({
+    queryKey: ['dashboardInventoryItems', tenantId],
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .eq('tenant_id', tenantId);
+      return data || [];
+    },
+    enabled: !!tenantId,
+  });
+
+  const lowStockCount = products.filter(p => {
+    if (!p.track_inventory) return false;
+    const inv = inventoryItems.find(i => i.product_id === p.id);
+    if (!inv) return false;
+    return inv.current_stock > 0 && inv.current_stock < inv.low_stock_threshold;
+  }).length;
 
   const { data: staff = [] } = useQuery({
     queryKey: ['dashboardStaff', tenantId],
