@@ -22,8 +22,8 @@ const featureCards = [
   { label: 'Products', icon: ShoppingBag, page: 'Products', permission: 'products.view', color: 'bg-purple-50 text-purple-600 border-purple-100' },
   { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view', color: 'bg-pink-50 text-pink-600 border-pink-100' },
   { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view', color: 'bg-amber-50 text-amber-600 border-amber-100' },
-  { label: 'Staff', icon: Users, page: 'Staff', permission: 'staff.view', color: 'bg-green-50 text-green-600 border-green-100' },
-  { label: 'Roles', icon: Shield, page: 'RoleManagement', permission: 'roles.view', color: 'bg-indigo-50 text-indigo-600 border-indigo-100' },
+  { label: 'Staff', icon: Users, page: 'UserManagement', permission: 'staff.view', color: 'bg-green-50 text-green-600 border-green-100' },
+  { label: 'Roles', icon: Shield, page: 'UserManagement', permission: 'roles.view', color: 'bg-indigo-50 text-indigo-600 border-indigo-100' },
   { label: 'Reports', icon: BarChart2, page: 'Reports', permission: 'reports.view', color: 'bg-rose-50 text-rose-600 border-rose-100' },
   { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view', color: 'bg-slate-50 text-slate-600 border-slate-200' },
 ];
@@ -131,11 +131,12 @@ export default function Dashboard() {
     ? { value: lowStockCount, subtext: 'Low stock', cardClass: 'rounded-2xl border border-amber-200 bg-amber-50', iconColor: 'bg-amber-100 text-amber-600', icon: AlertTriangle }
     : { value: trackedCount, subtext: 'Well stocked', cardClass: 'rounded-2xl border border-green-200 bg-green-50', iconColor: 'bg-green-100 text-green-600', icon: Package };
 
-  const { data: staff = [] } = useQuery({
+  const { data: allStaff = [] } = useQuery({
     queryKey: ['dashboardStaff', tenantId],
-    queryFn: () => db.entities.TenantUser.filter({ tenant_id: tenantId, status: 'active' }),
+    queryFn: () => db.entities.TenantUser.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
   });
+  const staff = allStaff.filter(m => m.status === 'active');
 
   const currency = tenant?.settings?.currency || '$';
 
@@ -207,7 +208,7 @@ export default function Dashboard() {
             value={staff.length}
             subtext="Team members"
             color="bg-teal-50 text-teal-600"
-            onClick={() => navigate(createPageUrl('Staff'))}
+            onClick={() => navigate(createPageUrl('UserManagement'))}
           />
         </RequirePermission>
       </div>
