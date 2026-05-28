@@ -210,17 +210,18 @@ function AppLayout({ children, currentPageName }) {
     );
   }, [tenantId]);
 
+  const isBypassEmail = BYPASS_EMAILS.includes((user?.email || '').toLowerCase());
+
   useEffect(() => {
     if (!subscription || subscription.status !== 'trial') return;
     if (sessionStorage.getItem('trial_modal_dismissed')) return;
-    if (BYPASS_EMAILS.includes((user?.email || '').toLowerCase())) return;
     const trialEnd = subscription.current_period_end;
     if (!trialEnd) return;
     const hoursLeft = Math.max(0, Math.floor((new Date(trialEnd) - new Date()) / (1000 * 60 * 60)));
     if (hoursLeft <= 24) setShowTrialModal(true);
   }, [subscription, user]);
 
-  const isLocked = subscription && (
+  const isLocked = !isBypassEmail && subscription && (
     subscription.status === 'cancelled' ||
     subscription.status === 'past_due' ||
     (subscription.status === 'trial' && new Date(subscription.current_period_end) < new Date())
