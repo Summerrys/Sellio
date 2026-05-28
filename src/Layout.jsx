@@ -34,6 +34,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { base44 } from '@/api/base44Client';
 import { useAppUser } from '@/lib/AppUserContext';
 import { cn } from '@/lib/utils';
+import UpgradeWall from './components/subscription/UpgradeWall';
+import PricingModal from './components/subscription/PricingModal';
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth'];
 
@@ -192,6 +194,7 @@ function AppLayout({ children, currentPageName }) {
   const [isNewProductOpen, setIsNewProductOpen] = useState(false);
   const [subscription, setSubscription] = useState(null);
   const [showTrialBanner, setShowTrialBanner] = useState(true);
+  const [showPricingModal, setShowPricingModal] = useState(false);
   const { appUser: customUser, clearAppUser } = useAppUser();
   const { user, tenant, isSuperAdmin, isLoading, hasPermission } = useTenant();
 
@@ -199,10 +202,16 @@ function AppLayout({ children, currentPageName }) {
   useEffect(() => {
     if (!tenantId) return;
     getSupabase().then(supabase =>
-      supabase.from('subscriptions').select('current_period_end, status, tier').eq('tenant_id', tenantId).maybeSingle()
+      supabase.from('subscriptions').select('*').eq('tenant_id', tenantId).order('created_date', { ascending: false }).limit(1).maybeSingle()
         .then(({ data }) => setSubscription(data))
     );
   }, [tenantId]);
+
+  const isLocked = subscription && (
+    subscription.status === 'cancelled' ||
+    subscription.status === 'past_due' ||
+    (subscription.status === 'trial' && new Date(subscription.current_period_end) < new Date())
+  );
 
   // Persist scroll position per bottom-tab page
   const scrollPositions = useRef({});
@@ -233,6 +242,10 @@ function AppLayout({ children, currentPageName }) {
 
   if (publicPages.includes(currentPageName)) {
     return <>{children}</>;
+  }
+
+  if (isLocked) {
+    return <UpgradeWall />;
   }
 
   if (isLoading) {
@@ -336,18 +349,31 @@ function AppLayout({ children, currentPageName }) {
         {(() => {
           const trialEnd = subscription?.current_period_end;
           const hoursLeft = trialEnd ? Math.max(0, Math.floor((new Date(trialEnd) - new Date()) / (1000 * 60 * 60))) : null;
-          return showTrialBanner && subscription?.status === 'trial' && hoursLeft !== null && hoursLeft <= 24 ? (
+          const daysLeft = hoursLeft !== null ? Math.floor(hoursLeft / 24) : null;
+          if (!showTrialBanner || subscription?.status !== 'trial' || hoursLeft === null) return null;
+          const isUrgent = hoursLeft <= 24;
+          return (
             <div className="w-full px-4 py-2 flex items-center justify-between text-sm font-medium text-white"
-              style={{ background: 'linear-gradient(90deg, #ef4444, #dc2626)' }}>
+              style={{ background: isUrgent ? 'linear-gradient(90deg, #ef4444, #dc2626)' : 'linear-gradient(90deg, #f59e0b, #d97706)' }}>
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-4 h-4" />
-                Your free trial ends in {hoursLeft} hours — upgrade to keep your data
+                {isUrgent
+                  ? `Your free trial ends in ${hoursLeft} hours — upgrade to keep your data`
+                  : `Your free trial ends in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`}
               </div>
-              <button onClick={() => setShowTrialBanner(false)} className="text-white/70 hover:text-white">
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowPricingModal(true)}
+                  className="text-xs font-semibold bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition-colors"
+                >
+                  Upgrade Now
+                </button>
+                <button onClick={() => setShowTrialBanner(false)} className="text-white/70 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-          ) : null;
+          );
         })()}
         <div className="p-2 sm:p-6 lg:p-8 max-w-[1280px] mx-auto overflow-x-hidden">
           {children}
@@ -432,6 +458,7 @@ function AppLayout({ children, currentPageName }) {
       />
 
       <RoleSwitcher />
+      <PricingModal open={showPricingModal} onOpenChange={setShowPricingModal} tenantId={tenantId} />
     </div>
   );
 }
