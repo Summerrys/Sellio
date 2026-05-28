@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { getSupabase } from '@/lib/supabaseClient';
+import db from '@/lib/db';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import RecentOrders from '../components/dashboard/RecentOrders';
@@ -19,11 +19,11 @@ const featureCards = [
   { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view' },
   { label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view' },
   { label: 'Products', icon: ShoppingBag, page: 'Products', permission: 'products.view' },
-  { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view' },
   { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view' },
-  { label: 'Reports', icon: BarChart2, page: 'Reports', permission: 'reports.view' },
+  { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view' },
   { label: 'Staff', icon: Users, page: 'Staff', permission: 'staff.view' },
   { label: 'Roles', icon: Shield, page: 'RoleManagement', permission: 'roles.view' },
+  { label: 'Reports', icon: BarChart2, page: 'Reports', permission: 'reports.view' },
   { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view' },
 ];
 
@@ -61,30 +61,15 @@ function FeatureCard({ icon: Icon, label, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform"
-      style={{ width: '72px', height: '80px', flexShrink: 0 }}
+      className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border bg-white shadow-sm active:scale-95 transition-transform hover:shadow-md aspect-square"
     >
       <div
-        className="flex items-center justify-center rounded-[12px]"
-        style={{
-          width: '44px',
-          height: '44px',
-          background: 'rgba(var(--color-primary), 0.10)',
-        }}
+        className="w-11 h-11 rounded-xl flex items-center justify-center"
+        style={{ background: 'rgba(var(--color-primary), 0.10)' }}
       >
         <Icon className="w-5 h-5" style={{ color: 'rgb(var(--color-primary))' }} />
       </div>
-      <span
-        className="truncate text-center leading-tight"
-        style={{
-          fontSize: '10px',
-          fontWeight: 500,
-          color: '#475569',
-          width: '72px',
-        }}
-      >
-        {label}
-      </span>
+      <span className="text-xs font-semibold text-slate-700 text-center leading-tight">{label}</span>
     </button>
   );
 }
@@ -95,11 +80,7 @@ export default function Dashboard() {
 
   const { data: todayOrders = [] } = useQuery({
     queryKey: ['todayOrders', tenantId],
-    queryFn: async () => {
-      const supabase = await getSupabase();
-      const { data } = await supabase.from('orders').select('*').eq('tenant_id', tenantId);
-      return data || [];
-    },
+    queryFn: () => db.entities.Order.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
     refetchInterval: 30000,
   });
@@ -117,35 +98,17 @@ export default function Dashboard() {
 
   const { data: products = [] } = useQuery({
     queryKey: ['dashboardProducts', tenantId],
-    queryFn: async () => {
-      const supabase = await getSupabase();
-      const [{ data: prods }, { data: invItems }] = await Promise.all([
-        supabase.from('products').select('id, track_inventory').eq('tenant_id', tenantId),
-        supabase.from('inventory_items').select('product_id, current_stock, low_stock_threshold').eq('tenant_id', tenantId),
-      ]);
-      const invMap = Object.fromEntries((invItems || []).map(i => [i.product_id, i]));
-      return (prods || []).map(p => ({
-        ...p,
-        stock_quantity: invMap[p.id]?.current_stock ?? 0,
-        low_stock_threshold: invMap[p.id]?.low_stock_threshold ?? 5,
-      }));
-    },
+    queryFn: () => db.entities.Product.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
   });
 
-  const lowStockCount = products.filter(p => {
-    const stock = p.stock_quantity || 0;
-    const threshold = p.low_stock_threshold || 5;
-    return stock > 0 && stock < threshold;
-  }).length;
+  const lowStockCount = products.filter(p =>
+    (p.stock_quantity || 0) <= (p.low_stock_threshold || 5)
+  ).length;
 
   const { data: staff = [] } = useQuery({
     queryKey: ['dashboardStaff', tenantId],
-    queryFn: async () => {
-      const supabase = await getSupabase();
-      const { data } = await supabase.from('tenant_users').select('id').eq('tenant_id', tenantId).eq('status', 'active');
-      return data || [];
-    },
+    queryFn: () => db.entities.TenantUser.filter({ tenant_id: tenantId, status: 'active' }),
     enabled: !!tenantId,
   });
 
@@ -218,25 +181,15 @@ export default function Dashboard() {
       {/* Feature Grid */}
       <div>
         <h2 className="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wide">Quick Access</h2>
-        <div className="overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-          <style>{`
-            div:has(> button:first-child) {
-              -webkit-overflow-scrolling: touch;
-            }
-            div:has(> button:first-child)::-webkit-scrollbar {
-              display: none;
-            }
-          `}</style>
-          <div className="flex gap-[10px] p-[4px_0]" style={{ width: 'fit-content' }}>
-            {visibleFeatures.map(f => (
-              <FeatureCard
-                key={f.page}
-                icon={f.icon}
-                label={f.label}
-                onClick={() => navigate(createPageUrl(f.page))}
-              />
-            ))}
-          </div>
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+          {visibleFeatures.map(f => (
+            <FeatureCard
+              key={f.page}
+              icon={f.icon}
+              label={f.label}
+              onClick={() => navigate(createPageUrl(f.page))}
+            />
+          ))}
         </div>
       </div>
 
