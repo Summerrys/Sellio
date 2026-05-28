@@ -62,8 +62,6 @@ const OrderTracking = lazy(() => import('./pages/OrderTracking'));
 const Orders = lazy(() => import('./pages/Orders'));
 const Products = lazy(() => import('./pages/Products'));
 const Reports = lazy(() => import('./pages/Reports'));
-const RoleManagement = lazy(() => import('./pages/RoleManagement'));
-const Staff = lazy(() => import('./pages/Staff'));
 const Tables = lazy(() => import('./pages/Tables'));
 const TenantSettings = lazy(() => import('./pages/TenantSettings'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
@@ -84,8 +82,6 @@ export const PAGES = {
     "Orders": Orders,
     "Products": Products,
     "Reports": Reports,
-    "RoleManagement": RoleManagement,
-    "Staff": Staff,
     "Tables": Tables,
     "TenantSettings": TenantSettings,
     "UserManagement": UserManagement,

@@ -18,9 +18,11 @@ import { Badge } from '@/components/ui/badge';
 import InviteStaffDialog from '../components/staff/InviteStaffDialog';
 import CreateStaffDialog from '../components/staff/CreateStaffDialog';
 import EditStaffDialog from '../components/staff/EditStaffDialog';
+import StaffImportDialog from '../components/staff/StaffImportDialog';
 import StaffTable from '../components/staff/StaffTable';
 import StaffCards from '../components/staff/StaffCards';
-import { Shield, Plus, Pencil, Trash2, Copy, Users, CheckCircle2, UserPlus, Search, LayoutGrid, List } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Shield, Plus, Pencil, Trash2, Copy, Users, CheckCircle2, UserPlus, Search, LayoutGrid, List, Download, Upload, FileDown, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -68,6 +70,7 @@ function StaffContent() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const { data: staff = [], isLoading } = useQuery({
     queryKey: ['staff', tenantId],
@@ -88,49 +91,85 @@ function StaffContent() {
     return matchesSearch && matchesStatus && matchesRole;
   });
 
+  const csvEscape = (val) => {
+    const s = val == null ? '' : String(val);
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
+  const handleDownloadTemplate = () => {
+    const csv = 'name,email,role,status\nJohn Doe,john@example.com,staff,active';
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'staff_import_template.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExport = () => {
+    const rows = staff.map(m => [m.user_name || '', m.user_email || '', m.role_name || '', m.status || ''].map(csvEscape).join(','));
+    const csv = ['name,email,role,status', ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `staff_export_${new Date().toISOString().split('T')[0]}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = async (rows) => {
+    for (const row of rows) {
+      await db.entities.TenantUser.create({ tenant_id: tenantId, user_email: row.email, user_name: row.name, role_name: row.role || 'staff', status: row.status || 'active' });
+    }
+    queryClient.invalidateQueries({ queryKey: ['staff', tenantId] });
+  };
+
   return (
     <RequirePermission permission="staff.view">
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto">
-            <div className="relative flex-1 sm:max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input placeholder="Search staff..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="invited">Invited</SelectItem>
-                <SelectItem value="suspended">Suspended</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                {roles.map(role => <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+      <div className="space-y-4">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input placeholder="Search staff..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 h-11" />
+        </div>
+
+        {/* Filters + View Toggle + Actions */}
+        <div className="flex gap-2 items-center">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="flex-1 h-11"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="invited">Invited</SelectItem>
+              <SelectItem value="suspended">Suspended</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="flex-1 h-11"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Roles</SelectItem>
+              {roles.map(role => <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <div className="flex gap-1 flex-shrink-0">
+            <button onClick={() => setViewMode('table')} style={{ background: viewMode === 'table' ? 'rgba(var(--color-primary),0.08)' : 'transparent', color: viewMode === 'table' ? 'rgb(var(--color-primary))' : '#9ca3af', border: '0.5px solid #e5e7eb', borderRadius: 8, padding: '6px 8px', cursor: 'pointer' }}><List size={18} /></button>
+            <button onClick={() => setViewMode('cards')} style={{ background: viewMode === 'cards' ? 'rgba(var(--color-primary),0.08)' : 'transparent', color: viewMode === 'cards' ? 'rgb(var(--color-primary))' : '#9ca3af', border: '0.5px solid #e5e7eb', borderRadius: 8, padding: '6px 8px', cursor: 'pointer' }}><LayoutGrid size={18} /></button>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex gap-1 p-1 bg-slate-100 rounded-lg">
-              <Button variant="ghost" size="sm" onClick={() => setViewMode('table')} className={cn("h-8 px-3", viewMode === 'table' && "bg-white shadow-sm")}>
-                <List className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setViewMode('cards')} className={cn("h-8 px-3", viewMode === 'cards' && "bg-white shadow-sm")}>
-                <LayoutGrid className="w-4 h-4" />
-              </Button>
-            </div>
-            <RequirePermission permission="staff.create" silent>
-              <Button onClick={() => setInviteDialogOpen(true)} size="sm" className="text-white gap-1.5" style={{ background: 'var(--color-primary-gradient)' }}>
-                <UserPlus className="w-4 h-4" />
-                <span className="hidden sm:inline">Add Staff</span>
-                <span className="sm:hidden">Add</span>
-              </Button>
-            </RequirePermission>
-          </div>
+          <RequirePermission permission="staff.create" silent>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="flex-shrink-0">
+                  <Download className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Download</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleDownloadTemplate}><FileDown className="w-4 h-4 mr-2" />Download Template</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExport}><FileSpreadsheet className="w-4 h-4 mr-2" />Export All Staff</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button variant="outline" size="sm" className="flex-shrink-0" onClick={() => setImportOpen(true)}>
+              <Upload className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Import</span>
+            </Button>
+            <Button onClick={() => setInviteDialogOpen(true)} size="sm" className="text-white gap-1.5 whitespace-nowrap flex-shrink-0" style={{ background: 'var(--color-primary-gradient)' }}>
+              <UserPlus className="w-4 h-4" /><span className="hidden sm:inline">Add Staff</span><span className="sm:hidden">Add</span>
+            </Button>
+          </RequirePermission>
         </div>
 
         {isLoading ? (
@@ -146,6 +185,7 @@ function StaffContent() {
         <CreateStaffDialog open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={() => { setCreateOpen(false); queryClient.invalidateQueries({ queryKey: ['staff'] }); }} />
         <InviteStaffDialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen} tenantId={tenantId} />
         <EditStaffDialog open={!!editingStaff} onOpenChange={(open) => !open && setEditingStaff(null)} staff={editingStaff} tenantId={tenantId} />
+        <StaffImportDialog open={importOpen} onOpenChange={setImportOpen} onImport={handleImport} />
       </div>
     </RequirePermission>
   );
