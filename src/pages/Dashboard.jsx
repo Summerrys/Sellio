@@ -16,15 +16,15 @@ import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 
 const featureCards = [
-  { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view', color: 'bg-blue-50 text-blue-600 border-blue-100' },
-  { label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view', color: 'bg-teal-50 text-teal-600 border-teal-100' },
-  { label: 'Products', icon: ShoppingBag, page: 'Products', permission: 'products.view', color: 'bg-purple-50 text-purple-600 border-purple-100' },
-  { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view', color: 'bg-pink-50 text-pink-600 border-pink-100' },
-  { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view', color: 'bg-amber-50 text-amber-600 border-amber-100' },
-  { label: 'Staff', icon: Users, page: 'Staff', permission: 'staff.view', color: 'bg-green-50 text-green-600 border-green-100' },
-  { label: 'Roles', icon: Shield, page: 'RoleManagement', permission: 'roles.view', color: 'bg-indigo-50 text-indigo-600 border-indigo-100' },
-  { label: 'Reports', icon: BarChart2, page: 'Reports', permission: 'reports.view', color: 'bg-rose-50 text-rose-600 border-rose-100' },
-  { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view', color: 'bg-slate-50 text-slate-600 border-slate-200' },
+  { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view', bg: '#3b82f6' },
+  { label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view', bg: '#14b8a6' },
+  { label: 'Products', icon: ShoppingBag, page: 'Products', permission: 'products.view', bg: '#a855f7' },
+  { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view', bg: '#ec4899' },
+  { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view', bg: '#f59e0b' },
+  { label: 'Staff', icon: Users, page: 'Staff', permission: 'staff.view', bg: '#22c55e' },
+  { label: 'Roles', icon: Shield, page: 'RoleManagement', permission: 'roles.view', bg: '#6366f1' },
+  { label: 'Reports', icon: BarChart2, page: 'Reports', permission: 'reports.view', bg: '#f43f5e' },
+  { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view', bg: '#64748b' },
 ];
 
 function StatCard({ icon: Icon, label, value, subtext, color, onClick }) {
@@ -49,19 +49,15 @@ function StatCard({ icon: Icon, label, value, subtext, color, onClick }) {
   );
 }
 
-function FeatureCard({ icon: Icon, label, color, onClick }) {
+function FeatureCard({ icon: Icon, label, bg, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={cn(
-        'flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border bg-white shadow-sm active:scale-95 transition-transform hover:shadow-md',
-        'aspect-square'
-      )}
+      className="flex flex-col items-center justify-center active:scale-95 transition-transform"
+      style={{ width: 80, height: 90, borderRadius: 14, backgroundColor: bg, gap: 6 }}
     >
-      <div className={cn('w-11 h-11 rounded-xl flex items-center justify-center border', color)}>
-        <Icon className="w-5 h-5" />
-      </div>
-      <span className="text-xs font-semibold text-slate-700 text-center leading-tight">{label}</span>
+      <Icon className="text-white" style={{ width: 28, height: 28 }} />
+      <span className="text-white text-center leading-tight" style={{ fontSize: 10, fontWeight: 600 }}>{label}</span>
     </button>
   );
 }
@@ -181,13 +177,13 @@ export default function Dashboard() {
       {/* Feature Grid */}
       <div>
         <h2 className="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wide">Quick Access</h2>
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+        <div className="flex flex-wrap gap-3">
           {visibleFeatures.map(f => (
             <FeatureCard
               key={f.page}
               icon={f.icon}
               label={f.label}
-              color={f.color}
+              bg={f.bg}
               onClick={() => navigate(createPageUrl(f.page))}
             />
           ))}
