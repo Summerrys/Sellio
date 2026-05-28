@@ -73,18 +73,18 @@ function InventoryContent() {
   });
 
   const getStockStatus = (product) => {
-    if (!product.track_inventory) return { label: 'Unlimited', color: '#6b7280', bg: '#f3f4f6' };
+    if (!product.track_inventory) return null;
     const stock = product.current_stock;
     const threshold = product.low_stock_threshold;
-    if (stock === 0) return { label: 'Out of Stock', color: '#dc2626', bg: '#fee2e2' };
-    if (stock > 0 && stock < threshold) return { label: `Low Stock (${stock})`, color: '#92400e', bg: '#fef3c7' };
-    return { label: `${stock} in stock`, color: '#166534', bg: '#dcfce7' };
+    if (stock === 0) return { label: 'Out of stock', color: '#DC2626', bg: '#FEF2F2' };
+    if (stock > 0 && stock < threshold) return { label: 'Low stock', color: '#D97706', bg: '#FFFBEB' };
+    return { label: 'In stock', color: '#16A34A', bg: '#F0FDF4' };
   };
 
   const trackedProducts = mergedProducts.filter(p => p.track_inventory);
   const outOfStock = mergedProducts.filter(p => p.track_inventory && p.current_stock === 0).length;
   const lowStock = mergedProducts.filter(p => p.track_inventory && p.current_stock > 0 && p.current_stock < p.low_stock_threshold).length;
-  const unlimitedCount = mergedProducts.filter(p => !p.track_inventory).length;
+  const wellStocked = mergedProducts.filter(p => p.track_inventory && p.current_stock >= p.low_stock_threshold).length;
 
   const filteredProducts = mergedProducts.filter(product => {
     const matchesSearch = !searchQuery ||
@@ -151,17 +151,17 @@ function InventoryContent() {
 
         {/* Summary Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-          <div style={{ background: 'var(--color-background-secondary, #f1f5f9)', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
-            <p style={{ fontSize: '20px', fontWeight: '700', margin: '0 0 2px', color: '#dc2626' }}>{outOfStock}</p>
+          <div style={{ background: '#FEF2F2', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
+            <p style={{ fontSize: '20px', fontWeight: '700', margin: '0 0 2px', color: '#DC2626' }}>{outOfStock}</p>
             <p style={{ fontSize: '10px', color: '#6b7280', margin: 0 }}>Out of stock</p>
           </div>
-          <div style={{ background: 'var(--color-background-secondary, #f1f5f9)', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
-            <p style={{ fontSize: '20px', fontWeight: '700', margin: '0 0 2px', color: '#92400e' }}>{lowStock}</p>
+          <div style={{ background: '#FFFBEB', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
+            <p style={{ fontSize: '20px', fontWeight: '700', margin: '0 0 2px', color: '#D97706' }}>{lowStock}</p>
             <p style={{ fontSize: '10px', color: '#6b7280', margin: 0 }}>Low stock</p>
           </div>
-          <div style={{ background: 'var(--color-background-secondary, #f1f5f9)', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
-            <p style={{ fontSize: '20px', fontWeight: '700', margin: '0 0 2px', color: '#6b7280' }}>{unlimitedCount}</p>
-            <p style={{ fontSize: '10px', color: '#6b7280', margin: 0 }}>Unlimited</p>
+          <div style={{ background: '#F0FDF4', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
+            <p style={{ fontSize: '20px', fontWeight: '700', margin: '0 0 2px', color: '#16A34A' }}>{wellStocked}</p>
+            <p style={{ fontSize: '10px', color: '#6b7280', margin: 0 }}>Well stocked</p>
           </div>
         </div>
 
@@ -272,16 +272,14 @@ function InventoryContent() {
                         <p style={{ fontSize: '11px', color: '#6b7280', margin: 0 }}>{product.sku || 'No SKU'}</p>
                       </div>
                       <div className="flex items-center justify-between">
-                        {product.track_inventory ? (
+                        {product.track_inventory && status ? (
                           <div style={{ flex: 1 }}>
                             <div style={{ height: '3px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden', marginBottom: '4px' }}>
-                              <div style={{ height: '100%', width: `${Math.min((stock / Math.max(threshold * 2, 1)) * 100, 100)}%`, background: stock === 0 ? '#dc2626' : stock < threshold ? '#f59e0b' : '#16a34a', borderRadius: '999px' }} />
+                              <div style={{ height: '100%', width: `${Math.min((stock / Math.max(threshold * 2, 1)) * 100, 100)}%`, background: stock === 0 ? '#DC2626' : stock < threshold ? '#D97706' : '#16A34A', borderRadius: '999px' }} />
                             </div>
                             <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: status.bg, color: status.color }}>{status.label}</span>
                           </div>
-                        ) : (
-                          <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: '#f3f4f6', color: '#6b7280' }}>Unlimited</span>
-                        )}
+                        ) : null}
                       </div>
                       <div className="flex items-center justify-between px-1 mt-2" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1.5">
@@ -320,18 +318,10 @@ function InventoryContent() {
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-xs text-slate-400">{product.sku || 'No SKU'}</span>
-                          {product.track_inventory ? (
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                              stock === 0 ? 'bg-red-100 text-red-600' :
-                              stock < threshold ? 'bg-amber-100 text-amber-600' :
-                              'bg-green-100 text-green-600'
-                            }`}>
-                              {stock === 0 ? 'Out of stock' :
-                               stock < threshold ? `Low (${stock})` :
-                               `${stock} in stock`}
+                          {product.track_inventory && status && (
+                            <span style={{ fontSize: '11px', fontWeight: '500', padding: '1px 8px', borderRadius: '999px', background: status.bg, color: status.color }}>
+                              {status.label}
                             </span>
-                          ) : (
-                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">Unlimited</span>
                           )}
                         </div>
                         {product.track_inventory && (
@@ -339,7 +329,7 @@ function InventoryContent() {
                             <div style={{
                               height: '100%',
                               width: `${Math.min((stock / Math.max(threshold * 2, 1)) * 100, 100)}%`,
-                              background: stock === 0 ? '#dc2626' : stock < threshold ? '#f59e0b' : '#16a34a',
+                              background: stock === 0 ? '#DC2626' : stock < threshold ? '#D97706' : '#16A34A',
                               borderRadius: '999px',
                               transition: 'width 0.3s ease'
                             }} />
