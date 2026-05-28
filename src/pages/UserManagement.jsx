@@ -129,8 +129,9 @@ function StaffContent() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
-                </Button>
+                    <Download className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Download</span>
+                  </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleDownloadTemplate}><FileDown className="w-4 h-4 mr-2" />Download Template</DropdownMenuItem>
