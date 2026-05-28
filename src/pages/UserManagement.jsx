@@ -191,7 +191,7 @@ function StaffContent() {
         <CreateStaffDialog open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={() => { setCreateOpen(false); queryClient.invalidateQueries({ queryKey: ['staff'] }); }} />
         <InviteStaffDialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen} tenantId={tenantId} />
         <EditStaffDialog open={!!editingStaff} onOpenChange={(open) => !open && setEditingStaff(null)} staff={editingStaff} tenantId={tenantId} />
-        <StaffImportDialog open={importOpen} onOpenChange={setImportOpen} onImport={handleImport} />
+        <StaffImportDialog open={importOpen} onOpenChange={setImportOpen} onImport={handleImport} roles={roles} />
       </div>
     </RequirePermission>
   );
