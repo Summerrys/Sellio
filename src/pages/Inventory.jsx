@@ -187,7 +187,7 @@ function InventoryContent() {
             {/* Filters + View toggle */}
             <div className="flex gap-2 items-center flex-wrap">
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="flex-1 min-w-[120px] h-11">
+                <SelectTrigger className="flex-1 min-w-[120px]" style={{ height: 36, background: 'white', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', borderRadius: 8 }}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -199,7 +199,7 @@ function InventoryContent() {
               </Select>
 
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="flex-1 min-w-[110px] h-11">
+                <SelectTrigger className="flex-1 min-w-[110px]" style={{ height: 36, background: 'white', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', borderRadius: 8 }}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
