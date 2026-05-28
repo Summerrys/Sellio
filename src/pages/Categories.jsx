@@ -72,12 +72,12 @@ function CategoriesContent() {
       <PageHeader title="Categories" description="Organize your products into categories"
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex gap-1">
-              <button onClick={() => handleViewToggle('grid')} style={{ background: viewMode === 'grid' ? 'rgba(var(--color-primary), 0.08)' : 'transparent', color: viewMode === 'grid' ? 'rgb(var(--color-primary))' : '#9ca3af', border: '0.5px solid #e5e7eb', borderRadius: '8px', padding: '6px 8px', cursor: 'pointer' }}>
-                <LayoutGrid size={18} />
+            <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', borderRadius: 8, padding: 3 }}>
+              <button onClick={() => handleViewToggle('grid')} style={{ width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer', background: viewMode === 'grid' ? 'white' : 'transparent', boxShadow: viewMode === 'grid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: viewMode === 'grid' ? '#6366f1' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <LayoutGrid size={16} />
               </button>
-              <button onClick={() => handleViewToggle('list')} style={{ background: viewMode === 'list' ? 'rgba(var(--color-primary), 0.08)' : 'transparent', color: viewMode === 'list' ? 'rgb(var(--color-primary))' : '#9ca3af', border: '0.5px solid #e5e7eb', borderRadius: '8px', padding: '6px 8px', cursor: 'pointer' }}>
-                <List size={18} />
+              <button onClick={() => handleViewToggle('list')} style={{ width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer', background: viewMode === 'list' ? 'white' : 'transparent', boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: viewMode === 'list' ? '#6366f1' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <List size={16} />
               </button>
             </div>
             <Button
