@@ -129,7 +129,6 @@ function StaffContent() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" />Download
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
