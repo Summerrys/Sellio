@@ -54,14 +54,12 @@ function FeatureCard({ icon: Icon, label, color, onClick }) {
     <button
       onClick={onClick}
       className={cn(
-        'flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border bg-white shadow-sm active:scale-95 transition-transform hover:shadow-md',
-        'aspect-square'
+        'flex flex-col items-center justify-center gap-2 p-3 rounded-2xl aspect-square active:scale-95 transition-transform',
+        color
       )}
     >
-      <div className={cn('w-11 h-11 rounded-xl flex items-center justify-center border', color)}>
-        <Icon className="w-5 h-5" />
-      </div>
-      <span className="text-xs font-semibold text-slate-700 text-center leading-tight">{label}</span>
+      <Icon className="w-6 h-6" />
+      <span className="text-[11px] font-semibold text-center leading-tight">{label}</span>
     </button>
   );
 }
