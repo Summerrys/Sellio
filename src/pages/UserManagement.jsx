@@ -138,7 +138,7 @@ function StaffContent() {
                 <DropdownMenuItem onClick={handleExport}><FileSpreadsheet className="w-4 h-4 mr-2" />Export All Staff</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-                <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm">
+                <Button onClick={() => setImportOpen(true)} variant="outline" size="sm">
                   <Upload className="w-4 h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Import</span>
                 </Button>

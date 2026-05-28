@@ -250,7 +250,7 @@ export default function Products() {
           <div className="flex gap-2 items-center flex-wrap">
             {/* Category Filter */}
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="flex-1 min-w-[120px] h-11">
+              <SelectTrigger className="flex-1 min-w-[120px]" style={{ height: 36, background: 'white', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', borderRadius: 8 }}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -263,7 +263,7 @@ export default function Products() {
 
             {/* Status Filter */}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="flex-1 min-w-[110px] h-11">
+              <SelectTrigger className="flex-1 min-w-[110px]" style={{ height: 36, background: 'white', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', borderRadius: 8 }}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -278,25 +278,13 @@ export default function Products() {
             <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', borderRadius: 8, padding: 3, marginLeft: 'auto', flexShrink: 0 }}>
               <button
                 onClick={() => handleViewToggle('grid')}
-                style={{
-                  width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer',
-                  background: viewMode === 'grid' ? 'white' : 'transparent',
-                  boxShadow: viewMode === 'grid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                  color: viewMode === 'grid' ? '#6366f1' : '#94a3b8',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
+                style={{ width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer', background: viewMode === 'grid' ? 'white' : 'transparent', boxShadow: viewMode === 'grid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: viewMode === 'grid' ? '#6366f1' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <LayoutGrid size={16} />
               </button>
               <button
                 onClick={() => handleViewToggle('list')}
-                style={{
-                  width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer',
-                  background: viewMode === 'list' ? 'white' : 'transparent',
-                  boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                  color: viewMode === 'list' ? '#6366f1' : '#94a3b8',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
+                style={{ width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer', background: viewMode === 'list' ? 'white' : 'transparent', boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: viewMode === 'list' ? '#6366f1' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <List size={16} />
               </button>
