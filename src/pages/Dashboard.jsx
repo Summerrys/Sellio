@@ -33,7 +33,7 @@ function StatCard({ icon: Icon, label, value, subtext, color, onClick }) {
     <button
       onClick={onClick}
       className={cn(
-        'w-full text-left p-4 rounded-2xl border bg-white shadow-sm flex items-center gap-3 active:scale-95 transition-transform',
+        'w-full h-full text-left p-4 rounded-2xl border bg-white shadow-sm flex items-center gap-3 active:scale-95 transition-transform',
         onClick && 'hover:shadow-md cursor-pointer'
       )}
     >
@@ -114,6 +114,19 @@ export default function Dashboard() {
     return inv.current_stock > 0 && inv.current_stock < inv.low_stock_threshold;
   }).length;
 
+  const outOfStockCount = products.filter(p => {
+    if (!p.track_inventory) return false;
+    const inv = inventoryItems.find(i => i.product_id === p.id);
+    if (!inv) return false;
+    return inv.current_stock === 0;
+  }).length;
+
+  const stockStatus = outOfStockCount > 0
+    ? { value: outOfStockCount, subtext: 'Out of stock', cardClass: 'rounded-2xl border border-red-200 bg-red-50', iconColor: 'bg-red-100 text-red-600', icon: AlertTriangle }
+    : lowStockCount > 0
+    ? { value: lowStockCount, subtext: 'Low stock', cardClass: 'rounded-2xl border border-amber-200 bg-amber-50', iconColor: 'bg-amber-100 text-amber-600', icon: AlertTriangle }
+    : { value: 'All good', subtext: 'Well stocked', cardClass: '', iconColor: 'bg-green-50 text-green-600', icon: Package };
+
   const { data: staff = [] } = useQuery({
     queryKey: ['dashboardStaff', tenantId],
     queryFn: () => db.entities.TenantUser.filter({ tenant_id: tenantId, status: 'active' }),
@@ -147,7 +160,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3" style={{ alignItems: 'stretch' }}>
         <RequirePermission permission="orders.view" silent>
           <StatCard
             icon={DollarSign}
@@ -170,13 +183,13 @@ export default function Dashboard() {
         </RequirePermission>
 
         <RequirePermission permission="inventory.view" silent>
-          <div className={cn(lowStockCount > 0 ? 'rounded-2xl border border-amber-200 bg-amber-50' : '')}>
+          <div className={cn('h-full', stockStatus.cardClass)}>
             <StatCard
-              icon={lowStockCount > 0 ? AlertTriangle : Package}
-              label="Low Stock"
-              value={lowStockCount}
-              subtext={lowStockCount > 0 ? 'Need restocking' : 'Well stocked'}
-              color={lowStockCount > 0 ? 'bg-amber-100 text-amber-600' : 'bg-green-50 text-green-600'}
+              icon={stockStatus.icon}
+              label="Stock Level"
+              value={stockStatus.value}
+              subtext={stockStatus.subtext}
+              color={stockStatus.iconColor}
               onClick={() => navigate(createPageUrl('Inventory'))}
             />
           </div>
