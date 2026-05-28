@@ -17,9 +17,9 @@ import { cn } from '@/lib/utils';
 
 const featureCards = [
   { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view', color: 'bg-blue-50 text-blue-600 border-blue-100' },
+  { label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view', color: 'bg-teal-50 text-teal-600 border-teal-100' },
   { label: 'Products', icon: ShoppingBag, page: 'Products', permission: 'products.view', color: 'bg-purple-50 text-purple-600 border-purple-100' },
   { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view', color: 'bg-pink-50 text-pink-600 border-pink-100' },
-  { label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view', color: 'bg-teal-50 text-teal-600 border-teal-100' },
   { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view', color: 'bg-amber-50 text-amber-600 border-amber-100' },
   { label: 'Staff', icon: Users, page: 'Staff', permission: 'staff.view', color: 'bg-green-50 text-green-600 border-green-100' },
   { label: 'Roles', icon: Shield, page: 'RoleManagement', permission: 'roles.view', color: 'bg-indigo-50 text-indigo-600 border-indigo-100' },
@@ -42,7 +42,7 @@ function StatCard({ icon: Icon, label, value, subtext, color, onClick }) {
       <div className="min-w-0 flex-1">
         <p className="text-xs text-slate-500 font-medium">{label}</p>
         <p className="text-xl font-bold text-slate-900 leading-tight">{value}</p>
-        {subtext && <p className="text-xs text-slate-400 truncate">{subtext}</p>}
+        {subtext && <p className="text-xs text-slate-400 leading-tight">{subtext}</p>}
       </div>
       {onClick && <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0" />}
     </button>
@@ -110,14 +110,24 @@ export default function Dashboard() {
     !f.permission || hasPermission(f.permission)
   );
 
+  const getGreeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const todayLabel = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+
   return (
     <div className="space-y-6 pb-8">
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-slate-900">
-          Welcome {tenant?.name || 'Dashboard'} 👋!
+          {getGreeting()}, {tenant?.name || 'there'} 👋!
         </h1>
         <p className="text-sm text-slate-500 mt-0.5">Today's overview</p>
+        <p className="text-xs text-slate-400 mt-0.5">{todayLabel}</p>
       </div>
 
       {/* Stats Row */}
@@ -144,14 +154,16 @@ export default function Dashboard() {
         </RequirePermission>
 
         <RequirePermission permission="inventory.view" silent>
-          <StatCard
-            icon={lowStockCount > 0 ? AlertTriangle : Package}
-            label="Low Stock"
-            value={lowStockCount}
-            subtext={lowStockCount > 0 ? 'Need restock' : 'Well stocked'}
-            color={lowStockCount > 0 ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'}
-            onClick={() => navigate(createPageUrl('Inventory'))}
-          />
+          <div className={cn(lowStockCount > 0 ? 'rounded-2xl border border-amber-200 bg-amber-50' : '')}>
+            <StatCard
+              icon={lowStockCount > 0 ? AlertTriangle : Package}
+              label="Low Stock"
+              value={lowStockCount}
+              subtext={lowStockCount > 0 ? 'Need restocking' : 'Well stocked'}
+              color={lowStockCount > 0 ? 'bg-amber-100 text-amber-600' : 'bg-green-50 text-green-600'}
+              onClick={() => navigate(createPageUrl('Inventory'))}
+            />
+          </div>
         </RequirePermission>
 
         <RequirePermission permission="staff.view" silent>
