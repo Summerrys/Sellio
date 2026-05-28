@@ -171,8 +171,8 @@ function StaffContent() {
             </SelectContent>
           </Select>
           <div className="flex gap-1 flex-shrink-0 ml-auto">
-            <button onClick={() => setViewMode('table')} style={{ background: viewMode === 'table' ? 'rgba(var(--color-primary),0.08)' : 'transparent', color: viewMode === 'table' ? 'rgb(var(--color-primary))' : '#9ca3af', border: '0.5px solid #e5e7eb', borderRadius: 8, padding: '6px 8px', cursor: 'pointer' }}><List size={18} /></button>
             <button onClick={() => setViewMode('cards')} style={{ background: viewMode === 'cards' ? 'rgba(var(--color-primary),0.08)' : 'transparent', color: viewMode === 'cards' ? 'rgb(var(--color-primary))' : '#9ca3af', border: '0.5px solid #e5e7eb', borderRadius: 8, padding: '6px 8px', cursor: 'pointer' }}><LayoutGrid size={18} /></button>
+            <button onClick={() => setViewMode('table')} style={{ background: viewMode === 'table' ? 'rgba(var(--color-primary),0.08)' : 'transparent', color: viewMode === 'table' ? 'rgb(var(--color-primary))' : '#9ca3af', border: '0.5px solid #e5e7eb', borderRadius: 8, padding: '6px 8px', cursor: 'pointer' }}><List size={18} /></button>
           </div>
         </div>
 
