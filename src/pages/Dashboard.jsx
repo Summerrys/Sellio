@@ -28,13 +28,15 @@ const featureCards = [
   { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view', color: 'bg-slate-50 text-slate-600 border-slate-200' },
 ];
 
-function StatCard({ icon: Icon, label, value, subtext, color, onClick }) {
+function StatCard({ icon: Icon, label, value, subtext, color, onClick, transparent }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        'w-full h-full text-left p-4 rounded-2xl border bg-white shadow-sm flex items-center gap-3 active:scale-95 transition-transform',
-        onClick && 'hover:shadow-md cursor-pointer'
+        'w-full h-full text-left p-4 rounded-2xl flex items-center gap-3 active:scale-95 transition-transform',
+        transparent ? 'bg-transparent border-none shadow-none' : 'border bg-white shadow-sm',
+        !transparent && onClick && 'hover:shadow-md cursor-pointer',
+        transparent && onClick && 'cursor-pointer'
       )}
     >
       <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0', color)}>
@@ -121,11 +123,13 @@ export default function Dashboard() {
     return inv.current_stock === 0;
   }).length;
 
+  const trackedCount = products.filter(p => p.track_inventory).length;
+
   const stockStatus = outOfStockCount > 0
     ? { value: outOfStockCount, subtext: 'Out of stock', cardClass: 'rounded-2xl border border-red-200 bg-red-50', iconColor: 'bg-red-100 text-red-600', icon: AlertTriangle }
     : lowStockCount > 0
     ? { value: lowStockCount, subtext: 'Low stock', cardClass: 'rounded-2xl border border-amber-200 bg-amber-50', iconColor: 'bg-amber-100 text-amber-600', icon: AlertTriangle }
-    : { value: 'All good', subtext: 'Well stocked', cardClass: '', iconColor: 'bg-green-50 text-green-600', icon: Package };
+    : { value: trackedCount, subtext: 'Well stocked', cardClass: 'rounded-2xl border border-green-200 bg-green-50', iconColor: 'bg-green-100 text-green-600', icon: Package };
 
   const { data: staff = [] } = useQuery({
     queryKey: ['dashboardStaff', tenantId],
@@ -191,6 +195,7 @@ export default function Dashboard() {
               subtext={stockStatus.subtext}
               color={stockStatus.iconColor}
               onClick={() => navigate(createPageUrl('Inventory'))}
+              transparent
             />
           </div>
         </RequirePermission>
