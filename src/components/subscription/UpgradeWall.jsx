@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Check, Zap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Lock, Check } from 'lucide-react';
 import { useTenant } from '../tenant/TenantContext';
 
 const PLANS = [
@@ -79,18 +77,24 @@ const PLANS = [
   },
 ];
 
-const COLOR_STYLES = {
-  blue: { icon: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-200', badge: 'bg-blue-100 text-blue-700' },
-  purple: { icon: 'text-purple-500', bg: 'bg-purple-50', border: 'border-purple-200', badge: 'bg-purple-100 text-purple-700' },
-  gold: { icon: 'text-amber-500', bg: 'bg-amber-50', border: 'border-amber-200', badge: 'bg-amber-100 text-amber-700' },
+const BADGE_COLORS = {
+  blue: 'bg-blue-100 text-blue-700',
+  purple: 'bg-purple-100 text-purple-700',
+  gold: 'bg-amber-100 text-amber-700',
+};
+
+const BUTTON_STYLES = {
+  starter: { background: '#3b82f6' },
+  growth: { background: 'var(--color-primary-gradient, linear-gradient(90deg,#6366f1,#8b5cf6))' },
+  pro: { background: '#1e293b' },
 };
 
 export default function UpgradeWall() {
-  const [annual, setAnnual] = useState(false);
+  const [billing, setBilling] = useState('monthly');
   const { tenantId } = useTenant();
 
   const getLink = (plan) => {
-    const base = annual ? plan.links.yearly : plan.links.monthly;
+    const base = billing === 'annual' ? plan.links.yearly : plan.links.monthly;
     return tenantId ? `${base}?client_reference_id=${tenantId}` : base;
   };
 
@@ -116,42 +120,46 @@ export default function UpgradeWall() {
         Choose a plan to continue using Sellio. Your data is safe and will be restored immediately after upgrade.
       </p>
 
-      {/* Monthly / Annual Toggle */}
-      <div className="flex items-center gap-3 mb-10">
-        <span className={`text-sm font-medium ${!annual ? 'text-slate-900' : 'text-slate-400'}`}>Monthly</span>
+      {/* Pill Toggle */}
+      <div className="flex items-center justify-center gap-2 mb-6">
         <button
-          onClick={() => setAnnual(v => !v)}
-          className={`relative w-12 h-6 rounded-full transition-colors ${annual ? 'bg-slate-800' : 'bg-slate-300'}`}
+          onClick={() => setBilling('monthly')}
+          className="text-sm font-medium px-5 py-1.5 rounded-full transition-all"
+          style={billing === 'monthly'
+            ? { background: 'var(--color-primary-gradient, linear-gradient(90deg,#6366f1,#8b5cf6))', color: '#fff' }
+            : { color: '#64748b' }}
         >
-          <span
-            className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${annual ? 'translate-x-7' : 'translate-x-1'}`}
-          />
+          Monthly
         </button>
-        <span className={`text-sm font-medium ${annual ? 'text-slate-900' : 'text-slate-400'}`}>Annual</span>
-        {annual && (
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-            2 months free
-          </span>
-        )}
+        <button
+          onClick={() => setBilling('annual')}
+          className="flex items-center gap-2 text-sm font-medium px-5 py-1.5 rounded-full transition-all"
+          style={billing === 'annual'
+            ? { background: 'var(--color-primary-gradient, linear-gradient(90deg,#6366f1,#8b5cf6))', color: '#fff' }
+            : { color: '#64748b' }}
+        >
+          Annual
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">2 months free</span>
+        </button>
       </div>
 
-      {/* Pricing Cards */}
-      <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Pricing Cards — horizontal scroll on mobile */}
+      <div
+        className="w-full max-w-5xl flex md:grid md:grid-cols-3 gap-6 overflow-x-auto pb-4 md:overflow-x-visible"
+        style={{ scrollSnapType: 'x mandatory' }}
+      >
         {PLANS.map((plan) => {
           const isGrowth = plan.key === 'growth';
-          const colors = COLOR_STYLES[plan.color];
-          const price = annual ? plan.yearly : plan.monthly;
+          const price = billing === 'annual' ? plan.yearly : plan.monthly;
           const saving = plan.monthly * 12 - plan.yearly;
 
           return (
             <div
               key={plan.key}
-              className={`relative bg-white rounded-2xl flex flex-col ${
-                isGrowth
-                  ? 'shadow-xl ring-2 ring-offset-2'
-                  : 'shadow-sm border border-slate-200'
+              className={`relative bg-white rounded-2xl flex flex-col flex-shrink-0 w-[85vw] md:w-auto ${
+                isGrowth ? 'shadow-xl ring-2 ring-offset-2' : 'shadow-sm border border-slate-200'
               }`}
-              style={isGrowth ? { ringColor: 'rgb(var(--color-primary, 99 102 241))' } : {}}
+              style={{ minHeight: 480, scrollSnapAlign: 'start' }}
             >
               {isGrowth && (
                 <div
@@ -160,12 +168,12 @@ export default function UpgradeWall() {
                 />
               )}
 
-              <div className="p-6 flex-1 flex flex-col">
+              <div className="p-6 flex flex-col h-full" style={{ minHeight: 480 }}>
                 {/* Header */}
                 <div className="flex items-center justify-between mb-1">
                   <h2 className="text-base font-bold text-slate-900">{plan.name}</h2>
                   {plan.badge && (
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${colors.badge}`}>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${BADGE_COLORS[plan.color]}`}>
                       {plan.badge}
                     </span>
                   )}
@@ -174,9 +182,9 @@ export default function UpgradeWall() {
                 {/* Price */}
                 <div className="mt-3 mb-1">
                   <span className="text-3xl font-extrabold text-slate-900">SGD {price}</span>
-                  <span className="text-sm text-slate-400 ml-1">/{annual ? 'year' : 'month'}</span>
+                  <span className="text-sm text-slate-400 ml-1">/{billing === 'annual' ? 'year' : 'month'}</span>
                 </div>
-                {annual && (
+                {billing === 'annual' && (
                   <p className="text-xs text-green-600 font-medium mb-2">Save SGD {saving}</p>
                 )}
 
@@ -193,21 +201,20 @@ export default function UpgradeWall() {
                   ))}
                 </ul>
 
-                {/* CTA */}
-                <a
-                  href={getLink(plan)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block"
+                {/* CTA always at bottom */}
+                <button
+                  onClick={() => window.open(getLink(plan), '_blank')}
+                  className="w-full text-white font-semibold text-sm mt-auto"
+                  style={{
+                    ...BUTTON_STYLES[plan.key],
+                    height: 44,
+                    borderRadius: 10,
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
                 >
-                  <Button
-                    className="w-full text-white font-semibold"
-                    style={isGrowth ? { background: 'var(--color-primary-gradient, linear-gradient(90deg,#6366f1,#8b5cf6))' } : {}}
-                    variant={isGrowth ? 'default' : 'outline'}
-                  >
-                    Get Started
-                  </Button>
-                </a>
+                  Get Started →
+                </button>
               </div>
             </div>
           );
