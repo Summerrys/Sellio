@@ -134,7 +134,7 @@ function InventoryContent() {
           <button
             onClick={handleStartStockTake}
             disabled={trackedProducts.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
             style={{ border: '1.5px solid rgb(var(--color-primary))', color: 'rgb(var(--color-primary))', background: 'rgba(var(--color-primary), 0.08)' }}
             onMouseEnter={e => {
               e.currentTarget.style.background = 'var(--color-primary-gradient)';
