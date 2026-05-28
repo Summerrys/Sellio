@@ -53,8 +53,9 @@ function FeatureCard({ icon: Icon, label, color, onClick }) {
   return (
     <button
       onClick={onClick}
+      style={{ width: 80, height: 88, flexShrink: 0 }}
       className={cn(
-        'flex flex-col items-center justify-center gap-2 p-3 rounded-2xl aspect-square active:scale-95 transition-transform',
+        'flex flex-col items-center justify-center gap-2 p-3 rounded-2xl active:scale-95 transition-transform',
         color
       )}
     >
@@ -179,7 +180,10 @@ export default function Dashboard() {
       {/* Feature Grid */}
       <div>
         <h2 className="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wide">Quick Access</h2>
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+        <div
+          className="no-scrollbar"
+          style={{ display: 'flex', flexDirection: 'row', gap: 10, overflowX: 'auto', overflowY: 'hidden', padding: '4px 2px' }}
+        >
           {visibleFeatures.map(f => (
             <FeatureCard
               key={f.page}

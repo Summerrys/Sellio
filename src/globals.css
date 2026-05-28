@@ -63,6 +63,10 @@ input[type="number"]::-webkit-outer-spin-button {
   margin: 0;
 }
 
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* Scrollbar styles — desktop only */
 @media (min-width: 1024px) {
   ::-webkit-scrollbar {
