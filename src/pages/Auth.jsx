@@ -75,16 +75,41 @@ function SignupPricingWall({ pricingRef }) {
       </p>
 
       {/* Toggle */}
-      <div className="flex items-center gap-3 mb-10">
-        <span className={`text-sm font-medium ${!annual ? 'text-slate-900' : 'text-slate-400'}`}>Monthly</span>
+      <div className="flex items-center justify-center gap-2 mb-6" style={{ marginBottom: 24 }}>
+        <span
+          onClick={() => setAnnual(false)}
+          style={{ fontSize: 14, fontWeight: 500, color: !annual ? '#0f172a' : '#94a3b8', cursor: 'pointer', flexShrink: 0 }}
+        >
+          Monthly
+        </span>
         <button
           onClick={() => setAnnual(v => !v)}
-          className={`relative w-12 h-6 rounded-full transition-colors ${annual ? 'bg-slate-800' : 'bg-slate-300'}`}
+          style={{
+            position: 'relative', width: 44, height: 24, borderRadius: 12,
+            background: annual ? '#16a34a' : '#cbd5e1',
+            border: 'none', cursor: 'pointer', flexShrink: 0, transition: 'background 0.2s',
+          }}
         >
-          <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${annual ? 'translate-x-7' : 'translate-x-1'}`} />
+          <span style={{
+            position: 'absolute', top: 2, width: 20, height: 20, borderRadius: '50%',
+            background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+            transition: 'left 0.2s', left: annual ? 22 : 2,
+          }} />
         </button>
-        <span className={`text-sm font-medium ${annual ? 'text-slate-900' : 'text-slate-400'}`}>Annual</span>
-        {annual && <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">2 months free</span>}
+        <span
+          onClick={() => setAnnual(true)}
+          style={{ fontSize: 14, fontWeight: 500, color: annual ? '#0f172a' : '#94a3b8', cursor: 'pointer', flexShrink: 0 }}
+        >
+          Annual
+        </span>
+        {annual && (
+          <span style={{
+            fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
+            background: '#dcfce7', color: '#15803d', flexShrink: 0,
+          }}>
+            2 months free
+          </span>
+        )}
       </div>
 
       {/* Cards */}
@@ -154,6 +179,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [checkingToken, setCheckingToken] = useState(false);
+  const [googleGateError, setGoogleGateError] = useState('');
 
   // Signup gate state
   const [signupMode, setSignupMode] = useState(null); // null | 'allowed' | 'pricing_wall' | 'invalid_token'
@@ -227,6 +253,21 @@ export default function Auth() {
         const user = session.user;
         const now = new Date(Date.now() + 8 * 3600 * 1000).toISOString().replace('Z', '').replace('T', ' ').substring(0, 23);
 
+        // Token gate: check if this is a brand-new Supabase auth user
+        const createdAt = user.created_at ? new Date(user.created_at) : null;
+        const isNewAuthUser = createdAt && (Date.now() - createdAt.getTime()) < 60 * 1000;
+        const tokenInUrl = new URLSearchParams(window.location.search).get('token');
+        const isBypass = BYPASS_EMAILS.includes((user.email || '').toLowerCase());
+
+        if (isNewAuthUser && !tokenInUrl && !isBypass) {
+          await supabase.auth.signOut();
+          setGoogleLoading(false);
+          window.history.replaceState(null, '', window.location.pathname);
+          // Set error state to show inline
+          setGoogleGateError('Account creation requires a valid plan. Please purchase a plan at sellio.apptelier.sg to get started.');
+          return;
+        }
+
         const { data: existingAppUser } = await supabase
           .from('app_users')
           .select('id, created_date, onboarding_completed, tenant_id, role')
@@ -286,6 +327,7 @@ export default function Auth() {
   }, []);
 
   const handleGoogleSignIn = async () => {
+    setGoogleGateError('');
     setGoogleLoading(true);
     try {
       const supabase = await getSupabase();
@@ -633,6 +675,13 @@ export default function Auth() {
                   )}
                   {googleLoading ? 'Redirecting...' : 'Sign in with Google'}
                 </button>
+
+                {googleGateError && (
+                  <div className="mt-3 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                    <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-800">{googleGateError}</p>
+                  </div>
+                )}
               </>
             )}
           </div>
