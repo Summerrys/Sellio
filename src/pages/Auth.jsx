@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Phone, Lock, User, Mail, ChevronDown, Check, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Phone, Lock, User, Mail, ChevronDown, Check, AlertCircle, X } from 'lucide-react';
 import { getSupabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { createPageUrl } from '../utils';
@@ -59,116 +59,99 @@ const hashPassword = async (password) => {
   return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
-// Pricing wall shown when no token and not in bypass list
-function SignupPricingWall({ pricingRef }) {
+// Pricing modal overlay
+function PricingModal({ onClose }) {
   const [annual, setAnnual] = useState(false);
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 py-12 flex flex-col items-center" ref={pricingRef}>
-      <img src="https://assets.apptelier.sg/sellio/Logo_Sellio.png" alt="Sellio" className="h-16 w-auto object-contain mb-8" />
-
-      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 text-center mb-2">
-        Choose a plan to get started
-      </h1>
-      <p className="text-slate-500 text-center max-w-md mb-6 text-sm leading-relaxed">
-        Start your 3-day free trial. No charge until trial ends.
-      </p>
-
-      {/* Toggle */}
-      <div className="flex items-center justify-center gap-2 mb-6" style={{ marginBottom: 24 }}>
-        <span
-          onClick={() => setAnnual(false)}
-          style={{ fontSize: 14, fontWeight: 500, color: !annual ? '#0f172a' : '#94a3b8', cursor: 'pointer', flexShrink: 0 }}
-        >
-          Monthly
-        </span>
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: '24px 16px' }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 780, position: 'relative', padding: '32px 24px 28px' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Close button */}
         <button
-          onClick={() => setAnnual(v => !v)}
-          style={{
-            position: 'relative', width: 44, height: 24, borderRadius: 12,
-            background: annual ? '#16a34a' : '#cbd5e1',
-            border: 'none', cursor: 'pointer', flexShrink: 0, transition: 'background 0.2s',
-          }}
+          onClick={onClose}
+          style={{ position: 'absolute', top: 16, right: 16, background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
         >
-          <span style={{
-            position: 'absolute', top: 2, width: 20, height: 20, borderRadius: '50%',
-            background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-            transition: 'left 0.2s', left: annual ? 22 : 2,
-          }} />
+          <X style={{ width: 16, height: 16, color: '#64748b' }} />
         </button>
-        <span
-          onClick={() => setAnnual(true)}
-          style={{ fontSize: 14, fontWeight: 500, color: annual ? '#0f172a' : '#94a3b8', cursor: 'pointer', flexShrink: 0 }}
-        >
-          Annual
-        </span>
-        {annual && (
-          <span style={{
-            fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
-            background: '#dcfce7', color: '#15803d', flexShrink: 0,
-          }}>
-            2 months free
-          </span>
-        )}
-      </div>
 
-      {/* Cards */}
-      <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-6">
-        {PLANS.map((plan) => {
-          const isGrowth = plan.key === 'growth';
-          const price = annual ? plan.yearly : plan.monthly;
-          const saving = plan.monthly * 12 - plan.yearly;
-          const link = annual ? plan.links.yearly : plan.links.monthly;
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', textAlign: 'center', marginBottom: 4 }}>Choose a plan to get started</h2>
+        <p style={{ fontSize: 13, color: '#64748b', textAlign: 'center', marginBottom: 20 }}>Start your 3-day free trial. No charge until trial ends.</p>
 
-          return (
-            <div
-              key={plan.key}
-              className={`relative bg-white rounded-2xl flex flex-col ${isGrowth ? 'shadow-xl ring-2 ring-purple-400 ring-offset-2' : 'shadow-sm border border-slate-200'}`}
-            >
-              {isGrowth && (
-                <div className="absolute -top-px left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-purple-500 to-indigo-500" />
-              )}
-              <div className="p-6 flex-1 flex flex-col">
-                <div className="flex items-center justify-between mb-1">
-                  <h2 className="text-base font-bold text-slate-900">{plan.name}</h2>
-                  {plan.badge && (
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">{plan.badge}</span>
-                  )}
+        {/* Toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24 }}>
+          <span onClick={() => setAnnual(false)} style={{ fontSize: 13, fontWeight: 500, color: !annual ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}>Monthly</span>
+          <button
+            onClick={() => setAnnual(v => !v)}
+            style={{ position: 'relative', width: 44, height: 24, borderRadius: 12, background: annual ? '#16a34a' : '#cbd5e1', border: 'none', cursor: 'pointer', flexShrink: 0, transition: 'background 0.2s' }}
+          >
+            <span style={{ position: 'absolute', top: 2, width: 20, height: 20, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s', left: annual ? 22 : 2 }} />
+          </button>
+          <span onClick={() => setAnnual(true)} style={{ fontSize: 13, fontWeight: 500, color: annual ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}>Annual</span>
+          {annual && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#dcfce7', color: '#15803d' }}>2 months free</span>}
+        </div>
+
+        {/* Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+          {PLANS.map((plan) => {
+            const isGrowth = plan.key === 'growth';
+            const price = annual ? plan.yearly : plan.monthly;
+            const saving = plan.monthly * 12 - plan.yearly;
+            const link = annual ? plan.links.yearly : plan.links.monthly;
+            return (
+              <div
+                key={plan.key}
+                style={{
+                  position: 'relative', background: '#fff', borderRadius: 16, display: 'flex', flexDirection: 'column',
+                  boxShadow: isGrowth ? '0 4px 24px rgba(139,92,246,0.15)' : '0 1px 4px rgba(0,0,0,0.06)',
+                  border: isGrowth ? '2px solid #a78bfa' : '1px solid #e2e8f0',
+                }}
+              >
+                {isGrowth && <div style={{ position: 'absolute', top: -1, left: 0, right: 0, height: 4, borderRadius: '16px 16px 0 0', background: 'linear-gradient(90deg, #8b5cf6, #6366f1)' }} />}
+                <div style={{ padding: '20px 20px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{plan.name}</span>
+                    {plan.badge && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#ede9fe', color: '#7c3aed' }}>{plan.badge}</span>}
+                  </div>
+                  <div style={{ margin: '10px 0 2px' }}>
+                    <span style={{ fontSize: 26, fontWeight: 800, color: '#0f172a' }}>SGD {price}</span>
+                    <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 4 }}>/{annual ? 'year' : 'month'}</span>
+                  </div>
+                  {annual && <p style={{ fontSize: 11, color: '#16a34a', fontWeight: 500, marginBottom: 4 }}>Save SGD {saving}</p>}
+                  <p style={{ fontSize: 11, color: '#64748b', marginBottom: 12 }}>{plan.description}</p>
+                  <ul style={{ flex: 1, marginBottom: 16, listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {plan.features.map((f) => (
+                      <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 11, color: '#475569' }}>
+                        <Check style={{ width: 13, height: 13, color: '#22c55e', marginTop: 1, flexShrink: 0 }} />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <a href={link} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+                    <button
+                      style={{
+                        width: '100%', padding: '10px 0', borderRadius: 12, fontSize: 13, fontWeight: 600, color: '#fff', border: 'none', cursor: 'pointer',
+                        background: isGrowth ? 'linear-gradient(90deg, #8b5cf6, #6366f1)' : 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)',
+                      }}
+                    >
+                      Start Free Trial
+                    </button>
+                  </a>
                 </div>
-                <div className="mt-3 mb-1">
-                  <span className="text-3xl font-extrabold text-slate-900">SGD {price}</span>
-                  <span className="text-sm text-slate-400 ml-1">/{annual ? 'year' : 'month'}</span>
-                </div>
-                {annual && <p className="text-xs text-green-600 font-medium mb-2">Save SGD {saving}</p>}
-                <p className="text-xs text-slate-500 mb-5">{plan.description}</p>
-                <ul className="space-y-2 flex-1 mb-6">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-xs text-slate-600">
-                      <Check className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <a href={link} target="_blank" rel="noopener noreferrer" className="block">
-                  <button
-                    className="w-full py-2.5 rounded-xl text-sm font-semibold transition-colors text-white"
-                    style={isGrowth
-                      ? { background: 'linear-gradient(90deg, #8b5cf6, #6366f1)' }
-                      : { background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }
-                    }
-                  >
-                    Start Free Trial
-                  </button>
-                </a>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
 
-      <p className="mt-8 text-xs text-slate-400 text-center max-w-sm">
-        After completing payment, check your email for your registration link.
-      </p>
+        <p style={{ marginTop: 20, fontSize: 11, color: '#94a3b8', textAlign: 'center' }}>
+          After completing payment, check your email for your registration link.
+        </p>
+      </div>
     </div>
   );
 }
@@ -185,7 +168,7 @@ export default function Auth() {
   const [signupMode, setSignupMode] = useState(null); // null | 'allowed' | 'pricing_wall' | 'invalid_token'
   const [inviteEmail, setInviteEmail] = useState('');
 
-  const pricingRef = useRef(null);
+  const [showPricingModal, setShowPricingModal] = useState(false);
 
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);
@@ -501,10 +484,7 @@ export default function Auth() {
                   </p>
                 </div>
                 <button
-                  onClick={() => {
-                    setSignupMode('pricing_wall');
-                    setTimeout(() => pricingRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-                  }}
+                  onClick={() => { setSignupMode('pricing_wall'); setShowPricingModal(true); }}
                   className="w-full py-2.5 rounded-xl text-white text-sm font-semibold"
                   style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
                 >
@@ -639,7 +619,7 @@ export default function Auth() {
                   Choose a plan below to start your free trial and get your registration link.
                 </p>
                 <button
-                  onClick={() => pricingRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                  onClick={() => setShowPricingModal(true)}
                   className="w-full py-2.5 rounded-xl text-white text-sm font-semibold"
                   style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
                 >
@@ -691,9 +671,9 @@ export default function Auth() {
           </div>
         </div>
 
-        {/* Pricing wall — shown below the card when no token */}
-        {showPricingWall && <SignupPricingWall pricingRef={pricingRef} />}
       </div>
+
+      {showPricingModal && <PricingModal onClose={() => setShowPricingModal(false)} />}
     </>
   );
 }
