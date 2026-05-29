@@ -264,7 +264,7 @@ export default function Auth() {
           setGoogleLoading(false);
           window.history.replaceState(null, '', window.location.pathname);
           // Set error state to show inline
-          setGoogleGateError('Account creation requires a valid plan. Please purchase a plan at sellio.apptelier.sg to get started.');
+          setGoogleGateError('true');
           return;
         }
 
@@ -679,7 +679,11 @@ export default function Auth() {
                 {googleGateError && (
                   <div className="mt-3 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                     <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-amber-800">{googleGateError}</p>
+                    <p className="text-xs text-amber-800">
+                      Account creation requires a valid plan. Please purchase a plan at{' '}
+                      <a href="https://apptelier.sg/pricing" target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600, color: '#d97706', textDecoration: 'underline' }}>apptelier.sg/pricing</a>
+                      {' '}to get started.
+                    </p>
                   </div>
                 )}
               </>
