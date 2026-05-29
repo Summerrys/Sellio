@@ -243,7 +243,13 @@ export default function Auth() {
         const isBypass = BYPASS_EMAILS.includes((user.email || '').toLowerCase());
 
         if (isNewAuthUser && !tokenInUrl && !isBypass) {
+          const unauthorizedEmail = user.email;
           await supabase.auth.signOut();
+          await fetch('https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1/deleteUnauthorizedUser', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: unauthorizedEmail }),
+          });
           setGoogleLoading(false);
           window.history.replaceState(null, '', window.location.pathname);
           // Set error state to show inline
