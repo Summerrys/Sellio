@@ -723,8 +723,8 @@ export default function Auth() {
               </div>
             )}
 
-            {/* Divider + Google — always shown */}
-            {!checkingToken && (
+            {/* Divider + Google — login tab always, signup tab only when no token (pricing wall) */}
+            {!checkingToken && (isLogin || showPricingWall) && (
               <>
                 <div className="flex items-center gap-3 my-4">
                   <div className="flex-1 h-px bg-slate-200" />
