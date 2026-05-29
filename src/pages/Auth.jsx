@@ -158,7 +158,10 @@ function PricingModal({ onClose }) {
 
 export default function Auth() {
   const { setAppUser } = useAppUser();
-  const [isLogin, setIsLogin] = useState(true);
+  // Read token from URL on mount
+  const urlToken = new URLSearchParams(window.location.search).get('token');
+
+  const [isLogin, setIsLogin] = useState(!urlToken); // default to signup tab if token present
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [checkingToken, setCheckingToken] = useState(false);
@@ -174,12 +177,18 @@ export default function Auth() {
   const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);
   const [formData, setFormData] = useState({ full_name: '', email: '', phone: '', password: '' });
 
-  // Read token from URL on mount
-  const urlToken = new URLSearchParams(window.location.search).get('token');
+  // On mount: if token in URL, auto-evaluate signup access (pre-fills email too)
+  useEffect(() => {
+    if (urlToken) {
+      evaluateSignupAccess();
+    }
+  }, []);
 
   // When switching to signup tab, evaluate gate
   useEffect(() => {
     if (isLogin) return; // login is always allowed — no check needed
+    // Avoid double-run on mount when token is present (already called above)
+    if (urlToken && signupMode !== null) return;
     evaluateSignupAccess();
   }, [isLogin]);
 
