@@ -192,38 +192,64 @@ export default function Auth() {
   }, [isLogin]);
 
   const evaluateSignupAccess = async () => {
-    // Bypass: if the email field already has a bypass email, allow freely
-    // But at this point we don't know the email yet — check token/URL
     if (urlToken) {
       setCheckingToken(true);
-      try {
-        const supabase = await getSupabase();
-        const { data: invite } = await supabase
-          .from('merchant_invites')
-          .select('email, phone, full_name, currency')
-          .eq('token', urlToken)
-          .eq('status', 'pending')
-          .single();
+      let invite = null;
+      let attempts = 0;
+      const maxAttempts = 5;
 
-        if (invite && invite.expires_at && new Date(invite.expires_at) > new Date()) {
-          setInviteEmail(invite.email || '');
-          setInviteName(invite.full_name || '');
-          setFormData(prev => ({
-            ...prev,
-            email: invite.email || '',
-            ...(invite.full_name ? { full_name: invite.full_name } : {}),
-          }));
-          setSignupMode('allowed');
-        } else {
-          setSignupMode('invalid_token');
+      while (!invite && attempts < maxAttempts) {
+        attempts++;
+        try {
+          const supabase = await getSupabase();
+          const { data } = await supabase
+            .from('merchant_invites')
+            .select('email, phone, full_name, currency')
+            .eq('token', urlToken)
+            .eq('status', 'pending')
+            .single();
+
+          if (data && data.expires_at && new Date(data.expires_at) > new Date()) {
+            invite = data;
+          } else if (attempts < maxAttempts) {
+            console.log(`Invite not found, retrying (${attempts}/${maxAttempts})...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        } catch {
+          if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
         }
-      } catch {
-        setSignupMode('invalid_token');
-      } finally {
-        setCheckingToken(false);
       }
+
+      if (invite) {
+        setInviteEmail(invite.email || '');
+        setInviteName(invite.full_name || '');
+        setFormData(prev => ({
+          ...prev,
+          email: invite.email || '',
+          full_name: invite.full_name || '',
+        }));
+        // Phone pre-fill
+        if (invite.phone) {
+          let phoneNumber = invite.phone;
+          let detectedCountry = COUNTRY_CODES[0];
+          if (invite.phone.startsWith('+60')) {
+            detectedCountry = COUNTRY_CODES.find(c => c.code === '+60');
+            phoneNumber = invite.phone.replace('+60', '');
+          } else if (invite.phone.startsWith('+65')) {
+            detectedCountry = COUNTRY_CODES.find(c => c.code === '+65');
+            phoneNumber = invite.phone.replace('+65', '');
+          }
+          setSelectedCountry(detectedCountry);
+          setFormData(prev => ({ ...prev, phone: phoneNumber }));
+        }
+        setSignupMode('allowed');
+      } else {
+        setSignupMode('invalid_token');
+      }
+      setCheckingToken(false);
     } else {
-      // No token — show pricing wall (bypass emails are checked at submit time)
       setSignupMode('pricing_wall');
     }
   };
@@ -595,8 +621,9 @@ export default function Auth() {
 
             {/* Token checking spinner */}
             {checkingToken && (
-              <div className="flex items-center justify-center py-8">
+              <div className="flex flex-col items-center justify-center py-8 gap-3">
                 <div className="w-6 h-6 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
+                <p className="text-sm text-slate-500">Verifying your payment...</p>
               </div>
             )}
 
