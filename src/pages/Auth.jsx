@@ -310,12 +310,11 @@ export default function Auth() {
           if (insertError) throw insertError;
 
           // Sync phone from merchant_invites if available
-          const tokenForPhone = new URLSearchParams(window.location.search).get('token');
-          if (tokenForPhone) {
+          if (tokenInUrl) {
             const { data: inviteData } = await supabase
               .from('merchant_invites')
               .select('phone')
-              .eq('token', tokenForPhone)
+              .eq('token', tokenInUrl)
               .maybeSingle();
 
             if (inviteData?.phone) {
@@ -352,6 +351,16 @@ export default function Auth() {
           last_login_at: now,
         };
         setAppUser(appUser);
+
+        // Mark merchant invite as registered
+        if (tokenInUrl) {
+          await supabase
+            .from('merchant_invites')
+            .update({ status: 'registered', updated_date: new Date().toISOString() })
+            .eq('token', tokenInUrl)
+            .eq('status', 'pending');
+        }
+
         window.location.href = appUser.onboarding_completed ? '/Dashboard' : '/Onboarding';
       } catch (err) {
         toast.error(err.message || 'Google Sign-In failed');
@@ -491,6 +500,15 @@ export default function Auth() {
 
         const appUserRow = rows?.[0];
         setAppUser(appUserRow || { email: authEmail, full_name: formData.full_name, role: 'admin', onboarding_completed: false });
+
+        // Mark merchant invite as registered
+        if (urlToken) {
+          await supabase
+            .from('merchant_invites')
+            .update({ status: 'registered', updated_date: new Date().toISOString() })
+            .eq('token', urlToken)
+            .eq('status', 'pending');
+        }
 
         showSuccess('Account created!');
         setTimeout(() => { window.location.href = createPageUrl('Onboarding'); }, 500);
