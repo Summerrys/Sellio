@@ -168,6 +168,7 @@ export default function Auth() {
   // Signup gate state
   const [signupMode, setSignupMode] = useState(null); // null | 'allowed' | 'pricing_wall' | 'invalid_token'
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteName, setInviteName] = useState('');
 
   const [showPricingModal, setShowPricingModal] = useState(false);
 
@@ -199,14 +200,19 @@ export default function Auth() {
         const supabase = await getSupabase();
         const { data: invite } = await supabase
           .from('merchant_invites')
-          .select('*')
+          .select('email, phone, full_name, currency')
           .eq('token', urlToken)
           .eq('status', 'pending')
           .single();
 
         if (invite && invite.expires_at && new Date(invite.expires_at) > new Date()) {
           setInviteEmail(invite.email || '');
-          setFormData(prev => ({ ...prev, email: invite.email || '' }));
+          setInviteName(invite.full_name || '');
+          setFormData(prev => ({
+            ...prev,
+            email: invite.email || '',
+            ...(invite.full_name ? { full_name: invite.full_name } : {}),
+          }));
           setSignupMode('allowed');
         } else {
           setSignupMode('invalid_token');
@@ -607,10 +613,14 @@ export default function Auth() {
                         placeholder="John Doe"
                         value={formData.full_name}
                         onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                        readOnly={signupMode === 'allowed' && !!inviteName}
                         required
-                        className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
+                        className={`w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 ${signupMode === 'allowed' && !!inviteName ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
                       />
                     </div>
+                    {signupMode === 'allowed' && !!inviteName && (
+                      <p className="text-xs text-slate-400 mt-1">Name pre-filled from your registration.</p>
+                    )}
                   </div>
                 )}
 
