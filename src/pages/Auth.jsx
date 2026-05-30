@@ -202,17 +202,18 @@ export default function Auth() {
         attempts++;
         try {
           const supabase = await getSupabase();
-          const { data } = await supabase
+          const { data, error: fetchError } = await supabase
             .from('merchant_invites')
-            .select('email, phone, full_name, currency')
+            .select('email, phone, full_name, currency, expires_at, status')
             .eq('token', urlToken)
-            .eq('status', 'pending')
-            .single();
+            .maybeSingle();
 
-          if (data && data.expires_at && new Date(data.expires_at) > new Date()) {
+          console.log(`[invite lookup attempt ${attempts}]`, { data, fetchError });
+
+          if (data && data.status === 'pending' && (!data.expires_at || new Date(data.expires_at) > new Date())) {
             invite = data;
           } else if (attempts < maxAttempts) {
-            console.log(`Invite not found, retrying (${attempts}/${maxAttempts})...`);
+            console.log(`Invite not found or not ready, retrying (${attempts}/${maxAttempts})...`);
             await new Promise(resolve => setTimeout(resolve, 2000));
           }
         } catch {
