@@ -148,9 +148,6 @@ function PricingModal({ onClose }) {
           })}
         </div>
 
-        <p style={{ marginTop: 20, fontSize: 11, color: '#94a3b8', textAlign: 'center' }}>
-          After completing payment, check your email for your registration link.
-        </p>
       </div>
     </div>
   );
