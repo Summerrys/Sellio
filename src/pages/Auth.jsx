@@ -308,6 +308,25 @@ export default function Auth() {
             last_login_at: now,
           });
           if (insertError) throw insertError;
+
+          // Sync phone from merchant_invites if available
+          const tokenForPhone = new URLSearchParams(window.location.search).get('token');
+          if (tokenForPhone) {
+            const { data: inviteData } = await supabase
+              .from('merchant_invites')
+              .select('phone')
+              .eq('token', tokenForPhone)
+              .maybeSingle();
+
+            if (inviteData?.phone) {
+              await supabase
+                .from('app_users')
+                .update({ phone: inviteData.phone })
+                .eq('email', user.email);
+              console.log('✓ Phone synced from merchant_invites:', inviteData.phone);
+            }
+          }
+
           const { data: fetchedUser, error: fetchError } = await supabase
             .from('app_users')
             .select('id, created_date, onboarding_completed, tenant_id, role')
