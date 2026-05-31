@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import ImageEditModal from '@/components/onboarding/ImageEditModal';
 
 const INDUSTRIES = [
   { value: 'f&b', label: 'F&B / Cafe / Restaurant' },
@@ -79,6 +80,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
   const [logoFile, setLogoFile] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [showLogoEditor, setShowLogoEditor] = useState(false);
 
   useEffect(() => {
     if (!tenant) return;
@@ -141,6 +143,32 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
     return publicUrl;
   };
 
+  // Called by ImageEditModal on Save — receives base64 data URL or null (delete)
+  const handleLogoEditSave = async (imageData) => {
+    if (!imageData) {
+      // Delete
+      handleRemoveLogo();
+      return;
+    }
+    setIsUploadingLogo(true);
+    try {
+      const supabase = await getSupabase();
+      const res = await fetch(imageData);
+      const blob = await res.blob();
+      const path = `${tenantId}/logo/${Date.now()}.jpg`;
+      const { error } = await supabase.storage.from('product-images').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
+      setLogoPreview(publicUrl);
+      setLogoFile(null);
+      setForm(prev => ({ ...prev, logo_url: publicUrl }));
+    } catch (err) {
+      toast.error('Failed to upload logo');
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -187,7 +215,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
                 <div
                   className="relative rounded-xl border border-slate-200 bg-slate-50 shadow-sm flex items-center justify-center overflow-hidden cursor-pointer"
                   style={{ width: 200, height: 120, margin: '0 auto' }}
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => setShowLogoEditor(true)}
                 >
                   {isUploadingLogo ? (
                     <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
@@ -202,7 +230,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
                   <button
                     type="button"
                     className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center hover:bg-slate-50 transition-colors"
-                    onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                    onClick={e => { e.stopPropagation(); setShowLogoEditor(true); }}
                   >
                     <Pencil className="w-3.5 h-3.5 text-slate-600" />
                   </button>
@@ -319,6 +347,16 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
           </div>
         </Section>
       </Card>
+
+      {/* Logo Edit Modal */}
+      {showLogoEditor && logoPreview && (
+        <ImageEditModal
+          src={logoPreview}
+          themeColor="var(--color-primary-gradient, #6366f1)"
+          onSave={handleLogoEditSave}
+          onClose={() => setShowLogoEditor(false)}
+        />
+      )}
 
       {/* Save Button */}
       <Button
