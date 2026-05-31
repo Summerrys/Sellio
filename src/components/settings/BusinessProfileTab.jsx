@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import {
-  Building2, MapPin, Phone, Globe, Camera, X, Save, Percent, Tag, Loader2
+  Building2, MapPin, Camera, X, Save, Percent, Loader2, Pencil
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -179,55 +179,67 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
       {/* Business Identity */}
       <Card className="border border-slate-100 shadow-sm p-6 space-y-6">
         <Section icon={Building2} title="Business Identity">
-          {/* Logo */}
-          <div className="flex items-start gap-4">
-            <div className="flex flex-col items-center gap-2">
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoSelect} />
-              {logoPreview ? (
-                <>
-                  <div
-                    className="rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:border-slate-400 transition-colors flex items-center justify-center overflow-hidden"
-                    style={{ width: 120, height: 80 }}
-                    onClick={() => fileInputRef.current?.click()}
-                    title="Click to change"
-                  >
+          {/* Logo — centered, full width */}
+          <div className="flex flex-col items-center gap-2">
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoSelect} />
+            {logoPreview ? (
+              <>
+                <div
+                  className="relative rounded-xl border border-slate-200 bg-slate-50 shadow-sm flex items-center justify-center overflow-hidden cursor-pointer"
+                  style={{ width: 200, height: 120, margin: '0 auto' }}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {isUploadingLogo ? (
+                    <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+                  ) : (
                     <img
                       src={logoPreview}
                       alt="Logo"
-                      style={{ maxWidth: 120, maxHeight: 80, objectFit: 'contain', display: 'block' }}
+                      style={{ maxWidth: 200, maxHeight: 120, objectFit: 'contain', display: 'block' }}
                     />
-                  </div>
+                  )}
+                  {/* Pencil edit button */}
                   <button
-                    onClick={handleRemoveLogo}
-                    className="text-xs text-red-500 hover:text-red-700 flex items-center gap-0.5"
+                    type="button"
+                    className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center hover:bg-slate-50 transition-colors"
+                    onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }}
                   >
-                    <X className="w-3 h-3" /> Remove
+                    <Pencil className="w-3.5 h-3.5 text-slate-600" />
                   </button>
-                </>
-              ) : (
-                <div
-                  className="rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors bg-slate-50"
-                  style={{ width: 120, height: 80 }}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Camera className="w-6 h-6 text-slate-400 mb-1" />
-                  <span className="text-[10px] text-slate-400 text-center leading-tight">Upload<br />Logo</span>
                 </div>
-              )}
+                <button
+                  onClick={handleRemoveLogo}
+                  className="text-xs text-red-500 hover:text-red-700 flex items-center gap-0.5"
+                >
+                  <X className="w-3 h-3" /> Remove logo
+                </button>
+              </>
+            ) : (
+              <div
+                className="rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors bg-slate-50"
+                style={{ width: 200, height: 120, margin: '0 auto' }}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Camera className="w-7 h-7 text-slate-400 mb-1.5" />
+                <span className="text-xs font-medium text-slate-500">Upload Logo</span>
+                <span className="text-[10px] text-slate-400 mt-0.5">JPG, PNG up to 10MB</span>
+              </div>
+            )}
+          </div>
+
+          {/* Business Name + Branch Name — side by side */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <Label className="text-xs text-slate-600 mb-1 block">Business Name</Label>
+              <Input className="h-10" value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. My Café Pte Ltd" />
             </div>
-            <div className="flex-1 space-y-3">
-              <div>
-                <Label className="text-xs text-slate-600 mb-1 block">Business Name</Label>
-                <Input className="h-10" value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. My Café Pte Ltd" />
-              </div>
-              <div>
-                <Label className="text-xs text-slate-600 mb-1 block">Branch Name</Label>
-                <Input className="h-10" value={form.branch_name} onChange={e => set('branch_name', e.target.value)} placeholder="e.g. Orchard Road Branch" />
-              </div>
+            <div className="flex-1">
+              <Label className="text-xs text-slate-600 mb-1 block">Branch Name</Label>
+              <Input className="h-10" value={form.branch_name} onChange={e => set('branch_name', e.target.value)} placeholder="e.g. Orchard Road" />
             </div>
           </div>
 
-          {/* Industry */}
+          {/* Industry — full width */}
           <div>
             <Label className="text-xs text-slate-600 mb-1 block">Industry Type</Label>
             <Select value={form.industry} onValueChange={v => set('industry', v)}>
