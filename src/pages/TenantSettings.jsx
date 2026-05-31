@@ -118,24 +118,6 @@ function TenantSettingsContent() {
 
         <TabsContent value="business">
           <BusinessProfileTab tenant={tenant} tenantId={tenantId} />
-
-          {/* Account Deletion */}
-          <Card className="border border-red-100 shadow-sm p-6 max-w-2xl mt-6">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <h3 className="text-sm font-semibold text-red-700">Delete Account</h3>
-                <p className="text-xs text-slate-500 mt-1">Permanently delete your account and all associated data. This action cannot be undone.</p>
-                <Button
-                  variant="outline"
-                  className="mt-3 h-11 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
-                  onClick={() => { setDeleteConfirmText(''); setShowDeleteConfirm(true); }}
-                >
-                  Delete Account
-                </Button>
-              </div>
-            </div>
-          </Card>
         </TabsContent>
 
         <TabsContent value="theme">

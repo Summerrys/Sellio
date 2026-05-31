@@ -13,12 +13,29 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
 const INDUSTRIES = [
-  'F&B', 'Cafe', 'Restaurant', 'Food', 'Retail', 'Fashion', 'Electronics',
-  'Beauty & Wellness', 'Healthcare', 'Education', 'Services', 'Other'
+  { value: 'f&b', label: 'F&B / Cafe / Restaurant' },
+  { value: 'retail', label: 'Retail' },
+  { value: 'service', label: 'Service' },
 ];
 
-const COUNTRIES = ['Singapore', 'Malaysia', 'Indonesia', 'Thailand', 'Philippines', 'Other'];
-const CURRENCIES = ['SGD', 'MYR', 'USD', 'EUR', 'GBP', 'THB', 'IDR', 'PHP'];
+const COUNTRIES = ['Singapore', 'Malaysia', 'Other'];
+const CURRENCIES = [
+  { value: 'SGD', label: 'SGD (Singapore Dollar)' },
+  { value: 'MYR', label: 'MYR (Malaysian Ringgit)' },
+];
+
+const PHONE_CONFIG = {
+  Singapore: { prefix: '+65', placeholder: '+65 9123 4567' },
+  Malaysia: { prefix: '+60', placeholder: '+60 12 345 6789' },
+  Other: { prefix: '', placeholder: '+X XXXX XXXX' },
+};
+
+function detectCountryFromPhone(phone) {
+  if (!phone) return null;
+  if (phone.startsWith('+65')) return 'Singapore';
+  if (phone.startsWith('+60')) return 'Malaysia';
+  return null;
+}
 
 function Section({ icon: Icon, title, children }) {
   return (
@@ -59,12 +76,14 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
   useEffect(() => {
     if (!tenant) return;
     const settings = tenant.settings || {};
+    const phone = tenant.phone || '';
+    const detectedCountry = detectCountryFromPhone(phone) || tenant.country || '';
     setForm({
       name: tenant.name || '',
       branch_name: settings.branch_name || '',
       industry: tenant.industry || '',
-      country: tenant.country || '',
-      phone: tenant.phone || '',
+      country: detectedCountry,
+      phone,
       currency: tenant.currency || 'SGD',
       address: tenant.address || '',
       tax_rate: settings.tax_rate != null ? String(settings.tax_rate) : '',
@@ -189,7 +208,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
             <Select value={form.industry} onValueChange={v => set('industry', v)}>
               <SelectTrigger className="h-10"><SelectValue placeholder="Select industry" /></SelectTrigger>
               <SelectContent>
-                {INDUSTRIES.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
+                {INDUSTRIES.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -214,14 +233,19 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
               <Select value={form.currency} onValueChange={v => set('currency', v)}>
                 <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  {CURRENCIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div>
             <Label className="text-xs text-slate-600 mb-1 block">Phone</Label>
-            <Input className="h-10" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+65 9123 4567" />
+            <Input
+              className="h-10"
+              value={form.phone}
+              onChange={e => set('phone', e.target.value)}
+              placeholder={PHONE_CONFIG[form.country]?.placeholder || '+X XXXX XXXX'}
+            />
           </div>
           <div>
             <Label className="text-xs text-slate-600 mb-1 block">Address</Label>
@@ -246,10 +270,13 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
               placeholder="e.g. 9"
             />
           </div>
-          <div className="flex items-center justify-between py-1">
-            <div>
+          <div className="flex items-start justify-between gap-4 py-1">
+            <div className="flex-1">
               <p className="text-sm font-medium text-slate-700">Prices include tax</p>
-              <p className="text-xs text-slate-400">Tax is already factored into listed prices</p>
+              <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+                When enabled, product prices shown to customers on your public storefront already include tax.
+                When disabled, tax will be added on top at checkout.
+              </p>
             </div>
             <Switch checked={form.tax_inclusive} onCheckedChange={v => set('tax_inclusive', v)} />
           </div>
