@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Shield, User, ChefHat, Users, Eye, X, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppUser } from '@/lib/AppUserContext';
+import { useTenant } from '../tenant/TenantContext';
 
 const DEV_EMAIL = 'alvin.leeyq@gmail.com';
 const STORAGE_KEY = 'simulate_role';
@@ -18,6 +19,7 @@ const ROLES = [
 
 export default function RoleSwitcher() {
   const { appUser } = useAppUser();
+  const { user } = useTenant();
   const [isOpen, setIsOpen] = useState(false);
   const [activeRole, setActiveRole] = useState(null);
 
@@ -26,8 +28,9 @@ export default function RoleSwitcher() {
     if (saved) setActiveRole(saved);
   }, []);
 
-  // Only visible to the dev email
-  if (appUser?.email !== DEV_EMAIL) return null;
+  // Only visible to the dev email (check both appUser and real user)
+  const currentEmail = (appUser?.email || user?.email || '').toLowerCase();
+  if (currentEmail !== DEV_EMAIL) return null;
 
   const switchRole = (roleId) => {
     if (activeRole === roleId) {
