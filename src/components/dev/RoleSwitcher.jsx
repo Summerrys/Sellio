@@ -4,8 +4,9 @@ import { Shield, User, ChefHat, Users, Eye, X, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppUser } from '@/lib/AppUserContext';
 import { useTenant } from '../tenant/TenantContext';
+import { getSupabase } from '@/lib/supabaseClient';
 
-const DEV_EMAIL = 'alvin.leeyq@gmail.com';
+const SUPERADMIN_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
 const STORAGE_KEY = 'simulate_role';
 
 const ROLES = [
@@ -22,15 +23,36 @@ export default function RoleSwitcher() {
   const { user } = useTenant();
   const [isOpen, setIsOpen] = useState(false);
   const [activeRole, setActiveRole] = useState(null);
+  const [currentEmail, setCurrentEmail] = useState('');
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) setActiveRole(saved);
   }, []);
 
-  // Only visible to the dev email (check both appUser and real user)
-  const currentEmail = (appUser?.email || user?.email || '').toLowerCase();
-  if (currentEmail !== DEV_EMAIL) return null;
+  useEffect(() => {
+    const checkEmail = async () => {
+      // Try context sources first
+      const ctxEmail = appUser?.email || user?.email;
+      if (ctxEmail) {
+        console.log('RoleSwitcher email check (context):', ctxEmail);
+        setCurrentEmail(ctxEmail);
+        return;
+      }
+      // Fall back to Supabase session
+      try {
+        const supabase = await getSupabase();
+        const { data: { user: sbUser } } = await supabase.auth.getUser();
+        console.log('RoleSwitcher email check (supabase):', sbUser?.email);
+        if (sbUser?.email) setCurrentEmail(sbUser.email);
+      } catch (e) {
+        console.warn('RoleSwitcher: could not get user email', e);
+      }
+    };
+    checkEmail();
+  }, [appUser?.email, user?.email]);
+
+  if (!SUPERADMIN_EMAILS.includes(currentEmail.toLowerCase())) return null;
 
   const switchRole = (roleId) => {
     if (activeRole === roleId) {
