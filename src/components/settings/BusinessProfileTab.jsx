@@ -18,23 +18,30 @@ const INDUSTRIES = [
   { value: 'service', label: 'Service' },
 ];
 
-const COUNTRIES = ['Singapore', 'Malaysia', 'Other'];
+const COUNTRIES = ['Singapore', 'Malaysia'];
+
 const CURRENCIES = [
-  { value: 'SGD', label: 'SGD (Singapore Dollar)' },
-  { value: 'MYR', label: 'MYR (Malaysian Ringgit)' },
+  { value: 'SGD', label: 'SGD — Singapore Dollar' },
+  { value: 'MYR', label: 'MYR — Malaysian Ringgit' },
 ];
 
-const PHONE_CONFIG = {
-  Singapore: { prefix: '+65', placeholder: '+65 9123 4567' },
-  Malaysia: { prefix: '+60', placeholder: '+60 12 345 6789' },
-  Other: { prefix: '', placeholder: '+X XXXX XXXX' },
+// country <-> currency <-> phone mapping
+const COUNTRY_CONFIG = {
+  Singapore: { currency: 'SGD', phonePlaceholder: '+65 9123 4567' },
+  Malaysia:  { currency: 'MYR', phonePlaceholder: '+60 12 345 6789' },
 };
+const CURRENCY_TO_COUNTRY = { SGD: 'Singapore', MYR: 'Malaysia' };
 
-function detectCountryFromPhone(phone) {
-  if (!phone) return null;
-  if (phone.startsWith('+65')) return 'Singapore';
-  if (phone.startsWith('+60')) return 'Malaysia';
-  return null;
+// Normalise stored industry values to match dropdown keys
+function normaliseIndustry(raw) {
+  if (!raw) return '';
+  const lower = raw.toLowerCase();
+  if (/f.?b|cafe|restaurant|food/i.test(lower)) return 'f&b';
+  if (/retail|fashion|electronics/i.test(lower)) return 'retail';
+  if (/service|beauty|wellness|health|education/i.test(lower)) return 'service';
+  // Already a valid key?
+  if (['f&b', 'retail', 'service'].includes(lower)) return lower;
+  return raw; // keep as-is so the dropdown can still show it
 }
 
 function Section({ icon: Icon, title, children }) {
@@ -77,14 +84,16 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
     if (!tenant) return;
     const settings = tenant.settings || {};
     const phone = tenant.phone || '';
-    const detectedCountry = detectCountryFromPhone(phone) || tenant.country || '';
+    // Derive country: prefer currency match, then stored country
+    const storedCurrency = tenant.currency || 'SGD';
+    const country = CURRENCY_TO_COUNTRY[storedCurrency] || tenant.country || 'Singapore';
     setForm({
       name: tenant.name || '',
       branch_name: settings.branch_name || '',
-      industry: tenant.industry || '',
-      country: detectedCountry,
+      industry: normaliseIndustry(tenant.industry),
+      country,
       phone,
-      currency: tenant.currency || 'SGD',
+      currency: storedCurrency,
       address: tenant.address || '',
       tax_rate: settings.tax_rate != null ? String(settings.tax_rate) : '',
       tax_inclusive: settings.tax_inclusive || false,
@@ -92,6 +101,18 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
     });
     setLogoPreview(tenant.logo_url || null);
   }, [tenant]);
+
+  // When country changes, sync currency
+  const handleCountryChange = (country) => {
+    const cfg = COUNTRY_CONFIG[country];
+    setForm(prev => ({ ...prev, country, currency: cfg?.currency || prev.currency }));
+  };
+
+  // When currency changes, sync country
+  const handleCurrencyChange = (currency) => {
+    const country = CURRENCY_TO_COUNTRY[currency] || form.country;
+    setForm(prev => ({ ...prev, currency, country }));
+  };
 
   const handleLogoSelect = (e) => {
     const file = e.target.files?.[0];
@@ -163,31 +184,35 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
             <div className="flex flex-col items-center gap-2">
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoSelect} />
               {logoPreview ? (
-                <div
-                  className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200 cursor-pointer group"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-white text-xs font-medium">Change</span>
+                <>
+                  <div
+                    className="rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:border-slate-400 transition-colors flex items-center justify-center overflow-hidden"
+                    style={{ width: 120, height: 80 }}
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Click to change"
+                  >
+                    <img
+                      src={logoPreview}
+                      alt="Logo"
+                      style={{ maxWidth: 120, maxHeight: 80, objectFit: 'contain', display: 'block' }}
+                    />
                   </div>
-                </div>
+                  <button
+                    onClick={handleRemoveLogo}
+                    className="text-xs text-red-500 hover:text-red-700 flex items-center gap-0.5"
+                  >
+                    <X className="w-3 h-3" /> Remove
+                  </button>
+                </>
               ) : (
                 <div
-                  className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors bg-slate-50"
+                  className="rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors bg-slate-50"
+                  style={{ width: 120, height: 80 }}
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Camera className="w-6 h-6 text-slate-400 mb-1" />
                   <span className="text-[10px] text-slate-400 text-center leading-tight">Upload<br />Logo</span>
                 </div>
-              )}
-              {logoPreview && (
-                <button
-                  onClick={handleRemoveLogo}
-                  className="text-xs text-red-500 hover:text-red-700 flex items-center gap-0.5"
-                >
-                  <X className="w-3 h-3" /> Remove
-                </button>
               )}
             </div>
             <div className="flex-1 space-y-3">
@@ -221,7 +246,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label className="text-xs text-slate-600 mb-1 block">Country</Label>
-              <Select value={form.country} onValueChange={v => set('country', v)}>
+              <Select value={form.country} onValueChange={handleCountryChange}>
                 <SelectTrigger className="h-10"><SelectValue placeholder="Select country" /></SelectTrigger>
                 <SelectContent>
                   {COUNTRIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
@@ -230,7 +255,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
             </div>
             <div>
               <Label className="text-xs text-slate-600 mb-1 block">Currency</Label>
-              <Select value={form.currency} onValueChange={v => set('currency', v)}>
+              <Select value={form.currency} onValueChange={handleCurrencyChange}>
                 <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {CURRENCIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
@@ -244,7 +269,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
               className="h-10"
               value={form.phone}
               onChange={e => set('phone', e.target.value)}
-              placeholder={PHONE_CONFIG[form.country]?.placeholder || '+X XXXX XXXX'}
+              placeholder={COUNTRY_CONFIG[form.country]?.phonePlaceholder || '+X XXXX XXXX'}
             />
           </div>
           <div>
