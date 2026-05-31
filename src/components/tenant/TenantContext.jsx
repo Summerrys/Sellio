@@ -282,6 +282,10 @@ export function TenantProvider({ children }) {
   }, [role, tenantUser, devRoleOverride, user, currentTenantId]);
 
   const hasPermission = (permission) => {
+    // When simulating a role, ONLY check the simulated permissions — no owner/superadmin bypass
+    if (devRoleOverride) {
+      return userPermissions.includes(permission);
+    }
     if (isSuperAdmin) return true;
     if (tenantUser?.[0]?.is_owner) return true;
     return userPermissions.includes(permission);
