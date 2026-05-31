@@ -255,8 +255,8 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
             )}
           </div>
 
-          {/* Business Name + Branch Name — side by side */}
-          <div className="flex gap-3">
+          {/* Business Name + Branch Name — side by side on sm+, stacked on mobile */}
+          <div className="flex flex-col min-[480px]:flex-row gap-3">
             <div className="flex-1">
               <Label className="text-xs text-slate-600 mb-1 block">Business Name</Label>
               <Input className="h-10" value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. My Café Pte Ltd" />
