@@ -1,33 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Shield, User, Settings, ChefHat, Users, Eye, X } from 'lucide-react';
+import { Shield, User, ChefHat, Users, Eye, X, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAppUser } from '@/lib/AppUserContext';
+
+const DEV_EMAIL = 'alvin.leeyq@gmail.com';
+const STORAGE_KEY = 'simulate_role';
 
 const ROLES = [
-  { id: 'superadmin', label: 'SuperAdmin', icon: Shield, color: 'bg-purple-500' },
-  { id: 'owner', label: 'Owner', icon: Settings, color: 'bg-blue-500' },
-  { id: 'admin', label: 'Admin', icon: User, color: 'bg-green-500' },
+  { id: 'owner', label: 'Owner', icon: Shield, color: 'bg-blue-500' },
   { id: 'manager', label: 'Manager', icon: Users, color: 'bg-amber-500' },
   { id: 'cashier', label: 'Cashier', icon: User, color: 'bg-teal-500' },
-  { id: 'waiter', label: 'Waiter', icon: User, color: 'bg-pink-500' },
-  { id: 'chef', label: 'Chef', icon: ChefHat, color: 'bg-red-500' },
+  { id: 'kitchen staff', label: 'Kitchen Staff', icon: ChefHat, color: 'bg-red-500' },
+  { id: 'inventory staff', label: 'Inventory Staff', icon: Package, color: 'bg-green-500' },
+  { id: 'staff', label: 'Staff', icon: User, color: 'bg-pink-500' },
 ];
 
 export default function RoleSwitcher() {
+  const { appUser } = useAppUser();
   const [isOpen, setIsOpen] = useState(false);
   const [activeRole, setActiveRole] = useState(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('dev_role_override');
+    const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) setActiveRole(saved);
   }, []);
 
+  // Only visible to the dev email
+  if (appUser?.email !== DEV_EMAIL) return null;
+
   const switchRole = (roleId) => {
     if (activeRole === roleId) {
-      localStorage.removeItem('dev_role_override');
+      localStorage.removeItem(STORAGE_KEY);
       setActiveRole(null);
     } else {
-      localStorage.setItem('dev_role_override', roleId);
+      localStorage.setItem(STORAGE_KEY, roleId);
       setActiveRole(roleId);
     }
     window.location.reload();

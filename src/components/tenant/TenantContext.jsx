@@ -190,9 +190,9 @@ export function TenantProvider({ children }) {
   const [currentTenantId, setCurrentTenantId] = useState(null);
   const [devRoleOverride, setDevRoleOverride] = useState(null);
 
-  // Check for dev role override
+  // Check for simulate_role (dev tool for alvin.leeyq@gmail.com)
   useEffect(() => {
-    const override = localStorage.getItem('dev_role_override');
+    const override = localStorage.getItem('simulate_role');
     if (override) setDevRoleOverride(override);
   }, []);
   const [userPermissions, setUserPermissions] = useState([]);
@@ -222,7 +222,10 @@ export function TenantProvider({ children }) {
   });
 
   useEffect(() => {
-    if (devRoleOverride === 'superadmin' || user?.role === 'admin') {
+    // When simulating a role, never treat the user as superadmin
+    if (devRoleOverride) {
+      setIsSuperAdmin(false);
+    } else if (user?.role === 'admin') {
       setIsSuperAdmin(true);
     } else {
       setIsSuperAdmin(false);
@@ -239,13 +242,33 @@ export function TenantProvider({ children }) {
   }, [tenantUser, user]);
 
   useEffect(() => {
-    // Dev role override
+    // Dev simulate_role override
     if (devRoleOverride) {
+      // Try ROLE_TEMPLATES first (exact key match)
       const template = ROLE_TEMPLATES[devRoleOverride];
       if (template) {
         setUserPermissions(template.permissions);
         return;
       }
+      // Try case-insensitive template match (e.g. "kitchen staff")
+      const templateKey = Object.keys(ROLE_TEMPLATES).find(
+        k => k.toLowerCase() === devRoleOverride.toLowerCase()
+      );
+      if (templateKey) {
+        setUserPermissions(ROLE_TEMPLATES[templateKey].permissions);
+        return;
+      }
+      // Fall back to fetching from tenant's custom roles by name
+      if (currentTenantId) {
+        db.entities.Role.filter({ tenant_id: currentTenantId }).then(roles => {
+          const matched = roles?.find(r => r.name?.toLowerCase() === devRoleOverride.toLowerCase());
+          if (matched?.permissions) setUserPermissions(matched.permissions);
+          else setUserPermissions([]);
+        });
+        return;
+      }
+      setUserPermissions([]);
+      return;
     }
 
     if (tenantUser?.[0]?.is_owner) {
@@ -256,7 +279,7 @@ export function TenantProvider({ children }) {
       // Fallback: user has a tenant (e.g. just completed onboarding) — grant full permissions
       setUserPermissions(Object.keys(PERMISSIONS));
     }
-  }, [role, tenantUser, devRoleOverride, user]);
+  }, [role, tenantUser, devRoleOverride, user, currentTenantId]);
 
   const hasPermission = (permission) => {
     if (isSuperAdmin) return true;
@@ -274,7 +297,9 @@ export function TenantProvider({ children }) {
     tenantId: currentTenantId,
     tenantUser: tenantUser?.[0] || null,
     isSuperAdmin,
-    isOwner: devRoleOverride === 'owner' || tenantUser?.[0]?.is_owner || !!user?.tenant_id || false,
+    isOwner: devRoleOverride
+      ? devRoleOverride === 'owner'
+      : (tenantUser?.[0]?.is_owner || !!user?.tenant_id || false),
     permissions: userPermissions,
     hasPermission,
     hasAnyPermission,
