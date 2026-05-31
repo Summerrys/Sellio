@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Checkbox } from '@/components/ui/checkbox';
 import { Building2, Shield, Plus, Pencil, Trash2, Save, Palette, AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import BusinessProfileTab from '../components/settings/BusinessProfileTab';
 
 export default function TenantSettings() {
   return (
@@ -32,7 +33,6 @@ function TenantSettingsContent() {
   const { tenantId, tenant } = useTenant();
   const queryClient = useQueryClient();
 
-  const [businessForm, setBusinessForm] = useState({ name: '', phone: '', address: '', currency: 'SGD', timezone: 'Asia/Singapore' });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -40,25 +40,10 @@ function TenantSettingsContent() {
   const [editingRole, setEditingRole] = useState(null);
   const [roleForm, setRoleForm] = useState({ name: '', description: '', permissions: [] });
 
-  useEffect(() => {
-    if (tenant) {
-      setBusinessForm({ name: tenant.name || '', phone: tenant.phone || '', address: tenant.address || '', currency: tenant.currency || 'SGD', timezone: tenant.timezone || 'Asia/Singapore' });
-    }
-  }, [tenant]);
-
   const { data: roles = [] } = useQuery({
     queryKey: ['settingsRoles', tenantId],
     queryFn: () => db.entities.Role.filter({ tenant_id: tenantId }),
     enabled: !!tenantId,
-  });
-
-  const updateBusinessMutation = useMutation({
-    mutationFn: async () => {
-      const supabase = await getSupabase();
-      const { error } = await supabase.from('tenants').update(businessForm).eq('id', tenantId);
-      if (error) throw error;
-    },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['currentTenant'] }); toast.success('Settings saved'); },
   });
 
   const saveRoleMutation = useMutation({
@@ -132,26 +117,7 @@ function TenantSettingsContent() {
         </TabsList>
 
         <TabsContent value="business">
-          <Card className="border-0 shadow-sm p-6 max-w-2xl">
-            <div className="space-y-4">
-              <div><Label>Business Name</Label><Input className="h-11" value={businessForm.name} onChange={e => setBusinessForm({ ...businessForm, name: e.target.value })} /></div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div><Label>Phone</Label><Input className="h-11" value={businessForm.phone} onChange={e => setBusinessForm({ ...businessForm, phone: e.target.value })} /></div>
-                <div><Label>Currency</Label>
-                  <Select value={businessForm.currency} onValueChange={v => setBusinessForm({ ...businessForm, currency: v })}>
-                    <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {['SGD', 'USD', 'EUR', 'GBP', 'MYR', 'THB', 'IDR', 'PHP'].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div><Label>Address</Label><Input className="h-11" value={businessForm.address} onChange={e => setBusinessForm({ ...businessForm, address: e.target.value })} /></div>
-              <Button onClick={() => updateBusinessMutation.mutate()} disabled={updateBusinessMutation.isPending} className="h-11 gap-2" style={{ background: 'var(--color-primary-gradient)', color: '#fff' }}>
-                <Save className="w-4 h-4" /> {updateBusinessMutation.isPending ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </div>
-          </Card>
+          <BusinessProfileTab tenant={tenant} tenantId={tenantId} />
 
           {/* Account Deletion */}
           <Card className="border border-red-100 shadow-sm p-6 max-w-2xl mt-6">
