@@ -7,8 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useTenant } from '../tenant/TenantContext';
-import { base44 } from '@/api/base44Client';
 import db from '@/lib/db';
+
+const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6a3R1dGVlZGJ0bmF4ZmR5bHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NzY2NzIsImV4cCI6MjA5MDU1MjY3Mn0.zZL0Tyizzj3U8JTggYYKZ8BFrhDOKAzwISGNPJDAFzg';
 
 const COUNTRY_CODES = [
   { code: '+65', label: '🇸🇬 +65' },
@@ -60,20 +62,29 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
       const fullPhone = `${form.countryCode}${form.phone.trim()}`;
       const selectedRole = roles.find((r) => r.id === form.roleId);
 
-      const res = await base44.functions.invoke('authProxy', {
-        action: 'createStaff',
-        phone: fullPhone,
-        password: form.password,
-        full_name: form.fullName.trim(),
-        tenant_id: tenantId,
-        role_id: form.roleId,
-        role_name: selectedRole?.name || '',
-      });
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/createStaffUser`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'apikey': SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            tenantId,
+            fullName: form.fullName.trim(),
+            phone: fullPhone,
+            password: form.password,
+            roleId: form.roleId,
+            roleName: selectedRole?.name || '',
+          }),
+        }
+      );
 
-      if (res.data?.error) {
-        setError(res.data.error);
-        return;
-      }
+      const data = await response.json();
+      console.log('→ createStaffUser response:', response.status, data);
+      if (!response.ok) throw new Error(data.error || 'Failed to create staff');
 
       toast.success('Staff account created successfully');
       setForm({ fullName: '', countryCode: '+65', phone: '', password: '', confirmPassword: '', roleId: '' });
