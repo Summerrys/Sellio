@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { action, phone, password, full_name, email } = await req.json();
+    const { action, phone, password, full_name, email, tenant_id, role_id, role_name } = await req.json();
 
     if (!action) {
       return Response.json(
@@ -174,6 +174,71 @@ Deno.serve(async (req) => {
             'Content-Type': 'application/json',
           },
         }
+      );
+    } else if (action === 'createStaff') {
+      if (!phone || !password || !full_name || !tenant_id || !role_id) {
+        return Response.json(
+          { error: 'Missing required fields' },
+          { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } }
+        );
+      }
+
+      const fullPhone = phone.trim();
+      const staffEmail = `${fullPhone.replace('+', '')}@sellio.app`;
+
+      // Check if phone already exists
+      const { data: existing } = await supabase.from('app_users').select('id').eq('phone', fullPhone);
+      if (existing && existing.length > 0) {
+        return Response.json(
+          { error: 'An account with this phone number already exists' },
+          { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } }
+        );
+      }
+
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL'),
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+      );
+
+      const password_hash = await bcrypt.hash(password, 10);
+
+      // Insert into app_users
+      const { data: newUser, error: userError } = await supabaseAdmin
+        .from('app_users')
+        .insert({
+          phone: fullPhone,
+          email: staffEmail,
+          full_name: full_name.trim(),
+          password_hash,
+          role: 'staff',
+          is_active: true,
+          onboarding_completed: true,
+          auth_provider: 'phone',
+          tenant_id,
+        })
+        .select()
+        .single();
+
+      if (userError) throw userError;
+
+      // Insert into tenant_users
+      const { error: tuError } = await supabaseAdmin
+        .from('tenant_users')
+        .insert({
+          tenant_id,
+          user_email: staffEmail,
+          user_name: full_name.trim(),
+          role_id,
+          role_name: role_name || '',
+          status: 'active',
+          is_owner: false,
+        });
+
+      if (tuError) throw tuError;
+
+      return Response.json(
+        { success: true, user: { id: newUser.id, email: staffEmail, full_name: newUser.full_name } },
+        { headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' } }
       );
     } else {
       return Response.json(

@@ -15,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import InviteStaffDialog from '../components/staff/InviteStaffDialog';
 import CreateStaffDialog from '../components/staff/CreateStaffDialog';
 import EditStaffDialog from '../components/staff/EditStaffDialog';
 import StaffImportDialog from '../components/staff/StaffImportDialog';
@@ -67,7 +66,6 @@ function StaffContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
   const [importOpen, setImportOpen] = useState(false);
@@ -142,7 +140,7 @@ function StaffContent() {
                   <Upload className="w-4 h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Import</span>
                 </Button>
-            <Button onClick={() => setInviteDialogOpen(true)} size="sm" className="text-white gap-1.5" style={{ background: 'var(--color-primary-gradient)' }}>
+            <Button onClick={() => setCreateOpen(true)} size="sm" className="text-white gap-1.5" style={{ background: 'var(--color-primary-gradient)' }}>
               <UserPlus className="w-4 h-4" />Add Staff
             </Button>
           </div>
@@ -181,15 +179,14 @@ function StaffContent() {
         {isLoading ? (
           <div className="text-center py-12 text-slate-400">Loading staff...</div>
         ) : filteredStaff.length === 0 ? (
-          <EmptyState icon={Users} title={searchQuery || statusFilter !== 'all' || roleFilter !== 'all' ? "No staff found" : "No staff members yet"} description={searchQuery || statusFilter !== 'all' || roleFilter !== 'all' ? "Try adjusting your filters" : "Invite your first team member to get started"} actionLabel="Add Staff" onAction={() => setInviteDialogOpen(true)} />
+          <EmptyState icon={Users} title={searchQuery || statusFilter !== 'all' || roleFilter !== 'all' ? "No staff found" : "No staff members yet"} description={searchQuery || statusFilter !== 'all' || roleFilter !== 'all' ? "Try adjusting your filters" : "Add your first team member to get started"} actionLabel="Add Staff" onAction={() => setCreateOpen(true)} />
         ) : viewMode === 'table' ? (
           <StaffTable staff={filteredStaff} onEdit={setEditingStaff} />
         ) : (
           <StaffCards staff={filteredStaff} onEdit={setEditingStaff} />
         )}
 
-        <CreateStaffDialog open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={() => { setCreateOpen(false); queryClient.invalidateQueries({ queryKey: ['staff'] }); }} />
-        <InviteStaffDialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen} tenantId={tenantId} />
+        <CreateStaffDialog open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={() => { setCreateOpen(false); queryClient.invalidateQueries({ queryKey: ['staff', tenantId] }); }} />
         <EditStaffDialog open={!!editingStaff} onOpenChange={(open) => !open && setEditingStaff(null)} staff={editingStaff} tenantId={tenantId} />
         <StaffImportDialog open={importOpen} onOpenChange={setImportOpen} onImport={handleImport} roles={roles} />
       </div>
