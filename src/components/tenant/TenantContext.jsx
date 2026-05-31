@@ -4,102 +4,104 @@ import db from '@/lib/db';
 
 const TenantContext = createContext(null);
 
-const PERMISSIONS = {
-  // Staff Management
-  'staff.view': 'View staff members',
-  'staff.create': 'Invite new staff',
-  'staff.edit': 'Edit staff details',
-  'staff.delete': 'Remove staff members',
-  
+export const ALL_PERMISSIONS = {
+  // Orders
+  'orders.view': 'View orders',
+  'orders.create': 'Create orders',
+  'orders.edit': 'Edit orders',
+  'orders.update': 'Update orders',
+  'orders.cancel': 'Cancel orders',
   // Products
   'products.view': 'View products',
   'products.create': 'Create products',
   'products.edit': 'Edit products',
   'products.delete': 'Delete products',
-  
   // Categories
   'categories.view': 'View categories',
   'categories.create': 'Create categories',
   'categories.edit': 'Edit categories',
   'categories.delete': 'Delete categories',
-  
   // Inventory
-  'inventory.view': 'View inventory levels',
-  'inventory.adjust': 'Adjust stock quantities',
-  'inventory.restock': 'Restock products',
-  
-  // Orders
-  'orders.view': 'View orders',
-  'orders.create': 'Create new orders',
-  'orders.update': 'Update order status',
-  'orders.cancel': 'Cancel orders',
-  
+  'inventory.view': 'View inventory',
+  'inventory.edit': 'Edit inventory',
+  'inventory.adjust': 'Adjust stock',
+  'inventory.restock': 'Restock inventory',
   // Tables
   'tables.view': 'View tables',
-  'tables.manage': 'Manage tables and QR codes',
-  
-  // Payments
-  'payments.view': 'View payments',
-  'payments.process': 'Process payments',
-  'payments.refund': 'Issue refunds',
-  
-  // Reports
-  'reports.view': 'View reports',
-  'reports.export': 'Export reports',
-  
-  // Settings
-  'settings.view': 'View settings',
-  'settings.edit': 'Edit business settings',
-  
+  'tables.create': 'Create tables',
+  'tables.edit': 'Edit tables',
+  'tables.delete': 'Delete tables',
+  'tables.manage': 'Manage tables',
+  // Staff
+  'staff.view': 'View staff',
+  'staff.create': 'Create staff',
+  'staff.edit': 'Edit staff',
+  'staff.delete': 'Delete staff',
   // Roles
   'roles.view': 'View roles',
   'roles.create': 'Create roles',
   'roles.edit': 'Edit roles',
   'roles.delete': 'Delete roles',
-  
+  // Reports
+  'reports.view': 'View reports',
+  'reports.export': 'Export reports',
+  // Settings
+  'settings.view': 'View settings',
+  'settings.edit': 'Edit settings',
+  // Payments
+  'payments.view': 'View payments',
+  'payments.process': 'Process payments',
+  'payments.refund': 'Refund payments',
   // Theme
-  'theme.edit': 'Customize theme and branding',
-  
+  'theme.edit': 'Customise theme and branding',
   // Suppliers
   'suppliers.view': 'View suppliers',
   'suppliers.manage': 'Manage suppliers',
 };
 
-export const ALL_PERMISSIONS = PERMISSIONS;
+const PERMISSIONS = ALL_PERMISSIONS;
 
 // Permission groups for UI organization
 export const PERMISSION_GROUPS = {
-  staff: {
-    label: 'Staff Management',
-    permissions: ['staff.view', 'staff.create', 'staff.edit', 'staff.delete'],
+  orders: {
+    label: 'Orders',
+    permissions: ['orders.view','orders.create','orders.edit','orders.update','orders.cancel'],
   },
   products: {
-    label: 'Products & Categories',
-    permissions: ['products.view', 'products.create', 'products.edit', 'products.delete', 'categories.view', 'categories.create', 'categories.edit', 'categories.delete'],
+    label: 'Products',
+    permissions: ['products.view','products.create','products.edit','products.delete'],
+  },
+  categories: {
+    label: 'Categories',
+    permissions: ['categories.view','categories.create','categories.edit','categories.delete'],
   },
   inventory: {
-    label: 'Inventory Management',
-    permissions: ['inventory.view', 'inventory.adjust', 'inventory.restock'],
+    label: 'Inventory',
+    permissions: ['inventory.view','inventory.edit','inventory.adjust','inventory.restock'],
   },
-  orders: {
-    label: 'Orders & Tables',
-    permissions: ['orders.view', 'orders.create', 'orders.update', 'orders.cancel', 'tables.view', 'tables.manage'],
+  tables: {
+    label: 'Tables & QR',
+    permissions: ['tables.view','tables.create','tables.edit','tables.delete','tables.manage'],
   },
-  payments: {
-    label: 'Payments',
-    permissions: ['payments.view', 'payments.process', 'payments.refund'],
-  },
-  reports: {
-    label: 'Reports & Analytics',
-    permissions: ['reports.view', 'reports.export'],
-  },
-  settings: {
-    label: 'Settings & Configuration',
-    permissions: ['settings.view', 'settings.edit', 'theme.edit', 'suppliers.view', 'suppliers.manage'],
+  staff: {
+    label: 'Staff Management',
+    permissions: ['staff.view','staff.create','staff.edit','staff.delete'],
   },
   roles: {
     label: 'Role Management',
-    permissions: ['roles.view', 'roles.create', 'roles.edit', 'roles.delete'],
+    permissions: ['roles.view','roles.create','roles.edit','roles.delete'],
+  },
+  reports: {
+    label: 'Reports & Analytics',
+    permissions: ['reports.view','reports.export'],
+  },
+  settings: {
+    label: 'Settings & Configuration',
+    permissions: ['settings.view','settings.edit','theme.edit','suppliers.view','suppliers.manage'],
+  },
+  payments: {
+    label: 'Payments',
+    permissions: ['payments.view','payments.process','payments.refund'],
   },
 };
 
@@ -281,14 +283,32 @@ export function TenantProvider({ children }) {
     }
   }, [role, tenantUser, devRoleOverride, user, currentTenantId]);
 
+  const PERMISSION_ALIASES = {
+    'orders.edit': 'orders.update',
+    'orders.update': 'orders.edit',
+    'tables.edit': 'tables.manage',
+    'tables.manage': 'tables.edit',
+    'inventory.edit': 'inventory.adjust',
+    'inventory.adjust': 'inventory.edit',
+  };
+
   const hasPermission = (permission) => {
+    const checkInList = (perms) => {
+      if (!perms) return false;
+      if (perms.includes('*')) return true;
+      if (perms.includes(permission)) return true;
+      const alias = PERMISSION_ALIASES[permission];
+      if (alias && perms.includes(alias)) return true;
+      return false;
+    };
+
     // When simulating a role, ONLY check the simulated permissions — no owner/superadmin bypass
     if (devRoleOverride) {
-      return userPermissions.includes(permission);
+      return checkInList(userPermissions);
     }
     if (isSuperAdmin) return true;
     if (tenantUser?.[0]?.is_owner) return true;
-    return userPermissions.includes(permission);
+    return checkInList(userPermissions);
   };
 
   const hasAnyPermission = (permissions) => permissions.some(p => hasPermission(p));
