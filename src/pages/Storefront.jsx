@@ -51,7 +51,7 @@ export default function Storefront() {
         supabase.from('categories').select('id, name, slug, sort_order').eq('tenant_id', tenantId).eq('is_active', true).order('sort_order'),
         supabase.from('products')
           .select('*, category:categories(name), inventory:inventory_items(current_stock, low_stock_threshold)')
-          .eq('tenant_id', tenantId).eq('is_active', true)
+          .eq('tenant_id', tenantId).neq('is_active', false)
           .order('is_featured', { ascending: false })
           .order('created_date', { ascending: false }),
       ]);
@@ -295,7 +295,7 @@ export default function Storefront() {
               padding: '4px 12px', marginBottom: 8
             }}>
               <span style={{ color: 'white', fontSize: 13 }}>🪑</span>
-              <span style={{ color: 'white', fontSize: 12, fontWeight: 600 }}>Table {table.name}</span>
+              <span style={{ color: 'white', fontSize: 12, fontWeight: 600 }}>{table.name}</span>
             </div>
           )}
 
@@ -600,7 +600,7 @@ export default function Storefront() {
             {isDineIn && table && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f8fafc', borderRadius: 8, padding: '8px 12px', marginBottom: 12 }}>
                 <span style={{ fontSize: 14 }}>🪑</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>Table {table.name}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{table.name}</span>
               </div>
             )}
             {cart.length === 0 ? (
@@ -748,7 +748,7 @@ export default function Storefront() {
             <p style={{ fontWeight: 700, fontSize: 22, margin: '0 0 4px', textAlign: 'center', color: '#0f172a' }}>Order placed!</p>
             <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 4px' }}>Order #{placedOrderNumber}</p>
             {isDineIn && table && (
-              <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 20px' }}>Table {table.name}</p>
+              <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 20px' }}>{table.name}</p>
             )}
             <p style={{ color: '#64748b', textAlign: 'center', margin: '0 0 24px', fontSize: 13, maxWidth: 280 }}>
               We've received your order and will prepare it shortly.
