@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import {
-  Building2, MapPin, Camera, X, Save, Percent, Loader2, Pencil
+  Building2, MapPin, Camera, X, Save, Percent, Loader2, Pencil, QrCode
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -76,11 +76,18 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
     logo_url: '',
   });
 
+  const paymentQRInputRef = useRef(null);
+
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [showLogoEditor, setShowLogoEditor] = useState(false);
+
+  const [paymentQRFile, setPaymentQRFile] = useState(null);
+  const [paymentQRPreview, setPaymentQRPreview] = useState(null);
+  const [paymentQRLabel, setPaymentQRLabel] = useState('');
+  const [paymentReference, setPaymentReference] = useState('');
 
   useEffect(() => {
     if (!tenant) return;
@@ -102,6 +109,10 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
       logo_url: tenant.logo_url || '',
     });
     setLogoPreview(tenant.logo_url || null);
+    setPaymentQRPreview(tenant.payment_qr_url || null);
+    const s = tenant.settings || {};
+    setPaymentQRLabel(s.payment_qr_label || '');
+    setPaymentReference(s.payment_reference || '');
   }, [tenant]);
 
   // When country changes, sync currency
@@ -128,6 +139,30 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
     setLogoPreview(null);
     setForm(prev => ({ ...prev, logo_url: '' }));
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handlePaymentQRUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPaymentQRFile(file);
+    setPaymentQRPreview(URL.createObjectURL(file));
+    e.target.value = '';
+  };
+
+  const handleRemovePaymentQR = () => {
+    setPaymentQRFile(null);
+    setPaymentQRPreview(null);
+  };
+
+  const uploadPaymentQR = async (currentUrl) => {
+    if (!paymentQRFile) return currentUrl;
+    const supabase = await getSupabase();
+    const ext = paymentQRFile.name.split('.').pop();
+    const path = `${tenantId}/payment-qr/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from('product-images').upload(path, paymentQRFile, { upsert: true });
+    if (error) throw error;
+    const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
+    return publicUrl;
   };
 
   const uploadLogo = async () => {
@@ -174,6 +209,8 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
     try {
       const supabase = await getSupabase();
       const logoUrl = await uploadLogo();
+      const existingQRUrl = tenant?.payment_qr_url || null;
+      const paymentQRUrl = paymentQRPreview ? await uploadPaymentQR(existingQRUrl) : null;
       const existingSettings = tenant?.settings || {};
       const { error } = await supabase.from('tenants').update({
         name: form.name,
@@ -183,11 +220,14 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
         currency: form.currency,
         address: form.address,
         logo_url: logoUrl,
+        payment_qr_url: paymentQRUrl,
         settings: {
           ...existingSettings,
           branch_name: form.branch_name,
           tax_rate: form.tax_rate !== '' ? parseFloat(form.tax_rate) : null,
           tax_inclusive: form.tax_inclusive,
+          payment_qr_label: paymentQRLabel,
+          payment_reference: paymentReference,
         },
       }).eq('id', tenantId);
       if (error) throw error;
@@ -344,6 +384,73 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
               </p>
             </div>
             <Switch checked={form.tax_inclusive} onCheckedChange={v => set('tax_inclusive', v)} />
+          </div>
+        </Section>
+      </Card>
+
+      {/* Payment QR */}
+      <Card className="border border-slate-100 shadow-sm p-6 space-y-4">
+        <Section icon={QrCode} title="Payment QR Code">
+          <p className="text-xs text-slate-400 -mt-2">
+            Upload your PayNow, Touch N Go, DuitNow or any payment QR. Shown to customers after they place an order.
+          </p>
+
+          <input
+            ref={paymentQRInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePaymentQRUpload}
+          />
+
+          {paymentQRPreview ? (
+            <div className="flex items-start gap-4">
+              <img
+                src={paymentQRPreview}
+                alt="Payment QR"
+                className="w-24 h-24 rounded-lg border border-slate-200 object-contain bg-slate-50"
+              />
+              <div className="flex-1">
+                <p className="text-xs text-slate-500 mb-2">QR uploaded ✓</p>
+                <button
+                  type="button"
+                  onClick={handleRemovePaymentQR}
+                  className="text-xs text-red-500 hover:text-red-700 flex items-center gap-0.5"
+                >
+                  <X className="w-3 h-3" /> Remove QR
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              onClick={() => paymentQRInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer hover:border-slate-400 transition-colors bg-slate-50"
+            >
+              <QrCode className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+              <p className="text-xs font-medium text-slate-500">Click to upload payment QR</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">PNG, JPG supported</p>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs text-slate-600 mb-1 block">Payment label (shown to customer)</Label>
+              <Input
+                className="h-10"
+                value={paymentQRLabel}
+                onChange={e => setPaymentQRLabel(e.target.value)}
+                placeholder="e.g. Scan to pay via PayNow"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-slate-600 mb-1 block">Payment reference / UEN / phone number (optional)</Label>
+              <Input
+                className="h-10"
+                value={paymentReference}
+                onChange={e => setPaymentReference(e.target.value)}
+                placeholder="e.g. +65 9123 4567 or UEN 12345678A"
+              />
+            </div>
           </div>
         </Section>
       </Card>
