@@ -48,8 +48,8 @@ function PaymentQRTab({ tenant, tenantId }) {
     if (!tenant) return;
     const settings = tenant.settings || {};
     setPaymentQRPreview(tenant.payment_qr_url || null);
-    setPaymentQRLabel(settings.payment_qr_label || '');
-    setPaymentReference(settings.payment_reference || '');
+    setPaymentQRLabel(tenant.payment_qr_label || '');
+    setPaymentReference(tenant.payment_reference || '');
   }, [tenant]);
 
   const handlePaymentQRUpload = async (e) => {
@@ -80,13 +80,9 @@ function PaymentQRTab({ tenant, tenantId }) {
     setIsSavingQR(true);
     try {
       const supabase = await getSupabase();
-      const existingSettings = tenant?.settings || {};
       const { error } = await supabase.from('tenants').update({
-        settings: {
-          ...existingSettings,
-          payment_qr_label: paymentQRLabel,
-          payment_reference: paymentReference,
-        },
+        payment_qr_label: paymentQRLabel,
+        payment_reference: paymentReference,
       }).eq('id', tenantId);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['currentTenant'] });
