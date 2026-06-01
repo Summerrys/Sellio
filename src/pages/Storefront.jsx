@@ -50,9 +50,10 @@ export default function Storefront() {
         supabase.from('storefront_configs').select('*').eq('tenant_id', tenantId).maybeSingle(),
         supabase.from('categories').select('id, name, slug, sort_order').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').order('sort_order'),
         supabase.from('products')
-          .select('*, category:categories!left(name), inventory:inventory_items!left(current_stock, low_stock_threshold)')
+          .select('*, category:categories!left(name)')
           .eq('tenant_id', tenantId)
-          .or('is_active.eq.true,is_active.is.null'),
+          .or('is_active.eq.true,is_active.is.null')
+          .order('created_date', { ascending: false }),
       ]);
 
       setTheme(themeRes.data);
@@ -336,8 +337,7 @@ export default function Storefront() {
             {storefrontConfig?.featured_section_title || "Today's Picks"} ⭐
           </p>
           {featuredProducts.map(product => {
-            const inv = product.inventory?.[0];
-            const isOutOfStock = product.track_inventory && inv?.current_stock === 0;
+            const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
             return (
               <div key={product.id} onClick={() => setSelectedProduct(product)} style={{
                 display: 'flex', background: '#f8fafc',
@@ -394,9 +394,8 @@ export default function Storefront() {
         {(storefrontConfig?.product_layout === 'grid' || !storefrontConfig?.product_layout) && (
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${storefrontConfig?.products_per_row || 2}, 1fr)`, gap: 10 }}>
             {filteredProducts.map(product => {
-              const inv = product.inventory?.[0];
-                const isOutOfStock = product.track_inventory && inv?.current_stock === 0;
-                const isLowStock = showStockBadge && product.track_inventory && inv && inv.current_stock > 0 && inv.current_stock < inv.low_stock_threshold;
+                const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
+                const isLowStock = showStockBadge && product.track_inventory && product.stock_quantity > 0 && product.stock_quantity <= product.low_stock_threshold;
                return (
                  <div key={product.id} onClick={() => setSelectedProduct(product)}
                    style={{ background: '#fff', borderRadius: 12, border: '0.5px solid #e5e7eb', overflow: 'hidden', cursor: 'pointer' }}>
@@ -439,8 +438,7 @@ export default function Storefront() {
         {storefrontConfig?.product_layout === 'list' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {filteredProducts.map(product => {
-              const inv = product.inventory?.[0];
-              const isOutOfStock = product.track_inventory && inv?.current_stock === 0;
+              const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
               return (
                 <div key={product.id} onClick={() => setSelectedProduct(product)}
                   style={{ display: 'flex', gap: 12, background: '#fff', borderRadius: 12, border: '0.5px solid #e5e7eb', overflow: 'hidden', cursor: 'pointer' }}>
@@ -474,8 +472,7 @@ export default function Storefront() {
         {storefrontConfig?.product_layout === 'carousel' && (
           <div style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 8 }}>
             {filteredProducts.map(product => {
-              const inv = product.inventory?.[0];
-              const isOutOfStock = product.track_inventory && inv?.current_stock === 0;
+              const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
               return (
                 <div key={product.id} onClick={() => setSelectedProduct(product)}
                   style={{ flexShrink: 0, width: 160, background: '#fff', borderRadius: 12, border: '0.5px solid #e5e7eb', overflow: 'hidden', cursor: 'pointer' }}>
