@@ -291,7 +291,7 @@ function TenantSettingsContent() {
             <Building2 className="w-4 h-4" /> <span className="hidden sm:inline">Business</span><span className="sm:hidden text-xs">Biz</span>
           </TabsTrigger>
           <TabsTrigger value="payment_qr" className="rounded-lg gap-1.5 flex-1 sm:flex-none">
-            <QrCode className="w-4 h-4" /> <span className="hidden sm:inline">Payment</span><span className="sm:hidden text-xs">Payment</span>
+            <QrCode className="w-4 h-4" /> <span className="hidden sm:inline">Payment QR</span><span className="sm:hidden text-xs">Payment</span>
           </TabsTrigger>
           <TabsTrigger value="theme" className="rounded-lg gap-1.5 flex-1 sm:flex-none">
             <Palette className="w-4 h-4" /> Theme
