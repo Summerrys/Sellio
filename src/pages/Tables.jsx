@@ -133,10 +133,52 @@ export default function Tables() {
 
   const currency = tenant?.currency || 'SGD';
 
-  // Sync localTables when query data changes
+  // Sync localTables when query data changes (initial load only — don't overwrite realtime patches)
   useEffect(() => {
     setLocalTables(tables);
   }, [tables]);
+
+  // Realtime subscription for live table status updates
+  useEffect(() => {
+    if (!tenantId) return;
+    let supabaseInstance;
+    let channel;
+
+    getSupabase().then(supabase => {
+      supabaseInstance = supabase;
+      channel = supabase
+        .channel(`tables-${tenantId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'tables', filter: `tenant_id=eq.${tenantId}` },
+          (payload) => {
+            if (payload.eventType === 'UPDATE') {
+              setLocalTables(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t));
+              queryClient.setQueryData(['tables', tenantId], (prev) =>
+                prev ? prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t) : prev
+              );
+            }
+            if (payload.eventType === 'INSERT') {
+              setLocalTables(prev => [...prev, payload.new]);
+              queryClient.setQueryData(['tables', tenantId], (prev) =>
+                prev ? [...prev, payload.new] : prev
+              );
+            }
+            if (payload.eventType === 'DELETE') {
+              setLocalTables(prev => prev.filter(t => t.id !== payload.old.id));
+              queryClient.setQueryData(['tables', tenantId], (prev) =>
+                prev ? prev.filter(t => t.id !== payload.old.id) : prev
+              );
+            }
+          }
+        )
+        .subscribe();
+    });
+
+    return () => {
+      if (supabaseInstance && channel) supabaseInstance.removeChannel(channel);
+    };
+  }, [tenantId]);
 
   // Hybrid QR load: use saved static URL if available, otherwise generate + save
   useEffect(() => {
