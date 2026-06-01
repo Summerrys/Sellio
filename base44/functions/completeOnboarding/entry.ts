@@ -245,9 +245,26 @@ Deno.serve(async (req) => {
     console.log('→ Step 5: insert roles...');
     let ownerRole;
     try {
+      // Role permission templates (mirrored from frontend ROLE_TEMPLATES)
+      const ROLE_TEMPLATES = {
+        owner:          ['orders.view','orders.create','orders.edit','orders.update','orders.cancel','products.view','products.create','products.edit','products.delete','categories.view','categories.create','categories.edit','categories.delete','inventory.view','inventory.edit','inventory.adjust','inventory.restock','tables.view','tables.create','tables.edit','tables.delete','tables.manage','staff.view','staff.create','staff.edit','staff.delete','roles.view','roles.create','roles.edit','roles.delete','reports.view','reports.export','settings.view','settings.edit','theme.edit','suppliers.view','suppliers.manage','payments.view','payments.process','payments.refund'],
+        manager:        ['staff.view','staff.edit','products.view','products.create','products.edit','categories.view','categories.create','categories.edit','inventory.view','inventory.adjust','inventory.restock','orders.view','orders.create','orders.update','tables.view','tables.manage','payments.view','reports.view','suppliers.view'],
+        cashier:        ['products.view','categories.view','orders.view','orders.create','orders.update','tables.view','payments.view','payments.process'],
+        'kitchen staff':['products.view','orders.view','orders.update','inventory.view'],
+        'inventory staff':['products.view','inventory.view','inventory.edit','inventory.adjust','inventory.restock','categories.view','suppliers.view','suppliers.manage'],
+        staff:          ['products.view','orders.view','orders.create','tables.view'],
+      };
+
+      const getTemplatePermissions = (name) =>
+        ROLE_TEMPLATES[name.toLowerCase()] || [];
+
       const { data, error } = await supabase.from('roles').insert([
-        { tenant_id: newTenantId, name: 'owner', slug: 'owner', permissions: ['*'], is_system: true },
-        { tenant_id: newTenantId, name: 'staff', slug: 'staff', permissions: [], is_system: true },
+        { tenant_id: newTenantId, name: 'owner',          slug: 'owner',          permissions: getTemplatePermissions('owner'),          is_system: true  },
+        { tenant_id: newTenantId, name: 'manager',        slug: 'manager',        permissions: getTemplatePermissions('manager'),        is_system: false },
+        { tenant_id: newTenantId, name: 'cashier',        slug: 'cashier',        permissions: getTemplatePermissions('cashier'),        is_system: false },
+        { tenant_id: newTenantId, name: 'kitchen staff',  slug: 'kitchen-staff',  permissions: getTemplatePermissions('kitchen staff'),  is_system: false },
+        { tenant_id: newTenantId, name: 'inventory staff',slug: 'inventory-staff',permissions: getTemplatePermissions('inventory staff'),is_system: false },
+        { tenant_id: newTenantId, name: 'staff',          slug: 'staff',          permissions: getTemplatePermissions('staff'),          is_system: false },
       ]).select();
       if (error) throw error;
       ownerRole = data.find(r => r.name === 'owner');
