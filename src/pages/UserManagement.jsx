@@ -405,18 +405,14 @@ function RolesContent() {
 
         {/* Mobile permissions modal */}
         {mobilePreviewRole && (
-          <div className="lg:hidden fixed inset-0 z-50 flex items-end justify-center" onClick={() => setMobilePreviewRole(null)}>
+          <div className="lg:hidden fixed inset-0 z-50 flex items-center justify-center px-5" onClick={() => setMobilePreviewRole(null)}>
             <div className="absolute inset-0 bg-black/40" />
             <div
-              className="relative w-full bg-white rounded-t-2xl max-h-[75vh] flex flex-col"
+              className="relative w-full max-w-[90vw] bg-white rounded-2xl shadow-xl max-h-[75vh] flex flex-col"
               onClick={e => e.stopPropagation()}
             >
-              {/* Handle */}
-              <div className="flex justify-center pt-3 pb-1">
-                <div className="w-10 h-1 bg-slate-200 rounded-full" />
-              </div>
               {/* Header */}
-              <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                 <h3 className="text-sm font-semibold text-slate-900">{mobilePreviewRole.name}</h3>
                 <button onClick={() => setMobilePreviewRole(null)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100">
                   <X className="w-4 h-4 text-slate-500" />

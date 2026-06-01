@@ -94,7 +94,7 @@ function TenantSettingsContent() {
   };
 
   return (
-    <PermissionGate permission="settings.read">
+    <PermissionGate permission="settings.view">
       <PageHeader title="Settings" description="Configure your business and manage roles" />
 
       <Tabs defaultValue="business">
