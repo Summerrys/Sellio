@@ -122,19 +122,27 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
   const handleBannerImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!tenantId) {
+      toast.error('Tenant not loaded yet');
+      return;
+    }
     setUploading(true);
     const supabase = await getSupabase();
-    const path = `${tenantId}/storefront/banner-bg.jpg`;
+    const ext = file.name.split('.').pop() || 'jpg';
+    const path = `${tenantId}/storefront/banner-bg.${ext}`;
     const { error } = await supabase.storage
       .from('product-images')
       .upload(path, file, { upsert: true, contentType: file.type });
-    if (!error) {
-      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
-      onChange('banner_bg_image_url', publicUrl + '?t=' + Date.now());
-      onImageUploaded?.();
-    } else {
-      toast.error('Upload failed');
+    if (error) {
+      console.error('Banner upload error:', error);
+      toast.error('Upload failed: ' + error.message);
+      setUploading(false);
+      return;
     }
+    const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
+    onChange('banner_bg_image_url', publicUrl + '?t=' + Date.now());
+    toast.success('Banner image uploaded');
+    onImageUploaded?.();
     setUploading(false);
   };
 
