@@ -50,7 +50,7 @@ export default function Storefront() {
         supabase.from('storefront_configs').select('*').eq('tenant_id', tenantId).maybeSingle(),
         supabase.from('categories').select('id, name, slug, sort_order').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').order('sort_order'),
         supabase.from('products')
-          .select('id, name, description, price, compare_at_price, image_url, images, category_id, is_featured, is_active, stock_quantity, track_inventory, low_stock_threshold, variants, tags')
+          .select('id, name, description, price, compare_at_price, image_url, images, category_id, is_featured, is_active, stock_quantity, track_inventory, low_stock_threshold, variants, tags, category:categories!left(name)')
           .eq('tenant_id', tenantId)
           .or('is_active.eq.true,is_active.is.null'),
       ]);
@@ -59,11 +59,6 @@ export default function Storefront() {
       setStorefrontConfig(storefrontRes.data);
       setCategories(categoriesRes.data || []);
       setProducts(productsRes.data || []);
-      console.log('[Storefront] tenant.id:', tenantId, 'products:', productsRes.data?.length ?? 0, productsRes.error || '');
-      console.log('PRODUCTS RAW:', JSON.stringify(productsRes.data?.slice(0,2)));
-      console.log('PRODUCTS ERROR FULL:', JSON.stringify(productsRes.error));
-      console.log('CATEGORIES RAW:', JSON.stringify(categoriesRes.data));
-      if (productsRes.error) console.error('[Storefront] products error:', productsRes.error);
 
       if (tableId) {
         const { data: tableData } = await supabase
@@ -214,7 +209,6 @@ export default function Storefront() {
       setOrderSuccess(true);
     } else {
       setIsSubmitting(false);
-      alert('Something went wrong. Please try again.');
     }
   };
 
