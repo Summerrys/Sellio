@@ -141,29 +141,30 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handlePaymentQRUpload = (e) => {
+  const handlePaymentQRUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setPaymentQRFile(file);
-    setPaymentQRPreview(URL.createObjectURL(file));
     e.target.value = '';
-  };
-
-  const handleRemovePaymentQR = () => {
-    setPaymentQRFile(null);
-    setPaymentQRPreview(null);
-  };
-
-  const uploadPaymentQR = async (currentUrl) => {
-    if (!paymentQRFile) return currentUrl;
     const supabase = await getSupabase();
-    const ext = paymentQRFile.name.split('.').pop();
-    const path = `${tenantId}/payment-qr/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from('product-images').upload(path, paymentQRFile, { upsert: true });
-    if (error) throw error;
+    const path = `${tenantId}/payment-qr/${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true });
+    if (error) { toast.error('Failed to upload QR'); return; }
     const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
-    return publicUrl;
+    await supabase.from('tenants').update({ payment_qr_url: publicUrl }).eq('id', tenantId);
+    setPaymentQRPreview(publicUrl);
+    setPaymentQRFile(null);
+    queryClient.invalidateQueries({ queryKey: ['currentTenant'] });
   };
+
+  const handleRemovePaymentQR = async () => {
+    const supabase = await getSupabase();
+    await supabase.from('tenants').update({ payment_qr_url: null }).eq('id', tenantId);
+    setPaymentQRPreview(null);
+    setPaymentQRFile(null);
+    queryClient.invalidateQueries({ queryKey: ['currentTenant'] });
+  };
+
+  const uploadPaymentQR = async (currentUrl) => currentUrl; // upload is now immediate
 
   const uploadLogo = async () => {
     if (!logoFile) return form.logo_url;
@@ -209,8 +210,6 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
     try {
       const supabase = await getSupabase();
       const logoUrl = await uploadLogo();
-      const existingQRUrl = tenant?.payment_qr_url || null;
-      const paymentQRUrl = paymentQRPreview ? await uploadPaymentQR(existingQRUrl) : null;
       const existingSettings = tenant?.settings || {};
       const { error } = await supabase.from('tenants').update({
         name: form.name,
@@ -220,7 +219,6 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
         currency: form.currency,
         address: form.address,
         logo_url: logoUrl,
-        payment_qr_url: paymentQRUrl,
         settings: {
           ...existingSettings,
           branch_name: form.branch_name,
