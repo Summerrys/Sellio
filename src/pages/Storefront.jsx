@@ -48,9 +48,9 @@ export default function Storefront() {
       const [themeRes, storefrontRes, categoriesRes, productsRes] = await Promise.all([
         supabase.from('theme_configs').select('*').eq('tenant_id', tenantId).maybeSingle(),
         supabase.from('storefront_configs').select('*').eq('tenant_id', tenantId).maybeSingle(),
-        supabase.from('categories').select('id, name, slug, sort_order').eq('tenant_id', tenantId).eq('is_active', true).order('sort_order'),
+        supabase.from('categories').select('id, name, slug, sort_order').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').order('sort_order'),
         supabase.from('products')
-          .select('*, category:categories(name), inventory:inventory_items(current_stock, low_stock_threshold)')
+          .select('*, category:categories!left(name), inventory:inventory_items!left(current_stock, low_stock_threshold)')
           .eq('tenant_id', tenantId)
           .or('is_active.eq.true,is_active.is.null')
           .order('sort_order', { ascending: true, nullsFirst: false })
@@ -62,6 +62,9 @@ export default function Storefront() {
       setCategories(categoriesRes.data || []);
       setProducts(productsRes.data || []);
       console.log('[Storefront] tenant.id:', tenantId, 'products:', productsRes.data?.length ?? 0, productsRes.error || '');
+      console.log('PRODUCTS RAW:', JSON.stringify(productsRes.data?.slice(0,2)));
+      console.log('PRODUCTS ERROR:', productsRes.error);
+      console.log('CATEGORIES RAW:', JSON.stringify(categoriesRes.data));
       if (productsRes.error) console.error('[Storefront] products error:', productsRes.error);
 
       if (tableId) {
