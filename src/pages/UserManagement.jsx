@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Link } from 'react-router-dom';
 
-export default function UserManagement({ embedded = false }) {
+export default function UserManagement({ embedded = false, onUpgrade }) {
   const [activeTab, setActiveTab] = useState('staff');
 
   return (
@@ -55,13 +55,13 @@ export default function UserManagement({ embedded = false }) {
           Roles
         </button>
       </div>
-      {activeTab === 'staff' && <StaffContent />}
-      {activeTab === 'roles' && <RolesContent />}
+      {activeTab === 'staff' && <StaffContent onUpgrade={onUpgrade} />}
+      {activeTab === 'roles' && <RolesContent onUpgrade={onUpgrade} />}
     </div>
   );
 }
 
-function StaffContent() {
+function StaffContent({ onUpgrade }) {
   const { tenantId } = useTenant();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState('table');
@@ -168,7 +168,11 @@ function StaffContent() {
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-500">
             <Info className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
             <span>You've reached the {staffCap}-staff limit on your current plan.</span>
-            <Link to="/TenantSettings" className="ml-auto font-medium text-slate-700 underline underline-offset-2 whitespace-nowrap">Upgrade</Link>
+            {onUpgrade ? (
+              <button onClick={onUpgrade} className="ml-auto font-medium text-slate-700 underline underline-offset-2 whitespace-nowrap">Upgrade</button>
+            ) : (
+              <Link to="/TenantSettings" className="ml-auto font-medium text-slate-700 underline underline-offset-2 whitespace-nowrap">Upgrade</Link>
+            )}
           </div>
         )}
 
@@ -220,7 +224,7 @@ function StaffContent() {
   );
 }
 
-function RolesContent() {
+function RolesContent({ onUpgrade }) {
   const { tenantId, tenant } = useTenant();
   const { tier, isPro, roleCap } = useSubscription();
   const queryClient = useQueryClient();
@@ -350,7 +354,11 @@ function RolesContent() {
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-500">
             <Info className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
             <span>{roleBannerText}</span>
-            <Link to="/TenantSettings" className="ml-auto font-medium text-slate-700 underline underline-offset-2 whitespace-nowrap">Upgrade</Link>
+            {onUpgrade ? (
+              <button onClick={onUpgrade} className="ml-auto font-medium text-slate-700 underline underline-offset-2 whitespace-nowrap">Upgrade</button>
+            ) : (
+              <Link to="/TenantSettings" className="ml-auto font-medium text-slate-700 underline underline-offset-2 whitespace-nowrap">Upgrade</Link>
+            )}
           </div>
         )}
 

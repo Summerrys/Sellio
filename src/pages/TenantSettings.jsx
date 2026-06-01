@@ -24,6 +24,7 @@ import {
 import { toast } from 'sonner';
 import BusinessProfileTab from '../components/settings/BusinessProfileTab';
 import UserManagement from './UserManagement';
+import PricingModal from '../components/subscription/PricingModal';
 
 export default function TenantSettings() {
   return (
@@ -216,6 +217,7 @@ function TenantSettingsContent() {
   const queryClient = useQueryClient();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showPricingModal, setShowPricingModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [showRoleForm, setShowRoleForm] = useState(false);
@@ -316,7 +318,7 @@ function TenantSettingsContent() {
         </TabsContent>
 
         <TabsContent value="users">
-          <UserManagement embedded={true} />
+          <UserManagement embedded={true} onUpgrade={() => setShowPricingModal(true)} />
         </TabsContent>
       </Tabs>
 
@@ -454,6 +456,7 @@ function TenantSettingsContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <PricingModal open={showPricingModal} onOpenChange={setShowPricingModal} tenantId={tenantId} />
     </PermissionGate>
   );
 }
