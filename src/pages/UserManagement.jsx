@@ -289,43 +289,60 @@ function RolesContent({ onUpgrade }) {
 
   const getUserCount = (roleId) => tenantUsers.filter(u => u.role_id === roleId).length;
 
-  const DEFAULT_ROLE_NAMES = ['Manager', 'Cashier', 'Kitchen Staff', 'Inventory Staff'];
-  const existingRoleNames = roles.map(r => r.name);
-  const allDefaultsExist = DEFAULT_ROLE_NAMES.every(n => existingRoleNames.includes(n));
-
   const [seedingRoles, setSeedingRoles] = useState(false);
 
+  // Role cap logic
+  const industry = (tenant?.industry || '').toLowerCase();
+  const isFnB = /f&b|cafe|restaurant|food|bar/.test(industry);
+  const planCap = isPro ? Infinity : roleCap;
+  const roleCapReached = roles.length >= planCap;
+  const slotsAvailable = planCap === Infinity ? Infinity : planCap - roles.length;
+
+  // Duplicate detection (case-insensitive)
+  const lowerNames = roles.map(r => r.name?.toLowerCase());
+  const hasDuplicates = lowerNames.length !== new Set(lowerNames).size;
+
+  // Full default role definitions (capitalised names, matching completeOnboarding)
+  const ALL_DEFAULT_ROLES = [
+    { name: 'Owner',          slug: 'owner',           is_system: true,  permissions: ['orders.view','orders.create','orders.edit','orders.update','orders.cancel','products.view','products.create','products.edit','products.delete','categories.view','categories.create','categories.edit','categories.delete','inventory.view','inventory.edit','inventory.adjust','inventory.restock','tables.view','tables.create','tables.edit','tables.delete','tables.manage','staff.view','staff.create','staff.edit','staff.delete','roles.view','roles.create','roles.edit','roles.delete','reports.view','reports.export','settings.view','settings.edit','theme.edit','suppliers.view','suppliers.manage','payments.view','payments.process','payments.refund'] },
+    { name: 'Manager',        slug: 'manager',         is_system: false, permissions: ['staff.view','staff.edit','products.view','products.create','products.edit','categories.view','categories.create','categories.edit','inventory.view','inventory.adjust','inventory.restock','orders.view','orders.create','orders.update','tables.view','tables.manage','payments.view','reports.view','suppliers.view'] },
+    { name: 'Staff',          slug: 'staff',           is_system: false, permissions: ['products.view','orders.view','orders.create','tables.view'] },
+    { name: 'Cashier',        slug: 'cashier',         is_system: false, permissions: ['products.view','categories.view','orders.view','orders.create','orders.update','tables.view','payments.view','payments.process'] },
+    ...(isFnB
+      ? [{ name: 'Kitchen Staff',   slug: 'kitchen_staff',   is_system: false, permissions: ['products.view','orders.view','orders.update','inventory.view'] }]
+      : [{ name: 'Inventory Staff', slug: 'inventory_staff', is_system: false, permissions: ['products.view','inventory.view','inventory.edit','inventory.adjust','inventory.restock','categories.view','suppliers.view','suppliers.manage'] }]
+    ),
+  ];
+
+  // Plan-appropriate ordered list
+  const defaultsForPlan = tier?.startsWith('starter')
+    ? ALL_DEFAULT_ROLES.filter(r => ['Owner','Manager','Staff'].includes(r.name))
+    : tier?.startsWith('growth')
+    ? ALL_DEFAULT_ROLES.filter(r => ['Owner','Manager','Staff','Cashier', isFnB ? 'Kitchen Staff' : 'Inventory Staff'].includes(r.name))
+    : ALL_DEFAULT_ROLES;
+
+  const existingSlugs = roles.map(r => (r.slug || r.name)?.toLowerCase());
+  const toInsertDefaults = defaultsForPlan
+    .filter(r => !existingSlugs.includes(r.slug.toLowerCase()) && !existingSlugs.includes(r.name.toLowerCase()))
+    .slice(0, slotsAvailable === Infinity ? undefined : slotsAvailable);
+
+  const allDefaultsExist = toInsertDefaults.length === 0;
+
   const handleSetupDefaultRoles = async () => {
+    if (slotsAvailable <= 0) {
+      toast.error('You have reached the maximum number of roles for your plan.');
+      return;
+    }
+    if (toInsertDefaults.length === 0) {
+      toast.info('All default roles for your plan are already set up.');
+      return;
+    }
     setSeedingRoles(true);
     try {
       const supabase = await getSupabase();
-      const defaultRoles = [
-        {
-          tenant_id: tenantId, name: 'Manager', slug: 'manager',
-          description: 'Day-to-day operations management', is_system: false,
-          permissions: ['orders.view','orders.create','orders.edit','orders.cancel','products.view','products.create','products.edit','products.delete','categories.view','categories.create','categories.edit','categories.delete','inventory.view','inventory.edit','tables.view','tables.create','tables.edit','tables.delete','staff.view','staff.create','staff.edit','reports.view','settings.view'],
-        },
-        {
-          tenant_id: tenantId, name: 'Cashier', slug: 'cashier',
-          description: 'Front-of-house POS and order taking', is_system: false,
-          permissions: ['orders.view','orders.create','orders.edit','products.view','tables.view','tables.edit','inventory.view'],
-        },
-        {
-          tenant_id: tenantId, name: 'Kitchen Staff', slug: 'kitchen-staff',
-          description: 'Back-of-house order visibility', is_system: false,
-          permissions: ['orders.view','products.view'],
-        },
-        {
-          tenant_id: tenantId, name: 'Inventory Staff', slug: 'inventory-staff',
-          description: 'Stock and inventory management', is_system: false,
-          permissions: ['products.view','inventory.view','inventory.edit','categories.view'],
-        },
-      ];
-      const toInsert = defaultRoles.filter(r => !existingRoleNames.includes(r.name));
-      if (toInsert.length > 0) {
-        const { error } = await supabase.from('roles').insert(toInsert);
-        if (error) throw error;
-      }
+      const rows = toInsertDefaults.map(r => ({ ...r, tenant_id: tenantId }));
+      const { error } = await supabase.from('roles').insert(rows);
+      if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['allRoles', tenantId] });
       toast.success('Default roles created successfully');
     } catch {
@@ -334,11 +351,6 @@ function RolesContent({ onUpgrade }) {
       setSeedingRoles(false);
     }
   };
-
-  // Role cap logic
-  const industry = (tenant?.industry || '').toLowerCase();
-  const isFnB = /f&b|cafe|restaurant|food|bar/.test(industry);
-  const roleCapReached = !isPro && roles.length >= roleCap;
 
   const roleBannerText = tier === 'starter'
     ? `Your plan includes up to ${roleCap} roles. Upgrade to Pro for unlimited roles.`
@@ -359,6 +371,13 @@ function RolesContent({ onUpgrade }) {
             ) : (
               <Link to="/TenantSettings" className="ml-auto font-medium text-slate-700 underline underline-offset-2 whitespace-nowrap">Upgrade</Link>
             )}
+          </div>
+        )}
+
+        {hasDuplicates && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700">
+            <Info className="w-3.5 h-3.5 flex-shrink-0 text-amber-500" />
+            <span>Duplicate roles detected. Please delete the duplicates to ensure correct behaviour.</span>
           </div>
         )}
 
