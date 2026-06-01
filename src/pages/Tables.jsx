@@ -27,7 +27,7 @@ import TableFormDialog from '../components/tables/TableFormDialog';
 import TableCard from '../components/tables/TableCard';
 import QRCodeGenerator from '../components/tables/QRCodeGenerator';
 import BulkQRActions from '../components/tables/BulkQRActions';
-import { QrCode, Plus, Search, LayoutGrid, List, Trash2, Download, Pencil, CheckCircle2, Users, Clock, Wrench, Check, X } from 'lucide-react';
+import { QrCode, Plus, Search, LayoutGrid, List, Trash2, Download, Pencil, CheckCircle2, Users, Clock, Wrench, Check, X, Printer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -91,6 +91,7 @@ export default function Tables() {
   const [localTables, setLocalTables] = useState([]); // local copy to patch qr_image_url
   const [editingZone, setEditingZone] = useState(null);
   const [editingZoneName, setEditingZoneName] = useState('');
+  const [qrModalTable, setQrModalTable] = useState(null);
 
   const { data: tables = [], isLoading } = useQuery({
     queryKey: ['tables', tenantId],
@@ -456,7 +457,7 @@ export default function Tables() {
                         <div
                           className="relative"
                           style={{ padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', cursor: 'pointer' }}
-                          onClick={() => handleDownloadQR(localTable)}
+                          onClick={() => setQrModalTable(localTable)}
                         >
                           {qrCodes[table.id] ? (
                             <div className="relative w-20 h-20">
@@ -537,7 +538,7 @@ export default function Tables() {
                         <div
                           className="relative"
                           style={{ width: '56px', height: '56px', borderRadius: '8px', background: '#f8fafc', flexShrink: 0, cursor: 'pointer', overflow: 'hidden' }}
-                          onClick={() => handleDownloadQR(localTable)}
+                          onClick={() => setQrModalTable(localTable)}
                         >
                           {qrCodes[table.id] ? (
                             <>
@@ -631,6 +632,67 @@ export default function Tables() {
           table={selectedTable}
           tenant={tenant}
         />
+
+        {/* QR Preview Modal */}
+        {qrModalTable && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onClick={() => setQrModalTable(null)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-xl w-full p-6 flex flex-col gap-4"
+              style={{ maxWidth: '340px' }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-slate-900 text-base">{qrModalTable.name} — QR Code</h3>
+                <button onClick={() => setQrModalTable(null)} className="text-slate-400 hover:text-slate-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              {/* QR Image */}
+              <div className="flex flex-col items-center gap-2">
+                <div className="bg-white rounded-xl border border-slate-100 p-3 flex items-center justify-center" style={{ width: 280, height: 280 }}>
+                  {(qrModalTable.qr_code_url && qrCodes[qrModalTable.id]) || qrModalTable.qr_image_url ? (
+                    <img
+                      src={qrCodes[qrModalTable.id] || qrModalTable.qr_image_url}
+                      alt={`QR ${qrModalTable.name}`}
+                      style={{ width: 256, height: 256, objectFit: 'contain', borderRadius: 8 }}
+                    />
+                  ) : (
+                    <QrCode className="w-24 h-24 text-slate-200" />
+                  )}
+                </div>
+                <p className="text-sm text-slate-500">{qrModalTable.capacity} pax</p>
+                <p className="text-xs text-slate-400">Scan to order</p>
+              </div>
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleDownloadQR(qrModalTable)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                  style={{ background: 'var(--color-primary-gradient)' }}
+                >
+                  <Download className="w-4 h-4" /> Download
+                </button>
+                <button
+                  onClick={() => {
+                    const imgSrc = qrCodes[qrModalTable.id] || qrModalTable.qr_image_url;
+                    const w = window.open();
+                    w.document.write(`<html><head><title>${qrModalTable.name}</title></head><body style="text-align:center;font-family:Arial;padding:24px"><h2>${qrModalTable.name}</h2><p>${qrModalTable.capacity} pax</p><img src="${imgSrc}" style="max-width:400px;" /><p>Scan to order</p></body></html>`);
+                    w.document.close();
+                    setTimeout(() => w.print(), 300);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                  style={{ background: 'var(--color-primary-gradient)' }}
+                >
+                  <Printer className="w-4 h-4" /> Print
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <AlertDialog open={!!tableToDelete} onOpenChange={() => setTableToDelete(null)}>
           <AlertDialogContent>
