@@ -52,8 +52,7 @@ export default function Storefront() {
         supabase.from('products')
           .select('*, category:categories!left(name), inventory:inventory_items!left(current_stock, low_stock_threshold)')
           .eq('tenant_id', tenantId)
-          .or('is_active.eq.true,is_active.is.null')
-          .order('created_date', { ascending: false }),
+          .or('is_active.eq.true,is_active.is.null'),
       ]);
 
       setTheme(themeRes.data);
