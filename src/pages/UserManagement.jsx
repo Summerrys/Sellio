@@ -21,7 +21,7 @@ import StaffImportDialog from '../components/staff/StaffImportDialog';
 import StaffTable from '../components/staff/StaffTable';
 import StaffCards from '../components/staff/StaffCards';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Shield, Plus, Pencil, Trash2, Copy, Users, CheckCircle2, UserPlus, Search, LayoutGrid, List, Download, Upload, FileDown, FileSpreadsheet } from 'lucide-react';
+import { Shield, Plus, Pencil, Trash2, Copy, Users, CheckCircle2, UserPlus, Search, LayoutGrid, List, Download, Upload, FileDown, FileSpreadsheet, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -201,6 +201,7 @@ function RolesContent() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: '', description: '', permissions: [] });
   const [selectedRole, setSelectedRole] = useState(null);
+  const [mobilePreviewRole, setMobilePreviewRole] = useState(null);
 
   const { data: roles = [] } = useQuery({
     queryKey: ['allRoles', tenantId],
@@ -324,7 +325,7 @@ function RolesContent() {
             {roles.map(role => {
               const userCount = getUserCount(role.id);
               return (
-                <Card key={role.id} className="border-0 shadow-sm p-5 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedRole(role)}>
+                <Card key={role.id} className="border-0 shadow-sm p-5 hover:shadow-md transition-shadow cursor-pointer" onClick={() => { setSelectedRole(role); setMobilePreviewRole(role); }}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
@@ -370,7 +371,8 @@ function RolesContent() {
             })}
           </div>
 
-          <Card className="border-0 shadow-sm p-5 lg:sticky lg:top-6 h-fit">
+          {/* Desktop permissions panel — hidden on mobile */}
+          <Card className="hidden lg:block border-0 shadow-sm p-5 lg:sticky lg:top-6 h-fit">
             {selectedRole ? (
               <div>
                 <h3 className="text-sm font-semibold text-slate-900 mb-4">{selectedRole.name}</h3>
@@ -400,6 +402,53 @@ function RolesContent() {
             )}
           </Card>
         </div>
+
+        {/* Mobile permissions modal */}
+        {mobilePreviewRole && (
+          <div className="lg:hidden fixed inset-0 z-50 flex items-end justify-center" onClick={() => setMobilePreviewRole(null)}>
+            <div className="absolute inset-0 bg-black/40" />
+            <div
+              className="relative w-full bg-white rounded-t-2xl max-h-[75vh] flex flex-col"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 bg-slate-200 rounded-full" />
+              </div>
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+                <h3 className="text-sm font-semibold text-slate-900">{mobilePreviewRole.name}</h3>
+                <button onClick={() => setMobilePreviewRole(null)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100">
+                  <X className="w-4 h-4 text-slate-500" />
+                </button>
+              </div>
+              {/* Permissions list */}
+              <div className="overflow-y-auto px-5 py-4 space-y-4">
+                {Object.entries(PERMISSION_GROUPS).map(([key, group]) => {
+                  const rolePerms = mobilePreviewRole.permissions || [];
+                  const groupPerms = group.permissions.filter(p => rolePerms.includes(p));
+                  if (groupPerms.length === 0) return null;
+                  return (
+                    <div key={key}>
+                      <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">{group.label}</p>
+                      <div className="space-y-1.5">
+                        {groupPerms.map(perm => (
+                          <div key={perm} className="flex items-center gap-2 text-xs text-slate-600">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                            {ALL_PERMISSIONS[perm]}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+                {(mobilePreviewRole.permissions || []).length === 0 && (
+                  <p className="text-sm text-slate-400 text-center py-4">No permissions assigned</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         <Dialog open={showForm} onOpenChange={setShowForm}>
           <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
