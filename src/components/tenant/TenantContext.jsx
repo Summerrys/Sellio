@@ -188,25 +188,11 @@ export const INDUSTRY_ROLES = {
   other: ['owner', 'admin', 'manager', 'staff'],
 };
 
+const SUPERADMIN_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
+
 export function TenantProvider({ children }) {
   const [currentTenantId, setCurrentTenantId] = useState(null);
   const [devRoleOverride, setDevRoleOverride] = useState(null);
-
-  const SUPERADMIN_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
-
-  // Check for simulate_role (dev tool for alvin.leeyq@gmail.com)
-  // Only apply the override once the user is loaded and confirmed to be a superadmin
-  useEffect(() => {
-    if (!user?.email) return;
-    if (!SUPERADMIN_EMAILS.includes(user.email.toLowerCase())) {
-      // Not a superadmin — clear any stale simulation
-      localStorage.removeItem('simulate_role');
-      setDevRoleOverride(null);
-      return;
-    }
-    const override = localStorage.getItem('simulate_role');
-    setDevRoleOverride(override || null);
-  }, [user?.email]);
   const [userPermissions, setUserPermissions] = useState([]);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
@@ -214,6 +200,18 @@ export function TenantProvider({ children }) {
     queryKey: ['currentUser'],
     queryFn: () => db.auth.me(),
   });
+
+  // Check for simulate_role — only apply for authorized superadmin emails
+  useEffect(() => {
+    if (!user?.email) return;
+    if (!SUPERADMIN_EMAILS.includes(user.email.toLowerCase())) {
+      localStorage.removeItem('simulate_role');
+      setDevRoleOverride(null);
+      return;
+    }
+    const override = localStorage.getItem('simulate_role');
+    setDevRoleOverride(override || null);
+  }, [user?.email]);
 
   const { data: tenantUser, isLoading: tenantUserLoading } = useQuery({
     queryKey: ['tenantUser', user?.email],
