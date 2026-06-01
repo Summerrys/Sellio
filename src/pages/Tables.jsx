@@ -27,6 +27,7 @@ import TableFormDialog from '../components/tables/TableFormDialog';
 import TableCard from '../components/tables/TableCard';
 import QRCodeGenerator from '../components/tables/QRCodeGenerator';
 import BulkQRActions from '../components/tables/BulkQRActions';
+import QRPreviewModal from '../components/tables/QRPreviewModal';
 import { QrCode, Plus, Search, LayoutGrid, List, Trash2, Download, Pencil, CheckCircle2, Users, Clock, Wrench, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -91,6 +92,7 @@ export default function Tables() {
   const [localTables, setLocalTables] = useState([]); // local copy to patch qr_image_url
   const [editingZone, setEditingZone] = useState(null);
   const [editingZoneName, setEditingZoneName] = useState('');
+  const [qrPreviewTable, setQrPreviewTable] = useState(null);
 
   const { data: tables = [], isLoading } = useQuery({
     queryKey: ['tables', tenantId],
@@ -456,7 +458,7 @@ export default function Tables() {
                         <div
                           className="relative"
                           style={{ padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', cursor: 'pointer' }}
-                          onClick={() => handleDownloadQR(localTable)}
+                          onClick={() => setQrPreviewTable(localTable)}
                         >
                           {qrCodes[table.id] ? (
                             <div className="relative w-20 h-20">
@@ -537,7 +539,7 @@ export default function Tables() {
                         <div
                           className="relative"
                           style={{ width: '56px', height: '56px', borderRadius: '8px', background: '#f8fafc', flexShrink: 0, cursor: 'pointer', overflow: 'hidden' }}
-                          onClick={() => handleDownloadQR(localTable)}
+                          onClick={() => setQrPreviewTable(localTable)}
                         >
                           {qrCodes[table.id] ? (
                             <>
@@ -614,6 +616,16 @@ export default function Tables() {
             );
           });
         })()}
+
+        {/* QR Preview Modal */}
+        {qrPreviewTable && (
+          <QRPreviewModal
+            table={qrPreviewTable}
+            qrUrl={qrCodes[qrPreviewTable.id] || qrPreviewTable.qr_image_url}
+            onClose={() => setQrPreviewTable(null)}
+            onDownload={() => handleDownloadQR(qrPreviewTable)}
+          />
+        )}
 
         {/* Dialogs */}
         <TableFormDialog
