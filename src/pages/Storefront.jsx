@@ -51,8 +51,9 @@ export default function Storefront() {
         supabase.from('categories').select('id, name, slug, sort_order').eq('tenant_id', tenantId).eq('is_active', true).order('sort_order'),
         supabase.from('products')
           .select('*, category:categories(name), inventory:inventory_items(current_stock, low_stock_threshold)')
-          .eq('tenant_id', tenantId).neq('is_active', false)
-          .order('is_featured', { ascending: false })
+          .eq('tenant_id', tenantId)
+          .neq('is_active', false)
+          .order('sort_order', { ascending: true, nullsFirst: false })
           .order('created_date', { ascending: false }),
       ]);
 
@@ -60,6 +61,8 @@ export default function Storefront() {
       setStorefrontConfig(storefrontRes.data);
       setCategories(categoriesRes.data || []);
       setProducts(productsRes.data || []);
+      console.log('[Storefront] tenant.id:', tenantId, 'products:', productsRes.data?.length ?? 0, productsRes.error || '');
+      if (productsRes.error) console.error('[Storefront] products error:', productsRes.error);
 
       if (tableId) {
         const { data: tableData } = await supabase
@@ -139,9 +142,9 @@ export default function Storefront() {
   const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
   const cartTotal = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
 
-  const featuredProducts = products.filter(p => p.is_featured);
+  const featuredProducts = products.filter(p => p.is_featured === true);
   const filteredProducts = products.filter(p =>
-    !p.is_featured && (selectedCategory === null || p.category_id === selectedCategory)
+    p.is_featured !== true && (selectedCategory === null || p.category_id === selectedCategory)
   );
 
   const addToCart = (product, variant = null) => {
