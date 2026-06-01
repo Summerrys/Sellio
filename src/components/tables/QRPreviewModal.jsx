@@ -14,13 +14,14 @@ export default function QRPreviewModal({ table, qrUrl, onClose, onDownload }) {
           <style>
             body { margin: 0; padding: 20mm; font-family: Arial, sans-serif; text-align: center; }
             img { width: 80mm; height: 80mm; }
-            h2 { font-size: 24pt; margin: 8mm 0; }
-            p { font-size: 14pt; color: #64748b; margin: 6mm 0 0; }
+            h2 { font-size: 24pt; margin: 8mm 0 4mm; }
+            p { font-size: 12pt; color: #64748b; margin: 4mm 0 0; }
           </style>
         </head>
         <body>
           <h2>${table.name}</h2>
           <img src="${qrUrl}" alt="QR Code" />
+          <p>${table.capacity} pax</p>
           <p>Scan to order</p>
         </body>
       </html>
@@ -35,7 +36,7 @@ export default function QRPreviewModal({ table, qrUrl, onClose, onDownload }) {
       onClick={onClose}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" />
+      <div className="absolute inset-0 bg-black/60" />
 
       {/* Modal */}
       <div
@@ -51,7 +52,7 @@ export default function QRPreviewModal({ table, qrUrl, onClose, onDownload }) {
         </button>
 
         {/* Title */}
-        <h3 className="text-base font-semibold text-slate-900 mb-4">{table.name}</h3>
+        <h3 className="text-base font-semibold text-slate-900 mb-4 pr-8 text-center">{table.name} — QR Code</h3>
 
         {/* QR Image */}
         <div className="bg-white border border-slate-200 rounded-xl p-3 mb-3">
@@ -68,6 +69,8 @@ export default function QRPreviewModal({ table, qrUrl, onClose, onDownload }) {
           )}
         </div>
 
+        {/* Capacity */}
+        <p className="text-sm text-slate-500 mb-1">{table.capacity} pax</p>
         {/* Subtitle */}
         <p className="text-xs text-slate-400 mb-5">Scan to order</p>
 
