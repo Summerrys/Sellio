@@ -37,10 +37,11 @@ import { cn } from '@/lib/utils';
 import UpgradeWall from './components/subscription/UpgradeWall';
 import PricingModal from './components/subscription/PricingModal';
 import TrialReminderModal from './components/subscription/TrialReminderModal';
+import AccountProfileModal from './components/profile/AccountProfileModal';
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth'];
 
-function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription }) {
+function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription, onOpenProfile }) {
   const superAdminItems = [];
 
   // Check if user is admin
@@ -150,19 +151,24 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
       <div className={cn("p-3 border-t border-slate-100", collapsed && "flex justify-center")}>
         {!collapsed ? (
           <div className="flex items-center gap-3 p-2">
-            <Avatar className="w-8 h-8">
-              <AvatarFallback className="bg-slate-100 text-slate-600 text-xs font-medium">
-                {user?.full_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-900 truncate">{user?.full_name || 'User'}</p>
-              <p className="text-xs text-slate-400 truncate">{user?.email}</p>
-            </div>
+            <button
+              className="flex items-center gap-3 flex-1 min-w-0 text-left hover:bg-slate-50 rounded-lg p-1 -m-1 transition-colors"
+              onClick={onOpenProfile}
+            >
+              <Avatar className="w-8 h-8 flex-shrink-0">
+                <AvatarFallback className="bg-slate-100 text-slate-600 text-xs font-medium">
+                  {user?.full_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-900 truncate">{user?.full_name || 'User'}</p>
+                <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+              </div>
+            </button>
             <Button
               variant="ghost"
               size="icon"
-              className="h-11 w-11 text-slate-400 hover:text-slate-600"
+              className="h-11 w-11 text-slate-400 hover:text-slate-600 flex-shrink-0"
               onClick={() => {
                 clearAppUser();
                 window.location.href = createPageUrl('Auth');
@@ -196,6 +202,7 @@ function AppLayout({ children, currentPageName }) {
   const [subscription, setSubscription] = useState(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [showTrialModal, setShowTrialModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
   const { appUser: customUser, clearAppUser } = useAppUser();
@@ -302,7 +309,7 @@ function AppLayout({ children, currentPageName }) {
           collapsed ? "w-[72px]" : "w-[260px]"
         )}
       >
-        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => {}} subscription={subscription} />
+        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => {}} subscription={subscription} onOpenProfile={() => setShowProfileModal(true)} />
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 transition-colors"
@@ -346,7 +353,7 @@ function AppLayout({ children, currentPageName }) {
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => setMobileOpen(false)} subscription={subscription} />
+            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => setMobileOpen(false)} subscription={subscription} onOpenProfile={() => { setMobileOpen(false); setShowProfileModal(true); }} />
           </aside>
         </div>
       )}
@@ -443,6 +450,14 @@ function AppLayout({ children, currentPageName }) {
         tenantId={tenant?.id}
       />
 
+      <AccountProfileModal
+        open={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        user={displayUser}
+        subscription={subscription}
+        onOpenPricing={() => setShowPricingModal(true)}
+        clearAppUser={clearAppUser}
+      />
       <RoleSwitcher />
       <PricingModal open={showPricingModal} onOpenChange={setShowPricingModal} tenantId={tenantId} />
       {showTrialModal && (
