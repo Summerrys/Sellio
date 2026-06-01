@@ -3,7 +3,7 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { X, ArrowLeft, ExternalLink, RefreshCw, ImageIcon, Upload } from 'lucide-react';
+import { X, ArrowLeft, ExternalLink, RefreshCw, ImageIcon, Upload, Eye } from 'lucide-react';
 
 const FONTS = [
   { value: 'Inter', label: 'Inter', style: { fontFamily: 'Inter, sans-serif' } },
@@ -17,6 +17,7 @@ const TABS = [
   { id: 'announcement', label: 'Announcement' },
   { id: 'menu', label: 'Menu' },
   { id: 'typography', label: 'Typography' },
+  { id: 'preview', label: 'Preview' },
 ];
 
 const DEFAULTS = {
@@ -113,7 +114,7 @@ function Toggle({ checked, onChange, label, description }) {
   );
 }
 
-function EditorControls({ form, onChange, tenantId, onImageUploaded }) {
+function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, iframeRef, reloadIframe }) {
   const [activeTab, setActiveTab] = useState('banner');
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
@@ -140,28 +141,49 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded }) {
   return (
     <div className="flex flex-col h-full">
       {/* Premium pill tab bar */}
-      <div className="px-4 py-3 bg-white flex gap-2 overflow-x-auto no-scrollbar" style={{ flexShrink: 0 }}>
+      <div
+        className="tab-bar"
+        style={{
+          display: 'flex',
+          gap: 8,
+          padding: '12px 16px',
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          WebkitOverflowScrolling: 'touch',
+          borderBottom: '1px solid #f1f5f9',
+          flexShrink: 0,
+        }}
+      >
+        <style>{`.tab-bar::-webkit-scrollbar { display: none; }`}</style>
         {TABS.map(tab => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className="whitespace-nowrap flex-shrink-0 px-4 py-1.5 rounded-full text-sm transition-all"
-            style={activeTab === tab.id
-              ? {
-                  background: 'var(--color-primary-gradient)',
-                  color: 'white',
-                  fontWeight: 600,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                  border: 'none',
-                }
-              : {
-                  background: '#f1f5f9',
-                  color: '#64748b',
-                  fontWeight: 400,
-                  border: 'none',
-                }
-            }
+            style={{
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              padding: '6px 16px',
+              borderRadius: 999,
+              fontSize: 13,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              ...(activeTab === tab.id
+                ? {
+                    background: 'var(--color-primary-gradient)',
+                    color: 'white',
+                    fontWeight: 600,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                    border: 'none',
+                  }
+                : {
+                    background: '#f1f5f9',
+                    color: '#64748b',
+                    fontWeight: 400,
+                    border: 'none',
+                  }
+              ),
+            }}
           >
             {tab.label}
           </button>
@@ -169,7 +191,13 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded }) {
       </div>
 
       {/* Tab content */}
-      <div className="flex-1 overflow-y-auto" style={{ padding: '16px 20px', paddingBottom: 24 }}>
+      <div
+        className="flex-1 overflow-y-auto"
+        style={activeTab === 'preview'
+          ? { position: 'relative', overflow: 'hidden', padding: 0 }
+          : { padding: '16px 20px', paddingBottom: 24 }
+        }
+      >
 
         {/* ── BANNER TAB ── */}
         {activeTab === 'banner' && (
@@ -359,6 +387,29 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded }) {
           </div>
         )}
 
+        {/* ── PREVIEW TAB ── */}
+        {activeTab === 'preview' && (
+          <div style={{ position: 'absolute', inset: 0, top: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
+              <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600, letterSpacing: '0.06em' }}>LIVE PREVIEW</span>
+              <button
+                type="button"
+                onClick={reloadIframe}
+                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#94a3b8', background: 'none', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', cursor: 'pointer' }}
+              >
+                <RefreshCw style={{ width: 12, height: 12 }} />
+                Refresh
+              </button>
+            </div>
+            <iframe
+              ref={iframeRef}
+              src={storeUrl}
+              style={{ flex: 1, width: '100%', border: 'none', minHeight: 0 }}
+              title="Store Preview"
+            />
+          </div>
+        )}
+
         {/* ── TYPOGRAPHY TAB ── */}
         {activeTab === 'typography' && (
           <div>
@@ -543,10 +594,13 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
               onChange={handleChange}
               tenantId={tenantId}
               onImageUploaded={reloadIframe}
+              storeUrl={storeUrl}
+              iframeRef={iframeRef}
+              reloadIframe={reloadIframe}
             />
 
             {/* Desktop Save */}
-            <div className="hidden md:block p-4 border-t border-slate-100 bg-white flex-shrink-0">
+            <div className="hidden lg:block p-4 border-t border-slate-100 bg-white flex-shrink-0">
               <Button
                 onClick={handleSave}
                 disabled={saving}
@@ -560,7 +614,7 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
 
           {/* Right: Live Preview (desktop only) */}
           <div
-            className="hidden md:flex flex-1 flex-col items-center overflow-auto"
+            className="hidden lg:flex flex-1 flex-col items-center overflow-auto"
             style={{ background: '#f8fafc', padding: '32px 32px 32px 32px', position: 'relative' }}
           >
             {/* Preview label + refresh */}
@@ -626,7 +680,7 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
 
         {/* ── MOBILE BOTTOM BAR ── */}
         <div
-          className="md:hidden flex gap-3 flex-shrink-0"
+          className="lg:hidden flex gap-3 flex-shrink-0"
           style={{ padding: '12px 16px', borderTop: '1px solid #f1f5f9', background: 'white' }}
         >
           <a
