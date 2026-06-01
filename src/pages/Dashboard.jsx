@@ -10,8 +10,9 @@ import RevenueChart from '../components/dashboard/RevenueChart';
 import {
   DollarSign, ShoppingCart, Package, Users,
   ClipboardList, ShoppingBag, Grid3X3, QrCode,
-  Shield, Settings, BarChart2, ChevronRight, AlertTriangle
+  Shield, Settings, BarChart2, ChevronRight, AlertTriangle, Paintbrush
 } from 'lucide-react';
+import StorefrontDesigner from '../components/storefront/StorefrontDesigner';
 import { startOfDay, endOfDay } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
@@ -71,6 +72,7 @@ function FeatureCard({ icon: Icon, label, color, onClick }) {
 export default function Dashboard() {
   const { tenantId, tenant, hasPermission } = useTenant();
   const navigate = useNavigate();
+  const [showDesigner, setShowDesigner] = React.useState(false);
 
   const { data: todayOrders = [] } = useQuery({
     queryKey: ['todayOrders', tenantId],
@@ -156,13 +158,31 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 pb-8">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">
-          {getGreeting()}, {tenant?.name || 'there'} 👋!
-        </h1>
-        <p className="text-sm text-slate-500 mt-0.5">Today's overview</p>
-        <p className="text-xs text-slate-400 mt-0.5">{todayLabel}</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">
+            {getGreeting()}, {tenant?.name || 'there'} 👋!
+          </h1>
+          <p className="text-sm text-slate-500 mt-0.5">Today's overview</p>
+          <p className="text-xs text-slate-400 mt-0.5">{todayLabel}</p>
+        </div>
+        {tenant?.slug && (
+          <button
+            onClick={() => setShowDesigner(true)}
+            className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-all text-sm font-medium flex-shrink-0"
+          >
+            <Paintbrush className="w-4 h-4" />
+            Design Store
+          </button>
+        )}
       </div>
+
+      <StorefrontDesigner
+        open={showDesigner}
+        onClose={() => setShowDesigner(false)}
+        tenantId={tenantId}
+        tenantSlug={tenant?.slug}
+      />
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 gap-3" style={{ alignItems: 'stretch' }}>

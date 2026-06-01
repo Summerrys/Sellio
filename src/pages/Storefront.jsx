@@ -78,6 +78,7 @@ export default function Storefront() {
   const fontFamily = storefrontConfig?.font_family || theme?.font_family || 'Inter';
   const currency = tenant?.currency || 'SGD';
   const isFnB = /f&b|cafe|restaurant|food|beverage/i.test(tenant?.industry || '');
+  const showStockBadge = storefrontConfig?.show_stock_badge !== false;
 
   // Init table session when customer lands on ordering page
   useEffect(() => {
@@ -362,7 +363,7 @@ export default function Storefront() {
                         {currency} {parseFloat(product.price).toFixed(2)}
                       </span>
                     </div>
-                    {isOutOfStock ? (
+                    {isOutOfStock && showStockBadge ? (
                       <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600, background: '#fee2e2', padding: '4px 10px', borderRadius: 999 }}>Sold out</span>
                     ) : (
                       <button onClick={(e) => { e.stopPropagation(); addToCart(product); }} style={{
@@ -390,21 +391,27 @@ export default function Storefront() {
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${storefrontConfig?.products_per_row || 2}, 1fr)`, gap: 10 }}>
             {filteredProducts.map(product => {
               const inv = product.inventory?.[0];
-              const isOutOfStock = product.track_inventory && inv?.current_stock === 0;
-              return (
-                <div key={product.id} onClick={() => setSelectedProduct(product)}
-                  style={{ background: '#fff', borderRadius: 12, border: '0.5px solid #e5e7eb', overflow: 'hidden', cursor: 'pointer' }}>
-                  <div style={{ position: 'relative' }}>
-                    {product.image_url
-                      ? <img src={product.image_url} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover' }} />
-                      : <div style={{ width: '100%', aspectRatio: '1', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>🛍️</div>
-                    }
-                    {isOutOfStock && (
-                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ color: 'white', fontWeight: 700, fontSize: 12 }}>Sold out</span>
-                      </div>
-                    )}
-                  </div>
+                const isOutOfStock = product.track_inventory && inv?.current_stock === 0;
+                const isLowStock = showStockBadge && product.track_inventory && inv && inv.current_stock > 0 && inv.current_stock < inv.low_stock_threshold;
+               return (
+                 <div key={product.id} onClick={() => setSelectedProduct(product)}
+                   style={{ background: '#fff', borderRadius: 12, border: '0.5px solid #e5e7eb', overflow: 'hidden', cursor: 'pointer' }}>
+                   <div style={{ position: 'relative' }}>
+                     {product.image_url
+                       ? <img src={product.image_url} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover' }} />
+                       : <div style={{ width: '100%', aspectRatio: '1', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>🛍️</div>
+                     }
+                     {isOutOfStock && showStockBadge && (
+                       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                         <span style={{ color: 'white', fontWeight: 700, fontSize: 12 }}>Sold out</span>
+                       </div>
+                     )}
+                     {isLowStock && (
+                       <div style={{ position: 'absolute', top: 6, right: 6 }}>
+                         <span style={{ background: '#fef3c7', color: '#92400e', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999 }}>Low stock</span>
+                       </div>
+                     )}
+                   </div>
                   <div style={{ padding: 10 }}>
                     <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#0f172a' }}>{product.name}</p>
                     {storefrontConfig?.show_product_description !== false && product.description && (
