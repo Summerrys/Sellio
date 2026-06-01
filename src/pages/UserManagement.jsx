@@ -21,9 +21,11 @@ import StaffImportDialog from '../components/staff/StaffImportDialog';
 import StaffTable from '../components/staff/StaffTable';
 import StaffCards from '../components/staff/StaffCards';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Shield, Plus, Pencil, Trash2, Copy, Users, CheckCircle2, UserPlus, Search, LayoutGrid, List, Download, Upload, FileDown, FileSpreadsheet, X } from 'lucide-react';
+import { Shield, Plus, Pencil, Trash2, Copy, Users, CheckCircle2, UserPlus, Search, LayoutGrid, List, Download, Upload, FileDown, FileSpreadsheet, X, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useSubscription } from '@/hooks/useSubscription';
+import { Link } from 'react-router-dom';
 
 export default function UserManagement() {
   const [activeTab, setActiveTab] = useState('staff');
@@ -69,6 +71,8 @@ function StaffContent() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
   const [importOpen, setImportOpen] = useState(false);
+
+  const { staffCap, isPro } = useSubscription();
 
   const { data: staff = [], isLoading } = useQuery({
     queryKey: ['staff', tenantId],
@@ -118,6 +122,8 @@ function StaffContent() {
     queryClient.invalidateQueries({ queryKey: ['staff', tenantId] });
   };
 
+  const staffCapReached = !isPro && staff.length >= staffCap;
+
   return (
     <RequirePermission permission="staff.view">
       <div className="space-y-4">
@@ -136,15 +142,28 @@ function StaffContent() {
                 <DropdownMenuItem onClick={handleExport}><FileSpreadsheet className="w-4 h-4 mr-2" />Export All Staff</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-                <Button onClick={() => setImportOpen(true)} variant="outline" size="sm">
-                  <Upload className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Import</span>
-                </Button>
-            <Button onClick={() => setCreateOpen(true)} size="sm" className="text-white gap-1.5" style={{ background: 'var(--color-primary-gradient)' }}>
-              <UserPlus className="w-4 h-4" />Add Staff
-            </Button>
+            <div title={staffCapReached ? 'Upgrade your plan to add more staff' : undefined}>
+              <Button onClick={() => setImportOpen(true)} variant="outline" size="sm" disabled={staffCapReached}>
+                <Upload className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Import</span>
+              </Button>
+            </div>
+            <div title={staffCapReached ? 'Upgrade your plan to add more staff' : undefined}>
+              <Button onClick={() => setCreateOpen(true)} size="sm" className="text-white gap-1.5" style={{ background: 'var(--color-primary-gradient)' }} disabled={staffCapReached}>
+                <UserPlus className="w-4 h-4" />Add Staff
+              </Button>
+            </div>
           </div>
         </RequirePermission>
+
+        {/* Staff cap banner */}
+        {staffCapReached && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-500">
+            <Info className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
+            <span>You've reached the {staffCap}-staff limit on your current plan.</span>
+            <Link to="/TenantSettings" className="ml-auto font-medium text-slate-700 underline underline-offset-2 whitespace-nowrap">Upgrade</Link>
+          </div>
+        )}
 
         {/* Search */}
         <div className="relative">
@@ -196,6 +215,7 @@ function StaffContent() {
 
 function RolesContent() {
   const { tenantId, tenant } = useTenant();
+  const { tier, isPro, roleCap } = useSubscription();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -304,9 +324,29 @@ function RolesContent() {
     }
   };
 
+  // Role cap logic
+  const industry = (tenant?.industry || '').toLowerCase();
+  const isFnB = /f&b|cafe|restaurant|food|bar/.test(industry);
+  const roleCapReached = !isPro && roles.length >= roleCap;
+
+  const roleBannerText = tier === 'starter'
+    ? `Your plan includes up to ${roleCap} roles. Upgrade to Pro for unlimited roles.`
+    : tier === 'growth'
+    ? `Your plan includes up to ${roleCap} roles. Upgrade to Pro for unlimited roles.`
+    : null;
+
   return (
     <RequirePermission permission="roles.view">
       <div className="space-y-4">
+        {/* Role plan banner */}
+        {roleBannerText && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-500">
+            <Info className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
+            <span>{roleBannerText}</span>
+            <Link to="/TenantSettings" className="ml-auto font-medium text-slate-700 underline underline-offset-2 whitespace-nowrap">Upgrade</Link>
+          </div>
+        )}
+
         <div className="flex justify-end gap-2">
           <RequirePermission permission="roles.create" silent>
             {!allDefaultsExist && (
@@ -314,9 +354,11 @@ function RolesContent() {
                 <Shield className="w-4 h-4" /> {seedingRoles ? 'Setting up...' : 'Setup Default Roles'}
               </Button>
             )}
-            <Button onClick={() => open(null)} size="sm" className="text-white gap-1.5" style={{ background: 'var(--color-primary-gradient)' }}>
-              <Plus className="w-4 h-4" /> Create Role
-            </Button>
+            {!roleCapReached && (
+              <Button onClick={() => open(null)} size="sm" className="text-white gap-1.5" style={{ background: 'var(--color-primary-gradient)' }}>
+                <Plus className="w-4 h-4" /> Create Role
+              </Button>
+            )}
           </RequirePermission>
         </div>
 
