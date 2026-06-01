@@ -52,7 +52,7 @@ export default function Storefront() {
         supabase.from('products')
           .select('*, category:categories(name), inventory:inventory_items(current_stock, low_stock_threshold)')
           .eq('tenant_id', tenantId)
-          .neq('is_active', false)
+          .or('is_active.eq.true,is_active.is.null')
           .order('sort_order', { ascending: true, nullsFirst: false })
           .order('created_date', { ascending: false }),
       ]);
