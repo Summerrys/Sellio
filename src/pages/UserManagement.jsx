@@ -124,6 +124,13 @@ function StaffContent() {
 
   const staffCapReached = !isPro && staff.length >= staffCap;
 
+  const handleDelete = async (member) => {
+    if (!window.confirm(`Remove ${member.user_name || member.user_email} from your team?`)) return;
+    await db.entities.TenantUser.delete(member.id);
+    queryClient.invalidateQueries({ queryKey: ['staff', tenantId] });
+    toast.success('Staff member removed');
+  };
+
   return (
     <RequirePermission permission="staff.view">
       <div className="space-y-4">
@@ -202,7 +209,7 @@ function StaffContent() {
         ) : viewMode === 'table' ? (
           <StaffTable staff={filteredStaff} onEdit={setEditingStaff} />
         ) : (
-          <StaffCards staff={filteredStaff} onEdit={setEditingStaff} />
+          <StaffCards staff={filteredStaff} onEdit={setEditingStaff} onDelete={handleDelete} />
         )}
 
         <CreateStaffDialog open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={() => { setCreateOpen(false); queryClient.invalidateQueries({ queryKey: ['staff', tenantId] }); }} />

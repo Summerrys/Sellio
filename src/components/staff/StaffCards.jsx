@@ -1,62 +1,66 @@
 import React from 'react';
-import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import StatusBadge from '../ui-custom/StatusBadge';
-import { Edit2, Crown, Mail } from 'lucide-react';
+import { Trash2, Crown } from 'lucide-react';
 import { format } from 'date-fns';
 
-export default function StaffCards({ staff, onEdit }) {
+export default function StaffCards({ staff, onEdit, onDelete }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
       {staff.map((member) => (
-        <Card key={member.id} className="p-6 border-0 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between mb-4">
-            <Avatar className="w-14 h-14">
-              <AvatarFallback className="bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary))] font-semibold text-lg">
-                {member.user_email?.charAt(0)?.toUpperCase() || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            {member.is_owner && (
-              <div className="flex items-center gap-1 bg-amber-50 text-amber-600 text-xs font-medium px-2 py-1 rounded-full">
-                <Crown className="w-3 h-3" />
-                Owner
-              </div>
-            )}
-          </div>
-
-          <div className="mb-4">
-            <h3 className="font-semibold text-slate-900 mb-1">
-              {member.user_email}
-            </h3>
-            <div className="flex items-center gap-2 text-sm text-slate-500">
-              <Mail className="w-4 h-4" />
-              {member.user_email}
+        <div
+          key={member.id}
+          onClick={() => !member.is_owner && onEdit(member)}
+          className="bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col items-center text-center relative"
+          style={{ cursor: member.is_owner ? 'default' : 'pointer' }}
+        >
+          {/* Owner crown badge */}
+          {member.is_owner && (
+            <div className="absolute top-2 left-2 flex items-center gap-1 bg-amber-50 text-amber-600 text-xs font-medium px-1.5 py-0.5 rounded-full">
+              <Crown className="w-3 h-3" />
             </div>
-          </div>
+          )}
 
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-sm text-slate-600 font-medium">
-              {member.role_name || 'Staff'}
-            </span>
-            <span className="text-slate-300">•</span>
+          {/* Avatar */}
+          <Avatar className="w-10 h-10 mb-2">
+            <AvatarFallback className="bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary))] font-semibold text-sm">
+              {(member.user_name || member.user_email)?.charAt(0)?.toUpperCase() || 'U'}
+            </AvatarFallback>
+          </Avatar>
+
+          {/* Name & email */}
+          <p className="text-sm font-semibold text-slate-900 w-full truncate">
+            {member.user_name || member.user_email}
+          </p>
+          <p className="text-xs text-slate-400 w-full truncate mb-2">
+            {member.user_email}
+          </p>
+
+          {/* Role pill */}
+          <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full mb-1.5">
+            {member.role_name || 'Staff'}
+          </span>
+
+          {/* Status badge */}
+          <div className="mb-2">
             <StatusBadge status={member.status} />
           </div>
 
-          <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-            <span className="text-xs text-slate-400">
-              Joined {format(new Date(member.created_date), 'MMM yyyy')}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onEdit(member)}
-              disabled={member.is_owner}
+          {/* Joined date */}
+          <p className="text-xs text-slate-400 mt-auto">
+            Joined {format(new Date(member.created_date), 'MMM yyyy')}
+          </p>
+
+          {/* Trash icon — bottom right, only for non-owners */}
+          {!member.is_owner && onDelete && (
+            <button
+              className="absolute bottom-2 right-2 w-7 h-7 flex items-center justify-center rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+              onClick={(e) => { e.stopPropagation(); onDelete(member); }}
             >
-              <Edit2 className="w-4 h-4" />
-            </Button>
-          </div>
-        </Card>
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       ))}
     </div>
   );
