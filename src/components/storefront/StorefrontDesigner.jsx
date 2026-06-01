@@ -26,7 +26,7 @@ const DEFAULTS = {
   banner_headline: '',
   banner_tagline: '',
   banner_height: 'medium',
-  banner_bg_color: '#6366f1',
+  banner_bg_color: '#fb923c',
   banner_bg_image_url: '',
   show_announcement_bar: false,
   announcement_text: '',
@@ -66,7 +66,8 @@ function Toggle({ checked, onChange, label }) {
       <span className="text-sm text-slate-700">{label}</span>
       <button
         onClick={() => onChange(!checked)}
-        className={`relative w-10 h-6 rounded-full transition-colors ${checked ? 'bg-indigo-500' : 'bg-slate-200'}`}
+        className={`relative w-10 h-6 rounded-full transition-colors ${checked ? '' : 'bg-slate-200'}`}
+        style={checked ? { background: 'var(--color-primary-gradient)' } : {}}
       >
         <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-5' : 'translate-x-1'}`} />
       </button>
@@ -110,9 +111,10 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded }) {
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 flex flex-col items-center gap-1 py-3 text-[11px] font-medium transition-colors ${
                 activeTab === tab.id
-                  ? 'text-indigo-600 border-b-2 border-indigo-500'
+                  ? 'border-b-2'
                   : 'text-slate-400 hover:text-slate-600'
               }`}
+              style={activeTab === tab.id ? { color: 'var(--color-primary)', borderColor: 'var(--color-primary)' } : {}}
             >
               <Icon className="w-4 h-4" />
               {tab.label}
@@ -165,6 +167,9 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded }) {
                   className="w-32 font-mono text-sm"
                 />
               </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Tip: This sets your storefront banner colour. Your brand primary colour is applied automatically to buttons and accents.
+              </p>
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-2">Background image</label>
@@ -182,7 +187,7 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded }) {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="w-full h-20 border-2 border-dashed border-slate-200 rounded-lg flex flex-col items-center justify-center gap-1 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors text-sm"
+                  className="w-full h-20 border-2 border-dashed border-slate-200 rounded-lg flex flex-col items-center justify-center gap-1 text-slate-400 hover:border-slate-300 hover:text-slate-500 transition-colors text-sm"
                 >
                   <Image className="w-5 h-5" />
                   {uploading ? 'Uploading...' : 'Upload image'}
@@ -262,9 +267,13 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded }) {
                   onClick={() => onChange('font_family', font.value)}
                   className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${
                     form.font_family === font.value
-                      ? 'border-indigo-500 bg-indigo-50'
+                      ? ''
                       : 'border-slate-200 hover:border-slate-300'
                   }`}
+                  style={form.font_family === font.value
+                    ? { borderColor: 'var(--color-primary)', background: 'var(--color-background-secondary, #f8fafc)' }
+                    : {}
+                  }
                 >
                   <span style={font.style} className="text-base font-medium text-slate-900">{font.label}</span>
                   <span className="text-xs text-slate-400 ml-2" style={font.style}>Aa Bb Cc</span>
@@ -371,7 +380,8 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
             href={storeUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700 transition-colors text-sm font-medium"
+            className="flex items-center gap-1.5 transition-colors text-sm font-medium"
+            style={{ color: 'var(--color-primary)' }}
           >
             Open store
             <ExternalLink className="w-3.5 h-3.5" />
@@ -397,7 +407,7 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
                 onClick={handleSave}
                 disabled={saving}
                 className="w-full"
-                style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: 'white', border: 'none' }}
+                style={{ background: 'var(--color-primary-gradient)', color: 'white', border: 'none' }}
               >
                 {saving ? 'Saving...' : 'Save Changes'}
               </Button>
@@ -449,7 +459,7 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
             onClick={handleSave}
             disabled={saving}
             className="flex-1"
-            style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: 'white', border: 'none' }}
+            style={{ background: 'var(--color-primary-gradient)', color: 'white', border: 'none' }}
           >
             {saving ? 'Saving...' : 'Save Changes'}
           </Button>
