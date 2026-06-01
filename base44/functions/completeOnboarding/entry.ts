@@ -251,9 +251,13 @@ Deno.serve(async (req) => {
         .select('key');
 
       const allKeys = permRows?.map(p => p.key) || [];
-      console.log('✓ Step 5 fetched', allKeys.length, 'permissions from DB');
+      if (allKeys.length === 0) {
+        console.warn('⚠ Step 5 permissions table returned empty — roles will be inserted with empty permissions');
+      } else {
+        console.log('✓ Step 5 fetched', allKeys.length, 'permissions from DB');
+      }
 
-      const pick = (keys) => keys.filter(k => allKeys.includes(k));
+      const pick = (keys) => allKeys.length === 0 ? [] : keys.filter(k => allKeys.includes(k));
 
       const ROLE_PERMISSIONS = {
         'Owner': allKeys,
@@ -296,8 +300,8 @@ Deno.serve(async (req) => {
         { tenant_id: newTenantId, name: 'Owner',          slug: 'owner',          permissions: ROLE_PERMISSIONS['Owner'],          is_system: true  },
         { tenant_id: newTenantId, name: 'Manager',        slug: 'manager',        permissions: ROLE_PERMISSIONS['Manager'],        is_system: false },
         { tenant_id: newTenantId, name: 'Cashier',        slug: 'cashier',        permissions: ROLE_PERMISSIONS['Cashier'],        is_system: false },
-        { tenant_id: newTenantId, name: 'Kitchen Staff',  slug: 'kitchen-staff',  permissions: ROLE_PERMISSIONS['Kitchen Staff'],  is_system: false },
-        { tenant_id: newTenantId, name: 'Inventory Staff',slug: 'inventory-staff',permissions: ROLE_PERMISSIONS['Inventory Staff'],is_system: false },
+        { tenant_id: newTenantId, name: 'Kitchen Staff',  slug: 'kitchen_staff',  permissions: ROLE_PERMISSIONS['Kitchen Staff'],  is_system: false },
+        { tenant_id: newTenantId, name: 'Inventory Staff',slug: 'inventory_staff',permissions: ROLE_PERMISSIONS['Inventory Staff'],is_system: false },
         { tenant_id: newTenantId, name: 'Staff',          slug: 'staff',          permissions: ROLE_PERMISSIONS['Staff'],          is_system: false },
       ]).select();
       if (error) throw error;
