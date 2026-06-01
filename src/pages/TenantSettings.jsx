@@ -187,12 +187,12 @@ function PaymentQRTab({ tenant, tenantId }) {
               />
             </div>
             <div>
-              <Label className="text-xs text-slate-600 mb-1 block">Payment reference / UEN / phone number (optional)</Label>
+              <Label className="text-xs text-slate-600 mb-1 block">Payment reference (optional)</Label>
               <Input
                 className="h-10"
                 value={paymentReference}
                 onChange={e => setPaymentReference(e.target.value)}
-                placeholder="e.g. +65 9123 4567 or UEN 12345678A"
+                placeholder="e.g. UEN 12345678A"
               />
             </div>
           </div>
