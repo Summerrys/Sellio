@@ -606,6 +606,7 @@ export default function Storefront() {
                     addToCart(selectedProduct, combinedVariant);
                     setSelectedProduct(null);
                     setSelectedVariants({});
+                    setActiveImageIndex(0);
                   }}
                   style={{
                     width: '100%', padding: 14, background: primaryColor, color: 'white',
