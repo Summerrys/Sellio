@@ -27,7 +27,6 @@ import TableFormDialog from '../components/tables/TableFormDialog';
 import TableCard from '../components/tables/TableCard';
 import QRCodeGenerator from '../components/tables/QRCodeGenerator';
 import BulkQRActions from '../components/tables/BulkQRActions';
-import QRPreviewModal from '../components/tables/QRPreviewModal';
 import { QrCode, Plus, Search, LayoutGrid, List, Trash2, Download, Pencil, CheckCircle2, Users, Clock, Wrench, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -92,7 +91,6 @@ export default function Tables() {
   const [localTables, setLocalTables] = useState([]); // local copy to patch qr_image_url
   const [editingZone, setEditingZone] = useState(null);
   const [editingZoneName, setEditingZoneName] = useState('');
-  const [qrModalTable, setQrModalTable] = useState(null);
 
   const { data: tables = [], isLoading } = useQuery({
     queryKey: ['tables', tenantId],
@@ -454,10 +452,11 @@ export default function Tables() {
                   {zoneTables.map(table => {
                     const localTable = localTables.find(t => t.id === table.id) || table;
                     return (
-                      <div key={table.id} style={{ background: 'white', borderRadius: '12px', border: '0.5px solid #e2e8f0', overflow: 'hidden', cursor: 'pointer' }} onClick={() => setQrModalTable(localTable)}>
+                      <div key={table.id} style={{ background: 'white', borderRadius: '12px', border: '0.5px solid #e2e8f0', overflow: 'hidden' }}>
                         <div
                           className="relative"
-                          style={{ padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}
+                          style={{ padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', cursor: 'pointer' }}
+                          onClick={() => handleDownloadQR(localTable)}
                         >
                           {qrCodes[table.id] ? (
                             <div className="relative w-20 h-20">
@@ -510,20 +509,20 @@ export default function Tables() {
                               </button>
                             ))}
                           </div>
-                                <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }} onClick={e => e.stopPropagation()}>
-                                <button
-                                onClick={() => handleDownloadQR(localTable)}
-                                style={{ flex: 1, padding: '6px', borderRadius: '8px', border: '0.5px solid #e2e8f0', background: 'none', fontSize: '11px', fontWeight: '600', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                                >
-                                <Download style={{ width: '13px', height: '13px' }} /> QR
-                                </button>
-                                <button
-                                onClick={() => handleEdit(table)}
-                                style={{ flex: 1, padding: '6px', borderRadius: '8px', border: '0.5px solid #e2e8f0', background: 'none', fontSize: '11px', fontWeight: '600', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                                >
-                                <Pencil style={{ width: '13px', height: '13px' }} /> Edit
-                                </button>
-                                </div>
+                                <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                            <button
+                              onClick={() => handleDownloadQR(localTable)}
+                              style={{ flex: 1, padding: '6px', borderRadius: '8px', border: '0.5px solid #e2e8f0', background: 'none', fontSize: '11px', fontWeight: '600', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                            >
+                              <Download style={{ width: '13px', height: '13px' }} /> QR
+                            </button>
+                            <button
+                              onClick={() => handleEdit(table)}
+                              style={{ flex: 1, padding: '6px', borderRadius: '8px', border: '0.5px solid #e2e8f0', background: 'none', fontSize: '11px', fontWeight: '600', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                            >
+                              <Pencil style={{ width: '13px', height: '13px' }} /> Edit
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -534,10 +533,11 @@ export default function Tables() {
                   {zoneTables.map(table => {
                     const localTable = localTables.find(t => t.id === table.id) || table;
                     return (
-                      <div key={table.id} style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'white', borderRadius: '12px', border: '0.5px solid #e2e8f0', padding: '12px', cursor: 'pointer' }} onClick={() => setQrModalTable(localTable)}>
+                      <div key={table.id} style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'white', borderRadius: '12px', border: '0.5px solid #e2e8f0', padding: '12px' }}>
                         <div
                           className="relative"
-                          style={{ width: '56px', height: '56px', borderRadius: '8px', background: '#f8fafc', flexShrink: 0, overflow: 'hidden' }}
+                          style={{ width: '56px', height: '56px', borderRadius: '8px', background: '#f8fafc', flexShrink: 0, cursor: 'pointer', overflow: 'hidden' }}
+                          onClick={() => handleDownloadQR(localTable)}
                         >
                           {qrCodes[table.id] ? (
                             <>
@@ -574,7 +574,7 @@ export default function Tables() {
                                 </span>
                               ) : null;
                             })()}
-                            <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }} onClick={e => e.stopPropagation()}>
+                            <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
                               <button
                                 onClick={() => handleDownloadQR(localTable)}
                                 style={{ width: '28px', height: '28px', borderRadius: '6px', border: '0.5px solid #e2e8f0', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -614,16 +614,6 @@ export default function Tables() {
             );
           });
         })()}
-
-        {/* QR Preview Modal */}
-        {qrModalTable && (
-          <QRPreviewModal
-            table={qrModalTable}
-            qrUrl={qrModalTable.qr_code_url || qrModalTable.qr_image_url || qrCodes[qrModalTable.id]}
-            onClose={() => setQrModalTable(null)}
-            onDownload={() => handleDownloadQR(qrModalTable)}
-          />
-        )}
 
         {/* Dialogs */}
         <TableFormDialog
