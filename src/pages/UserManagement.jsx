@@ -27,12 +27,12 @@ import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Link } from 'react-router-dom';
 
-export default function UserManagement() {
+export default function UserManagement({ embedded = false }) {
   const [activeTab, setActiveTab] = useState('staff');
 
   return (
     <div className="space-y-6">
-      <PageHeader title="User Management" description="Manage your staff and roles" />
+      {!embedded && <PageHeader title="User Management" description="Manage your staff and roles" />}
       <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
         <button
           onClick={() => setActiveTab('staff')}
