@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, X, Send } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { getSupabase } from '@/lib/supabaseClient';
 
 export default function MenuAssistantWidget({ products, tenant, onProductSelect, storefront }) {
   const [open, setOpen] = useState(false);
@@ -30,14 +30,28 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
     setLoading(true);
 
     try {
-      const response = await base44.functions.invoke('chatWithMenuAssistant', {
-        message: text,
-        conversationHistory: conversationHistory,
-        products: products,
-        tenant: tenant
+      const supabase = await getSupabase();
+      const { data, error } = await supabase.functions.invoke('menuAssistant', {
+        body: {
+          messages: conversationHistory,
+          products: products,
+          tenant: tenant
+        }
       });
 
-      const { text: aiText, recommendedProducts, newMessage: aiMsg } = response.data;
+      if (error) {
+        console.error('menuAssistant error:', error);
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: "Sorry, I'm having trouble right now. Please ask our staff!"
+        }]);
+        return;
+      }
+
+      const { text: aiText, recommendedProductIds } = data;
+      const recommendedProducts = (recommendedProductIds || [])
+        .map((id) => products.find((p) => p.id === id))
+        .filter(Boolean);
 
       setMessages(prev => [...prev, {
         role: 'assistant',
@@ -45,11 +59,11 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
         products: recommendedProducts
       }]);
 
-      setConversationHistory(prev => [...prev.slice(-9), newMessage, aiMsg]);
+      setConversationHistory(prev => [...prev.slice(-9), newMessage, { role: 'assistant', content: aiText }]);
     } catch (error) {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: '❌ Sorry, I encountered an error. Please try again.'
+        content: "Sorry, I'm having trouble right now. Please ask our staff!"
       }]);
     } finally {
       setLoading(false);
