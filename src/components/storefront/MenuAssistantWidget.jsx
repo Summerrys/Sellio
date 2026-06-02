@@ -20,8 +20,19 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
     scrollToBottom();
   }, [messages]);
 
+  const renderMarkdown = (text) => {
+    if (!text) return null;
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i}>{part.slice(2, -2)}</strong>;
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
   const sendMessage = async (text) => {
-    if (!text.trim()) return;
+    if (!text.trim() || loading) return;
 
     const newMessage = { role: 'user', content: text };
     const newMessages = [...messages, newMessage];
@@ -219,7 +230,7 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
                   lineHeight: 1.5,
                   wordWrap: 'break-word'
                 }}>
-                  <p style={{ margin: 0 }}>{msg.content}</p>
+                  <p style={{ margin: 0 }}>{msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content}</p>
                   
                   {msg.products && msg.products.length > 0 && (
                     <div style={{
@@ -292,6 +303,15 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
                 </div>
               </div>
             ))}
+
+            {loading && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '10px 14px', background: '#f1f5f9', borderRadius: '18px 18px 18px 4px', width: 'fit-content', marginBottom: 8 }}>
+                <style>{`@keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }`}</style>
+                {[0, 1, 2].map(i => (
+                  <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: '#94a3b8', animation: 'bounce 1.2s infinite', animationDelay: `${i * 0.2}s`, display: 'inline-block' }} />
+                ))}
+              </div>
+            )}
 
             {messages.length === 1 && (
               <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
