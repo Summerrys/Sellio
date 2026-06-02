@@ -184,15 +184,23 @@ export default function Storefront() {
   // Intersection observer for split layout active category
   useEffect(() => {
     if (productLayout !== 'split') return;
+    // Set first category as active on load
+    if (categoriesWithProducts.length > 0 && !activeCategory) {
+      setActiveCategory(categoriesWithProducts[0].id);
+    }
+    const root = document.getElementById('split-right-panel');
+    if (!root) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            setActiveCategory(entry.target.dataset.categoryId);
-          }
-        });
+        // Find the topmost intersecting entry
+        const intersecting = entries
+          .filter(e => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (intersecting.length > 0) {
+          setActiveCategory(intersecting[0].target.dataset.categoryId);
+        }
       },
-      { threshold: 0.3 }
+      { root, threshold: 0.1, rootMargin: '0px 0px -60% 0px' }
     );
     Object.values(categoryRefs.current).forEach(ref => {
       if (ref) observer.observe(ref);
@@ -512,9 +520,9 @@ export default function Storefront() {
 
         {/* ── SPLIT LAYOUT ── */}
         {productLayout === 'split' ? (
-          <div style={{ display: 'flex', height: 'calc(100vh - 180px)', overflow: 'hidden', marginTop: 8 }}>
+          <div style={{ display: 'flex', height: 'calc(100vh - 160px)', overflow: 'hidden', marginTop: 8 }}>
             {/* Left category panel */}
-            <div className="sf-no-scrollbar" style={{ width: 100, flexShrink: 0, overflowY: 'auto', borderRight: '1px solid #f1f5f9', background: '#fafafa' }}>
+            <div className="sf-no-scrollbar" style={{ width: 100, flexShrink: 0, overflowY: 'auto', height: '100%', borderRight: '1px solid #f1f5f9', background: '#fafafa' }}>
               {categoriesWithProducts.map(cat => (
                 <button
                   key={cat.id}
@@ -555,7 +563,7 @@ export default function Storefront() {
             </div>
 
             {/* Right products panel */}
-            <div id="split-right-panel" className="sf-no-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
+            <div id="split-right-panel" className="sf-no-scrollbar" style={{ flex: 1, overflowY: 'auto', height: '100%', paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
               {categoriesWithProducts.map(cat => {
                 const catProducts = products.filter(p => p.category_id === cat.id);
                 return (
