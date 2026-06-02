@@ -295,7 +295,7 @@ function DraggableBannerImage({ src, positionX, positionY, onPositionChange, hei
 
 function StorefrontMiniPreview({ form, tenant, products, categories, onBannerDrag, onRemoveBanner, onReplaceBanner, onHeightChange, interactive, bannerHeightOverride }) {
   const primaryColor = form.banner_bg_color || '#6366f1';
-  const cleanBannerUrl = form.banner_bg_image_url?.split('?')[0];
+  const cleanBannerUrl = form.banner_bg_image_url || undefined;
   const bannerHeight = bannerHeightOverride ?? form.banner_height_px ?? 240;
 
   const displayProducts = (products || []).slice(0, 6);
