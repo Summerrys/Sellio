@@ -114,7 +114,7 @@ export default function Storefront() {
   const isFnB = /f&b|cafe|restaurant|food|beverage/i.test(tenant?.industry || '');
   const showStockBadge = storefrontConfig?.show_stock_badge !== false;
   const bannerBgImage = storefrontConfig?.banner_bg_image_url || null;
-  const bannerHeight = storefrontConfig?.banner_height_px || BANNER_HEIGHTS[storefrontConfig?.banner_height || 'medium'];
+  const bannerHeight = 'clamp(160px, 25vh, 260px)';
   const productLayout = storefrontConfig?.product_layout || 'grid';
 
   // Persist cart to localStorage
@@ -442,7 +442,6 @@ export default function Storefront() {
         position: 'relative',
         width: '100%',
         height: bannerHeight,
-        overflow: 'hidden',
         flexShrink: 0,
         ...(bannerBgImage
           ? {
@@ -454,65 +453,66 @@ export default function Storefront() {
           : { background: primaryColor }
         ),
       }}>
+        {/* Action icons — History and Cart, top-right */}
+        <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 4, display: 'flex', gap: 8 }}>
+          <button onClick={handleShowOrderHistory} style={{
+            width: 44, height: 44, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.92)', border: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.18)', flexShrink: 0,
+          }}>
+            <Clock size={18} color={primaryColor} />
+          </button>
+          <button onClick={() => setShowCart(true)} style={{
+            width: 44, height: 44, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.92)', border: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+            flexShrink: 0, position: 'relative',
+          }}>
+            <ShoppingCart size={18} color={primaryColor} />
+            {cartCount > 0 && (
+              <span style={{
+                position: 'absolute', top: -2, right: -2,
+                minWidth: 18, height: 18, borderRadius: 9,
+                background: '#ef4444', color: 'white',
+                fontSize: 10, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
+              }}>{cartCount}</span>
+            )}
+          </button>
+        </div>
+
+        {/* Logo badge — bottom-right, half-overlapping the business card below */}
+        {tenant?.logo_url ? (
+          <img
+            src={tenant.logo_url}
+            style={{
+              position: 'absolute', bottom: -26, right: 16, zIndex: 20,
+              width: 52, height: 52, borderRadius: '50%', objectFit: 'cover',
+              border: '3px solid white', boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+            }}
+          />
+        ) : (
+          <div style={{
+            position: 'absolute', bottom: -26, right: 16, zIndex: 20,
+            width: 52, height: 52, borderRadius: '50%',
+            background: primaryColor,
+            border: '3px solid white', boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 20, fontWeight: 700, color: 'white',
+          }}>
+            {tenant?.name?.[0] || 'S'}
+          </div>
+        )}
+
         {bannerBgImage && (
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.38)' }} />
         )}
 
-        {/* Top bar: logo + name + action buttons */}
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '16px 16px 0',
-          zIndex: 2,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
-            {tenant.logo_url && (
-              <img src={tenant.logo_url} style={{
-                width: 40, height: 40, borderRadius: '50%',
-                objectFit: 'cover', border: '2px solid white',
-                flexShrink: 0, background: 'white',
-              }} />
-            )}
-            <p style={{
-              color: 'white', fontWeight: 700, fontSize: 17, margin: 0,
-              textShadow: '0 1px 4px rgba(0,0,0,0.4)',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>{tenant.name}</p>
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-            <button onClick={handleShowOrderHistory} style={{
-              width: 44, height: 44, borderRadius: '50%',
-              background: 'white', border: 'none',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
-              flexShrink: 0,
-            }}>
-              <Clock size={18} color={primaryColor} />
-            </button>
-            <button onClick={() => setShowCart(true)} style={{
-              width: 44, height: 44, borderRadius: '50%',
-              background: 'white', border: 'none',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
-              flexShrink: 0, position: 'relative',
-            }}>
-              <ShoppingCart size={18} color={primaryColor} />
-              {cartCount > 0 && (
-                <span style={{
-                  position: 'absolute', top: -2, right: -2,
-                  minWidth: 18, height: 18, borderRadius: 9,
-                  background: '#ef4444', color: 'white',
-                  fontSize: 10, fontWeight: 700,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
-                }}>{cartCount}</span>
-              )}
-            </button>
-          </div>
-        </div>
-
         {/* Headline + tagline bottom-left */}
         {(storefrontConfig?.banner_headline || storefrontConfig?.banner_tagline) && (
-          <div style={{ position: 'absolute', bottom: 60, left: 16, right: 16, zIndex: 2 }}>
+          <div style={{ position: 'absolute', bottom: 60, left: 16, right: 80, zIndex: 2 }}>
             {storefrontConfig.banner_headline && (
               <p style={{ color: 'white', fontWeight: 800, fontSize: 26, margin: '0 0 4px', textShadow: '0 2px 8px rgba(0,0,0,0.3)', lineHeight: 1.2 }}>
                 {storefrontConfig.banner_headline}
@@ -540,14 +540,11 @@ export default function Storefront() {
         position: 'relative',
         zIndex: 10,
       }}>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, paddingRight: 60 }}>
           <p style={{ fontWeight: 800, fontSize: 18, margin: '0 0 2px', color: '#1e293b' }}>{tenant.name}</p>
           {table && <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>🪑 {table.name}</p>}
           {tenant.address && <p style={{ fontSize: 11, color: '#94a3b8', margin: '2px 0 0' }}>📍 {tenant.address}</p>}
         </div>
-        {tenant.logo_url && (
-          <img src={tenant.logo_url} style={{ width: 52, height: 52, borderRadius: 12, objectFit: 'cover', border: '2px solid #f1f5f9', flexShrink: 0, marginLeft: 12 }} />
-        )}
       </div>
 
       {/* ── 3. ORDER METHOD SELECTOR (F&B only) ── */}
