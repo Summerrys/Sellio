@@ -81,6 +81,7 @@ export default function Storefront() {
   const isFnB = /f&b|cafe|restaurant|food|beverage/i.test(tenant?.industry || '');
   const showStockBadge = storefrontConfig?.show_stock_badge !== false;
   const bannerBgImage = storefrontConfig?.banner_bg_image_url || null;
+  console.log('storefront config:', storefrontConfig?.banner_bg_image_url);
 
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {

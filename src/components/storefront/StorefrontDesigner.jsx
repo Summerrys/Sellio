@@ -238,10 +238,10 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
               {form.banner_bg_image_url ? (
                 <div className="relative">
                   <img
-                    src={form.banner_bg_image_url}
-                    alt=""
-                    onClick={() => setShowBannerEditor(true)}
-                    style={{ width: '100%', height: 128, objectFit: 'cover', borderRadius: 12, display: 'block', cursor: 'pointer' }}
+                   src={form.banner_bg_image_url}
+                   alt=""
+                   onClick={() => setShowBannerEditor(true)}
+                   style={{ width: '100%', height: 160, objectFit: 'contain', background: '#f8f9fa', borderRadius: 12, border: '1px solid #e2e8f0', display: 'block', cursor: 'pointer' }}
                   />
                   <div
                     onClick={() => setShowBannerEditor(true)}
