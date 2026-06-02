@@ -484,7 +484,7 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, onOpenPrevi
       <div
         className="flex-1 overflow-y-auto"
         style={activeTab === 'preview'
-          ? { position: 'relative', overflow: 'hidden', padding: 0 }
+          ? { padding: 0, background: '#f8fafc' }
           : { padding: '16px 20px', paddingBottom: 24 }
         }
       >
@@ -750,8 +750,28 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, onOpenPrevi
 
         {/* ── PREVIEW TAB ── */}
         {activeTab === 'preview' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: 32 }}>
-            <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', width: 390, flexShrink: 0 }}>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            padding: '16px 0',
+            background: '#f8fafc',
+            minHeight: '100%',
+          }}>
+            <p style={{
+              fontSize: 10, fontWeight: 700,
+              letterSpacing: '0.08em', color: '#94a3b8',
+              marginBottom: 12, textTransform: 'uppercase',
+            }}>
+              Preview — updates instantly
+            </p>
+            <div style={{
+              transform: 'scale(0.72)',
+              transformOrigin: 'top center',
+              width: 390,
+              flexShrink: 0,
+              marginBottom: `calc((390px * 0.72) - 390px)`,
+            }}>
               <StorefrontMiniPreview
                 form={form}
                 tenant={previewData?.tenant}
@@ -825,6 +845,26 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
 
   const loadConfig = async () => {
     const supabase = await getSupabase();
+
+    // Check for unsaved draft first
+    const draft = sessionStorage.getItem(`storefront_draft_${tenantId}`);
+    if (draft) {
+      try {
+        const parsed = JSON.parse(draft);
+        setForm({ ...DEFAULTS, ...parsed });
+        const [productsRes, categoriesRes, tenantRes] = await Promise.all([
+          supabase.from('products').select('id, name, description, price, image_url, category_id, is_active').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').limit(12),
+          supabase.from('categories').select('id, name').eq('tenant_id', tenantId),
+          supabase.from('tenants').select('name, logo_url, currency').eq('id', tenantId).maybeSingle(),
+        ]);
+        setPreviewProducts(productsRes.data || []);
+        setPreviewCategories(categoriesRes.data || []);
+        setPreviewTenant(tenantRes.data);
+        return;
+      } catch {}
+    }
+
+    // No draft — fetch from DB
     const [configRes, productsRes, categoriesRes, tenantRes] = await Promise.all([
       supabase.from('storefront_configs').select('*').eq('tenant_id', tenantId).maybeSingle(),
       supabase.from('products').select('id, name, description, price, image_url, category_id, is_active').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').limit(12),
@@ -838,6 +878,12 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
   };
 
   const handleClose = () => {
+    const draft = sessionStorage.getItem(`storefront_draft_${tenantId}`);
+    if (draft) {
+      const leave = window.confirm('You have unsaved changes. Leave without saving?');
+      if (!leave) return;
+      sessionStorage.removeItem(`storefront_draft_${tenantId}`);
+    }
     setVisible(false);
     setTimeout(onClose, 300);
   };
@@ -845,6 +891,12 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
   const handleChange = useCallback((key, value) => {
     setForm(prev => ({ ...prev, [key]: value }));
   }, []);
+
+  // Persist unsaved form to sessionStorage
+  useEffect(() => {
+    if (!open || !tenantId) return;
+    sessionStorage.setItem(`storefront_draft_${tenantId}`, JSON.stringify(form));
+  }, [form]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -856,7 +908,8 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
     if (error) {
       toast.error('Save failed');
     } else {
-      toast.success('Storefront updated ✓');
+      sessionStorage.removeItem(`storefront_draft_${tenantId}`);
+      toast.success('Storefront saved ✓');
     }
   };
 
