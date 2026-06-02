@@ -214,24 +214,29 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
     form.banner_height_px || (form.banner_height === 'small' ? 160 : form.banner_height === 'large' ? 300 : 220)
   );
 
+  const bannerPreviewRef = useRef(null);
+
   const startResize = (e) => {
     e.preventDefault();
     const startY = e.touches ? e.touches[0].clientY : e.clientY;
     const startHeight = bannerHeightPx;
+    let finalHeight = startHeight;
     const onMove = (moveEvent) => {
       const y = moveEvent.touches ? moveEvent.touches[0].clientY : moveEvent.clientY;
       const delta = y - startY;
-      const newHeight = Math.max(MIN_BANNER_HEIGHT, Math.min(MAX_BANNER_HEIGHT, startHeight + delta));
-      setBannerHeightPx(newHeight);
-      const named = newHeight < 180 ? 'small' : newHeight > 260 ? 'large' : 'medium';
-      onChange('banner_height', named);
-      onChange('banner_height_px', Math.round(newHeight));
+      finalHeight = Math.max(MIN_BANNER_HEIGHT, Math.min(MAX_BANNER_HEIGHT, startHeight + delta));
+      // Update DOM directly — no React re-render during drag
+      setBannerHeightPx(finalHeight);
     };
     const onEnd = () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onEnd);
       window.removeEventListener('touchmove', onMove);
       window.removeEventListener('touchend', onEnd);
+      // Only call onChange once on release
+      const named = finalHeight < 180 ? 'small' : finalHeight > 260 ? 'large' : 'medium';
+      onChange('banner_height', named);
+      onChange('banner_height_px', Math.round(finalHeight));
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onEnd);
@@ -383,17 +388,21 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
                         const startX = e.clientX, startY = e.clientY;
                         const startPX = form.banner_position_x ?? 50;
                         const startPY = form.banner_position_y ?? 50;
-                        // Capture rect NOW while currentTarget is valid
                         const rect = e.currentTarget.getBoundingClientRect();
+                        const previewEl = e.currentTarget.parentElement;
+                        let finalX = startPX, finalY = startPY;
                         const onMove = (me) => {
-                          const newX = Math.max(0, Math.min(100, startPX - ((me.clientX - startX) / rect.width * 100)));
-                          const newY = Math.max(0, Math.min(100, startPY - ((me.clientY - startY) / rect.height * 100)));
-                          onChange('banner_position_x', newX);
-                          onChange('banner_position_y', newY);
+                          finalX = Math.max(0, Math.min(100, startPX - ((me.clientX - startX) / rect.width * 100)));
+                          finalY = Math.max(0, Math.min(100, startPY - ((me.clientY - startY) / rect.height * 100)));
+                          // Update DOM directly — no React re-render during drag
+                          if (previewEl) previewEl.style.backgroundPosition = `${finalX}% ${finalY}%`;
                         };
                         const onUp = () => {
                           window.removeEventListener('mousemove', onMove);
                           window.removeEventListener('mouseup', onUp);
+                          // Only call onChange once on release
+                          onChange('banner_position_x', finalX);
+                          onChange('banner_position_y', finalY);
                         };
                         window.addEventListener('mousemove', onMove);
                         window.addEventListener('mouseup', onUp);
@@ -686,6 +695,7 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
   const [saving, setSaving] = useState(false);
   const [visible, setVisible] = useState(false);
   const [showPreviewDrawer, setShowPreviewDrawer] = useState(false);
+  const [isSyncingPreview, setIsSyncingPreview] = useState(false);
   const iframeRef = useRef(null);
   const storeUrl = `https://sellio.apptelier.sg/store/${tenantSlug}`;
 
@@ -743,11 +753,13 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
   };
 
   const autoSave = async (currentForm) => {
+    setIsSyncingPreview(true);
     const supabase = await getSupabase();
     await supabase
       .from('storefront_configs')
       .upsert({ tenant_id: tenantId, ...currentForm }, { onConflict: 'tenant_id' });
     reloadIframe();
+    setTimeout(() => setIsSyncingPreview(false), 1000);
   };
 
   useEffect(() => {
@@ -782,6 +794,7 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
     <div style={{ position: 'fixed', inset: 0, zIndex: 200 }} className="flex">
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
       `}</style>
 
       {/* Slide-in panel */}
@@ -897,6 +910,26 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
             className="hidden lg:flex flex-1 flex-col items-center overflow-auto"
             style={{ background: '#f8fafc', padding: '32px 32px 32px 32px', position: 'relative' }}
           >
+            {isSyncingPreview && (
+              <div style={{
+                position: 'absolute', top: 12, right: 12,
+                background: 'white', borderRadius: 8,
+                padding: '4px 10px', fontSize: 11,
+                color: '#64748b', fontWeight: 500,
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                display: 'flex', alignItems: 'center', gap: 6,
+                zIndex: 10,
+              }}>
+                <span style={{
+                  width: 6, height: 6, borderRadius: '50%',
+                  background: '#f59e0b',
+                  animation: 'pulse 1s infinite',
+                  display: 'inline-block',
+                }} />
+                Syncing preview...
+              </div>
+            )}
             {/* Preview label + refresh */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: 390 * 0.75, marginBottom: 16 }}>
               <div style={{
