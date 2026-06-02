@@ -3,7 +3,8 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { X, ArrowLeft, ExternalLink, RefreshCw, ImageIcon, Upload, Eye } from 'lucide-react';
+import { X, ArrowLeft, ExternalLink, RefreshCw, ImageIcon, Upload, Eye, Pencil } from 'lucide-react';
+import ImageEditModal from '@/components/onboarding/ImageEditModal';
 
 const FONTS = [
   { value: 'Inter', label: 'Inter', style: { fontFamily: 'Inter, sans-serif' } },
@@ -118,6 +119,7 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
   const [activeTab, setActiveTab] = useState('banner');
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const [showBannerEditor, setShowBannerEditor] = useState(false);
 
   const handleBannerImageUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -219,15 +221,56 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
                   <img
                     src={form.banner_bg_image_url}
                     alt=""
-                    style={{ width: '100%', height: 128, objectFit: 'cover', borderRadius: 12, display: 'block' }}
+                    onClick={() => setShowBannerEditor(true)}
+                    style={{ width: '100%', height: 128, objectFit: 'cover', borderRadius: 12, display: 'block', cursor: 'pointer' }}
                   />
+                  <div
+                    onClick={() => setShowBannerEditor(true)}
+                    className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors rounded-xl cursor-pointer flex items-center justify-center"
+                  >
+                    <div className="opacity-0 hover:opacity-100 transition-opacity bg-white rounded-full p-2 shadow">
+                      <Pencil className="w-4 h-4 text-slate-600" />
+                    </div>
+                  </div>
                   <button
                     type="button"
                     onClick={() => onChange('banner_bg_image_url', '')}
-                    className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-slate-50 transition-colors"
+                    className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-red-50 transition-colors"
                   >
                     <X className="w-3.5 h-3.5 text-slate-600" />
                   </button>
+                  <p className="text-xs text-slate-400 mt-1.5 text-center">Click image to crop, rotate or replace</p>
+
+                  {showBannerEditor && (
+                    <ImageEditModal
+                      src={form.banner_bg_image_url}
+                      themeColor="var(--color-primary-gradient, #6366f1)"
+                      onSave={async (imageData) => {
+                        if (!imageData) {
+                          onChange('banner_bg_image_url', '');
+                          setShowBannerEditor(false);
+                          return;
+                        }
+                        const supabase = await getSupabase();
+                        const res = await fetch(imageData);
+                        const blob = await res.blob();
+                        const path = `${tenantId}/storefront/banner-bg.jpg`;
+                        const { error } = await supabase.storage
+                          .from('product-images')
+                          .upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+                        if (!error) {
+                          const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
+                          onChange('banner_bg_image_url', publicUrl + '?t=' + Date.now());
+                          onImageUploaded?.();
+                          toast.success('Banner image updated');
+                        } else {
+                          toast.error('Failed to save: ' + error.message);
+                        }
+                        setShowBannerEditor(false);
+                      }}
+                      onClose={() => setShowBannerEditor(false)}
+                    />
+                  )}
                 </div>
               ) : (
                 <button
@@ -519,6 +562,36 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
       iframeRef.current.src = storeUrl + '?t=' + Date.now();
     }
   };
+
+  const autoSave = async (currentForm) => {
+    const supabase = await getSupabase();
+    await supabase
+      .from('storefront_configs')
+      .upsert({ tenant_id: tenantId, ...currentForm }, { onConflict: 'tenant_id' });
+    reloadIframe();
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const timer = setTimeout(() => {
+      autoSave(form);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [
+    form.product_layout,
+    form.products_per_row,
+    form.show_category_tabs,
+    form.show_featured,
+    form.show_product_description,
+    form.show_stock_badge,
+    form.banner_bg_color,
+    form.banner_headline,
+    form.banner_tagline,
+    form.banner_height,
+    form.show_announcement_bar,
+    form.announcement_text,
+    form.font_family,
+  ]);
 
   if (!open) return null;
 
