@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, X, Send } from 'lucide-react';
-import { getSupabase } from '@/lib/supabaseClient';
+import { base44 } from '@/api/base44Client';
 
 export default function MenuAssistantWidget({ products, tenant, onProductSelect, storefront }) {
   const [open, setOpen] = useState(false);
@@ -24,43 +24,74 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
     if (!text.trim()) return;
 
     const newMessage = { role: 'user', content: text };
-    const newMessages = [...messages, newMessage];
-    setMessages(newMessages);
+    setMessages(prev => [...prev, newMessage]);
     setInput('');
     setLoading(true);
 
     try {
-      const supabase = await getSupabase();
-      const { data, error } = await supabase.functions.invoke('menuAssistant', {
-        body: {
-          messages: conversationHistory,
-          products: products,
-          tenant: tenant
+      const productsContext = products.map(p => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        featured: p.is_featured
+      }));
+
+      const systemPrompt = `You are a friendly and helpful menu assistant for ${tenant?.name || 'our restaurant'}. ${tenant?.industry ? `The business operates in the ${tenant.industry} industry.` : ''}
+
+You have access to the restaurant's complete menu. When customers ask for recommendations:
+1. Understand what they're looking for
+2. Recommend products from the menu that match their needs
+3. Be conversational and friendly
+4. When recommending products, wrap their IDs in <products>[id1, id2, id3]</products> tags
+
+Always respond naturally first, then include product recommendations if relevant.`;
+
+      const conversationMessages = conversationHistory.length > 0 
+        ? conversationHistory 
+        : [];
+
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `${systemPrompt}
+
+Menu: ${JSON.stringify(productsContext)}
+
+${conversationMessages.map(m => `${m.role === 'user' ? 'Customer' : 'Assistant'}: ${m.content}`).join('\n')}
+
+Customer: ${text}`,
+        response_json_schema: {
+          type: 'object',
+          properties: {
+            text: { type: 'string' },
+            recommendedProductIds: { 
+              type: 'array', 
+              items: { type: 'string' } 
+            }
+          }
         }
       });
 
-      if (error) {
-        console.error('menuAssistant error:', error);
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: "Sorry, I'm having trouble right now. Please ask our staff!"
-        }]);
-        return;
-      }
+      const aiText = response.text || '';
+      const productIdsMatch = aiText.match(/<products>\[(.*?)\]<\/products>/);
+      const recommendedProductIds = productIdsMatch 
+        ? productIdsMatch[1].split(',').map(id => id.trim().replace(/['"]/g, ''))
+        : [];
 
-      const { text: aiText, recommendedProductIds } = data;
-      const recommendedProducts = (recommendedProductIds || [])
+      const recommendedProducts = recommendedProductIds
         .map((id) => products.find((p) => p.id === id))
         .filter(Boolean);
 
+      const cleanedText = aiText.replace(/<products>\[.*?\]<\/products>/g, '').trim();
+
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: aiText,
-        products: recommendedProducts
+        content: cleanedText,
+        products: recommendedProducts.length > 0 ? recommendedProducts : undefined
       }]);
 
-      setConversationHistory(prev => [...prev.slice(-9), newMessage, { role: 'assistant', content: aiText }]);
+      setConversationHistory(prev => [...prev.slice(-9), newMessage, { role: 'assistant', content: cleanedText }]);
     } catch (error) {
+      console.error('Menu assistant error:', error);
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: "Sorry, I'm having trouble right now. Please ask our staff!"
