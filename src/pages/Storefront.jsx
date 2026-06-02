@@ -435,7 +435,15 @@ export default function Storefront() {
 
       {/* ── HEADER / BANNER ── */}
       <div style={{
-        background: bannerBgImage ? `url('${bannerBgImage}') center/cover no-repeat` : primaryColor,
+        ...(bannerBgImage
+          ? {
+              backgroundImage: `url('${bannerBgImage}')`,
+              backgroundSize: 'cover',
+              backgroundPosition: `${storefrontConfig?.banner_position_x ?? 50}% ${storefrontConfig?.banner_position_y ?? 50}%`,
+              backgroundRepeat: 'no-repeat',
+            }
+          : { background: primaryColor }
+        ),
         paddingTop: 'env(safe-area-inset-top, 0px)',
         position: 'relative',
         zIndex: 1,

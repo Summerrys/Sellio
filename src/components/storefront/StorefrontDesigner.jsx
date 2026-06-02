@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { X, ArrowLeft, ExternalLink, RefreshCw, ImageIcon, Upload, Eye, Pencil } from 'lucide-react';
-import ImageEditModal from '@/components/onboarding/ImageEditModal';
 
 const FONTS = [
   { value: 'Inter', label: 'Inter', style: { fontFamily: 'Inter, sans-serif' } },
@@ -27,6 +26,8 @@ const DEFAULTS = {
   banner_height: 'medium',
   banner_bg_color: '#fb923c',
   banner_bg_image_url: '',
+  banner_position_x: 50,
+  banner_position_y: 50,
   show_announcement_bar: false,
   announcement_text: '',
   product_layout: 'grid',
@@ -38,6 +39,92 @@ const DEFAULTS = {
   show_stock_badge: true,
   font_family: 'Inter',
 };
+
+function DraggableBannerImage({ src, positionX, positionY, onPositionChange }) {
+  const containerRef = useRef(null);
+  const isDragging = useRef(false);
+  const lastPos = useRef({ x: 0, y: 0 });
+  const currentPos = useRef({ x: positionX, y: positionY });
+
+  useEffect(() => {
+    currentPos.current = { x: positionX, y: positionY };
+  }, [positionX, positionY]);
+
+  const getEventPos = (e) => {
+    if (e.touches?.[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    return { x: e.clientX, y: e.clientY };
+  };
+
+  const handleStart = (e) => {
+    isDragging.current = true;
+    lastPos.current = getEventPos(e);
+    e.preventDefault();
+  };
+
+  const handleMove = (e) => {
+    if (!isDragging.current || !containerRef.current) return;
+    const pos = getEventPos(e);
+    const dx = pos.x - lastPos.current.x;
+    const dy = pos.y - lastPos.current.y;
+    lastPos.current = pos;
+    const rect = containerRef.current.getBoundingClientRect();
+    const newX = Math.max(0, Math.min(100, currentPos.current.x - (dx / rect.width * 100)));
+    const newY = Math.max(0, Math.min(100, currentPos.current.y - (dy / rect.height * 100)));
+    currentPos.current = { x: newX, y: newY };
+    if (containerRef.current) {
+      containerRef.current.style.backgroundPosition = `${newX}% ${newY}%`;
+    }
+    e.preventDefault();
+  };
+
+  const handleEnd = () => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+    onPositionChange(currentPos.current.x, currentPos.current.y);
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      onMouseDown={handleStart}
+      onMouseMove={handleMove}
+      onMouseUp={handleEnd}
+      onMouseLeave={handleEnd}
+      onTouchStart={handleStart}
+      onTouchMove={handleMove}
+      onTouchEnd={handleEnd}
+      style={{
+        width: '100%',
+        height: 160,
+        borderRadius: 12,
+        border: '1px solid #e2e8f0',
+        overflow: 'hidden',
+        cursor: 'grab',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        position: 'relative',
+        backgroundImage: `url('${src}')`,
+        backgroundSize: 'cover',
+        backgroundPosition: `${positionX}% ${positionY}%`,
+        backgroundRepeat: 'no-repeat',
+        touchAction: 'none',
+      }}
+    >
+      <div style={{
+        position: 'absolute', bottom: 8, right: 8,
+        background: 'rgba(0,0,0,0.45)',
+        backdropFilter: 'blur(4px)',
+        borderRadius: 8,
+        padding: '4px 10px',
+        display: 'flex', alignItems: 'center', gap: 4,
+        color: 'white', fontSize: 11, fontWeight: 500,
+        pointerEvents: 'none',
+      }}>
+        ✥ Drag to reposition
+      </div>
+    </div>
+  );
+}
 
 function SectionLabel({ children }) {
   return (
@@ -119,7 +206,6 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
   const [activeTab, setActiveTab] = useState('banner');
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
-  const [showBannerEditor, setShowBannerEditor] = useState(false);
 
   const handleRemoveBannerImage = async () => {
     if (!form.banner_bg_image_url) return;
@@ -242,65 +328,34 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
             <div>
               <SectionLabel>Background Image</SectionLabel>
               {form.banner_bg_image_url ? (
-                <div className="relative">
-                  <img
-                   src={form.banner_bg_image_url}
-                   alt=""
-                   onClick={() => setShowBannerEditor(true)}
-                   style={{ width: '100%', height: 160, objectFit: 'contain', background: '#f8f9fa', borderRadius: 12, border: '1px solid #e2e8f0', display: 'block', cursor: 'pointer' }}
+                <div>
+                  <DraggableBannerImage
+                    src={form.banner_bg_image_url}
+                    positionX={form.banner_position_x ?? 50}
+                    positionY={form.banner_position_y ?? 50}
+                    onPositionChange={(x, y) => {
+                      onChange('banner_position_x', x);
+                      onChange('banner_position_y', y);
+                    }}
                   />
-                  <div
-                    onClick={() => setShowBannerEditor(true)}
-                    className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors rounded-xl cursor-pointer flex items-center justify-center"
-                  >
-                    <div className="opacity-0 hover:opacity-100 transition-opacity bg-white rounded-full p-2 shadow">
-                      <Pencil className="w-4 h-4 text-slate-600" />
-                    </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                    >
+                      <Upload size={12} />
+                      Replace image
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRemoveBannerImage}
+                      style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                    >
+                      <X size={12} />
+                      Remove
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleRemoveBannerImage}
-                    className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-red-50 transition-colors"
-                  >
-                    <X className="w-3.5 h-3.5 text-slate-600" />
-                  </button>
-                  <p className="text-xs text-slate-400 mt-1.5 text-center">Click image to crop, rotate or replace</p>
-
-                  {showBannerEditor && (
-                    <ImageEditModal
-                      src={form.banner_bg_image_url}
-                      themeColor="var(--color-primary-gradient, #6366f1)"
-                      onSave={async (imageData) => {
-                        if (!imageData) {
-                          await handleRemoveBannerImage();
-                          setShowBannerEditor(false);
-                          return;
-                        }
-                        const supabase = await getSupabase();
-                        const res = await fetch(imageData);
-                        const blob = await res.blob();
-                        const path = `${tenantId}/storefront/banner-bg.jpg`;
-                        const { error } = await supabase.storage
-                          .from('product-images')
-                          .upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
-                        if (!error) {
-                          const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
-                          const finalUrl = publicUrl + '?t=' + Date.now();
-                          onChange('banner_bg_image_url', finalUrl);
-                          await supabase.from('storefront_configs').upsert(
-                            { tenant_id: tenantId, banner_bg_image_url: finalUrl },
-                            { onConflict: 'tenant_id' }
-                          );
-                          onImageUploaded?.();
-                          toast.success('Banner image updated');
-                        } else {
-                          toast.error('Failed to save: ' + error.message);
-                        }
-                        setShowBannerEditor(false);
-                      }}
-                      onClose={() => setShowBannerEditor(false)}
-                    />
-                  )}
                 </div>
               ) : (
                 <button
@@ -622,6 +677,8 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
     form.announcement_text,
     form.font_family,
     form.banner_bg_image_url,
+    form.banner_position_x,
+    form.banner_position_y,
   ]);
 
   if (!open) return null;
