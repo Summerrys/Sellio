@@ -251,6 +251,9 @@ export default function Storefront() {
         background: storefrontConfig?.banner_bg_image_url
           ? `url(${storefrontConfig.banner_bg_image_url}) center/cover no-repeat`
           : (storefrontConfig?.banner_bg_color || primaryColor),
+        minHeight: storefrontConfig?.banner_height === 'large' ? '200px'
+                 : storefrontConfig?.banner_height === 'small' ? '80px'
+                 : '140px',
         padding: storefrontConfig?.banner_height === 'large' ? '48px 20px 32px'
                : storefrontConfig?.banner_height === 'small' ? '20px 20px 16px'
                : '32px 20px 20px',

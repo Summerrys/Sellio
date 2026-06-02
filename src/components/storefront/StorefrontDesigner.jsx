@@ -121,6 +121,25 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
   const [uploading, setUploading] = useState(false);
   const [showBannerEditor, setShowBannerEditor] = useState(false);
 
+  const handleRemoveBannerImage = async () => {
+    if (!form.banner_bg_image_url) return;
+    const supabase = await getSupabase();
+    const url = form.banner_bg_image_url;
+    const bucketPrefix = '/object/public/product-images/';
+    const pathStart = url.indexOf(bucketPrefix);
+    if (pathStart !== -1) {
+      const storagePath = decodeURIComponent(url.slice(pathStart + bucketPrefix.length).split('?')[0]);
+      await supabase.storage.from('product-images').remove([storagePath]);
+    }
+    onChange('banner_bg_image_url', '');
+    await supabase.from('storefront_configs').upsert(
+      { tenant_id: tenantId, banner_bg_image_url: null },
+      { onConflict: 'tenant_id' }
+    );
+    reloadIframe();
+    toast.success('Banner image removed');
+  };
+
   const handleBannerImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -234,7 +253,7 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
                   </div>
                   <button
                     type="button"
-                    onClick={() => onChange('banner_bg_image_url', '')}
+                    onClick={handleRemoveBannerImage}
                     className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-red-50 transition-colors"
                   >
                     <X className="w-3.5 h-3.5 text-slate-600" />
@@ -247,7 +266,7 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
                       themeColor="var(--color-primary-gradient, #6366f1)"
                       onSave={async (imageData) => {
                         if (!imageData) {
-                          onChange('banner_bg_image_url', '');
+                          await handleRemoveBannerImage();
                           setShowBannerEditor(false);
                           return;
                         }
