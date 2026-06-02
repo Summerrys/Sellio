@@ -74,12 +74,20 @@ export default function Storefront() {
     loadData();
   }, [tenantSlug, tableId]);
 
-  const primaryColor = theme?.primary_color || '#6366f1';
+  const primaryColor = storefrontConfig?.banner_bg_color || theme?.primary_color || '#6366f1';
   const accentColor = theme?.accent_color || '#f59e0b';
   const fontFamily = storefrontConfig?.font_family || theme?.font_family || 'Inter';
   const currency = tenant?.currency || 'SGD';
   const isFnB = /f&b|cafe|restaurant|food|beverage/i.test(tenant?.industry || '');
   const showStockBadge = storefrontConfig?.show_stock_badge !== false;
+  const bannerBgImage = storefrontConfig?.banner_bg_image_url || null;
+
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 60);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Init table session when customer lands on ordering page
   useEffect(() => {
@@ -237,100 +245,165 @@ export default function Storefront() {
   }
 
   return (
-    <div style={{ fontFamily: `var(--sf-font, Inter), sans-serif`, maxWidth: 480, margin: '0 auto', minHeight: '100vh', background: '#ffffff', position: 'relative' }}>
+    <div style={{ fontFamily: `var(--sf-font, Inter), sans-serif`, maxWidth: 480, margin: '0 auto', minHeight: '100vh', background: primaryColor, position: 'relative' }}>
+      <style>{`
+        @keyframes sfSpin { to { transform: rotate(360deg); } }
+        .sf-no-scrollbar::-webkit-scrollbar { display: none; }
+      `}</style>
 
-      {/* Announcement bar */}
-      {storefrontConfig?.show_announcement_bar && storefrontConfig?.announcement_text && (
-        <div style={{ background: primaryColor, color: 'white', textAlign: 'center', padding: '8px 16px', fontSize: 12, fontWeight: 500 }}>
-          {storefrontConfig.announcement_text}
+      {/* Sticky top bar — appears on scroll */}
+      {scrolled && (
+        <div style={{
+          position: 'fixed', top: 0, left: '50%', transform: 'translateX(-50%)',
+          width: '100%', maxWidth: 480, zIndex: 50,
+          background: primaryColor,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 16px', height: 52,
+          boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {tenant.logo_url && (
+              <img src={tenant.logo_url} style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover' }} />
+            )}
+            <span style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>{tenant.name}</span>
+          </div>
+          <button onClick={() => setShowCart(true)} style={{
+            position: 'relative', background: 'rgba(255,255,255,0.2)',
+            border: '1px solid rgba(255,255,255,0.3)', borderRadius: '50%',
+            width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+          }}>
+            <span style={{ fontSize: 17 }}>🛒</span>
+            {cartCount > 0 && (
+              <span style={{
+                position: 'absolute', top: -4, right: -4,
+                width: 18, height: 18, borderRadius: '50%',
+                background: '#ef4444', color: 'white',
+                fontSize: 10, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>{cartCount}</span>
+            )}
+          </button>
         </div>
       )}
 
-      {/* Hero banner */}
+      {/* ── HEADER LAYER ── */}
       <div style={{
-        background: storefrontConfig?.banner_bg_image_url
-          ? `url(${storefrontConfig.banner_bg_image_url}) center/cover no-repeat`
-          : (storefrontConfig?.banner_bg_color || primaryColor),
-        minHeight: storefrontConfig?.banner_height === 'large' ? '200px'
-                 : storefrontConfig?.banner_height === 'small' ? '80px'
-                 : '140px',
-        padding: storefrontConfig?.banner_height === 'large' ? '48px 20px 32px'
-               : storefrontConfig?.banner_height === 'small' ? '20px 20px 16px'
-               : '32px 20px 20px',
+        background: bannerBgImage ? `url('${bannerBgImage}') center/cover no-repeat` : primaryColor,
+        paddingTop: 'env(safe-area-inset-top, 0px)',
         position: 'relative',
+        zIndex: 1,
       }}>
-        {storefrontConfig?.banner_bg_image_url && (
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 0 }} />
+        {bannerBgImage && (
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} />
         )}
         <div style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          {/* Top bar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 16px 12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {tenant.logo_url && (
-                <img src={tenant.logo_url} style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)' }} />
+                <img src={tenant.logo_url} style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'cover', background: 'white' }} />
               )}
               <div>
-                <p style={{ color: 'white', fontWeight: 700, fontSize: 17, margin: 0 }}>{tenant.name}</p>
-                {storefrontConfig?.banner_tagline && (
-                  <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, margin: '2px 0 0' }}>{storefrontConfig.banner_tagline}</p>
+                <p style={{ color: 'white', fontWeight: 700, fontSize: 18, margin: 0, textShadow: bannerBgImage ? '0 1px 3px rgba(0,0,0,0.4)' : 'none' }}>
+                  {tenant.name}
+                </p>
+                {table && (
+                  <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, margin: 0 }}>🪑 {table.name}</p>
                 )}
               </div>
             </div>
             <button onClick={() => setShowCart(true)} style={{
-              position: 'relative', background: 'rgba(255,255,255,0.2)',
-              border: 'none', borderRadius: '50%', width: 42, height: 42,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+              width: 44, height: 44, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.2)',
+              backdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+              position: 'relative',
             }}>
               <span style={{ fontSize: 20 }}>🛒</span>
               {cartCount > 0 && (
                 <span style={{
-                  position: 'absolute', top: -3, right: -3,
-                  background: accentColor, color: 'white', borderRadius: '50%',
-                  width: 18, height: 18, fontSize: 10, fontWeight: 700,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  position: 'absolute', top: -4, right: -4,
+                  width: 18, height: 18, borderRadius: '50%',
+                  background: '#ef4444', color: 'white',
+                  fontSize: 10, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>{cartCount}</span>
               )}
             </button>
           </div>
 
-          {isDineIn && table && (
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              background: 'rgba(255,255,255,0.2)', borderRadius: 999,
-              padding: '4px 12px', marginBottom: 8
-            }}>
-              <span style={{ color: 'white', fontSize: 13 }}>🪑</span>
-              <span style={{ color: 'white', fontSize: 12, fontWeight: 600 }}>{table.name}</span>
+          {/* Headline / tagline */}
+          {(storefrontConfig?.banner_headline || storefrontConfig?.banner_tagline) && (
+            <div style={{ padding: '0 16px 20px' }}>
+              {storefrontConfig.banner_headline && (
+                <p style={{ color: 'white', fontWeight: 800, fontSize: 24, margin: '0 0 4px', textShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
+                  {storefrontConfig.banner_headline}
+                </p>
+              )}
+              {storefrontConfig.banner_tagline && (
+                <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, margin: 0 }}>
+                  {storefrontConfig.banner_tagline}
+                </p>
+              )}
             </div>
           )}
 
-          {storefrontConfig?.banner_headline && (
-            <p style={{ color: 'white', fontSize: 20, fontWeight: 700, margin: '8px 0 0', lineHeight: 1.3 }}>
-              {storefrontConfig.banner_headline}
-            </p>
-          )}
+          {/* Spacer so white sheet overlaps */}
+          <div style={{ height: 28 }} />
         </div>
       </div>
 
-      {/* Category tabs */}
-      {storefrontConfig?.show_category_tabs !== false && categories.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, padding: '12px 16px', overflowX: 'auto', scrollbarWidth: 'none', borderBottom: '0.5px solid #e5e7eb' }}>
-          {[{ id: null, name: 'All' }, ...categories].map(cat => (
-            <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} style={{
-              flexShrink: 0, padding: '6px 16px', borderRadius: 999,
-              fontSize: 13, fontWeight: 500, cursor: 'pointer', border: 'none',
-              background: selectedCategory === cat.id ? primaryColor : '#f1f5f9',
-              color: selectedCategory === cat.id ? 'white' : '#64748b',
-              transition: 'all 0.15s ease'
-            }}>
-              {cat.name}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* ── CONTENT SHEET ── */}
+      <div style={{
+        background: 'white',
+        borderRadius: '24px 24px 0 0',
+        marginTop: -24,
+        minHeight: 'calc(100vh - 80px)',
+        position: 'relative',
+        zIndex: 2,
+        paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))',
+      }}>
+        {/* Drag handle */}
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: '#e2e8f0', margin: '12px auto 0' }} />
 
-      {/* Featured section */}
-      {storefrontConfig?.show_featured !== false && featuredProducts.length > 0 && (
-        <div style={{ padding: '16px 16px 8px' }}>
+        {/* Announcement bar */}
+        {storefrontConfig?.show_announcement_bar && storefrontConfig?.announcement_text && (
+          <div style={{
+            margin: '12px 16px 0',
+            background: `${primaryColor}20`,
+            borderRadius: 10, padding: '8px 12px',
+            fontSize: 13, color: primaryColor,
+            fontWeight: 500, textAlign: 'center',
+          }}>
+            📢 {storefrontConfig.announcement_text}
+          </div>
+        )}
+
+        {/* Category tabs */}
+        {storefrontConfig?.show_category_tabs !== false && categories.length > 0 && (
+          <div className="sf-no-scrollbar" style={{ display: 'flex', gap: 8, padding: '14px 16px 0', overflowX: 'auto', scrollbarWidth: 'none' }}>
+            {[{ id: null, name: 'All' }, ...categories].map(cat => (
+              <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} style={{
+                flexShrink: 0, padding: '7px 16px', borderRadius: 20,
+                fontSize: 13, cursor: 'pointer', border: 'none',
+                fontWeight: selectedCategory === cat.id ? 600 : 400,
+                background: selectedCategory === cat.id ? primaryColor : '#f1f5f9',
+                color: selectedCategory === cat.id ? 'white' : '#64748b',
+                transition: 'all 0.15s ease',
+              }}>
+                {cat.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Products content */}
+        <div style={{ padding: '16px 16px 0' }}>
+
+        {/* Featured section */}
+        {storefrontConfig?.show_featured !== false && featuredProducts.length > 0 && (
+          <div style={{ marginBottom: 8 }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>
             {storefrontConfig?.featured_section_title || "Today's Picks"} ⭐
           </p>
@@ -340,7 +413,7 @@ export default function Storefront() {
               <div key={product.id} onClick={() => setSelectedProduct(product)} style={{
                 display: 'flex', background: '#f8fafc',
                 borderRadius: 14, overflow: 'hidden', marginBottom: 10,
-                border: '0.5px solid #e5e7eb', cursor: 'pointer'
+                border: '0.5px solid #e5e7eb', cursor: 'pointer',
               }}>
                 {product.image_url && (
                   <img src={product.image_url} style={{ width: 110, height: 110, objectFit: 'cover', flexShrink: 0 }} />
@@ -379,11 +452,10 @@ export default function Storefront() {
               </div>
             );
           })}
-        </div>
-      )}
+          </div>
+        )}
 
-      {/* Products section */}
-      <div style={{ padding: '8px 16px 100px' }}>
+        {/* Products section */}
         {featuredProducts.length > 0 && filteredProducts.length > 0 && (
           <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>All items</p>
         )}
@@ -500,7 +572,8 @@ export default function Storefront() {
             <p style={{ color: '#94a3b8', fontSize: 14 }}>No products found</p>
           </div>
         )}
-      </div>
+        </div>{/* end products content */}
+      </div>{/* end content sheet */}
 
       {/* Floating cart button */}
       {cartCount > 0 && !showCart && !showCheckout && (
