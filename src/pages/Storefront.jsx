@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getSupabase } from '@/lib/supabaseClient';
+import MenuAssistantWidget from '@/components/storefront/MenuAssistantWidget';
 
 export default function Storefront() {
   const { tenantSlug, tableId } = useParams();
@@ -836,6 +837,16 @@ export default function Storefront() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Menu Assistant Widget */}
+      {products.length > 0 && (
+        <MenuAssistantWidget
+          products={products}
+          tenant={tenant}
+          storefront={storefrontConfig}
+          onProductSelect={setSelectedProduct}
+        />
       )}
     </div>
   );
