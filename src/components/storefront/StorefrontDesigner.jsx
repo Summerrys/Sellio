@@ -20,14 +20,14 @@ const TABS = [
   { id: 'preview', label: 'Preview' },
 ];
 
-const MIN_BANNER_HEIGHT = 100;
-const MAX_BANNER_HEIGHT = 400;
+const MIN_BANNER_HEIGHT = 80;
+const MAX_BANNER_HEIGHT = 280;
 
 const DEFAULTS = {
   banner_headline: '',
   banner_tagline: '',
   banner_height: 'medium',
-  banner_height_px: 220,
+  banner_height_px: 200,
   banner_bg_color: '#fb923c',
   banner_bg_image_url: '',
   banner_position_x: 50,
@@ -44,24 +44,36 @@ const DEFAULTS = {
   font_family: 'Inter',
 };
 
-function DraggableBannerImage({ src, positionX, positionY, onPositionChange }) {
+function DraggableBannerImage({ src, positionX, positionY, onPositionChange, height }) {
   const containerRef = useRef(null);
   const isDragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
   const currentPos = useRef({ x: positionX, y: positionY });
 
+  // Sync position when props change
   useEffect(() => {
     currentPos.current = { x: positionX, y: positionY };
+    if (containerRef.current) {
+      containerRef.current.style.backgroundPosition = `${positionX}% ${positionY}%`;
+    }
   }, [positionX, positionY]);
 
-  const getEventPos = (e) => {
-    if (e.touches?.[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    return { x: e.clientX, y: e.clientY };
-  };
+  // Sync height when prop changes
+  useEffect(() => {
+    if (containerRef.current && height) {
+      containerRef.current.style.height = `${height}px`;
+    }
+  }, [height]);
+
+  const getEventPos = (e) => ({
+    x: e.touches?.[0]?.clientX ?? e.clientX,
+    y: e.touches?.[0]?.clientY ?? e.clientY,
+  });
 
   const handleStart = (e) => {
     isDragging.current = true;
     lastPos.current = getEventPos(e);
+    if (containerRef.current) containerRef.current.style.cursor = 'grabbing';
     e.preventDefault();
   };
 
@@ -75,17 +87,19 @@ function DraggableBannerImage({ src, positionX, positionY, onPositionChange }) {
     const newX = Math.max(0, Math.min(100, currentPos.current.x - (dx / rect.width * 100)));
     const newY = Math.max(0, Math.min(100, currentPos.current.y - (dy / rect.height * 100)));
     currentPos.current = { x: newX, y: newY };
-    if (containerRef.current) {
-      containerRef.current.style.backgroundPosition = `${newX}% ${newY}%`;
-    }
+    containerRef.current.style.backgroundPosition = `${newX}% ${newY}%`;
     e.preventDefault();
   };
 
   const handleEnd = () => {
     if (!isDragging.current) return;
     isDragging.current = false;
+    if (containerRef.current) containerRef.current.style.cursor = 'grab';
     onPositionChange(currentPos.current.x, currentPos.current.y);
   };
+
+  // Strip cache-busting param for CSS background
+  const cleanSrc = src?.split('?')[0] || src;
 
   return (
     <div
@@ -99,24 +113,23 @@ function DraggableBannerImage({ src, positionX, positionY, onPositionChange }) {
       onTouchEnd={handleEnd}
       style={{
         width: '100%',
-        height: 160,
-        borderRadius: 12,
-        border: '1px solid #e2e8f0',
+        height: height || 200,
+        borderRadius: '12px 12px 0 0',
         overflow: 'hidden',
         cursor: 'grab',
         userSelect: 'none',
         WebkitUserSelect: 'none',
-        position: 'relative',
-        backgroundImage: `url('${src}')`,
+        touchAction: 'none',
+        backgroundImage: `url("${cleanSrc}")`,
         backgroundSize: 'cover',
         backgroundPosition: `${positionX}% ${positionY}%`,
         backgroundRepeat: 'no-repeat',
-        touchAction: 'none',
+        backgroundColor: '#f1f5f9',
       }}
     >
       <div style={{
         position: 'absolute', bottom: 8, right: 8,
-        background: 'rgba(0,0,0,0.45)',
+        background: 'rgba(0,0,0,0.5)',
         backdropFilter: 'blur(4px)',
         borderRadius: 8,
         padding: '4px 10px',
@@ -210,6 +223,7 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
   const [activeTab, setActiveTab] = useState('banner');
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const [hoveringBanner, setHoveringBanner] = useState(false);
   const [bannerHeightPx, setBannerHeightPx] = useState(
     form.banner_height_px || (form.banner_height === 'small' ? 160 : form.banner_height === 'large' ? 300 : 220)
   );
@@ -284,11 +298,12 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
       return;
     }
     const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
-    const finalUrl = publicUrl + '?t=' + Date.now();
-    onChange('banner_bg_image_url', finalUrl);
-    // Immediately persist to DB (don't wait for debounce)
+    const cleanUrl = publicUrl.split('?')[0];
+    // Use clean URL + cache-bust for in-memory state (forces browser refresh)
+    onChange('banner_bg_image_url', cleanUrl + '?t=' + Date.now());
+    // Save clean URL (no ?t=) to DB so it loads correctly on next open
     await supabase.from('storefront_configs').upsert(
-      { tenant_id: tenantId, banner_bg_image_url: finalUrl },
+      { tenant_id: tenantId, banner_bg_image_url: cleanUrl },
       { onConflict: 'tenant_id' }
     );
     toast.success('Banner image uploaded');
@@ -364,62 +379,72 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
             {/* 1. Banner Preview with resize handle */}
             <div>
               <SectionLabel>Banner Preview</SectionLabel>
-              <div style={{ position: 'relative', userSelect: 'none' }}>
-                {/* Banner preview */}
-                <div
-                  onMouseDown={form.banner_bg_image_url ? undefined : undefined}
-                  style={{
-                    width: '100%',
-                    height: bannerHeightPx,
-                    borderRadius: '12px 12px 0 0',
-                    overflow: 'hidden',
-                    backgroundImage: form.banner_bg_image_url ? `url('${form.banner_bg_image_url}')` : 'none',
-                    background: form.banner_bg_image_url ? undefined : (form.banner_bg_color || '#6366f1'),
-                    backgroundSize: 'cover',
-                    backgroundPosition: `${form.banner_position_x ?? 50}% ${form.banner_position_y ?? 50}%`,
-                    cursor: form.banner_bg_image_url ? 'grab' : 'default',
-                    position: 'relative',
-                  }}
-                >
-                  {/* Drag-to-reposition for image */}
-                  {form.banner_bg_image_url && (
-                    <div
-                      onMouseDown={(e) => {
-                        const startX = e.clientX, startY = e.clientY;
-                        const startPX = form.banner_position_x ?? 50;
-                        const startPY = form.banner_position_y ?? 50;
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const previewEl = e.currentTarget.parentElement;
-                        let finalX = startPX, finalY = startPY;
-                        const onMove = (me) => {
-                          finalX = Math.max(0, Math.min(100, startPX - ((me.clientX - startX) / rect.width * 100)));
-                          finalY = Math.max(0, Math.min(100, startPY - ((me.clientY - startY) / rect.height * 100)));
-                          // Update DOM directly — no React re-render during drag
-                          if (previewEl) previewEl.style.backgroundPosition = `${finalX}% ${finalY}%`;
-                        };
-                        const onUp = () => {
-                          window.removeEventListener('mousemove', onMove);
-                          window.removeEventListener('mouseup', onUp);
-                          // Only call onChange once on release
-                          onChange('banner_position_x', finalX);
-                          onChange('banner_position_y', finalY);
-                        };
-                        window.addEventListener('mousemove', onMove);
-                        window.addEventListener('mouseup', onUp);
-                        e.preventDefault();
+              <div style={{ position: 'relative', userSelect: 'none', marginBottom: 8 }}>
+                {form.banner_bg_image_url ? (
+                  <div
+                    onMouseEnter={() => setHoveringBanner(true)}
+                    onMouseLeave={() => setHoveringBanner(false)}
+                    style={{ position: 'relative' }}
+                  >
+                    <DraggableBannerImage
+                      src={form.banner_bg_image_url}
+                      positionX={form.banner_position_x ?? 50}
+                      positionY={form.banner_position_y ?? 50}
+                      height={bannerHeightPx}
+                      onPositionChange={(x, y) => {
+                        onChange('banner_position_x', x);
+                        onChange('banner_position_y', y);
                       }}
-                      style={{ position: 'absolute', inset: 0, cursor: 'grab', touchAction: 'none' }}
+                    />
+                    {/* X remove button */}
+                    <button
+                      type="button"
+                      onClick={handleRemoveBannerImage}
+                      style={{
+                        position: 'absolute', top: 8, right: 8,
+                        width: 26, height: 26, borderRadius: '50%',
+                        background: 'rgba(0,0,0,0.55)',
+                        backdropFilter: 'blur(4px)',
+                        border: 'none', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        zIndex: 20, color: 'white',
+                      }}
                     >
-                      <div style={{
-                        position: 'absolute', bottom: 8, right: 8,
-                        background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)',
-                        borderRadius: 8, padding: '4px 10px',
-                        display: 'flex', alignItems: 'center', gap: 4,
-                        color: 'white', fontSize: 11, fontWeight: 500, pointerEvents: 'none',
-                      }}>✥ Drag to reposition</div>
+                      <X size={12} color="white" />
+                    </button>
+                    {/* Replace overlay */}
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{
+                        position: 'absolute',
+                        top: '50%', left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        background: 'rgba(0,0,0,0.45)',
+                        backdropFilter: 'blur(4px)',
+                        borderRadius: 10,
+                        padding: '8px 14px',
+                        display: (hoveringBanner || window.innerWidth < 768) ? 'flex' : 'none',
+                        alignItems: 'center', gap: 6,
+                        cursor: 'pointer',
+                        color: 'white', fontSize: 12, fontWeight: 600,
+                        zIndex: 20,
+                        pointerEvents: 'all',
+                      }}
+                    >
+                      <Upload size={13} color="white" />
+                      {uploading ? 'Uploading...' : 'Replace'}
                     </div>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      width: '100%',
+                      height: bannerHeightPx,
+                      borderRadius: '12px 12px 0 0',
+                      background: form.banner_bg_color || '#6366f1',
+                    }}
+                  />
+                )}
                 {/* Resize handle */}
                 <div
                   onMouseDown={startResize}
@@ -445,29 +470,10 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
               </p>
             </div>
 
-            {/* 1b. Background Image */}
-            <div>
-              <SectionLabel>Background Image</SectionLabel>
-              {form.banner_bg_image_url ? (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                  >
-                    <Upload size={12} />
-                    Replace image
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleRemoveBannerImage}
-                    style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                  >
-                    <X size={12} />
-                    Remove
-                  </button>
-                </div>
-              ) : (
+            {/* 1b. Background Image upload (no image state) */}
+            {!form.banner_bg_image_url && (
+              <div>
+                <SectionLabel>Background Image</SectionLabel>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
@@ -493,9 +499,9 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
                   <Upload className="w-5 h-5" />
                   <span style={{ fontSize: 13, fontWeight: 500 }}>{uploading ? 'Uploading...' : 'Upload banner image'}</span>
                 </button>
-              )}
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerImageUpload} />
-            </div>
+              </div>
+            )}
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerImageUpload} />
 
             {/* 2. Background Colour */}
             <div>
