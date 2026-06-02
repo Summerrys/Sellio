@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, X, Send } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 
-export default function MenuAssistantWidget({ products, tenant, onProductSelect, storefront }) {
+export default function MenuAssistantWidget({ products, tenant, onProductSelect, storefront, externalOpen, onExternalClose }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -19,6 +19,18 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Sync external open trigger from quick links
+  useEffect(() => {
+    if (externalOpen) {
+      setOpen(true);
+      setMessages(prev => prev.length === 0
+        ? [{ role: 'assistant', content: "Hi! 👋 I'm your menu assistant. Ask me what's good, what's featured, or what you're in the mood for!" }]
+        : prev
+      );
+      onExternalClose?.();
+    }
+  }, [externalOpen]);
 
   const renderMarkdown = (text) => {
     if (!text) return null;

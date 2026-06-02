@@ -57,6 +57,10 @@ export default function Storefront() {
     name: '', phone: '', notes: '', orderType: isDineIn ? 'dine_in' : 'takeaway', tableNumber: '', address: ''
   });
   const [scrolled, setScrolled] = useState(false);
+  const [orderMethod, setOrderMethod] = useState(tableId ? 'dine-in' : 'takeaway');
+  const [showChat, setShowChat] = useState(false);
+  const productsRef = useRef(null);
+  const scrollToProducts = () => productsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   // Split layout state
   const [activeCategory, setActiveCategory] = useState(null);
@@ -274,7 +278,7 @@ export default function Storefront() {
       tenant_id: tenant.id,
       order_number: orderNumber,
       status: 'pending',
-      type: isDineIn ? 'dine_in' : checkoutForm.orderType,
+      type: isDineIn ? 'dine_in' : (orderMethod === 'dine-in' ? 'dine_in' : checkoutForm.orderType),
       table_id: tableId || null,
       table_name: table?.name || checkoutForm.tableNumber || null,
       customer_name: checkoutForm.name,
@@ -402,7 +406,7 @@ export default function Storefront() {
   }
 
   return (
-    <div style={{ fontFamily: `var(--sf-font, Inter), sans-serif`, maxWidth: 480, margin: '0 auto', minHeight: '100vh', background: primaryColor, position: 'relative' }}>
+    <div style={{ fontFamily: `var(--sf-font, Inter), sans-serif`, maxWidth: 480, margin: '0 auto', minHeight: '100vh', background: '#f8fafc', position: 'relative' }}>
       <style>{`
         @keyframes sfSpin { to { transform: rotate(360deg); } }
         .sf-no-scrollbar::-webkit-scrollbar { display: none; }
@@ -433,12 +437,13 @@ export default function Storefront() {
         </div>
       </div>
 
-      {/* ── HEADER / BANNER ── */}
+      {/* ── 1. HERO BANNER ── */}
       <div style={{
         position: 'relative',
-        zIndex: 1,
+        width: '100%',
         height: bannerHeight,
         overflow: 'hidden',
+        flexShrink: 0,
         ...(bannerBgImage
           ? {
               backgroundImage: `url('${bannerBgImage}')`,
@@ -450,57 +455,169 @@ export default function Storefront() {
         ),
       }}>
         {bannerBgImage && (
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.38)' }} />
         )}
-        <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          {/* Top bar inside banner */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 16px 12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
-              {tenant.logo_url && (
-                <img src={tenant.logo_url} style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'cover', background: 'white', flexShrink: 0 }} />
-              )}
-              <div style={{ minWidth: 0 }}>
-                <p style={{ color: 'white', fontWeight: 700, fontSize: 18, margin: 0, textShadow: bannerBgImage ? '0 1px 3px rgba(0,0,0,0.4)' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {tenant.name}
-                </p>
-                {table && (
-                  <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, margin: 0 }}>🪑 {table.name}</p>
-                )}
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-              <HistoryButton onClick={handleShowOrderHistory} />
-              <CartButton onClick={() => setShowCart(true)} />
-            </div>
-          </div>
 
-          {/* Headline / tagline at bottom of banner */}
-          {(storefrontConfig?.banner_headline || storefrontConfig?.banner_tagline) && (
-            <div style={{ padding: '0 16px 32px' }}>
-              {storefrontConfig.banner_headline && (
-                <p style={{ color: 'white', fontWeight: 800, fontSize: 26, margin: '0 0 6px', textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
-                  {storefrontConfig.banner_headline}
-                </p>
+        {/* Top bar: logo + name + action buttons */}
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '16px 16px 0',
+          zIndex: 2,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+            {tenant.logo_url && (
+              <img src={tenant.logo_url} style={{
+                width: 40, height: 40, borderRadius: '50%',
+                objectFit: 'cover', border: '2px solid white',
+                flexShrink: 0, background: 'white',
+              }} />
+            )}
+            <p style={{
+              color: 'white', fontWeight: 700, fontSize: 17, margin: 0,
+              textShadow: '0 1px 4px rgba(0,0,0,0.4)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>{tenant.name}</p>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <button onClick={handleShowOrderHistory} style={{
+              width: 44, height: 44, borderRadius: '50%',
+              background: 'white', border: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+              flexShrink: 0,
+            }}>
+              <Clock size={18} color={primaryColor} />
+            </button>
+            <button onClick={() => setShowCart(true)} style={{
+              width: 44, height: 44, borderRadius: '50%',
+              background: 'white', border: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+              flexShrink: 0, position: 'relative',
+            }}>
+              <ShoppingCart size={18} color={primaryColor} />
+              {cartCount > 0 && (
+                <span style={{
+                  position: 'absolute', top: -2, right: -2,
+                  minWidth: 18, height: 18, borderRadius: 9,
+                  background: '#ef4444', color: 'white',
+                  fontSize: 10, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
+                }}>{cartCount}</span>
               )}
-              {storefrontConfig.banner_tagline && (
-                <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 14, margin: 0 }}>
-                  {storefrontConfig.banner_tagline}
-                </p>
-              )}
-            </div>
-          )}
-          {/* Spacer when no headline */}
-          {!storefrontConfig?.banner_headline && !storefrontConfig?.banner_tagline && (
-            <div style={{ height: 28 }} />
-          )}
+            </button>
+          </div>
         </div>
+
+        {/* Headline + tagline bottom-left */}
+        {(storefrontConfig?.banner_headline || storefrontConfig?.banner_tagline) && (
+          <div style={{ position: 'absolute', bottom: 60, left: 16, right: 16, zIndex: 2 }}>
+            {storefrontConfig.banner_headline && (
+              <p style={{ color: 'white', fontWeight: 800, fontSize: 26, margin: '0 0 4px', textShadow: '0 2px 8px rgba(0,0,0,0.3)', lineHeight: 1.2 }}>
+                {storefrontConfig.banner_headline}
+              </p>
+            )}
+            {storefrontConfig.banner_tagline && (
+              <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, margin: 0, textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
+                {storefrontConfig.banner_tagline}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* ── CONTENT SHEET ── */}
+      {/* ── 2. FLOATING BUSINESS CARD ── */}
       <div style={{
+        margin: '-40px 12px 0',
+        background: 'white',
+        borderRadius: 16,
+        padding: '14px 16px',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        position: 'relative',
+        zIndex: 10,
+      }}>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontWeight: 800, fontSize: 18, margin: '0 0 2px', color: '#1e293b' }}>{tenant.name}</p>
+          {table && <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>🪑 {table.name}</p>}
+          {tenant.address && <p style={{ fontSize: 11, color: '#94a3b8', margin: '2px 0 0' }}>📍 {tenant.address}</p>}
+        </div>
+        {tenant.logo_url && (
+          <img src={tenant.logo_url} style={{ width: 52, height: 52, borderRadius: 12, objectFit: 'cover', border: '2px solid #f1f5f9', flexShrink: 0, marginLeft: 12 }} />
+        )}
+      </div>
+
+      {/* ── 3. ORDER METHOD SELECTOR (F&B only) ── */}
+      {isFnB && (
+        <div style={{ margin: '12px 12px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {[
+            { id: 'dine-in', label: 'Dine In', icon: '🍽️', available: !!tableId },
+            { id: 'takeaway', label: 'Takeaway', icon: '🥡', available: true },
+          ].map(method => (
+            <button key={method.id} onClick={() => setOrderMethod(method.id)} style={{
+              padding: '14px 12px', borderRadius: 14,
+              border: orderMethod === method.id ? `2px solid ${primaryColor}` : '2px solid #f1f5f9',
+              background: orderMethod === method.id ? `${primaryColor}15` : 'white',
+              cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s',
+            }}>
+              <div style={{ fontSize: 28, marginBottom: 4 }}>{method.icon}</div>
+              <p style={{ fontSize: 13, fontWeight: 700, margin: 0, color: orderMethod === method.id ? primaryColor : '#1e293b' }}>
+                {method.label}
+              </p>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── 4. QUICK LINKS ROW ── */}
+      {(() => {
+        const quickLinks = [
+          isFnB && { id: 'menu', label: 'Menu', icon: '📋', action: scrollToProducts },
+          { id: 'ai', label: 'Ask AI', icon: '✨', action: () => setShowChat(true) },
+          cartCount > 0 && { id: 'cart', label: 'Cart', icon: '🛒', action: () => setShowCart(true) },
+          { id: 'history', label: 'Orders', icon: '🕐', action: handleShowOrderHistory },
+        ].filter(Boolean);
+        return (
+          <div className="sf-no-scrollbar" style={{ display: 'flex', gap: 8, padding: '12px 12px 0', overflowX: 'auto', scrollbarWidth: 'none' }}>
+            {quickLinks.map(link => (
+              <button key={link.id} onClick={link.action} style={{
+                flexShrink: 0, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: 4,
+                padding: '10px 14px', borderRadius: 14,
+                background: 'white', border: '1px solid #f1f5f9',
+                cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', minWidth: 64,
+              }}>
+                <span style={{ fontSize: 22 }}>{link.icon}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>{link.label}</span>
+              </button>
+            ))}
+          </div>
+        );
+      })()}
+
+      {/* ── 5. ANNOUNCEMENT BANNER ── */}
+      {storefrontConfig?.show_announcement_bar && storefrontConfig?.announcement_text && (
+        <div style={{
+          margin: '12px 12px 0',
+          background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}cc)`,
+          borderRadius: 14, padding: '14px 16px',
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <span style={{ fontSize: 20 }}>📢</span>
+          <p style={{ color: 'white', fontSize: 13, fontWeight: 500, margin: 0, flex: 1 }}>
+            {storefrontConfig.announcement_text}
+          </p>
+        </div>
+      )}
+
+      {/* ── 6. WHITE CONTENT SHEET ── */}
+      <div ref={productsRef} style={{
         background: 'white',
         borderRadius: '24px 24px 0 0',
-        marginTop: -24,
+        marginTop: 16,
         minHeight: 'calc(100vh - 80px)',
         position: 'relative',
         zIndex: 2,
@@ -509,19 +626,6 @@ export default function Storefront() {
       }}>
         {/* Drag handle */}
         <div style={{ width: 36, height: 4, borderRadius: 2, background: '#e2e8f0', margin: '12px auto 0' }} />
-
-        {/* Announcement bar */}
-        {storefrontConfig?.show_announcement_bar && storefrontConfig?.announcement_text && (
-          <div style={{
-            margin: '12px 16px 0',
-            background: `${primaryColor}20`,
-            borderRadius: 10, padding: '8px 12px',
-            fontSize: 13, color: primaryColor,
-            fontWeight: 500, textAlign: 'center',
-          }}>
-            📢 {storefrontConfig.announcement_text}
-          </div>
-        )}
 
         {/* ── SPLIT LAYOUT ── */}
         {productLayout === 'split' ? (
@@ -1110,6 +1214,8 @@ export default function Storefront() {
           tenant={tenant}
           storefront={storefrontConfig}
           onProductSelect={setSelectedProduct}
+          externalOpen={showChat}
+          onExternalClose={() => setShowChat(false)}
         />
       )}
     </div>
