@@ -29,11 +29,14 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
     setInput('');
     setLoading(true);
 
+    // Add user message to conversation history BEFORE invoking function
+    const updatedHistory = [...conversationHistory, newMessage];
+
     try {
       const supabase = await getSupabase();
       const { data, error } = await supabase.functions.invoke('menuAssistant', {
         body: {
-          messages: conversationHistory,
+          messages: updatedHistory,
           products: products,
           tenant: tenant
         }
@@ -59,6 +62,7 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
         products: recommendedProducts
       }]);
 
+      // Add AI response to conversation history AFTER receiving response
       setConversationHistory(prev => [...prev.slice(-9), newMessage, { role: 'assistant', content: aiText }]);
     } catch (error) {
       setMessages(prev => [...prev, {
