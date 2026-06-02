@@ -169,9 +169,33 @@ export default function Dashboard() {
         {tenant?.slug && (
           <button
             onClick={() => setShowDesigner(true)}
-            className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-all text-sm font-medium flex-shrink-0"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: window.innerWidth < 480 ? '6px 11px' : '7px 14px',
+              borderRadius: 999,
+              border: 'none',
+              cursor: 'pointer',
+              background: 'linear-gradient(135deg, #fb923c, #e0449a, #8b5cf6)',
+              color: 'white',
+              fontSize: window.innerWidth < 480 ? 12 : 13,
+              fontWeight: 600,
+              boxShadow: '0 2px 12px rgba(224, 68, 154, 0.4)',
+              whiteSpace: 'nowrap',
+              transition: 'opacity 0.15s, transform 0.15s',
+              flexShrink: 0,
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.opacity = '0.9';
+              e.currentTarget.style.transform = 'scale(1.03)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.opacity = '1';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
           >
-            <Paintbrush className="w-4 h-4" />
+            <Paintbrush size={14} color="white" />
             Design Store
           </button>
         )}
