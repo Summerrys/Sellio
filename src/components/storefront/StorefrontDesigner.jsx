@@ -20,10 +20,14 @@ const TABS = [
   { id: 'preview', label: 'Preview' },
 ];
 
+const MIN_BANNER_HEIGHT = 100;
+const MAX_BANNER_HEIGHT = 400;
+
 const DEFAULTS = {
   banner_headline: '',
   banner_tagline: '',
   banner_height: 'medium',
+  banner_height_px: 220,
   banner_bg_color: '#fb923c',
   banner_bg_image_url: '',
   banner_position_x: 50,
@@ -202,10 +206,38 @@ function Toggle({ checked, onChange, label, description }) {
   );
 }
 
-function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, iframeRef, reloadIframe }) {
+function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, iframeRef, reloadIframe, onOpenPreview }) {
   const [activeTab, setActiveTab] = useState('banner');
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const [bannerHeightPx, setBannerHeightPx] = useState(
+    form.banner_height_px || (form.banner_height === 'small' ? 160 : form.banner_height === 'large' ? 300 : 220)
+  );
+
+  const startResize = (e) => {
+    e.preventDefault();
+    const startY = e.touches ? e.touches[0].clientY : e.clientY;
+    const startHeight = bannerHeightPx;
+    const onMove = (moveEvent) => {
+      const y = moveEvent.touches ? moveEvent.touches[0].clientY : moveEvent.clientY;
+      const delta = y - startY;
+      const newHeight = Math.max(MIN_BANNER_HEIGHT, Math.min(MAX_BANNER_HEIGHT, startHeight + delta));
+      setBannerHeightPx(newHeight);
+      const named = newHeight < 180 ? 'small' : newHeight > 260 ? 'large' : 'medium';
+      onChange('banner_height', named);
+      onChange('banner_height_px', Math.round(newHeight));
+    };
+    const onEnd = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onEnd);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onEnd);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onEnd);
+  };
 
   const handleRemoveBannerImage = async () => {
     if (!form.banner_bg_image_url) return;
@@ -324,38 +356,110 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
         {activeTab === 'banner' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-            {/* 1. Background Image — first for visual impact */}
+            {/* 1. Banner Preview with resize handle */}
+            <div>
+              <SectionLabel>Banner Preview</SectionLabel>
+              <div style={{ position: 'relative', userSelect: 'none' }}>
+                {/* Banner preview */}
+                <div
+                  onMouseDown={form.banner_bg_image_url ? undefined : undefined}
+                  style={{
+                    width: '100%',
+                    height: bannerHeightPx,
+                    borderRadius: '12px 12px 0 0',
+                    overflow: 'hidden',
+                    backgroundImage: form.banner_bg_image_url ? `url('${form.banner_bg_image_url}')` : 'none',
+                    background: form.banner_bg_image_url ? undefined : (form.banner_bg_color || '#6366f1'),
+                    backgroundSize: 'cover',
+                    backgroundPosition: `${form.banner_position_x ?? 50}% ${form.banner_position_y ?? 50}%`,
+                    cursor: form.banner_bg_image_url ? 'grab' : 'default',
+                    position: 'relative',
+                  }}
+                >
+                  {/* Drag-to-reposition for image */}
+                  {form.banner_bg_image_url && (() => {
+                    const containerRef = React.createRef();
+                    return (
+                      <div
+                        ref={containerRef}
+                        onMouseDown={(e) => {
+                          const startX = e.clientX, startY = e.clientY;
+                          const startPX = form.banner_position_x ?? 50;
+                          const startPY = form.banner_position_y ?? 50;
+                          const onMove = (me) => {
+                            const rect = e.currentTarget.closest('div').getBoundingClientRect();
+                            const newX = Math.max(0, Math.min(100, startPX - ((me.clientX - startX) / rect.width * 100)));
+                            const newY = Math.max(0, Math.min(100, startPY - ((me.clientY - startY) / rect.height * 100)));
+                            onChange('banner_position_x', newX);
+                            onChange('banner_position_y', newY);
+                          };
+                          const onUp = () => {
+                            window.removeEventListener('mousemove', onMove);
+                            window.removeEventListener('mouseup', onUp);
+                          };
+                          window.addEventListener('mousemove', onMove);
+                          window.addEventListener('mouseup', onUp);
+                          e.preventDefault();
+                        }}
+                        style={{ position: 'absolute', inset: 0, cursor: 'grab', touchAction: 'none' }}
+                      >
+                        <div style={{
+                          position: 'absolute', bottom: 8, right: 8,
+                          background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)',
+                          borderRadius: 8, padding: '4px 10px',
+                          display: 'flex', alignItems: 'center', gap: 4,
+                          color: 'white', fontSize: 11, fontWeight: 500, pointerEvents: 'none',
+                        }}>✥ Drag to reposition</div>
+                      </div>
+                    );
+                  })()}
+                </div>
+                {/* Resize handle */}
+                <div
+                  onMouseDown={startResize}
+                  onTouchStart={startResize}
+                  style={{
+                    height: 20,
+                    background: 'white',
+                    borderRadius: '0 0 12px 12px',
+                    border: '1px solid #e2e8f0',
+                    borderTop: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'ns-resize',
+                    userSelect: 'none',
+                  }}
+                >
+                  <div style={{ width: 32, height: 4, borderRadius: 2, background: '#cbd5e1' }} />
+                </div>
+              </div>
+              <p style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center', marginTop: 4 }}>
+                ↕ Drag to resize banner · {Math.round(bannerHeightPx)}px
+              </p>
+            </div>
+
+            {/* 1b. Background Image */}
             <div>
               <SectionLabel>Background Image</SectionLabel>
               {form.banner_bg_image_url ? (
-                <div>
-                  <DraggableBannerImage
-                    src={form.banner_bg_image_url}
-                    positionX={form.banner_position_x ?? 50}
-                    positionY={form.banner_position_y ?? 50}
-                    onPositionChange={(x, y) => {
-                      onChange('banner_position_x', x);
-                      onChange('banner_position_y', y);
-                    }}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                    >
-                      <Upload size={12} />
-                      Replace image
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleRemoveBannerImage}
-                      style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                    >
-                      <X size={12} />
-                      Remove
-                    </button>
-                  </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                  >
+                    <Upload size={12} />
+                    Replace image
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRemoveBannerImage}
+                    style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                  >
+                    <X size={12} />
+                    Remove
+                  </button>
                 </div>
               ) : (
                 <button
@@ -364,7 +468,7 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
                   disabled={uploading}
                   style={{
                     width: '100%',
-                    height: 128,
+                    height: 80,
                     border: '2px dashed #cbd5e1',
                     borderRadius: 12,
                     display: 'flex',
@@ -426,15 +530,7 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
               />
             </div>
 
-            {/* 5. Banner Height */}
-            <div>
-              <SectionLabel>Banner Height</SectionLabel>
-              <PillToggle
-                options={[{ value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' }]}
-                value={form.banner_height}
-                onChange={v => onChange('banner_height', v)}
-              />
-            </div>
+
           </div>
         )}
 
@@ -592,6 +688,7 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
   const [form, setForm] = useState({ ...DEFAULTS });
   const [saving, setSaving] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [showPreviewDrawer, setShowPreviewDrawer] = useState(false);
   const iframeRef = useRef(null);
   const storeUrl = `https://sellio.apptelier.sg/store/${tenantSlug}`;
 
@@ -679,6 +776,7 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
     form.banner_bg_image_url,
     form.banner_position_x,
     form.banner_position_y,
+    form.banner_height_px,
   ]);
 
   if (!open) return null;
@@ -766,14 +864,30 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
               storeUrl={storeUrl}
               iframeRef={iframeRef}
               reloadIframe={reloadIframe}
+              onOpenPreview={() => setShowPreviewDrawer(true)}
             />
 
             {/* Desktop Save */}
-            <div className="hidden lg:block p-4 border-t border-slate-100 bg-white flex-shrink-0">
+            <div className="hidden lg:flex gap-2 p-4 border-t border-slate-100 bg-white flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowPreviewDrawer(true)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  border: '1.5px solid var(--color-primary)',
+                  borderRadius: 999, padding: '8px 16px',
+                  fontSize: 13, fontWeight: 500,
+                  color: 'var(--color-primary)',
+                  background: 'none', cursor: 'pointer', flexShrink: 0,
+                }}
+              >
+                <Eye size={14} />
+                Preview
+              </button>
               <Button
                 onClick={handleSave}
                 disabled={saving}
-                className="w-full rounded-full"
+                className="flex-1 rounded-full"
                 style={{ background: 'var(--color-primary-gradient)', color: 'white', border: 'none', fontWeight: 600 }}
               >
                 {saving ? 'Saving...' : 'Save Changes'}
@@ -852,28 +966,24 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
           className="lg:hidden flex gap-3 flex-shrink-0"
           style={{ padding: '12px 16px', borderTop: '1px solid #f1f5f9', background: 'white' }}
         >
-          <a
-            href={storeUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => setShowPreviewDrawer(true)}
             style={{
               flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
+              display: 'flex', alignItems: 'center',
+              justifyContent: 'center', gap: 6,
               border: '1.5px solid var(--color-primary)',
               borderRadius: 999,
               padding: '10px 0',
-              fontSize: 14,
-              fontWeight: 500,
+              fontSize: 14, fontWeight: 500,
               color: 'var(--color-primary)',
-              textDecoration: 'none',
+              background: 'none', cursor: 'pointer',
             }}
           >
-            <ExternalLink style={{ width: 14, height: 14 }} />
-            Preview Store
-          </a>
+            <Eye size={14} />
+            Preview
+          </button>
           <button
             type="button"
             onClick={handleSave}
@@ -897,6 +1007,58 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
+
+        {/* ── PREVIEW DRAWER ── */}
+        {showPreviewDrawer && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 100,
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'white',
+            borderRadius: '20px 20px 0 0',
+            animation: 'slideUp 0.3s ease',
+            overflow: 'hidden',
+          }}>
+            <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '14px 16px', borderBottom: '1px solid #f1f5f9', flexShrink: 0,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 36, height: 4, borderRadius: 2, background: '#e2e8f0' }} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>Store Preview</span>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <a
+                  href={storeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    fontSize: 12, color: 'var(--color-primary)',
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    textDecoration: 'none', fontWeight: 500,
+                  }}
+                >
+                  <ExternalLink size={12} />
+                  Open
+                </a>
+                <button
+                  onClick={() => setShowPreviewDrawer(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+                >
+                  <X size={16} color="#64748b" />
+                </button>
+              </div>
+            </div>
+            <iframe
+              src={storeUrl + '?t=' + Date.now()}
+              style={{ flex: 1, width: '100%', border: 'none', minHeight: 0 }}
+              title="Store Preview"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

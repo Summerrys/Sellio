@@ -5,9 +5,9 @@ import MenuAssistantWidget from '@/components/storefront/MenuAssistantWidget';
 import { ShoppingCart, Clock, X } from 'lucide-react';
 
 const BANNER_HEIGHTS = {
-  small: '35vh',
-  medium: '50vh',
-  large: '65vh',
+  small: 160,
+  medium: 220,
+  large: 300,
 };
 
 const STATUS_COLORS = {
@@ -110,7 +110,7 @@ export default function Storefront() {
   const isFnB = /f&b|cafe|restaurant|food|beverage/i.test(tenant?.industry || '');
   const showStockBadge = storefrontConfig?.show_stock_badge !== false;
   const bannerBgImage = storefrontConfig?.banner_bg_image_url || null;
-  const bannerHeight = BANNER_HEIGHTS[storefrontConfig?.banner_height || 'medium'];
+  const bannerHeight = storefrontConfig?.banner_height_px || BANNER_HEIGHTS[storefrontConfig?.banner_height || 'medium'];
   const productLayout = storefrontConfig?.product_layout || 'grid';
 
   // Persist cart to localStorage
@@ -435,6 +435,10 @@ export default function Storefront() {
 
       {/* ── HEADER / BANNER ── */}
       <div style={{
+        position: 'relative',
+        zIndex: 1,
+        height: bannerHeight,
+        overflow: 'hidden',
         ...(bannerBgImage
           ? {
               backgroundImage: `url('${bannerBgImage}')`,
@@ -444,18 +448,11 @@ export default function Storefront() {
             }
           : { background: primaryColor }
         ),
-        paddingTop: 'env(safe-area-inset-top, 0px)',
-        position: 'relative',
-        zIndex: 1,
-        height: bannerHeight,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
       }}>
         {bannerBgImage && (
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} />
         )}
-        <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           {/* Top bar inside banner */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 16px 12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
