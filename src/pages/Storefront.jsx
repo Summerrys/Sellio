@@ -208,6 +208,14 @@ export default function Storefront() {
     p.is_featured !== true && (selectedCategory === null || p.category_id === selectedCategory)
   );
 
+  // Split layout computed data
+  const categoriesWithProducts = categories.filter(cat =>
+    products.some(p => p.category_id === cat.id)
+  );
+  const uncategorised = products.filter(
+    p => !categories.some(c => c.id === p.category_id)
+  );
+
   const addToCart = (product, variant = null) => {
     const key = `${product.id}-${variant?.label || 'default'}`;
     setCart(prev => {
@@ -504,15 +512,10 @@ export default function Storefront() {
 
         {/* ── SPLIT LAYOUT ── */}
         {productLayout === 'split' ? (
-          <div style={{ display: 'flex', height: 'calc(100vh - 52px)', overflow: 'hidden', marginTop: 8 }}>
+          <div style={{ display: 'flex', height: 'calc(100vh - 180px)', overflow: 'hidden', marginTop: 8 }}>
             {/* Left category panel */}
-            <div className="sf-no-scrollbar" style={{
-              width: '30%', maxWidth: 120,
-              overflowY: 'auto',
-              borderRight: '1px solid #f1f5f9',
-              flexShrink: 0,
-            }}>
-              {categories.map(cat => (
+            <div className="sf-no-scrollbar" style={{ width: 100, flexShrink: 0, overflowY: 'auto', borderRight: '1px solid #f1f5f9', background: '#fafafa' }}>
+              {categoriesWithProducts.map(cat => (
                 <button
                   key={cat.id}
                   onClick={() => scrollToCategory(cat.id)}
@@ -520,24 +523,41 @@ export default function Storefront() {
                     width: '100%', textAlign: 'center',
                     padding: '14px 8px',
                     border: 'none', cursor: 'pointer',
-                    fontSize: 12, fontWeight: activeCategory === cat.id ? 600 : 500,
-                    background: activeCategory === cat.id ? `${primaryColor}15` : 'white',
+                    fontSize: 11, fontWeight: activeCategory === cat.id ? 600 : 400,
+                    background: activeCategory === cat.id ? `${primaryColor}15` : 'transparent',
                     color: activeCategory === cat.id ? primaryColor : '#64748b',
                     borderLeft: activeCategory === cat.id ? `3px solid ${primaryColor}` : '3px solid transparent',
-                    transition: 'all 0.15s ease',
+                    transition: 'all 0.15s',
                     lineHeight: 1.3,
                     display: 'block',
                   }}>
                   {cat.name}
                 </button>
               ))}
+              {uncategorised.length > 0 && (
+                <button
+                  onClick={() => scrollToCategory('other')}
+                  style={{
+                    width: '100%', textAlign: 'center',
+                    padding: '14px 8px',
+                    border: 'none', cursor: 'pointer',
+                    fontSize: 11, fontWeight: activeCategory === 'other' ? 600 : 400,
+                    background: activeCategory === 'other' ? `${primaryColor}15` : 'transparent',
+                    color: activeCategory === 'other' ? primaryColor : '#64748b',
+                    borderLeft: activeCategory === 'other' ? `3px solid ${primaryColor}` : '3px solid transparent',
+                    transition: 'all 0.15s',
+                    lineHeight: 1.3,
+                    display: 'block',
+                  }}>
+                  Other
+                </button>
+              )}
             </div>
 
             {/* Right products panel */}
-            <div className="sf-no-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
-              {categories.map(cat => {
+            <div id="split-right-panel" className="sf-no-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
+              {categoriesWithProducts.map(cat => {
                 const catProducts = products.filter(p => p.category_id === cat.id);
-                if (catProducts.length === 0) return null;
                 return (
                   <div
                     key={cat.id}
@@ -562,6 +582,28 @@ export default function Storefront() {
                   </div>
                 );
               })}
+              {uncategorised.length > 0 && (
+                <div
+                  ref={el => categoryRefs.current['other'] = el}
+                  data-category-id="other"
+                >
+                  <p style={{
+                    fontSize: 14, fontWeight: 700,
+                    padding: '16px 16px 8px',
+                    color: '#1e293b', margin: 0,
+                    position: 'sticky', top: 0,
+                    background: 'white', zIndex: 1,
+                    borderBottom: '1px solid #f8f9fa',
+                  }}>
+                    Other
+                  </p>
+                  <div style={{ padding: '8px 12px' }}>
+                    {uncategorised.map(product => (
+                      <ListProductCard key={product.id} product={product} />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : (

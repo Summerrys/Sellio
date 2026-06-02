@@ -161,7 +161,13 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
       return;
     }
     const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
-    onChange('banner_bg_image_url', publicUrl + '?t=' + Date.now());
+    const finalUrl = publicUrl + '?t=' + Date.now();
+    onChange('banner_bg_image_url', finalUrl);
+    // Immediately persist to DB (don't wait for debounce)
+    await supabase.from('storefront_configs').upsert(
+      { tenant_id: tenantId, banner_bg_image_url: finalUrl },
+      { onConflict: 'tenant_id' }
+    );
     toast.success('Banner image uploaded');
     onImageUploaded?.();
     setUploading(false);
@@ -279,7 +285,12 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
                           .upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
                         if (!error) {
                           const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
-                          onChange('banner_bg_image_url', publicUrl + '?t=' + Date.now());
+                          const finalUrl = publicUrl + '?t=' + Date.now();
+                          onChange('banner_bg_image_url', finalUrl);
+                          await supabase.from('storefront_configs').upsert(
+                            { tenant_id: tenantId, banner_bg_image_url: finalUrl },
+                            { onConflict: 'tenant_id' }
+                          );
                           onImageUploaded?.();
                           toast.success('Banner image updated');
                         } else {
@@ -610,6 +621,7 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
     form.show_announcement_bar,
     form.announcement_text,
     form.font_family,
+    form.banner_bg_image_url,
   ]);
 
   if (!open) return null;
