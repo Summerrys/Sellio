@@ -16,8 +16,15 @@ export default function Storefront() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
+  const CART_KEY = `sf_cart_${tenantSlug}`;
+
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`sf_cart_${tenantSlug}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [showCart, setShowCart] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
@@ -82,6 +89,11 @@ export default function Storefront() {
   const showStockBadge = storefrontConfig?.show_stock_badge !== false;
   const bannerBgImage = storefrontConfig?.banner_bg_image_url || null;
   console.log('storefront config:', storefrontConfig?.banner_bg_image_url);
+
+  // Persist cart to localStorage on every change
+  useEffect(() => {
+    try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch {}
+  }, [cart, CART_KEY]);
 
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -215,6 +227,7 @@ export default function Storefront() {
       setLastCartTotal(savedCartTotal);
       setPlacedOrderNumber(orderNumber);
       setCart([]);
+      try { localStorage.removeItem(CART_KEY); } catch {}
       setShowCheckout(false);
       setIsSubmitting(false);
       setOrderSuccess(true);
