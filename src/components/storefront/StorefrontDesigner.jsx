@@ -39,7 +39,7 @@ const DEFAULTS = {
   banner_headline: '',
   banner_tagline: '',
   banner_height: 'medium',
-  banner_height_px: 240,
+  banner_height_px: 220,
   banner_bg_color: '#fb923c',
   banner_bg_image_url: '',
   banner_position_x: 50,
@@ -293,10 +293,10 @@ function DraggableBannerImage({ src, positionX, positionY, onPositionChange, hei
   );
 }
 
-function StorefrontMiniPreview({ form, tenant, products, categories, onBannerDrag, onRemoveBanner, onReplaceBanner, onHeightChange, interactive, bannerHeightOverride }) {
+function StorefrontMiniPreview({ form, tenant, products, categories, onBannerDrag, onRemoveBanner, onReplaceBanner, interactive }) {
   const primaryColor = form.banner_bg_color || '#6366f1';
   const cleanBannerUrl = form.banner_bg_image_url || undefined;
-  const bannerHeight = bannerHeightOverride ?? form.banner_height_px ?? 240;
+  const bannerHeight = Math.max(160, Math.min(260, Math.round(window.innerHeight * 0.25)));
 
   const displayProducts = (products || []).slice(0, 6);
 
@@ -304,62 +304,10 @@ function StorefrontMiniPreview({ form, tenant, products, categories, onBannerDra
   const isDragging = useRef(false);
   const lastDragPos = useRef({ x: 0, y: 0 });
   const livePos = useRef({ x: form.banner_position_x ?? 50, y: form.banner_position_y ?? 50 });
-  const [bannerExpanded, setBannerExpanded] = useState(false);
-  const liveBannerHeight = useRef(bannerHeight);
 
   useEffect(() => {
     livePos.current = { x: form.banner_position_x ?? 50, y: form.banner_position_y ?? 50 };
   }, [form.banner_position_x, form.banner_position_y]);
-
-  // Sync banner height directly to DOM when override changes
-  useEffect(() => {
-    if (bannerRef.current && bannerHeightOverride != null) {
-      bannerRef.current.style.height = `${bannerHeightOverride}px`;
-      liveBannerHeight.current = bannerHeightOverride;
-    }
-  }, [bannerHeightOverride]);
-
-  // Banner resize handle (interactive mode only)
-  const startBannerResize = (e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    const startY = e.touches?.[0]?.clientY ?? e.clientY;
-    const startH = liveBannerHeight.current;
-    let finalH = startH;
-    const onMove = (me) => {
-      if (me.cancelable) me.preventDefault();
-      const y = me.touches?.[0]?.clientY ?? me.clientY;
-      finalH = Math.max(MIN_BANNER_HEIGHT, Math.min(MAX_BANNER_HEIGHT, startH + (y - startY)));
-      liveBannerHeight.current = finalH;
-      if (bannerRef.current) bannerRef.current.style.height = `${finalH}px`;
-    };
-    const onEnd = () => {
-      onHeightChange?.(Math.round(finalH));
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onEnd);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchmove', onMove, { passive: false });
-    window.addEventListener('touchend', onEnd);
-  };
-
-  // Banner tap to expand/collapse
-  const handleBannerTap = () => {
-    if (!interactive) return;
-    const newExpanded = !bannerExpanded;
-    setBannerExpanded(newExpanded);
-    const newH = newExpanded ? MAX_BANNER_HEIGHT : 240;
-    liveBannerHeight.current = newH;
-    if (bannerRef.current) {
-      bannerRef.current.style.transition = 'height 0.3s ease';
-      bannerRef.current.style.height = `${newH}px`;
-      setTimeout(() => { if (bannerRef.current) bannerRef.current.style.transition = ''; }, 300);
-    }
-    onHeightChange?.(newH);
-  };
 
   const handleBannerDragStart = (e) => {
     if (!form.banner_bg_image_url || !interactive) return;
@@ -418,7 +366,6 @@ function StorefrontMiniPreview({ form, tenant, products, categories, onBannerDra
     const onEnd = () => {
       isDragging.current = false;
       if (hasImage && moved) onBannerDrag?.(livePos.current.x, livePos.current.y);
-      if (!moved) handleBannerTap();
       window.removeEventListener('touchmove', onMove);
       window.removeEventListener('touchend', onEnd);
     };
@@ -441,33 +388,30 @@ function StorefrontMiniPreview({ form, tenant, products, categories, onBannerDra
           height: bannerHeight,
           flexShrink: 0,
           position: 'relative',
-          cursor: interactive ? (form.banner_bg_image_url ? 'grab' : 'pointer') : 'default',
+          zIndex: 3,
+          cursor: interactive ? (form.banner_bg_image_url ? 'grab' : 'default') : 'default',
           ...(cleanBannerUrl
             ? { backgroundImage: `url("${cleanBannerUrl}")`, backgroundSize: 'cover', backgroundPosition: `${form.banner_position_x ?? 50}% ${form.banner_position_y ?? 50}%` }
             : { background: primaryColor }),
         }}
       >
-        <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 14px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {tenant?.logo_url ? (
-              <img src={tenant.logo_url} style={{ width: 34, height: 34, borderRadius: 8, objectFit: 'cover', border: '2px solid rgba(255,255,255,0.8)', flexShrink: 0 }} />
-            ) : (
-              <div style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: primaryColor }}>
-                {tenant?.name?.[0] || 'S'}
-              </div>
-            )}
-            <span style={{ color: 'white', fontWeight: 700, fontSize: 14, textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
-              {tenant?.name || 'Store Name'}
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', fontSize: 16 }}>🕐</div>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', fontSize: 16 }}>🛒</div>
-          </div>
+        {/* Action icons — top right */}
+        <div style={{ position: 'absolute', top: 14, right: 14, zIndex: 2, display: 'flex', gap: 8 }}>
+          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', fontSize: 16 }}>🕐</div>
+          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', fontSize: 16 }}>🛒</div>
         </div>
 
+        {/* Logo badge — bottom right, half-overlapping content card */}
+        {tenant?.logo_url ? (
+          <img src={tenant.logo_url} style={{ position: 'absolute', bottom: -26, right: 16, zIndex: 5, width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '3px solid white', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', flexShrink: 0 }} />
+        ) : (
+          <div style={{ position: 'absolute', bottom: -26, right: 16, zIndex: 5, width: 52, height: 52, borderRadius: '50%', background: primaryColor, border: '3px solid white', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, color: 'white' }}>
+            {tenant?.name?.[0] || 'S'}
+          </div>
+        )}
+
         {(form.banner_headline || form.banner_tagline) && (
-          <div style={{ position: 'absolute', bottom: 50, left: 16, right: 16 }}>
+          <div style={{ position: 'absolute', bottom: 50, left: 16, right: 80 }}>
             {form.banner_headline && (
               <p style={{ color: 'white', fontWeight: 800, fontSize: 22, margin: '0 0 4px', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>{form.banner_headline}</p>
             )}
@@ -485,7 +429,7 @@ function StorefrontMiniPreview({ form, tenant, products, categories, onBannerDra
                 data-overlay="true"
                 onClick={(e) => { e.stopPropagation(); onRemoveBanner?.(); }}
                 style={{
-                  position: 'absolute', top: 10, right: 10,
+                  position: 'absolute', top: 10, left: 10,
                   width: 28, height: 28, borderRadius: '50%',
                   background: 'rgba(0,0,0,0.55)',
                   border: 'none', cursor: 'pointer', zIndex: 20,
@@ -546,32 +490,7 @@ function StorefrontMiniPreview({ form, tenant, products, categories, onBannerDra
               </div>
             )}
 
-            {/* Tap hint */}
-            <div style={{
-              position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-              background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)',
-              borderRadius: 8, padding: '4px 10px',
-              color: 'white', fontSize: 10, fontWeight: 500,
-              pointerEvents: 'none', whiteSpace: 'nowrap', zIndex: 10,
-            }}>
-              {bannerExpanded ? '↕ Tap to collapse' : '↕ Tap to expand'}
-            </div>
 
-            {/* Resize handle at bottom of banner */}
-            <div
-              data-overlay="true"
-              onMouseDown={startBannerResize}
-              onTouchStart={startBannerResize}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                position: 'absolute', bottom: 0, left: 0, right: 0,
-                height: 16, cursor: 'ns-resize', zIndex: 30,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'rgba(255,255,255,0.15)',
-              }}
-            >
-              <div style={{ width: 32, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.6)' }} />
-            </div>
           </>
         )}
       </div>
@@ -579,6 +498,12 @@ function StorefrontMiniPreview({ form, tenant, products, categories, onBannerDra
       {/* CONTENT SHEET — scrolls independently */}
       <div style={{ flex: 1, overflowY: 'auto', background: 'white', borderRadius: '24px 24px 0 0', marginTop: -24, position: 'relative', zIndex: 2 }}>
         <div style={{ width: 36, height: 4, borderRadius: 2, background: '#e2e8f0', margin: '12px auto 0' }} />
+
+        <div style={{ padding: '14px 16px 4px', paddingRight: 76 }}>
+          <p style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {tenant?.name || 'Your Store'}
+          </p>
+        </div>
 
         {form.show_announcement_bar && form.announcement_text && (
           <div style={{ margin: '10px 16px 0', background: `${primaryColor}18`, borderRadius: 10, padding: '8px 12px', fontSize: 12, color: primaryColor, fontWeight: 500, textAlign: 'center' }}>
@@ -641,36 +566,6 @@ function DesktopEditorControls({ form, onChange, tenantId, onImageUploaded }) {
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [hoveringBanner, setHoveringBanner] = useState(false);
-  const [bannerHeightPx, setBannerHeightPx] = useState(
-    form.banner_height_px || 240
-  );
-
-  const startResize = (e) => {
-    e.preventDefault();
-    const startY = e.touches ? e.touches[0].clientY : e.clientY;
-    const startHeight = bannerHeightPx;
-    let finalHeight = startHeight;
-    const onMove = (moveEvent) => {
-      const y = moveEvent.touches ? moveEvent.touches[0].clientY : moveEvent.clientY;
-      const delta = y - startY;
-      finalHeight = Math.max(80, Math.min(280, startHeight + delta));
-      setBannerHeightPx(finalHeight);
-    };
-    const onEnd = () => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onEnd);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
-      const named = finalHeight < 180 ? 'small' : finalHeight > 260 ? 'large' : 'medium';
-      onChange('banner_height', named);
-      onChange('banner_height_px', Math.round(finalHeight));
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchmove', onMove, { passive: false });
-    window.addEventListener('touchend', onEnd);
-  };
-
   const handleRemoveBannerImage = async () => {
     if (!form.banner_bg_image_url) return;
     const supabase = await getSupabase();
@@ -743,7 +638,7 @@ function DesktopEditorControls({ form, onChange, tenantId, onImageUploaded }) {
                       src={form.banner_bg_image_url}
                       positionX={form.banner_position_x ?? 50}
                       positionY={form.banner_position_y ?? 50}
-                      height={bannerHeightPx}
+                      height={220}
                       onPositionChange={(x, y) => { onChange('banner_position_x', x); onChange('banner_position_y', y); }}
                     />
                     <button type="button" onClick={handleRemoveBannerImage}
@@ -757,14 +652,9 @@ function DesktopEditorControls({ form, onChange, tenantId, onImageUploaded }) {
                     </div>
                   </div>
                 ) : (
-                  <div style={{ width: '100%', height: bannerHeightPx, borderRadius: '12px 12px 0 0', background: form.banner_bg_color || '#6366f1' }} />
+                  <div style={{ width: '100%', height: 220, borderRadius: '12px 12px 0 0', background: form.banner_bg_color || '#6366f1' }} />
                 )}
-                <div onMouseDown={startResize} onTouchStart={startResize}
-                  style={{ height: 20, background: 'white', borderRadius: '0 0 12px 12px', border: '1px solid #e2e8f0', borderTop: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'ns-resize', userSelect: 'none' }}>
-                  <div style={{ width: 32, height: 4, borderRadius: 2, background: '#cbd5e1' }} />
-                </div>
               </div>
-              <p style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center', marginTop: 4 }}>↕ Drag to resize banner · {Math.round(bannerHeightPx)}px</p>
             </div>
 
             {!form.banner_bg_image_url && (
@@ -815,16 +705,6 @@ function MobileCanvasLayout({ form, onChange, tenantId, onImageUploaded, preview
   const drawerHeightRef = useRef(DRAWER_HANDLE_ONLY);
 
   const MAX_DRAWER = Math.round(window.innerHeight * 0.55);
-
-  // Banner height resize state (stored in form.banner_height_px)
-  const bannerHeightRef = useRef(form.banner_height_px ?? 240);
-  const [bannerHeightDisplay, setBannerHeightDisplay] = useState(form.banner_height_px ?? 240);
-
-  useEffect(() => {
-    const h = form.banner_height_px ?? 240;
-    bannerHeightRef.current = h;
-    setBannerHeightDisplay(h);
-  }, [form.banner_height_px]);
 
   const handleRemoveBannerImage = async () => {
     if (!form.banner_bg_image_url) return;
@@ -895,34 +775,6 @@ function MobileCanvasLayout({ form, onChange, tenantId, onImageUploaded, preview
     window.addEventListener('touchend', onEnd);
   };
 
-  const startBannerResize = (e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    const startY = e.touches?.[0]?.clientY ?? e.clientY;
-    const startH = bannerHeightRef.current;
-    let finalH = startH;
-    const onMove = (me) => {
-      const y = me.touches?.[0]?.clientY ?? me.clientY;
-      const delta = y - startY;
-      finalH = Math.max(MIN_BANNER_HEIGHT, Math.min(MAX_BANNER_HEIGHT, startH + delta));
-      bannerHeightRef.current = finalH;
-      setBannerHeightDisplay(finalH);
-    };
-    const onEnd = () => {
-      onChange('banner_height_px', Math.round(finalH));
-      const named = finalH < 180 ? 'small' : finalH > 280 ? 'large' : 'medium';
-      onChange('banner_height', named);
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onEnd);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchmove', onMove, { passive: false });
-    window.addEventListener('touchend', onEnd);
-  };
-
   // Canvas height = 100vh - topbar(52px) - drawerHeight
   const canvasHeight = `calc(100vh - 52px - ${drawerHeight}px)`;
 
@@ -938,9 +790,7 @@ function MobileCanvasLayout({ form, onChange, tenantId, onImageUploaded, preview
           onBannerDrag={(x, y) => { onChange('banner_position_x', x); onChange('banner_position_y', y); }}
           onRemoveBanner={handleRemoveBannerImage}
           onReplaceBanner={() => fileInputRef.current?.click()}
-          onHeightChange={(h) => { bannerHeightRef.current = h; setBannerHeightDisplay(h); onChange('banner_height_px', h); }}
           interactive={true}
-          bannerHeightOverride={bannerHeightDisplay}
         />
       </div>
 
