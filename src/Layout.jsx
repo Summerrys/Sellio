@@ -25,12 +25,10 @@ import {
   ArrowLeft,
   Plus,
   AlertCircle,
-  Clock,
-  Paintbrush
+  Clock
 } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import ProductFormDialog from './components/products/ProductFormDialog';
-import StorefrontDesigner from './components/storefront/StorefrontDesigner';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { base44 } from '@/api/base44Client';
@@ -205,7 +203,6 @@ function AppLayout({ children, currentPageName }) {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showDesigner, setShowDesigner] = useState(false);
 
   const BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
   const { appUser: customUser, clearAppUser } = useAppUser();
@@ -338,17 +335,6 @@ function AppLayout({ children, currentPageName }) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          {tenant?.slug && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-11 w-11 text-slate-500 hover:text-indigo-600"
-              onClick={() => setShowDesigner(true)}
-              title="Design Store"
-            >
-              <Paintbrush className="w-5 h-5" />
-            </Button>
-          )}
           {displayUser && <NotificationBell />}
           <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setMobileOpen(true)}>
             <Menu className="w-5 h-5" />
@@ -455,14 +441,6 @@ function AppLayout({ children, currentPageName }) {
           })}
         </nav>
       )}
-
-      {/* Storefront Designer */}
-      <StorefrontDesigner
-        open={showDesigner}
-        onClose={() => setShowDesigner(false)}
-        tenantId={tenant?.id}
-        tenantSlug={tenant?.slug}
-      />
 
       {/* Global New Product Modal */}
       <ProductFormDialog
