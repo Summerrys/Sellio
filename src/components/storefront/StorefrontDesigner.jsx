@@ -327,6 +327,7 @@ function StorefrontMiniPreview({ form, tenant, products, categories, onBannerDra
     const startH = liveBannerHeight.current;
     let finalH = startH;
     const onMove = (me) => {
+      if (me.cancelable) me.preventDefault();
       const y = me.touches?.[0]?.clientY ?? me.clientY;
       finalH = Math.max(MIN_BANNER_HEIGHT, Math.min(MAX_BANNER_HEIGHT, startH + (y - startY)));
       liveBannerHeight.current = finalH;
@@ -390,32 +391,39 @@ function StorefrontMiniPreview({ form, tenant, products, categories, onBannerDra
   };
 
   const handleBannerTouchStart = (e) => {
-    if (!form.banner_bg_image_url || !interactive) return;
+    if (!interactive) return;
     if (e.target.closest('[data-overlay]')) return;
     const touch = e.touches[0];
-    isDragging.current = true;
-    lastDragPos.current = { x: touch.clientX, y: touch.clientY };
+    const startX = touch.clientX, startY = touch.clientY;
+    const hasImage = !!form.banner_bg_image_url;
+    let moved = false;
+    if (hasImage) {
+      isDragging.current = true;
+      lastDragPos.current = { x: startX, y: startY };
+    }
     const onMove = (te) => {
-      if (!isDragging.current || !bannerRef.current) return;
       const t = te.touches[0];
-      const dx = t.clientX - lastDragPos.current.x;
-      const dy = t.clientY - lastDragPos.current.y;
-      lastDragPos.current = { x: t.clientX, y: t.clientY };
-      const rect = bannerRef.current.getBoundingClientRect();
-      livePos.current.x = Math.max(0, Math.min(100, livePos.current.x - (dx / rect.width * 100)));
-      livePos.current.y = Math.max(0, Math.min(100, livePos.current.y - (dy / rect.height * 100)));
-      bannerRef.current.style.backgroundPosition = `${livePos.current.x}% ${livePos.current.y}%`;
-      te.preventDefault();
+      if (Math.abs(t.clientX - startX) > 8 || Math.abs(t.clientY - startY) > 8) moved = true;
+      if (hasImage && isDragging.current && bannerRef.current) {
+        const dx = t.clientX - lastDragPos.current.x;
+        const dy = t.clientY - lastDragPos.current.y;
+        lastDragPos.current = { x: t.clientX, y: t.clientY };
+        const rect = bannerRef.current.getBoundingClientRect();
+        livePos.current.x = Math.max(0, Math.min(100, livePos.current.x - (dx / rect.width * 100)));
+        livePos.current.y = Math.max(0, Math.min(100, livePos.current.y - (dy / rect.height * 100)));
+        bannerRef.current.style.backgroundPosition = `${livePos.current.x}% ${livePos.current.y}%`;
+        if (te.cancelable) te.preventDefault();
+      }
     };
     const onEnd = () => {
       isDragging.current = false;
-      onBannerDrag?.(livePos.current.x, livePos.current.y);
+      if (hasImage && moved) onBannerDrag?.(livePos.current.x, livePos.current.y);
+      if (!moved) handleBannerTap();
       window.removeEventListener('touchmove', onMove);
       window.removeEventListener('touchend', onEnd);
     };
     window.addEventListener('touchmove', onMove, { passive: false });
     window.addEventListener('touchend', onEnd);
-    e.preventDefault();
   };
 
   return (
@@ -429,7 +437,6 @@ function StorefrontMiniPreview({ form, tenant, products, categories, onBannerDra
         ref={bannerRef}
         onMouseDown={interactive ? handleBannerDragStart : undefined}
         onTouchStart={interactive ? handleBannerTouchStart : undefined}
-        onClick={interactive ? handleBannerTap : undefined}
         style={{
           height: bannerHeight,
           flexShrink: 0,
@@ -812,6 +819,12 @@ function MobileCanvasLayout({ form, onChange, tenantId, onImageUploaded, preview
   // Banner height resize state (stored in form.banner_height_px)
   const bannerHeightRef = useRef(form.banner_height_px ?? 240);
   const [bannerHeightDisplay, setBannerHeightDisplay] = useState(form.banner_height_px ?? 240);
+
+  useEffect(() => {
+    const h = form.banner_height_px ?? 240;
+    bannerHeightRef.current = h;
+    setBannerHeightDisplay(h);
+  }, [form.banner_height_px]);
 
   const handleRemoveBannerImage = async () => {
     if (!form.banner_bg_image_url) return;
