@@ -377,42 +377,39 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
                   }}
                 >
                   {/* Drag-to-reposition for image */}
-                  {form.banner_bg_image_url && (() => {
-                    const containerRef = React.createRef();
-                    return (
-                      <div
-                        ref={containerRef}
-                        onMouseDown={(e) => {
-                          const startX = e.clientX, startY = e.clientY;
-                          const startPX = form.banner_position_x ?? 50;
-                          const startPY = form.banner_position_y ?? 50;
-                          const onMove = (me) => {
-                            const rect = e.currentTarget.closest('div').getBoundingClientRect();
-                            const newX = Math.max(0, Math.min(100, startPX - ((me.clientX - startX) / rect.width * 100)));
-                            const newY = Math.max(0, Math.min(100, startPY - ((me.clientY - startY) / rect.height * 100)));
-                            onChange('banner_position_x', newX);
-                            onChange('banner_position_y', newY);
-                          };
-                          const onUp = () => {
-                            window.removeEventListener('mousemove', onMove);
-                            window.removeEventListener('mouseup', onUp);
-                          };
-                          window.addEventListener('mousemove', onMove);
-                          window.addEventListener('mouseup', onUp);
-                          e.preventDefault();
-                        }}
-                        style={{ position: 'absolute', inset: 0, cursor: 'grab', touchAction: 'none' }}
-                      >
-                        <div style={{
-                          position: 'absolute', bottom: 8, right: 8,
-                          background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)',
-                          borderRadius: 8, padding: '4px 10px',
-                          display: 'flex', alignItems: 'center', gap: 4,
-                          color: 'white', fontSize: 11, fontWeight: 500, pointerEvents: 'none',
-                        }}>✥ Drag to reposition</div>
-                      </div>
-                    );
-                  })()}
+                  {form.banner_bg_image_url && (
+                    <div
+                      onMouseDown={(e) => {
+                        const startX = e.clientX, startY = e.clientY;
+                        const startPX = form.banner_position_x ?? 50;
+                        const startPY = form.banner_position_y ?? 50;
+                        // Capture rect NOW while currentTarget is valid
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const onMove = (me) => {
+                          const newX = Math.max(0, Math.min(100, startPX - ((me.clientX - startX) / rect.width * 100)));
+                          const newY = Math.max(0, Math.min(100, startPY - ((me.clientY - startY) / rect.height * 100)));
+                          onChange('banner_position_x', newX);
+                          onChange('banner_position_y', newY);
+                        };
+                        const onUp = () => {
+                          window.removeEventListener('mousemove', onMove);
+                          window.removeEventListener('mouseup', onUp);
+                        };
+                        window.addEventListener('mousemove', onMove);
+                        window.addEventListener('mouseup', onUp);
+                        e.preventDefault();
+                      }}
+                      style={{ position: 'absolute', inset: 0, cursor: 'grab', touchAction: 'none' }}
+                    >
+                      <div style={{
+                        position: 'absolute', bottom: 8, right: 8,
+                        background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)',
+                        borderRadius: 8, padding: '4px 10px',
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        color: 'white', fontSize: 11, fontWeight: 500, pointerEvents: 'none',
+                      }}>✥ Drag to reposition</div>
+                    </div>
+                  )}
                 </div>
                 {/* Resize handle */}
                 <div
