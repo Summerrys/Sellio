@@ -3,7 +3,7 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { X, ArrowLeft, ExternalLink, RefreshCw, ImageIcon, Upload, Eye, Pencil } from 'lucide-react';
+import { X, ArrowLeft, ExternalLink, Upload, Eye } from 'lucide-react';
 
 const FONTS = [
   { value: 'Inter', label: 'Inter', style: { fontFamily: 'Inter, sans-serif' } },
@@ -179,6 +179,124 @@ function PillToggle({ options, value, onChange }) {
   );
 }
 
+function StorefrontMiniPreview({ form, tenant, products, categories }) {
+  const primaryColor = form.banner_bg_color || '#6366f1';
+  const cleanBannerUrl = form.banner_bg_image_url?.split('?')[0];
+  const bannerBg = cleanBannerUrl
+    ? {
+        backgroundImage: `url("${cleanBannerUrl}")`,
+        backgroundSize: 'cover',
+        backgroundPosition: `${form.banner_position_x ?? 50}% ${form.banner_position_y ?? 50}%`,
+      }
+    : { background: primaryColor };
+
+  const displayProducts = (products || []).slice(0, 6);
+
+  return (
+    <div style={{
+      width: 390,
+      minHeight: 844,
+      background: 'white',
+      borderRadius: 40,
+      overflow: 'hidden',
+      boxShadow: '0 24px 72px rgba(0,0,0,0.18)',
+      fontFamily: form.font_family ? `'${form.font_family}', sans-serif` : 'Inter, sans-serif',
+      position: 'relative',
+    }}>
+      {/* BANNER */}
+      <div style={{ height: 240, position: 'relative', ...bannerBg }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 16px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {tenant?.logo_url && (
+              <img src={tenant.logo_url} style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', border: '2px solid rgba(255,255,255,0.8)' }} />
+            )}
+            <span style={{ color: 'white', fontWeight: 700, fontSize: 15, textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
+              {tenant?.name || 'Store Name'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[1, 2].map(i => (
+              <div key={i} style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 16, height: 16, borderRadius: 3, background: '#94a3b8' }} />
+              </div>
+            ))}
+          </div>
+        </div>
+        {(form.banner_headline || form.banner_tagline) && (
+          <div style={{ position: 'absolute', bottom: 50, left: 16, right: 16 }}>
+            {form.banner_headline && (
+              <p style={{ color: 'white', fontWeight: 800, fontSize: 22, margin: '0 0 4px', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                {form.banner_headline}
+              </p>
+            )}
+            {form.banner_tagline && (
+              <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, margin: 0 }}>
+                {form.banner_tagline}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* WHITE CONTENT SHEET */}
+      <div style={{ background: 'white', borderRadius: '24px 24px 0 0', marginTop: -24, position: 'relative', zIndex: 2, minHeight: 600 }}>
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: '#e2e8f0', margin: '12px auto 0' }} />
+
+        {form.show_announcement_bar && form.announcement_text && (
+          <div style={{ margin: '10px 16px 0', background: `${primaryColor}18`, borderRadius: 10, padding: '8px 12px', fontSize: 12, color: primaryColor, fontWeight: 500, textAlign: 'center' }}>
+            📢 {form.announcement_text}
+          </div>
+        )}
+
+        {form.show_category_tabs !== false && (
+          <div style={{ display: 'flex', gap: 8, padding: '12px 16px 0', overflowX: 'auto', scrollbarWidth: 'none' }}>
+            {['All', ...(categories || []).map(c => c.name)].slice(0, 5).map((cat, i) => (
+              <div key={cat} style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: i === 0 ? 600 : 400, background: i === 0 ? primaryColor : '#f1f5f9', color: i === 0 ? 'white' : '#64748b' }}>
+                {cat}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ padding: '12px 16px 0' }}>
+          {form.product_layout === 'list' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {displayProducts.map(p => (
+                <div key={p.id} style={{ display: 'flex', gap: 10, padding: '10px 0', borderBottom: '1px solid #f8f9fa', alignItems: 'center' }}>
+                  <div style={{ width: 64, height: 64, borderRadius: 10, background: p.image_url ? `url('${p.image_url}') center/cover` : '#f1f5f9', flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, margin: '0 0 2px', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
+                    {form.show_product_description !== false && p.description && (
+                      <p style={{ fontSize: 11, color: '#94a3b8', margin: '0 0 4px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{p.description}</p>
+                    )}
+                    <p style={{ fontSize: 13, fontWeight: 700, color: primaryColor, margin: 0 }}>{p.price?.toFixed(2)}</p>
+                  </div>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'white', fontSize: 18, fontWeight: 300 }}>+</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${form.products_per_row || 2}, 1fr)`, gap: 10 }}>
+              {displayProducts.map(p => (
+                <div key={p.id} style={{ borderRadius: 14, overflow: 'hidden', background: '#fafafa', border: '1px solid #f1f5f9' }}>
+                  <div style={{ height: 100, background: p.image_url ? `url('${p.image_url}') center/cover` : '#f1f5f9' }} />
+                  <div style={{ padding: '8px 10px 10px' }}>
+                    <p style={{ fontSize: 12, fontWeight: 600, margin: '0 0 2px', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: primaryColor, margin: 0 }}>{p.price?.toFixed(2)}</p>
+                      <div style={{ width: 22, height: 22, borderRadius: '50%', background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 16 }}>+</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Toggle({ checked, onChange, label, description }) {
   return (
     <div className="flex items-start justify-between gap-4 py-3 border-b border-slate-50 last:border-0">
@@ -219,7 +337,7 @@ function Toggle({ checked, onChange, label, description }) {
   );
 }
 
-function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, iframeRef, reloadIframe, onOpenPreview }) {
+function EditorControls({ form, onChange, tenantId, onImageUploaded, onOpenPreview, previewData }) {
   const [activeTab, setActiveTab] = useState('banner');
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
@@ -273,7 +391,6 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
       { tenant_id: tenantId, banner_bg_image_url: null },
       { onConflict: 'tenant_id' }
     );
-    reloadIframe();
     toast.success('Banner image removed');
   };
 
@@ -633,24 +750,15 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
 
         {/* ── PREVIEW TAB ── */}
         {activeTab === 'preview' && (
-          <div style={{ position: 'absolute', inset: 0, top: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
-              <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600, letterSpacing: '0.06em' }}>LIVE PREVIEW</span>
-              <button
-                type="button"
-                onClick={reloadIframe}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#94a3b8', background: 'none', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', cursor: 'pointer' }}
-              >
-                <RefreshCw style={{ width: 12, height: 12 }} />
-                Refresh
-              </button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: 32 }}>
+            <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', width: 390, flexShrink: 0 }}>
+              <StorefrontMiniPreview
+                form={form}
+                tenant={previewData?.tenant}
+                products={previewData?.products}
+                categories={previewData?.categories}
+              />
             </div>
-            <iframe
-              ref={iframeRef}
-              src={storeUrl}
-              style={{ flex: 1, width: '100%', border: 'none', minHeight: 0 }}
-              title="Store Preview"
-            />
           </div>
         )}
 
@@ -701,8 +809,9 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
   const [saving, setSaving] = useState(false);
   const [visible, setVisible] = useState(false);
   const [showPreviewDrawer, setShowPreviewDrawer] = useState(false);
-  const [isSyncingPreview, setIsSyncingPreview] = useState(false);
-  const iframeRef = useRef(null);
+  const [previewProducts, setPreviewProducts] = useState([]);
+  const [previewCategories, setPreviewCategories] = useState([]);
+  const [previewTenant, setPreviewTenant] = useState(null);
   const storeUrl = `https://sellio.apptelier.sg/store/${tenantSlug}`;
 
   useEffect(() => {
@@ -716,16 +825,16 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
 
   const loadConfig = async () => {
     const supabase = await getSupabase();
-    const { data } = await supabase
-      .from('storefront_configs')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .maybeSingle();
-    if (data) {
-      setForm({ ...DEFAULTS, ...data });
-    } else {
-      setForm({ ...DEFAULTS });
-    }
+    const [configRes, productsRes, categoriesRes, tenantRes] = await Promise.all([
+      supabase.from('storefront_configs').select('*').eq('tenant_id', tenantId).maybeSingle(),
+      supabase.from('products').select('id, name, description, price, image_url, category_id, is_active').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').limit(12),
+      supabase.from('categories').select('id, name').eq('tenant_id', tenantId),
+      supabase.from('tenants').select('name, logo_url, currency').eq('id', tenantId).maybeSingle(),
+    ]);
+    setForm(configRes.data ? { ...DEFAULTS, ...configRes.data } : { ...DEFAULTS });
+    setPreviewProducts(productsRes.data || []);
+    setPreviewCategories(categoriesRes.data || []);
+    setPreviewTenant(tenantRes.data);
   };
 
   const handleClose = () => {
@@ -748,51 +857,8 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
       toast.error('Save failed');
     } else {
       toast.success('Storefront updated ✓');
-      reloadIframe();
     }
   };
-
-  const reloadIframe = () => {
-    if (iframeRef.current) {
-      iframeRef.current.src = storeUrl + '?t=' + Date.now();
-    }
-  };
-
-  const autoSave = async (currentForm) => {
-    setIsSyncingPreview(true);
-    const supabase = await getSupabase();
-    await supabase
-      .from('storefront_configs')
-      .upsert({ tenant_id: tenantId, ...currentForm }, { onConflict: 'tenant_id' });
-    reloadIframe();
-    setTimeout(() => setIsSyncingPreview(false), 1000);
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    const timer = setTimeout(() => {
-      autoSave(form);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [
-    form.product_layout,
-    form.products_per_row,
-    form.show_category_tabs,
-    form.show_featured,
-    form.show_product_description,
-    form.show_stock_badge,
-    form.banner_bg_color,
-    form.banner_headline,
-    form.banner_tagline,
-    form.banner_height,
-    form.show_announcement_bar,
-    form.announcement_text,
-    form.font_family,
-    form.banner_bg_image_url,
-    form.banner_position_x,
-    form.banner_position_y,
-    form.banner_height_px,
-  ]);
 
   if (!open) return null;
 
@@ -800,7 +866,7 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
     <div style={{ position: 'fixed', inset: 0, zIndex: 200 }} className="flex">
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
       `}</style>
 
       {/* Slide-in panel */}
@@ -876,11 +942,9 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
               form={form}
               onChange={handleChange}
               tenantId={tenantId}
-              onImageUploaded={reloadIframe}
-              storeUrl={storeUrl}
-              iframeRef={iframeRef}
-              reloadIframe={reloadIframe}
+              onImageUploaded={() => {}}
               onOpenPreview={() => setShowPreviewDrawer(true)}
+              previewData={{ tenant: previewTenant, products: previewProducts, categories: previewCategories }}
             />
 
             {/* Desktop Save */}
@@ -916,82 +980,25 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
             className="hidden lg:flex flex-1 flex-col items-center overflow-auto"
             style={{ background: '#f8fafc', padding: '32px 32px 32px 32px', position: 'relative' }}
           >
-            {isSyncingPreview && (
+            {/* Preview label */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 390 * 0.65, marginBottom: 16 }}>
               <div style={{
-                position: 'absolute', top: 12, right: 12,
-                background: 'white', borderRadius: 8,
-                padding: '4px 10px', fontSize: 11,
-                color: '#64748b', fontWeight: 500,
-                border: '1px solid #e2e8f0',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                display: 'flex', alignItems: 'center', gap: 6,
-                zIndex: 10,
-              }}>
-                <span style={{
-                  width: 6, height: 6, borderRadius: '50%',
-                  background: '#f59e0b',
-                  animation: 'pulse 1s infinite',
-                  display: 'inline-block',
-                }} />
-                Syncing preview...
-              </div>
-            )}
-            {/* Preview label + refresh */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: 390 * 0.75, marginBottom: 16 }}>
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                background: 'white',
-                border: '1px solid #e2e8f0',
-                borderRadius: 999,
-                padding: '4px 12px',
-                fontSize: 12,
-                color: '#64748b',
-                fontWeight: 500,
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: 'white', border: '1px solid #e2e8f0', borderRadius: 999,
+                padding: '4px 12px', fontSize: 12, color: '#64748b', fontWeight: 500,
                 boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
               }}>
                 📱 Live Preview
               </div>
-              <button
-                type="button"
-                onClick={reloadIframe}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 30,
-                  height: 30,
-                  borderRadius: 8,
-                  border: '1px solid #e2e8f0',
-                  background: 'white',
-                  cursor: 'pointer',
-                  color: '#64748b',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
-                  transition: 'color 0.15s',
-                }}
-                onMouseEnter={e => e.currentTarget.style.color = '#0f172a'}
-                onMouseLeave={e => e.currentTarget.style.color = '#64748b'}
-                title="Refresh preview"
-              >
-                <RefreshCw style={{ width: 13, height: 13 }} />
-              </button>
             </div>
 
             {/* Phone frame */}
-            <div style={{ transform: 'scale(0.75)', transformOrigin: 'top center', width: 390, height: 844, flexShrink: 0 }}>
-              <iframe
-                ref={iframeRef}
-                src={storeUrl}
-                style={{
-                  width: 390,
-                  height: 844,
-                  border: 'none',
-                  borderRadius: 40,
-                  boxShadow: '0 24px 72px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.08)',
-                  display: 'block',
-                }}
-                title="Store Preview"
+            <div style={{ transform: 'scale(0.65)', transformOrigin: 'top center', width: 390, flexShrink: 0 }}>
+              <StorefrontMiniPreview
+                form={form}
+                tenant={previewTenant}
+                products={previewProducts}
+                categories={previewCategories}
               />
             </div>
           </div>
@@ -1057,7 +1064,6 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
             animation: 'slideUp 0.3s ease',
             overflow: 'hidden',
           }}>
-            <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '14px 16px', borderBottom: '1px solid #f1f5f9', flexShrink: 0,
@@ -1088,11 +1094,16 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
                 </button>
               </div>
             </div>
-            <iframe
-              src={storeUrl + '?t=' + Date.now()}
-              style={{ flex: 1, width: '100%', border: 'none', minHeight: 0 }}
-              title="Store Preview"
-            />
+            <div style={{ flex: 1, overflow: 'auto', display: 'flex', justifyContent: 'center', padding: '16px 0' }}>
+              <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', width: 390, flexShrink: 0 }}>
+                <StorefrontMiniPreview
+                  form={form}
+                  tenant={previewTenant}
+                  products={previewProducts}
+                  categories={previewCategories}
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>
