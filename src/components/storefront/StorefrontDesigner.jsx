@@ -400,7 +400,7 @@ function EditorControls({ form, onChange, tenantId, onImageUploaded, storeUrl, i
             <div>
               <SectionLabel>Product layout</SectionLabel>
               <PillToggle
-                options={[{ value: 'grid', label: 'Grid' }, { value: 'list', label: 'List' }, { value: 'carousel', label: 'Carousel' }]}
+                options={[{ value: 'grid', label: 'Grid' }, { value: 'list', label: 'List' }, { value: 'split', label: 'Split' }, { value: 'carousel', label: 'Carousel' }]}
                 value={form.product_layout}
                 onChange={v => onChange('product_layout', v)}
               />

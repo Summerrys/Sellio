@@ -1,7 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { getSupabase } from '@/lib/supabaseClient';
 import MenuAssistantWidget from '@/components/storefront/MenuAssistantWidget';
+import { ShoppingCart, Clock, X } from 'lucide-react';
+
+const BANNER_HEIGHTS = {
+  small: '35vh',
+  medium: '50vh',
+  large: '65vh',
+};
+
+const STATUS_COLORS = {
+  pending: { bg: '#fef3c7', color: '#92400e' },
+  preparing: { bg: '#dbeafe', color: '#1e40af' },
+  ready: { bg: '#d1fae5', color: '#065f46' },
+  completed: { bg: '#f1f5f9', color: '#475569' },
+  cancelled: { bg: '#fee2e2', color: '#991b1b' },
+};
 
 export default function Storefront() {
   const { tenantSlug, tableId } = useParams();
@@ -27,6 +42,8 @@ export default function Storefront() {
   });
   const [showCart, setShowCart] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [showOrderHistory, setShowOrderHistory] = useState(false);
+  const [orderHistory, setOrderHistory] = useState([]);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastCart, setLastCart] = useState([]);
@@ -39,6 +56,11 @@ export default function Storefront() {
   const [checkoutForm, setCheckoutForm] = useState({
     name: '', phone: '', notes: '', orderType: isDineIn ? 'dine_in' : 'takeaway', tableNumber: '', address: ''
   });
+  const [scrolled, setScrolled] = useState(false);
+
+  // Split layout state
+  const [activeCategory, setActiveCategory] = useState(null);
+  const categoryRefs = useRef({});
 
   useEffect(() => {
     async function loadData() {
@@ -88,21 +110,22 @@ export default function Storefront() {
   const isFnB = /f&b|cafe|restaurant|food|beverage/i.test(tenant?.industry || '');
   const showStockBadge = storefrontConfig?.show_stock_badge !== false;
   const bannerBgImage = storefrontConfig?.banner_bg_image_url || null;
-  console.log('storefront config:', storefrontConfig?.banner_bg_image_url);
+  const bannerHeight = BANNER_HEIGHTS[storefrontConfig?.banner_height || 'medium'];
+  const productLayout = storefrontConfig?.product_layout || 'grid';
 
-  // Persist cart to localStorage on every change
+  // Persist cart to localStorage
   useEffect(() => {
     try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch {}
   }, [cart, CART_KEY]);
 
-  const [scrolled, setScrolled] = useState(false);
+  // Scroll detection on window scroll
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 60);
+    const handleScroll = () => setScrolled(window.scrollY > 80);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Init table session when customer lands on ordering page
+  // Init table session
   useEffect(() => {
     const initSession = async () => {
       if (!tableId || !tenantSlug) return;
@@ -158,6 +181,25 @@ export default function Storefront() {
     document.title = `${tenant.name} — Order Online`;
   }, [primaryColor, accentColor, fontFamily, tenant]);
 
+  // Intersection observer for split layout active category
+  useEffect(() => {
+    if (productLayout !== 'split') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            setActiveCategory(entry.target.dataset.categoryId);
+          }
+        });
+      },
+      { threshold: 0.3 }
+    );
+    Object.values(categoryRefs.current).forEach(ref => {
+      if (ref) observer.observe(ref);
+    });
+    return () => observer.disconnect();
+  }, [productLayout, categories, products]);
+
   const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
   const cartTotal = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
 
@@ -183,6 +225,25 @@ export default function Storefront() {
   const updateQuantity = (key, qty) => {
     if (qty <= 0) setCart(prev => prev.filter(i => i.key !== key));
     else setCart(prev => prev.map(i => i.key === key ? { ...i, quantity: qty } : i));
+  };
+
+  const scrollToCategory = (categoryId) => {
+    categoryRefs.current[categoryId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveCategory(categoryId);
+  };
+
+  const loadOrderHistory = async () => {
+    if (!tenant) return;
+    const supabase = await getSupabase();
+    let query = supabase.from('orders').select('*').eq('tenant_id', tenant.id).order('created_date', { ascending: false }).limit(20);
+    if (tableId) query = query.eq('table_id', tableId);
+    const { data } = await query;
+    setOrderHistory(data || []);
+  };
+
+  const handleShowOrderHistory = () => {
+    setShowOrderHistory(true);
+    loadOrderHistory();
   };
 
   const handleSubmitOrder = async () => {
@@ -236,6 +297,72 @@ export default function Storefront() {
     }
   };
 
+  // Reusable cart icon button (white bg)
+  const CartButton = ({ onClick, size = 44 }) => (
+    <button onClick={onClick} style={{
+      width: size, height: size, borderRadius: '50%',
+      background: 'white',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+      border: 'none',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+      position: 'relative', flexShrink: 0,
+    }}>
+      <ShoppingCart size={20} color={primaryColor} />
+      {cartCount > 0 && (
+        <span style={{
+          position: 'absolute', top: -2, right: -2,
+          minWidth: 18, height: 18, borderRadius: 9,
+          background: '#ef4444', color: 'white',
+          fontSize: 10, fontWeight: 700,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
+        }}>{cartCount}</span>
+      )}
+    </button>
+  );
+
+  const HistoryButton = ({ onClick, size = 44 }) => (
+    <button onClick={onClick} style={{
+      width: size, height: size, borderRadius: '50%',
+      background: 'white',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+      border: 'none',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+      flexShrink: 0,
+    }}>
+      <Clock size={20} color={primaryColor} />
+    </button>
+  );
+
+  // Reusable list-style product card
+  const ListProductCard = ({ product }) => {
+    const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
+    return (
+      <div onClick={() => setSelectedProduct(product)}
+        style={{ display: 'flex', gap: 12, background: '#fff', borderRadius: 12, border: '0.5px solid #e5e7eb', overflow: 'hidden', cursor: 'pointer', marginBottom: 8 }}>
+        {product.image_url
+          ? <img src={product.image_url} style={{ width: 88, height: 88, objectFit: 'cover', flexShrink: 0 }} />
+          : <div style={{ width: 88, height: 88, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, flexShrink: 0 }}>🛍️</div>
+        }
+        <div style={{ flex: 1, padding: '10px 10px 10px 0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <p style={{ fontWeight: 600, fontSize: 14, margin: '0 0 2px', color: '#0f172a' }}>{product.name}</p>
+            {storefrontConfig?.show_product_description !== false && product.description && (
+              <p style={{ fontSize: 12, color: '#64748b', margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{product.description}</p>
+            )}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: primaryColor }}>{currency} {parseFloat(product.price).toFixed(2)}</span>
+            {isOutOfStock
+              ? <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>Sold out</span>
+              : <button onClick={(e) => { e.stopPropagation(); addToCart(product); }}
+                  style={{ background: primaryColor, color: 'white', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Add +</button>
+            }
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
@@ -263,62 +390,56 @@ export default function Storefront() {
       <style>{`
         @keyframes sfSpin { to { transform: rotate(360deg); } }
         .sf-no-scrollbar::-webkit-scrollbar { display: none; }
+        @keyframes sfFadeIn { from { opacity: 0; } to { opacity: 1; } }
       `}</style>
 
-      {/* Sticky top bar — appears on scroll */}
-      {scrolled && (
-        <div style={{
-          position: 'fixed', top: 0, left: '50%', transform: 'translateX(-50%)',
-          width: '100%', maxWidth: 480, zIndex: 50,
-          background: primaryColor,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 16px', height: 52,
-          boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {tenant.logo_url && (
-              <img src={tenant.logo_url} style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover' }} />
-            )}
-            <span style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>{tenant.name}</span>
-          </div>
-          <button onClick={() => setShowCart(true)} style={{
-            position: 'relative', background: 'rgba(255,255,255,0.2)',
-            border: '1px solid rgba(255,255,255,0.3)', borderRadius: '50%',
-            width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-          }}>
-            <span style={{ fontSize: 17 }}>🛒</span>
-            {cartCount > 0 && (
-              <span style={{
-                position: 'absolute', top: -4, right: -4,
-                width: 18, height: 18, borderRadius: '50%',
-                background: '#ef4444', color: 'white',
-                fontSize: 10, fontWeight: 700,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>{cartCount}</span>
-            )}
-          </button>
+      {/* ── STICKY TOP BAR — appears on scroll ── */}
+      <div style={{
+        position: 'fixed', top: 0, left: '50%', transform: 'translateX(-50%)',
+        width: '100%', maxWidth: 480, zIndex: 50,
+        background: primaryColor,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 16px', height: 52,
+        boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+        opacity: scrolled ? 1 : 0,
+        pointerEvents: scrolled ? 'auto' : 'none',
+        transition: 'opacity 0.25s ease',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
+          {tenant.logo_url && (
+            <img src={tenant.logo_url} style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+          )}
+          <span style={{ color: 'white', fontWeight: 600, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tenant.name}</span>
         </div>
-      )}
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <HistoryButton onClick={handleShowOrderHistory} size={36} />
+          <CartButton onClick={() => setShowCart(true)} size={36} />
+        </div>
+      </div>
 
-      {/* ── HEADER LAYER ── */}
+      {/* ── HEADER / BANNER ── */}
       <div style={{
         background: bannerBgImage ? `url('${bannerBgImage}') center/cover no-repeat` : primaryColor,
         paddingTop: 'env(safe-area-inset-top, 0px)',
         position: 'relative',
         zIndex: 1,
+        height: bannerHeight,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
       }}>
         {bannerBgImage && (
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} />
         )}
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          {/* Top bar */}
+        <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          {/* Top bar inside banner */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 16px 12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
               {tenant.logo_url && (
-                <img src={tenant.logo_url} style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'cover', background: 'white' }} />
+                <img src={tenant.logo_url} style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'cover', background: 'white', flexShrink: 0 }} />
               )}
-              <div>
-                <p style={{ color: 'white', fontWeight: 700, fontSize: 18, margin: 0, textShadow: bannerBgImage ? '0 1px 3px rgba(0,0,0,0.4)' : 'none' }}>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ color: 'white', fontWeight: 700, fontSize: 18, margin: 0, textShadow: bannerBgImage ? '0 1px 3px rgba(0,0,0,0.4)' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {tenant.name}
                 </p>
                 {table && (
@@ -326,45 +447,31 @@ export default function Storefront() {
                 )}
               </div>
             </div>
-            <button onClick={() => setShowCart(true)} style={{
-              width: 44, height: 44, borderRadius: '50%',
-              background: 'rgba(255,255,255,0.2)',
-              backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255,255,255,0.3)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-              position: 'relative',
-            }}>
-              <span style={{ fontSize: 20 }}>🛒</span>
-              {cartCount > 0 && (
-                <span style={{
-                  position: 'absolute', top: -4, right: -4,
-                  width: 18, height: 18, borderRadius: '50%',
-                  background: '#ef4444', color: 'white',
-                  fontSize: 10, fontWeight: 700,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>{cartCount}</span>
-              )}
-            </button>
+            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+              <HistoryButton onClick={handleShowOrderHistory} />
+              <CartButton onClick={() => setShowCart(true)} />
+            </div>
           </div>
 
-          {/* Headline / tagline */}
+          {/* Headline / tagline at bottom of banner */}
           {(storefrontConfig?.banner_headline || storefrontConfig?.banner_tagline) && (
-            <div style={{ padding: '0 16px 20px' }}>
+            <div style={{ padding: '0 16px 32px' }}>
               {storefrontConfig.banner_headline && (
-                <p style={{ color: 'white', fontWeight: 800, fontSize: 24, margin: '0 0 4px', textShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
+                <p style={{ color: 'white', fontWeight: 800, fontSize: 26, margin: '0 0 6px', textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
                   {storefrontConfig.banner_headline}
                 </p>
               )}
               {storefrontConfig.banner_tagline && (
-                <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, margin: 0 }}>
+                <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 14, margin: 0 }}>
                   {storefrontConfig.banner_tagline}
                 </p>
               )}
             </div>
           )}
-
-          {/* Spacer so white sheet overlaps */}
-          <div style={{ height: 28 }} />
+          {/* Spacer when no headline */}
+          {!storefrontConfig?.banner_headline && !storefrontConfig?.banner_tagline && (
+            <div style={{ height: 28 }} />
+          )}
         </div>
       </div>
 
@@ -376,7 +483,8 @@ export default function Storefront() {
         minHeight: 'calc(100vh - 80px)',
         position: 'relative',
         zIndex: 2,
-        paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))',
+        paddingBottom: productLayout === 'split' ? 0 : 'calc(80px + env(safe-area-inset-bottom, 0px))',
+        overflow: productLayout === 'split' ? 'hidden' : 'visible',
       }}>
         {/* Drag handle */}
         <div style={{ width: 36, height: 4, borderRadius: 2, background: '#e2e8f0', margin: '12px auto 0' }} />
@@ -394,202 +502,241 @@ export default function Storefront() {
           </div>
         )}
 
-        {/* Category tabs */}
-        {storefrontConfig?.show_category_tabs !== false && categories.length > 0 && (
-          <div className="sf-no-scrollbar" style={{ display: 'flex', gap: 8, padding: '14px 16px 0', overflowX: 'auto', scrollbarWidth: 'none' }}>
-            {[{ id: null, name: 'All' }, ...categories].map(cat => (
-              <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} style={{
-                flexShrink: 0, padding: '7px 16px', borderRadius: 20,
-                fontSize: 13, cursor: 'pointer', border: 'none',
-                fontWeight: selectedCategory === cat.id ? 600 : 400,
-                background: selectedCategory === cat.id ? primaryColor : '#f1f5f9',
-                color: selectedCategory === cat.id ? 'white' : '#64748b',
-                transition: 'all 0.15s ease',
-              }}>
-                {cat.name}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* ── SPLIT LAYOUT ── */}
+        {productLayout === 'split' ? (
+          <div style={{ display: 'flex', height: 'calc(100vh - 52px)', overflow: 'hidden', marginTop: 8 }}>
+            {/* Left category panel */}
+            <div className="sf-no-scrollbar" style={{
+              width: '30%', maxWidth: 120,
+              overflowY: 'auto',
+              borderRight: '1px solid #f1f5f9',
+              flexShrink: 0,
+            }}>
+              {categories.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => scrollToCategory(cat.id)}
+                  style={{
+                    width: '100%', textAlign: 'center',
+                    padding: '14px 8px',
+                    border: 'none', cursor: 'pointer',
+                    fontSize: 12, fontWeight: activeCategory === cat.id ? 600 : 500,
+                    background: activeCategory === cat.id ? `${primaryColor}15` : 'white',
+                    color: activeCategory === cat.id ? primaryColor : '#64748b',
+                    borderLeft: activeCategory === cat.id ? `3px solid ${primaryColor}` : '3px solid transparent',
+                    transition: 'all 0.15s ease',
+                    lineHeight: 1.3,
+                    display: 'block',
+                  }}>
+                  {cat.name}
+                </button>
+              ))}
+            </div>
 
-        {/* Products content */}
-        <div style={{ padding: '16px 16px 0' }}>
-
-        {/* Featured section */}
-        {storefrontConfig?.show_featured !== false && featuredProducts.length > 0 && (
-          <div style={{ marginBottom: 8 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>
-            {storefrontConfig?.featured_section_title || "Today's Picks"} ⭐
-          </p>
-          {featuredProducts.map(product => {
-            const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
-            return (
-              <div key={product.id} onClick={() => setSelectedProduct(product)} style={{
-                display: 'flex', background: '#f8fafc',
-                borderRadius: 14, overflow: 'hidden', marginBottom: 10,
-                border: '0.5px solid #e5e7eb', cursor: 'pointer',
-              }}>
-                {product.image_url && (
-                  <img src={product.image_url} style={{ width: 110, height: 110, objectFit: 'cover', flexShrink: 0 }} />
-                )}
-                <div style={{ flex: 1, padding: 12, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <div>
-                    <p style={{ fontWeight: 600, fontSize: 14, margin: '0 0 3px', color: '#0f172a' }}>{product.name}</p>
-                    {storefrontConfig?.show_product_description !== false && product.description && (
-                      <p style={{ fontSize: 12, color: '#64748b', margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                        {product.description}
-                      </p>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                    <div>
-                      {product.compare_at_price > product.price && (
-                        <span style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through', marginRight: 4 }}>
-                          {currency} {parseFloat(product.compare_at_price).toFixed(2)}
-                        </span>
-                      )}
-                      <span style={{ fontSize: 15, fontWeight: 700, color: primaryColor }}>
-                        {currency} {parseFloat(product.price).toFixed(2)}
-                      </span>
+            {/* Right products panel */}
+            <div className="sf-no-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
+              {categories.map(cat => {
+                const catProducts = products.filter(p => p.category_id === cat.id);
+                if (catProducts.length === 0) return null;
+                return (
+                  <div
+                    key={cat.id}
+                    ref={el => categoryRefs.current[cat.id] = el}
+                    data-category-id={cat.id}
+                  >
+                    <p style={{
+                      fontSize: 14, fontWeight: 700,
+                      padding: '16px 16px 8px',
+                      color: '#1e293b', margin: 0,
+                      position: 'sticky', top: 0,
+                      background: 'white', zIndex: 1,
+                      borderBottom: '1px solid #f8f9fa',
+                    }}>
+                      {cat.name}
+                    </p>
+                    <div style={{ padding: '8px 12px' }}>
+                      {catProducts.map(product => (
+                        <ListProductCard key={product.id} product={product} />
+                      ))}
                     </div>
-                    {isOutOfStock && showStockBadge ? (
-                      <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600, background: '#fee2e2', padding: '4px 10px', borderRadius: 999 }}>Sold out</span>
-                    ) : (
-                      <button onClick={(e) => { e.stopPropagation(); addToCart(product); }} style={{
-                        background: primaryColor, color: 'white', border: 'none',
-                        borderRadius: 8, padding: '6px 14px', fontSize: 12,
-                        fontWeight: 600, cursor: 'pointer'
-                      }}>Add +</button>
-                    )}
                   </div>
-                </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          /* ── STANDARD LAYOUTS ── */
+          <>
+            {/* Category tabs */}
+            {storefrontConfig?.show_category_tabs !== false && categories.length > 0 && (
+              <div className="sf-no-scrollbar" style={{ display: 'flex', gap: 8, padding: '14px 16px 0', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                {[{ id: null, name: 'All' }, ...categories].map(cat => (
+                  <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} style={{
+                    flexShrink: 0, padding: '7px 16px', borderRadius: 20,
+                    fontSize: 13, cursor: 'pointer', border: 'none',
+                    fontWeight: selectedCategory === cat.id ? 600 : 400,
+                    background: selectedCategory === cat.id ? primaryColor : '#f1f5f9',
+                    color: selectedCategory === cat.id ? 'white' : '#64748b',
+                    transition: 'all 0.15s ease',
+                  }}>
+                    {cat.name}
+                  </button>
+                ))}
               </div>
-            );
-          })}
-          </div>
-        )}
+            )}
 
-        {/* Products section */}
-        {featuredProducts.length > 0 && filteredProducts.length > 0 && (
-          <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>All items</p>
-        )}
+            {/* Products content */}
+            <div style={{ padding: '16px 16px 0' }}>
 
-        {/* Grid layout (default) */}
-        {(storefrontConfig?.product_layout === 'grid' || !storefrontConfig?.product_layout) && (
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${storefrontConfig?.products_per_row || 2}, 1fr)`, gap: 10 }}>
-            {filteredProducts.map(product => {
-                const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
-                const isLowStock = showStockBadge && product.track_inventory && product.stock_quantity > 0 && product.stock_quantity <= product.low_stock_threshold;
-               return (
-                 <div key={product.id} onClick={() => setSelectedProduct(product)}
-                   style={{ background: '#fff', borderRadius: 12, border: '0.5px solid #e5e7eb', overflow: 'hidden', cursor: 'pointer' }}>
-                   <div style={{ position: 'relative' }}>
-                     {product.image_url
-                       ? <img src={product.image_url} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover' }} />
-                       : <div style={{ width: '100%', aspectRatio: '1', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>🛍️</div>
-                     }
-                     {isOutOfStock && showStockBadge && (
-                       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                         <span style={{ color: 'white', fontWeight: 700, fontSize: 12 }}>Sold out</span>
-                       </div>
-                     )}
-                     {isLowStock && (
-                       <div style={{ position: 'absolute', top: 6, right: 6 }}>
-                         <span style={{ background: '#fef3c7', color: '#92400e', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999 }}>Low stock</span>
-                       </div>
-                     )}
-                   </div>
-                  <div style={{ padding: 10 }}>
-                    <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#0f172a' }}>{product.name}</p>
-                    {storefrontConfig?.show_product_description !== false && product.description && (
-                      <p style={{ fontSize: 11, color: '#64748b', margin: '0 0 6px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{product.description}</p>
-                    )}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: primaryColor }}>{currency} {parseFloat(product.price).toFixed(2)}</span>
-                      {!isOutOfStock && (
-                        <button onClick={(e) => { e.stopPropagation(); addToCart(product); }}
-                          style={{ width: 28, height: 28, borderRadius: '50%', background: primaryColor, color: 'white', border: 'none', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>+</button>
-                      )}
-                    </div>
-                  </div>
+              {/* Featured section */}
+              {storefrontConfig?.show_featured !== false && featuredProducts.length > 0 && (
+                <div style={{ marginBottom: 8 }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>
+                    {storefrontConfig?.featured_section_title || "Today's Picks"} ⭐
+                  </p>
+                  {featuredProducts.map(product => {
+                    const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
+                    return (
+                      <div key={product.id} onClick={() => setSelectedProduct(product)} style={{
+                        display: 'flex', background: '#f8fafc',
+                        borderRadius: 14, overflow: 'hidden', marginBottom: 10,
+                        border: '0.5px solid #e5e7eb', cursor: 'pointer',
+                      }}>
+                        {product.image_url && (
+                          <img src={product.image_url} style={{ width: 110, height: 110, objectFit: 'cover', flexShrink: 0 }} />
+                        )}
+                        <div style={{ flex: 1, padding: 12, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                          <div>
+                            <p style={{ fontWeight: 600, fontSize: 14, margin: '0 0 3px', color: '#0f172a' }}>{product.name}</p>
+                            {storefrontConfig?.show_product_description !== false && product.description && (
+                              <p style={{ fontSize: 12, color: '#64748b', margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                                {product.description}
+                              </p>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                            <div>
+                              {product.compare_at_price > product.price && (
+                                <span style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through', marginRight: 4 }}>
+                                  {currency} {parseFloat(product.compare_at_price).toFixed(2)}
+                                </span>
+                              )}
+                              <span style={{ fontSize: 15, fontWeight: 700, color: primaryColor }}>
+                                {currency} {parseFloat(product.price).toFixed(2)}
+                              </span>
+                            </div>
+                            {isOutOfStock && showStockBadge ? (
+                              <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600, background: '#fee2e2', padding: '4px 10px', borderRadius: 999 }}>Sold out</span>
+                            ) : (
+                              <button onClick={(e) => { e.stopPropagation(); addToCart(product); }} style={{
+                                background: primaryColor, color: 'white', border: 'none',
+                                borderRadius: 8, padding: '6px 14px', fontSize: 12,
+                                fontWeight: 600, cursor: 'pointer'
+                              }}>Add +</button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        )}
+              )}
 
-        {/* List layout */}
-        {storefrontConfig?.product_layout === 'list' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {filteredProducts.map(product => {
-              const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
-              return (
-                <div key={product.id} onClick={() => setSelectedProduct(product)}
-                  style={{ display: 'flex', gap: 12, background: '#fff', borderRadius: 12, border: '0.5px solid #e5e7eb', overflow: 'hidden', cursor: 'pointer' }}>
-                  {product.image_url
-                    ? <img src={product.image_url} style={{ width: 88, height: 88, objectFit: 'cover', flexShrink: 0 }} />
-                    : <div style={{ width: 88, height: 88, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, flexShrink: 0 }}>🛍️</div>
-                  }
-                  <div style={{ flex: 1, padding: '10px 10px 10px 0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                    <div>
-                      <p style={{ fontWeight: 600, fontSize: 14, margin: '0 0 2px', color: '#0f172a' }}>{product.name}</p>
-                      {storefrontConfig?.show_product_description !== false && product.description && (
-                        <p style={{ fontSize: 12, color: '#64748b', margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{product.description}</p>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: primaryColor }}>{currency} {parseFloat(product.price).toFixed(2)}</span>
-                      {isOutOfStock
-                        ? <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>Sold out</span>
-                        : <button onClick={(e) => { e.stopPropagation(); addToCart(product); }}
-                            style={{ background: primaryColor, color: 'white', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Add +</button>
-                      }
-                    </div>
-                  </div>
+              {featuredProducts.length > 0 && filteredProducts.length > 0 && (
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>All items</p>
+              )}
+
+              {/* Grid layout */}
+              {(productLayout === 'grid' || !storefrontConfig?.product_layout) && (
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${storefrontConfig?.products_per_row || 2}, 1fr)`, gap: 10 }}>
+                  {filteredProducts.map(product => {
+                    const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
+                    const isLowStock = showStockBadge && product.track_inventory && product.stock_quantity > 0 && product.stock_quantity <= product.low_stock_threshold;
+                    return (
+                      <div key={product.id} onClick={() => setSelectedProduct(product)}
+                        style={{ background: '#fff', borderRadius: 12, border: '0.5px solid #e5e7eb', overflow: 'hidden', cursor: 'pointer' }}>
+                        <div style={{ position: 'relative' }}>
+                          {product.image_url
+                            ? <img src={product.image_url} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover' }} />
+                            : <div style={{ width: '100%', aspectRatio: '1', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>🛍️</div>
+                          }
+                          {isOutOfStock && showStockBadge && (
+                            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <span style={{ color: 'white', fontWeight: 700, fontSize: 12 }}>Sold out</span>
+                            </div>
+                          )}
+                          {isLowStock && (
+                            <div style={{ position: 'absolute', top: 6, right: 6 }}>
+                              <span style={{ background: '#fef3c7', color: '#92400e', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999 }}>Low stock</span>
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ padding: 10 }}>
+                          <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#0f172a' }}>{product.name}</p>
+                          {storefrontConfig?.show_product_description !== false && product.description && (
+                            <p style={{ fontSize: 11, color: '#64748b', margin: '0 0 6px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{product.description}</p>
+                          )}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: primaryColor }}>{currency} {parseFloat(product.price).toFixed(2)}</span>
+                            {!isOutOfStock && (
+                              <button onClick={(e) => { e.stopPropagation(); addToCart(product); }}
+                                style={{ width: 28, height: 28, borderRadius: '50%', background: primaryColor, color: 'white', border: 'none', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>+</button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        )}
+              )}
 
-        {/* Carousel layout */}
-        {storefrontConfig?.product_layout === 'carousel' && (
-          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 8 }}>
-            {filteredProducts.map(product => {
-              const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
-              return (
-                <div key={product.id} onClick={() => setSelectedProduct(product)}
-                  style={{ flexShrink: 0, width: 160, background: '#fff', borderRadius: 12, border: '0.5px solid #e5e7eb', overflow: 'hidden', cursor: 'pointer' }}>
-                  {product.image_url
-                    ? <img src={product.image_url} style={{ width: '100%', height: 140, objectFit: 'cover' }} />
-                    : <div style={{ width: '100%', height: 140, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>🛍️</div>
-                  }
-                  <div style={{ padding: 10 }}>
-                    <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#0f172a' }}>{product.name}</p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: primaryColor }}>{currency} {parseFloat(product.price).toFixed(2)}</span>
-                      {!isOutOfStock && (
-                        <button onClick={(e) => { e.stopPropagation(); addToCart(product); }}
-                          style={{ width: 26, height: 26, borderRadius: '50%', background: primaryColor, color: 'white', border: 'none', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
-                      )}
-                    </div>
-                  </div>
+              {/* List layout */}
+              {productLayout === 'list' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {filteredProducts.map(product => <ListProductCard key={product.id} product={product} />)}
                 </div>
-              );
-            })}
-          </div>
-        )}
+              )}
 
-        {filteredProducts.length === 0 && featuredProducts.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '48px 16px' }}>
-            <p style={{ fontSize: 32, margin: '0 0 12px' }}>🛍️</p>
-            <p style={{ color: '#94a3b8', fontSize: 14 }}>No products found</p>
-          </div>
+              {/* Carousel layout */}
+              {productLayout === 'carousel' && (
+                <div style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 8 }}>
+                  {filteredProducts.map(product => {
+                    const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
+                    return (
+                      <div key={product.id} onClick={() => setSelectedProduct(product)}
+                        style={{ flexShrink: 0, width: 160, background: '#fff', borderRadius: 12, border: '0.5px solid #e5e7eb', overflow: 'hidden', cursor: 'pointer' }}>
+                        {product.image_url
+                          ? <img src={product.image_url} style={{ width: '100%', height: 140, objectFit: 'cover' }} />
+                          : <div style={{ width: '100%', height: 140, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>🛍️</div>
+                        }
+                        <div style={{ padding: 10 }}>
+                          <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#0f172a' }}>{product.name}</p>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: primaryColor }}>{currency} {parseFloat(product.price).toFixed(2)}</span>
+                            {!isOutOfStock && (
+                              <button onClick={(e) => { e.stopPropagation(); addToCart(product); }}
+                                style={{ width: 26, height: 26, borderRadius: '50%', background: primaryColor, color: 'white', border: 'none', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {filteredProducts.length === 0 && featuredProducts.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '48px 16px' }}>
+                  <p style={{ fontSize: 32, margin: '0 0 12px' }}>🛍️</p>
+                  <p style={{ color: '#94a3b8', fontSize: 14 }}>No products found</p>
+                </div>
+              )}
+            </div>{/* end products content */}
+          </>
         )}
-        </div>{/* end products content */}
       </div>{/* end content sheet */}
 
-      {/* Floating cart button */}
+      {/* ── FLOATING CART BUTTON ── */}
       {cartCount > 0 && !showCart && !showCheckout && (
         <div style={{ position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 50 }}>
           <button onClick={() => setShowCart(true)} style={{
@@ -605,67 +752,40 @@ export default function Storefront() {
         </div>
       )}
 
-      {/* Product detail modal */}
+      {/* ── PRODUCT DETAIL MODAL ── */}
       {selectedProduct && (() => {
         const allImages = [selectedProduct.image_url, ...(selectedProduct.images || [])].filter(Boolean);
         const activeImage = allImages[activeImageIndex];
-
         return (
           <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', overflow: 'auto' }}>
             <div onClick={() => { setSelectedProduct(null); setSelectedVariants({}); setActiveImageIndex(0); }} style={{ position: 'absolute', inset: 0 }} />
-            <div style={{
-              position: 'relative', width: '90%', maxWidth: 420,
-              maxHeight: '85vh', overflowY: 'auto',
-              borderRadius: 20, background: '#fff',
-              padding: 0
-            }}>
-              {/* Close button */}
-              <button onClick={() => { setSelectedProduct(null); setSelectedVariants({}); setActiveImageIndex(0); }} style={{
-                position: 'absolute', top: 12, right: 12, zIndex: 10,
-                width: 36, height: 36, borderRadius: '50%', background: 'white',
-                border: 'none', cursor: 'pointer', fontSize: 18, boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}>✕</button>
-
-              {/* Main image */}
+            <div style={{ position: 'relative', width: '90%', maxWidth: 420, maxHeight: '85vh', overflowY: 'auto', borderRadius: 20, background: '#fff', padding: 0 }}>
+              <button onClick={() => { setSelectedProduct(null); setSelectedVariants({}); setActiveImageIndex(0); }} style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, width: 36, height: 36, borderRadius: '50%', background: 'white', border: 'none', cursor: 'pointer', fontSize: 18, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
               {activeImage ? (
                 <img src={activeImage} style={{ width: '100%', aspectRatio: '1/1', objectFit: 'contain', background: '#f8f9fa', borderRadius: '20px 20px 0 0' }} />
               ) : (
                 <div style={{ width: '100%', aspectRatio: '1/1', background: '#f8f9fa', borderRadius: '20px 20px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>🛍️</div>
               )}
-
-              {/* Thumbnail strip */}
               {allImages.length > 1 && (
                 <div style={{ paddingLeft: 16, paddingRight: 16, paddingTop: 8, paddingBottom: 8, display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', borderBottom: '0.5px solid #e5e7eb' }}>
                   {allImages.map((img, idx) => (
-                    <button key={idx} onClick={() => setActiveImageIndex(idx)} style={{
-                      width: 60, height: 60, flexShrink: 0, borderRadius: 8, border: activeImageIndex === idx ? `2px solid ${primaryColor}` : '0.5px solid #e5e7eb',
-                      background: '#f8f9fa', padding: 0, cursor: 'pointer', overflow: 'hidden'
-                    }}>
+                    <button key={idx} onClick={() => setActiveImageIndex(idx)} style={{ width: 60, height: 60, flexShrink: 0, borderRadius: 8, border: activeImageIndex === idx ? `2px solid ${primaryColor}` : '0.5px solid #e5e7eb', background: '#f8f9fa', padding: 0, cursor: 'pointer', overflow: 'hidden' }}>
                       <img src={img} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                     </button>
                   ))}
                 </div>
               )}
-
-              {/* Content */}
               <div style={{ padding: '20px 20px' }}>
                 <p style={{ fontWeight: 700, fontSize: 18, margin: '0 0 6px', color: '#0f172a' }}>{selectedProduct.name}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                   {selectedProduct.compare_at_price > selectedProduct.price && (
-                    <span style={{ fontSize: 13, color: '#94a3b8', textDecoration: 'line-through' }}>
-                      {currency} {parseFloat(selectedProduct.compare_at_price).toFixed(2)}
-                    </span>
+                    <span style={{ fontSize: 13, color: '#94a3b8', textDecoration: 'line-through' }}>{currency} {parseFloat(selectedProduct.compare_at_price).toFixed(2)}</span>
                   )}
-                  <span style={{ fontSize: 20, fontWeight: 700, color: primaryColor }}>
-                    {currency} {parseFloat(selectedProduct.price).toFixed(2)}
-                  </span>
+                  <span style={{ fontSize: 20, fontWeight: 700, color: primaryColor }}>{currency} {parseFloat(selectedProduct.price).toFixed(2)}</span>
                 </div>
                 {selectedProduct.description && (
                   <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6, margin: '0 0 16px' }}>{selectedProduct.description}</p>
                 )}
-
-                {/* Variants */}
                 {selectedProduct.variants?.length > 0 && (
                   <div style={{ marginBottom: 16 }}>
                     {selectedProduct.variants.map((group, gi) => (
@@ -674,12 +794,7 @@ export default function Storefront() {
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                           {group.options?.map((opt, oi) => (
                             <button key={oi} onClick={() => setSelectedVariants(prev => ({ ...prev, [gi]: opt }))}
-                              style={{
-                                padding: '6px 14px', borderRadius: 8, fontSize: 13,
-                                border: selectedVariants[gi]?.label === opt.label ? `2px solid ${primaryColor}` : '0.5px solid #e5e7eb',
-                                background: selectedVariants[gi]?.label === opt.label ? '#f1f5f9' : 'none',
-                                cursor: 'pointer', fontWeight: 500, color: '#0f172a'
-                              }}>
+                              style={{ padding: '6px 14px', borderRadius: 8, fontSize: 13, border: selectedVariants[gi]?.label === opt.label ? `2px solid ${primaryColor}` : '0.5px solid #e5e7eb', background: selectedVariants[gi]?.label === opt.label ? '#f1f5f9' : 'none', cursor: 'pointer', fontWeight: 500, color: '#0f172a' }}>
                               {opt.label}{opt.price_modifier > 0 ? ` +${currency} ${opt.price_modifier.toFixed(2)}` : ''}
                             </button>
                           ))}
@@ -688,7 +803,6 @@ export default function Storefront() {
                     ))}
                   </div>
                 )}
-
                 <button
                   onClick={() => {
                     const combinedVariant = Object.values(selectedVariants).length > 0
@@ -699,10 +813,7 @@ export default function Storefront() {
                     setSelectedVariants({});
                     setActiveImageIndex(0);
                   }}
-                  style={{
-                    width: '100%', padding: 14, background: primaryColor, color: 'white',
-                    border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer'
-                  }}>
+                  style={{ width: '100%', padding: 14, background: primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
                   Add to order · {currency} {(parseFloat(selectedProduct.price) + Object.values(selectedVariants).reduce((sum, v) => sum + (v.price_modifier || 0), 0)).toFixed(2)}
                 </button>
               </div>
@@ -711,15 +822,11 @@ export default function Storefront() {
         );
       })()}
 
-      {/* Cart drawer */}
+      {/* ── CART DRAWER ── */}
       {showCart && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100 }}>
           <div onClick={() => setShowCart(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
-          <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: '#fff', borderRadius: '20px 20px 0 0', padding: '20px 16px',
-            maxHeight: '80vh', overflowY: 'auto'
-          }}>
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '20px 20px 0 0', padding: '20px 16px', maxHeight: '80vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontWeight: 700, fontSize: 17, margin: 0 }}>Your order</p>
               <button onClick={() => setShowCart(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22, lineHeight: 1 }}>✕</button>
@@ -756,30 +863,70 @@ export default function Storefront() {
                   <span style={{ fontWeight: 600, fontSize: 15, color: '#0f172a' }}>Total</span>
                   <span style={{ fontWeight: 700, fontSize: 18, color: primaryColor }}>{currency} {cartTotal.toFixed(2)}</span>
                 </div>
-                <button onClick={() => { setShowCart(false); setShowCheckout(true); }} style={{
-                  width: '100%', padding: 14, background: primaryColor, color: 'white',
-                  border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer'
-                }}>Proceed to checkout</button>
+                <button onClick={() => { setShowCart(false); setShowCheckout(true); }} style={{ width: '100%', padding: 14, background: primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Proceed to checkout</button>
               </>
             )}
           </div>
         </div>
       )}
 
-      {/* Checkout form */}
+      {/* ── ORDER HISTORY PANEL ── */}
+      {showOrderHistory && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100 }}>
+          <div onClick={() => setShowOrderHistory(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '20px 20px 0 0', padding: '20px 16px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontWeight: 700, fontSize: 17, margin: 0 }}>Order History</p>
+              <button onClick={() => setShowOrderHistory(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22, lineHeight: 1 }}>✕</button>
+            </div>
+            {orderHistory.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                <p style={{ fontSize: 36, margin: '0 0 8px' }}>🍽️</p>
+                <p style={{ color: '#94a3b8', fontSize: 14 }}>No orders yet</p>
+              </div>
+            ) : (
+              orderHistory.map(order => {
+                const statusStyle = STATUS_COLORS[order.status] || STATUS_COLORS.pending;
+                return (
+                  <div key={order.id} style={{ marginBottom: 14, padding: 14, background: '#f8fafc', borderRadius: 12, border: '0.5px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <div>
+                        <p style={{ fontWeight: 700, fontSize: 14, margin: '0 0 2px', color: '#0f172a' }}>#{order.order_number}</p>
+                        <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>
+                          {new Date(order.created_date).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 999, background: statusStyle.bg, color: statusStyle.color }}>
+                        {order.status}
+                      </span>
+                    </div>
+                    {(order.items || []).map((item, idx) => (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b', marginBottom: 2 }}>
+                        <span>{item.name}{item.variant ? ` (${item.variant})` : ''} × {item.quantity}</span>
+                        <span style={{ fontWeight: 600 }}>{currency} {(item.price * item.quantity).toFixed(2)}</span>
+                      </div>
+                    ))}
+                    <div style={{ borderTop: '0.5px solid #e5e7eb', marginTop: 8, paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 13 }}>
+                      <span style={{ color: '#0f172a' }}>Total</span>
+                      <span style={{ color: primaryColor }}>{currency} {parseFloat(order.total_amount || 0).toFixed(2)}</span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── CHECKOUT FORM ── */}
       {showCheckout && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100 }}>
           <div onClick={() => setShowCheckout(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
-          <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: '#fff', borderRadius: '20px 20px 0 0', padding: '20px 16px',
-            maxHeight: '85vh', overflowY: 'auto'
-          }}>
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '20px 20px 0 0', padding: '20px 16px', maxHeight: '85vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontWeight: 700, fontSize: 17, margin: 0 }}>Your details</p>
               <button onClick={() => setShowCheckout(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22 }}>✕</button>
             </div>
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
               <div>
                 <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 4 }}>Name *</label>
@@ -791,7 +938,6 @@ export default function Storefront() {
                 <input value={checkoutForm.phone} onChange={e => setCheckoutForm(p => ({ ...p, phone: e.target.value }))} placeholder="e.g. 9123 4567" inputMode="tel"
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #e5e7eb', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
               </div>
-
               {!isDineIn && (
                 <div>
                   <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>Order type</label>
@@ -801,20 +947,13 @@ export default function Storefront() {
                       : [{ value: 'takeaway', label: '🏪 Pickup' }, { value: 'delivery', label: '🚚 Delivery' }]
                     ).map(type => (
                       <button key={type.value} onClick={() => setCheckoutForm(p => ({ ...p, orderType: type.value }))}
-                        style={{
-                          flex: 1, padding: '10px 8px', borderRadius: 10, fontSize: 13,
-                          fontWeight: 500, cursor: 'pointer',
-                          border: checkoutForm.orderType === type.value ? `2px solid ${primaryColor}` : '0.5px solid #e5e7eb',
-                          background: checkoutForm.orderType === type.value ? '#f1f5f9' : 'none',
-                          color: '#0f172a'
-                        }}>
+                        style={{ flex: 1, padding: '10px 8px', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', border: checkoutForm.orderType === type.value ? `2px solid ${primaryColor}` : '0.5px solid #e5e7eb', background: checkoutForm.orderType === type.value ? '#f1f5f9' : 'none', color: '#0f172a' }}>
                         {type.label}
                       </button>
                     ))}
                   </div>
                 </div>
               )}
-
               {!isDineIn && checkoutForm.orderType === 'dine_in' && (
                 <div>
                   <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 4 }}>Table number</label>
@@ -822,7 +961,6 @@ export default function Storefront() {
                     style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #e5e7eb', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
                 </div>
               )}
-
               {checkoutForm.orderType === 'delivery' && (
                 <div>
                   <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 4 }}>Delivery address</label>
@@ -830,15 +968,12 @@ export default function Storefront() {
                     style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #e5e7eb', fontSize: 14, outline: 'none', resize: 'none', boxSizing: 'border-box' }} />
                 </div>
               )}
-
               <div>
                 <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 4 }}>Notes (optional)</label>
                 <textarea value={checkoutForm.notes} onChange={e => setCheckoutForm(p => ({ ...p, notes: e.target.value }))} placeholder="Any special requests?" rows={2}
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #e5e7eb', fontSize: 14, outline: 'none', resize: 'none', boxSizing: 'border-box' }} />
               </div>
             </div>
-
-            {/* Order summary */}
             <div style={{ background: '#f8fafc', borderRadius: 10, padding: 12, marginBottom: 16 }}>
               <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 8px', fontWeight: 600 }}>Order summary</p>
               {cart.map(item => (
@@ -852,43 +987,29 @@ export default function Storefront() {
                 <span style={{ color: primaryColor }}>{currency} {cartTotal.toFixed(2)}</span>
               </div>
             </div>
-
             <button onClick={handleSubmitOrder} disabled={isSubmitting || !checkoutForm.name || !checkoutForm.phone}
-              style={{
-                width: '100%', padding: 14,
-                background: isSubmitting || !checkoutForm.name || !checkoutForm.phone ? '#94a3b8' : primaryColor,
-                color: 'white', border: 'none', borderRadius: 12,
-                fontSize: 15, fontWeight: 700,
-                cursor: isSubmitting ? 'not-allowed' : 'pointer'
-              }}>
+              style={{ width: '100%', padding: 14, background: isSubmitting || !checkoutForm.name || !checkoutForm.phone ? '#94a3b8' : primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}>
               {isSubmitting ? 'Placing order...' : `Place order · ${currency} ${cartTotal.toFixed(2)}`}
             </button>
           </div>
         </div>
       )}
 
-      {/* Order success */}
+      {/* ── ORDER SUCCESS ── */}
       {orderSuccess && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#fff', overflowY: 'auto' }}>
           <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100vh' }}>
             <div style={{ fontSize: 56, marginBottom: 12 }}>🎉</div>
             <p style={{ fontWeight: 700, fontSize: 22, margin: '0 0 4px', textAlign: 'center', color: '#0f172a' }}>Order placed!</p>
             <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 4px' }}>Order #{placedOrderNumber}</p>
-            {isDineIn && table && (
-              <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 20px' }}>{table.name}</p>
-            )}
+            {isDineIn && table && <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 20px' }}>{table.name}</p>}
             <p style={{ color: '#64748b', textAlign: 'center', margin: '0 0 24px', fontSize: 13, maxWidth: 280 }}>
               We've received your order and will prepare it shortly.
             </p>
-
             {tenant.payment_qr_url && (
               <div style={{ width: '100%', maxWidth: 320, background: '#f8fafc', borderRadius: 16, padding: 20, textAlign: 'center', marginBottom: 20, border: '0.5px solid #e5e7eb' }}>
-                <p style={{ fontWeight: 600, fontSize: 14, margin: '0 0 4px', color: '#0f172a' }}>
-                  {tenant.payment_qr_label || 'Scan to pay'}
-                </p>
-                <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 14px' }}>
-                  Amount: <strong style={{ color: primaryColor }}>{currency} {lastCartTotal.toFixed(2)}</strong>
-                </p>
+                <p style={{ fontWeight: 600, fontSize: 14, margin: '0 0 4px', color: '#0f172a' }}>{tenant.payment_qr_label || 'Scan to pay'}</p>
+                <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 14px' }}>Amount: <strong style={{ color: primaryColor }}>{currency} {lastCartTotal.toFixed(2)}</strong></p>
                 <img src={tenant.payment_qr_url} style={{ width: 180, height: 180, objectFit: 'contain', borderRadius: 12, border: '0.5px solid #e5e7eb', background: 'white', padding: 8, marginBottom: 12 }} />
                 {tenant.payment_reference && (
                   <div style={{ background: '#fff', borderRadius: 8, padding: '8px 12px', marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '0.5px solid #e5e7eb' }}>
@@ -906,7 +1027,6 @@ export default function Storefront() {
                 <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>Screenshot or save the QR to complete payment</p>
               </div>
             )}
-
             <div style={{ width: '100%', maxWidth: 320, background: '#f8fafc', borderRadius: 12, padding: 14, marginBottom: 20 }}>
               <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 10px', fontWeight: 600 }}>Order summary</p>
               {lastCart.map(item => (
@@ -920,7 +1040,6 @@ export default function Storefront() {
                 <span style={{ color: primaryColor }}>{currency} {lastCartTotal.toFixed(2)}</span>
               </div>
             </div>
-
             <button onClick={() => { setOrderSuccess(false); setLastCart([]); setLastCartTotal(0); }}
               style={{ width: '100%', maxWidth: 320, padding: 14, background: 'none', border: '0.5px solid #e5e7eb', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#0f172a' }}>
               Back to menu
@@ -929,7 +1048,7 @@ export default function Storefront() {
         </div>
       )}
 
-      {/* Menu Assistant Widget */}
+      {/* ── MENU ASSISTANT ── */}
       {products.length > 0 && (
         <MenuAssistantWidget
           products={products}
