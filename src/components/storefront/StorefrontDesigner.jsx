@@ -957,16 +957,50 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
   const handleSave = async () => {
     setSaving(true);
     const supabase = await getSupabase();
-    const safeForm = {
-      ...form,
-      banner_position_x: isNaN(form.banner_position_x) ? 50 : (form.banner_position_x ?? 50),
-      banner_position_y: isNaN(form.banner_position_y) ? 50 : (form.banner_position_y ?? 50),
-      banner_height_px: isNaN(form.banner_height_px) ? 240 : (form.banner_height_px ?? 240),
-    };
-    const { error } = await supabase.from('storefront_configs').upsert({ tenant_id: tenantId, ...safeForm }, { onConflict: 'tenant_id' });
+
+    const ALLOWED = [
+      'banner_headline', 'banner_tagline', 'banner_bg_color', 'banner_bg_image_url',
+      'banner_height', 'banner_height_px', 'banner_position_x', 'banner_position_y',
+      'show_announcement_bar', 'announcement_text', 'product_layout', 'products_per_row',
+      'show_featured', 'featured_section_title', 'show_category_tabs',
+      'show_product_description', 'show_stock_badge', 'font_family',
+    ];
+
+    const payload = {};
+    for (const key of ALLOWED) {
+      const val = form[key];
+      if (key === 'banner_position_x' || key === 'banner_position_y') {
+        payload[key] = Number.isFinite(Number(val)) ? Math.round(Number(val)) : 50;
+      } else if (key === 'banner_height_px') {
+        payload[key] = Number.isFinite(Number(val)) ? Math.round(Number(val)) : 220;
+      } else if (key === 'products_per_row') {
+        payload[key] = Number.isFinite(Number(val)) ? Number(val) : 2;
+      } else {
+        payload[key] = val ?? null;
+      }
+    }
+
+    const { data: existing } = await supabase
+      .from('storefront_configs')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
+
+    let error;
+    if (existing) {
+      ({ error } = await supabase
+        .from('storefront_configs')
+        .update(payload)
+        .eq('tenant_id', tenantId));
+    } else {
+      ({ error } = await supabase
+        .from('storefront_configs')
+        .insert({ tenant_id: tenantId, ...payload }));
+    }
+
     setSaving(false);
     if (error) {
-      toast.error('Save failed');
+      toast.error('Save failed: ' + error.message);
     } else {
       sessionStorage.removeItem(`storefront_draft_${tenantId}`);
       toast.success('Storefront saved ✓');
