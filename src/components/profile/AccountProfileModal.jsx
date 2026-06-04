@@ -64,21 +64,38 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
 
   const initial = fullName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U';
 
-  // Plan badge text
-  const statusLabel = activeSub?.status === 'trial' ? 'Trial' : activeSub?.status === 'active' ? 'Active' : activeSub?.status || '';
-  const tierLabel = tier ? tier.charAt(0).toUpperCase() + tier.slice(1) : 'Starter';
-  const planBadge = `${tierLabel} · ${statusLabel}`;
+  // Plan name
+  const tierNames = { starter: 'Starter Plan', growth: 'Growth Plan', pro: 'Professional Plan' };
+  const tierLabel = tierNames[tier] ?? (tier ? tier.charAt(0).toUpperCase() + tier.slice(1) + ' Plan' : 'Starter Plan');
 
-  // Trial end / renew text
-  const trialEnd = activeSub?.current_period_end ? new Date(activeSub.current_period_end) : null;
-  const renewText = (() => {
-    if (!trialEnd) return null;
-    if (activeSub?.status === 'trial') return `Trial ends ${format(trialEnd, 'MMM d')}`;
-    if (activeSub?.status === 'active') return `Monthly · Renews ${format(trialEnd, 'MMM d, yyyy')}`;
+  // Status badge
+  const statusConfig = (() => {
+    switch (activeSub?.status) {
+      case 'trial':    return { label: 'Trial',    color: 'bg-amber-100 text-amber-700' };
+      case 'active':   return { label: 'Active',   color: 'bg-green-100 text-green-700' };
+      case 'past_due': return { label: 'Past Due', color: 'bg-red-100 text-red-700' };
+      case 'cancelled':return { label: 'Cancelled',color: 'bg-slate-100 text-slate-500' };
+      default:         return { label: activeSub?.status || 'Unknown', color: 'bg-slate-100 text-slate-500' };
+    }
+  })();
+
+  // Billing cycle
+  const billingCycle = activeSub?.billing_cycle === 'yearly' ? 'Annual' : activeSub?.billing_cycle === 'monthly' ? 'Monthly' : null;
+
+  // Date sublabel
+  const periodEnd = activeSub?.current_period_end ? new Date(activeSub.current_period_end) : null;
+  const dateLabel = (() => {
+    if (!periodEnd) return null;
+    if (activeSub?.status === 'trial')    return `Trial ends ${format(periodEnd, 'MMM d, yyyy')}`;
+    if (activeSub?.status === 'active')   return `Renews ${format(periodEnd, 'MMM d, yyyy')}`;
+    if (activeSub?.status === 'past_due') return 'Payment overdue';
     return null;
   })();
 
-  const showUpgrade = tier !== 'pro';
+  const showUpgrade = ['trial', 'active', 'past_due'].includes(activeSub?.status) && tier !== 'pro';
+
+  // Legacy planBadge for header badge
+  const planBadge = `${tierLabel} · ${statusConfig.label}`;
 
   const handleSaveProfile = async () => {
     setIsSavingProfile(true);
@@ -247,9 +264,15 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
           {/* Subscription */}
           <SectionHeader title="Subscription" />
           <SectionCard>
-            <div>
-              <p className="text-sm font-semibold text-slate-800">{tierLabel} Plan · <span className="font-normal text-slate-500">{statusLabel}</span></p>
-              {renewText && <p className="text-xs text-slate-400 mt-0.5">{renewText}</p>}
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-800">{tierLabel}</p>
+                {billingCycle && <p className="text-xs text-slate-400 mt-0.5">{billingCycle}</p>}
+                {dateLabel && <p className="text-xs text-slate-400 mt-0.5">{dateLabel}</p>}
+              </div>
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${statusConfig.color}`}>
+                {statusConfig.label}
+              </span>
             </div>
             {showUpgrade ? (
               <Button
