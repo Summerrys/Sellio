@@ -93,16 +93,19 @@ const PLAN_RANK = { starter: 0, growth: 1, pro: 2 };
 
 export default function UpgradeWall({ currentTier: currentTierProp = null }) {
   const [billing, setBilling] = useState('monthly');
-  const { tenantId, subscription } = useTenant();
+  const { tenantId, subscription, user } = useTenant();
 
   const currentTier = currentTierProp ?? subscription?.tier ?? null;
   console.log('UpgradeWall currentTier:', currentTier);
 
   const getLink = (plan) => {
     const base = billing === 'annual' ? plan.links.yearly : plan.links.monthly;
-    const withTenant = tenantId ? `${base}?client_reference_id=${tenantId}` : base;
-    // Only append upgraded=1 return param when upgrading from an existing plan (not new signup)
-    return currentTier !== null ? `${withTenant}&upgraded=1` : withTenant;
+    if (currentTier === null) return base;
+    const params = new URLSearchParams();
+    if (tenantId) params.set('client_reference_id', tenantId);
+    if (user?.email) params.set('prefilled_email', user.email);
+    params.set('upgraded', '1');
+    return `${base}?${params.toString()}`;
   };
 
   const getButtonLabel = (plan) => {
