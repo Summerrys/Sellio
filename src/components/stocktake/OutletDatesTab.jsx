@@ -1,11 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../tenant/TenantContext';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageCircle, Users, AlertCircle } from 'lucide-react';
+import { MessageCircle, Users, AlertCircle, Check, X } from 'lucide-react';
 import SupplierDrawer from './SupplierDrawer';
 import SupplierPickerModal from './SupplierPickerModal';
 import { toast } from 'sonner';
@@ -20,14 +19,13 @@ export default function OutletDatesTab() {
 
   const branchName = tenant?.settings?.branch_name || tenant?.name || '—';
 
-  // Load inventory items joined with products
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['stocktake-outlet', tenantId],
     queryFn: async () => {
       const supabase = await getSupabase();
       const { data } = await supabase
         .from('inventory_items')
-        .select('id, product_id, current_stock, par_level, unit, products(id, name, slug)')
+        .select('id, product_id, current_stock, par_level, unit, low_stock_threshold, products(id, name, slug)')
         .eq('tenant_id', tenantId);
       return (data || []).map(i => ({
         ...i,
@@ -37,7 +35,6 @@ export default function OutletDatesTab() {
     enabled: !!tenantId,
   });
 
-  // Load suppliers
   const { data: suppliers = [] } = useQuery({
     queryKey: ['suppliers', tenantId],
     queryFn: async () => {
@@ -48,29 +45,16 @@ export default function OutletDatesTab() {
     enabled: !!tenantId,
   });
 
-  const handleParLevelBlur = useCallback(async (itemId, value) => {
-    const parsed = parseFloat(value);
-    if (isNaN(parsed)) return;
-    const supabase = await getSupabase();
-    const { error } = await supabase
-      .from('inventory_items')
-      .update({ par_level: parsed })
-      .eq('id', itemId)
-      .eq('tenant_id', tenantId);
-    if (error) toast.error('Failed to save PAR level');
-    else queryClient.invalidateQueries({ queryKey: ['stocktake-outlet', tenantId] });
-  }, [tenantId, queryClient]);
-
   const productsNeedingOrder = items.filter(i => {
-    const parLevel = i.par_level ?? 0;
-    const needed = Math.max(0, parLevel - (i.current_stock ?? 0));
+    const needed = Math.max(0, (i.par_level ?? 0) - (i.current_stock ?? 0));
     return needed > 0;
   });
 
   const handleWhatsApp = (supplier) => {
     const lines = productsNeedingOrder.map(i => {
       const needed = Math.max(0, (i.par_level ?? 0) - (i.current_stock ?? 0));
-      return `• ${i.product_name}: ${needed} ${i.unit || 'unit(s)'}`;
+      const unit = i.unit ? ` ${i.unit}` : '';
+      return `• ${i.product_name}: ${needed}${unit} needed`;
     });
     const msg = [
       `Hello${supplier ? ` ${supplier.name}` : ''},`,
@@ -87,13 +71,9 @@ export default function OutletDatesTab() {
   };
 
   const onWhatsAppClick = () => {
-    if (suppliers.length === 0) {
-      handleWhatsApp(null);
-    } else if (suppliers.length === 1) {
-      handleWhatsApp(suppliers[0]);
-    } else {
-      setShowSupplierPicker(true);
-    }
+    if (suppliers.length === 0) handleWhatsApp(null);
+    else if (suppliers.length === 1) handleWhatsApp(suppliers[0]);
+    else setShowSupplierPicker(true);
   };
 
   if (isLoading) {
@@ -106,7 +86,6 @@ export default function OutletDatesTab() {
 
   return (
     <div className="p-5 space-y-5">
-      {/* Header info */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="bg-slate-50 rounded-xl p-3.5">
           <p className="text-xs text-slate-500 mb-1">Branch</p>
@@ -123,7 +102,6 @@ export default function OutletDatesTab() {
         </div>
       </div>
 
-      {/* Products table */}
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="w-10 h-10 text-slate-300 mb-3" />
@@ -132,13 +110,15 @@ export default function OutletDatesTab() {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <table className="w-full text-sm min-w-[560px]">
+          <table className="w-full text-sm min-w-[680px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="text-left px-4 py-3 font-medium text-slate-600">Product</th>
+                <th className="text-center px-3 py-3 font-medium text-slate-600 w-24">Unit</th>
                 <th className="text-center px-3 py-3 font-medium text-slate-600 w-28">PAR Level</th>
+                <th className="text-center px-3 py-3 font-medium text-slate-600 w-28">Alert Below</th>
                 <th className="text-center px-3 py-3 font-medium text-slate-600 w-28">Current Stock</th>
-                <th className="text-center px-3 py-3 font-medium text-slate-600 w-28">Order Needed</th>
+                <th className="text-center px-3 py-3 font-medium text-slate-600 w-32">Orders Needed</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -148,26 +128,47 @@ export default function OutletDatesTab() {
                 const needed = Math.max(0, parLevel - stock);
                 const stockOk = stock >= parLevel;
                 return (
-                  <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      {item.product_name}
-                      {item.unit && <span className="ml-1.5 text-xs text-slate-400">({item.unit})</span>}
-                    </td>
+                  <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="px-4 py-2.5 font-medium text-slate-900">{item.product_name}</td>
                     <td className="px-3 py-2 text-center">
-                      <ParInput
-                        defaultValue={parLevel}
-                        onBlur={(v) => handleParLevelBlur(item.id, v)}
+                      <InlineTextInput
+                        value={item.unit || ''}
+                        placeholder="pcs"
+                        itemId={item.id}
+                        field="unit"
+                        tenantId={tenantId}
+                        onSaved={() => queryClient.invalidateQueries({ queryKey: ['stocktake-outlet', tenantId] })}
                       />
                     </td>
-                    <td className="px-3 py-3 text-center">
+                    <td className="px-3 py-2 text-center">
+                      <InlineNumberInput
+                        value={item.par_level ?? ''}
+                        placeholder="Set PAR"
+                        itemId={item.id}
+                        field="par_level"
+                        tenantId={tenantId}
+                        onSaved={() => queryClient.invalidateQueries({ queryKey: ['stocktake-outlet', tenantId] })}
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      <InlineNumberInput
+                        value={item.low_stock_threshold ?? ''}
+                        placeholder="0"
+                        itemId={item.id}
+                        field="low_stock_threshold"
+                        tenantId={tenantId}
+                        onSaved={() => queryClient.invalidateQueries({ queryKey: ['stocktake-outlet', tenantId] })}
+                      />
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
                       <span className={`font-semibold ${stockOk ? 'text-green-600' : 'text-red-600'}`}>
-                        {stock}
+                        {stock}{item.unit ? ` ${item.unit}` : ''}
                       </span>
                     </td>
-                    <td className="px-3 py-3 text-center">
+                    <td className="px-3 py-2.5 text-center">
                       {needed > 0 ? (
                         <span className="inline-block px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold text-xs">
-                          {needed}
+                          {needed}{item.unit ? ` ${item.unit}` : ''}
                         </span>
                       ) : (
                         <span className="text-slate-400">—</span>
@@ -181,13 +182,8 @@ export default function OutletDatesTab() {
         </div>
       )}
 
-      {/* Action buttons */}
       <div className="flex flex-wrap gap-3 pt-2">
-        <Button
-          variant="outline"
-          onClick={() => setShowSupplierDrawer(true)}
-          className="flex items-center gap-2"
-        >
+        <Button variant="outline" onClick={() => setShowSupplierDrawer(true)} className="flex items-center gap-2">
           <Users className="w-4 h-4" />
           Manage Suppliers
         </Button>
@@ -205,39 +201,101 @@ export default function OutletDatesTab() {
         </Button>
       </div>
 
-      {/* Supplier Drawer */}
-      <SupplierDrawer
-        open={showSupplierDrawer}
-        onClose={() => setShowSupplierDrawer(false)}
-        tenantId={tenantId}
-      />
-
-      {/* Supplier Picker for WhatsApp */}
+      <SupplierDrawer open={showSupplierDrawer} onClose={() => setShowSupplierDrawer(false)} tenantId={tenantId} />
       <SupplierPickerModal
         open={showSupplierPicker}
         onClose={() => setShowSupplierPicker(false)}
         suppliers={suppliers}
-        onSelect={(supplier) => {
-          setShowSupplierPicker(false);
-          handleWhatsApp(supplier);
-        }}
+        onSelect={(supplier) => { setShowSupplierPicker(false); handleWhatsApp(supplier); }}
       />
     </div>
   );
 }
 
-// Inline editable PAR input
-function ParInput({ defaultValue, onBlur }) {
-  const [value, setValue] = useState(defaultValue ?? 0);
+// Shared save logic
+async function saveField(itemId, tenantId, field, value) {
+  const supabase = await getSupabase();
+  const { error } = await supabase
+    .from('inventory_items')
+    .update({ [field]: value })
+    .eq('id', itemId)
+    .eq('tenant_id', tenantId);
+  if (error) throw error;
+}
+
+// Inline number input (PAR level, low_stock_threshold)
+function InlineNumberInput({ value, placeholder, itemId, field, tenantId, onSaved }) {
+  const [localVal, setLocalVal] = useState(value === '' || value == null ? '' : String(value));
+  const [status, setStatus] = useState(null); // null | 'saving' | 'saved' | 'error'
+  const timerRef = useRef(null);
+
+  const handleBlur = async () => {
+    const trimmed = localVal.trim();
+    const parsed = trimmed === '' ? null : parseInt(trimmed, 10);
+    if (trimmed !== '' && isNaN(parsed)) return;
+    setStatus('saving');
+    try {
+      await saveField(itemId, tenantId, field, parsed);
+      setStatus('saved');
+      onSaved();
+      timerRef.current = setTimeout(() => setStatus(null), 1500);
+    } catch {
+      setStatus('error');
+      timerRef.current = setTimeout(() => setStatus(null), 2000);
+    }
+  };
+
   return (
-    <input
-      type="number"
-      min="0"
-      value={value}
-      onChange={e => setValue(e.target.value)}
-      onBlur={e => onBlur(e.target.value)}
-      className="w-20 text-center border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent"
-      style={{ '--tw-ring-color': 'rgb(var(--color-primary))' }}
-    />
+    <div className="inline-flex items-center gap-1 justify-center">
+      <input
+        type="number"
+        min="0"
+        value={localVal}
+        placeholder={placeholder}
+        onChange={e => setLocalVal(e.target.value)}
+        onBlur={handleBlur}
+        className="w-20 text-center border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent placeholder:text-slate-300"
+        style={{ '--tw-ring-color': 'rgb(var(--color-primary))' }}
+      />
+      {status === 'saved' && <Check className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />}
+      {status === 'error' && <X className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />}
+    </div>
+  );
+}
+
+// Inline text input (unit)
+function InlineTextInput({ value, placeholder, itemId, field, tenantId, onSaved }) {
+  const [localVal, setLocalVal] = useState(value || '');
+  const [status, setStatus] = useState(null);
+  const timerRef = useRef(null);
+
+  const handleBlur = async () => {
+    const trimmed = localVal.trim();
+    setStatus('saving');
+    try {
+      await saveField(itemId, tenantId, field, trimmed || null);
+      setStatus('saved');
+      onSaved();
+      timerRef.current = setTimeout(() => setStatus(null), 1500);
+    } catch {
+      setStatus('error');
+      timerRef.current = setTimeout(() => setStatus(null), 2000);
+    }
+  };
+
+  return (
+    <div className="inline-flex items-center gap-1 justify-center">
+      <input
+        type="text"
+        value={localVal}
+        placeholder={placeholder}
+        onChange={e => setLocalVal(e.target.value)}
+        onBlur={handleBlur}
+        className="w-16 text-center border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent placeholder:text-slate-300"
+        style={{ '--tw-ring-color': 'rgb(var(--color-primary))' }}
+      />
+      {status === 'saved' && <Check className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />}
+      {status === 'error' && <X className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />}
+    </div>
   );
 }
