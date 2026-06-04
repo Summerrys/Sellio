@@ -103,7 +103,10 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
     "Surprise me! 🎲"
   ];
 
-  const primaryColor = storefront?.banner_bg_color || 'rgb(var(--sf-primary, 51, 65, 85))';
+  const primaryColor = storefront?.banner_bg_color || tenant?.primary_color || '#6366f1';
+  const buttonBackground = primaryColor.startsWith('#') || primaryColor.startsWith('rgb')
+    ? primaryColor
+    : 'linear-gradient(135deg, #f97316, #ec4899, #8b5cf6)';
 
   return (
     <>

@@ -547,53 +547,7 @@ export default function Storefront() {
         </div>
       </div>
 
-      {/* ── 3. ORDER METHOD SELECTOR (F&B only) ── */}
-      {isFnB && (
-        <div style={{ margin: '12px 12px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          {[
-            { id: 'dine-in', label: 'Dine In', icon: '🍽️', available: !!tableId },
-            { id: 'takeaway', label: 'Takeaway', icon: '🥡', available: true },
-          ].map(method => (
-            <button key={method.id} onClick={() => setOrderMethod(method.id)} style={{
-              padding: '14px 12px', borderRadius: 14,
-              border: orderMethod === method.id ? `2px solid ${primaryColor}` : '2px solid #f1f5f9',
-              background: orderMethod === method.id ? `${primaryColor}15` : 'white',
-              cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s',
-            }}>
-              <div style={{ fontSize: 28, marginBottom: 4 }}>{method.icon}</div>
-              <p style={{ fontSize: 13, fontWeight: 700, margin: 0, color: orderMethod === method.id ? primaryColor : '#1e293b' }}>
-                {method.label}
-              </p>
-            </button>
-          ))}
-        </div>
-      )}
 
-      {/* ── 4. QUICK LINKS ROW ── */}
-      {(() => {
-        const quickLinks = [
-          isFnB && { id: 'menu', label: 'Menu', icon: '📋', action: scrollToProducts },
-          { id: 'ai', label: 'Ask AI', icon: '✨', action: () => setShowChat(true) },
-          cartCount > 0 && { id: 'cart', label: 'Cart', icon: '🛒', action: () => setShowCart(true) },
-          { id: 'history', label: 'Orders', icon: '🕐', action: handleShowOrderHistory },
-        ].filter(Boolean);
-        return (
-          <div className="sf-no-scrollbar" style={{ display: 'flex', gap: 8, padding: '12px 12px 0', overflowX: 'auto', scrollbarWidth: 'none' }}>
-            {quickLinks.map(link => (
-              <button key={link.id} onClick={link.action} style={{
-                flexShrink: 0, display: 'flex', flexDirection: 'column',
-                alignItems: 'center', gap: 4,
-                padding: '10px 14px', borderRadius: 14,
-                background: 'white', border: '1px solid #f1f5f9',
-                cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', minWidth: 64,
-              }}>
-                <span style={{ fontSize: 22 }}>{link.icon}</span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>{link.label}</span>
-              </button>
-            ))}
-          </div>
-        );
-      })()}
 
       {/* ── 5. ANNOUNCEMENT BANNER ── */}
       {storefrontConfig?.show_announcement_bar && storefrontConfig?.announcement_text && (
