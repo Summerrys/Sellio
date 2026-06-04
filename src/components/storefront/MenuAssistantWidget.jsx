@@ -129,13 +129,13 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
           width: 52,
           height: 52,
           borderRadius: '50%',
-          background: primaryColor,
+          background: buttonBackground,
           border: 'none',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
           transition: 'transform 0.2s'
         }}
         onMouseEnter={e => e.target.style.transform = 'scale(1.1)'}
