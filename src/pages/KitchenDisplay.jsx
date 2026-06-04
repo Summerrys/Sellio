@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
-import { Clock, AlertCircle, ChefHat, ArrowLeft } from 'lucide-react';
+import { Clock, AlertCircle, ChefHat, ArrowLeft, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -94,30 +94,38 @@ export default function KitchenDisplay() {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const refreshRef = useRef(null);
 
-  // True browser fullscreen
+  // Listen for native fullscreen exit (Escape key)
   useEffect(() => {
-    const el = document.documentElement;
-    if (el.requestFullscreen) {
-      el.requestFullscreen().catch(() => {});
-    } else if (el.webkitRequestFullscreen) {
-      el.webkitRequestFullscreen();
-    }
+    const onFSChange = () => {
+      if (!document.fullscreenElement) {
+        document.body.classList.remove('kitchen-fullscreen');
+        setIsFullscreen(false);
+      }
+    };
+    document.addEventListener('fullscreenchange', onFSChange);
     return () => {
+      // Cleanup on unmount: always restore nav
+      document.body.classList.remove('kitchen-fullscreen');
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
-      } else if (document.webkitFullscreenElement) {
-        document.webkitExitFullscreen();
       }
+      document.removeEventListener('fullscreenchange', onFSChange);
     };
   }, []);
 
+  const handleEnterFullscreen = () => {
+    document.documentElement.requestFullscreen().catch(() => {});
+    document.body.classList.add('kitchen-fullscreen');
+    setIsFullscreen(true);
+  };
+
   const handleExit = () => {
+    document.body.classList.remove('kitchen-fullscreen');
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
-    } else if (document.webkitFullscreenElement) {
-      document.webkitExitFullscreen();
     }
     navigate(createPageUrl('Orders'));
   };
@@ -179,13 +187,23 @@ export default function KitchenDisplay() {
       <div className="mb-6 pb-4 border-b border-slate-700">
         {/* Top row: Exit button + Title */}
         <div className="flex items-center gap-3 mb-3">
-          <button
-            onClick={handleExit}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-white/40 text-white bg-transparent hover:bg-white/10 transition-colors flex-shrink-0"
-          >
-            <ArrowLeft className="w-4 h-4" /> Exit
-          </button>
-          <h1 className="text-xl sm:text-3xl font-black truncate">{tenant?.name || 'Kitchen'} — Kitchen Display</h1>
+          {isFullscreen && (
+            <button
+              onClick={handleExit}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-white/40 text-white bg-transparent hover:bg-white/10 transition-colors flex-shrink-0"
+            >
+              <ArrowLeft className="w-4 h-4" /> Exit
+            </button>
+          )}
+          <h1 className="text-xl sm:text-3xl font-black truncate flex-1">{tenant?.name || 'Kitchen'} — Kitchen Display</h1>
+          {!isFullscreen && (
+            <button
+              onClick={handleEnterFullscreen}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-white/40 text-white bg-transparent hover:bg-white/10 transition-colors flex-shrink-0"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
         {/* Stat cards — equal width, single row, no overflow */}
         <div className="flex gap-2">
