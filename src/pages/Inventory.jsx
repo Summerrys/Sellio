@@ -249,7 +249,7 @@ function InventoryContent() {
                 description={searchQuery || statusFilter !== 'all' || categoryFilter !== 'all' ? "Try adjusting your filters" : "Enable inventory tracking on products to see them here"}
               />
             ) : viewMode === 'grid' ? (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {sortedProducts.map((product) => {
                   const status = getStockStatus(product);
                   const stock = product.current_stock;
@@ -259,37 +259,41 @@ function InventoryContent() {
                       key={product.id}
                       onClick={() => setSelectedProduct(product)}
                       className="bg-white border border-slate-200 rounded-xl overflow-hidden cursor-pointer hover:border-slate-300 hover:shadow-sm transition-all active:scale-[0.99]"
-                      style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}
                     >
-                      {product.image_url
-                        ? <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '80px', borderRadius: '8px', objectFit: 'cover' }} />
-                        : <div style={{ width: '100%', height: '80px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>🛍️</div>
-                      }
-                      <div>
-                        <p style={{ fontWeight: '600', fontSize: '13px', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#0f172a' }}>{product.name}</p>
-                        <p style={{ fontSize: '11px', color: '#6b7280', margin: 0 }}>{product.sku || 'No SKU'}</p>
+                      {/* Square image — matches ProductGrid */}
+                      <div className="aspect-square bg-slate-100 relative overflow-hidden">
+                        {product.image_url
+                          ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center text-3xl">🛍️</div>
+                        }
                       </div>
-                      <div className="flex items-center justify-between">
-                        {product.track_inventory ? (
-                          <div style={{ flex: 1 }}>
-                            <div style={{ height: '3px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden', marginBottom: '4px' }}>
-                              <div style={{ height: '100%', width: `${Math.min((stock / Math.max(threshold * 2, 1)) * 100, 100)}%`, background: stock === 0 ? '#dc2626' : stock < threshold ? '#f59e0b' : '#16a34a', borderRadius: '999px' }} />
-                            </div>
-                            <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: status.bg, color: status.color }}>{status.label}</span>
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: '#f3f4f6', color: '#6b7280' }}>Unlimited</span>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between px-1 mt-2" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center gap-1.5">
-                          <Activity className="w-3.5 h-3.5" style={{ color: 'rgb(var(--color-primary))' }} />
-                          <span className="text-xs font-medium" style={{ color: 'rgb(var(--color-primary))' }}>Track stock</span>
+                      <div className="p-3 flex flex-col gap-2">
+                        <div>
+                          <p style={{ fontWeight: '600', fontSize: '13px', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#0f172a' }}>{product.name}</p>
+                          <p style={{ fontSize: '11px', color: '#6b7280', margin: 0 }}>{product.sku || 'No SKU'}</p>
                         </div>
-                        <Switch
-                          checked={!!product.track_inventory}
-                          onCheckedChange={(v) => handleToggleTracking(product.id, v)}
-                        />
+                        <div>
+                          {product.track_inventory ? (
+                            <div>
+                              <div style={{ height: '3px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden', marginBottom: '4px' }}>
+                                <div style={{ height: '100%', width: `${Math.min((stock / Math.max(threshold * 2, 1)) * 100, 100)}%`, background: stock === 0 ? '#dc2626' : stock < threshold ? '#f59e0b' : '#16a34a', borderRadius: '999px' }} />
+                              </div>
+                              <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: status.bg, color: status.color }}>{status.label}</span>
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: '#f3f4f6', color: '#6b7280' }}>Unlimited</span>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between" onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center gap-1.5">
+                            <Activity className="w-3.5 h-3.5" style={{ color: 'rgb(var(--color-primary))' }} />
+                            <span className="text-xs font-medium" style={{ color: 'rgb(var(--color-primary))' }}>Track stock</span>
+                          </div>
+                          <Switch
+                            checked={!!product.track_inventory}
+                            onCheckedChange={(v) => handleToggleTracking(product.id, v)}
+                          />
+                        </div>
                       </div>
                     </div>
                   );

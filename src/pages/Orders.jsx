@@ -25,8 +25,28 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [statusFilter, setStatusFilter] = useState('active');
-  const audioRef = useRef(null);
-  const previousOrderCountRef = useRef(0);
+  const previousOrderIdsRef = useRef(new Set());
+
+  const isFnB = /f&b|cafe|restaurant|food/i.test(tenant?.industry || '');
+
+  const playDing = () => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.4);
+      gain.gain.setValueAtTime(0.6, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.5);
+    } catch (e) {
+      console.log('Audio failed:', e);
+    }
+  };
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders', tenantId, statusFilter],
@@ -57,8 +77,8 @@ export default function Orders() {
     db.entities.Order.subscribe((event) => {
       if (event.data?.tenant_id === tenantId) {
         queryClient.invalidateQueries({ queryKey: ['orders', tenantId] });
-        if (event.type === 'create' && soundEnabled && audioRef.current) {
-          audioRef.current.play().catch(e => console.log('Audio play failed:', e));
+        if (event.type === 'create' && soundEnabled) {
+          playDing();
         }
       }
     }).then(fn => { unsubFn = fn; });
@@ -66,13 +86,18 @@ export default function Orders() {
     return () => { if (unsubFn) unsubFn(); };
   }, [tenantId, soundEnabled, queryClient]);
 
-  // Check for new orders to play sound
+  // Check for new orders to play sound (polling fallback)
   useEffect(() => {
-    const pendingOrders = orders.filter(o => o.status === 'pending').length;
-    if (pendingOrders > previousOrderCountRef.current && soundEnabled && audioRef.current) {
-      audioRef.current.play().catch(e => console.log('Audio play failed:', e));
+    const newOrderIds = new Set(orders.filter(o => o.status === 'new' || o.status === 'pending').map(o => o.id));
+    if (soundEnabled && previousOrderIdsRef.current.size > 0) {
+      for (const id of newOrderIds) {
+        if (!previousOrderIdsRef.current.has(id)) {
+          playDing();
+          break;
+        }
+      }
     }
-    previousOrderCountRef.current = pendingOrders;
+    previousOrderIdsRef.current = newOrderIds;
   }, [orders, soundEnabled]);
 
   const handleRefresh = useCallback(() =>
@@ -184,15 +209,17 @@ export default function Orders() {
           title="Orders"
           description="Manage incoming and active orders"
           actions={
-            <Button
-              variant="outline"
-              onClick={() => navigate(createPageUrl('KitchenDisplay'))}
-              className="gap-2 text-sm"
-            >
-              <Monitor className="w-4 h-4" />
-              <span className="hidden sm:inline">Kitchen Display</span>
-              <span className="sm:hidden">Kitchen</span>
-            </Button>
+            isFnB ? (
+              <Button
+                variant="outline"
+                onClick={() => navigate(createPageUrl('KitchenDisplay'))}
+                className="gap-2 text-sm"
+              >
+                <Monitor className="w-4 h-4" />
+                <span className="hidden sm:inline">Kitchen Display</span>
+                <span className="sm:hidden">Kitchen</span>
+              </Button>
+            ) : null
           }
         />
 
@@ -276,8 +303,7 @@ export default function Orders() {
           currency={tenant?.currency || 'SGD'}
         />
 
-        {/* Hidden audio element for notifications */}
-        <audio ref={audioRef} src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZSBQMS6Ln77BcGwU+ltTy0H4qBSh+zPDajzoJE1yy6+SfUBMJS6Lg8rllIQU2j9Ty0oIuBSV4yPDbki4HGWu/7OKXRxILT6jk8bJeHQU7mtXx0H8pBCuCzvDakTsJElyw6+GdTxkKSZ7h8rllHwU2kdPx1IIvBSp4yO/bkz0KFl2w6+KdUhIMT6fn8LRfHQU7nNXy0IAqBS2Bze/aj0IJEV6w6+SfVBUJSaDg8bViIAU3kdTy1IQxBSh4x+/ckT4KFl6x6+KeUhMLUanl8bNgHgVEnNTy0H8pBSt/yPDbkDwJFF+x6uKeTBYKSaHg8bllIAU5k9Tx1IMyBSh5ye/dlEEKFGCy6uOfUhQMUavm8bRiHwVFntXx0H4pBSh/ye7ckUILFWGz6+OgVBYLS6Ph8r" />
+
       </div>
       </PullToRefresh>
     </RequirePermission>

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
-import { BellRing } from 'lucide-react';
+import { BellRing, X } from 'lucide-react';
 
 export default function StockAdjustmentPanel({ open, onOpenChange, product, tenantId, onSuccess, onClose, initialThreshold }) {
   const queryClient = useQueryClient();
@@ -14,7 +13,6 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [threshold, setThreshold] = useState(initialThreshold ?? product?.low_stock_threshold ?? product?.inventory?.[0]?.low_stock_threshold ?? 5);
 
-  // Reset state when product changes or modal opens
   useEffect(() => {
     setNewStock(currentStock ?? 0);
     setNotes('');
@@ -34,7 +32,6 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
       const supabase = await getSupabase();
       const productId = product?.id;
 
-      // Check if an inventory_items row exists for this product
       const { data: existing } = await supabase
         .from('inventory_items')
         .select('id')
@@ -61,10 +58,8 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
         if (error) throw error;
       }
 
-      // Mirror to products table
       await supabase.from('products').update({ stock_quantity: newStock, low_stock_threshold: threshold, updated_date: new Date().toISOString() }).eq('id', productId).eq('tenant_id', tenantId);
 
-      // Insert into stock_history table (non-fatal)
       try {
         await supabase.from('stock_history').insert({
           tenant_id: tenantId,
@@ -80,7 +75,6 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
         console.warn('stock_history insert failed (non-fatal):', historyErr.message);
       }
 
-      // Log to localStorage history
       const history = JSON.parse(localStorage.getItem('stock_history') || '[]');
       history.unshift({
         id: crypto.randomUUID(),
@@ -108,30 +102,74 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
     }
   };
 
-  if (!product) return null;
+  if (!open || !product) return null;
 
   const stockColor = newStock === 0 ? '#dc2626' : newStock < threshold ? '#f59e0b' : '#16a34a';
+  const noChange = newStock === currentStock && threshold === (initialThreshold ?? 5);
+  const stockIncreased = newStock > currentStock;
+  const stockDecreased = newStock < currentStock;
 
   return (
-    <Sheet open={open} onOpenChange={(val) => { if (!val) handleClose(); }}>
-      <SheetContent side="bottom" className="p-0 rounded-t-[20px] max-h-[92vh] overflow-y-auto [&>button]:hidden">
-        <div style={{ borderRadius: '20px 20px 0 0', background: 'white', overflow: 'hidden' }}>
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/40"
+        onClick={handleClose}
+      />
 
-          {/* Header */}
-          <div style={{ padding: '16px 20px', borderBottom: '0.5px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              {product.image_url && (
-                <img src={product.image_url} alt={product.name} style={{ width: '38px', height: '38px', borderRadius: '8px', objectFit: 'cover' }} />
-              )}
-              <div>
-                <p style={{ fontWeight: '700', fontSize: '14px', margin: 0, color: '#0f172a' }}>{product.name}</p>
-                {product.sku && <p style={{ fontSize: '11px', color: '#6b7280', margin: 0 }}>{product.sku}</p>}
-              </div>
-            </div>
-            <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '22px', padding: '4px', lineHeight: 1 }}>✕</button>
+      <style>{`
+        @media (min-width: 640px) {
+          .stock-panel-inner {
+            bottom: auto !important;
+            left: 50% !important;
+            right: auto !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            width: 100% !important;
+            max-width: 480px !important;
+            border-radius: 20px !important;
+            max-height: 90vh !important;
+          }
+        }
+      `}</style>
+
+      {/* Panel — bottom sheet on mobile, centered modal on desktop */}
+        <div
+          className="stock-panel-inner fixed z-50 bg-white flex flex-col"
+          style={{
+            bottom: 0,
+            left: 0,
+            right: 0,
+            borderRadius: '20px 20px 0 0',
+            maxHeight: '92vh',
+          }}
+        >
+          {/* Drag handle (mobile only) */}
+          <div className="flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0">
+            <div className="w-10 h-1 rounded-full bg-slate-200" />
           </div>
 
-          <div style={{ padding: '28px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
+            <div className="flex items-center gap-3">
+              {product.image_url && (
+                <img src={product.image_url} alt={product.name} style={{ width: '38px', height: '38px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />
+              )}
+              <div>
+                <p className="font-bold text-sm text-slate-900">{product.name}</p>
+                {product.sku && <p className="text-xs text-slate-400">{product.sku}</p>}
+              </div>
+            </div>
+            <button
+              onClick={handleClose}
+              className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-colors flex-shrink-0"
+            >
+              <X className="w-4 h-4 text-slate-500" />
+            </button>
+          </div>
+
+          {/* Scrollable body */}
+          <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col items-center gap-6">
 
             {/* Main counter */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
@@ -241,7 +279,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
             </div>
 
             {/* Low stock threshold */}
-            <div className="border-t border-slate-100 pt-4 mt-2 w-full">
+            <div className="border-t border-slate-100 pt-4 w-full">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <BellRing className="w-4 h-4" style={{ color: 'rgb(var(--color-primary))' }} />
@@ -260,36 +298,30 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
               </div>
             </div>
 
-            {/* Save button */}
-            {(() => {
-              const noChange = newStock === currentStock && threshold === (initialThreshold ?? 5);
-              const stockIncreased = newStock > currentStock;
-              const stockDecreased = newStock < currentStock;
-              return (
-                <button
-                  onClick={handleSubmit}
-                  disabled={noChange || isSubmitting}
-                  style={{
-                    width: '100%', padding: '15px',
-                    background: noChange ? '#e2e8f0' : stockDecreased ? '#dc2626' : 'var(--color-primary-gradient)',
-                    color: noChange ? '#94a3b8' : 'white',
-                    border: 'none', borderRadius: '14px',
-                    fontSize: '15px', fontWeight: '700',
-                    cursor: noChange ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}>
-                  {isSubmitting ? 'Saving...'
-                   : noChange ? 'No changes made'
-                   : stockIncreased ? `Save — add ${newStock - currentStock} units`
-                   : stockDecreased ? `Save — remove ${currentStock - newStock} units`
-                   : 'Save changes'}
-                </button>
-              );
-            })()}
+          </div>
 
+          {/* Fixed footer save button */}
+          <div className="px-6 pb-6 pt-3 border-t border-slate-100 flex-shrink-0" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }}>
+            <button
+              onClick={handleSubmit}
+              disabled={noChange || isSubmitting}
+              style={{
+                width: '100%', padding: '15px',
+                background: noChange ? '#e2e8f0' : stockDecreased ? '#dc2626' : 'var(--color-primary-gradient)',
+                color: noChange ? '#94a3b8' : 'white',
+                border: 'none', borderRadius: '14px',
+                fontSize: '15px', fontWeight: '700',
+                cursor: noChange ? 'not-allowed' : 'pointer',
+                transition: 'all 0.15s ease'
+              }}>
+              {isSubmitting ? 'Saving...'
+               : noChange ? 'No changes made'
+               : stockIncreased ? `Save — add ${newStock - currentStock} units`
+               : stockDecreased ? `Save — remove ${currentStock - newStock} units`
+               : 'Save changes'}
+            </button>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+    </>
   );
 }
