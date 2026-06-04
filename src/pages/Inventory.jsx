@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import StockAdjustmentPanel from '../components/inventory/StockAdjustmentPanel';
 import InventoryLogTable from '../components/inventory/InventoryLogTable';
 import StockHistoryList from '../components/inventory/StockHistoryList';
-import StockTakeDialog from '../components/inventory/StockTakeDialog';
+import StockTakeOverlay from '../components/stocktake/StockTakeOverlay';
 import { Package, Search, ClipboardList, LayoutGrid, List, Activity, ChevronRight } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Switch } from '@/components/ui/switch';
@@ -133,7 +133,6 @@ function InventoryContent() {
           </div>
           <button
             onClick={handleStartStockTake}
-            disabled={trackedProducts.length === 0}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
             style={{ border: '1.5px solid rgb(var(--color-primary))', color: 'rgb(var(--color-primary))', background: 'rgba(var(--color-primary), 0.08)' }}
             onMouseEnter={e => {
@@ -381,12 +380,10 @@ function InventoryContent() {
           }}
         />
 
-        {/* Stock Take Dialog */}
-        <StockTakeDialog
+        {/* Stock Take Overlay */}
+        <StockTakeOverlay
           open={showStockTake}
-          onOpenChange={setShowStockTake}
-          products={trackedProducts.map(p => ({ ...p, stock_quantity: p.current_stock }))}
-          tenantId={tenantId}
+          onClose={() => setShowStockTake(false)}
         />
       </div>
     </PullToRefresh>
