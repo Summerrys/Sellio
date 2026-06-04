@@ -204,7 +204,6 @@ function AppLayout({ children, currentPageName }) {
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  const BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
   const { appUser: customUser, clearAppUser } = useAppUser();
   const { user, tenant, isSuperAdmin, isLoading, hasPermission } = useTenant();
 
@@ -217,8 +216,6 @@ function AppLayout({ children, currentPageName }) {
     );
   }, [tenantId]);
 
-  const isBypassEmail = BYPASS_EMAILS.includes((user?.email || '').toLowerCase());
-
   useEffect(() => {
     if (!subscription || subscription.status !== 'trial') return;
     if (sessionStorage.getItem('trial_modal_dismissed')) return;
@@ -228,7 +225,7 @@ function AppLayout({ children, currentPageName }) {
     if (hoursLeft <= 24) setShowTrialModal(true);
   }, [subscription, user]);
 
-  const isLocked = !isBypassEmail && subscription && (
+  const isLocked = subscription && (
     subscription.status === 'cancelled' ||
     subscription.status === 'past_due' ||
     (subscription.status === 'trial' && new Date(subscription.current_period_end) < new Date())

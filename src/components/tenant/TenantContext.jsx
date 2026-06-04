@@ -189,8 +189,6 @@ export const INDUSTRY_ROLES = {
   other: ['owner', 'admin', 'manager', 'staff'],
 };
 
-const SUPERADMIN_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
-
 export function TenantProvider({ children }) {
   const [currentTenantId, setCurrentTenantId] = useState(null);
   const [devRoleOverride, setDevRoleOverride] = useState(null);
@@ -202,17 +200,17 @@ export function TenantProvider({ children }) {
     queryFn: () => db.auth.me(),
   });
 
-  // Check for simulate_role — only apply for authorized superadmin emails
+  // Check for simulate_role — only apply for superadmin users
   useEffect(() => {
     if (!user?.email) return;
-    if (!SUPERADMIN_EMAILS.includes(user.email.toLowerCase())) {
+    if (user?.role !== 'admin') {
       localStorage.removeItem('simulate_role');
       setDevRoleOverride(null);
       return;
     }
     const override = localStorage.getItem('simulate_role');
     setDevRoleOverride(override || null);
-  }, [user?.email]);
+  }, [user?.email, user?.role]);
 
   const { data: tenantUser, isLoading: tenantUserLoading } = useQuery({
     queryKey: ['tenantUser', user?.email],

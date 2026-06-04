@@ -6,7 +6,6 @@ import { useAppUser } from '@/lib/AppUserContext';
 import { useTenant } from '../tenant/TenantContext';
 import { getSupabase } from '@/lib/supabaseClient';
 
-const SUPERADMIN_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
 const STORAGE_KEY = 'simulate_role';
 
 const ROLES = [
@@ -52,7 +51,7 @@ export default function RoleSwitcher() {
     checkEmail();
   }, [appUser?.email, user?.email]);
 
-  if (!SUPERADMIN_EMAILS.includes(currentEmail.toLowerCase())) return null;
+  if (user?.role !== 'admin') return null;
 
   const switchRole = (roleId) => {
     if (activeRole === roleId) {
