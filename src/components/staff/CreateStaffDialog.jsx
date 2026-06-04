@@ -97,10 +97,10 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
         .eq('tenant_id', tenantId)
         .eq('user_email', generatedEmail);
 
+      // Confirm owner session is still intact — no auth calls made on client
+      const { data: { session: ownerSession } } = await supabase.auth.getSession();
+      console.log('Staff created, owner session preserved:', ownerSession?.user?.email);
       toast.success('Staff account created successfully');
-      const supabaseCheck = await getSupabase();
-      const { data: { session } } = await supabaseCheck.auth.getSession();
-      console.log('Staff created, owner session preserved:', session?.user?.email);
       setForm({ fullName: '', countryCode: '+65', phone: '', password: '', confirmPassword: '', roleId: '' });
       onSuccess?.();
     } catch (err) {

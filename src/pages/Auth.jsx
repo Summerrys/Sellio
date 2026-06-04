@@ -200,8 +200,11 @@ export default function Auth() {
               .select('is_owner')
               .eq('tenant_id', appUserRow.tenant_id)
               .eq('user_email', session.user.email)
+              .eq('is_owner', true)
+              .eq('status', 'active')
               .limit(1);
             const isOwner = tuRows?.[0]?.is_owner === true;
+            console.log('[Auth] owner check for', session.user.email, '→ isOwner:', isOwner);
             if (isOwner) {
               window.location.href = '/Dashboard';
               return;
