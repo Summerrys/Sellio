@@ -627,48 +627,68 @@ export default function Storefront() {
         {/* ── SPLIT LAYOUT ── */}
         {productLayout === 'split' ? (
           <div style={{ display: 'flex', height: 'calc(100vh - 160px)', overflow: 'hidden', marginTop: 8 }}>
-            {/* Left category panel */}
-            <div className="sf-no-scrollbar" style={{ width: 100, flexShrink: 0, overflowY: 'auto', height: '100%', borderRight: '1px solid #f1f5f9', background: '#fafafa' }}>
-              {categoriesWithProducts.map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => scrollToCategory(cat.id)}
-                  style={{
-                    width: '100%', textAlign: 'center',
-                    padding: '14px 8px',
-                    border: 'none', cursor: 'pointer',
-                    fontSize: 11, fontWeight: activeCategory === cat.id ? 600 : 400,
-                    background: activeCategory === cat.id ? `${primaryColor}15` : 'transparent',
-                    color: activeCategory === cat.id ? primaryColor : '#64748b',
-                    borderLeft: activeCategory === cat.id ? `3px solid ${primaryColor}` : '3px solid transparent',
-                    transition: 'all 0.15s',
-                    lineHeight: 1.3,
-                    display: 'block',
-                  }}>
-                  {cat.name}
-                </button>
-              ))}
-              {uncategorised.length > 0 && (
-                <button
-                  onClick={() => scrollToCategory('other')}
-                  style={{
-                    width: '100%', textAlign: 'center',
-                    padding: '14px 8px',
-                    border: 'none', cursor: 'pointer',
-                    fontSize: 11, fontWeight: activeCategory === 'other' ? 600 : 400,
-                    background: activeCategory === 'other' ? `${primaryColor}15` : 'transparent',
-                    color: activeCategory === 'other' ? primaryColor : '#64748b',
-                    borderLeft: activeCategory === 'other' ? `3px solid ${primaryColor}` : '3px solid transparent',
-                    transition: 'all 0.15s',
-                    lineHeight: 1.3,
-                    display: 'block',
-                  }}>
-                  Other
-                </button>
-              )}
+            {/* Left category panel — fixed, non-scrolling with page */}
+            <div className="sf-no-scrollbar" style={{
+              width: 'clamp(72px, 20vw, 120px)',
+              flexShrink: 0, overflowY: 'auto', height: '100%',
+              borderRight: '1px solid #f1f5f9', background: '#fafafa',
+            }}>
+              {categoriesWithProducts.map(cat => {
+                const isActive = activeCategory === cat.id;
+                const icon = (() => {
+                  const m = cat.name?.match(/^\p{Emoji}/u);
+                  return m ? m[0] : (cat.name?.[0] || '?');
+                })();
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => scrollToCategory(cat.id)}
+                    style={{
+                      width: '100%', textAlign: 'center',
+                      padding: '12px 6px',
+                      border: 'none', cursor: 'pointer',
+                      background: isActive ? `${primaryColor}15` : 'transparent',
+                      borderLeft: isActive ? `3px solid ${primaryColor}` : '3px solid transparent',
+                      transition: 'all 0.15s',
+                      display: 'block',
+                    }}>
+                    <div style={{ fontSize: 18, marginBottom: 4, lineHeight: 1 }}>{icon}</div>
+                    <div style={{
+                      fontSize: 10, fontWeight: isActive ? 600 : 400,
+                      color: isActive ? primaryColor : '#64748b',
+                      lineHeight: 1.25, overflow: 'hidden',
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                      wordBreak: 'break-word',
+                    }}>{cat.name}</div>
+                  </button>
+                );
+              })}
+              {uncategorised.length > 0 && (() => {
+                const isActive = activeCategory === 'other';
+                return (
+                  <button
+                    onClick={() => scrollToCategory('other')}
+                    style={{
+                      width: '100%', textAlign: 'center',
+                      padding: '12px 6px',
+                      border: 'none', cursor: 'pointer',
+                      background: isActive ? `${primaryColor}15` : 'transparent',
+                      borderLeft: isActive ? `3px solid ${primaryColor}` : '3px solid transparent',
+                      transition: 'all 0.15s',
+                      display: 'block',
+                    }}>
+                    <div style={{ fontSize: 18, marginBottom: 4, lineHeight: 1 }}>🏷️</div>
+                    <div style={{
+                      fontSize: 10, fontWeight: isActive ? 600 : 400,
+                      color: isActive ? primaryColor : '#64748b',
+                      lineHeight: 1.25,
+                    }}>Other</div>
+                  </button>
+                );
+              })()}
             </div>
 
-            {/* Right products panel */}
+            {/* Right products panel — scrollable horizontal list cards */}
             <div id="split-right-panel" className="sf-no-scrollbar" style={{ flex: 1, overflowY: 'auto', height: '100%', paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
               {categoriesWithProducts.map(cat => {
                 const catProducts = products.filter(p => p.category_id === cat.id);
@@ -679,19 +699,48 @@ export default function Storefront() {
                     data-category-id={cat.id}
                   >
                     <p style={{
-                      fontSize: 14, fontWeight: 700,
-                      padding: '16px 16px 8px',
+                      fontSize: 13, fontWeight: 700,
+                      padding: '14px 14px 6px',
                       color: '#1e293b', margin: 0,
                       position: 'sticky', top: 0,
                       background: 'white', zIndex: 1,
-                      borderBottom: '1px solid #f8f9fa',
+                      borderBottom: '1px solid #f1f5f9',
                     }}>
                       {cat.name}
                     </p>
-                    <div style={{ padding: '8px 12px' }}>
-                      {catProducts.map(product => (
-                        <ListProductCard key={product.id} product={product} />
-                      ))}
+                    <div style={{ padding: '6px 10px' }}>
+                      {catProducts.map(product => {
+                        const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
+                        return (
+                          <div
+                            key={product.id}
+                            onClick={() => setSelectedProduct(product)}
+                            style={{
+                              display: 'flex', gap: 10, alignItems: 'center',
+                              padding: '10px 0', borderBottom: '1px solid #f8f9fa', cursor: 'pointer',
+                            }}
+                          >
+                            {/* Square thumbnail */}
+                            {product.image_url
+                              ? <img src={product.image_url} style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+                              : <div style={{ width: 72, height: 72, borderRadius: 10, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>🛍️</div>
+                            }
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 2px', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</p>
+                              {storefrontConfig?.show_product_description !== false && product.description && (
+                                <p style={{ fontSize: 11, color: '#64748b', margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.description}</p>
+                              )}
+                              <p style={{ fontSize: 13, fontWeight: 700, color: primaryColor, margin: 0 }}>{currency} {parseFloat(product.price).toFixed(2)}</p>
+                            </div>
+                            {isOutOfStock
+                              ? <span style={{ fontSize: 10, color: '#dc2626', fontWeight: 600, flexShrink: 0 }}>Sold out</span>
+                              : <button
+                                  onClick={(e) => { e.stopPropagation(); addToCart(product); }}
+                                  style={{ width: 30, height: 30, borderRadius: '50%', background: primaryColor, border: 'none', color: 'white', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}>+</button>
+                            }
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -702,19 +751,44 @@ export default function Storefront() {
                   data-category-id="other"
                 >
                   <p style={{
-                    fontSize: 14, fontWeight: 700,
-                    padding: '16px 16px 8px',
+                    fontSize: 13, fontWeight: 700,
+                    padding: '14px 14px 6px',
                     color: '#1e293b', margin: 0,
                     position: 'sticky', top: 0,
                     background: 'white', zIndex: 1,
-                    borderBottom: '1px solid #f8f9fa',
+                    borderBottom: '1px solid #f1f5f9',
                   }}>
                     Other
                   </p>
-                  <div style={{ padding: '8px 12px' }}>
-                    {uncategorised.map(product => (
-                      <ListProductCard key={product.id} product={product} />
-                    ))}
+                  <div style={{ padding: '6px 10px' }}>
+                    {uncategorised.map(product => {
+                      const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
+                      return (
+                        <div
+                          key={product.id}
+                          onClick={() => setSelectedProduct(product)}
+                          style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f8f9fa', cursor: 'pointer' }}
+                        >
+                          {product.image_url
+                            ? <img src={product.image_url} style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+                            : <div style={{ width: 72, height: 72, borderRadius: 10, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>🛍️</div>
+                          }
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 2px', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</p>
+                            {storefrontConfig?.show_product_description !== false && product.description && (
+                              <p style={{ fontSize: 11, color: '#64748b', margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.description}</p>
+                            )}
+                            <p style={{ fontSize: 13, fontWeight: 700, color: primaryColor, margin: 0 }}>{currency} {parseFloat(product.price).toFixed(2)}</p>
+                          </div>
+                          {isOutOfStock
+                            ? <span style={{ fontSize: 10, color: '#dc2626', fontWeight: 600, flexShrink: 0 }}>Sold out</span>
+                            : <button
+                                onClick={(e) => { e.stopPropagation(); addToCart(product); }}
+                                style={{ width: 30, height: 30, borderRadius: '50%', background: primaryColor, border: 'none', color: 'white', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}>+</button>
+                          }
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
