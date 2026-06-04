@@ -108,8 +108,17 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
-              <Label>Email</Label>
-              <Input value={staff.user_email} disabled className="mt-1.5 bg-slate-50" />
+              <Label>Mobile Number</Label>
+              <Input
+                value={(() => {
+                  if (staff.user_phone) return staff.user_phone;
+                  // Derive from email: strip @sellio.app suffix
+                  const digits = staff.user_email?.replace(/@sellio\.app$/, '') || '';
+                  return digits;
+                })()}
+                disabled
+                className="mt-1.5 bg-slate-50"
+              />
             </div>
 
             <div>

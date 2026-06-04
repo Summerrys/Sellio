@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { getSupabase } from '@/lib/supabaseClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -85,6 +86,15 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
       const data = await response.json();
       console.log('→ createStaffUser response:', response.status, data);
       if (!response.ok) throw new Error(data.error || 'Failed to create staff');
+
+      // Persist phone number on the tenant_users row so Edit modal can display it
+      const generatedEmail = `${form.phone.trim()}@sellio.app`;
+      const supabase = await getSupabase();
+      await supabase
+        .from('tenant_users')
+        .update({ user_phone: fullPhone })
+        .eq('tenant_id', tenantId)
+        .eq('user_email', generatedEmail);
 
       toast.success('Staff account created successfully');
       setForm({ fullName: '', countryCode: '+65', phone: '', password: '', confirmPassword: '', roleId: '' });
