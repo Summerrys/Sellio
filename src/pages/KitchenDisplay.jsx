@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
-import { Clock, AlertCircle, ChefHat } from 'lucide-react';
+import { Clock, AlertCircle, ChefHat, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '../utils';
 
 function ElapsedTimer({ createdDate }) {
   const [elapsed, setElapsed] = useState(0);
@@ -51,19 +53,19 @@ function KDSOrderCard({ order, onBump }) {
 
       {order.table_name && (
         <div className="bg-white/20 rounded-xl px-4 py-2 text-center text-2xl font-bold">
-          TABLE {order.table_name}
+          {order.table_name}
         </div>
       )}
 
       <div className="space-y-2 flex-1">
         {(order.items || []).map((item, idx) => (
           <div key={idx} className="bg-white/15 rounded-xl p-3">
-            <p className="text-xl font-bold">{item.quantity}× {item.name}</p>
-            {item.variant && <p className="text-base opacity-80 mt-0.5">{item.variant}</p>}
+            <p className="text-xl font-bold text-left">{item.quantity}× {item.name}</p>
+            {item.variant && <p className="text-base opacity-80 mt-0.5 text-left">{item.variant}</p>}
             {item.notes && (
               <div className="mt-2 bg-yellow-300 text-slate-900 rounded-lg p-2 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <p className="text-sm font-semibold">{item.notes}</p>
+                <p className="text-sm font-semibold text-left">{item.notes}</p>
               </div>
             )}
           </div>
@@ -89,9 +91,20 @@ function KDSOrderCard({ order, onBump }) {
 
 export default function KitchenDisplay() {
   const { tenantId, tenant } = useTenant();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const refreshRef = useRef(null);
+
+  // Full-screen mode: hide top header and bottom nav
+  useEffect(() => {
+    document.body.classList.add('kitchen-fullscreen');
+    return () => document.body.classList.remove('kitchen-fullscreen');
+  }, []);
+
+  const handleExit = () => {
+    navigate(createPageUrl('Orders'));
+  };
 
   const fetchOrders = async () => {
     if (!tenantId) return;
@@ -146,25 +159,32 @@ export default function KitchenDisplay() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white p-6">
-      <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-700">
-        <div>
-          <h1 className="text-3xl font-black">{tenant?.name || 'Kitchen'} — Kitchen Display</h1>
-          <div className="flex gap-3 mt-3">
-            {[
-              { label: 'New',       count: pendingOrders.length,   color: 'text-amber-400',  bg: 'bg-amber-400/10' },
-              { label: 'Confirmed', count: confirmedOrders.length, color: 'text-blue-400',   bg: 'bg-blue-400/10' },
-              { label: 'Preparing', count: preparingOrders.length, color: 'text-purple-400', bg: 'bg-purple-400/10' },
-              { label: 'Ready',     count: readyOrders.length,     color: 'text-green-400',  bg: 'bg-green-400/10' },
-            ].map(s => (
-              <div key={s.label} className={`rounded-xl px-3 py-2 text-center ${s.bg}`}>
-                <p className={`text-2xl font-black ${s.color}`}>{s.count}</p>
-                <p className={`text-xs font-semibold ${s.color} opacity-80`}>{s.label}</p>
-              </div>
-            ))}
-          </div>
+    <div className="min-h-screen bg-slate-900 text-white p-4 sm:p-6">
+      <div className="mb-6 pb-4 border-b border-slate-700">
+        {/* Top row: Exit button + Title */}
+        <div className="flex items-center gap-3 mb-3">
+          <button
+            onClick={handleExit}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-white/40 text-white bg-transparent hover:bg-white/10 transition-colors flex-shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4" /> Exit
+          </button>
+          <h1 className="text-xl sm:text-3xl font-black truncate">{tenant?.name || 'Kitchen'} — Kitchen Display</h1>
         </div>
-
+        {/* Stat cards — equal width, single row, no overflow */}
+        <div className="flex gap-2">
+          {[
+            { label: 'New',       count: pendingOrders.length,   color: 'text-amber-400',  bg: 'bg-amber-400/10' },
+            { label: 'Confirmed', count: confirmedOrders.length, color: 'text-blue-400',   bg: 'bg-blue-400/10' },
+            { label: 'Preparing', count: preparingOrders.length, color: 'text-purple-400', bg: 'bg-purple-400/10' },
+            { label: 'Ready',     count: readyOrders.length,     color: 'text-green-400',  bg: 'bg-green-400/10' },
+          ].map(s => (
+            <div key={s.label} className={`flex-1 rounded-xl py-2 text-center ${s.bg}`}>
+              <p className={`text-[20px] font-black leading-tight ${s.color}`}>{s.count}</p>
+              <p className={`text-[11px] font-semibold ${s.color} opacity-80`}>{s.label}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {orders.length === 0 ? (

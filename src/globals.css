@@ -63,6 +63,12 @@ input[type="number"]::-webkit-outer-spin-button {
   margin: 0;
 }
 
+/* Kitchen Display full-screen mode — hide top header and bottom nav */
+body.kitchen-fullscreen .lg\:hidden.fixed.top-0,
+body.kitchen-fullscreen nav.lg\:hidden.fixed.bottom-0 {
+  display: none !important;
+}
+
 /* Hide scrollbar utility */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
