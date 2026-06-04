@@ -12,7 +12,7 @@ const STATUS_LABEL = {
   confirmed: { text: 'Confirmed',  cls: 'bg-blue-100 text-blue-700' },
   preparing: { text: 'Preparing',  cls: 'bg-purple-100 text-purple-700' },
   ready:     { text: 'Ready',      cls: 'bg-green-100 text-green-700' },
-  completed: { text: 'Completed',  cls: 'bg-slate-100 text-slate-600' },
+  completed: { text: 'Completed',  cls: 'bg-green-600 text-white' },
   cancelled: { text: 'Cancelled',  cls: 'bg-red-100 text-red-600' },
 };
 
@@ -52,7 +52,11 @@ export default function RecentOrders({ tenantId }) {
               <div
                 key={order.id}
                 onClick={() => navigate(createPageUrl('Orders'))}
-                className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group"
+                className={`flex items-center justify-between p-3 rounded-xl transition-colors cursor-pointer group border-l-4 ${
+                  order.status === 'completed'
+                    ? 'bg-green-50 border-green-500 hover:bg-green-100'
+                    : 'bg-slate-50 border-transparent hover:bg-slate-100'
+                }`}
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">

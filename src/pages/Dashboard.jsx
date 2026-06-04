@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import db from '@/lib/db';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
@@ -14,7 +13,6 @@ import {
   Shield, Settings, BarChart2, ChevronRight, AlertTriangle, Paintbrush
 } from 'lucide-react';
 import StorefrontDesigner from '../components/storefront/StorefrontDesigner';
-import { startOfDay, endOfDay } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 
@@ -104,27 +102,54 @@ export default function Dashboard() {
     }
   }, []);
 
-  const { data: todayOrders = [] } = useQuery({
+  const { data: todayStats = { count: 0, revenue: 0, pending: 0 } } = useQuery({
     queryKey: ['todayOrders', tenantId],
-    queryFn: () => db.entities.Order.filter({ tenant_id: tenantId }),
+    queryFn: async () => {
+      const supabaseClient = await getSupabase();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Count ALL orders today (all statuses)
+      const { count } = await supabaseClient
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .gte('created_date', today.toISOString());
+
+      // Revenue (paid orders today)
+      const { data: paidOrders } = await supabaseClient
+        .from('orders')
+        .select('total_amount')
+        .eq('tenant_id', tenantId)
+        .eq('payment_status', 'paid')
+        .gte('created_date', today.toISOString());
+
+      const revenue = (paidOrders || []).reduce((sum, o) => sum + (o.total_amount || 0), 0);
+
+      // Pending count
+      const { count: pending } = await supabaseClient
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .in('status', ['pending', 'confirmed'])
+        .gte('created_date', today.toISOString());
+
+      return { count: count || 0, revenue, pending: pending || 0 };
+    },
     enabled: !!tenantId,
     refetchInterval: 30000,
   });
 
-  const todayOrdersFiltered = todayOrders.filter(o => {
-    const orderDate = new Date(o.created_date);
-    return orderDate >= startOfDay(new Date()) && orderDate <= endOfDay(new Date());
-  });
-
-  const todayRevenue = todayOrdersFiltered
-    .filter(o => o.payment_status === 'paid')
-    .reduce((sum, o) => sum + (o.total_amount || 0), 0);
-
-  const pendingOrders = todayOrdersFiltered.filter(o => o.status === 'pending' || o.status === 'confirmed').length;
+  const todayRevenue = todayStats.revenue;
+  const pendingOrders = todayStats.pending;
 
   const { data: products = [] } = useQuery({
     queryKey: ['dashboardProducts', tenantId],
-    queryFn: () => db.entities.Product.filter({ tenant_id: tenantId }),
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data } = await supabase.from('products').select('id,track_inventory').eq('tenant_id', tenantId);
+      return data || [];
+    },
     enabled: !!tenantId,
   });
 
@@ -165,7 +190,11 @@ export default function Dashboard() {
 
   const { data: allStaff = [] } = useQuery({
     queryKey: ['dashboardStaff', tenantId],
-    queryFn: () => db.entities.TenantUser.filter({ tenant_id: tenantId }),
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data } = await supabase.from('tenant_users').select('id,status').eq('tenant_id', tenantId);
+      return data || [];
+    },
     enabled: !!tenantId,
   });
   const staff = allStaff.filter(m => m.status === 'active');
@@ -256,7 +285,7 @@ export default function Dashboard() {
             compact
             icon={ShoppingCart}
             label="Orders Today"
-            value={todayOrdersFiltered.length}
+            value={todayStats.count}
             subtext={pendingOrders > 0 ? `${pendingOrders} pending` : undefined}
             color="bg-purple-50 text-purple-600"
             onClick={() => navigate(createPageUrl('Orders'))}
