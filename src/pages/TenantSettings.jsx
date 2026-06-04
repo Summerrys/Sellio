@@ -213,7 +213,7 @@ function PaymentQRTab({ tenant, tenantId }) {
 }
 
 function TenantSettingsContent() {
-  const { tenantId, tenant } = useTenant();
+  const { tenantId, tenant, subscription } = useTenant();
   const queryClient = useQueryClient();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -456,7 +456,7 @@ function TenantSettingsContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <PricingModal open={showPricingModal} onOpenChange={setShowPricingModal} tenantId={tenantId} />
+      <PricingModal open={showPricingModal} onOpenChange={setShowPricingModal} tenantId={tenantId} currentTier={subscription?.tier ?? null} />
     </PermissionGate>
   );
 }

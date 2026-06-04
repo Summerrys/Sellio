@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import db from '@/lib/db';
+import { getSupabase } from '@/lib/supabaseClient';
 
 const TenantContext = createContext(null);
 
@@ -231,6 +232,21 @@ export function TenantProvider({ children }) {
     enabled: !!tenantUser?.[0]?.role_id,
   });
 
+  const { data: subscriptionData } = useQuery({
+    queryKey: ['tenantSubscription', currentTenantId],
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('tenant_id', currentTenantId)
+        .order('created_date', { ascending: false })
+        .limit(1);
+      return data;
+    },
+    enabled: !!currentTenantId,
+  });
+
   useEffect(() => {
     // When simulating a role, never treat the user as superadmin
     if (devRoleOverride) {
@@ -337,6 +353,7 @@ export function TenantProvider({ children }) {
     hasAnyPermission,
     switchTenant,
     isLoading: tenantUserLoading || tenantLoading,
+    subscription: subscriptionData?.[0] || null,
   };
 
   return (

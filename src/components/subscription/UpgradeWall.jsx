@@ -91,9 +91,12 @@ const BUTTON_STYLES = {
 
 const PLAN_RANK = { starter: 0, growth: 1, pro: 2 };
 
-export default function UpgradeWall({ currentTier = null }) {
+export default function UpgradeWall({ currentTier: currentTierProp = null }) {
   const [billing, setBilling] = useState('monthly');
-  const { tenantId } = useTenant();
+  const { tenantId, subscription } = useTenant();
+
+  const currentTier = currentTierProp ?? subscription?.tier ?? null;
+  console.log('UpgradeWall currentTier:', currentTier);
 
   const getLink = (plan) => {
     const base = billing === 'annual' ? plan.links.yearly : plan.links.monthly;
@@ -229,20 +232,37 @@ export default function UpgradeWall({ currentTier = null }) {
                 </ul>
 
                 {/* CTA always at bottom */}
-                <button
-                  onClick={() => !isCurrent && window.open(getLink(plan), '_blank')}
-                  disabled={isCurrent}
-                  className="w-full font-semibold text-sm mt-auto"
-                  style={{
-                    ...(isCurrent ? { background: '#e2e8f0', color: '#94a3b8' } : { ...BUTTON_STYLES[plan.key], color: '#fff' }),
-                    height: 44,
-                    borderRadius: 10,
-                    border: 'none',
-                    cursor: isCurrent ? 'default' : 'pointer',
-                  }}
-                >
-                  {getButtonLabel(plan)}
-                </button>
+                {isCurrent ? (
+                  <div
+                    className="w-full font-semibold text-sm mt-auto flex items-center justify-center gap-1.5 select-none"
+                    style={{
+                      height: 44,
+                      borderRadius: 10,
+                      background: '#e2e8f0',
+                      color: '#94a3b8',
+                      opacity: 0.7,
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <Check className="w-4 h-4" />
+                    Current Plan
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => window.open(getLink(plan), '_blank')}
+                    className="w-full font-semibold text-sm mt-auto"
+                    style={{
+                      ...BUTTON_STYLES[plan.key],
+                      color: '#fff',
+                      height: 44,
+                      borderRadius: 10,
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {getButtonLabel(plan)}
+                  </button>
+                )}
               </div>
             </div>
           );
