@@ -41,17 +41,6 @@ const STATUS_NEXT = {
 // Buttons that use theme color vs neutral
 const THEME_BUTTON_STATUSES = new Set(['pending', 'confirmed', 'preparing']);
 
-function playTone(ctx, freq, startOffset, duration) {
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain); gain.connect(ctx.destination);
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(freq, ctx.currentTime + startOffset);
-  gain.gain.setValueAtTime(0.5, ctx.currentTime + startOffset);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startOffset + duration);
-  osc.start(ctx.currentTime + startOffset);
-  osc.stop(ctx.currentTime + startOffset + duration);
-}
 
 function printReceipt(order, currency, merchantName) {
   const itemsHtml = (order.items || []).map(item => {
@@ -199,10 +188,13 @@ export default function Orders() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
-  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    // Will be updated once tenantId is known
+    return false;
+  });
   const [searchQuery, setSearchQuery] = useState('');
-  const previousPendingIds = useRef(new Set());
-  const previousReadyIds = useRef(new Set());
+  const lastSeenDateRef = useRef(null);
+  const soundPollRef = useRef(null);
   const refreshRef = useRef(null);
   const audioCtxRef = useRef(null);
 
@@ -210,22 +202,42 @@ export default function Orders() {
   const currency = tenant?.settings?.currency || tenant?.currency || 'SGD';
   const canViewOrders = hasPermission?.('orders.view');
 
-  const handleSoundToggle = (checked) => {
-    if (checked && !audioCtxRef.current) {
-      // Initialize AudioContext lazily on first user gesture
-      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    setSoundEnabled(checked);
+  // Restore sound preference from localStorage once tenantId is available
+  useEffect(() => {
+    if (!tenantId) return;
+    const stored = localStorage.getItem(`sellio_sound_alerts_${tenantId}`);
+    if (stored === 'true') setSoundEnabled(true);
+  }, [tenantId]);
+
+  const playToneNow = (freq, duration) => {
+    if (!audioCtxRef.current) return;
+    const ctx = audioCtxRef.current;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
   };
 
   const playSound = (type) => {
     if (!audioCtxRef.current) return;
-    const ctx = audioCtxRef.current;
     if (type === 'ready') {
-      playTone(ctx, 880, 0, 0.2);
-      playTone(ctx, 1100, 0.25, 0.2);
+      playToneNow(880, 0.2);
+      setTimeout(() => playToneNow(1100, 0.2), 200);
     } else {
-      playTone(ctx, 440, 0, 0.3);
+      playToneNow(440, 0.4);
+    }
+  };
+
+  const handleSoundToggle = (newVal) => {
+    setSoundEnabled(newVal);
+    if (tenantId) localStorage.setItem(`sellio_sound_alerts_${tenantId}`, String(newVal));
+    if (newVal && !audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
     }
   };
 
@@ -248,26 +260,48 @@ export default function Orders() {
     return () => clearInterval(refreshRef.current);
   }, [tenantId, fetchOrders]);
 
-  // Sound alerts
+  // Sound alert polling — runs every 20s when sound is enabled
   useEffect(() => {
-    const pendingIds = new Set(orders.filter(o => o.status === 'pending').map(o => o.id));
-    const readyIds   = new Set(orders.filter(o => o.status === 'ready').map(o => o.id));
-
-    if (soundEnabled && canViewOrders) {
-      if (previousPendingIds.current.size > 0) {
-        for (const id of pendingIds) {
-          if (!previousPendingIds.current.has(id)) { playSound('new'); break; }
-        }
-      }
-      if (previousReadyIds.current.size > 0) {
-        for (const id of readyIds) {
-          if (!previousReadyIds.current.has(id)) { playSound('ready'); break; }
-        }
-      }
+    if (!soundEnabled || !tenantId || !canViewOrders) {
+      clearInterval(soundPollRef.current);
+      return;
     }
-    previousPendingIds.current = pendingIds;
-    previousReadyIds.current = readyIds;
-  }, [orders, soundEnabled, canViewOrders]);
+    const poll = async () => {
+      const supabase = await getSupabase();
+      const query = supabase
+        .from('orders')
+        .select('id, status, created_date')
+        .eq('tenant_id', tenantId)
+        .order('created_date', { ascending: false })
+        .limit(20);
+      const { data } = await query;
+      if (!data || data.length === 0) return;
+
+      const latestDate = data[0].created_date;
+      if (lastSeenDateRef.current === null) {
+        // First poll — just record baseline, no alert
+        lastSeenDateRef.current = latestDate;
+        return;
+      }
+
+      // Check for genuinely new orders (created after last seen)
+      const hasNewPending = data.some(o => o.status === 'pending' && o.created_date > lastSeenDateRef.current);
+      const hasNewReady   = data.some(o => o.status === 'ready'   && o.created_date > lastSeenDateRef.current);
+
+      if (hasNewReady) {
+        playSound('ready');
+      } else if (hasNewPending) {
+        playSound('new');
+      }
+
+      lastSeenDateRef.current = latestDate;
+    };
+
+    // Run immediately, then every 20s
+    poll();
+    soundPollRef.current = setInterval(poll, 20000);
+    return () => clearInterval(soundPollRef.current);
+  }, [soundEnabled, tenantId, canViewOrders]);
 
   const handleStatusUpdate = async (orderId, newStatus) => {
     const supabase = await getSupabase();

@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Building2, MapPin, Camera, X, Save, Percent, Loader2, Pencil, Hash } from 'lucide-react';
+import { Building2, MapPin, Camera, X, Save, Percent, Loader2, Pencil, Hash, Receipt, ChevronDown, ChevronUp } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import ImageEditModal from '@/components/onboarding/ImageEditModal';
@@ -58,6 +59,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
 
+  const [receiptOpen, setReceiptOpen] = useState(false);
   const [form, setForm] = useState({
     name: '',
     branch_name: '',
@@ -71,6 +73,11 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
     logo_url: '',
     order_id_prefix: 'ORD',
     order_id_start: 1,
+    receipt_paper_size: 'a4',
+    receipt_show_logo: true,
+    receipt_show_tax: true,
+    receipt_show_order_number: true,
+    receipt_footer: '',
   });
 
   const [logoPreview, setLogoPreview] = useState(null);
@@ -97,6 +104,11 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
       logo_url: tenant.logo_url || '',
       order_id_prefix: tenant.order_id_prefix || 'ORD',
       order_id_start: tenant.order_id_start || 1,
+      receipt_paper_size: tenant.receipt_paper_size || 'a4',
+      receipt_show_logo: tenant.receipt_show_logo !== false,
+      receipt_show_tax: tenant.receipt_show_tax !== false,
+      receipt_show_order_number: tenant.receipt_show_order_number !== false,
+      receipt_footer: tenant.receipt_footer || '',
     });
     setLogoPreview(tenant.logo_url || null);
   }, [tenant]);
@@ -175,6 +187,11 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
         logo_url: logoUrl,
         order_id_prefix: form.order_id_prefix || 'ORD',
         order_id_start: parseInt(form.order_id_start) || 1,
+        receipt_paper_size: form.receipt_paper_size,
+        receipt_show_logo: form.receipt_show_logo,
+        receipt_show_tax: form.receipt_show_tax,
+        receipt_show_order_number: form.receipt_show_order_number,
+        receipt_footer: form.receipt_footer || null,
         settings: {
           ...existingSettings,
           branch_name: form.branch_name,
@@ -327,6 +344,75 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
             <Switch checked={form.tax_inclusive} onCheckedChange={v => set('tax_inclusive', v)} />
           </div>
         </Section>
+      </Card>
+
+      {/* Receipt Settings */}
+      <Card className="border border-slate-100 shadow-sm overflow-hidden">
+        <button
+          type="button"
+          className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors"
+          onClick={() => setReceiptOpen(o => !o)}
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-primary-gradient, #6366f1)' }}>
+              <Receipt className="w-3.5 h-3.5 text-white" />
+            </div>
+            <h3 className="text-sm font-semibold text-slate-800">Receipt Settings</h3>
+          </div>
+          {receiptOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+        </button>
+        {receiptOpen && (
+          <div className="px-6 pb-6 space-y-4 border-t border-slate-100">
+            {/* Paper Size */}
+            <div className="pt-4">
+              <Label className="text-xs text-slate-600 mb-2 block">Paper Size</Label>
+              <div className="flex gap-2">
+                {[
+                  { value: 'thermal_58', label: 'Thermal 58mm' },
+                  { value: 'thermal_80', label: 'Thermal 80mm' },
+                  { value: 'a4', label: 'A4' },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => set('receipt_paper_size', opt.value)}
+                    className="flex-1 py-2 px-2 rounded-lg border text-xs font-medium transition-all"
+                    style={form.receipt_paper_size === opt.value
+                      ? { background: 'var(--color-primary-gradient)', color: '#fff', borderColor: 'transparent' }
+                      : { background: 'white', color: '#475569', borderColor: '#e2e8f0' }
+                    }
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Toggles */}
+            {[
+              { key: 'receipt_show_logo', label: 'Show Logo on receipt' },
+              { key: 'receipt_show_tax', label: 'Show Tax breakdown' },
+              { key: 'receipt_show_order_number', label: 'Show Order Number' },
+            ].map(({ key, label }) => (
+              <div key={key} className="flex items-center justify-between py-1">
+                <p className="text-sm font-medium text-slate-700">{label}</p>
+                <Switch checked={form[key]} onCheckedChange={v => set(key, v)} />
+              </div>
+            ))}
+
+            {/* Footer message */}
+            <div>
+              <Label className="text-xs text-slate-600 mb-1 block">Footer Message</Label>
+              <Textarea
+                value={form.receipt_footer}
+                onChange={e => set('receipt_footer', e.target.value)}
+                placeholder="e.g. Thank you for dining with us!"
+                className="resize-none text-sm"
+                rows={2}
+              />
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Order Settings */}

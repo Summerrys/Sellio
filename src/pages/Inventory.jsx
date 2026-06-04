@@ -6,7 +6,6 @@ import RequirePermission from '../components/auth/RequirePermission';
 import EmptyState from '../components/ui-custom/EmptyState';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import StockAdjustmentPanel from '../components/inventory/StockAdjustmentPanel';
 import InventoryLogTable from '../components/inventory/InventoryLogTable';
 import StockHistoryList from '../components/inventory/StockHistoryList';
@@ -30,6 +29,7 @@ function InventoryContent() {
     queryClient.invalidateQueries({ queryKey: ['inventoryMerged', tenantId] });
   }, [queryClient, tenantId]);
 
+  const [activeTab, setActiveTab] = useState('inventory');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -164,14 +164,28 @@ function InventoryContent() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="inventory" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="inventory">Current Stock</TabsTrigger>
-            <TabsTrigger value="logs">History</TabsTrigger>
-          </TabsList>
+        {/* Tab toggle */}
+        <div className="flex p-0.5 bg-slate-100 rounded-lg gap-0.5">
+          {[
+            { value: 'inventory', label: 'Current Stock' },
+            { value: 'logs', label: 'History' },
+          ].map(tab => (
+            <button
+              key={tab.value}
+              onClick={() => setActiveTab(tab.value)}
+              className="flex-1 py-2 rounded-md text-sm font-medium transition-all"
+              style={activeTab === tab.value
+                ? { background: 'var(--color-primary-gradient, rgb(var(--color-primary)))', color: '#fff' }
+                : { color: '#64748b', background: 'transparent' }
+              }
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-          <TabsContent value="inventory" className="space-y-4">
+        <div className="space-y-4">
+          {activeTab === 'inventory' && <div className="space-y-4">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -361,12 +375,9 @@ function InventoryContent() {
                 })}
               </div>
             )}
-          </TabsContent>
-
-          <TabsContent value="logs">
-            <StockHistoryList tenantId={tenantId} />
-          </TabsContent>
-        </Tabs>
+          </div>}
+          {activeTab === 'logs' && <StockHistoryList tenantId={tenantId} />}
+        </div>
 
         {/* Stock Adjustment Panel */}
         <StockAdjustmentPanel

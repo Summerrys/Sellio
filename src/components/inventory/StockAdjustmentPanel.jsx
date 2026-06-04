@@ -75,22 +75,9 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
         console.warn('stock_history insert failed (non-fatal):', historyErr.message);
       }
 
-      const history = JSON.parse(localStorage.getItem('stock_history') || '[]');
-      history.unshift({
-        id: crypto.randomUUID(),
-        product_id: productId,
-        product_name: product?.name || '',
-        product_image: product?.image_url || null,
-        old_stock: currentStock,
-        new_stock: newStock,
-        change: newStock - currentStock,
-        notes: notes || '',
-        timestamp: new Date().toISOString(),
-      });
-      localStorage.setItem('stock_history', JSON.stringify(history.slice(0, 200)));
-
       queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
       queryClient.invalidateQueries({ queryKey: ['inventoryLogs', tenantId] });
+      queryClient.invalidateQueries({ queryKey: ['stockHistory', tenantId] });
 
       onSuccess?.();
       handleClose();
