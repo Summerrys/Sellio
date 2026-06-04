@@ -165,6 +165,9 @@ export default function Auth() {
   const [googleGateError, setGoogleGateError] = useState('');
   const [googleSignupError, setGoogleSignupError] = useState('');
 
+  // Auth check — true while we verify whether the user is already logged in
+  const [authChecking, setAuthChecking] = useState(true);
+
   // Signup gate state
   const [signupMode, setSignupMode] = useState(null); // null | 'allowed' | 'pricing_wall' | 'invalid_token'
   const [inviteEmail, setInviteEmail] = useState('');
@@ -176,20 +179,49 @@ export default function Auth() {
   const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);
   const [formData, setFormData] = useState({ full_name: '', email: '', phone: '', password: '' });
 
+  // On mount: check if user is already authenticated and has completed onboarding.
+  // If so, redirect immediately — do NOT run invite-token validation at all.
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const supabase = await getSupabase();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data: rows } = await supabase
+            .from('app_users')
+            .select('onboarding_completed, tenant_id')
+            .eq('email', session.user.email)
+            .limit(1);
+          const appUserRow = rows?.[0];
+          if (appUserRow?.onboarding_completed === true && appUserRow?.tenant_id) {
+            window.location.href = '/Dashboard';
+            return; // stay in loading state while redirect happens
+          }
+        }
+      } catch {
+        // silently fall through to normal auth flow
+      }
+      setAuthChecking(false);
+    };
+    checkAuth();
+  }, []);
+
   // On mount: if token in URL, auto-evaluate signup access (pre-fills email too)
   useEffect(() => {
+    if (authChecking) return; // wait until auth check completes
     if (urlToken) {
       evaluateSignupAccess();
     }
-  }, []);
+  }, [authChecking]);
 
   // When switching to signup tab, evaluate gate
   useEffect(() => {
+    if (authChecking) return;
     if (isLogin) return; // login is always allowed — no check needed
     // Avoid double-run on mount when token is present (already called above)
     if (urlToken && signupMode !== null) return;
     evaluateSignupAccess();
-  }, [isLogin]);
+  }, [isLogin, authChecking]);
 
   const evaluateSignupAccess = async () => {
     if (urlToken) {
@@ -558,6 +590,14 @@ export default function Auth() {
   const showInvalidToken = !isLogin && signupMode === 'invalid_token';
   // Show the form if: login tab, OR (signup tab AND allowed), OR (signup tab AND bypass email typed)
   const showForm = isLogin || signupMode === 'allowed' || (signupMode === 'pricing_wall' && BYPASS_EMAILS.includes(formData.email.trim().toLowerCase()));
+
+  if (authChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'radial-gradient(ellipse at top left, #faeee6 0%, #fdf6f2 30%, #ffffff 60%, #fdf4f0 100%)' }}>
+        <div className="w-6 h-6 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <>
