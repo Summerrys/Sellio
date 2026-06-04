@@ -1,6 +1,7 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import db from '@/lib/db';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
@@ -72,7 +73,17 @@ function FeatureCard({ icon: Icon, label, color, onClick }) {
 export default function Dashboard() {
   const { tenantId, tenant, hasPermission } = useTenant();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [showDesigner, setShowDesigner] = React.useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('upgraded') === '1') {
+      toast.success('Your plan has been upgraded successfully.');
+      window.history.replaceState(null, '', window.location.pathname);
+      queryClient.invalidateQueries({ queryKey: ['subscription'] });
+    }
+  }, []);
 
   const { data: todayOrders = [] } = useQuery({
     queryKey: ['todayOrders', tenantId],

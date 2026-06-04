@@ -100,7 +100,9 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
 
   const getLink = (plan) => {
     const base = billing === 'annual' ? plan.links.yearly : plan.links.monthly;
-    return tenantId ? `${base}?client_reference_id=${tenantId}` : base;
+    const withTenant = tenantId ? `${base}?client_reference_id=${tenantId}` : base;
+    // Only append upgraded=1 return param when upgrading from an existing plan (not new signup)
+    return currentTier !== null ? `${withTenant}&upgraded=1` : withTenant;
   };
 
   const getButtonLabel = (plan) => {
