@@ -1,14 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
-import { X, Plus, Pencil, Trash2, Upload, Check, Download } from 'lucide-react';
+import { X, Plus, Pencil, Trash2, Upload, Check, Download, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 
-const EMPTY_SUPPLIER = { name: '', phone: '', contact_person: '', notes: '', active: true };
+const EMPTY_SUPPLIER = { name: '', phone: '', contact_person: '', notes: '', is_active: true };
 
 const CSV_TEMPLATE_HEADER = 'name,phone,contact_person,email,notes';
 
@@ -35,7 +36,7 @@ export default function SupplierDrawer({ open, onClose, tenantId }) {
 
   const handleDownloadAll = (suppliers) => {
     const rows = suppliers.map(s =>
-      [s.name, s.phone || '', s.contact_person || '', s.email || '', s.notes || '', s.active ? 'true' : 'false']
+      [s.name, s.phone || '', s.contact_person || '', s.email || '', s.notes || '', s.is_active ? 'true' : 'false']
         .map(v => `"${String(v).replace(/"/g, '""')}"`)
         .join(',')
     );
@@ -44,7 +45,7 @@ export default function SupplierDrawer({ open, onClose, tenantId }) {
   };
 
   const { data: suppliers = [], isLoading } = useQuery({
-    queryKey: ['suppliers', tenantId],
+    queryKey: ['suppliers-all', tenantId],
     queryFn: async () => {
       const supabase = await getSupabase();
       const { data } = await supabase.from('suppliers').select('*').eq('tenant_id', tenantId).order('name');
@@ -56,7 +57,7 @@ export default function SupplierDrawer({ open, onClose, tenantId }) {
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['suppliers', tenantId] });
 
   const startNew = () => { setEditing('new'); setForm(EMPTY_SUPPLIER); };
-  const startEdit = (s) => { setEditing(s.id); setForm({ name: s.name, phone: s.phone || '', contact_person: s.contact_person || '', notes: s.notes || '', active: s.active ?? true }); };
+  const startEdit = (s) => { setEditing(s.id); setForm({ name: s.name, phone: s.phone || '', contact_person: s.contact_person || '', notes: s.notes || '', is_active: s.is_active ?? true }); };
   const cancelEdit = () => { setEditing(null); setForm(EMPTY_SUPPLIER); };
 
   const handleSave = async () => {
@@ -85,7 +86,7 @@ export default function SupplierDrawer({ open, onClose, tenantId }) {
 
   const handleToggleActive = async (supplier) => {
     const supabase = await getSupabase();
-    await supabase.from('suppliers').update({ active: !supplier.active }).eq('id', supplier.id);
+    await supabase.from('suppliers').update({ is_active: !supplier.is_active }).eq('id', supplier.id);
     refresh();
   };
 
@@ -99,6 +100,8 @@ export default function SupplierDrawer({ open, onClose, tenantId }) {
     const phoneIdx = header.indexOf('phone');
     const cpIdx = header.indexOf('contact_person');
     if (nameIdx === -1) { toast.error('CSV must have a "name" column'); return; }
+    const emailIdx = header.indexOf('email');
+    const notesIdx = header.indexOf('notes');
     const rows = lines.slice(1).map(l => {
       const cols = l.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
       return {
@@ -107,7 +110,9 @@ export default function SupplierDrawer({ open, onClose, tenantId }) {
         name: cols[nameIdx] || '',
         phone: phoneIdx !== -1 ? cols[phoneIdx] || '' : '',
         contact_person: cpIdx !== -1 ? cols[cpIdx] || '' : '',
-        active: true,
+        email: emailIdx !== -1 ? cols[emailIdx] || '' : '',
+        notes: notesIdx !== -1 ? cols[notesIdx] || '' : '',
+        is_active: true,
         created_date: new Date().toISOString(),
       };
     }).filter(r => r.name);
@@ -130,14 +135,23 @@ export default function SupplierDrawer({ open, onClose, tenantId }) {
           <h3 className="font-semibold text-slate-900">Manage Suppliers</h3>
           <div className="flex items-center gap-1.5">
             <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleCSVImport} />
-            <Button variant="outline" size="sm" onClick={handleDownloadTemplate} className="gap-1 h-7 text-xs px-2">
-              <Download className="w-3 h-3" /> Template
-            </Button>
-            {suppliers.length > 0 && (
-              <Button variant="outline" size="sm" onClick={() => handleDownloadAll(suppliers)} className="gap-1 h-7 text-xs px-2">
-                <Download className="w-3 h-3" /> Download All
-              </Button>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1 h-7 text-xs px-2">
+                  <Download className="w-3 h-3" /> Download <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleDownloadTemplate}>
+                  Download Template
+                </DropdownMenuItem>
+                {suppliers.length > 0 && (
+                  <DropdownMenuItem onClick={() => handleDownloadAll(suppliers)}>
+                    Download All Suppliers
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="gap-1 h-7 text-xs px-2">
               <Upload className="w-3 h-3" /> Import CSV
             </Button>
@@ -165,12 +179,12 @@ export default function SupplierDrawer({ open, onClose, tenantId }) {
               ) : (
                 <div className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200">
                   <div className="flex-1 min-w-0">
-                    <p className={`font-medium ${s.active ? 'text-slate-900' : 'text-slate-400 line-through'}`}>{s.name}</p>
+                    <p className={`font-medium ${s.is_active ? 'text-slate-900' : 'text-slate-400 line-through'}`}>{s.name}</p>
                     {s.phone && <p className="text-xs text-slate-500">{s.phone}</p>}
                     {s.contact_person && <p className="text-xs text-slate-400">{s.contact_person}</p>}
                   </div>
                   <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <Switch checked={s.active ?? true} onCheckedChange={() => handleToggleActive(s)} />
+                    <Switch checked={s.is_active ?? true} onCheckedChange={() => handleToggleActive(s)} />
                     <button onClick={() => startEdit(s)} className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-500">
                       <Pencil className="w-3.5 h-3.5" />
                     </button>

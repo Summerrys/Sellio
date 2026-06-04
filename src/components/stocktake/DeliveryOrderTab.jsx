@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../tenant/TenantContext';
@@ -28,6 +28,21 @@ export default function DeliveryOrderTab() {
   });
   const [saving, setSaving] = useState(false);
   const [expandedDO, setExpandedDO] = useState(null);
+  const [products, setProducts] = useState([]);
+
+  // Load products directly via Supabase on mount
+  useEffect(() => {
+    if (!tenantId) return;
+    getSupabase().then(supabase =>
+      supabase
+        .from('products')
+        .select('id, name, slug')
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)
+        .order('name', { ascending: true })
+        .then(({ data }) => setProducts(data || []))
+    );
+  }, [tenantId]);
 
   // Suppliers
   const { data: suppliers = [] } = useQuery({
@@ -35,22 +50,6 @@ export default function DeliveryOrderTab() {
     queryFn: async () => {
       const supabase = await getSupabase();
       const { data } = await supabase.from('suppliers').select('*').eq('tenant_id', tenantId).eq('active', true).order('name');
-      return data || [];
-    },
-    enabled: !!tenantId,
-  });
-
-  // Products — active only, include SKU for display
-  const { data: products = [] } = useQuery({
-    queryKey: ['products-do', tenantId],
-    queryFn: async () => {
-      const supabase = await getSupabase();
-      const { data } = await supabase
-        .from('products')
-        .select('id, name, sku, unit')
-        .eq('tenant_id', tenantId)
-        .eq('is_active', true)
-        .order('name');
       return data || [];
     },
     enabled: !!tenantId,
@@ -78,7 +77,7 @@ export default function DeliveryOrderTab() {
       items[idx] = { ...items[idx], [field]: value };
       if (field === 'product_id') {
         const prod = products.find(p => p.id === value);
-        if (prod) { items[idx].product_name = prod.name; items[idx].unit = prod.unit || ''; }
+        if (prod) { items[idx].product_name = prod.name; items[idx].unit = 'pcs'; }
       }
       return { ...f, items };
     });
@@ -223,7 +222,7 @@ export default function DeliveryOrderTab() {
                           className="w-full border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-xs focus:outline-none"
                         >
                           <option value="">Select product...</option>
-                          {products.map(p => <option key={p.id} value={p.id}>{p.name}{p.sku ? ` (${p.sku})` : ''}</option>)}
+                          {products.map(p => <option key={p.id} value={p.id}>{p.name}{p.slug ? ` (${p.slug})` : ''}</option>)}
                         </select>
                       </td>
                       <td className="px-2 py-2">

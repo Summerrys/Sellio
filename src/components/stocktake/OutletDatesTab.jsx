@@ -20,23 +20,19 @@ export default function OutletDatesTab() {
 
   const branchName = tenant?.settings?.branch_name || tenant?.name || '—';
 
-  // Load inventory items with product info
+  // Load inventory items joined with products
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['stocktake-outlet', tenantId],
     queryFn: async () => {
       const supabase = await getSupabase();
-      const [{ data: invItems }, { data: products }] = await Promise.all([
-        supabase.from('inventory_items').select('*').eq('tenant_id', tenantId),
-        supabase.from('products').select('id, name, unit').eq('tenant_id', tenantId).eq('track_inventory', true),
-      ]);
-      const prodMap = Object.fromEntries((products || []).map(p => [p.id, p]));
-      return (invItems || [])
-        .filter(i => prodMap[i.product_id])
-        .map(i => ({
-          ...i,
-          product_name: prodMap[i.product_id]?.name || '',
-          unit: prodMap[i.product_id]?.unit || '',
-        }));
+      const { data } = await supabase
+        .from('inventory_items')
+        .select('id, product_id, current_stock, par_level, unit, products(id, name, slug)')
+        .eq('tenant_id', tenantId);
+      return (data || []).map(i => ({
+        ...i,
+        product_name: i.products?.name || '',
+      }));
     },
     enabled: !!tenantId,
   });
@@ -46,7 +42,7 @@ export default function OutletDatesTab() {
     queryKey: ['suppliers', tenantId],
     queryFn: async () => {
       const supabase = await getSupabase();
-      const { data } = await supabase.from('suppliers').select('*').eq('tenant_id', tenantId).eq('active', true).order('name');
+      const { data } = await supabase.from('suppliers').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('name');
       return data || [];
     },
     enabled: !!tenantId,
