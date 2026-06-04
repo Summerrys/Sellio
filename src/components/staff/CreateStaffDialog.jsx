@@ -98,6 +98,9 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
         .eq('user_email', generatedEmail);
 
       toast.success('Staff account created successfully');
+      const supabaseCheck = await getSupabase();
+      const { data: { session } } = await supabaseCheck.auth.getSession();
+      console.log('Staff created, owner session preserved:', session?.user?.email);
       setForm({ fullName: '', countryCode: '+65', phone: '', password: '', confirmPassword: '', roleId: '' });
       onSuccess?.();
     } catch (err) {

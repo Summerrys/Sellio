@@ -194,8 +194,18 @@ export default function Auth() {
             .limit(1);
           const appUserRow = rows?.[0];
           if (appUserRow?.onboarding_completed === true && appUserRow?.tenant_id) {
-            window.location.href = '/Dashboard';
-            return; // stay in loading state while redirect happens
+            // Only redirect owners — staff (is_owner=false) must log in explicitly
+            const { data: tuRows } = await supabase
+              .from('tenant_users')
+              .select('is_owner')
+              .eq('tenant_id', appUserRow.tenant_id)
+              .eq('user_email', session.user.email)
+              .limit(1);
+            const isOwner = tuRows?.[0]?.is_owner === true;
+            if (isOwner) {
+              window.location.href = '/Dashboard';
+              return;
+            }
           }
         }
       } catch {
