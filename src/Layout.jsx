@@ -169,7 +169,9 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
               variant="ghost"
               size="icon"
               className="h-11 w-11 text-slate-400 hover:text-slate-600 flex-shrink-0"
-              onClick={() => {
+              onClick={async () => {
+                const supabase = await getSupabase();
+                await supabase.auth.signOut();
                 clearAppUser();
                 window.location.href = createPageUrl('Auth');
               }}
@@ -182,7 +184,9 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
             variant="ghost"
             size="icon"
             className="h-11 w-11 text-slate-400 hover:text-slate-600"
-            onClick={() => {
+            onClick={async () => {
+              const supabase = await getSupabase();
+              await supabase.auth.signOut();
               clearAppUser();
               window.location.href = createPageUrl('Auth');
             }}
