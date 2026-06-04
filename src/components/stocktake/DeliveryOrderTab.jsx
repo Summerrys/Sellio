@@ -40,12 +40,17 @@ export default function DeliveryOrderTab() {
     enabled: !!tenantId,
   });
 
-  // Products
+  // Products — active only, include SKU for display
   const { data: products = [] } = useQuery({
     queryKey: ['products-do', tenantId],
     queryFn: async () => {
       const supabase = await getSupabase();
-      const { data } = await supabase.from('products').select('id, name, unit').eq('tenant_id', tenantId).order('name');
+      const { data } = await supabase
+        .from('products')
+        .select('id, name, sku, unit')
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)
+        .order('name');
       return data || [];
     },
     enabled: !!tenantId,
@@ -185,9 +190,13 @@ export default function DeliveryOrderTab() {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label className="text-xs font-medium text-slate-600">Line Items</label>
-            <Button variant="outline" size="sm" onClick={addItem} className="gap-1 h-7 text-xs">
+            <button
+              onClick={addItem}
+              className="flex items-center gap-1 h-7 px-2.5 text-xs font-medium rounded-md text-white"
+              style={{ background: 'var(--color-primary-gradient)' }}
+            >
               <Plus className="w-3 h-3" /> Add Row
-            </Button>
+            </button>
           </div>
           <div className="overflow-x-auto rounded-xl border border-slate-200">
             <table className="w-full text-xs min-w-[700px]">
@@ -213,8 +222,8 @@ export default function DeliveryOrderTab() {
                           onChange={e => setItem(idx, 'product_id', e.target.value)}
                           className="w-full border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-xs focus:outline-none"
                         >
-                          <option value="">Select...</option>
-                          {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          <option value="">Select product...</option>
+                          {products.map(p => <option key={p.id} value={p.id}>{p.name}{p.sku ? ` (${p.sku})` : ''}</option>)}
                         </select>
                       </td>
                       <td className="px-2 py-2">

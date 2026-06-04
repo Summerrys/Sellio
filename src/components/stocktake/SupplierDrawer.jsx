@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
-import { X, Plus, Pencil, Trash2, Upload, Check } from 'lucide-react';
+import { X, Plus, Pencil, Trash2, Upload, Check, Download } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -10,12 +10,38 @@ import { toast } from 'sonner';
 
 const EMPTY_SUPPLIER = { name: '', phone: '', contact_person: '', notes: '', active: true };
 
+const CSV_TEMPLATE_HEADER = 'name,phone,contact_person,email,notes';
+
+function downloadCSV(filename, content) {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function SupplierDrawer({ open, onClose, tenantId }) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(null); // null or supplier object
   const [form, setForm] = useState(EMPTY_SUPPLIER);
   const [saving, setSaving] = useState(false);
   const fileRef = useRef();
+
+  const handleDownloadTemplate = () => {
+    downloadCSV('suppliers_template.csv', CSV_TEMPLATE_HEADER + '\n');
+  };
+
+  const handleDownloadAll = (suppliers) => {
+    const rows = suppliers.map(s =>
+      [s.name, s.phone || '', s.contact_person || '', s.email || '', s.notes || '', s.active ? 'true' : 'false']
+        .map(v => `"${String(v).replace(/"/g, '""')}"`)
+        .join(',')
+    );
+    const csv = 'name,phone,contact_person,email,notes,is_active\n' + rows.join('\n');
+    downloadCSV('suppliers.csv', csv);
+  };
 
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ['suppliers', tenantId],
@@ -102,12 +128,20 @@ export default function SupplierDrawer({ open, onClose, tenantId }) {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <h3 className="font-semibold text-slate-900">Manage Suppliers</h3>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleCSVImport} />
-            <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="gap-1.5">
-              <Upload className="w-3.5 h-3.5" /> Import CSV
+            <Button variant="outline" size="sm" onClick={handleDownloadTemplate} className="gap-1 h-7 text-xs px-2">
+              <Download className="w-3 h-3" /> Template
             </Button>
-            <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 text-slate-400">
+            {suppliers.length > 0 && (
+              <Button variant="outline" size="sm" onClick={() => handleDownloadAll(suppliers)} className="gap-1 h-7 text-xs px-2">
+                <Download className="w-3 h-3" /> Download All
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="gap-1 h-7 text-xs px-2">
+              <Upload className="w-3 h-3" /> Import CSV
+            </Button>
+            <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 text-slate-400 ml-1">
               <X className="w-4 h-4" />
             </button>
           </div>
