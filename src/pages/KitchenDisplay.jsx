@@ -59,13 +59,13 @@ function KDSOrderCard({ order, onBump }) {
 
       <div className="space-y-2 flex-1">
         {(order.items || []).map((item, idx) => (
-          <div key={idx} className="bg-white/15 rounded-xl p-3">
-            <p className="text-xl font-bold text-left">{item.quantity}× {item.name}</p>
-            {item.variant && <p className="text-base opacity-80 mt-0.5 text-left">{item.variant}</p>}
+          <div key={idx} className="bg-white/15 rounded-xl p-3 text-center">
+            <p className="text-xl font-bold">{item.quantity}× {item.name}</p>
+            {item.variant && <p className="text-base opacity-80 mt-0.5">{item.variant}</p>}
             {item.notes && (
-              <div className="mt-2 bg-yellow-300 text-slate-900 rounded-lg p-2 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <p className="text-sm font-semibold text-left">{item.notes}</p>
+              <div className="mt-2 bg-yellow-300 text-slate-900 rounded-lg p-2 flex items-center justify-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <p className="text-sm font-semibold">{item.notes}</p>
               </div>
             )}
           </div>
@@ -96,13 +96,29 @@ export default function KitchenDisplay() {
   const [isLoading, setIsLoading] = useState(true);
   const refreshRef = useRef(null);
 
-  // Full-screen mode: hide top header and bottom nav
+  // True browser fullscreen
   useEffect(() => {
-    document.body.classList.add('kitchen-fullscreen');
-    return () => document.body.classList.remove('kitchen-fullscreen');
+    const el = document.documentElement;
+    if (el.requestFullscreen) {
+      el.requestFullscreen().catch(() => {});
+    } else if (el.webkitRequestFullscreen) {
+      el.webkitRequestFullscreen();
+    }
+    return () => {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      } else if (document.webkitFullscreenElement) {
+        document.webkitExitFullscreen();
+      }
+    };
   }, []);
 
   const handleExit = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else if (document.webkitFullscreenElement) {
+      document.webkitExitFullscreen();
+    }
     navigate(createPageUrl('Orders'));
   };
 

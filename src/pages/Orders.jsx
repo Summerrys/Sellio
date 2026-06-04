@@ -41,35 +41,16 @@ const STATUS_NEXT = {
 // Buttons that use theme color vs neutral
 const THEME_BUTTON_STATUSES = new Set(['pending', 'confirmed', 'preparing']);
 
-function playSound(type) {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    if (type === 'ready') {
-      // Double ding at 880Hz
-      [0, 0.3].forEach(offset => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, ctx.currentTime + offset);
-        gain.gain.setValueAtTime(0.5, ctx.currentTime + offset);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.4);
-        osc.start(ctx.currentTime + offset);
-        osc.stop(ctx.currentTime + offset + 0.4);
-      });
-    } else {
-      // Single ding at 440Hz
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, ctx.currentTime);
-      gain.gain.setValueAtTime(0.5, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.5);
-    }
-  } catch (e) {}
+function playTone(ctx, freq, startOffset, duration) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq, ctx.currentTime + startOffset);
+  gain.gain.setValueAtTime(0.5, ctx.currentTime + startOffset);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startOffset + duration);
+  osc.start(ctx.currentTime + startOffset);
+  osc.stop(ctx.currentTime + startOffset + duration);
 }
 
 function printReceipt(order, currency, merchantName) {
@@ -213,7 +194,7 @@ function OrderCard({ order, currency, merchantName, onStatusUpdate }) {
 }
 
 export default function Orders() {
-  const { tenantId, tenant } = useTenant();
+  const { tenantId, tenant, hasPermission } = useTenant();
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -223,9 +204,30 @@ export default function Orders() {
   const previousPendingIds = useRef(new Set());
   const previousReadyIds = useRef(new Set());
   const refreshRef = useRef(null);
+  const audioCtxRef = useRef(null);
 
   const isFnB = /f&b|cafe|restaurant|food/i.test(tenant?.industry || '');
   const currency = tenant?.settings?.currency || tenant?.currency || 'SGD';
+  const canViewOrders = hasPermission?.('orders.view');
+
+  const handleSoundToggle = (checked) => {
+    if (checked && !audioCtxRef.current) {
+      // Initialize AudioContext lazily on first user gesture
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    setSoundEnabled(checked);
+  };
+
+  const playSound = (type) => {
+    if (!audioCtxRef.current) return;
+    const ctx = audioCtxRef.current;
+    if (type === 'ready') {
+      playTone(ctx, 880, 0, 0.2);
+      playTone(ctx, 1100, 0.25, 0.2);
+    } else {
+      playTone(ctx, 440, 0, 0.3);
+    }
+  };
 
   const fetchOrders = useCallback(async () => {
     if (!tenantId) return;
@@ -251,7 +253,7 @@ export default function Orders() {
     const pendingIds = new Set(orders.filter(o => o.status === 'pending').map(o => o.id));
     const readyIds   = new Set(orders.filter(o => o.status === 'ready').map(o => o.id));
 
-    if (soundEnabled) {
+    if (soundEnabled && canViewOrders) {
       if (previousPendingIds.current.size > 0) {
         for (const id of pendingIds) {
           if (!previousPendingIds.current.has(id)) { playSound('new'); break; }
@@ -265,7 +267,7 @@ export default function Orders() {
     }
     previousPendingIds.current = pendingIds;
     previousReadyIds.current = readyIds;
-  }, [orders, soundEnabled]);
+  }, [orders, soundEnabled, canViewOrders]);
 
   const handleStatusUpdate = async (orderId, newStatus) => {
     const supabase = await getSupabase();
@@ -296,7 +298,7 @@ export default function Orders() {
 
   const handleDownload = () => {
     const rows = orders.map(o => {
-      const itemsStr = (o.items || []).map(i => `${i.quantity}× ${i.name || i.product_name}`).join(', ');
+      const itemsStr = (o.items || []).map(i => `${i.quantity}x ${i.name || i.product_name}`).join(', ');
       return [
         o.order_number || '',
         o.status || '',
@@ -306,8 +308,8 @@ export default function Orders() {
         o.created_date || '',
       ].join(',');
     });
-    const csv = ['order_number,status,table_name,items,total_amount,created_date', ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const csv = '\uFEFF' + ['order_number,status,table_name,items,total_amount,created_date', ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -351,7 +353,7 @@ export default function Orders() {
                 </button>
               )}
               <div className="flex items-center gap-1.5">
-                <Switch id="sound" checked={soundEnabled} onCheckedChange={setSoundEnabled} className="scale-90" />
+                <Switch id="sound" checked={soundEnabled} onCheckedChange={handleSoundToggle} className="scale-90" />
                 <Label htmlFor="sound" className="flex items-center gap-1 cursor-pointer text-xs text-slate-600">
                   {soundEnabled ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
                   Sound Alerts
