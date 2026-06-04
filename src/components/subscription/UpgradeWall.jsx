@@ -89,7 +89,9 @@ const BUTTON_STYLES = {
   pro: { background: '#1e293b' },
 };
 
-export default function UpgradeWall() {
+const PLAN_RANK = { starter: 0, growth: 1, pro: 2 };
+
+export default function UpgradeWall({ currentTier = null }) {
   const [billing, setBilling] = useState('monthly');
   const { tenantId } = useTenant();
 
@@ -97,6 +99,16 @@ export default function UpgradeWall() {
     const base = billing === 'annual' ? plan.links.yearly : plan.links.monthly;
     return tenantId ? `${base}?client_reference_id=${tenantId}` : base;
   };
+
+  const getButtonLabel = (plan) => {
+    if (currentTier === null) return 'Get Started →';
+    if (plan.key === currentTier) return 'Current Plan';
+    const planRank = PLAN_RANK[plan.key] ?? 0;
+    const currentRank = PLAN_RANK[currentTier] ?? 0;
+    return planRank > currentRank ? 'Upgrade →' : 'Downgrade →';
+  };
+
+  const isCurrentPlan = (plan) => currentTier !== null && plan.key === currentTier;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center px-4 py-12">
@@ -150,6 +162,7 @@ export default function UpgradeWall() {
       >
         {PLANS.map((plan) => {
           const isGrowth = plan.key === 'growth';
+          const isCurrent = isCurrentPlan(plan);
           const price = billing === 'annual' ? plan.yearly : plan.monthly;
           const saving = plan.monthly * 12 - plan.yearly;
 
@@ -157,26 +170,40 @@ export default function UpgradeWall() {
             <div
               key={plan.key}
               className={`relative bg-white rounded-2xl flex flex-col flex-shrink-0 w-[85vw] md:w-auto ${
-                isGrowth ? 'shadow-xl ring-2 ring-offset-2' : 'shadow-sm border border-slate-200'
+                isCurrent
+                  ? 'shadow-xl ring-2 ring-offset-2 ring-green-400'
+                  : isGrowth
+                  ? 'shadow-xl ring-2 ring-offset-2'
+                  : 'shadow-sm border border-slate-200'
               }`}
               style={{ minHeight: 480, scrollSnapAlign: 'start' }}
             >
-              {isGrowth && (
+              {isGrowth && !isCurrent && (
                 <div
                   className="absolute -top-px left-0 right-0 h-1 rounded-t-2xl"
                   style={{ background: 'var(--color-primary-gradient, linear-gradient(90deg,#6366f1,#8b5cf6))' }}
                 />
+              )}
+              {isCurrent && (
+                <div className="absolute -top-px left-0 right-0 h-1 rounded-t-2xl bg-green-400" />
               )}
 
               <div className="p-6 flex flex-col h-full" style={{ minHeight: 480 }}>
                 {/* Header */}
                 <div className="flex items-center justify-between mb-1">
                   <h2 className="text-base font-bold text-slate-900">{plan.name}</h2>
-                  {plan.badge && (
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${BADGE_COLORS[plan.color]}`}>
-                      {plan.badge}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {isCurrent && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                        Current Plan
+                      </span>
+                    )}
+                    {plan.badge && !isCurrent && (
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${BADGE_COLORS[plan.color]}`}>
+                        {plan.badge}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Price */}
@@ -203,17 +230,18 @@ export default function UpgradeWall() {
 
                 {/* CTA always at bottom */}
                 <button
-                  onClick={() => window.open(getLink(plan), '_blank')}
-                  className="w-full text-white font-semibold text-sm mt-auto"
+                  onClick={() => !isCurrent && window.open(getLink(plan), '_blank')}
+                  disabled={isCurrent}
+                  className="w-full font-semibold text-sm mt-auto"
                   style={{
-                    ...BUTTON_STYLES[plan.key],
+                    ...(isCurrent ? { background: '#e2e8f0', color: '#94a3b8' } : { ...BUTTON_STYLES[plan.key], color: '#fff' }),
                     height: 44,
                     borderRadius: 10,
                     border: 'none',
-                    cursor: 'pointer',
+                    cursor: isCurrent ? 'default' : 'pointer',
                   }}
                 >
-                  Get Started →
+                  {getButtonLabel(plan)}
                 </button>
               </div>
             </div>

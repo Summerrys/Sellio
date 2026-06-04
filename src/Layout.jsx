@@ -266,7 +266,7 @@ function AppLayout({ children, currentPageName }) {
   }
 
   if (isLocked) {
-    return <UpgradeWall />;
+    return <UpgradeWall currentTier={subscription?.tier ?? null} />;
   }
 
   if (isLoading) {
@@ -459,7 +459,7 @@ function AppLayout({ children, currentPageName }) {
         clearAppUser={clearAppUser}
       />
       <RoleSwitcher />
-      <PricingModal open={showPricingModal} onOpenChange={setShowPricingModal} tenantId={tenantId} />
+      <PricingModal open={showPricingModal} onOpenChange={setShowPricingModal} tenantId={tenantId} currentTier={subscription?.tier ?? null} />
       {showTrialModal && (
         <TrialReminderModal
           hoursLeft={Math.max(0, Math.floor((new Date(subscription.current_period_end) - new Date()) / (1000 * 60 * 60)))}
