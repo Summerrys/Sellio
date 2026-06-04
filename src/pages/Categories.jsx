@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Grid3X3, Plus, Pencil, Trash2, LayoutGrid, List } from 'lucide-react';
+import { Grid3X3, Plus, Pencil, Trash2, LayoutGrid, List, Loader2 } from 'lucide-react';
 
 export default function Categories() {
   return (
@@ -31,6 +31,7 @@ function CategoriesContent() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: '', description: '', is_active: true, sort_order: 0 });
   const [viewMode, setViewMode] = useState(localStorage.getItem('categories_view_mode') || 'grid');
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const handleViewToggle = (mode) => { setViewMode(mode); localStorage.setItem('categories_view_mode', mode); };
 
   const { data: categories = [] } = useQuery({
@@ -64,8 +65,13 @@ function CategoriesContent() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
   });
 
-  const open = (cat) => { setEditing(cat || null); setForm(cat ? { name: cat.name, description: cat.description || '', is_active: cat.is_active !== false, sort_order: cat.sort_order || 0 } : { name: '', description: '', is_active: true, sort_order: 0 }); setShowForm(true); };
-  const close = () => { setShowForm(false); setEditing(null); };
+  const open = (cat) => { setEditing(cat || null); setForm(cat ? { name: cat.name, description: cat.description || '', is_active: cat.is_active !== false, sort_order: cat.sort_order || 0 } : { name: '', description: '', is_active: true, sort_order: 0 }); setConfirmDelete(false); setShowForm(true); };
+  const close = () => { setShowForm(false); setEditing(null); setConfirmDelete(false); };
+
+  const handleDelete = () => {
+    if (!confirmDelete) { setConfirmDelete(true); return; }
+    deleteMutation.mutate(editing.id, { onSuccess: close });
+  };
 
   return (
     <PermissionGate permission="categories.read">
@@ -163,11 +169,29 @@ function CategoriesContent() {
             <div><Label>Sort Order</Label><Input type="number" value={form.sort_order} onChange={e => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })} /></div>
             <div className="flex items-center gap-2"><Switch checked={form.is_active} onCheckedChange={v => setForm({ ...form, is_active: v })} /><Label>Active</Label></div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={close}>Cancel</Button>
-            <Button onClick={() => saveMutation.mutate(form)} disabled={!form.name || saveMutation.isPending} className="bg-slate-900 hover:bg-slate-800">
-              {saveMutation.isPending ? 'Saving...' : editing ? 'Update' : 'Create'}
-            </Button>
+          <DialogFooter className="flex flex-row items-center gap-3 pt-2">
+            {editing && (
+              <Button
+                variant="outline"
+                className={`flex-shrink-0 transition-all ${confirmDelete ? 'border-red-500 bg-red-50 text-red-600 hover:bg-red-100' : 'text-red-500 border-red-200 hover:bg-red-50'}`}
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {confirmDelete ? 'Confirm?' : ''}
+              </Button>
+            )}
+            <div className="flex flex-1 gap-3">
+              <Button variant="outline" className="flex-1" onClick={close}>Cancel</Button>
+              <Button
+                className="flex-1 text-white"
+                style={{ background: 'var(--color-primary-gradient)' }}
+                onClick={() => saveMutation.mutate(form)}
+                disabled={!form.name || saveMutation.isPending}
+              >
+                {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : editing ? 'Save Changes' : 'Create'}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
