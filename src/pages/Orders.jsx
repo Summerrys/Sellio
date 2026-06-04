@@ -1,163 +1,173 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
-import PageHeader from '../components/ui-custom/PageHeader';
 import PullToRefresh from '../components/ui-custom/PullToRefresh';
+import TableCallAlerts from '../components/orders/TableCallAlerts';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import TableCallAlerts from '../components/orders/TableCallAlerts';
-import { ClipboardList, Volume2, VolumeX, Monitor, ChevronDown, ChevronUp } from 'lucide-react';
+import { ClipboardList, Bell, BellOff, Monitor } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPageUrl } from '../utils';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 
 const STATUS_TABS = [
-  { value: 'all',       label: 'All',        color: 'slate' },
-  { value: 'pending',   label: 'New',        color: 'amber' },
-  { value: 'confirmed', label: 'Confirmed',  color: 'blue' },
-  { value: 'preparing', label: 'Preparing',  color: 'purple' },
-  { value: 'ready',     label: 'Ready',      color: 'green' },
-  { value: 'completed', label: 'Completed',  color: 'slate' },
+  { value: 'all',       label: 'All' },
+  { value: 'pending',   label: 'New' },
+  { value: 'confirmed', label: 'Confirmed' },
+  { value: 'preparing', label: 'Preparing' },
+  { value: 'ready',     label: 'Ready' },
+  { value: 'completed', label: 'Done' },
 ];
 
 const STATUS_ACCENT = {
-  pending:   'border-l-amber-400 bg-amber-50',
-  confirmed: 'border-l-blue-400 bg-blue-50',
-  preparing: 'border-l-purple-400 bg-purple-50',
-  ready:     'border-l-green-400 bg-green-50',
-  completed: 'border-l-slate-300 bg-slate-50',
-  cancelled: 'border-l-red-300 bg-red-50',
+  pending:   { border: '#f59e0b', bg: '#fffbeb' },
+  confirmed: { border: '#3b82f6', bg: '#eff6ff' },
+  preparing: { border: '#8b5cf6', bg: '#f5f3ff' },
+  ready:     { border: '#10b981', bg: '#ecfdf5' },
+  completed: { border: '#94a3b8', bg: '#f8fafc' },
+  cancelled: { border: '#ef4444', bg: '#fef2f2' },
 };
 
 const STATUS_NEXT = {
-  pending:   { label: 'Accept',           next: 'confirmed' },
-  confirmed: { label: 'Start Preparing',  next: 'preparing' },
-  preparing: { label: 'Mark Ready',       next: 'ready' },
-  ready:     { label: 'Mark Served',      next: 'completed' },
+  pending:   { label: 'Accept',          next: 'confirmed' },
+  confirmed: { label: 'Start Preparing', next: 'preparing' },
+  preparing: { label: 'Mark Ready',      next: 'ready' },
+  ready:     { label: 'Mark Served',     next: 'completed' },
 };
 
+// Buttons that use theme color vs neutral
+const THEME_BUTTON_STATUSES = new Set(['pending', 'confirmed', 'preparing']);
+
+function playSound(type) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (type === 'ready') {
+      // Double ding at 880Hz
+      [0, 0.3].forEach(offset => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime + offset);
+        gain.gain.setValueAtTime(0.5, ctx.currentTime + offset);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.4);
+        osc.start(ctx.currentTime + offset);
+        osc.stop(ctx.currentTime + offset + 0.4);
+      });
+    } else {
+      // Single ding at 440Hz
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      gain.gain.setValueAtTime(0.5, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.5);
+    }
+  } catch (e) {}
+}
+
 function OrderCard({ order, currency, onStatusUpdate }) {
-  const [expanded, setExpanded] = useState(false);
   const action = STATUS_NEXT[order.status];
-  const elapsed = formatDistanceToNow(new Date(order.created_date), { addSuffix: true });
-  const accentClass = STATUS_ACCENT[order.status] || 'border-l-slate-300 bg-slate-50';
+  const accent = STATUS_ACCENT[order.status] || STATUS_ACCENT.completed;
+  const elapsed = formatDistanceToNow(new Date(order.created_date || order.created_at), { addSuffix: true });
+  const customerName = order.customer_name && order.customer_name.toLowerCase() !== 'nil' ? order.customer_name : null;
+
+  const useThemeButton = THEME_BUTTON_STATUSES.has(order.status);
 
   return (
     <div
-      className={`border border-slate-200 rounded-xl border-l-4 ${accentClass} shadow-sm overflow-hidden`}
+      className="rounded-xl border border-slate-200 overflow-hidden shadow-sm"
+      style={{ borderLeft: `4px solid ${accent.border}`, background: accent.bg }}
     >
-      {/* Card header — tap to expand */}
-      <div
-        className="p-4 cursor-pointer"
-        onClick={() => setExpanded(e => !e)}
-      >
-        <div className="flex items-start justify-between gap-2">
+      <div className="p-4">
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-bold text-slate-900 text-sm">#{order.order_number || order.id?.slice(-6)}</span>
             {order.table_name && (
-              <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-medium">
-                {order.table_name}
+              <span className="text-xs bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-medium">
+                🪑 {order.table_name}
               </span>
             )}
             {order.order_type && (
-              <span className="text-xs text-slate-500">{order.order_type === 'dine_in' ? 'Dine In' : 'Takeaway'}</span>
+              <span className="text-xs text-slate-500">
+                {order.order_type === 'dine_in' ? 'Dine In' : order.order_type === 'takeaway' ? 'Takeaway' : order.order_type}
+              </span>
             )}
           </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <span className="text-xs text-slate-400">{elapsed}</span>
-            {expanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-          </div>
+          <span className="text-xs text-slate-400 flex-shrink-0">{elapsed}</span>
         </div>
 
-        {order.customer_name && (
-          <p className="text-xs text-slate-500 mt-1">{order.customer_name}</p>
+        {/* Customer */}
+        {customerName && (
+          <p className="text-xs text-slate-500 mb-2">{customerName}</p>
         )}
 
-        {/* Items preview */}
-        <div className="mt-2 space-y-0.5">
+        {/* Items */}
+        <div className="space-y-1 mb-3">
           {(order.items || []).map((item, idx) => (
-            <p key={idx} className="text-sm text-slate-700">
-              {item.quantity}× {item.name}
-            </p>
-          ))}
-        </div>
-
-        <div className="flex items-center justify-between mt-2">
-          <span className="text-sm font-bold text-slate-900">{currency} {parseFloat(order.total_amount || 0).toFixed(2)}</span>
-          {order.status === 'completed' && (
-            <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">Completed</span>
-          )}
-        </div>
-      </div>
-
-      {/* Expanded detail */}
-      {expanded && (
-        <div className="px-4 pb-3 border-t border-slate-100 pt-3 space-y-1">
-          {order.notes && (
-            <p className="text-xs text-slate-500 italic mb-2">Note: {order.notes}</p>
-          )}
-          {(order.items || []).map((item, idx) => (
-            <div key={idx} className="flex justify-between text-sm text-slate-700">
-              <span>{item.quantity}× {item.name}{item.variant ? ` (${item.variant})` : ''}</span>
-              <span className="text-slate-500">{currency} {((item.price || 0) * (item.quantity || 1)).toFixed(2)}</span>
+            <div key={idx} className="flex justify-between text-sm">
+              <span className="text-slate-800 font-medium">
+                {item.quantity}× {item.name || item.product_name}
+                {item.variant ? <span className="text-slate-500 font-normal"> ({item.variant})</span> : ''}
+              </span>
+              {item.price != null && (
+                <span className="text-slate-500 text-xs">{currency} {((item.price || 0) * (item.quantity || 1)).toFixed(2)}</span>
+              )}
             </div>
           ))}
-          <div className="flex justify-between text-sm font-bold text-slate-900 pt-1 border-t border-slate-100 mt-1">
-            <span>Total</span>
-            <span>{currency} {parseFloat(order.total_amount || 0).toFixed(2)}</span>
-          </div>
         </div>
-      )}
 
-      {/* Action button */}
-      {action && (
-        <div className="px-4 pb-4 pt-1" onClick={e => e.stopPropagation()}>
-          <Button
-            className="w-full h-10 text-sm font-semibold"
+        {/* Notes */}
+        {order.notes && (
+          <p className="text-xs text-slate-500 italic mb-2">📝 {order.notes}</p>
+        )}
+
+        {/* Total */}
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-bold text-slate-900">{currency} {parseFloat(order.total_amount || 0).toFixed(2)}</span>
+          {order.status === 'completed' && (
+            <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">✓ Completed</span>
+          )}
+        </div>
+
+        {/* Action button */}
+        {action && (
+          <button
             onClick={() => onStatusUpdate(order.id, action.next)}
+            className="w-full py-2.5 rounded-lg text-sm font-semibold text-white active:scale-95 transition-transform"
+            style={useThemeButton
+              ? { background: 'var(--color-primary-gradient, rgb(var(--color-primary)))' }
+              : { background: '#334155' }
+            }
           >
             {action.label}
-          </Button>
-        </div>
-      )}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
 export default function Orders() {
   const { tenantId, tenant } = useTenant();
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [soundEnabled, setSoundEnabled] = useState(false);
-  const previousOrderIdsRef = useRef(new Set());
+  const previousPendingIds = useRef(new Set());
+  const previousReadyIds = useRef(new Set());
   const refreshRef = useRef(null);
 
   const isFnB = /f&b|cafe|restaurant|food/i.test(tenant?.industry || '');
   const currency = tenant?.settings?.currency || tenant?.currency || 'SGD';
-
-  const playDing = () => {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.4);
-      gain.gain.setValueAtTime(0.6, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.5);
-    } catch (e) {}
-  };
 
   const fetchOrders = useCallback(async () => {
     if (!tenantId) return;
@@ -178,15 +188,25 @@ export default function Orders() {
     return () => clearInterval(refreshRef.current);
   }, [tenantId, fetchOrders]);
 
-  // Sound on new pending orders
+  // Sound alerts
   useEffect(() => {
     const pendingIds = new Set(orders.filter(o => o.status === 'pending').map(o => o.id));
-    if (soundEnabled && previousOrderIdsRef.current.size > 0) {
-      for (const id of pendingIds) {
-        if (!previousOrderIdsRef.current.has(id)) { playDing(); break; }
+    const readyIds   = new Set(orders.filter(o => o.status === 'ready').map(o => o.id));
+
+    if (soundEnabled) {
+      if (previousPendingIds.current.size > 0) {
+        for (const id of pendingIds) {
+          if (!previousPendingIds.current.has(id)) { playSound('new'); break; }
+        }
+      }
+      if (previousReadyIds.current.size > 0) {
+        for (const id of readyIds) {
+          if (!previousReadyIds.current.has(id)) { playSound('ready'); break; }
+        }
       }
     }
-    previousOrderIdsRef.current = pendingIds;
+    previousPendingIds.current = pendingIds;
+    previousReadyIds.current = readyIds;
   }, [orders, soundEnabled]);
 
   const handleStatusUpdate = async (orderId, newStatus) => {
@@ -203,7 +223,6 @@ export default function Orders() {
   const handleRefresh = useCallback(() => fetchOrders(), [fetchOrders]);
 
   const filteredOrders = activeTab === 'all' ? orders : orders.filter(o => o.status === activeTab);
-
   const countFor = (status) => orders.filter(o => o.status === status).length;
 
   const pendingCount   = countFor('pending');
@@ -215,54 +234,59 @@ export default function Orders() {
     <RequirePermission permission="orders.view">
       <PullToRefresh onRefresh={handleRefresh}>
         <div className="space-y-4">
-          <PageHeader
-            title="Orders"
-            description="Manage incoming and active orders"
-            actions={
-              isFnB ? (
-                <Button variant="outline" onClick={() => navigate(createPageUrl('KitchenDisplay'))} className="gap-2 text-sm">
-                  <Monitor className="w-4 h-4" />
-                  <span className="hidden sm:inline">Kitchen Display</span>
-                  <span className="sm:hidden">Kitchen</span>
+          {/* Header */}
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">Orders</h1>
+              <p className="text-sm text-slate-500">Manage incoming and active orders</p>
+            </div>
+            <div className="flex flex-col items-end gap-2 flex-shrink-0">
+              {isFnB && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(createPageUrl('KitchenDisplay'))}
+                  className="gap-1.5 text-xs h-8 border-slate-200"
+                >
+                  <Monitor className="w-3.5 h-3.5" />
+                  Kitchen Display
                 </Button>
-              ) : null
-            }
-          />
-
-          {/* Sound toggle */}
-          <div className="flex items-center gap-2">
-            <Switch id="sound" checked={soundEnabled} onCheckedChange={setSoundEnabled} />
-            <Label htmlFor="sound" className="flex items-center gap-2 cursor-pointer text-sm">
-              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-              <span className="hidden sm:inline">Sound Alerts</span>
-            </Label>
+              )}
+              <div className="flex items-center gap-1.5">
+                <Switch id="sound" checked={soundEnabled} onCheckedChange={setSoundEnabled} className="scale-90" />
+                <Label htmlFor="sound" className="flex items-center gap-1 cursor-pointer text-xs text-slate-600">
+                  {soundEnabled ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
+                  Sound Alerts
+                </Label>
+              </div>
+            </div>
           </div>
 
           {/* Table Call Alerts */}
           <TableCallAlerts tenantId={tenantId} />
 
-          {/* Stats — 4 compact cards in a row */}
+          {/* Stats — 4 compact cards */}
           <div className="grid grid-cols-4 gap-2">
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-center">
               <p className="text-xl font-bold text-amber-900">{pendingCount}</p>
               <p className="text-[11px] text-amber-700 font-medium">New</p>
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
-              <p className="text-xl font-bold text-blue-900">{confirmCount}</p>
-              <p className="text-[11px] text-blue-700 font-medium">Confirmed</p>
-            </div>
-            <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-center">
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-2.5 text-center">
               <p className="text-xl font-bold text-purple-900">{preparingCount}</p>
               <p className="text-[11px] text-purple-700 font-medium">Preparing</p>
             </div>
-            <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+            <div className="bg-green-50 border border-green-200 rounded-xl p-2.5 text-center">
               <p className="text-xl font-bold text-green-900">{readyCount}</p>
               <p className="text-[11px] text-green-700 font-medium">Ready</p>
             </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-2.5 text-center">
+              <p className="text-xl font-bold text-blue-900">{confirmCount}</p>
+              <p className="text-[11px] text-blue-700 font-medium">Confirmed</p>
+            </div>
           </div>
 
-          {/* Status tabs — horizontal scrollable row */}
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {/* Status tabs — all fit on mobile 375px */}
+          <div className="flex w-full gap-1">
             {STATUS_TABS.map(tab => {
               const count = tab.value === 'all' ? orders.length : countFor(tab.value);
               const isActive = activeTab === tab.value;
@@ -270,16 +294,18 @@ export default function Orders() {
                 <button
                   key={tab.value}
                   onClick={() => setActiveTab(tab.value)}
-                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all active:scale-95 ${
                     isActive
                       ? 'text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-slate-100 text-slate-600'
                   }`}
                   style={isActive ? { background: 'var(--color-primary-gradient, rgb(var(--color-primary)))' } : {}}
                 >
                   {tab.label}
                   {count > 0 && (
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${isActive ? 'bg-white/25 text-white' : 'bg-slate-200 text-slate-700'}`}>
+                    <span className={`text-[10px] font-bold px-1 py-0 rounded-full min-w-[16px] text-center leading-4 ${
+                      isActive ? 'bg-white/25 text-white' : 'bg-slate-200 text-slate-700'
+                    }`}>
                       {count}
                     </span>
                   )}
@@ -294,7 +320,7 @@ export default function Orders() {
           ) : filteredOrders.length === 0 ? (
             <div className="text-center py-12">
               <ClipboardList className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500">No orders {activeTab !== 'all' ? `with status "${STATUS_TABS.find(t=>t.value===activeTab)?.label}"` : 'yet'}</p>
+              <p className="text-slate-500">No {activeTab !== 'all' ? `${STATUS_TABS.find(t => t.value === activeTab)?.label} ` : ''}orders yet</p>
             </div>
           ) : (
             <div className="space-y-3">

@@ -17,15 +17,17 @@ function ElapsedTimer({ createdDate }) {
 }
 
 const STATUS_CONFIG = {
-  pending:   { label: 'New Order',  bg: 'bg-amber-600 border-amber-400',  btnLabel: '▶  Accept' },
-  confirmed: { label: 'Confirmed',  bg: 'bg-blue-700 border-blue-500',    btnLabel: '▶  Start Preparing' },
+  pending:   { label: 'New Order',  bg: 'bg-amber-600 border-amber-400',   btnLabel: '▶  Accept' },
+  confirmed: { label: 'Confirmed',  bg: 'bg-blue-700 border-blue-500',     btnLabel: '▶  Start Preparing' },
   preparing: { label: 'Preparing',  bg: 'bg-purple-700 border-purple-500', btnLabel: '✓  Mark Ready' },
+  ready:     { label: 'Ready',      bg: 'bg-green-700 border-green-500',   btnLabel: '✓  Mark Served' },
 };
 
 const NEXT_STATUS = {
   pending:   'confirmed',
   confirmed: 'preparing',
   preparing: 'ready',
+  ready:     'completed',
 };
 
 function KDSOrderCard({ order, onBump }) {
@@ -98,7 +100,7 @@ export default function KitchenDisplay() {
       .from('orders')
       .select('*')
       .eq('tenant_id', tenantId)
-      .in('status', ['pending', 'confirmed', 'preparing'])
+      .in('status', ['pending', 'confirmed', 'preparing', 'ready'])
       .order('created_date', { ascending: true });
     if (!error) setOrders(data || []);
     setIsLoading(false);
@@ -120,7 +122,7 @@ export default function KitchenDisplay() {
       .update({ status: nextStatus, updated_date: new Date().toISOString() })
       .eq('id', orderId);
     if (error) { toast.error('Failed to update order'); return; }
-    if (nextStatus === 'ready') {
+    if (nextStatus === 'completed') {
       setOrders(prev => prev.filter(o => o.id !== orderId));
     } else {
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: nextStatus } : o));
@@ -130,6 +132,7 @@ export default function KitchenDisplay() {
   const pendingOrders   = orders.filter(o => o.status === 'pending');
   const confirmedOrders = orders.filter(o => o.status === 'confirmed');
   const preparingOrders = orders.filter(o => o.status === 'preparing');
+  const readyOrders     = orders.filter(o => o.status === 'ready');
 
   if (isLoading) {
     return (
@@ -147,11 +150,19 @@ export default function KitchenDisplay() {
       <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-700">
         <div>
           <h1 className="text-3xl font-black">{tenant?.name || 'Kitchen'} — Kitchen Display</h1>
-          <p className="text-slate-400 text-lg mt-1">
-            {orders.length === 0
-              ? 'No active orders'
-              : `${pendingOrders.length} new · ${confirmedOrders.length} confirmed · ${preparingOrders.length} preparing`}
-          </p>
+          <div className="flex gap-3 mt-3">
+            {[
+              { label: 'New',       count: pendingOrders.length,   color: 'text-amber-400',  bg: 'bg-amber-400/10' },
+              { label: 'Confirmed', count: confirmedOrders.length, color: 'text-blue-400',   bg: 'bg-blue-400/10' },
+              { label: 'Preparing', count: preparingOrders.length, color: 'text-purple-400', bg: 'bg-purple-400/10' },
+              { label: 'Ready',     count: readyOrders.length,     color: 'text-green-400',  bg: 'bg-green-400/10' },
+            ].map(s => (
+              <div key={s.label} className={`rounded-xl px-3 py-2 text-center ${s.bg}`}>
+                <p className={`text-2xl font-black ${s.color}`}>{s.count}</p>
+                <p className={`text-xs font-semibold ${s.color} opacity-80`}>{s.label}</p>
+              </div>
+            ))}
+          </div>
         </div>
         <Button variant="ghost" className="text-slate-400 hover:text-white" onClick={() => window.history.back()}>
           ← Back
@@ -165,7 +176,7 @@ export default function KitchenDisplay() {
           <p className="text-lg">New orders will appear here automatically</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* New Orders */}
           <div>
             <h2 className="text-xl font-bold text-amber-400 uppercase tracking-widest mb-4">
@@ -204,6 +215,20 @@ export default function KitchenDisplay() {
             ) : (
               <div className="space-y-4">
                 {preparingOrders.map(order => <KDSOrderCard key={order.id} order={order} onBump={handleBump} />)}
+              </div>
+            )}
+          </div>
+
+          {/* Ready */}
+          <div>
+            <h2 className="text-xl font-bold text-green-400 uppercase tracking-widest mb-4">
+              🟢 Ready ({readyOrders.length})
+            </h2>
+            {readyOrders.length === 0 ? (
+              <div className="rounded-2xl border-2 border-dashed border-slate-700 p-8 text-center text-slate-600">No ready orders</div>
+            ) : (
+              <div className="space-y-4">
+                {readyOrders.map(order => <KDSOrderCard key={order.id} order={order} onBump={handleBump} />)}
               </div>
             )}
           </div>
