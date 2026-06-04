@@ -20,35 +20,47 @@ export default function OutletDatesTab() {
 
   const branchName = tenant?.settings?.branch_name || tenant?.name || '—';
 
-  // Load inventory items via useEffect with direct Supabase call
-  useEffect(() => {
+  const fetchItems = async () => {
     if (!tenantId) return;
     setLoadingItems(true);
-    getSupabase().then(async (supabase) => {
-      const { data, error } = await supabase
-        .from('inventory_items')
-        .select('id, current_stock, low_stock_threshold, par_level, unit, last_restock_date, product_id, products(id, name)')
-        .eq('tenant_id', tenantId);
+    const supabase = await getSupabase();
+
+    const { data: invItems, error: invError } = await supabase
+      .from('inventory_items')
+      .select('id, product_id, current_stock, low_stock_threshold, par_level, unit, last_restock_date')
+      .eq('tenant_id', tenantId);
+
+    console.log('[OutletDatesTab] invItems:', invItems, 'error:', invError);
+
+    if (!invItems || invItems.length === 0) {
+      setItems([]);
       setLoadingItems(false);
-      if (!error) {
-        setItems((data || []).map(i => ({
-          ...i,
-          product_name: i.products?.name || '',
-        })));
-      }
-    });
+      return;
+    }
+
+    const productIds = invItems.map(i => i.product_id).filter(Boolean);
+    const { data: prods, error: prodsError } = await supabase
+      .from('products')
+      .select('id, name')
+      .in('id', productIds);
+
+    console.log('[OutletDatesTab] prods:', prods, 'error:', prodsError);
+
+    const rows = invItems.map(item => ({
+      ...item,
+      product_name: prods?.find(p => p.id === item.product_id)?.name ?? 'Unknown',
+    }));
+
+    setItems(rows);
+    setLoadingItems(false);
+  };
+
+  // Load inventory items via useEffect with direct Supabase call
+  useEffect(() => {
+    fetchItems();
   }, [tenantId]);
 
-  const refreshItems = () => {
-    if (!tenantId) return;
-    getSupabase().then(async (supabase) => {
-      const { data } = await supabase
-        .from('inventory_items')
-        .select('id, current_stock, low_stock_threshold, par_level, unit, last_restock_date, product_id, products(id, name)')
-        .eq('tenant_id', tenantId);
-      setItems((data || []).map(i => ({ ...i, product_name: i.products?.name || '' })));
-    });
-  };
+  const refreshItems = () => fetchItems();
 
   const { data: suppliers = [] } = useQuery({
     queryKey: ['suppliers', tenantId],
