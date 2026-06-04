@@ -169,40 +169,44 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
               </div>
             )}
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <div className="flex flex-col gap-2 pt-2">
+              <div className="flex gap-2">
+                <Button
+                  type="submit"
+                  disabled={updateMutation.isPending || !canEdit}
+                  className="flex-1 text-white"
+                  style={{ background: 'var(--color-primary-gradient)' }}
+                >
+                  {updateMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
               {canEdit && (
                 <Button
                   type="button"
                   variant="destructive"
                   onClick={() => setShowDeleteDialog(true)}
-                  className="sm:mr-auto"
+                  className="w-full"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Remove
                 </Button>
               )}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={updateMutation.isPending || !canEdit}
-                className="bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-600))]"
-              >
-                {updateMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Changes'
-                )}
-              </Button>
-            </DialogFooter>
+            </div>
           </form>
         </DialogContent>
       </Dialog>

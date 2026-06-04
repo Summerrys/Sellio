@@ -191,19 +191,19 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={loading}>
-            Cancel
-          </Button>
+        <div className="flex gap-2 pt-2">
           <Button
             onClick={handleSubmit}
             disabled={loading}
-            className="text-white"
+            className="flex-[2] text-white"
             style={{ background: 'var(--color-primary-gradient)' }}
           >
             {loading ? 'Creating...' : 'Create Account'}
           </Button>
-        </DialogFooter>
+          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={loading} className="flex-1">
+            Cancel
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
