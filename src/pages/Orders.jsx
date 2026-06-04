@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { loadPrinterConfig, buildOrderReceipt, sendViaBluetooth, sendViaEpsonEPos } from '@/lib/printerUtils';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
@@ -7,7 +8,7 @@ import TableCallAlerts from '../components/orders/TableCallAlerts';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { ClipboardList, Bell, BellOff, Monitor, Search, Download, Printer } from 'lucide-react';
+import { ClipboardList, Bell, BellOff, Monitor, Search, Download, Printer, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPageUrl } from '../utils';
 import { useNavigate } from 'react-router-dom';
@@ -86,13 +87,39 @@ function printReceipt(order, currency, merchantName) {
   win.document.close();
 }
 
-function OrderCard({ order, currency, merchantName, onStatusUpdate }) {
+function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate }) {
   const action = STATUS_NEXT[order.status];
   const accent = STATUS_ACCENT[order.status] || STATUS_ACCENT.completed;
   const elapsed = formatDistanceToNow(new Date(order.created_date || order.created_at), { addSuffix: true });
   const customerName = order.customer_name && order.customer_name.toLowerCase() !== 'nil' ? order.customer_name : null;
   const useThemeButton = THEME_BUTTON_STATUSES.has(order.status);
   const showPrint = order.status === 'ready' || order.status === 'completed';
+  const [printing, setPrinting] = useState(false);
+
+  const handlePrint = async () => {
+    const cfg = loadPrinterConfig(tenantId);
+    if (!cfg) {
+      // Fall back to browser print dialog
+      printReceipt(order, currency, merchantName);
+      return;
+    }
+    setPrinting(true);
+    const bytes = buildOrderReceipt(order, currency, merchantName);
+    try {
+      if (cfg.mode === 'bluetooth' && cfg.deviceName) {
+        await sendViaBluetooth(cfg.deviceName, bytes);
+      } else if (cfg.mode === 'network') {
+        await sendViaEpsonEPos(cfg.ip, bytes, merchantName);
+      } else {
+        printReceipt(order, currency, merchantName);
+      }
+      toast.success('Printed ✓');
+    } catch (err) {
+      toast.error(`Print failed: ${err.message}`);
+    } finally {
+      setPrinting(false);
+    }
+  };
 
   return (
     <div
@@ -155,13 +182,17 @@ function OrderCard({ order, currency, merchantName, onStatusUpdate }) {
         <div className={showPrint ? 'flex gap-2' : ''}>
           {showPrint && (
             <button
-              onClick={() => printReceipt(order, currency, merchantName)}
-              className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold flex-1 transition-colors"
+              onClick={handlePrint}
+              disabled={printing}
+              className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold flex-1 transition-colors disabled:opacity-70"
               style={{ border: '1.5px solid rgb(var(--color-primary))', color: 'rgb(var(--color-primary))', background: 'transparent' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(var(--color-primary),0.08)'; }}
+              onMouseEnter={e => { if (!printing) e.currentTarget.style.background = 'rgba(var(--color-primary),0.08)'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
             >
-              <Printer className="w-3.5 h-3.5" /> Receipt
+              {printing
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending...</>
+                : <><Printer className="w-3.5 h-3.5" /> Receipt</>
+              }
             </button>
           )}
           {action && (
@@ -480,6 +511,7 @@ export default function Orders() {
                   order={order}
                   currency={currency}
                   merchantName={tenant?.name}
+                  tenantId={tenantId}
                   onStatusUpdate={handleStatusUpdate}
                 />
               ))}

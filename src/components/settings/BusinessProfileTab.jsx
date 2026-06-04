@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Building2, MapPin, Camera, X, Save, Percent, Loader2, Pencil, Hash, Receipt, ChevronDown, ChevronUp } from 'lucide-react';
+import PrinterSettings from '@/components/settings/PrinterSettings';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -411,6 +412,9 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
                 rows={2}
               />
             </div>
+
+            {/* Printer connection */}
+            <PrinterSettings tenantId={tenantId} merchantName={form.name} />
           </div>
         )}
       </Card>
