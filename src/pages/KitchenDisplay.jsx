@@ -93,7 +93,23 @@ export default function KitchenDisplay() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const refreshRef = useRef(null);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const fallbackPollRef = useRef(null);
+  const audioCtxRef = useRef(null);
+
+  const playTone = (freq, duration) => {
+    if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = audioCtxRef.current;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  };
 
   // Listen for native fullscreen exit (Escape key)
   useEffect(() => {
@@ -138,9 +154,50 @@ export default function KitchenDisplay() {
 
   useEffect(() => {
     if (!tenantId) return;
+
     fetchOrders();
-    refreshRef.current = setInterval(fetchOrders, 15000);
-    return () => clearInterval(refreshRef.current);
+
+    let supabaseClient;
+    let channel;
+
+    getSupabase().then(sc => {
+      supabaseClient = sc;
+      channel = sc
+        .channel(`kitchen-orders-${tenantId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` },
+          (payload) => {
+            console.log('Kitchen Display real-time update:', payload.eventType, payload.new?.order_number);
+            fetchOrders();
+            if (payload.eventType === 'INSERT' && soundEnabled) {
+              playTone(440, 0.4);
+            }
+            if (payload.eventType === 'UPDATE' &&
+                payload.new?.status === 'ready' &&
+                payload.old?.status !== 'ready' &&
+                soundEnabled) {
+              setTimeout(() => playTone(880, 0.2), 0);
+              setTimeout(() => playTone(1100, 0.2), 250);
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('Kitchen Display subscription status:', status);
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('Kitchen Display: real-time failed, falling back to 30s polling');
+            clearInterval(fallbackPollRef.current);
+            fallbackPollRef.current = setInterval(fetchOrders, 30000);
+          } else if (status === 'SUBSCRIBED') {
+            clearInterval(fallbackPollRef.current);
+          }
+        });
+    });
+
+    return () => {
+      clearInterval(fallbackPollRef.current);
+      if (supabaseClient && channel) supabaseClient.removeChannel(channel);
+    };
   }, [tenantId]);
 
   const handleBump = async (orderId, currentStatus) => {

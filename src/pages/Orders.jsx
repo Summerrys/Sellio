@@ -194,8 +194,7 @@ export default function Orders() {
   });
   const [searchQuery, setSearchQuery] = useState('');
   const lastSeenDateRef = useRef(null);
-  const soundPollRef = useRef(null);
-  const refreshRef = useRef(null);
+  const fallbackPollRef = useRef(null);
   const audioCtxRef = useRef(null);
 
   const isFnB = /f&b|cafe|restaurant|food/i.test(tenant?.industry || '');
@@ -255,53 +254,50 @@ export default function Orders() {
 
   useEffect(() => {
     if (!tenantId) return;
+
     fetchOrders();
-    refreshRef.current = setInterval(fetchOrders, 10000);
-    return () => clearInterval(refreshRef.current);
-  }, [tenantId, fetchOrders]);
 
-  // Sound alert polling — runs every 20s when sound is enabled
-  useEffect(() => {
-    if (!soundEnabled || !tenantId || !canViewOrders) {
-      clearInterval(soundPollRef.current);
-      return;
-    }
-    const poll = async () => {
-      const supabase = await getSupabase();
-      const query = supabase
-        .from('orders')
-        .select('id, status, created_date')
-        .eq('tenant_id', tenantId)
-        .order('created_date', { ascending: false })
-        .limit(20);
-      const { data } = await query;
-      if (!data || data.length === 0) return;
+    let supabaseClient;
+    let channel;
 
-      const latestDate = data[0].created_date;
-      if (lastSeenDateRef.current === null) {
-        // First poll — just record baseline, no alert
-        lastSeenDateRef.current = latestDate;
-        return;
-      }
+    getSupabase().then(sc => {
+      supabaseClient = sc;
+      channel = sc
+        .channel(`orders-page-${tenantId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` },
+          (payload) => {
+            console.log('Orders page real-time update:', payload.eventType, payload.new?.order_number);
+            fetchOrders();
 
-      // Check for genuinely new orders (created after last seen)
-      const hasNewPending = data.some(o => o.status === 'pending' && o.created_date > lastSeenDateRef.current);
-      const hasNewReady   = data.some(o => o.status === 'ready'   && o.created_date > lastSeenDateRef.current);
+            // Sound alerts via real-time events
+            if (soundEnabled && payload.eventType === 'INSERT' && payload.new?.status === 'pending') {
+              playSound('new');
+            }
+            if (soundEnabled && payload.eventType === 'UPDATE' &&
+                payload.new?.status === 'ready' && payload.old?.status !== 'ready') {
+              playSound('ready');
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('Orders page subscription status:', status);
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('Orders page: real-time failed, falling back to 30s polling');
+            clearInterval(fallbackPollRef.current);
+            fallbackPollRef.current = setInterval(fetchOrders, 30000);
+          } else if (status === 'SUBSCRIBED') {
+            clearInterval(fallbackPollRef.current);
+          }
+        });
+    });
 
-      if (hasNewReady) {
-        playSound('ready');
-      } else if (hasNewPending) {
-        playSound('new');
-      }
-
-      lastSeenDateRef.current = latestDate;
+    return () => {
+      clearInterval(fallbackPollRef.current);
+      if (supabaseClient && channel) supabaseClient.removeChannel(channel);
     };
-
-    // Run immediately, then every 20s
-    poll();
-    soundPollRef.current = setInterval(poll, 20000);
-    return () => clearInterval(soundPollRef.current);
-  }, [soundEnabled, tenantId, canViewOrders]);
+  }, [tenantId, fetchOrders]);
 
   const handleStatusUpdate = async (orderId, newStatus) => {
     const supabase = await getSupabase();
