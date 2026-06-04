@@ -87,12 +87,13 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
       console.log('→ createStaffUser response:', response.status, data);
       if (!response.ok) throw new Error(data.error || 'Failed to create staff');
 
-      // Persist phone number on the tenant_users row so Edit modal can display it
-      const generatedEmail = `${form.phone.trim()}@sellio.app`;
+      // Persist local phone number (no country code) on the tenant_users row
+      const localPhone = form.phone.trim();
+      const generatedEmail = `${form.countryCode.replace('+', '')}${localPhone}@sellio.app`;
       const supabase = await getSupabase();
       await supabase
         .from('tenant_users')
-        .update({ user_phone: fullPhone })
+        .update({ user_phone: localPhone })
         .eq('tenant_id', tenantId)
         .eq('user_email', generatedEmail);
 

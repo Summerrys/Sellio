@@ -112,8 +112,13 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
               <Input
                 value={(() => {
                   if (staff.user_phone) return staff.user_phone;
-                  // Derive from email: strip @sellio.app suffix
+                  // Derive from email: strip @sellio.app, then strip leading country code
                   const digits = staff.user_email?.replace(/@sellio\.app$/, '') || '';
+                  // Check longest match first to avoid partial matches (e.g. 60 vs 6)
+                  const countryCodes = ['63', '66', '62', '65', '60'];
+                  for (const cc of countryCodes) {
+                    if (digits.startsWith(cc)) return digits.slice(cc.length);
+                  }
                   return digits;
                 })()}
                 disabled
