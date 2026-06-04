@@ -4,7 +4,6 @@ import { useTenant } from '../components/tenant/TenantContext';
 import { Clock, AlertCircle, ChefHat, ArrowLeft, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 
 function ElapsedTimer({ createdDate }) {
@@ -91,7 +90,6 @@ function KDSOrderCard({ order, onBump }) {
 
 export default function KitchenDisplay() {
   const { tenantId, tenant } = useTenant();
-  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -101,14 +99,11 @@ export default function KitchenDisplay() {
   useEffect(() => {
     const onFSChange = () => {
       if (!document.fullscreenElement) {
-        document.body.classList.remove('kitchen-fullscreen');
         setIsFullscreen(false);
       }
     };
     document.addEventListener('fullscreenchange', onFSChange);
     return () => {
-      // Cleanup on unmount: always restore nav
-      document.body.classList.remove('kitchen-fullscreen');
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
@@ -118,16 +113,14 @@ export default function KitchenDisplay() {
 
   const handleEnterFullscreen = () => {
     document.documentElement.requestFullscreen().catch(() => {});
-    document.body.classList.add('kitchen-fullscreen');
     setIsFullscreen(true);
   };
 
   const handleExit = () => {
-    document.body.classList.remove('kitchen-fullscreen');
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
     }
-    navigate(createPageUrl('Orders'));
+    setIsFullscreen(false);
   };
 
   const fetchOrders = async () => {
@@ -182,7 +175,7 @@ export default function KitchenDisplay() {
     );
   }
 
-  return (
+  const content = (
     <div className="min-h-screen bg-slate-900 text-white p-4 sm:p-6">
       <div className="mb-6 pb-4 border-b border-slate-700">
         {/* Top row: Exit button + Title */}
@@ -288,4 +281,17 @@ export default function KitchenDisplay() {
       )}
     </div>
   );
+
+  if (isFullscreen) {
+    return (
+      <div style={{
+        position: 'fixed', top: 0, left: 0, width: '100%', height: '100vh',
+        zIndex: 9999, background: '#0f172a', overflowY: 'auto'
+      }}>
+        {content}
+      </div>
+    );
+  }
+
+  return content;
 }
