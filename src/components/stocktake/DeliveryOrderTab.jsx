@@ -49,7 +49,7 @@ export default function DeliveryOrderTab() {
     queryKey: ['suppliers', tenantId],
     queryFn: async () => {
       const supabase = await getSupabase();
-      const { data } = await supabase.from('suppliers').select('*').eq('tenant_id', tenantId).eq('active', true).order('name');
+      const { data } = await supabase.from('suppliers').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('name');
       return data || [];
     },
     enabled: !!tenantId,
@@ -222,7 +222,7 @@ export default function DeliveryOrderTab() {
                           className="w-full border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-xs focus:outline-none"
                         >
                           <option value="">Select product...</option>
-                          {products.map(p => <option key={p.id} value={p.id}>{p.name}{p.slug ? ` (${p.slug})` : ''}</option>)}
+                          {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
                       </td>
                       <td className="px-2 py-2">

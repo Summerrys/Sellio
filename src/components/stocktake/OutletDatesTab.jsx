@@ -1,14 +1,13 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../tenant/TenantContext';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageCircle, Users, AlertCircle, Check, X } from 'lucide-react';
+import { MessageCircle, Users, AlertCircle, Check, X, Loader2 } from 'lucide-react';
 import SupplierDrawer from './SupplierDrawer';
 import SupplierPickerModal from './SupplierPickerModal';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 export default function OutletDatesTab() {
   const { tenantId, tenant } = useTenant();
@@ -16,24 +15,40 @@ export default function OutletDatesTab() {
   const [businessDate, setBusinessDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [showSupplierDrawer, setShowSupplierDrawer] = useState(false);
   const [showSupplierPicker, setShowSupplierPicker] = useState(false);
+  const [items, setItems] = useState([]);
+  const [loadingItems, setLoadingItems] = useState(false);
 
   const branchName = tenant?.settings?.branch_name || tenant?.name || '—';
 
-  const { data: items = [], isLoading } = useQuery({
-    queryKey: ['stocktake-outlet', tenantId],
-    queryFn: async () => {
-      const supabase = await getSupabase();
+  // Load inventory items via useEffect with direct Supabase call
+  useEffect(() => {
+    if (!tenantId) return;
+    setLoadingItems(true);
+    getSupabase().then(async (supabase) => {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select('id, current_stock, low_stock_threshold, par_level, unit, last_restock_date, product_id, products(id, name)')
+        .eq('tenant_id', tenantId);
+      setLoadingItems(false);
+      if (!error) {
+        setItems((data || []).map(i => ({
+          ...i,
+          product_name: i.products?.name || '',
+        })));
+      }
+    });
+  }, [tenantId]);
+
+  const refreshItems = () => {
+    if (!tenantId) return;
+    getSupabase().then(async (supabase) => {
       const { data } = await supabase
         .from('inventory_items')
-        .select('id, product_id, current_stock, par_level, unit, low_stock_threshold, products(id, name, slug)')
+        .select('id, current_stock, low_stock_threshold, par_level, unit, last_restock_date, product_id, products(id, name)')
         .eq('tenant_id', tenantId);
-      return (data || []).map(i => ({
-        ...i,
-        product_name: i.products?.name || '',
-      }));
-    },
-    enabled: !!tenantId,
-  });
+      setItems((data || []).map(i => ({ ...i, product_name: i.products?.name || '' })));
+    });
+  };
 
   const { data: suppliers = [] } = useQuery({
     queryKey: ['suppliers', tenantId],
@@ -45,16 +60,15 @@ export default function OutletDatesTab() {
     enabled: !!tenantId,
   });
 
-  const productsNeedingOrder = items.filter(i => {
-    const needed = Math.max(0, (i.par_level ?? 0) - (i.current_stock ?? 0));
-    return needed > 0;
-  });
+  const productsNeedingOrder = items.filter(i =>
+    Math.max(0, (i.par_level ?? 0) - (i.current_stock ?? 0)) > 0
+  );
 
   const handleWhatsApp = (supplier) => {
     const lines = productsNeedingOrder.map(i => {
       const needed = Math.max(0, (i.par_level ?? 0) - (i.current_stock ?? 0));
       const unit = i.unit ? ` ${i.unit}` : '';
-      return `• ${i.product_name}: ${needed}${unit} needed`;
+      return `- ${i.product_name}: ${needed}${unit} needed`;
     });
     const msg = [
       `Hello${supplier ? ` ${supplier.name}` : ''},`,
@@ -76,7 +90,7 @@ export default function OutletDatesTab() {
     else setShowSupplierPicker(true);
   };
 
-  if (isLoading) {
+  if (loadingItems) {
     return (
       <div className="p-5 space-y-3">
         {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)}
@@ -86,6 +100,7 @@ export default function OutletDatesTab() {
 
   return (
     <div className="p-5 space-y-5">
+      {/* Header */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="bg-slate-50 rounded-xl p-3.5">
           <p className="text-xs text-slate-500 mb-1">Branch</p>
@@ -102,15 +117,15 @@ export default function OutletDatesTab() {
         </div>
       </div>
 
+      {/* Table */}
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="w-10 h-10 text-slate-300 mb-3" />
-          <p className="text-slate-600 font-medium">No products tracked yet</p>
-          <p className="text-sm text-slate-400 mt-1">Enable tracking in Inventory to see products here</p>
+          <p className="text-slate-600 font-medium">No inventory items found</p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <table className="w-full text-sm min-w-[680px]">
+          <table className="w-full text-sm min-w-[820px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="text-left px-4 py-3 font-medium text-slate-600">Product</th>
@@ -118,6 +133,7 @@ export default function OutletDatesTab() {
                 <th className="text-center px-3 py-3 font-medium text-slate-600 w-28">PAR Level</th>
                 <th className="text-center px-3 py-3 font-medium text-slate-600 w-28">Alert Below</th>
                 <th className="text-center px-3 py-3 font-medium text-slate-600 w-28">Current Stock</th>
+                <th className="text-center px-3 py-3 font-medium text-slate-600 w-32">Last Restocked</th>
                 <th className="text-center px-3 py-3 font-medium text-slate-600 w-32">Orders Needed</th>
               </tr>
             </thead>
@@ -127,6 +143,9 @@ export default function OutletDatesTab() {
                 const stock = item.current_stock ?? 0;
                 const needed = Math.max(0, parLevel - stock);
                 const stockOk = stock >= parLevel;
+                const lastRestocked = item.last_restock_date
+                  ? (() => { try { return format(parseISO(item.last_restock_date), 'dd MMM yyyy'); } catch { return '—'; } })()
+                  : '—';
                 return (
                   <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="px-4 py-2.5 font-medium text-slate-900">{item.product_name}</td>
@@ -137,17 +156,17 @@ export default function OutletDatesTab() {
                         itemId={item.id}
                         field="unit"
                         tenantId={tenantId}
-                        onSaved={() => queryClient.invalidateQueries({ queryKey: ['stocktake-outlet', tenantId] })}
+                        onSaved={refreshItems}
                       />
                     </td>
                     <td className="px-3 py-2 text-center">
                       <InlineNumberInput
                         value={item.par_level ?? ''}
-                        placeholder="Set PAR"
+                        placeholder="0"
                         itemId={item.id}
                         field="par_level"
                         tenantId={tenantId}
-                        onSaved={() => queryClient.invalidateQueries({ queryKey: ['stocktake-outlet', tenantId] })}
+                        onSaved={refreshItems}
                       />
                     </td>
                     <td className="px-3 py-2 text-center">
@@ -157,13 +176,16 @@ export default function OutletDatesTab() {
                         itemId={item.id}
                         field="low_stock_threshold"
                         tenantId={tenantId}
-                        onSaved={() => queryClient.invalidateQueries({ queryKey: ['stocktake-outlet', tenantId] })}
+                        onSaved={refreshItems}
                       />
                     </td>
                     <td className="px-3 py-2.5 text-center">
                       <span className={`font-semibold ${stockOk ? 'text-green-600' : 'text-red-600'}`}>
                         {stock}{item.unit ? ` ${item.unit}` : ''}
                       </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-center text-slate-500 text-xs">
+                      {lastRestocked}
                     </td>
                     <td className="px-3 py-2.5 text-center">
                       {needed > 0 ? (
@@ -182,6 +204,7 @@ export default function OutletDatesTab() {
         </div>
       )}
 
+      {/* Actions */}
       <div className="flex flex-wrap gap-3 pt-2">
         <Button variant="outline" onClick={() => setShowSupplierDrawer(true)} className="flex items-center gap-2">
           <Users className="w-4 h-4" />
@@ -212,7 +235,6 @@ export default function OutletDatesTab() {
   );
 }
 
-// Shared save logic
 async function saveField(itemId, tenantId, field, value) {
   const supabase = await getSupabase();
   const { error } = await supabase
@@ -223,10 +245,9 @@ async function saveField(itemId, tenantId, field, value) {
   if (error) throw error;
 }
 
-// Inline number input (PAR level, low_stock_threshold)
 function InlineNumberInput({ value, placeholder, itemId, field, tenantId, onSaved }) {
   const [localVal, setLocalVal] = useState(value === '' || value == null ? '' : String(value));
-  const [status, setStatus] = useState(null); // null | 'saving' | 'saved' | 'error'
+  const [status, setStatus] = useState(null);
   const timerRef = useRef(null);
 
   const handleBlur = async () => {
@@ -263,7 +284,6 @@ function InlineNumberInput({ value, placeholder, itemId, field, tenantId, onSave
   );
 }
 
-// Inline text input (unit)
 function InlineTextInput({ value, placeholder, itemId, field, tenantId, onSaved }) {
   const [localVal, setLocalVal] = useState(value || '');
   const [status, setStatus] = useState(null);
