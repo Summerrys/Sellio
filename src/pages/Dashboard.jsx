@@ -30,7 +30,26 @@ const featureCards = [
   { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view', color: 'bg-slate-50 text-slate-600 border-slate-200' },
 ];
 
-function StatCard({ icon: Icon, label, value, subtext, color, onClick, transparent }) {
+function StatCard({ icon: Icon, label, value, subtext, color, onClick, transparent, compact }) {
+  if (compact) {
+    return (
+      <button
+        onClick={onClick}
+        className={cn(
+          'w-full flex flex-col items-center justify-center gap-0.5 py-2 px-1 rounded-xl active:scale-95 transition-transform',
+          transparent ? 'bg-transparent border-none' : 'bg-white border border-slate-100 shadow-sm',
+          onClick && 'cursor-pointer'
+        )}
+      >
+        <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mb-0.5', color)}>
+          <Icon className="w-3.5 h-3.5" />
+        </div>
+        <p className="text-sm font-bold text-slate-900 leading-tight">{value}</p>
+        <p className="text-[10px] text-slate-400 font-medium text-center leading-tight">{label}</p>
+        {subtext && <p className="text-[9px] text-slate-300 leading-tight">{subtext}</p>}
+      </button>
+    );
+  }
   return (
     <button
       onClick={onClick}
@@ -219,12 +238,13 @@ export default function Dashboard() {
         tenantSlug={tenant?.slug}
       />
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-2 gap-3" style={{ alignItems: 'stretch' }}>
+      {/* Stats Row — 4 compact cards always in a row */}
+      <div className="grid grid-cols-4 gap-2">
         <RequirePermission permission="orders.view" silent>
           <StatCard
+            compact
             icon={DollarSign}
-            label="Revenue Today"
+            label="Today's Revenue"
             value={`${currency}${todayRevenue.toFixed(2)}`}
             color="bg-blue-50 text-blue-600"
             onClick={() => navigate(createPageUrl('Reports'))}
@@ -233,35 +253,34 @@ export default function Dashboard() {
 
         <RequirePermission permission="orders.view" silent>
           <StatCard
+            compact
             icon={ShoppingCart}
             label="Orders Today"
             value={todayOrdersFiltered.length}
-            subtext={pendingOrders > 0 ? `${pendingOrders} pending` : 'All clear'}
+            subtext={pendingOrders > 0 ? `${pendingOrders} pending` : undefined}
             color="bg-purple-50 text-purple-600"
             onClick={() => navigate(createPageUrl('Orders'))}
           />
         </RequirePermission>
 
         <RequirePermission permission="inventory.view" silent>
-          <div className={cn('h-full', stockStatus.cardClass)}>
-            <StatCard
-              icon={stockStatus.icon}
-              label="Stock Level"
-              value={stockStatus.value}
-              subtext={stockStatus.subtext}
-              color={stockStatus.iconColor}
-              onClick={() => navigate(createPageUrl('Inventory'))}
-              transparent
-            />
-          </div>
+          <StatCard
+            compact
+            icon={stockStatus.icon}
+            label="Stock"
+            value={stockStatus.value}
+            subtext={stockStatus.subtext}
+            color={stockStatus.iconColor}
+            onClick={() => navigate(createPageUrl('Inventory'))}
+          />
         </RequirePermission>
 
         <RequirePermission permission="staff.view" silent>
           <StatCard
+            compact
             icon={Users}
             label="Active Staff"
             value={staff.length}
-            subtext="Team members"
             color="bg-teal-50 text-teal-600"
             onClick={() => navigate(createPageUrl('UserManagement'))}
           />
