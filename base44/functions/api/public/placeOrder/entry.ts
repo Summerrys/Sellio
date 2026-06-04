@@ -60,8 +60,19 @@ Deno.serve(async (req) => {
     const taxAmount = (subtotal * taxRate) / 100;
     const totalAmount = subtotal + taxAmount;
 
-    // Generate order number
-    const orderNumber = `ORD-${Date.now().toString().slice(-8)}`;
+    // Generate order number using tenant sequence
+    let orderNumber;
+    try {
+      const supabase = await (await import('npm:@supabase/supabase-js@2')).createClient(
+        Deno.env.get('SUPABASE_URL'),
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+      );
+      const { data: seqNum } = await supabase.rpc('get_next_order_number', { p_tenant_id: tenant.id });
+      const prefix = tenant.order_id_prefix || 'ORD';
+      orderNumber = `${prefix}-${String(seqNum || 1).padStart(6, '0')}`;
+    } catch {
+      orderNumber = `ORD-${Date.now().toString().slice(-8)}`;
+    }
 
     // Create order
     const order = await base44.asServiceRole.entities.Order.create({

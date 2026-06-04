@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Building2, MapPin, Camera, X, Save, Percent, Loader2, Pencil } from 'lucide-react';
+import { Building2, MapPin, Camera, X, Save, Percent, Loader2, Pencil, Hash } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import ImageEditModal from '@/components/onboarding/ImageEditModal';
@@ -69,6 +69,8 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
     tax_rate: '',
     tax_inclusive: false,
     logo_url: '',
+    order_id_prefix: 'ORD',
+    order_id_start: 1,
   });
 
   const [logoPreview, setLogoPreview] = useState(null);
@@ -93,6 +95,8 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
       tax_rate: settings.tax_rate != null ? String(settings.tax_rate) : '',
       tax_inclusive: settings.tax_inclusive || false,
       logo_url: tenant.logo_url || '',
+      order_id_prefix: tenant.order_id_prefix || 'ORD',
+      order_id_start: tenant.order_id_start || 1,
     });
     setLogoPreview(tenant.logo_url || null);
   }, [tenant]);
@@ -169,6 +173,8 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
         currency: form.currency,
         address: form.address,
         logo_url: logoUrl,
+        order_id_prefix: form.order_id_prefix || 'ORD',
+        order_id_start: parseInt(form.order_id_start) || 1,
         settings: {
           ...existingSettings,
           branch_name: form.branch_name,
@@ -319,6 +325,42 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
               </p>
             </div>
             <Switch checked={form.tax_inclusive} onCheckedChange={v => set('tax_inclusive', v)} />
+          </div>
+        </Section>
+      </Card>
+
+      {/* Order Settings */}
+      <Card className="border border-slate-100 shadow-sm p-6 space-y-4">
+        <Section icon={Hash} title="Order Settings">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label className="text-xs text-slate-600 mb-1 block">Order ID Prefix</Label>
+              <Input
+                className="h-10 uppercase"
+                maxLength={6}
+                value={form.order_id_prefix}
+                onChange={e => set('order_id_prefix', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                placeholder="ORD"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-slate-600 mb-1 block">Starting Number</Label>
+              <Input
+                className="h-10"
+                type="number"
+                min={1}
+                value={form.order_id_start}
+                onChange={e => set('order_id_start', e.target.value)}
+                placeholder="1"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">New orders will be numbered from this value. Existing order numbers are unaffected.</p>
+            </div>
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+            <p className="text-xs text-slate-500 mb-1">Preview</p>
+            <p className="text-xl font-bold text-slate-800 font-mono">
+              {(form.order_id_prefix || 'ORD')}-{String(parseInt(form.order_id_start) || 1).padStart(6, '0')}
+            </p>
           </div>
         </Section>
       </Card>
