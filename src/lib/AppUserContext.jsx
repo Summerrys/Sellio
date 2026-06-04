@@ -72,6 +72,9 @@ export function AppUserProvider({ children }) {
 
   const clearAppUser = () => {
     cookieUtils.clear();
+    // Also clear any legacy localStorage keys that may persist old sessions
+    localStorage.removeItem('app_user');
+    localStorage.removeItem('app_session');
     setAppUserState(null);
   };
 
