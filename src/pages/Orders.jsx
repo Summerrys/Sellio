@@ -242,15 +242,15 @@ export default function Orders() {
             </div>
             <div className="flex flex-col items-end gap-2 flex-shrink-0">
               {isFnB && (
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
                   onClick={() => navigate(createPageUrl('KitchenDisplay'))}
-                  className="gap-1.5 text-xs h-8 border-slate-200"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors"
+                  style={{ border: '1.5px solid rgb(var(--color-primary))', color: 'rgb(var(--color-primary))', background: 'rgba(var(--color-primary), 0.08)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-primary-gradient)'; e.currentTarget.style.color = '#fff'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(var(--color-primary), 0.08)'; e.currentTarget.style.color = 'rgb(var(--color-primary))'; }}
                 >
-                  <Monitor className="w-3.5 h-3.5" />
-                  Kitchen Display
-                </Button>
+                  <Monitor className="w-4 h-4" /> Kitchen Display
+                </button>
               )}
               <div className="flex items-center gap-1.5">
                 <Switch id="sound" checked={soundEnabled} onCheckedChange={setSoundEnabled} className="scale-90" />

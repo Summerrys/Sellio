@@ -164,9 +164,7 @@ export default function KitchenDisplay() {
             ))}
           </div>
         </div>
-        <Button variant="ghost" className="text-slate-400 hover:text-white" onClick={() => window.history.back()}>
-          ← Back
-        </Button>
+
       </div>
 
       {orders.length === 0 ? (
