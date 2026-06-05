@@ -39,42 +39,20 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-// ── Haversine distance (km) ──────────────────────────────────────────────────
-function haversineKm(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function formatDistance(km) {
-  if (km < 1) return '< 1 km';
-  if (km < 10) return `${km.toFixed(1)} km`;
-  return `${Math.round(km)} km`;
-}
-
 // ── Sticky header bar ────────────────────────────────────────────────────────
 function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHistoryClick }) {
   const branchName = tenant?.settings?.branch_name;
   const address = tenant?.address || '';
-  const locationLabel = branchName || (address ? address.slice(0, 30) + (address.length > 30 ? '…' : '') : '');
-  const [distanceStr, setDistanceStr] = useState('');
+  const truncatedAddress = address.length > 25 ? address.slice(0, 25) + '…' : address;
 
-  useEffect(() => {
-    if (!address) return;
-    navigator.geolocation?.getCurrentPosition(async (pos) => {
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`);
-        const data = await res.json();
-        if (!data?.[0]) return;
-        const km = haversineKm(pos.coords.latitude, pos.coords.longitude, parseFloat(data[0].lat), parseFloat(data[0].lon));
-        setDistanceStr(formatDistance(km));
-      } catch {}
-    }, () => {}, { timeout: 6000 });
-  }, [address]);
-
-  const subLine = locationLabel ? (distanceStr ? `📍 ${locationLabel} · ${distanceStr}` : `📍 ${locationLabel}`) : '';
+  let subLine = '';
+  if (branchName && truncatedAddress) {
+    subLine = `📍 ${branchName} · ${truncatedAddress}`;
+  } else if (branchName) {
+    subLine = `📍 ${branchName}`;
+  } else if (truncatedAddress) {
+    subLine = `📍 ${truncatedAddress}`;
+  }
 
   const tintBg = hexToRgba(primaryColor, 0.10);
   const iconBtnBase = { width: 36, height: 36, borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 };
