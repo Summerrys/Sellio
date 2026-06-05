@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, X, Send } from 'lucide-react';
+import { X, Send } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 
 export default function MenuAssistantWidget({ products, tenant, onProductSelect, storefront, externalOpen, onExternalClose }) {
@@ -123,43 +123,23 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
         }}
         style={{
           position: 'fixed',
-          bottom: '80px',
+          bottom: '24px',
           right: '16px',
-          zIndex: 100,
-          width: 52,
-          height: 52,
-          borderRadius: '50%',
-          background: buttonBackground,
+          width: '64px',
+          height: '64px',
+          padding: 0,
           border: 'none',
+          background: 'none',
           cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-          transition: 'transform 0.2s'
+          zIndex: 50,
+          filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.20))',
         }}
-        onMouseEnter={e => e.target.style.transform = 'scale(1.1)'}
-        onMouseLeave={e => e.target.style.transform = 'scale(1)'}
       >
-        {!open && (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            width: 10,
-            height: 10,
-            borderRadius: '50%',
-            background: '#10b981',
-            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-          }}>
-            <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }`}</style>
-          </div>
-        )}
-        {!open ? (
-          <Sparkles size={24} color="white" />
-        ) : (
-          <X size={24} color="white" />
-        )}
+        <img
+          src="https://assets.apptelier.sg/sellio/Logo_AISellio_Assistant.png"
+          alt="Sellio Assistant"
+          style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover' }}
+        />
       </button>
 
       {/* Chat Panel */}
