@@ -32,42 +32,47 @@ function getCategoryIcon(name = '') {
 
 // ── Sticky header bar ────────────────────────────────────────────────────────
 function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHistoryClick }) {
+  const branchName = tenant?.settings?.branch_name;
+  const iconBtnStyle = { width: 36, height: 36, borderRadius: '50%', background: 'white', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.12)', flexShrink: 0 };
   return (
     <div style={{
       position: 'sticky', top: 0, zIndex: 50,
       height: 56,
-      background: primaryColor,
+      background: '#f8f9fa',
       display: 'flex', alignItems: 'center',
       padding: '0 14px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+      boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
     }}>
       {/* Left: logo + name */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
         {tenant?.logo_url ? (
-          <img src={tenant.logo_url} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.4)', flexShrink: 0 }} />
+          <div style={{ ...iconBtnStyle, overflow: 'hidden', padding: 0 }}>
+            <img src={tenant.logo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
         ) : (
-          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, color: 'white', flexShrink: 0 }}>
+          <div style={{ ...iconBtnStyle, fontWeight: 700, fontSize: 16, color: '#374151' }}>
             {tenant?.name?.[0] || 'S'}
           </div>
         )}
-        <span style={{ color: 'white', fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {tenant?.name || ''}
-        </span>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ color: '#111827', fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {tenant?.name || ''}
+          </div>
+          {branchName && (
+            <div style={{ color: '#6b7280', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
+              {branchName}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Right: History + Cart buttons */}
       <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
-        <button
-          onClick={onHistoryClick}
-          style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.92)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.18)', flexShrink: 0 }}
-        >
-          <Clock size={17} color={primaryColor} />
+        <button onClick={onHistoryClick} style={iconBtnStyle}>
+          <Clock size={17} color="#374151" />
         </button>
-        <button
-          onClick={onCartClick}
-          style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.92)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.18)', flexShrink: 0, position: 'relative' }}
-        >
-          <ShoppingCart size={17} color={primaryColor} />
+        <button onClick={onCartClick} style={{ ...iconBtnStyle, position: 'relative' }}>
+          <ShoppingCart size={17} color="#374151" />
           {cartCount > 0 && (
             <span style={{ position: 'absolute', top: -3, right: -3, minWidth: 17, height: 17, borderRadius: 9, background: '#ef4444', color: 'white', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
               {cartCount}
@@ -92,7 +97,7 @@ function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY, h
         : { background: primaryColor }
       ),
     }}>
-      {bannerBgImage && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.32)' }} />}
+      {/* No dark overlay — image displays at full brightness */}
       {(headline || tagline) && (
         <div style={{ position: 'absolute', bottom: 18, left: 16, right: 16, zIndex: 2 }}>
           {headline && <p style={{ color: 'white', fontWeight: 800, fontSize: 22, margin: '0 0 4px', textShadow: '0 2px 8px rgba(0,0,0,0.3)', lineHeight: 1.2 }}>{headline}</p>}
@@ -170,15 +175,18 @@ export default function StorefrontView({
   const [selectedVariants, setSelectedVariants] = useState({});
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
+  const featuredProducts = products.filter(p => p.is_featured === true);
+  const hasFeatured = featuredProducts.length > 0;
   const categoriesWithProducts = categories.filter(cat => products.some(p => p.category_id === cat.id));
-  const uncategorised = products.filter(p => !categories.some(c => c.id === p.category_id));
+  const uncategorised = products.filter(p => !p.is_featured && !categories.some(c => c.id === p.category_id));
 
-  // Set first category active on load
+  // Set first active section on load (deals first if present)
   useEffect(() => {
-    if (categoriesWithProducts.length > 0 && !activeCategory) {
-      setActiveCategory(categoriesWithProducts[0].id);
+    if (!activeCategory) {
+      if (hasFeatured) setActiveCategory('__deals__');
+      else if (categoriesWithProducts.length > 0) setActiveCategory(categoriesWithProducts[0].id);
     }
-  }, [categoriesWithProducts.length]);
+  }, [hasFeatured, categoriesWithProducts.length]);
 
   // Intersection observer for active category tracking
   useEffect(() => {
@@ -285,6 +293,14 @@ export default function StorefrontView({
               borderRight: '1px solid #f1f5f9',
               background: '#fafafa',
             }}>
+              {hasFeatured && (
+                <CategorySidebarItem
+                  cat={{ id: '__deals__', name: '⭐ Deals' }}
+                  isActive={activeCategory === '__deals__'}
+                  primaryColor={primaryColor}
+                  onClick={() => scrollToCategory('__deals__')}
+                />
+              )}
               {categoriesWithProducts.map(cat => (
                 <CategorySidebarItem
                   key={cat.id}
@@ -311,8 +327,18 @@ export default function StorefrontView({
               className="sf-no-scrollbar"
               style={{ flex: 1, overflowY: 'auto', height: '100%', paddingBottom: 80 }}
             >
+              {/* Special Deals section */}
+              {hasFeatured && (
+                <div ref={el => categoryRefs.current['__deals__'] = el} data-category-id="__deals__">
+                  <p style={{ fontSize: 13, fontWeight: 700, padding: '12px 14px 6px', color: '#1e293b', margin: 0, position: 'sticky', top: 0, background: 'white', zIndex: 1, borderBottom: '1px solid #f1f5f9' }}>⭐ Special Deals</p>
+                  <div style={{ padding: '4px 10px' }}>
+                    {featuredProducts.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={handleAddToCart} onProductClick={handleProductClick} featured={true} />)}
+                  </div>
+                </div>
+              )}
               {categoriesWithProducts.map(cat => {
-                const catProducts = products.filter(p => p.category_id === cat.id);
+                const catProducts = products.filter(p => p.category_id === cat.id && !p.is_featured);
+                if (!catProducts.length) return null;
                 return (
                   <div
                     key={cat.id}
@@ -380,17 +406,22 @@ export default function StorefrontView({
 }
 
 // ── Product row item (split layout) ─────────────────────────────────────────
-function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onAddToCart, onProductClick }) {
+function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onAddToCart, onProductClick, featured = false }) {
   const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
   return (
     <div
       onClick={() => onProductClick(product)}
       style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f8f9fa', cursor: 'pointer' }}
     >
-      {product.image_url
-        ? <img src={product.image_url} style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
-        : <div style={{ width: 72, height: 72, borderRadius: 10, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>🛍️</div>
-      }
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        {product.image_url
+          ? <img src={product.image_url} style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover', display: 'block' }} />
+          : <div style={{ width: 72, height: 72, borderRadius: 10, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🛍️</div>
+        }
+        {featured && (
+          <span style={{ position: 'absolute', bottom: 4, left: 4, background: '#f59e0b', color: 'white', fontSize: 9, fontWeight: 700, borderRadius: 4, padding: '1px 5px', lineHeight: 1.6 }}>★ Featured</span>
+        )}
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 2px', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</p>
         {storefrontConfig?.show_product_description !== false && product.description && (

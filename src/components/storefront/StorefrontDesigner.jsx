@@ -473,17 +473,27 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
   const [drawerHeight, setDrawerHeight] = useState(DRAWER_HANDLE_ONLY);
   const isDraggingDrawer = useRef(false);
   const drawerHeightRef = useRef(DRAWER_HANDLE_ONLY);
+  const dragDidMove = useRef(false);
 
-  const MAX_DRAWER = Math.round(window.innerHeight * 0.55);
+  const primaryColor = form.banner_bg_color || '#fb923c';
+  const MAX_DRAWER = Math.round(window.innerHeight * 0.50);
+
+  const snapDrawer = (targetH) => {
+    drawerHeightRef.current = targetH;
+    setDrawerHeight(targetH);
+    setDrawerExpanded(targetH >= MAX_DRAWER);
+  };
 
   const startDrawerDrag = (e) => {
     e.preventDefault();
     isDraggingDrawer.current = true;
+    dragDidMove.current = false;
     const startY = e.touches?.[0]?.clientY ?? e.clientY;
     const startH = drawerHeightRef.current;
     let currentH = startH;
 
     const onMove = (me) => {
+      dragDidMove.current = true;
       const y = me.touches?.[0]?.clientY ?? me.clientY;
       const delta = startY - y;
       currentH = Math.max(MIN_DRAWER, Math.min(MAX_DRAWER, startH + delta));
@@ -492,13 +502,16 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
     };
     const onEnd = () => {
       isDraggingDrawer.current = false;
-      let snapped;
-      if (currentH < DRAWER_HANDLE_ONLY + 30) snapped = DRAWER_HANDLE_ONLY;
-      else if (currentH < DRAWER_TABS_VISIBLE + 60) snapped = DRAWER_TABS_VISIBLE;
-      else snapped = MAX_DRAWER;
-      drawerHeightRef.current = snapped;
-      setDrawerHeight(snapped);
-      setDrawerExpanded(snapped >= MAX_DRAWER);
+      if (!dragDidMove.current) {
+        // Pure tap — toggle between closed and half-open
+        const next = drawerHeightRef.current >= MAX_DRAWER - 10 ? DRAWER_HANDLE_ONLY : MAX_DRAWER;
+        snapDrawer(next);
+      } else {
+        let snapped;
+        if (currentH < DRAWER_HANDLE_ONLY + 30) snapped = DRAWER_HANDLE_ONLY;
+        else snapped = MAX_DRAWER;
+        snapDrawer(snapped);
+      }
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onEnd);
       window.removeEventListener('touchmove', onMove);
@@ -515,7 +528,7 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
   return (
     <>
       {/* Canvas area — uses exact same StorefrontView as live store */}
-      <div style={{ height: canvasHeight, overflow: 'auto', background: '#f0f2f7', position: 'relative' }}>
+      <div onClick={() => { if (drawerHeight >= MAX_DRAWER) snapDrawer(DRAWER_HANDLE_ONLY); }} style={{ height: canvasHeight, overflow: 'auto', background: '#f0f2f7', position: 'relative' }}>
         <div style={{ position: 'relative' }}>
           <StorefrontView
             previewMode={true}
@@ -542,7 +555,7 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
         background: 'white',
         borderRadius: '20px 20px 0 0',
         boxShadow: '0 -4px 24px rgba(0,0,0,0.12)',
-        transition: isDraggingDrawer.current ? 'none' : 'height 0.3s ease',
+        transition: isDraggingDrawer.current ? 'none' : 'height 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
         zIndex: 100,
         display: 'flex', flexDirection: 'column',
         overflow: 'hidden',
@@ -551,9 +564,9 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
         <div
           onMouseDown={startDrawerDrag}
           onTouchStart={startDrawerDrag}
-          style={{ padding: '10px 0 4px', cursor: 'ns-resize', flexShrink: 0, touchAction: 'none' }}
+          style={{ padding: '10px 0 6px', cursor: 'pointer', flexShrink: 0, touchAction: 'none', userSelect: 'none' }}
         >
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: '#e2e8f0', margin: '0 auto' }} />
+          <div style={{ width: 48, height: 5, borderRadius: 3, background: primaryColor, margin: '0 auto', opacity: 0.85 }} />
         </div>
 
         {/* Tab bar */}
