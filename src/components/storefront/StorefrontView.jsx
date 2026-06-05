@@ -76,9 +76,8 @@ function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHist
 
   const subLine = locationLabel ? (distanceStr ? `📍 ${locationLabel} · ${distanceStr}` : `📍 ${locationLabel}`) : '';
 
-  const tintBg = hexToRgba(primaryColor, 0.10);
   const iconBtnBase = { width: 36, height: 36, borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 };
-  const iconBtnTinted = { ...iconBtnBase, background: tintBg };
+  const iconBtnNeutral = { ...iconBtnBase, background: '#ffffff', boxShadow: '0 1px 4px rgba(0,0,0,0.12)' };
 
   const headerHeight = subLine ? 64 : 56;
 
@@ -122,11 +121,11 @@ function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHist
 
       {/* Right: History + Cart buttons */}
       <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
-        <button onClick={onHistoryClick} style={iconBtnTinted}>
-          <Clock size={17} color={primaryColor} />
+        <button onClick={onHistoryClick} style={iconBtnNeutral}>
+          <Clock size={17} color="#374151" />
         </button>
-        <button onClick={onCartClick} style={{ ...iconBtnTinted, position: 'relative' }}>
-          <ShoppingCart size={17} color={primaryColor} />
+        <button onClick={onCartClick} style={{ ...iconBtnNeutral, position: 'relative' }}>
+          <ShoppingCart size={17} color="#374151" />
           {cartCount > 0 && (
             <span style={{ position: 'absolute', top: -3, right: -3, minWidth: 17, height: 17, borderRadius: 9, background: '#ef4444', color: 'white', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
               {cartCount}

@@ -721,9 +721,9 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
         const parsed = JSON.parse(draft);
         setForm({ ...DEFAULTS, ...parsed });
         const [productsRes, categoriesRes, tenantRes] = await Promise.all([
-          supabase.from('products').select('id, name, description, price, image_url, category_id, is_active').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').limit(12),
+          supabase.from('products').select('id, name, description, price, image_url, category_id, is_active, is_featured').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').limit(12),
           supabase.from('categories').select('id, name').eq('tenant_id', tenantId),
-          supabase.from('tenants').select('name, logo_url, currency').eq('id', tenantId).maybeSingle(),
+          supabase.from('tenants').select('name, logo_url, currency, address, settings').eq('id', tenantId).maybeSingle(),
         ]);
         setPreviewProducts(productsRes.data || []);
         setPreviewCategories(categoriesRes.data || []);
@@ -733,9 +733,9 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
     }
     const [configRes, productsRes, categoriesRes, tenantRes] = await Promise.all([
       supabase.from('storefront_configs').select('*').eq('tenant_id', tenantId).maybeSingle(),
-      supabase.from('products').select('id, name, description, price, image_url, category_id, is_active').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').limit(12),
+      supabase.from('products').select('id, name, description, price, image_url, category_id, is_active, is_featured').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').limit(12),
       supabase.from('categories').select('id, name').eq('tenant_id', tenantId),
-      supabase.from('tenants').select('name, logo_url, currency').eq('id', tenantId).maybeSingle(),
+      supabase.from('tenants').select('name, logo_url, currency, address, settings').eq('id', tenantId).maybeSingle(),
     ]);
     setForm(configRes.data ? { ...DEFAULTS, ...configRes.data } : { ...DEFAULTS });
     setPreviewProducts(productsRes.data || []);
