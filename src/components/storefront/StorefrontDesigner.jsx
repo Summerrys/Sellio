@@ -3,7 +3,7 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { X, ArrowLeft, ExternalLink, Upload, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
+import { X, ArrowLeft, ExternalLink, Upload, ChevronDown, ChevronUp, Pencil, ImagePlus } from 'lucide-react';
 import StorefrontView from '@/components/storefront/StorefrontView';
 import ImageEditModal from '@/components/onboarding/ImageEditModal';
 
@@ -124,14 +124,53 @@ function CollapsibleSection({ title, children, defaultOpen = false }) {
   );
 }
 
-// Banner tab content (shared between desktop and mobile)
-function BannerTabContent({ form, onChange, tenantId }) {
+// Banner tab content — colour + text only (image upload lives on the banner canvas)
+function BannerTabContent({ form, onChange }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div>
+        <SectionLabel>Background Colour</SectionLabel>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <input type="color" value={form.banner_bg_color || '#6366f1'} onChange={e => onChange('banner_bg_color', e.target.value)}
+            style={{ width: 40, height: 40, borderRadius: 8, border: '1px solid #e2e8f0', cursor: 'pointer', padding: 2 }} />
+          <Input value={form.banner_bg_color || ''} onChange={e => onChange('banner_bg_color', e.target.value)} className="w-32 font-mono text-sm" />
+        </div>
+        <p className="text-xs text-slate-400 mt-1.5">Fallback when no image is set</p>
+      </div>
+      <div>
+        <SectionLabel>Headline</SectionLabel>
+        <Input value={form.banner_headline || ''} onChange={e => onChange('banner_headline', e.target.value)} placeholder="e.g. Order fresh, eat happy" />
+      </div>
+      <div>
+        <SectionLabel>Tagline</SectionLabel>
+        <Input value={form.banner_tagline || ''} onChange={e => onChange('banner_tagline', e.target.value)} placeholder="e.g. Fast delivery · Fresh daily" />
+      </div>
+    </div>
+  );
+}
+
+// Interactive banner overlay — sits on top of the StorefrontView preview at exact banner position
+// HEADER_H = 56px (StorefrontHeader), BANNER_H = 180px (StorefrontBanner)
+const PREVIEW_HEADER_H = 56;
+const PREVIEW_BANNER_H = 180;
+
+function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
-  const [hoveringBanner, setHoveringBanner] = useState(false);
+  const [hovering, setHovering] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
 
-  const handleBannerImageUpload = async (e) => {
+  // Drag-to-reposition state
+  const overlayRef = useRef(null);
+  const isDragging = useRef(false);
+  const lastPos = useRef({ x: 0, y: 0 });
+  const livePos = useRef({ x: form.banner_position_x ?? 50, y: form.banner_position_y ?? 50 });
+
+  useEffect(() => {
+    livePos.current = { x: form.banner_position_x ?? 50, y: form.banner_position_y ?? 50 };
+  }, [form.banner_position_x, form.banner_position_y]);
+
+  const handleUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!tenantId) { toast.error('Tenant not loaded yet'); return; }
@@ -142,14 +181,13 @@ function BannerTabContent({ form, onChange, tenantId }) {
     const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type });
     if (error) { toast.error('Upload failed: ' + error.message); setUploading(false); return; }
     const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
-    const cleanUrl = publicUrl.split('?')[0];
-    onChange('banner_bg_image_url', cleanUrl + '?t=' + Date.now());
+    onChange('banner_bg_image_url', publicUrl.split('?')[0] + '?t=' + Date.now());
     setUploading(false);
     toast.success('Banner image uploaded');
     if (e.target) e.target.value = '';
   };
 
-  const handleRemoveBannerImage = async () => {
+  const handleRemove = async () => {
     if (!form.banner_bg_image_url) return;
     const supabase = await getSupabase();
     const url = form.banner_bg_image_url;
@@ -182,96 +220,124 @@ function BannerTabContent({ form, onChange, tenantId }) {
     setUploading(false);
   };
 
+  // Drag-to-reposition (mouse + touch)
+  const handleDragStart = (e) => {
+    if (!form.banner_bg_image_url) return;
+    if (e.target.closest('[data-no-drag]')) return;
+    isDragging.current = true;
+    lastPos.current = { x: e.clientX ?? e.touches?.[0]?.clientX, y: e.clientY ?? e.touches?.[0]?.clientY };
+    e.preventDefault();
+    const onMove = (me) => {
+      if (!isDragging.current) return;
+      const cx = me.clientX ?? me.touches?.[0]?.clientX;
+      const cy = me.clientY ?? me.touches?.[0]?.clientY;
+      const dx = cx - lastPos.current.x;
+      const dy = cy - lastPos.current.y;
+      lastPos.current = { x: cx, y: cy };
+      const rect = overlayRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      // Invert drag: dragging right moves focal point left
+      livePos.current.x = Math.max(0, Math.min(100, livePos.current.x - (dx / rect.width * 100)));
+      livePos.current.y = Math.max(0, Math.min(100, livePos.current.y - (dy / rect.height * 100)));
+      onChange('banner_position_x', livePos.current.x);
+      onChange('banner_position_y', livePos.current.y);
+    };
+    const onUp = () => {
+      isDragging.current = false;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onUp);
+  };
+
+  const hasImage = !!form.banner_bg_image_url;
+  const topOffset = PREVIEW_HEADER_H * scaleFactor;
+  const bannerH = PREVIEW_BANNER_H * scaleFactor;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Image section */}
-      <div>
-        <SectionLabel>Banner Image</SectionLabel>
-        {form.banner_bg_image_url ? (
-          <div
-            onMouseEnter={() => setHoveringBanner(true)}
-            onMouseLeave={() => setHoveringBanner(false)}
-            style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', height: 120 }}
-          >
-            {/* Drag-to-reposition mini preview */}
-            <DraggableBannerImage
-              src={form.banner_bg_image_url}
-              positionX={form.banner_position_x ?? 50}
-              positionY={form.banner_position_y ?? 50}
-              height={120}
-              onPositionChange={(x, y) => { onChange('banner_position_x', x); onChange('banner_position_y', y); }}
-            />
+    <>
+      {/* Positioned overlay exactly over the banner area */}
+      <div
+        ref={overlayRef}
+        onMouseEnter={() => setHovering(true)}
+        onMouseLeave={() => setHovering(false)}
+        onMouseDown={hasImage ? handleDragStart : undefined}
+        style={{
+          position: 'absolute',
+          top: topOffset,
+          left: 0, right: 0,
+          height: bannerH,
+          zIndex: 10,
+          cursor: hasImage ? 'grab' : 'pointer',
+          touchAction: 'none',
+        }}
+        onClick={!hasImage ? () => fileInputRef.current?.click() : undefined}
+      >
+        {/* No image: centered upload prompt */}
+        {!hasImage && (
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+            background: 'rgba(255,255,255,0.18)',
+            border: hovering ? '2px dashed rgba(255,255,255,0.9)' : '2px dashed rgba(255,255,255,0.5)',
+            borderRadius: 14, padding: '14px 24px', cursor: 'pointer',
+            transition: 'border-color 0.15s, background 0.15s',
+            ...(hovering ? { background: 'rgba(255,255,255,0.28)' } : {}),
+          }}>
+            <ImagePlus size={22} color="white" />
+            <span style={{ color: 'white', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
+              {uploading ? 'Uploading...' : 'Banner image'}
+            </span>
+          </div>
+        )}
+
+        {/* Has image: overlay controls */}
+        {hasImage && (
+          <>
             {/* Remove × */}
             <button
+              data-no-drag="true"
               type="button"
-              onClick={handleRemoveBannerImage}
-              style={{ position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}
+              onClick={(e) => { e.stopPropagation(); handleRemove(); }}
+              style={{ position: 'absolute', top: 8, left: 8, width: 26, height: 26, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}
             >
-              <X size={11} color="white" />
+              <X size={12} color="white" />
             </button>
-            {/* Edit button */}
+            {/* Edit pencil */}
             <button
+              data-no-drag="true"
               type="button"
-              onClick={() => setEditModalOpen(true)}
-              style={{ position: 'absolute', top: 6, left: 6, width: 24, height: 24, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}
+              onClick={(e) => { e.stopPropagation(); setEditModalOpen(true); }}
+              style={{ position: 'absolute', top: 8, left: 42, width: 26, height: 26, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}
             >
-              <Pencil size={11} color="white" />
+              <Pencil size={12} color="white" />
             </button>
-            {/* Replace overlay on hover */}
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              style={{
-                position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', borderRadius: 8,
-                padding: '6px 12px', display: hoveringBanner ? 'flex' : 'none',
-                alignItems: 'center', gap: 5, cursor: 'pointer', color: 'white', fontSize: 12, fontWeight: 600, zIndex: 20,
-              }}
-            >
-              <Upload size={12} /> {uploading ? 'Uploading...' : 'Replace'}
+            {/* Replace — shown on hover */}
+            {hovering && (
+              <button
+                data-no-drag="true"
+                type="button"
+                onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', border: 'none', borderRadius: 8, padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: 'white', fontSize: 12, fontWeight: 600, zIndex: 20 }}
+              >
+                <Upload size={13} /> {uploading ? 'Uploading...' : 'Replace'}
+              </button>
+            )}
+            {/* Drag hint */}
+            <div style={{ position: 'absolute', bottom: 6, right: 8, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', borderRadius: 6, padding: '3px 8px', color: 'white', fontSize: 10, fontWeight: 500, pointerEvents: 'none' }}>
+              ✥ Drag to reposition
             </div>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            style={{
-              width: '100%', height: 80, border: '2px dashed #cbd5e1', borderRadius: 12,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              gap: 6, color: '#94a3b8', background: '#f8fafc', cursor: 'pointer',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.color = '#64748b'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#94a3b8'; }}
-          >
-            <Upload className="w-5 h-5" />
-            <span style={{ fontSize: 13, fontWeight: 500 }}>{uploading ? 'Uploading...' : '↑ Upload banner image'}</span>
-          </button>
+          </>
         )}
-        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerImageUpload} />
       </div>
 
-      {/* Background colour */}
-      <div>
-        <SectionLabel>Background Colour</SectionLabel>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <input type="color" value={form.banner_bg_color || '#6366f1'} onChange={e => onChange('banner_bg_color', e.target.value)}
-            style={{ width: 40, height: 40, borderRadius: 8, border: '1px solid #e2e8f0', cursor: 'pointer', padding: 2 }} />
-          <Input value={form.banner_bg_color || ''} onChange={e => onChange('banner_bg_color', e.target.value)} className="w-32 font-mono text-sm" />
-        </div>
-        <p className="text-xs text-slate-400 mt-1.5">Fallback when no image is set</p>
-      </div>
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
 
-      {/* Headline / Tagline */}
-      <div>
-        <SectionLabel>Headline</SectionLabel>
-        <Input value={form.banner_headline || ''} onChange={e => onChange('banner_headline', e.target.value)} placeholder="e.g. Order fresh, eat happy" />
-      </div>
-      <div>
-        <SectionLabel>Tagline</SectionLabel>
-        <Input value={form.banner_tagline || ''} onChange={e => onChange('banner_tagline', e.target.value)} placeholder="e.g. Fast delivery · Fresh daily" />
-      </div>
-
-      {/* ImageEditModal */}
       {editModalOpen && form.banner_bg_image_url && (
         <ImageEditModal
           src={form.banner_bg_image_url.split('?')[0]}
@@ -280,7 +346,7 @@ function BannerTabContent({ form, onChange, tenantId }) {
           onClose={() => setEditModalOpen(false)}
         />
       )}
-    </div>
+    </>
   );
 }
 
@@ -364,360 +430,6 @@ function MenuTabContent({ form, onChange }) {
   );
 }
 
-// Split layout mini-preview for the canvas
-function SplitLayoutPreview({ form, products, categories, primaryColor }) {
-  const cats = (categories || []).filter(cat => (products || []).some(p => p.category_id === cat.id));
-  const [activeIdx, setActiveIdx] = useState(0);
-  const activeCat = cats[activeIdx];
-  const catProducts = activeCat ? (products || []).filter(p => p.category_id === activeCat.id) : (products || []).slice(0, 4);
-
-  const getCatIcon = (name) => {
-    // Try to find an emoji at the start, else use first letter
-    const emojiMatch = name?.match(/^\p{Emoji}/u);
-    return emojiMatch ? emojiMatch[0] : (name?.[0] || '?');
-  };
-
-  return (
-    <div style={{ display: 'flex', height: 260, overflow: 'hidden', marginTop: 8 }}>
-      {/* Left panel */}
-      <div style={{ width: 60, flexShrink: 0, borderRight: '1px solid #f1f5f9', background: '#fafafa', overflowY: 'auto' }}>
-        {cats.slice(0, 6).map((cat, i) => (
-          <button
-            key={cat.id}
-            onClick={() => setActiveIdx(i)}
-            style={{
-              width: '100%', padding: '10px 4px', border: 'none', cursor: 'pointer', textAlign: 'center',
-              background: activeIdx === i ? `${primaryColor}15` : 'transparent',
-              borderLeft: activeIdx === i ? `3px solid ${primaryColor}` : '3px solid transparent',
-              transition: 'all 0.15s',
-            }}
-          >
-            <div style={{ fontSize: 16, marginBottom: 3 }}>{getCatIcon(cat.name)}</div>
-            <div style={{
-              fontSize: 9, fontWeight: activeIdx === i ? 600 : 400,
-              color: activeIdx === i ? primaryColor : '#64748b',
-              lineHeight: 1.2, overflow: 'hidden', display: '-webkit-box',
-              WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-            }}>{cat.name}</div>
-          </button>
-        ))}
-      </div>
-      {/* Right panel */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
-        {activeCat && (
-          <p style={{ fontSize: 11, fontWeight: 700, padding: '8px 10px 4px', color: '#1e293b', margin: 0, position: 'sticky', top: 0, background: 'white', borderBottom: '1px solid #f8f9fa', zIndex: 1 }}>{activeCat.name}</p>
-        )}
-        {catProducts.slice(0, 5).map(p => (
-          <div key={p.id} style={{ display: 'flex', gap: 8, padding: '7px 10px', borderBottom: '1px solid #f8f9fa', alignItems: 'center' }}>
-            <div style={{ width: 44, height: 44, borderRadius: 8, flexShrink: 0, background: p.image_url ? `url('${p.image_url}') center/cover` : '#f1f5f9' }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 10, fontWeight: 600, margin: '0 0 1px', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
-              {form.show_product_description !== false && p.description && (
-                <p style={{ fontSize: 9, color: '#94a3b8', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.description}</p>
-              )}
-              <p style={{ fontSize: 10, fontWeight: 700, color: primaryColor, margin: 0 }}>{p.price?.toFixed(2)}</p>
-            </div>
-            <div style={{ width: 20, height: 20, borderRadius: '50%', background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 14, flexShrink: 0 }}>+</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function StorefrontMiniPreview({ form, tenant, products, categories, onBannerDrag, onRemoveBanner, onReplaceBanner, interactive }) {
-  const primaryColor = form.banner_bg_color || '#6366f1';
-  const cleanBannerUrl = form.banner_bg_image_url || undefined;
-  const bannerHeight = Math.max(160, Math.min(260, Math.round(window.innerHeight * 0.25)));
-
-  const displayProducts = (products || []).slice(0, 6);
-
-  const bannerRef = useRef(null);
-  const isDragging = useRef(false);
-  const lastDragPos = useRef({ x: 0, y: 0 });
-  const livePos = useRef({ x: form.banner_position_x ?? 50, y: form.banner_position_y ?? 50 });
-
-  useEffect(() => {
-    livePos.current = { x: form.banner_position_x ?? 50, y: form.banner_position_y ?? 50 };
-  }, [form.banner_position_x, form.banner_position_y]);
-
-  const handleBannerDragStart = (e) => {
-    if (!form.banner_bg_image_url || !interactive) return;
-    if (e.target.closest('[data-overlay]')) return;
-    isDragging.current = true;
-    lastDragPos.current = { x: e.clientX, y: e.clientY };
-    if (bannerRef.current) bannerRef.current.style.cursor = 'grabbing';
-    e.preventDefault();
-    const onMove = (me) => {
-      if (!isDragging.current || !bannerRef.current) return;
-      const dx = me.clientX - lastDragPos.current.x;
-      const dy = me.clientY - lastDragPos.current.y;
-      lastDragPos.current = { x: me.clientX, y: me.clientY };
-      const rect = bannerRef.current.getBoundingClientRect();
-      livePos.current.x = Math.max(0, Math.min(100, livePos.current.x - (dx / rect.width * 100)));
-      livePos.current.y = Math.max(0, Math.min(100, livePos.current.y - (dy / rect.height * 100)));
-      bannerRef.current.style.backgroundPosition = `${livePos.current.x}% ${livePos.current.y}%`;
-    };
-    const onUp = () => {
-      isDragging.current = false;
-      if (bannerRef.current) bannerRef.current.style.cursor = 'grab';
-      onBannerDrag?.(livePos.current.x, livePos.current.y);
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-  };
-
-  // Touch drag with touch-action:none to prevent page scroll jitter
-  const handleBannerTouchStart = (e) => {
-    if (!interactive) return;
-    if (e.target.closest('[data-overlay]')) return;
-    const touch = e.touches[0];
-    const hasImage = !!form.banner_bg_image_url;
-    if (hasImage) {
-      isDragging.current = true;
-      lastDragPos.current = { x: touch.clientX, y: touch.clientY };
-    }
-    let moved = false;
-    const onMove = (te) => {
-      const t = te.touches[0];
-      if (Math.abs(t.clientX - touch.clientX) > 8 || Math.abs(t.clientY - touch.clientY) > 8) moved = true;
-      if (hasImage && isDragging.current && bannerRef.current) {
-        const dx = t.clientX - lastDragPos.current.x;
-        const dy = t.clientY - lastDragPos.current.y;
-        lastDragPos.current = { x: t.clientX, y: t.clientY };
-        const rect = bannerRef.current.getBoundingClientRect();
-        livePos.current.x = Math.max(0, Math.min(100, livePos.current.x - (dx / rect.width * 100)));
-        livePos.current.y = Math.max(0, Math.min(100, livePos.current.y - (dy / rect.height * 100)));
-        bannerRef.current.style.backgroundPosition = `${livePos.current.x}% ${livePos.current.y}%`;
-        te.preventDefault();
-      }
-    };
-    const onEnd = () => {
-      isDragging.current = false;
-      if (hasImage && moved) onBannerDrag?.(livePos.current.x, livePos.current.y);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
-    };
-    window.addEventListener('touchmove', onMove, { passive: false });
-    window.addEventListener('touchend', onEnd);
-  };
-
-  return (
-    <div style={{
-      width: '100%', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden',
-      fontFamily: form.font_family ? `'${form.font_family}', sans-serif` : 'Inter, sans-serif',
-      background: 'white',
-    }}>
-      {/* BANNER — touch-action:none prevents scroll jitter */}
-      <div
-        ref={bannerRef}
-        onMouseDown={interactive ? handleBannerDragStart : undefined}
-        onTouchStart={interactive ? handleBannerTouchStart : undefined}
-        style={{
-          height: bannerHeight,
-          flexShrink: 0,
-          position: 'relative',
-          zIndex: 3,
-          touchAction: 'none',
-          cursor: interactive ? (form.banner_bg_image_url ? 'grab' : 'default') : 'default',
-          ...(cleanBannerUrl
-            ? { backgroundImage: `url("${cleanBannerUrl}")`, backgroundSize: 'cover', backgroundPosition: `${form.banner_position_x ?? 50}% ${form.banner_position_y ?? 50}%` }
-            : { background: primaryColor }),
-        }}
-      >
-        <div style={{ position: 'absolute', top: 14, right: 14, zIndex: 2, display: 'flex', gap: 8 }}>
-          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', fontSize: 16 }}>🕐</div>
-          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', fontSize: 16 }}>🛒</div>
-        </div>
-
-        {tenant?.logo_url ? (
-          <img src={tenant.logo_url} style={{ position: 'absolute', bottom: -26, right: 16, zIndex: 5, width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '3px solid white', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', flexShrink: 0 }} />
-        ) : (
-          <div style={{ position: 'absolute', bottom: -26, right: 16, zIndex: 5, width: 52, height: 52, borderRadius: '50%', background: primaryColor, border: '3px solid white', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, color: 'white' }}>
-            {tenant?.name?.[0] || 'S'}
-          </div>
-        )}
-
-        {(form.banner_headline || form.banner_tagline) && (
-          <div style={{ position: 'absolute', bottom: 50, left: 16, right: 80 }}>
-            {form.banner_headline && (
-              <p style={{ color: 'white', fontWeight: 800, fontSize: 22, margin: '0 0 4px', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>{form.banner_headline}</p>
-            )}
-            {form.banner_tagline && (
-              <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, margin: 0 }}>{form.banner_tagline}</p>
-            )}
-          </div>
-        )}
-
-        {interactive && (
-          <>
-            {form.banner_bg_image_url && (
-              <button
-                data-overlay="true"
-                onClick={(e) => { e.stopPropagation(); onRemoveBanner?.(); }}
-                style={{ position: 'absolute', top: 10, left: 10, width: 28, height: 28, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', border: 'none', cursor: 'pointer', zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}
-              >✕</button>
-            )}
-            {form.banner_bg_image_url && (
-              <div data-overlay="true" onClick={(e) => { e.stopPropagation(); onReplaceBanner?.(); }}
-                style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)', borderRadius: 10, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', zIndex: 20, color: 'white', fontSize: 12, fontWeight: 600, pointerEvents: 'all' }}>
-                ↑ Replace
-              </div>
-            )}
-            {form.banner_bg_image_url && (
-              <div style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)', borderRadius: 8, padding: '3px 8px', color: 'white', fontSize: 10, fontWeight: 500, pointerEvents: 'none', zIndex: 10 }}>
-                ✥ Drag to reposition
-              </div>
-            )}
-            {!form.banner_bg_image_url && (
-              <div data-overlay="true" onClick={(e) => { e.stopPropagation(); onReplaceBanner?.(); }}
-                style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', border: '2px dashed rgba(255,255,255,0.6)', borderRadius: 14, padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', zIndex: 20, color: 'white', fontSize: 13, fontWeight: 600 }}>
-                ↑ Upload banner image
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* CONTENT SHEET */}
-      <div style={{ flex: 1, overflowY: 'auto', background: 'white', borderRadius: '24px 24px 0 0', marginTop: -24, position: 'relative', zIndex: 2 }}>
-        <div style={{ width: 36, height: 4, borderRadius: 2, background: '#e2e8f0', margin: '12px auto 0' }} />
-
-        <div style={{ padding: '14px 16px 4px', paddingRight: 76 }}>
-          <p style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {tenant?.name || 'Your Store'}
-          </p>
-        </div>
-
-        {form.show_announcement_bar && form.announcement_text && (
-          <div style={{ margin: '10px 16px 0', background: `${primaryColor}18`, borderRadius: 10, padding: '8px 12px', fontSize: 12, color: primaryColor, fontWeight: 500, textAlign: 'center' }}>
-            📢 {form.announcement_text}
-          </div>
-        )}
-
-        {/* Split layout preview */}
-        {form.product_layout === 'split' ? (
-          <SplitLayoutPreview form={form} products={products} categories={categories} primaryColor={primaryColor} />
-        ) : (
-          <>
-            {form.show_category_tabs !== false && (
-              <div style={{ display: 'flex', gap: 8, padding: '12px 16px 0', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                {['All', ...(categories || []).map(c => c.name)].slice(0, 5).map((cat, i) => (
-                  <div key={cat} style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: i === 0 ? 600 : 400, background: i === 0 ? primaryColor : '#f1f5f9', color: i === 0 ? 'white' : '#64748b' }}>
-                    {cat}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div style={{ padding: '12px 16px 0' }}>
-              {form.product_layout === 'list' ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {displayProducts.map(p => (
-                    <div key={p.id} style={{ display: 'flex', gap: 10, padding: '10px 0', borderBottom: '1px solid #f8f9fa', alignItems: 'center' }}>
-                      <div style={{ width: 64, height: 64, borderRadius: 10, background: p.image_url ? `url('${p.image_url}') center/cover` : '#f1f5f9', flexShrink: 0 }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 13, fontWeight: 600, margin: '0 0 2px', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
-                        {form.show_product_description !== false && p.description && (
-                          <p style={{ fontSize: 11, color: '#94a3b8', margin: '0 0 4px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{p.description}</p>
-                        )}
-                        <p style={{ fontSize: 13, fontWeight: 700, color: primaryColor, margin: 0 }}>{p.price?.toFixed(2)}</p>
-                      </div>
-                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'white', fontSize: 18, fontWeight: 300 }}>+</div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${form.products_per_row || 2}, 1fr)`, gap: 10 }}>
-                  {displayProducts.map(p => (
-                    <div key={p.id} style={{ borderRadius: 14, overflow: 'hidden', background: '#fafafa', border: '1px solid #f1f5f9' }}>
-                      <div style={{ height: 100, background: p.image_url ? `url('${p.image_url}') center/cover` : '#f1f5f9' }} />
-                      <div style={{ padding: '8px 10px 10px' }}>
-                        <p style={{ fontSize: 12, fontWeight: 600, margin: '0 0 2px', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                          <p style={{ fontSize: 12, fontWeight: 700, color: primaryColor, margin: 0 }}>{p.price?.toFixed(2)}</p>
-                          <div style={{ width: 22, height: 22, borderRadius: '50%', background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 16 }}>+</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// Desktop-only: banner drag reposition image
-function DraggableBannerImage({ src, positionX, positionY, onPositionChange, height }) {
-  const containerRef = useRef(null);
-  const isDragging = useRef(false);
-  const lastPos = useRef({ x: 0, y: 0 });
-  const currentPos = useRef({ x: positionX, y: positionY });
-
-  useEffect(() => {
-    currentPos.current = { x: positionX, y: positionY };
-    if (containerRef.current) containerRef.current.style.backgroundPosition = `${positionX}% ${positionY}%`;
-  }, [positionX, positionY]);
-
-  useEffect(() => {
-    if (containerRef.current && height) containerRef.current.style.height = `${height}px`;
-  }, [height]);
-
-  const getEventPos = (e) => ({ x: e.touches?.[0]?.clientX ?? e.clientX, y: e.touches?.[0]?.clientY ?? e.clientY });
-
-  const handleStart = (e) => {
-    isDragging.current = true;
-    lastPos.current = getEventPos(e);
-    if (containerRef.current) containerRef.current.style.cursor = 'grabbing';
-    e.preventDefault();
-  };
-  const handleMove = (e) => {
-    if (!isDragging.current || !containerRef.current) return;
-    const pos = getEventPos(e);
-    const dx = pos.x - lastPos.current.x;
-    const dy = pos.y - lastPos.current.y;
-    lastPos.current = pos;
-    const rect = containerRef.current.getBoundingClientRect();
-    const newX = Math.max(0, Math.min(100, currentPos.current.x - (dx / rect.width * 100)));
-    const newY = Math.max(0, Math.min(100, currentPos.current.y - (dy / rect.height * 100)));
-    currentPos.current = { x: newX, y: newY };
-    containerRef.current.style.backgroundPosition = `${newX}% ${newY}%`;
-    e.preventDefault();
-  };
-  const handleEnd = () => {
-    if (!isDragging.current) return;
-    isDragging.current = false;
-    if (containerRef.current) containerRef.current.style.cursor = 'grab';
-    onPositionChange(currentPos.current.x, currentPos.current.y);
-  };
-
-  const cleanSrc = src?.split('?')[0] || src;
-  return (
-    <div
-      ref={containerRef}
-      onMouseDown={handleStart} onMouseMove={handleMove} onMouseUp={handleEnd} onMouseLeave={handleEnd}
-      onTouchStart={handleStart} onTouchMove={handleMove} onTouchEnd={handleEnd}
-      style={{
-        width: '100%', height: height || 200, borderRadius: '12px 12px 0 0',
-        overflow: 'hidden', cursor: 'grab', userSelect: 'none', WebkitUserSelect: 'none',
-        touchAction: 'none',
-        backgroundImage: `url("${cleanSrc}")`, backgroundSize: 'cover',
-        backgroundPosition: `${positionX}% ${positionY}%`, backgroundRepeat: 'no-repeat', backgroundColor: '#f1f5f9',
-      }}
-    >
-      <div style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', borderRadius: 8, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 4, color: 'white', fontSize: 11, fontWeight: 500, pointerEvents: 'none' }}>
-        ✥ Drag to reposition
-      </div>
-    </div>
-  );
-}
-
 // Desktop editor panel (left side, ≥1024px)
 function DesktopEditorControls({ form, onChange, tenantId }) {
   const [activeTab, setActiveTab] = useState('banner');
@@ -746,7 +458,7 @@ function DesktopEditorControls({ form, onChange, tenantId }) {
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto" style={{ padding: '16px 20px', paddingBottom: 24 }}>
-        {activeTab === 'banner' && <BannerTabContent form={form} onChange={onChange} tenantId={tenantId} />}
+        {activeTab === 'banner' && <BannerTabContent form={form} onChange={onChange} />}
         {activeTab === 'menu' && <MenuTabContent form={form} onChange={onChange} />}
       </div>
     </div>
@@ -803,20 +515,23 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
     <>
       {/* Canvas area — uses exact same StorefrontView as live store */}
       <div style={{ height: canvasHeight, overflow: 'auto', background: '#f0f2f7', position: 'relative' }}>
-        <StorefrontView
-          previewMode={true}
-          tenant={previewData?.tenant}
-          storefrontConfig={form}
-          theme={null}
-          products={previewData?.products || []}
-          categories={previewData?.categories || []}
-          cart={[]}
-          cartCount={0}
-          cartTotal={0}
-          setShowCart={() => {}}
-          setShowOrderHistory={() => {}}
-          onAddToCart={() => {}}
-        />
+        <div style={{ position: 'relative' }}>
+          <StorefrontView
+            previewMode={true}
+            tenant={previewData?.tenant}
+            storefrontConfig={form}
+            theme={null}
+            products={previewData?.products || []}
+            categories={previewData?.categories || []}
+            cart={[]}
+            cartCount={0}
+            cartTotal={0}
+            setShowCart={() => {}}
+            setShowOrderHistory={() => {}}
+            onAddToCart={() => {}}
+          />
+          <BannerCanvasOverlay form={form} onChange={onChange} tenantId={tenantId} scaleFactor={1} />
+        </div>
       </div>
 
       {/* Floating bottom drawer */}
@@ -873,7 +588,7 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
         {/* Tab content */}
         {drawerExpanded && (
           <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 16px' }}>
-            {drawerTab === 'banner' && <BannerTabContent form={form} onChange={onChange} tenantId={tenantId} />}
+            {drawerTab === 'banner' && <BannerTabContent form={form} onChange={onChange} />}
             {drawerTab === 'menu' && <MenuTabContent form={form} onChange={onChange} />}
           </div>
         )}
@@ -1092,8 +807,8 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'white', border: '1px solid #e2e8f0', borderRadius: 999, padding: '4px 12px', fontSize: 12, color: '#64748b', fontWeight: 500, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: 16 }}>
                 📱 Live Preview
               </div>
-              <div style={{ width: 375, flexShrink: 0, pointerEvents: 'none', border: '8px solid #1e293b', borderRadius: 36, overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.25)' }}>
-                <div style={{ height: 500, overflowY: 'auto', overflowX: 'hidden' }}>
+              <div style={{ width: 375, flexShrink: 0, border: '8px solid #1e293b', borderRadius: 36, overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.25)' }}>
+                <div style={{ height: 500, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
                   <StorefrontView
                     previewMode={true}
                     tenant={previewTenant}
@@ -1108,6 +823,7 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
                     setShowOrderHistory={() => {}}
                     onAddToCart={() => {}}
                   />
+                  <BannerCanvasOverlay form={form} onChange={handleChange} tenantId={tenantId} scaleFactor={1} />
                 </div>
               </div>
             </div>
