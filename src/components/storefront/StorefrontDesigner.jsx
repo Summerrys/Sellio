@@ -124,18 +124,75 @@ function CollapsibleSection({ title, children, defaultOpen = false }) {
   );
 }
 
+const COLOR_PRESETS = [
+  '#f97316', '#ef4444', '#f43f5e', '#7c3aed', '#3b82f6',
+  '#0d9488', '#10b981', '#f59e0b', '#475569', '#111827',
+];
+
 // Banner tab content — colour + text only (image upload lives on the banner canvas)
 function BannerTabContent({ form, onChange }) {
+  const currentColor = form.banner_bg_color || '#6366f1';
+  const colorInputRef = useRef(null);
+
+  const handleHexInput = (val) => {
+    if (/^#[0-9a-fA-F]{0,6}$/.test(val)) onChange('banner_bg_color', val);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
-        <SectionLabel>Background Colour</SectionLabel>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <input type="color" value={form.banner_bg_color || '#6366f1'} onChange={e => onChange('banner_bg_color', e.target.value)}
-            style={{ width: 40, height: 40, borderRadius: 8, border: '1px solid #e2e8f0', cursor: 'pointer', padding: 2 }} />
-          <Input value={form.banner_bg_color || ''} onChange={e => onChange('banner_bg_color', e.target.value)} className="w-32 font-mono text-sm" />
+        <SectionLabel>Brand Colour</SectionLabel>
+        {/* Large clickable swatch → opens native OS color picker */}
+        <div
+          onClick={() => colorInputRef.current?.click()}
+          style={{
+            width: '100%', height: 48, borderRadius: 10, background: currentColor,
+            cursor: 'pointer', border: '1px solid rgba(0,0,0,0.08)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.12)', marginBottom: 10,
+            transition: 'opacity 0.15s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+        />
+        <input
+          ref={colorInputRef}
+          type="color"
+          value={currentColor}
+          onChange={e => onChange('banner_bg_color', e.target.value)}
+          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+        />
+
+        {/* Hex input */}
+        <Input
+          value={currentColor}
+          onChange={e => handleHexInput(e.target.value)}
+          className="font-mono text-sm"
+          placeholder="#f97316"
+        />
+
+        {/* Preset swatches */}
+        <div style={{ display: 'flex', gap: 7, marginTop: 10, flexWrap: 'wrap' }}>
+          {COLOR_PRESETS.map(color => (
+            <button
+              key={color}
+              type="button"
+              onClick={() => onChange('banner_bg_color', color)}
+              style={{
+                width: 28, height: 28, borderRadius: '50%', background: color,
+                border: currentColor.toLowerCase() === color ? '2.5px solid #0f172a' : '2px solid transparent',
+                cursor: 'pointer', flexShrink: 0, position: 'relative',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                outline: currentColor.toLowerCase() === color ? '2px solid white' : 'none',
+                outlineOffset: -4,
+              }}
+            >
+              {currentColor.toLowerCase() === color && (
+                <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 13, fontWeight: 700, lineHeight: 1 }}>✓</span>
+              )}
+            </button>
+          ))}
         </div>
-        <p className="text-xs text-slate-400 mt-1.5">Fallback when no image is set</p>
+        <p className="text-xs text-slate-400 mt-2">Tap the swatch to open the colour picker, or pick a preset</p>
       </div>
       <div>
         <SectionLabel>Headline</SectionLabel>

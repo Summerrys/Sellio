@@ -30,32 +30,43 @@ function getCategoryIcon(name = '') {
   return LayoutGrid;
 }
 
+// ── Hex color → rgba(r, g, b, alpha) helper ─────────────────────────────────
+function hexToRgba(hex, alpha) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 // ── Sticky header bar ────────────────────────────────────────────────────────
 function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHistoryClick }) {
   const branchName = tenant?.settings?.branch_name;
-  const iconBtnStyle = { width: 36, height: 36, borderRadius: '50%', background: 'white', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.12)', flexShrink: 0 };
+  const tintBg = hexToRgba(primaryColor, 0.10);
+  const iconBtnBase = { width: 36, height: 36, borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 };
+  const iconBtnTinted = { ...iconBtnBase, background: tintBg };
   return (
     <div style={{
       position: 'sticky', top: 0, zIndex: 50,
       height: 56,
-      background: '#f8f9fa',
+      background: '#ffffff',
       display: 'flex', alignItems: 'center',
       padding: '0 14px',
-      boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
     }}>
       {/* Left: logo + name */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
         {tenant?.logo_url ? (
-          <div style={{ ...iconBtnStyle, overflow: 'hidden', padding: 0 }}>
+          <div style={{ ...iconBtnBase, background: '#f1f5f9', overflow: 'hidden', padding: 0 }}>
             <img src={tenant.logo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
         ) : (
-          <div style={{ ...iconBtnStyle, fontWeight: 700, fontSize: 16, color: '#374151' }}>
+          <div style={{ ...iconBtnBase, background: '#f1f5f9', fontWeight: 700, fontSize: 16, color: '#374151' }}>
             {tenant?.name?.[0] || 'S'}
           </div>
         )}
         <div style={{ minWidth: 0 }}>
-          <div style={{ color: '#111827', fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ color: '#111827', fontWeight: 700, fontSize: 17, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {tenant?.name || ''}
           </div>
           {branchName && (
@@ -68,11 +79,11 @@ function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHist
 
       {/* Right: History + Cart buttons */}
       <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
-        <button onClick={onHistoryClick} style={iconBtnStyle}>
-          <Clock size={17} color="#374151" />
+        <button onClick={onHistoryClick} style={iconBtnTinted}>
+          <Clock size={17} color={primaryColor} />
         </button>
-        <button onClick={onCartClick} style={{ ...iconBtnStyle, position: 'relative' }}>
-          <ShoppingCart size={17} color="#374151" />
+        <button onClick={onCartClick} style={{ ...iconBtnTinted, position: 'relative' }}>
+          <ShoppingCart size={17} color={primaryColor} />
           {cartCount > 0 && (
             <span style={{ position: 'absolute', top: -3, right: -3, minWidth: 17, height: 17, borderRadius: 9, background: '#ef4444', color: 'white', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
               {cartCount}
@@ -111,21 +122,22 @@ function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY, h
 // ── Category sidebar item ────────────────────────────────────────────────────
 function CategorySidebarItem({ cat, isActive, primaryColor, onClick }) {
   const Icon = getCategoryIcon(cat.name);
+  const tintBg = hexToRgba(primaryColor, 0.10);
   return (
     <button
       onClick={onClick}
       style={{
         width: '100%', textAlign: 'center', padding: '12px 6px',
         border: 'none', cursor: 'pointer',
-        background: isActive ? `${primaryColor}18` : 'transparent',
+        background: isActive ? tintBg : 'transparent',
         borderLeft: isActive ? `3px solid ${primaryColor}` : '3px solid transparent',
         transition: 'all 0.15s', display: 'block',
       }}
     >
-      <Icon size={20} style={{ color: isActive ? primaryColor : '#94a3b8', display: 'block', margin: '0 auto 4px' }} />
+      <Icon size={20} style={{ color: isActive ? primaryColor : '#374151', display: 'block', margin: '0 auto 4px' }} />
       <div style={{
         fontSize: 10, fontWeight: isActive ? 600 : 400,
-        color: isActive ? primaryColor : '#64748b',
+        color: isActive ? primaryColor : '#374151',
         lineHeight: 1.25, overflow: 'hidden',
         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
         wordBreak: 'break-word',
