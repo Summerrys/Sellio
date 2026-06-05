@@ -3,8 +3,9 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { X, ArrowLeft, ExternalLink, Upload, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, ArrowLeft, ExternalLink, Upload, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import StorefrontView from '@/components/storefront/StorefrontView';
+import ImageEditModal from '@/components/onboarding/ImageEditModal';
 
 const FONTS = [
   { value: 'Inter', label: 'Inter', style: { fontFamily: 'Inter, sans-serif' } },
@@ -124,9 +125,132 @@ function CollapsibleSection({ title, children, defaultOpen = false }) {
 }
 
 // Banner tab content (shared between desktop and mobile)
-function BannerTabContent({ form, onChange }) {
+function BannerTabContent({ form, onChange, tenantId }) {
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [hoveringBanner, setHoveringBanner] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+
+  const handleBannerImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!tenantId) { toast.error('Tenant not loaded yet'); return; }
+    setUploading(true);
+    const supabase = await getSupabase();
+    const ext = file.name.split('.').pop() || 'jpg';
+    const path = `${tenantId}/storefront/banner-bg.${ext}`;
+    const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type });
+    if (error) { toast.error('Upload failed: ' + error.message); setUploading(false); return; }
+    const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
+    const cleanUrl = publicUrl.split('?')[0];
+    onChange('banner_bg_image_url', cleanUrl + '?t=' + Date.now());
+    setUploading(false);
+    toast.success('Banner image uploaded');
+    if (e.target) e.target.value = '';
+  };
+
+  const handleRemoveBannerImage = async () => {
+    if (!form.banner_bg_image_url) return;
+    const supabase = await getSupabase();
+    const url = form.banner_bg_image_url;
+    const bucketPrefix = '/object/public/product-images/';
+    const pathStart = url.indexOf(bucketPrefix);
+    if (pathStart !== -1) {
+      const storagePath = decodeURIComponent(url.slice(pathStart + bucketPrefix.length).split('?')[0]);
+      await supabase.storage.from('product-images').remove([storagePath]);
+    }
+    onChange('banner_bg_image_url', '');
+    toast.success('Banner image removed');
+  };
+
+  const handleEditSave = async (dataUrl) => {
+    if (!dataUrl || !tenantId) return;
+    setUploading(true);
+    try {
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const supabase = await getSupabase();
+      const path = `${tenantId}/storefront/banner-bg.jpg`;
+      const { error } = await supabase.storage.from('product-images').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
+      onChange('banner_bg_image_url', publicUrl.split('?')[0] + '?t=' + Date.now());
+      toast.success('Banner updated');
+    } catch (err) {
+      toast.error('Save failed: ' + err.message);
+    }
+    setUploading(false);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Image section */}
+      <div>
+        <SectionLabel>Banner Image</SectionLabel>
+        {form.banner_bg_image_url ? (
+          <div
+            onMouseEnter={() => setHoveringBanner(true)}
+            onMouseLeave={() => setHoveringBanner(false)}
+            style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', height: 120 }}
+          >
+            {/* Drag-to-reposition mini preview */}
+            <DraggableBannerImage
+              src={form.banner_bg_image_url}
+              positionX={form.banner_position_x ?? 50}
+              positionY={form.banner_position_y ?? 50}
+              height={120}
+              onPositionChange={(x, y) => { onChange('banner_position_x', x); onChange('banner_position_y', y); }}
+            />
+            {/* Remove × */}
+            <button
+              type="button"
+              onClick={handleRemoveBannerImage}
+              style={{ position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}
+            >
+              <X size={11} color="white" />
+            </button>
+            {/* Edit button */}
+            <button
+              type="button"
+              onClick={() => setEditModalOpen(true)}
+              style={{ position: 'absolute', top: 6, left: 6, width: 24, height: 24, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}
+            >
+              <Pencil size={11} color="white" />
+            </button>
+            {/* Replace overlay on hover */}
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', borderRadius: 8,
+                padding: '6px 12px', display: hoveringBanner ? 'flex' : 'none',
+                alignItems: 'center', gap: 5, cursor: 'pointer', color: 'white', fontSize: 12, fontWeight: 600, zIndex: 20,
+              }}
+            >
+              <Upload size={12} /> {uploading ? 'Uploading...' : 'Replace'}
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            style={{
+              width: '100%', height: 80, border: '2px dashed #cbd5e1', borderRadius: 12,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              gap: 6, color: '#94a3b8', background: '#f8fafc', cursor: 'pointer',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.color = '#64748b'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#94a3b8'; }}
+          >
+            <Upload className="w-5 h-5" />
+            <span style={{ fontSize: 13, fontWeight: 500 }}>{uploading ? 'Uploading...' : '↑ Upload banner image'}</span>
+          </button>
+        )}
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerImageUpload} />
+      </div>
+
+      {/* Background colour */}
       <div>
         <SectionLabel>Background Colour</SectionLabel>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -134,8 +258,10 @@ function BannerTabContent({ form, onChange }) {
             style={{ width: 40, height: 40, borderRadius: 8, border: '1px solid #e2e8f0', cursor: 'pointer', padding: 2 }} />
           <Input value={form.banner_bg_color || ''} onChange={e => onChange('banner_bg_color', e.target.value)} className="w-32 font-mono text-sm" />
         </div>
-        <p className="text-xs text-slate-400 mt-1.5">Used when no image is set</p>
+        <p className="text-xs text-slate-400 mt-1.5">Fallback when no image is set</p>
       </div>
+
+      {/* Headline / Tagline */}
       <div>
         <SectionLabel>Headline</SectionLabel>
         <Input value={form.banner_headline || ''} onChange={e => onChange('banner_headline', e.target.value)} placeholder="e.g. Order fresh, eat happy" />
@@ -144,6 +270,16 @@ function BannerTabContent({ form, onChange }) {
         <SectionLabel>Tagline</SectionLabel>
         <Input value={form.banner_tagline || ''} onChange={e => onChange('banner_tagline', e.target.value)} placeholder="e.g. Fast delivery · Fresh daily" />
       </div>
+
+      {/* ImageEditModal */}
+      {editModalOpen && form.banner_bg_image_url && (
+        <ImageEditModal
+          src={form.banner_bg_image_url.split('?')[0]}
+          themeColor={form.banner_bg_color || '#6366f1'}
+          onSave={handleEditSave}
+          onClose={() => setEditModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -583,49 +719,12 @@ function DraggableBannerImage({ src, positionX, positionY, onPositionChange, hei
 }
 
 // Desktop editor panel (left side, ≥1024px)
-function DesktopEditorControls({ form, onChange, tenantId, onImageUploaded }) {
+function DesktopEditorControls({ form, onChange, tenantId }) {
   const [activeTab, setActiveTab] = useState('banner');
-  const fileInputRef = useRef(null);
-  const [uploading, setUploading] = useState(false);
-  const [hoveringBanner, setHoveringBanner] = useState(false);
-
-  const handleRemoveBannerImage = async () => {
-    if (!form.banner_bg_image_url) return;
-    const supabase = await getSupabase();
-    const url = form.banner_bg_image_url;
-    const bucketPrefix = '/object/public/product-images/';
-    const pathStart = url.indexOf(bucketPrefix);
-    if (pathStart !== -1) {
-      const storagePath = decodeURIComponent(url.slice(pathStart + bucketPrefix.length).split('?')[0]);
-      await supabase.storage.from('product-images').remove([storagePath]);
-    }
-    onChange('banner_bg_image_url', '');
-    await supabase.from('storefront_configs').upsert({ tenant_id: tenantId, banner_bg_image_url: null }, { onConflict: 'tenant_id' });
-    toast.success('Banner image removed');
-  };
-
-  const handleBannerImageUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!tenantId) { toast.error('Tenant not loaded yet'); return; }
-    setUploading(true);
-    const supabase = await getSupabase();
-    const ext = file.name.split('.').pop() || 'jpg';
-    const path = `${tenantId}/storefront/banner-bg.${ext}`;
-    const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type });
-    if (error) { toast.error('Upload failed: ' + error.message); setUploading(false); return; }
-    const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
-    const cleanUrl = publicUrl.split('?')[0];
-    onChange('banner_bg_image_url', cleanUrl + '?t=' + Date.now());
-    await supabase.from('storefront_configs').upsert({ tenant_id: tenantId, banner_bg_image_url: cleanUrl }, { onConflict: 'tenant_id' });
-    toast.success('Banner image uploaded');
-    onImageUploaded?.();
-    setUploading(false);
-  };
 
   return (
     <div className="flex flex-col h-full">
-      {/* Tab bar — 2 tabs only */}
+      {/* Tab bar */}
       <div className="tab-bar" style={{ display: 'flex', gap: 8, padding: '12px 16px', overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
         <style>{`.tab-bar::-webkit-scrollbar { display: none; }`}</style>
         {TABS.map(tab => (
@@ -647,66 +746,15 @@ function DesktopEditorControls({ form, onChange, tenantId, onImageUploaded }) {
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto" style={{ padding: '16px 20px', paddingBottom: 24 }}>
-        {activeTab === 'banner' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div>
-              <SectionLabel>Banner Preview</SectionLabel>
-              <div style={{ position: 'relative', userSelect: 'none', marginBottom: 8 }}>
-                {form.banner_bg_image_url ? (
-                  <div onMouseEnter={() => setHoveringBanner(true)} onMouseLeave={() => setHoveringBanner(false)} style={{ position: 'relative' }}>
-                    <DraggableBannerImage
-                      src={form.banner_bg_image_url}
-                      positionX={form.banner_position_x ?? 50}
-                      positionY={form.banner_position_y ?? 50}
-                      height={220}
-                      onPositionChange={(x, y) => { onChange('banner_position_x', x); onChange('banner_position_y', y); }}
-                    />
-                    <button type="button" onClick={handleRemoveBannerImage}
-                      style={{ position: 'absolute', top: 8, right: 8, width: 26, height: 26, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}>
-                      <X size={12} color="white" />
-                    </button>
-                    <div onClick={() => fileInputRef.current?.click()}
-                      style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)', borderRadius: 10, padding: '8px 14px', display: hoveringBanner ? 'flex' : 'none', alignItems: 'center', gap: 6, cursor: 'pointer', color: 'white', fontSize: 12, fontWeight: 600, zIndex: 20, pointerEvents: 'all' }}>
-                      <Upload size={13} color="white" />
-                      {uploading ? 'Uploading...' : 'Replace'}
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ width: '100%', height: 220, borderRadius: '12px 12px 0 0', background: form.banner_bg_color || '#6366f1' }} />
-                )}
-              </div>
-            </div>
-
-            {!form.banner_bg_image_url && (
-              <div>
-                <SectionLabel>Background Image</SectionLabel>
-                <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
-                  style={{ width: '100%', height: 80, border: '2px dashed #cbd5e1', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, color: '#94a3b8', background: '#f8fafc', cursor: 'pointer' }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.color = '#64748b'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#94a3b8'; }}>
-                  <Upload className="w-5 h-5" />
-                  <span style={{ fontSize: 13, fontWeight: 500 }}>{uploading ? 'Uploading...' : 'Upload banner image'}</span>
-                </button>
-              </div>
-            )}
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerImageUpload} />
-
-            <BannerTabContent form={form} onChange={onChange} />
-          </div>
-        )}
-
-        {activeTab === 'menu' && (
-          <MenuTabContent form={form} onChange={onChange} />
-        )}
+        {activeTab === 'banner' && <BannerTabContent form={form} onChange={onChange} tenantId={tenantId} />}
+        {activeTab === 'menu' && <MenuTabContent form={form} onChange={onChange} />}
       </div>
     </div>
   );
 }
 
 // Mobile full-canvas layout with floating drawer
-function MobileCanvasLayout({ form, onChange, tenantId, onImageUploaded, previewData, handleSave, saving }) {
-  const fileInputRef = useRef(null);
-  const [uploading, setUploading] = useState(false);
+function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave, saving }) {
   const [drawerTab, setDrawerTab] = useState('banner');
   const [drawerExpanded, setDrawerExpanded] = useState(false);
   const [drawerHeight, setDrawerHeight] = useState(DRAWER_HANDLE_ONLY);
@@ -714,40 +762,6 @@ function MobileCanvasLayout({ form, onChange, tenantId, onImageUploaded, preview
   const drawerHeightRef = useRef(DRAWER_HANDLE_ONLY);
 
   const MAX_DRAWER = Math.round(window.innerHeight * 0.55);
-
-  const handleRemoveBannerImage = async () => {
-    if (!form.banner_bg_image_url) return;
-    const supabase = await getSupabase();
-    const url = form.banner_bg_image_url;
-    const bucketPrefix = '/object/public/product-images/';
-    const pathStart = url.indexOf(bucketPrefix);
-    if (pathStart !== -1) {
-      const storagePath = decodeURIComponent(url.slice(pathStart + bucketPrefix.length).split('?')[0]);
-      await supabase.storage.from('product-images').remove([storagePath]);
-    }
-    onChange('banner_bg_image_url', '');
-    await supabase.from('storefront_configs').upsert({ tenant_id: tenantId, banner_bg_image_url: null }, { onConflict: 'tenant_id' });
-    toast.success('Banner image removed');
-  };
-
-  const handleBannerImageUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!tenantId) { toast.error('Tenant not loaded yet'); return; }
-    setUploading(true);
-    const supabase = await getSupabase();
-    const ext = file.name.split('.').pop() || 'jpg';
-    const path = `${tenantId}/storefront/banner-bg.${ext}`;
-    const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type });
-    if (error) { toast.error('Upload failed: ' + error.message); setUploading(false); return; }
-    const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
-    const cleanUrl = publicUrl.split('?')[0];
-    onChange('banner_bg_image_url', cleanUrl + '?t=' + Date.now());
-    await supabase.from('storefront_configs').upsert({ tenant_id: tenantId, banner_bg_image_url: cleanUrl }, { onConflict: 'tenant_id' });
-    toast.success('Banner image uploaded');
-    onImageUploaded?.();
-    setUploading(false);
-  };
 
   const startDrawerDrag = (e) => {
     e.preventDefault();
@@ -859,7 +873,7 @@ function MobileCanvasLayout({ form, onChange, tenantId, onImageUploaded, preview
         {/* Tab content */}
         {drawerExpanded && (
           <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 16px' }}>
-            {drawerTab === 'banner' && <BannerTabContent form={form} onChange={onChange} />}
+            {drawerTab === 'banner' && <BannerTabContent form={form} onChange={onChange} tenantId={tenantId} />}
             {drawerTab === 'menu' && <MenuTabContent form={form} onChange={onChange} />}
           </div>
         )}
@@ -884,7 +898,6 @@ function MobileCanvasLayout({ form, onChange, tenantId, onImageUploaded, preview
         )}
       </div>
 
-      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerImageUpload} />
     </>
   );
 }
@@ -1052,7 +1065,6 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
               form={form}
               onChange={handleChange}
               tenantId={tenantId}
-              onImageUploaded={() => {}}
               previewData={{ tenant: previewTenant, products: previewProducts, categories: previewCategories }}
               handleSave={handleSave}
               saving={saving}
@@ -1065,7 +1077,6 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
                 form={form}
                 onChange={handleChange}
                 tenantId={tenantId}
-                onImageUploaded={() => {}}
               />
               {/* Desktop Save */}
               <div className="flex gap-2 p-4 border-t border-slate-100 bg-white flex-shrink-0">
