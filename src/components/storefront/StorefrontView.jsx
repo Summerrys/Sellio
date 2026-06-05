@@ -39,16 +39,53 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+// ── Haversine distance (km) ──────────────────────────────────────────────────
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatDistance(km) {
+  if (km < 1) return '< 1 km';
+  if (km < 10) return `${km.toFixed(1)} km`;
+  return `${Math.round(km)} km`;
+}
+
 // ── Sticky header bar ────────────────────────────────────────────────────────
 function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHistoryClick }) {
   const branchName = tenant?.settings?.branch_name;
+  const address = tenant?.address || '';
+  const locationLabel = branchName || (address ? address.slice(0, 30) + (address.length > 30 ? '…' : '') : '');
+  const [distanceStr, setDistanceStr] = useState('');
+
+  useEffect(() => {
+    if (!address) return;
+    navigator.geolocation?.getCurrentPosition(async (pos) => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`);
+        const data = await res.json();
+        if (!data?.[0]) return;
+        const km = haversineKm(pos.coords.latitude, pos.coords.longitude, parseFloat(data[0].lat), parseFloat(data[0].lon));
+        setDistanceStr(formatDistance(km));
+      } catch {}
+    }, () => {}, { timeout: 6000 });
+  }, [address]);
+
+  const subLine = locationLabel ? (distanceStr ? `📍 ${locationLabel} · ${distanceStr}` : `📍 ${locationLabel}`) : '';
+
   const tintBg = hexToRgba(primaryColor, 0.10);
   const iconBtnBase = { width: 36, height: 36, borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 };
   const iconBtnTinted = { ...iconBtnBase, background: tintBg };
+
+  const headerHeight = subLine ? 64 : 56;
+
   return (
     <div style={{
       position: 'sticky', top: 0, zIndex: 50,
-      height: 56,
+      height: headerHeight,
       background: '#ffffff',
       display: 'flex', alignItems: 'center',
       padding: '0 14px',
@@ -57,11 +94,11 @@ function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHist
       {/* Left: logo + name */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
         {tenant?.logo_url ? (
-          <div style={{ ...iconBtnBase, background: '#f1f5f9', overflow: 'hidden', padding: 0 }}>
+          <div style={{ ...iconBtnBase, background: '#f1f5f9', overflow: 'hidden', padding: 0, flexShrink: 0 }}>
             <img src={tenant.logo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
         ) : (
-          <div style={{ ...iconBtnBase, background: '#f1f5f9', fontWeight: 700, fontSize: 16, color: '#374151' }}>
+          <div style={{ ...iconBtnBase, background: '#f1f5f9', fontWeight: 700, fontSize: 16, color: '#374151', flexShrink: 0 }}>
             {tenant?.name?.[0] || 'S'}
           </div>
         )}
@@ -69,10 +106,16 @@ function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHist
           <div style={{ color: '#111827', fontWeight: 700, fontSize: 17, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {tenant?.name || ''}
           </div>
-          {branchName && (
-            <div style={{ color: '#6b7280', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
-              {branchName}
-            </div>
+          {subLine && (
+            <a
+              href={address ? `https://maps.google.com/?q=${encodeURIComponent(address)}` : undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              style={{ display: 'block', color: '#6b7280', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2, textDecoration: 'none' }}
+            >
+              {subLine}
+            </a>
           )}
         </div>
       </div>
@@ -122,7 +165,7 @@ function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY, h
 // ── Category sidebar item ────────────────────────────────────────────────────
 function CategorySidebarItem({ cat, isActive, primaryColor, onClick }) {
   const Icon = getCategoryIcon(cat.name);
-  const tintBg = hexToRgba(primaryColor, 0.10);
+  const tintBg = hexToRgba(primaryColor, 0.08);
   return (
     <button
       onClick={onClick}
@@ -134,10 +177,10 @@ function CategorySidebarItem({ cat, isActive, primaryColor, onClick }) {
         transition: 'all 0.15s', display: 'block',
       }}
     >
-      <Icon size={20} style={{ color: isActive ? primaryColor : '#374151', display: 'block', margin: '0 auto 4px' }} />
+      <Icon size={20} style={{ color: isActive ? '#374151' : '#9ca3af', display: 'block', margin: '0 auto 4px' }} />
       <div style={{
         fontSize: 10, fontWeight: isActive ? 600 : 400,
-        color: isActive ? primaryColor : '#374151',
+        color: isActive ? '#374151' : '#6b7280',
         lineHeight: 1.25, overflow: 'hidden',
         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
         wordBreak: 'break-word',
