@@ -267,6 +267,7 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={() => setHovering(false)}
         onMouseDown={hasImage ? handleDragStart : undefined}
+        onTouchStart={hasImage ? handleDragStart : undefined}
         style={{
           position: 'absolute',
           top: topOffset,
