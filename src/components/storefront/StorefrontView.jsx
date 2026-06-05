@@ -76,8 +76,9 @@ function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHist
 
   const subLine = locationLabel ? (distanceStr ? `📍 ${locationLabel} · ${distanceStr}` : `📍 ${locationLabel}`) : '';
 
+  const tintBg = hexToRgba(primaryColor, 0.10);
   const iconBtnBase = { width: 36, height: 36, borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 };
-  const iconBtnNeutral = { ...iconBtnBase, background: '#ffffff', boxShadow: '0 1px 4px rgba(0,0,0,0.12)' };
+  const iconBtnNeutral = { ...iconBtnBase, background: tintBg };
 
   const headerHeight = subLine ? 64 : 56;
 
