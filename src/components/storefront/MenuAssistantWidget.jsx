@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Send } from 'lucide-react';
-
-const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
+import { base44 } from '@/api/base44Client';
 
 const IDLE_MESSAGES = [
   "👋 Hi! What can I get you?",
@@ -104,28 +103,34 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
 
     const updatedHistory = [...conversationHistory, userMsg];
 
+    const cur = tenant?.settings?.currency || currency;
+    const menuText = products
+      .filter(p => p.is_active)
+      .map(p => `- ${p.name} (${cur} ${Number(p.price).toFixed(2)})${p.description ? ': ' + p.description : ''}`)
+      .join('\n');
+
+    const systemPrompt = `You are the Sellio Assistant for ${tenant?.name}. You are a friendly menu assistant.
+
+CURRENT MENU:
+${menuText}
+
+When a customer wants to ORDER, end your reply with this exact block:
+<order_action>
+{"action":"add_to_cart","items":[{"product_id":"ID","product_name":"NAME","price":PRICE,"quantity":QTY}]}
+</order_action>
+
+Rules: only add active items, confirm what you're adding, be warm and concise.`;
+
     try {
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/menu-assistant`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: updatedHistory,
-          tenantId: tenant?.id,
-          tableId: tableId || null,
-        }),
+      const res = await base44.functions.invoke('menuAssistantProxy', {
+        messages: updatedHistory,
+        systemPrompt,
       });
 
-      const data = await response.json();
-      const aiText = data.message || "Sorry, I couldn't understand that. Please try again!";
-      const orderAction = data.orderAction || null;
+      const { message: cleanText, orderAction } = res.data;
 
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: aiText,
-        orderAction,
-      }]);
-
-      setConversationHistory([...updatedHistory, { role: 'assistant', content: aiText }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: cleanText || "Sorry, I couldn't understand that.", orderAction: orderAction || null }]);
+      setConversationHistory([...updatedHistory, { role: 'assistant', content: cleanText }]);
     } catch {
       setMessages(prev => [...prev, {
         role: 'assistant',
