@@ -10,6 +10,7 @@ import Splash from './pages/Splash';
 import Storefront from './pages/Storefront';
 import { useEffect, Suspense } from 'react';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import AppLoader from '@/components/ui-custom/AppLoader';
 import { AppUserProvider } from '@/lib/AppUserContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import UserManagement from './pages/UserManagement';
@@ -25,13 +26,9 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
-  // Show loading spinner while checking app public settings or auth
+  // Show loading screen while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
+    return <AppLoader />;
   }
 
   // Handle authentication errors
@@ -47,11 +44,7 @@ const AuthenticatedApp = () => {
 
   // Render the main app
   return (
-    <Suspense fallback={
-      <div className="fixed inset-0 flex items-center justify-center bg-slate-50">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
-      </div>
-    }>
+    <Suspense fallback={<AppLoader />}>
       <Routes>
         {Object.entries(Pages).map(([path, Page]) => (
           <Route

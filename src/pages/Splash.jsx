@@ -64,11 +64,17 @@ export default function Splash() {
           </p>
         </div>
 
-        {/* Subtle dots indicator */}
-        <div className="flex gap-1.5 opacity-30">
-          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" style={{ animationDelay: '0s' }} />
-          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" style={{ animationDelay: '0.2s' }} />
-          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" style={{ animationDelay: '0.4s' }} />
+        {/* Branded bouncing dots */}
+        <style>{`
+          @keyframes sellio-bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-8px)} }
+          .splash-dot-1{animation:sellio-bounce 1.2s ease-in-out infinite 0ms;background:#fb923c}
+          .splash-dot-2{animation:sellio-bounce 1.2s ease-in-out infinite 200ms;background:#e0449a}
+          .splash-dot-3{animation:sellio-bounce 1.2s ease-in-out infinite 400ms;background:#8b2fc9}
+        `}</style>
+        <div className="flex gap-2">
+          <span className="splash-dot-1" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
+          <span className="splash-dot-2" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
+          <span className="splash-dot-3" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
         </div>
       </div>
     </div>

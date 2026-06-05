@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { ClipboardList, Bell, BellOff, Monitor, Search, Download, Printer, Loader2 } from 'lucide-react';
+import { SkeletonList } from '@/components/ui-custom/AppLoader';
 import { toast } from 'sonner';
 import { createPageUrl } from '../utils';
 import { useNavigate } from 'react-router-dom';
@@ -495,7 +496,7 @@ export default function Orders() {
 
           {/* Orders list */}
           {isLoading ? (
-            <div className="text-center py-12 text-slate-400">Loading orders...</div>
+            <SkeletonList count={4} lines={3} imageSize={0} />
           ) : filteredOrders.length === 0 ? (
             <div className="text-center py-12">
               <ClipboardList className="w-16 h-16 text-slate-300 mx-auto mb-4" />

@@ -15,6 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { SkeletonList } from '@/components/ui-custom/AppLoader';
 
 const CSV_HEADERS = ['Name', 'SKU', 'Description', 'Category', 'Price', 'Cost Price', 'Compare At Price', 'Stock Quantity', 'Low Stock Threshold', 'Track Inventory', 'Active', 'Featured', 'Tags', 'Variants', 'Image URL', 'Additional Images'];
 
@@ -294,7 +295,7 @@ export default function Products() {
 
         {/* Products Display */}
         {isLoading ? (
-          <div className="text-center py-12 text-slate-400">Loading products...</div>
+          <SkeletonList count={5} lines={2} imageSize={64} />
         ) : filteredProducts.length === 0 ? (
           <EmptyState
             icon={ShoppingBag}
