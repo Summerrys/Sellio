@@ -150,9 +150,9 @@ function BannerTabContent({ form, onChange }) {
 }
 
 // Interactive banner overlay — sits on top of the StorefrontView preview at exact banner position
-// HEADER_H = 56px (StorefrontHeader), BANNER_H = 180px (StorefrontBanner)
+// HEADER_H = 56px (StorefrontHeader), BANNER_H = 220px (StorefrontBanner, matches clamp min)
 const PREVIEW_HEADER_H = 56;
-const PREVIEW_BANNER_H = 180;
+const PREVIEW_BANNER_H = 220;
 
 function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
   const fileInputRef = useRef(null);

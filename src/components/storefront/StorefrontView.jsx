@@ -84,7 +84,7 @@ function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY, h
   return (
     <div style={{
       width: '100%',
-      height: 180,
+      height: 'clamp(220px, 25vw, 300px)',
       flexShrink: 0,
       position: 'relative',
       ...(bannerBgImage
@@ -216,9 +216,9 @@ export default function StorefrontView({
   };
 
   // Determine heights for split layout
-  // Header is sticky at top (56px), banner is below header (180px)
+  // Header is sticky at top (56px), banner is below header (220px min)
   // Split panel fills rest of viewport
-  const splitPanelHeight = previewMode ? 340 : 'calc(100vh - 56px - 180px)';
+  const splitPanelHeight = previewMode ? 300 : 'calc(100vh - 56px - 220px)';
 
   return (
     <div style={{
@@ -268,7 +268,7 @@ export default function StorefrontView({
         borderRadius: '20px 20px 0 0',
         flex: 1,
         overflow: productLayout === 'split' ? 'hidden' : 'visible',
-        marginTop: -16,
+        marginTop: -24,
         position: 'relative',
         zIndex: 2,
       }}>
