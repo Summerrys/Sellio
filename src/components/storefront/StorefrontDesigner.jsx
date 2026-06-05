@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { X, ArrowLeft, ExternalLink, Upload, ChevronDown, ChevronUp } from 'lucide-react';
+import StorefrontView from '@/components/storefront/StorefrontView';
 
 const FONTS = [
   { value: 'Inter', label: 'Inter', style: { fontFamily: 'Inter, sans-serif' } },
@@ -786,17 +787,21 @@ function MobileCanvasLayout({ form, onChange, tenantId, onImageUploaded, preview
 
   return (
     <>
-      {/* Canvas area — static, does not scroll */}
-      <div style={{ height: canvasHeight, overflow: 'hidden', background: '#f0f2f7', position: 'relative' }}>
-        <StorefrontMiniPreview
-          form={form}
+      {/* Canvas area — uses exact same StorefrontView as live store */}
+      <div style={{ height: canvasHeight, overflow: 'auto', background: '#f0f2f7', position: 'relative' }}>
+        <StorefrontView
+          previewMode={true}
           tenant={previewData?.tenant}
-          products={previewData?.products}
-          categories={previewData?.categories}
-          onBannerDrag={(x, y) => { onChange('banner_position_x', x); onChange('banner_position_y', y); }}
-          onRemoveBanner={handleRemoveBannerImage}
-          onReplaceBanner={() => fileInputRef.current?.click()}
-          interactive={true}
+          storefrontConfig={form}
+          theme={null}
+          products={previewData?.products || []}
+          categories={previewData?.categories || []}
+          cart={[]}
+          cartCount={0}
+          cartTotal={0}
+          setShowCart={() => {}}
+          setShowOrderHistory={() => {}}
+          onAddToCart={() => {}}
         />
       </div>
 
@@ -1071,15 +1076,28 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
               </div>
             </div>
 
-            {/* Right: Live Preview — completely static */}
-            <div className="flex flex-1 flex-col items-center overflow-auto" style={{ background: '#f8fafc', padding: '32px', position: 'relative' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 390 * 0.65, marginBottom: 16 }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'white', border: '1px solid #e2e8f0', borderRadius: 999, padding: '4px 12px', fontSize: 12, color: '#64748b', fontWeight: 500, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                  📱 Live Preview
-                </div>
+            {/* Right: WYSIWYG Live Preview using the exact same StorefrontView */}
+            <div className="flex flex-1 flex-col items-center overflow-auto" style={{ background: '#f0f2f7', padding: '24px 32px', position: 'relative' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'white', border: '1px solid #e2e8f0', borderRadius: 999, padding: '4px 12px', fontSize: 12, color: '#64748b', fontWeight: 500, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: 16 }}>
+                📱 Live Preview
               </div>
-              <div style={{ transform: 'scale(0.65)', transformOrigin: 'top center', width: 390, flexShrink: 0, pointerEvents: 'none' }}>
-                <StorefrontMiniPreview form={form} tenant={previewTenant} products={previewProducts} categories={previewCategories} interactive={false} />
+              <div style={{ width: 375, flexShrink: 0, pointerEvents: 'none', border: '8px solid #1e293b', borderRadius: 36, overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.25)' }}>
+                <div style={{ height: 500, overflowY: 'auto', overflowX: 'hidden' }}>
+                  <StorefrontView
+                    previewMode={true}
+                    tenant={previewTenant}
+                    storefrontConfig={form}
+                    theme={null}
+                    products={previewProducts}
+                    categories={previewCategories}
+                    cart={[]}
+                    cartCount={0}
+                    cartTotal={0}
+                    setShowCart={() => {}}
+                    setShowOrderHistory={() => {}}
+                    onAddToCart={() => {}}
+                  />
+                </div>
               </div>
             </div>
           </div>

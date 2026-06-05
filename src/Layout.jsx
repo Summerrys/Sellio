@@ -320,8 +320,8 @@ function AppLayout({ children, currentPageName }) {
       </aside>
       )}
 
-      {/* Mobile Header */}
-      {currentPageName !== 'Onboarding' && (
+      {/* Mobile Header — hidden on public storefront routes */}
+      {currentPageName !== 'Onboarding' && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-100 z-30 flex items-center px-4 justify-between"
         style={{ height: 'calc(56px + env(safe-area-inset-top, 0px))', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="flex items-center gap-2">
@@ -363,7 +363,7 @@ function AppLayout({ children, currentPageName }) {
       <main
         className={cn(
           "flex-1 transition-all duration-300 min-h-screen overflow-x-hidden",
-          currentPageName === 'Onboarding' ? "pt-0" : "pt-[calc(56px+env(safe-area-inset-top,0px))] lg:pt-0",
+          (currentPageName === 'Onboarding' || window.location.pathname.startsWith('/store/') || window.location.pathname.startsWith('/order/')) ? "pt-0" : "pt-[calc(56px+env(safe-area-inset-top,0px))] lg:pt-0",
           currentPageName !== 'Onboarding' && (collapsed ? "lg:ml-[72px]" : "lg:ml-[260px]")
         )}
         style={{ paddingBottom: currentPageName !== 'Onboarding' ? 'calc(env(safe-area-inset-bottom, 0px) + 72px)' : undefined }}
@@ -374,8 +374,8 @@ function AppLayout({ children, currentPageName }) {
         </div>
       </main>
 
-      {/* Mobile Bottom Tab Bar */}
-      {currentPageName !== 'Onboarding' && (
+      {/* Mobile Bottom Tab Bar — never show on public storefront routes */}
+      {currentPageName !== 'Onboarding' && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (
         <nav
           className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-30 flex items-stretch"
           style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
