@@ -3,10 +3,13 @@ import ReactDOM from 'react-dom/client'
 import App from '@/App.jsx'
 import '@/index.css'
 
-// Unregister any stale service workers to prevent caching stale JS chunks
+// Unregister any stale service workers and clear caches to prevent serving stale JS
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then((registrations) => {
     registrations.forEach((reg) => reg.unregister());
+  });
+  caches.keys().then((cacheNames) => {
+    cacheNames.forEach((cacheName) => caches.delete(cacheName));
   });
 }
 

@@ -8,7 +8,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import Splash from './pages/Splash';
 import Storefront from './pages/Storefront';
-import { useEffect, Suspense } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import { AppUserProvider } from '@/lib/AppUserContext';
