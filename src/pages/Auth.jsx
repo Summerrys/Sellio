@@ -175,6 +175,20 @@ export default function Auth() {
 
   const [showPricingModal, setShowPricingModal] = useState(false);
 
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1); // 1=phone, 2=otp, 3=new password, 4=email sent
+  const [forgotPhone, setForgotPhone] = useState('');
+  const [forgotCountry, setForgotCountry] = useState(COUNTRY_CODES[0]);
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotUserEmail, setForgotUserEmail] = useState('');
+  const [forgotUserTenantId, setForgotUserTenantId] = useState('');
+  const [forgotPlan, setForgotPlan] = useState('');
+  const [forgotFullPhone, setForgotFullPhone] = useState('');
+  const [showForgotCountryDropdown, setShowForgotCountryDropdown] = useState(false);
+
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);
   const [formData, setFormData] = useState({ full_name: '', email: '', phone: '', password: '' });
@@ -466,6 +480,111 @@ export default function Auth() {
     }
   };
 
+  const handleForgotStart = async () => {
+    if (!forgotPhone.trim()) return;
+    setForgotLoading(true);
+    try {
+      const supabase = await getSupabase();
+      const cleanPhone = forgotPhone.replace(/^0+/, '');
+      const fullPhone = forgotCountry.code + cleanPhone;
+      setForgotFullPhone(fullPhone);
+
+      const { data: rows } = await supabase
+        .from('app_users')
+        .select('id, email, tenant_id')
+        .eq('phone', fullPhone)
+        .limit(1);
+
+      const appUserRow = rows?.[0];
+      if (!appUserRow) {
+        toast.error('No account found for this phone number.');
+        setForgotLoading(false);
+        return;
+      }
+
+      setForgotUserEmail(appUserRow.email || '');
+      setForgotUserTenantId(appUserRow.tenant_id || '');
+
+      if (appUserRow.tenant_id) {
+        const { data: subRows } = await supabase
+          .from('subscriptions')
+          .select('tier')
+          .eq('tenant_id', appUserRow.tenant_id)
+          .limit(1);
+        setForgotPlan(subRows?.[0]?.tier || 'starter');
+      }
+
+      const isRealEmail = appUserRow.email && !appUserRow.email.endsWith('@sellio.app');
+
+      if (isRealEmail) {
+        await supabase.auth.resetPasswordForEmail(appUserRow.email, {
+          redirectTo: 'https://sellio.apptelier.sg/Auth?type=recovery',
+        });
+        setForgotStep(4);
+      } else {
+        const res = await fetch('https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1/sendOTP', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: fullPhone }),
+        });
+        const result = await res.json();
+        if (!res.ok || result.error) throw new Error(result.error || 'Failed to send OTP');
+        setForgotStep(2);
+      }
+    } catch (err) {
+      toast.error(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleForgotVerifyOTP = async () => {
+    if (!forgotOtp.trim() || forgotOtp.length < 6) {
+      toast.error('Please enter the 6-digit code.');
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      const res = await fetch('https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1/verifyOTP', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: forgotFullPhone, code: forgotOtp }),
+      });
+      const result = await res.json();
+      if (!res.ok || !result.valid) throw new Error('Invalid or expired code. Please try again.');
+      setForgotStep(3);
+    } catch (err) {
+      toast.error(err.message || 'Verification failed.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleForgotSetPassword = async () => {
+    if (!forgotNewPassword || forgotNewPassword.length < 6) {
+      toast.error('Password must be at least 6 characters.');
+      return;
+    }
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      toast.error('Passwords do not match.');
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      const supabase = await getSupabase();
+      const { error } = await supabase.auth.updateUser({ password: forgotNewPassword });
+      if (error) throw error;
+      const newHash = await hashPassword(forgotNewPassword);
+      await supabase.from('app_users').update({ password_hash: newHash }).eq('phone', forgotFullPhone);
+      toast.success('Password updated successfully!');
+      setTimeout(() => { window.location.href = '/Dashboard'; }, 800);
+    } catch (err) {
+      toast.error(err.message || 'Failed to update password.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
   const handleGoogleSignUp = async () => {
     setGoogleSignupError('');
     setGoogleLoading(true);
@@ -598,6 +717,14 @@ export default function Auth() {
     }
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('type') === 'recovery') {
+      setForgotMode(true);
+      setForgotStep(3);
+    }
+  }, []);
+
   // Determine if we should show the pricing wall (signup tab, no token, not bypass)
   const showPricingWall = !isLogin && signupMode === 'pricing_wall';
   const showInvalidToken = !isLogin && signupMode === 'invalid_token';
@@ -627,6 +754,212 @@ export default function Auth() {
         {/* Auth card — always visible */}
         <div className="w-full max-w-sm mb-8">
           <div className="bg-white rounded-2xl shadow-xl p-8">
+            {forgotMode ? (
+              <div>
+                {/* Back button + title */}
+                <div className="flex items-center gap-3 mb-6">
+                  <button
+                    type="button"
+                    onClick={() => { setForgotMode(false); setForgotStep(1); setForgotPhone(''); setForgotOtp(''); setForgotNewPassword(''); setForgotConfirmPassword(''); }}
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 transition-colors border-none cursor-pointer"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+                  </button>
+                  <div>
+                    <p className="text-base font-semibold text-slate-800">
+                      {forgotStep === 1 && 'Reset Password'}
+                      {forgotStep === 2 && 'Enter OTP'}
+                      {forgotStep === 3 && 'New Password'}
+                      {forgotStep === 4 && 'Check Your Email'}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {forgotStep === 1 && 'Enter your registered phone number'}
+                      {forgotStep === 2 && `Code sent to WhatsApp: ${forgotFullPhone}`}
+                      {forgotStep === 3 && 'Choose a new password'}
+                      {forgotStep === 4 && 'Reset link sent'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Step 1 — Phone entry */}
+                {forgotStep === 1 && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
+                      <div className="flex gap-2">
+                        <div className="relative" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => setShowForgotCountryDropdown(!showForgotCountryDropdown)}
+                            className="flex items-center gap-1.5 px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white hover:bg-slate-50 transition-colors whitespace-nowrap"
+                          >
+                            <span>{forgotCountry.flag}</span>
+                            <span className="text-slate-700">{forgotCountry.code}</span>
+                            <ChevronDown className="w-3 h-3 text-slate-400" />
+                          </button>
+                          {showForgotCountryDropdown && (
+                            <div className="orange-scroll absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto min-w-[130px]">
+                              {COUNTRY_CODES.map((c) => (
+                                <button
+                                  key={c.code}
+                                  type="button"
+                                  onClick={() => { setForgotCountry(c); setShowForgotCountryDropdown(false); }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-slate-50 transition-colors text-left"
+                                >
+                                  <span>{c.flag}</span>
+                                  <span className="text-slate-600">{c.name}</span>
+                                  <span className="text-slate-400 ml-auto">{c.code}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="relative flex-1">
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <input
+                            type="tel"
+                            placeholder={forgotCountry.placeholder}
+                            value={forgotPhone}
+                            onChange={(e) => setForgotPhone(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleForgotStart}
+                      disabled={forgotLoading || !forgotPhone.trim()}
+                      className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70"
+                      style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
+                    >
+                      {forgotLoading ? 'Please wait...' : 'Continue'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Step 2 — OTP entry (WhatsApp) */}
+                {forgotStep === 2 && (
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-xl">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="#22c55e" className="flex-shrink-0 mt-0.5"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.564 4.14 1.548 5.874L0 24l6.336-1.524A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.006-1.371l-.36-.214-3.732.898.934-3.617-.235-.372A9.818 9.818 0 1112 21.818z"/></svg>
+                      <p className="text-xs text-green-800">A 6-digit code has been sent to your WhatsApp. It expires in 10 minutes.</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Verification Code</label>
+                      <input
+                        type="number"
+                        placeholder="123456"
+                        value={forgotOtp}
+                        onChange={(e) => setForgotOtp(e.target.value.slice(0, 6))}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-center tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleForgotVerifyOTP}
+                      disabled={forgotLoading || forgotOtp.length < 6}
+                      className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70"
+                      style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
+                    >
+                      {forgotLoading ? 'Verifying...' : 'Verify Code'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setForgotOtp(''); handleForgotStart(); }}
+                      className="w-full text-xs text-slate-500 hover:text-orange-500 bg-transparent border-none cursor-pointer py-1"
+                    >
+                      Didn't receive it? Resend
+                    </button>
+                  </div>
+                )}
+
+                {/* Step 3 — New password */}
+                {forgotStep === 3 && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          type="password"
+                          placeholder="Min. 6 characters"
+                          value={forgotNewPassword}
+                          onChange={(e) => setForgotNewPassword(e.target.value)}
+                          className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Confirm Password</label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          type="password"
+                          placeholder="Re-enter password"
+                          value={forgotConfirmPassword}
+                          onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                          className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleForgotSetPassword}
+                      disabled={forgotLoading || !forgotNewPassword || !forgotConfirmPassword}
+                      className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70"
+                      style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
+                    >
+                      {forgotLoading ? 'Saving...' : 'Set New Password'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Step 4 — Email sent confirmation */}
+                {forgotStep === 4 && (
+                  <div className="space-y-4">
+                    <div className="flex flex-col items-center py-4 gap-3">
+                      <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center">
+                        <Check className="w-7 h-7 text-green-500" />
+                      </div>
+                      <p className="text-sm font-semibold text-slate-800 text-center">Reset link sent!</p>
+                      <p className="text-xs text-slate-500 text-center leading-relaxed">
+                        Check your email inbox and click the reset link. It may take a minute to arrive.
+                      </p>
+                    </div>
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                      <p className="text-xs font-semibold text-slate-600 mb-2">Need further help?</p>
+                      <a
+                        href="mailto:support@apptelier.sg"
+                        className="flex items-center gap-2 text-xs text-slate-600 hover:text-orange-500 transition-colors mb-2"
+                      >
+                        <Mail className="w-3.5 h-3.5 flex-shrink-0" />
+                        support@apptelier.sg
+                      </a>
+                      {forgotPlan === 'pro' && (
+                        <a
+                          href={`https://wa.me/6565805411?text=Hi%2C%20I%20need%20help%20resetting%20my%20Sellio%20password.%20My%20registered%20phone%20is%3A%20${encodeURIComponent(forgotFullPhone)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-xs font-medium text-green-700 hover:text-green-800 transition-colors"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.564 4.14 1.548 5.874L0 24l6.336-1.524A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.006-1.371l-.36-.214-3.732.898.934-3.617-.235-.372A9.818 9.818 0 1112 21.818z"/></svg>
+                          WhatsApp Priority Support
+                        </a>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setForgotMode(false); setForgotStep(1); }}
+                      className="w-full py-2.5 rounded-xl text-sm font-medium text-slate-600 border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
+                    >
+                      Back to Login
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+            <>
             {/* Header */}
             <div className="text-center mb-6">
               <div className="flex items-center justify-center mb-3">
@@ -786,6 +1119,18 @@ export default function Auth() {
                   </div>
                 </div>
 
+                {isLogin && (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => { setForgotMode(true); setForgotStep(1); }}
+                      className="text-xs text-orange-500 hover:text-orange-600 font-medium bg-transparent border-none cursor-pointer p-0"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                )}
+
                 <button
                   type="submit"
                   disabled={loading}
@@ -886,6 +1231,8 @@ export default function Auth() {
                   </div>
                 )}
               </>
+            )}
+            </>
             )}
           </div>
         </div>
