@@ -77,6 +77,21 @@ const PLANS = [
   },
 ];
 
+const NO_TRIAL_LINKS = {
+  starter: {
+    monthly: 'https://buy.stripe.com/bJefZjdyV7ILeOD0kU7bW08',
+    yearly:  'https://buy.stripe.com/8x26oJ2UhgfhbCr4Ba7bW09',
+  },
+  growth: {
+    monthly: 'https://buy.stripe.com/14A00leCZ8MPbCr3x67bW0a',
+    yearly:  'https://buy.stripe.com/28EdRb8eB3svcGv4Ba7bW0b',
+  },
+  pro: {
+    monthly: 'https://buy.stripe.com/eVqdRb66tfbdbCrc3C7bW0c',
+    yearly:  'https://buy.stripe.com/4gM3cxdyVd35aync3C7bW0d',
+  },
+};
+
 const BADGE_COLORS = {
   blue: 'bg-blue-100 text-blue-700',
   purple: 'bg-purple-100 text-purple-700',
@@ -93,13 +108,14 @@ const PLAN_RANK = { starter: 0, growth: 1, pro: 2 };
 
 export default function UpgradeWall({ currentTier: currentTierProp = null }) {
   const [billing, setBilling] = useState('monthly');
-  const { tenantId, subscription, user } = useTenant();
+  const { tenantId, subscription, user, tenant } = useTenant();
 
   const currentTier = currentTierProp ?? subscription?.tier ?? null;
   console.log('UpgradeWall currentTier:', currentTier);
 
   const getLink = (plan) => {
-    const base = billing === 'annual' ? plan.links.yearly : plan.links.monthly;
+    const linkSet = tenant?.has_used_trial ? NO_TRIAL_LINKS[plan.key] : plan.links;
+    const base = billing === 'annual' ? linkSet.yearly : linkSet.monthly;
     if (currentTier === null) return base;
     const params = new URLSearchParams();
     if (tenantId) params.set('client_reference_id', tenantId);

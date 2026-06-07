@@ -245,6 +245,20 @@ export function TenantProvider({ children }) {
     enabled: !!currentTenantId,
   });
 
+  const { data: tenantDirectData } = useQuery({
+    queryKey: ['tenantDirect', currentTenantId],
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data } = await supabase
+        .from('tenants')
+        .select('has_used_trial')
+        .eq('id', currentTenantId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!currentTenantId,
+  });
+
   useEffect(() => {
     // When simulating a role, never treat the user as superadmin
     if (devRoleOverride) {
@@ -339,7 +353,7 @@ export function TenantProvider({ children }) {
 
   const value = {
     user,
-    tenant: tenant?.[0] || null,
+    tenant: tenant?.[0] ? { ...tenant[0], has_used_trial: tenantDirectData?.has_used_trial ?? false } : null,
     tenantId: currentTenantId,
     tenantUser: tenantUser?.[0] || null,
     isSuperAdmin,
