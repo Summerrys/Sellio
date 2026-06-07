@@ -225,7 +225,7 @@ export default function Dashboard() {
           <p className="text-sm text-slate-500 mt-0.5">Today's overview</p>
           <p className="text-xs text-slate-400 mt-0.5">{todayLabel}</p>
         </div>
-        {tenant?.slug && (
+        {tenant && (
           <button
             onClick={() => setShowDesigner(true)}
             style={{

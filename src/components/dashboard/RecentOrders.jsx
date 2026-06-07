@@ -43,7 +43,7 @@ export default function RecentOrders({ tenantId }) {
       </div>
 
       {orders.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-8">No orders yet today</p>
+        <p className="text-sm text-slate-400 text-center py-8">No orders yet</p>
       ) : (
         <div className="space-y-3">
           {orders.map((order) => {
