@@ -582,9 +582,23 @@ export default function Auth() {
       const { error } = await supabase.auth.updateUser({ password: forgotNewPassword });
       if (error) throw error;
       const newHash = await hashPassword(forgotNewPassword);
-      await supabase.from('app_users').update({ password_hash: newHash }).eq('phone', forgotFullPhone);
+
+      // Update password_hash in app_users.
+      // If forgotFullPhone is set (OTP flow), look up by phone.
+      // If not (email recovery flow), look up by the current session's email.
+      if (forgotFullPhone) {
+        await supabase.from('app_users').update({ password_hash: newHash }).eq('phone', forgotFullPhone);
+      } else {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user?.email) {
+          await supabase.from('app_users').update({ password_hash: newHash }).eq('email', session.user.email);
+        }
+      }
+
       toast.success('Password updated successfully!');
-      setTimeout(() => { window.location.href = '/Dashboard'; }, 800);
+      // Sign out so the merchant logs in fresh with their new password
+      await supabase.auth.signOut();
+      setTimeout(() => { window.location.href = '/Auth'; }, 800);
     } catch (err) {
       toast.error(err.message || 'Failed to update password.');
     } finally {
