@@ -199,6 +199,13 @@ export default function Auth() {
     const checkAuth = async () => {
       try {
         const supabase = await getSupabase();
+        // If this is a password recovery redirect, skip auto-redirect entirely
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('type') === 'recovery') {
+          setAuthChecking(false);
+          return;
+        }
+
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           const { data: rows } = await supabase
