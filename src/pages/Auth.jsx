@@ -324,6 +324,11 @@ export default function Auth() {
   // Google OAuth callback
   useEffect(() => {
     const hash = window.location.hash;
+
+    // Don't process hash as Google OAuth if this is a password recovery redirect
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('type') === 'recovery') return;
+
     if (hash.includes('error=')) {
       const params = new URLSearchParams(hash.substring(1));
       toast.error(params.get('error_description') || 'Google Sign-In failed');
