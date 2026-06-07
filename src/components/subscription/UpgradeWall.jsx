@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, Check } from 'lucide-react';
 import { useTenant } from '../tenant/TenantContext';
+import { getSupabase } from '@/lib/supabaseClient';
 
 const PLANS = [
   {
@@ -293,7 +294,15 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
       <p className="mt-8 text-sm text-slate-500">
         Already have an account?{' '}
         <button
-          onClick={() => window.location.href = '/Auth'}
+          onClick={async () => {
+  try {
+    const supabase = await getSupabase();
+    await supabase.auth.signOut();
+  } catch (e) {
+    console.warn('Sign out error:', e);
+  }
+  window.location.href = '/Auth';
+}}
           className="font-semibold text-indigo-600 hover:text-indigo-700 underline underline-offset-2 bg-transparent border-none cursor-pointer p-0"
         >
           Sign in
