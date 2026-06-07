@@ -930,11 +930,11 @@ export default function Auth() {
                     <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
                       <p className="text-xs font-semibold text-slate-600 mb-2">Need further help?</p>
                       <a
-                        href="mailto:support@apptelier.sg"
+                        href="mailto:hello@apptelier.sg"
                         className="flex items-center gap-2 text-xs text-slate-600 hover:text-orange-500 transition-colors mb-2"
                       >
                         <Mail className="w-3.5 h-3.5 flex-shrink-0" />
-                        support@apptelier.sg
+                        hello@apptelier.sg
                       </a>
                       {forgotPlan === 'pro' && (
                         <a
