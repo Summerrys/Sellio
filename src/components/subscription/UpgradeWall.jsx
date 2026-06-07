@@ -181,8 +181,8 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
 
       {/* Pricing Cards — horizontal scroll on mobile */}
       <div
-        className="w-full max-w-5xl flex md:grid md:grid-cols-3 gap-6 overflow-x-auto pb-4 md:overflow-x-visible"
-        style={{ scrollSnapType: 'x mandatory' }}
+        className="w-full max-w-5xl flex md:grid md:grid-cols-3 gap-4 overflow-x-auto pb-4 md:overflow-x-visible px-4 md:px-0"
+        style={{ scrollSnapType: 'x mandatory', scrollPadding: '0 16px' }}
       >
         {PLANS.map((plan) => {
           const isGrowth = plan.key === 'growth';
@@ -193,7 +193,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
           return (
             <div
               key={plan.key}
-              className={`relative bg-white rounded-2xl flex flex-col flex-shrink-0 w-[85vw] md:w-auto ${
+              className={`relative bg-white rounded-2xl flex flex-col flex-shrink-0 w-[82vw] mx-1 md:mx-0 md:w-auto ${
                 isCurrent
                   ? 'shadow-xl ring-2 ring-offset-2 ring-green-400'
                   : isGrowth
@@ -289,6 +289,16 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
           );
         })}
       </div>
+
+      <p className="mt-8 text-sm text-slate-500">
+        Already have an account?{' '}
+        <button
+          onClick={() => window.location.href = '/Auth'}
+          className="font-semibold text-indigo-600 hover:text-indigo-700 underline underline-offset-2 bg-transparent border-none cursor-pointer p-0"
+        >
+          Sign in
+        </button>
+      </p>
     </div>
   );
 }
