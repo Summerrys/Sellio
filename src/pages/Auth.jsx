@@ -59,6 +59,14 @@ const hashPassword = async (password) => {
   return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
+const getBaseUrl = () => {
+  const host = window.location.hostname;
+  if (host === 'localhost' || host.includes('base44.app') || host.includes('base44.com')) {
+    return window.location.origin;
+  }
+  return 'https://sellio.apptelier.sg';
+};
+
 // Pricing modal overlay
 function PricingModal({ onClose }) {
   const [annual, setAnnual] = useState(false);
@@ -483,7 +491,7 @@ export default function Auth() {
       const supabase = await getSupabase();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: 'https://sellio.apptelier.sg/Auth' },
+        options: { redirectTo: `${getBaseUrl()}/Auth` },
       });
       if (error) throw error;
     } catch (err) {
@@ -530,7 +538,7 @@ export default function Auth() {
 
       if (isRealEmail) {
         await supabase.auth.resetPasswordForEmail(appUserRow.email, {
-          redirectTo: 'https://sellio.apptelier.sg/Auth?type=recovery',
+          redirectTo: `${getBaseUrl()}/Auth?type=recovery`,
         });
         setForgotStep(4);
       } else {
@@ -603,7 +611,7 @@ export default function Auth() {
       toast.success('Password updated successfully!');
       // Sign out so the merchant logs in fresh with their new password
       await supabase.auth.signOut();
-      setTimeout(() => { window.location.href = '/Auth'; }, 800);
+      setTimeout(() => { window.location.href = `${getBaseUrl()}/Auth`; }, 800);
     } catch (err) {
       toast.error(err.message || 'Failed to update password.');
     } finally {
@@ -617,8 +625,8 @@ export default function Auth() {
     try {
       const supabase = await getSupabase();
       const redirectTo = urlToken
-        ? `https://sellio.apptelier.sg/Auth?token=${urlToken}`
-        : 'https://sellio.apptelier.sg/Auth';
+        ? `${getBaseUrl()}/Auth?token=${urlToken}`
+        : `${getBaseUrl()}/Auth`;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
