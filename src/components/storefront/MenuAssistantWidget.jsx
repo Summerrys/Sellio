@@ -122,12 +122,18 @@ When a customer wants to ORDER, end your reply with this exact block:
 Rules: only add active items, confirm what you're adding, be warm and concise.`;
 
     try {
-      const res = await base44.functions.invoke('menuAssistantProxy', {
-        messages: updatedHistory,
-        systemPrompt,
+      const aiRes = await base44.integrations.Core.InvokeLLM({
+        prompt: updatedHistory.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n'),
+        system_prompt: systemPrompt,
       });
 
-      const { message: cleanText, orderAction } = res.data;
+      const rawText = typeof aiRes === 'string' ? aiRes : (aiRes?.result || aiRes?.text || aiRes?.content || '');
+      const orderMatch = rawText.match(/<order_action>([\s\S]*?)<\/order_action>/);
+      let orderAction = null;
+      if (orderMatch) {
+        try { orderAction = JSON.parse(orderMatch[1].trim()); } catch { orderAction = null; }
+      }
+      const cleanText = rawText.replace(/<order_action>[\s\S]*?<\/order_action>/, '').trim();
 
       setMessages(prev => [...prev, { role: 'assistant', content: cleanText || "Sorry, I couldn't understand that.", orderAction: orderAction || null }]);
       setConversationHistory([...updatedHistory, { role: 'assistant', content: cleanText }]);
