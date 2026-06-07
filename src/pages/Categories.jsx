@@ -74,7 +74,7 @@ function CategoriesContent() {
   };
 
   return (
-    <PermissionGate permission="categories.view">
+    <PermissionGate permission="categories.read">
       <PageHeader title="Categories" description="Organize your products into categories"
         actions={
           <div className="flex flex-wrap items-center gap-2">

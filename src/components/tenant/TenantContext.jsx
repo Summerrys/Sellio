@@ -295,7 +295,7 @@ export function TenantProvider({ children }) {
       return;
     }
 
-    if (tenantUser?.[0]?.is_owner || role?.[0]?.slug?.toLowerCase() === 'owner' || role?.[0]?.name?.toLowerCase() === 'owner') {
+    if (tenantUser?.[0]?.is_owner) {
       setUserPermissions(Object.keys(PERMISSIONS));
     } else if (role?.[0]?.permissions) {
       setUserPermissions(role[0].permissions);
@@ -329,7 +329,7 @@ export function TenantProvider({ children }) {
       return checkInList(userPermissions);
     }
     if (isSuperAdmin) return true;
-    if (tenantUser?.[0]?.is_owner || role?.[0]?.slug?.toLowerCase() === 'owner' || role?.[0]?.name?.toLowerCase() === 'owner') return true;
+    if (tenantUser?.[0]?.is_owner) return true;
     return checkInList(userPermissions);
   };
 
@@ -345,7 +345,7 @@ export function TenantProvider({ children }) {
     isSuperAdmin,
     isOwner: devRoleOverride
       ? devRoleOverride === 'owner'
-      : (tenantUser?.[0]?.is_owner || role?.[0]?.slug?.toLowerCase() === 'owner' || role?.[0]?.name?.toLowerCase() === 'owner' || !!user?.tenant_id || false),
+      : (tenantUser?.[0]?.is_owner || !!user?.tenant_id || false),
     permissions: userPermissions,
     hasPermission,
     hasAnyPermission,

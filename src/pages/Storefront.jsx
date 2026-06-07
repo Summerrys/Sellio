@@ -367,7 +367,7 @@ export default function Storefront() {
       )}
 
       {products.length > 0 && (
-        <MenuAssistantWidget products={products} tenant={tenant} storefront={storefrontConfig} onProductSelect={() => {}} addToCart={addToCart} tableId={tableId} />
+        <MenuAssistantWidget products={products} tenant={tenant} storefront={storefrontConfig} onProductSelect={() => {}} />
       )}
     </>
   );
