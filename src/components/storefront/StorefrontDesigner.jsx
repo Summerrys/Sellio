@@ -416,7 +416,7 @@ function MenuTabContent({ form, onChange }) {
       <div style={{ paddingBottom: 20 }}>
         <SectionLabel>Product layout</SectionLabel>
         <PillToggle
-          options={[{ value: 'grid', label: 'Grid' }, { value: 'list', label: 'List' }, { value: 'split', label: 'Split' }, { value: 'carousel', label: 'Carousel' }]}
+          options={[{ value: 'grid', label: 'Grid' }, { value: 'list', label: 'List' }, { value: 'split', label: 'Split' }]}
           value={form.product_layout}
           onChange={v => onChange('product_layout', v)}
         />
@@ -721,7 +721,7 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
         const parsed = JSON.parse(draft);
         setForm({ ...DEFAULTS, ...parsed });
         const [productsRes, categoriesRes, tenantRes] = await Promise.all([
-          supabase.from('products').select('id, name, description, price, image_url, category_id, is_active, is_featured').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').limit(12),
+          supabase.from('products').select('id, name, description, price, compare_at_price, image_url, category_id, is_active, is_featured').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').limit(12),
           supabase.from('categories').select('id, name').eq('tenant_id', tenantId),
           supabase.from('tenants').select('name, logo_url, currency, address, settings').eq('id', tenantId).maybeSingle(),
         ]);
@@ -733,11 +733,16 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
     }
     const [configRes, productsRes, categoriesRes, tenantRes] = await Promise.all([
       supabase.from('storefront_configs').select('*').eq('tenant_id', tenantId).maybeSingle(),
-      supabase.from('products').select('id, name, description, price, image_url, category_id, is_active, is_featured').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').limit(12),
+      supabase.from('products').select('id, name, description, price, compare_at_price, image_url, category_id, is_active, is_featured').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').limit(12),
       supabase.from('categories').select('id, name').eq('tenant_id', tenantId),
       supabase.from('tenants').select('name, logo_url, currency, address, settings').eq('id', tenantId).maybeSingle(),
     ]);
-    setForm(configRes.data ? { ...DEFAULTS, ...configRes.data } : { ...DEFAULTS });
+    const { data: themeData } = await supabase.from('theme_configs').select('primary_color').eq('tenant_id', tenantId).maybeSingle();
+    const tenantPrimaryColor = themeData?.primary_color || null;
+    setForm(configRes.data
+      ? { ...DEFAULTS, ...configRes.data }
+      : { ...DEFAULTS, ...(tenantPrimaryColor ? { banner_bg_color: tenantPrimaryColor } : {}) }
+    );
     setPreviewProducts(productsRes.data || []);
     setPreviewCategories(categoriesRes.data || []);
     setPreviewTenant(tenantRes.data);
