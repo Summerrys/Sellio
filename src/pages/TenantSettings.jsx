@@ -308,11 +308,13 @@ function TenantSettingsContent() {
         </TabsContent>
 
         <TabsContent value="payment_qr">
-          <PaymentQRTab tenant={tenant} tenantId={tenantId} />
+          <div className="max-w-2xl">
+            <PaymentQRTab tenant={tenant} tenantId={tenantId} />
+          </div>
         </TabsContent>
 
         <TabsContent value="theme">
-          <div className="max-w-3xl">
+          <div className="max-w-2xl">
             <ThemeSelector variant="full" />
           </div>
         </TabsContent>

@@ -61,6 +61,9 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
   const fileInputRef = useRef(null);
 
   const [receiptOpen, setReceiptOpen] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [taxOpen, setTaxOpen] = useState(false);
+  const [orderSettingsOpen, setOrderSettingsOpen] = useState(false);
   const [form, setForm] = useState({
     name: '',
     branch_name: '',
@@ -105,7 +108,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
       logo_url: tenant.logo_url || '',
       order_id_prefix: tenant.order_id_prefix || 'ORD',
       order_id_start: tenant.order_id_start || 1,
-      receipt_paper_size: tenant.receipt_paper_size || 'a4',
+      receipt_paper_size: tenant.receipt_paper_size || 'thermal_58',
       receipt_show_logo: tenant.receipt_show_logo !== false,
       receipt_show_tax: tenant.receipt_show_tax !== false,
       receipt_show_order_number: tenant.receipt_show_order_number !== false,
@@ -280,71 +283,76 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
       </Card>
 
       {/* Location & Contact */}
-      <Card className="border border-slate-100 shadow-sm p-6 space-y-4">
-        <Section icon={MapPin} title="Location & Contact">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-xs text-slate-600 mb-1 block">Country</Label>
-              <Select value={form.country} onValueChange={handleCountryChange}>
-                <SelectTrigger className="h-10"><SelectValue placeholder="Select country" /></SelectTrigger>
-                <SelectContent>
-                  {COUNTRIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                </SelectContent>
-              </Select>
+      <Card className="border border-slate-100 shadow-sm overflow-hidden">
+        <button type="button" className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors" onClick={() => setLocationOpen(o => !o)}>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-primary-gradient, #6366f1)' }}>
+              <MapPin className="w-3.5 h-3.5 text-white" />
+            </div>
+            <h3 className="text-sm font-semibold text-slate-800">Location & Contact</h3>
+          </div>
+          {locationOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+        </button>
+        {locationOpen && (
+          <div className="px-6 pb-6 space-y-4 border-t border-slate-100">
+            <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs text-slate-600 mb-1 block">Country</Label>
+                <Select value={form.country} onValueChange={handleCountryChange}>
+                  <SelectTrigger className="h-10"><SelectValue placeholder="Select country" /></SelectTrigger>
+                  <SelectContent>
+                    {COUNTRIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs text-slate-600 mb-1 block">Currency</Label>
+                <Select value={form.currency} onValueChange={handleCurrencyChange}>
+                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CURRENCIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div>
-              <Label className="text-xs text-slate-600 mb-1 block">Currency</Label>
-              <Select value={form.currency} onValueChange={handleCurrencyChange}>
-                <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CURRENCIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label className="text-xs text-slate-600 mb-1 block">Phone</Label>
+              <Input className="h-10" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder={COUNTRY_CONFIG[form.country]?.phonePlaceholder || '+X XXXX XXXX'} />
+            </div>
+            <div>
+              <Label className="text-xs text-slate-600 mb-1 block">Address</Label>
+              <Input className="h-10" value={form.address} onChange={e => set('address', e.target.value)} placeholder="123 Street, City" />
             </div>
           </div>
-          <div>
-            <Label className="text-xs text-slate-600 mb-1 block">Phone</Label>
-            <Input
-              className="h-10"
-              value={form.phone}
-              onChange={e => set('phone', e.target.value)}
-              placeholder={COUNTRY_CONFIG[form.country]?.phonePlaceholder || '+X XXXX XXXX'}
-            />
-          </div>
-          <div>
-            <Label className="text-xs text-slate-600 mb-1 block">Address</Label>
-            <Input className="h-10" value={form.address} onChange={e => set('address', e.target.value)} placeholder="123 Street, City" />
-          </div>
-        </Section>
+        )}
       </Card>
 
       {/* Tax Settings */}
-      <Card className="border border-slate-100 shadow-sm p-6 space-y-4">
-        <Section icon={Percent} title="Tax Settings">
-          <div>
-            <Label className="text-xs text-slate-600 mb-1 block">Tax Rate (%)</Label>
-            <Input
-              className="h-10"
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
-              value={form.tax_rate}
-              onChange={e => set('tax_rate', e.target.value)}
-              placeholder="e.g. 9"
-            />
-          </div>
-          <div className="flex items-start justify-between gap-4 py-1">
-            <div className="flex-1">
-              <p className="text-sm font-medium text-slate-700">Prices include tax</p>
-              <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
-                When enabled, product prices shown to customers already include tax.
-                When disabled, tax will be added on top at checkout.
-              </p>
+      <Card className="border border-slate-100 shadow-sm overflow-hidden">
+        <button type="button" className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors" onClick={() => setTaxOpen(o => !o)}>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-primary-gradient, #6366f1)' }}>
+              <Percent className="w-3.5 h-3.5 text-white" />
             </div>
-            <Switch checked={form.tax_inclusive} onCheckedChange={v => set('tax_inclusive', v)} />
+            <h3 className="text-sm font-semibold text-slate-800">Tax Settings</h3>
           </div>
-        </Section>
+          {taxOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+        </button>
+        {taxOpen && (
+          <div className="px-6 pb-6 space-y-4 border-t border-slate-100">
+            <div className="pt-4">
+              <Label className="text-xs text-slate-600 mb-1 block">Tax Rate (%)</Label>
+              <Input className="h-10" type="number" min="0" max="100" step="0.1" value={form.tax_rate} onChange={e => set('tax_rate', e.target.value)} placeholder="e.g. 9" />
+            </div>
+            <div className="flex items-start justify-between gap-4 py-1">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-slate-700">Prices include tax</p>
+                <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">When enabled, product prices shown to customers already include tax. When disabled, tax will be added on top at checkout.</p>
+              </div>
+              <Switch checked={form.tax_inclusive} onCheckedChange={v => set('tax_inclusive', v)} />
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Receipt Settings */}
@@ -420,39 +428,37 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
       </Card>
 
       {/* Order Settings */}
-      <Card className="border border-slate-100 shadow-sm p-6 space-y-4">
-        <Section icon={Hash} title="Order Settings">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-xs text-slate-600 mb-1 block">Order ID Prefix</Label>
-              <Input
-                className="h-10 uppercase"
-                maxLength={6}
-                value={form.order_id_prefix}
-                onChange={e => set('order_id_prefix', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                placeholder="ORD"
-              />
+      <Card className="border border-slate-100 shadow-sm overflow-hidden">
+        <button type="button" className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors" onClick={() => setOrderSettingsOpen(o => !o)}>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-primary-gradient, #6366f1)' }}>
+              <Hash className="w-3.5 h-3.5 text-white" />
             </div>
-            <div>
-              <Label className="text-xs text-slate-600 mb-1 block">Starting Number</Label>
-              <Input
-                className="h-10"
-                type="number"
-                min={1}
-                value={form.order_id_start}
-                onChange={e => set('order_id_start', e.target.value)}
-                placeholder="1"
-              />
-              <p className="text-[11px] text-slate-400 mt-1">New orders will be numbered from this value. Existing order numbers are unaffected.</p>
+            <h3 className="text-sm font-semibold text-slate-800">Order Settings</h3>
+          </div>
+          {orderSettingsOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+        </button>
+        {orderSettingsOpen && (
+          <div className="px-6 pb-6 space-y-4 border-t border-slate-100">
+            <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs text-slate-600 mb-1 block">Order ID Prefix</Label>
+                <Input className="h-10 uppercase" maxLength={6} value={form.order_id_prefix} onChange={e => set('order_id_prefix', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} placeholder="ORD" />
+              </div>
+              <div>
+                <Label className="text-xs text-slate-600 mb-1 block">Starting Number</Label>
+                <Input className="h-10" type="number" min={1} value={form.order_id_start} onChange={e => set('order_id_start', e.target.value)} placeholder="1" />
+                <p className="text-[11px] text-slate-400 mt-1">New orders will be numbered from this value. Existing order numbers are unaffected.</p>
+              </div>
+            </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+              <p className="text-xs text-slate-500 mb-1">Preview</p>
+              <p className="text-xl font-bold text-slate-800 font-mono">
+                {(form.order_id_prefix || 'ORD')}-{String(parseInt(form.order_id_start) || 1).padStart(6, '0')}
+              </p>
             </div>
           </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-            <p className="text-xs text-slate-500 mb-1">Preview</p>
-            <p className="text-xl font-bold text-slate-800 font-mono">
-              {(form.order_id_prefix || 'ORD')}-{String(parseInt(form.order_id_start) || 1).padStart(6, '0')}
-            </p>
-          </div>
-        </Section>
+        )}
       </Card>
 
       {showLogoEditor && logoPreview && (

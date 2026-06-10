@@ -146,20 +146,39 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-50 bg-black/40"
+        className="fixed inset-0 z-50 bg-black/40 lg:hidden"
         onClick={onClose}
       />
 
-      {/* Bottom sheet */}
+      {/* Bottom sheet / sidebar */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white flex flex-col"
+        className="profile-modal-inner fixed z-50 bg-white flex flex-col"
         style={{
-          borderRadius: '20px 20px 0 0',
-          maxHeight: '92vh',
-          animation: 'slideUp 0.3s ease-out',
+          bottom: 0,
+          left: 0,
+          top: 0,
+          width: 'var(--sidebar-width, 260px)',
+          borderRight: '1px solid #f1f5f9',
+          boxShadow: '4px 0 24px rgba(0,0,0,0.10)',
+          animation: 'slideInLeft 0.25s ease-out',
         }}
       >
         <style>{`
+          @keyframes slideInLeft {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
+          }
+          @media (max-width: 1023px) {
+            .profile-modal-inner {
+              top: auto !important;
+              width: 100% !important;
+              border-right: none !important;
+              border-radius: 20px 20px 0 0 !important;
+              max-height: 92vh !important;
+              box-shadow: 0 -4px 24px rgba(0,0,0,0.12) !important;
+              animation: slideUp 0.3s ease-out !important;
+            }
+          }
           @keyframes slideUp {
             from { transform: translateY(100%); }
             to { transform: translateY(0); }
