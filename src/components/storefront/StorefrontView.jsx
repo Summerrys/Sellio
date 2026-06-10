@@ -328,7 +328,7 @@ export default function StorefrontView({
             }}>
               {hasFeatured && (
                 <CategorySidebarItem
-                  cat={{ id: '__deals__', name: '⭐ Deals' }}
+                  cat={{ id: '__deals__', name: "Today's Picks ⭐" }}
                   isActive={activeCategory === '__deals__'}
                   primaryColor={primaryColor}
                   onClick={() => scrollToCategory('__deals__')}
@@ -363,7 +363,7 @@ export default function StorefrontView({
               {/* Special Deals section */}
               {hasFeatured && (
                 <div ref={el => categoryRefs.current['__deals__'] = el} data-category-id="__deals__">
-                  <p style={{ fontSize: 13, fontWeight: 700, padding: '12px 14px 6px', color: '#1e293b', margin: 0, position: 'sticky', top: 0, background: 'white', zIndex: 1, borderBottom: '1px solid #f1f5f9' }}>⭐ Special Deals</p>
+                  <p style={{ fontSize: 13, fontWeight: 700, padding: '12px 14px 6px', color: '#1e293b', margin: 0, position: 'sticky', top: 0, background: 'white', zIndex: 1, borderBottom: '1px solid #f1f5f9' }}>Today's Picks ⭐</p>
                   <div style={{ padding: '4px 10px' }}>
                     {featuredProducts.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={handleAddToCart} onProductClick={handleProductClick} featured={true} />)}
                   </div>
@@ -460,7 +460,12 @@ function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onA
         {storefrontConfig?.show_product_description !== false && product.description && (
           <p style={{ fontSize: 11, color: '#64748b', margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.description}</p>
         )}
-        <p style={{ fontSize: 13, fontWeight: 700, color: primaryColor, margin: 0 }}>{currency} {parseFloat(product.price).toFixed(2)}</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {product.compare_at_price > product.price && (
+            <span style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through' }}>{currency} {parseFloat(product.compare_at_price).toFixed(2)}</span>
+          )}
+          <p style={{ fontSize: 13, fontWeight: 700, color: primaryColor, margin: 0 }}>{currency} {parseFloat(product.price).toFixed(2)}</p>
+        </div>
       </div>
       {isOutOfStock
         ? <span style={{ fontSize: 10, color: '#dc2626', fontWeight: 600, flexShrink: 0 }}>Sold out</span>
@@ -475,6 +480,7 @@ function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onA
 function NonSplitContent({ products, categories, primaryColor, currency, storefrontConfig, showStockBadge, onAddToCart, onProductClick }) {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const featuredProducts = products.filter(p => p.is_featured === true);
+  const specialDealProducts = products.filter(p => p.compare_at_price > p.price && !p.is_featured);
   const filteredProducts = products.filter(p =>
     p.is_featured !== true && (selectedCategory === null || p.category_id === selectedCategory)
   );
@@ -501,6 +507,14 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
               {storefrontConfig?.featured_section_title || "Today's Picks"} ⭐
             </p>
             {featuredProducts.map(product => <FeaturedCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} />)}
+          </div>
+        )}
+        {specialDealProducts.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>
+              🏷️ Special Deals
+            </p>
+            {specialDealProducts.map(product => <FeaturedCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} />)}
           </div>
         )}
         {productLayout === 'grid' && (
@@ -537,7 +551,12 @@ function FeaturedCard({ product, currency, primaryColor, storefrontConfig, showS
           )}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: primaryColor }}>{currency} {parseFloat(product.price).toFixed(2)}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {product.compare_at_price > product.price && (
+              <span style={{ fontSize: 12, color: '#94a3b8', textDecoration: 'line-through' }}>{currency} {parseFloat(product.compare_at_price).toFixed(2)}</span>
+            )}
+            <span style={{ fontSize: 15, fontWeight: 700, color: primaryColor }}>{currency} {parseFloat(product.price).toFixed(2)}</span>
+          </div>
           {isOutOfStock && showStockBadge
             ? <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600, background: '#fee2e2', padding: '4px 10px', borderRadius: 999 }}>Sold out</span>
             : !isOutOfStock && <button onClick={(e) => { e.stopPropagation(); onAddToCart(product); }} style={{ background: primaryColor, color: 'white', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Add +</button>
@@ -569,7 +588,12 @@ function GridCard({ product, currency, primaryColor, storefrontConfig, showStock
           <p style={{ fontSize: 11, color: '#64748b', margin: '0 0 6px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{product.description}</p>
         )}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: primaryColor }}>{currency} {parseFloat(product.price).toFixed(2)}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {product.compare_at_price > product.price && (
+              <span style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through' }}>{currency} {parseFloat(product.compare_at_price).toFixed(2)}</span>
+            )}
+            <span style={{ fontSize: 13, fontWeight: 700, color: primaryColor }}>{currency} {parseFloat(product.price).toFixed(2)}</span>
+          </div>
           {!isOutOfStock && (
             <button onClick={(e) => { e.stopPropagation(); onAddToCart(product); }}
               style={{ width: 28, height: 28, borderRadius: '50%', background: primaryColor, color: 'white', border: 'none', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>+</button>
