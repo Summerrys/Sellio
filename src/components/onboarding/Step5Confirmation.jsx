@@ -5,7 +5,7 @@ import { ArrowLeft, Rocket, Loader2, CheckCircle2, Circle, Star, Sparkles } from
 import confetti from 'canvas-confetti';
 import { motion } from 'framer-motion';
 import { generateThemeVariables } from '../theme/themeUtils';
-import { useAppUser } from '@/lib/AppUserContext';
+import { useAppUser, cookieUtils } from '@/lib/AppUserContext';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 
 export default function Step5Confirmation({ formData, prevStep, onComplete }) {
@@ -71,9 +71,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
 
     try {
       let storedUser = appUser;
-      if (!storedUser?.id) {
-        try { storedUser = JSON.parse(localStorage.getItem('app_user') || 'null'); } catch {}
-      }
+      if (!storedUser?.id) storedUser = cookieUtils.get();
       if (!storedUser?.id) throw new Error('No user session found. Please log in.');
       const ownerEmail = storedUser?.email || formData.adminEmail;
       if (!ownerEmail) throw new Error('No owner email found. Please log in.');
