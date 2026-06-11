@@ -182,6 +182,7 @@ export default function StorefrontView({
   // preview mode: pass data directly
   previewMode = false,
   showBackButton = false,
+  onProductModalChange,
   tenant: tenantProp,
   storefrontConfig: storefrontConfigProp,
   theme: themeProp,
@@ -264,6 +265,7 @@ export default function StorefrontView({
     if (!previewMode) {
       setSelectedProduct(product);
       setActiveImageIndex(0);
+      onProductModalChange?.(true);
     }
   };
 
@@ -443,7 +445,7 @@ export default function StorefrontView({
           activeImageIndex={activeImageIndex}
           setActiveImageIndex={setActiveImageIndex}
           onAddToCart={handleAddToCart}
-          onClose={() => { setSelectedProduct(null); setSelectedVariants({}); setActiveImageIndex(0); }}
+          onClose={() => { setSelectedProduct(null); setSelectedVariants({}); setActiveImageIndex(0); onProductModalChange?.(false); }}
         />
       )}
     </div>
@@ -620,63 +622,116 @@ function GridCard({ product, currency, primaryColor, storefrontConfig, showStock
 function ProductDetailModal({ product, currency, primaryColor, storefrontConfig, selectedVariants, setSelectedVariants, activeImageIndex, setActiveImageIndex, onAddToCart, onClose }) {
   const allImages = [product.image_url, ...(product.images || [])].filter(Boolean);
   const activeImage = allImages[activeImageIndex];
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const touchStartX = useRef(null);
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) {
+      if (diff > 0 && activeImageIndex < allImages.length - 1) {
+        setActiveImageIndex(activeImageIndex + 1);
+      } else if (diff < 0 && activeImageIndex > 0) {
+        setActiveImageIndex(activeImageIndex - 1);
+      }
+    }
+    touchStartX.current = null;
+  };
+
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', overflow: 'auto' }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0 }} />
-      <div style={{ position: 'relative', width: '90%', maxWidth: 420, maxHeight: '85vh', overflowY: 'auto', borderRadius: 20, background: '#fff' }}>
-        <button onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, width: 36, height: 36, borderRadius: '50%', background: 'white', border: 'none', cursor: 'pointer', fontSize: 18, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-        {activeImage
-          ? <img src={activeImage} style={{ width: '100%', aspectRatio: '1/1', objectFit: 'contain', background: '#f8f9fa', borderRadius: '20px 20px 0 0' }} />
-          : <div style={{ width: '100%', aspectRatio: '1/1', background: '#f8f9fa', borderRadius: '20px 20px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>🛍️</div>
-        }
-        {allImages.length > 1 && (
-          <div style={{ padding: '8px 16px', display: 'flex', gap: 8, overflowX: 'auto', borderBottom: '0.5px solid #e5e7eb' }}>
-            {allImages.map((img, idx) => (
-              <button key={idx} onClick={() => setActiveImageIndex(idx)} style={{ width: 60, height: 60, flexShrink: 0, borderRadius: 8, border: activeImageIndex === idx ? `2px solid ${primaryColor}` : '0.5px solid #e5e7eb', background: '#f8f9fa', padding: 0, cursor: 'pointer', overflow: 'hidden' }}>
-                <img src={img} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-              </button>
-            ))}
-          </div>
-        )}
-        <div style={{ padding: '20px' }}>
-          <p style={{ fontWeight: 700, fontSize: 18, margin: '0 0 6px', color: '#0f172a' }}>{product.name}</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            {product.compare_at_price > product.price && (
-              <span style={{ fontSize: 13, color: '#94a3b8', textDecoration: 'line-through' }}>{currency} {parseFloat(product.compare_at_price).toFixed(2)}</span>
+    <>
+      {/* Lightbox */}
+      {lightboxOpen && (
+        <div
+          onClick={() => setLightboxOpen(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <button onClick={() => setLightboxOpen(false)} style={{ position: 'absolute', top: 16, right: 16, width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          <img src={activeImage} style={{ maxWidth: '95vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: 8 }} />
+        </div>
+      )}
+
+      <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', overflow: 'auto' }}>
+        <div onClick={onClose} style={{ position: 'absolute', inset: 0 }} />
+        <div style={{ position: 'relative', width: '90%', maxWidth: 420, maxHeight: '85vh', overflowY: 'auto', borderRadius: 20, background: '#fff' }}>
+          <button onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, width: 36, height: 36, borderRadius: '50%', background: 'white', border: 'none', cursor: 'pointer', fontSize: 18, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+
+          {/* Main image with swipe and tap-to-lightbox */}
+          <div
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            onClick={() => activeImage && setLightboxOpen(true)}
+            style={{ cursor: activeImage ? 'zoom-in' : 'default', position: 'relative' }}
+          >
+            {activeImage
+              ? <img src={activeImage} style={{ width: '100%', aspectRatio: '1/1', objectFit: 'contain', background: '#f8f9fa', borderRadius: '20px 20px 0 0', display: 'block' }} />
+              : <div style={{ width: '100%', aspectRatio: '1/1', background: '#f8f9fa', borderRadius: '20px 20px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>🛍️</div>
+            }
+            {/* Swipe dots */}
+            {allImages.length > 1 && (
+              <div style={{ position: 'absolute', bottom: 10, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 5 }}>
+                {allImages.map((_, idx) => (
+                  <div key={idx} style={{ width: idx === activeImageIndex ? 16 : 6, height: 6, borderRadius: 3, background: idx === activeImageIndex ? primaryColor : 'rgba(255,255,255,0.7)', transition: 'all 0.2s' }} />
+                ))}
+              </div>
             )}
-            <span style={{ fontSize: 20, fontWeight: 700, color: primaryColor }}>{currency} {parseFloat(product.price).toFixed(2)}</span>
           </div>
-          {product.description && <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6, margin: '0 0 16px' }}>{product.description}</p>}
-          {product.variants?.length > 0 && (
-            <div style={{ marginBottom: 16 }}>
-              {product.variants.map((group, gi) => (
-                <div key={gi} style={{ marginBottom: 14 }}>
-                  <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 8px', color: '#0f172a' }}>{group.name}</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {group.options?.map((opt, oi) => (
-                      <button key={oi} onClick={() => setSelectedVariants(prev => ({ ...prev, [gi]: opt }))}
-                        style={{ padding: '6px 14px', borderRadius: 8, fontSize: 13, border: selectedVariants[gi]?.label === opt.label ? `2px solid ${primaryColor}` : '0.5px solid #e5e7eb', background: selectedVariants[gi]?.label === opt.label ? '#f1f5f9' : 'none', cursor: 'pointer', fontWeight: 500, color: '#0f172a' }}>
-                        {opt.label}{opt.price_modifier > 0 ? ` +${currency} ${opt.price_modifier.toFixed(2)}` : ''}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+
+          {/* Thumbnails */}
+          {allImages.length > 1 && (
+            <div style={{ padding: '8px 16px', display: 'flex', gap: 8, overflowX: 'auto', borderBottom: '0.5px solid #e5e7eb' }}>
+              {allImages.map((img, idx) => (
+                <button key={idx} onClick={() => setActiveImageIndex(idx)} style={{ width: 60, height: 60, flexShrink: 0, borderRadius: 8, border: activeImageIndex === idx ? `2px solid ${primaryColor}` : '0.5px solid #e5e7eb', background: '#f8f9fa', padding: 0, cursor: 'pointer', overflow: 'hidden' }}>
+                  <img src={img} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                </button>
               ))}
             </div>
           )}
-          <button
-            onClick={() => {
-              const combinedVariant = Object.values(selectedVariants).length > 0
-                ? { label: Object.values(selectedVariants).map(v => v.label).join(', '), price_modifier: Object.values(selectedVariants).reduce((sum, v) => sum + (v.price_modifier || 0), 0) }
-                : null;
-              onAddToCart(product, combinedVariant);
-              onClose();
-            }}
-            style={{ width: '100%', padding: 14, background: primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
-            Add to order · {currency} {(parseFloat(product.price) + Object.values(selectedVariants).reduce((sum, v) => sum + (v.price_modifier || 0), 0)).toFixed(2)}
-          </button>
+
+          <div style={{ padding: '20px' }}>
+            <p style={{ fontWeight: 700, fontSize: 18, margin: '0 0 6px', color: '#0f172a' }}>{product.name}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              {product.compare_at_price > product.price && (
+                <span style={{ fontSize: 13, color: '#94a3b8', textDecoration: 'line-through' }}>{currency} {parseFloat(product.compare_at_price).toFixed(2)}</span>
+              )}
+              <span style={{ fontSize: 20, fontWeight: 700, color: primaryColor }}>{currency} {parseFloat(product.price).toFixed(2)}</span>
+            </div>
+            {product.description && <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6, margin: '0 0 16px' }}>{product.description}</p>}
+            {product.variants?.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                {product.variants.map((group, gi) => (
+                  <div key={gi} style={{ marginBottom: 14 }}>
+                    <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 8px', color: '#0f172a' }}>{group.name}</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {group.options?.map((opt, oi) => (
+                        <button key={oi} onClick={() => setSelectedVariants(prev => ({ ...prev, [gi]: opt }))}
+                          style={{ padding: '6px 14px', borderRadius: 8, fontSize: 13, border: selectedVariants[gi]?.label === opt.label ? `2px solid ${primaryColor}` : '0.5px solid #e5e7eb', background: selectedVariants[gi]?.label === opt.label ? '#f1f5f9' : 'none', cursor: 'pointer', fontWeight: 500, color: '#0f172a' }}>
+                          {opt.label}{opt.price_modifier > 0 ? ` +${currency} ${opt.price_modifier.toFixed(2)}` : ''}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => {
+                const combinedVariant = Object.values(selectedVariants).length > 0
+                  ? { label: Object.values(selectedVariants).map(v => v.label).join(', '), price_modifier: Object.values(selectedVariants).reduce((sum, v) => sum + (v.price_modifier || 0), 0) }
+                  : null;
+                onAddToCart(product, combinedVariant);
+                onClose();
+              }}
+              style={{ width: '100%', padding: 14, background: primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+              Add to order · {currency} {(parseFloat(product.price) + Object.values(selectedVariants).reduce((sum, v) => sum + (v.price_modifier || 0), 0)).toFixed(2)}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

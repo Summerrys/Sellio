@@ -39,6 +39,7 @@ export default function Storefront() {
   const [lastCartTotal, setLastCartTotal] = useState(0);
   const [placedOrderNumber, setPlacedOrderNumber] = useState('');
   const [copied, setCopied] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false);
   const [checkoutForm, setCheckoutForm] = useState({
     name: '', phone: '', notes: '', orderType: isDineIn ? 'dine_in' : 'takeaway', tableNumber: '', address: ''
   });
@@ -210,6 +211,7 @@ export default function Storefront() {
         products={products}
         categories={categories}
         showBackButton={!isDineIn}
+        onProductModalChange={setShowProductModal}
         cart={cart}
         setCart={setCart}
         showCart={showCart}
@@ -441,7 +443,7 @@ export default function Storefront() {
         </div>
       )}
 
-      {products.length > 0 && !showCart && !showCheckout && !showOrderHistory && (
+      {products.length > 0 && !showCart && !showCheckout && !showOrderHistory && !showProductModal && (
         <MenuAssistantWidget products={products} tenant={tenant} storefront={storefrontConfig} onProductSelect={() => {}} onAddToCart={addToCart} />
       )}
     </>
