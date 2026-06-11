@@ -296,7 +296,7 @@ function TenantSettingsContent() {
             className="flex-1 h-9 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5"
             style={settingsTab === 'payment_qr' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
           >
-            <QrCode className="w-3.5 h-3.5 hidden sm:inline-block" /><span><span className="sm:hidden">QR</span><span className="hidden sm:inline">Payment QR</span></span>
+            <QrCode className="w-4 h-4" /> Payment QR
           </button>
           <button
             onClick={() => setSettingsTab('theme')}

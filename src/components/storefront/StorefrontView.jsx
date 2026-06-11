@@ -482,7 +482,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
   const featuredProducts = products.filter(p => p.is_featured === true);
   const specialDealProducts = products.filter(p => p.compare_at_price > p.price && !p.is_featured);
   const filteredProducts = products.filter(p =>
-    selectedCategory === null || p.category_id === selectedCategory
+    p.is_featured !== true && (selectedCategory === null || p.category_id === selectedCategory)
   );
   const productLayout = storefrontConfig?.product_layout || 'grid';
 
