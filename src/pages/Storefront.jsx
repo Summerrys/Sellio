@@ -66,6 +66,15 @@ export default function Storefront() {
       if (tableId) {
         const { data: tableData } = await supabase.from('tables').select('id, name, zone, capacity').eq('id', tableId).eq('tenant_id', tenantId).single();
         setTable(tableData);
+        if (tableData) {
+          // Mark table as occupied
+          await supabase.from('tables').update({ status: 'occupied', updated_date: new Date().toISOString() }).eq('id', tableId).eq('tenant_id', tenantId);
+          // Create table session if none active
+          const { data: existingSession } = await supabase.from('table_sessions').select('id').eq('table_id', tableId).eq('tenant_id', tenantId).eq('status', 'active').maybeSingle();
+          if (!existingSession) {
+            await supabase.from('table_sessions').insert({ table_id: tableId, tenant_id: tenantId, status: 'active', started_at: new Date().toISOString(), total_amount: 0 });
+          }
+        }
       }
       setLoading(false);
     }
@@ -165,6 +174,25 @@ export default function Storefront() {
 
   return (
     <>
+      {!isDineIn && (
+        <div style={{ position: 'fixed', top: 12, left: 12, zIndex: 999 }}>
+          <button
+            onClick={() => window.history.back()}
+            style={{
+              width: 36, height: 36, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.9)',
+              border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 5l-7 7 7 7"/>
+            </svg>
+          </button>
+        </div>
+      )}
       <StorefrontView
         tenant={tenant}
         storefrontConfig={storefrontConfig}
