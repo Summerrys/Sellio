@@ -48,7 +48,7 @@ export default function Storefront() {
       const supabase = await getSupabase();
       const { data: tenantData } = await supabase
         .from('tenants')
-        .select('id, name, slug, logo_url, industry, currency, country, phone, payment_qr_url, payment_qr_label, payment_reference, settings')
+        .select('id, name, slug, logo_url, industry, currency, country, phone, address, payment_qr_url, payment_qr_label, payment_reference, settings')
         .eq('slug', tenantSlug).single();
       if (!tenantData) { setNotFound(true); setLoading(false); return; }
       setTenant(tenantData);
