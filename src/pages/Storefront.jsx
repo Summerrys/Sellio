@@ -376,7 +376,7 @@ export default function Storefront() {
         </div>
       )}
 
-      {products.length > 0 && (
+      {products.length > 0 && !showCart && !showCheckout && (
         <MenuAssistantWidget products={products} tenant={tenant} storefront={storefrontConfig} onProductSelect={() => {}} onAddToCart={addToCart} />
       )}
     </>

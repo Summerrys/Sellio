@@ -72,7 +72,7 @@ function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHist
       {/* Left: logo + name */}
       {showBackButton && (
         <button
-          onClick={() => window.history.back()}
+          onClick={() => window.location.href = '/StorefrontDesigner'}
           style={{ width: 32, height: 32, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: 6 }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
