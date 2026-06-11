@@ -420,16 +420,7 @@ function MenuTabContent({ form, onChange }) {
           value={form.product_layout}
           onChange={v => onChange('product_layout', v)}
         />
-        {form.product_layout === 'grid' && (
-          <div style={{ marginTop: 16 }}>
-            <SectionLabel>Items per row</SectionLabel>
-            <PillToggle
-              options={[{ value: 1, label: '1' }, { value: 2, label: '2' }, { value: 3, label: '3' }]}
-              value={form.products_per_row}
-              onChange={v => onChange('products_per_row', Number(v))}
-            />
-          </div>
-        )}
+
       </div>
 
       {/* Display options */}
