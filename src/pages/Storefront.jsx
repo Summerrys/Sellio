@@ -226,11 +226,12 @@ export default function Storefront() {
         <div style={{ position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)', zIndex: 50 }}>
           <button onClick={() => setShowCart(true)} style={{
             background: primaryColor, color: 'white', border: 'none',
-            borderRadius: 999, padding: '14px 28px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+            borderRadius: 999, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+            whiteSpace: 'nowrap',
           }}>
-            <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700 }}>{cartCount}</span>
-            View order · {currency} {cartTotal.toFixed(2)}
+            <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>{cartCount}</span>
+            {currency} {cartTotal.toFixed(2)}
           </button>
         </div>
       )}
