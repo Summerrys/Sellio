@@ -216,6 +216,7 @@ function TenantSettingsContent() {
   const { tenantId, tenant, subscription } = useTenant();
   const queryClient = useQueryClient();
 
+  const [settingsTab, setSettingsTab] = useState('business');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -281,50 +282,57 @@ function TenantSettingsContent() {
     <PermissionGate permission="settings.view">
       <PageHeader title="Settings" description="Configure your business and manage roles" />
 
-      <Tabs defaultValue="business">
-        <style>{`
-          .settings-tabs [data-state=active] {
-            background: var(--color-primary-gradient) !important;
-            color: white !important;
-          }
-        `}</style>
-        <TabsList className="settings-tabs bg-white border border-slate-100 shadow-sm mb-6 w-full">
-          <TabsTrigger value="business" className="rounded-lg gap-1.5 flex-1 sm:flex-none">
-            <Building2 className="w-4 h-4" /> <span className="hidden sm:inline">Business</span><span className="sm:hidden text-xs">Biz</span>
-          </TabsTrigger>
-          <TabsTrigger value="payment_qr" className="rounded-lg gap-1.5 flex-1 sm:flex-none">
-            <QrCode className="w-4 h-4" /> <span className="hidden sm:inline">Payment QR</span><span className="sm:hidden text-xs">Payment</span>
-          </TabsTrigger>
-          <TabsTrigger value="theme" className="rounded-lg gap-1.5 flex-1 sm:flex-none">
+      <div>
+        <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-6">
+          <button
+            onClick={() => setSettingsTab('business')}
+            className="flex-1 h-9 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5"
+            style={settingsTab === 'business' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
+          >
+            <Building2 className="w-4 h-4" /> Business
+          </button>
+          <button
+            onClick={() => setSettingsTab('payment_qr')}
+            className="flex-1 h-9 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5"
+            style={settingsTab === 'payment_qr' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
+          >
+            <QrCode className="w-4 h-4" /> Payment QR
+          </button>
+          <button
+            onClick={() => setSettingsTab('theme')}
+            className="flex-1 h-9 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5"
+            style={settingsTab === 'theme' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
+          >
             <Palette className="w-4 h-4" /> Theme
-          </TabsTrigger>
-          <TabsTrigger value="users" className="rounded-lg gap-1.5 flex-1 sm:flex-none">
+          </button>
+          <button
+            onClick={() => setSettingsTab('users')}
+            className="flex-1 h-9 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5"
+            style={settingsTab === 'users' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
+          >
             <Users className="w-4 h-4" /> Users
-          </TabsTrigger>
-        </TabsList>
+          </button>
+        </div>
 
-        <TabsContent value="business">
+        {settingsTab === 'business' && (
           <div className="max-w-2xl mx-auto">
             <BusinessProfileTab tenant={tenant} tenantId={tenantId} />
           </div>
-        </TabsContent>
-
-        <TabsContent value="payment_qr">
+        )}
+        {settingsTab === 'payment_qr' && (
           <div className="max-w-2xl mx-auto">
             <PaymentQRTab tenant={tenant} tenantId={tenantId} />
           </div>
-        </TabsContent>
-
-        <TabsContent value="theme">
+        )}
+        {settingsTab === 'theme' && (
           <div className="max-w-2xl mx-auto">
             <ThemeSelector variant="full" />
           </div>
-        </TabsContent>
-
-        <TabsContent value="users">
+        )}
+        {settingsTab === 'users' && (
           <UserManagement embedded={true} onUpgrade={() => setShowPricingModal(true)} />
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
 
       {/* Account Deletion Dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={(open) => { if (!isDeleting) setShowDeleteConfirm(open); }}>
