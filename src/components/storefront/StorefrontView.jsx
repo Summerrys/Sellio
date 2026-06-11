@@ -518,7 +518,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
           </div>
         )}
         {productLayout === 'grid' && (
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${storefrontConfig?.products_per_row || 2}, 1fr)`, gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
             {filteredProducts.map(product => <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} />)}
           </div>
         )}
