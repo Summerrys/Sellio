@@ -288,7 +288,7 @@ function TenantSettingsContent() {
             color: white !important;
           }
         `}</style>
-        <TabsList className="settings-tabs bg-white border border-slate-100 shadow-sm mb-6 w-full sm:w-auto">
+        <TabsList className="settings-tabs bg-white border border-slate-100 shadow-sm mb-6 w-full">
           <TabsTrigger value="business" className="rounded-lg gap-1.5 flex-1 sm:flex-none">
             <Building2 className="w-4 h-4" /> <span className="hidden sm:inline">Business</span><span className="sm:hidden text-xs">Biz</span>
           </TabsTrigger>
@@ -304,17 +304,19 @@ function TenantSettingsContent() {
         </TabsList>
 
         <TabsContent value="business">
-          <BusinessProfileTab tenant={tenant} tenantId={tenantId} />
+          <div className="max-w-2xl mx-auto">
+            <BusinessProfileTab tenant={tenant} tenantId={tenantId} />
+          </div>
         </TabsContent>
 
         <TabsContent value="payment_qr">
-          <div className="max-w-2xl">
+          <div className="max-w-2xl mx-auto">
             <PaymentQRTab tenant={tenant} tenantId={tenantId} />
           </div>
         </TabsContent>
 
         <TabsContent value="theme">
-          <div className="max-w-2xl">
+          <div className="max-w-2xl mx-auto">
             <ThemeSelector variant="full" />
           </div>
         </TabsContent>
