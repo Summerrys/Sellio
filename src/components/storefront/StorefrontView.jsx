@@ -647,11 +647,20 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
       {/* Lightbox */}
       {lightboxOpen && (
         <div
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
           onClick={() => setLightboxOpen(false)}
           style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          <button onClick={() => setLightboxOpen(false)} style={{ position: 'absolute', top: 16, right: 16, width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          <button onClick={(e) => { e.stopPropagation(); setLightboxOpen(false); }} style={{ position: 'absolute', top: 16, right: 16, width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
           <img src={activeImage} style={{ maxWidth: '95vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: 8 }} />
+          {allImages.length > 1 && (
+            <div style={{ position: 'absolute', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6 }}>
+              {allImages.map((_, idx) => (
+                <div key={idx} style={{ width: idx === activeImageIndex ? 20 : 7, height: 7, borderRadius: 4, background: idx === activeImageIndex ? 'white' : 'rgba(255,255,255,0.4)', transition: 'all 0.2s' }} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
