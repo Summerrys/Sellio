@@ -174,31 +174,13 @@ export default function Storefront() {
 
   return (
     <>
-      {!isDineIn && (
-        <div style={{ position: 'fixed', top: 12, left: 12, zIndex: 999 }}>
-          <button
-            onClick={() => window.history.back()}
-            style={{
-              width: 36, height: 36, borderRadius: '50%',
-              background: 'rgba(255,255,255,0.9)',
-              border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              backdropFilter: 'blur(8px)',
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5M12 5l-7 7 7 7"/>
-            </svg>
-          </button>
-        </div>
-      )}
       <StorefrontView
         tenant={tenant}
         storefrontConfig={storefrontConfig}
         theme={theme}
         products={products}
         categories={categories}
+        showBackButton={!isDineIn}
         cart={cart}
         setCart={setCart}
         showCart={showCart}
@@ -212,7 +194,7 @@ export default function Storefront() {
 
       {/* ── FLOATING CART BUTTON ── */}
       {cartCount > 0 && !showCart && !showCheckout && (
-        <div style={{ position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 50 }}>
+        <div style={{ position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)', zIndex: 50 }}>
           <button onClick={() => setShowCart(true)} style={{
             background: primaryColor, color: 'white', border: 'none',
             borderRadius: 999, padding: '14px 28px', fontSize: 14, fontWeight: 700, cursor: 'pointer',

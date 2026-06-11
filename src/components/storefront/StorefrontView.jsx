@@ -40,7 +40,7 @@ function hexToRgba(hex, alpha) {
 }
 
 // ── Sticky header bar ────────────────────────────────────────────────────────
-function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHistoryClick }) {
+function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHistoryClick, showBackButton = false }) {
   const branchName = tenant?.settings?.branch_name;
   const address = tenant?.address || '';
   const truncatedAddress = address.length > 25 ? address.slice(0, 25) + '…' : address;
@@ -70,6 +70,16 @@ function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHist
       boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
     }}>
       {/* Left: logo + name */}
+      {showBackButton && (
+        <button
+          onClick={() => window.history.back()}
+          style={{ width: 32, height: 32, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: 6 }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 5l-7 7 7 7"/>
+          </svg>
+        </button>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
         {tenant?.logo_url ? (
           <div style={{ ...iconBtnBase, background: '#f1f5f9', overflow: 'hidden', padding: 0, flexShrink: 0 }}>
@@ -171,6 +181,7 @@ function CategorySidebarItem({ cat, isActive, primaryColor, onClick }) {
 export default function StorefrontView({
   // preview mode: pass data directly
   previewMode = false,
+  showBackButton = false,
   tenant: tenantProp,
   storefrontConfig: storefrontConfigProp,
   theme: themeProp,
@@ -284,6 +295,7 @@ export default function StorefrontView({
         cartCount={cartCount}
         onCartClick={() => setShowCart?.(true)}
         onHistoryClick={() => setShowOrderHistory?.(true)}
+        showBackButton={showBackButton}
       />
 
       {/* ── BANNER (below header) ── */}
