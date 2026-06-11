@@ -88,7 +88,7 @@ function printReceipt(order, currency, merchantName) {
   win.document.close();
 }
 
-function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate }) {
+function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate, onMarkPaid }) {
   const action = STATUS_NEXT[order.status];
   const accent = STATUS_ACCENT[order.status] || STATUS_ACCENT.completed;
   const elapsed = formatDistanceToNow(new Date(order.created_date || order.created_at), { addSuffix: true });
@@ -180,7 +180,18 @@ function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate }) 
         </div>
 
         {/* Action buttons */}
-        <div className={showPrint ? 'flex gap-2' : ''}>
+        <div className={showPrint || (order.payment_status !== 'paid' && (order.status === 'completed' || order.status === 'ready')) ? 'flex flex-col gap-2' : ''}>
+          {order.payment_status !== 'paid' && (order.status === 'completed' || order.status === 'ready') && (
+            <button
+              onClick={() => onMarkPaid(order)}
+              className="w-full py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
+              style={{ border: '1.5px solid #16a34a', color: '#16a34a', background: '#f0fdf4' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.color = '#fff'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#f0fdf4'; e.currentTarget.style.color = '#16a34a'; }}
+            >
+              💳 Mark as Paid
+            </button>
+          )}
           {showPrint && (
             <button
               onClick={handlePrint}
@@ -340,6 +351,35 @@ export default function Orders() {
     if (error) { toast.error('Failed to update order'); return; }
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
     toast.success('Order updated');
+  };
+
+  const handleMarkPaid = async (order) => {
+    const supabase = await getSupabase();
+    await supabase.from('orders').update({
+      payment_status: 'paid',
+      status: 'completed',
+      updated_date: new Date().toISOString(),
+    }).eq('id', order.id);
+
+    if (order.table_id) {
+      await supabase.from('tables').update({
+        status: 'available',
+        updated_date: new Date().toISOString(),
+      }).eq('id', order.table_id);
+
+      await supabase.from('table_sessions').update({
+        status: 'completed',
+        ended_at: new Date().toISOString(),
+        updated_date: new Date().toISOString(),
+      }).eq('table_id', order.table_id)
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active');
+    }
+
+    setOrders(prev => prev.map(o =>
+      o.id === order.id ? { ...o, payment_status: 'paid', status: 'completed' } : o
+    ));
+    toast.success('Marked as paid ✓');
   };
 
   const handleRefresh = useCallback(() => fetchOrders(), [fetchOrders]);
@@ -514,6 +554,7 @@ export default function Orders() {
                   merchantName={tenant?.name}
                   tenantId={tenantId}
                   onStatusUpdate={handleStatusUpdate}
+                  onMarkPaid={handleMarkPaid}
                 />
               ))}
             </div>
