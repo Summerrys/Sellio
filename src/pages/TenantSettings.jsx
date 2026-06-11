@@ -286,28 +286,28 @@ function TenantSettingsContent() {
         <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-6">
           <button
             onClick={() => setSettingsTab('business')}
-            className="flex-1 h-9 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5"
+            className="flex-1 h-9 rounded-lg text-[11px] sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5"
             style={settingsTab === 'business' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
           >
             <Building2 className="w-4 h-4" /> Business
           </button>
           <button
             onClick={() => setSettingsTab('payment_qr')}
-            className="flex-1 h-9 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5"
+            className="flex-1 h-9 rounded-lg text-[11px] sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5"
             style={settingsTab === 'payment_qr' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
           >
             <QrCode className="w-4 h-4" /> Payment QR
           </button>
           <button
             onClick={() => setSettingsTab('theme')}
-            className="flex-1 h-9 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5"
+            className="flex-1 h-9 rounded-lg text-[11px] sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5"
             style={settingsTab === 'theme' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
           >
             <Palette className="w-4 h-4" /> Theme
           </button>
           <button
             onClick={() => setSettingsTab('users')}
-            className="flex-1 h-9 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5"
+            className="flex-1 h-9 rounded-lg text-[11px] sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5"
             style={settingsTab === 'users' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
           >
             <Users className="w-4 h-4" /> Users
