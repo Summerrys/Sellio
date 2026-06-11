@@ -122,32 +122,61 @@ export default function Storefront() {
   };
 
   const handleSubmitOrder = async () => {
-    if (!checkoutForm.name || !checkoutForm.phone) return;
     setIsSubmitting(true);
     const supabase = await getSupabase();
-    const orderNumber = `ORD-${Date.now().toString().slice(-6)}`;
     const savedCartTotal = cartTotal;
     const savedCart = [...cart];
+
+    // Get sequential order number from Supabase RPC
+    let orderNumber = `ORD-${Date.now().toString().slice(-6)}`;
+    try {
+      const { data: rpcResult } = await supabase.rpc('get_next_order_number', { p_tenant_id: tenant.id });
+      if (rpcResult) orderNumber = rpcResult;
+    } catch (e) {
+      console.warn('RPC get_next_order_number failed, using fallback:', e.message);
+    }
+
     const { data: order, error } = await supabase.from('orders').insert({
       tenant_id: tenant.id, order_number: orderNumber, status: 'pending',
-      type: isDineIn ? 'dine_in' : checkoutForm.orderType,
-      table_id: tableId || null, table_name: table?.name || checkoutForm.tableNumber || null,
-      customer_name: checkoutForm.name, customer_phone: checkoutForm.phone,
+      type: isDineIn ? 'dine_in' : 'takeaway',
+      table_id: tableId || null, table_name: table?.name || null,
+      customer_name: null, customer_phone: null,
       notes: checkoutForm.notes || null, items: savedCart,
       subtotal: savedCartTotal, total_amount: savedCartTotal,
       payment_status: 'unpaid', payment_method: 'pending',
     }).select().single();
+
     if (!error && order) {
       await supabase.from('order_items').insert(savedCart.map(item => ({
         tenant_id: tenant.id, order_id: order.id, product_id: item.product_id,
         product_name: item.name, variant_name: item.variant || null,
         quantity: item.quantity, unit_price: item.price, total_price: item.price * item.quantity,
       })));
+
+      // Update table session: append order ID and increment total
+      if (tableId) {
+        const { data: session } = await supabase.from('table_sessions')
+          .select('id, order_ids, total_amount')
+          .eq('table_id', tableId).eq('tenant_id', tenant.id).eq('status', 'active')
+          .maybeSingle();
+        if (session) {
+          const existingIds = Array.isArray(session.order_ids) ? session.order_ids : [];
+          await supabase.from('table_sessions').update({
+            order_ids: [...existingIds, order.id],
+            table_name: table?.name || null,
+            total_amount: (parseFloat(session.total_amount) || 0) + savedCartTotal,
+            updated_date: new Date().toISOString(),
+          }).eq('id', session.id);
+        }
+      }
+
       setLastCart(savedCart); setLastCartTotal(savedCartTotal);
       setPlacedOrderNumber(orderNumber); setCart([]);
       try { localStorage.removeItem(CART_KEY); } catch {}
       setShowCheckout(false); setIsSubmitting(false); setOrderSuccess(true);
-    } else { setIsSubmitting(false); }
+    } else {
+      setIsSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -301,44 +330,48 @@ export default function Storefront() {
           <div onClick={() => setShowCheckout(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '20px 20px 0 0', padding: '20px 16px', maxHeight: '85vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <p style={{ fontWeight: 700, fontSize: 17, margin: 0 }}>Your details</p>
+              <p style={{ fontWeight: 700, fontSize: 17, margin: 0 }}>Confirm order</p>
               <button onClick={() => setShowCheckout(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22 }}>✕</button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-              <div>
-                <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 4 }}>Name *</label>
-                <input value={checkoutForm.name} onChange={e => setCheckoutForm(p => ({ ...p, name: e.target.value }))} placeholder="Your name"
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #e5e7eb', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+            {isDineIn && table && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f8fafc', borderRadius: 8, padding: '8px 12px', marginBottom: 14 }}>
+                <span style={{ fontSize: 14 }}>🪑</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{table.name}</span>
               </div>
-              <div>
-                <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 4 }}>Phone *</label>
-                <input value={checkoutForm.phone} onChange={e => setCheckoutForm(p => ({ ...p, phone: e.target.value }))} placeholder="e.g. 9123 4567" inputMode="tel"
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #e5e7eb', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
-              </div>
-              {!isDineIn && (
-                <div>
-                  <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>Order type</label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {(isFnB
-                      ? [{ value: 'dine_in', label: '🪑 Dine in' }, { value: 'takeaway', label: '🥡 Takeaway' }]
-                      : [{ value: 'takeaway', label: '🏪 Pickup' }, { value: 'delivery', label: '🚚 Delivery' }]
-                    ).map(type => (
-                      <button key={type.value} onClick={() => setCheckoutForm(p => ({ ...p, orderType: type.value }))}
-                        style={{ flex: 1, padding: '10px 8px', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', border: checkoutForm.orderType === type.value ? `2px solid ${primaryColor}` : '0.5px solid #e5e7eb', background: checkoutForm.orderType === type.value ? '#f1f5f9' : 'none', color: '#0f172a' }}>
-                        {type.label}
-                      </button>
-                    ))}
+            )}
+            <div style={{ marginBottom: 14 }}>
+              {cart.map(item => (
+                <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 10, marginBottom: 10, borderBottom: '0.5px solid #f1f5f9' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {item.image_url && <img src={item.image_url} style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />}
+                    <div>
+                      <p style={{ fontWeight: 600, fontSize: 13, margin: 0, color: '#0f172a' }}>{item.name}{item.variant ? ` (${item.variant})` : ''}</p>
+                      <p style={{ fontSize: 12, color: '#64748b', margin: '2px 0 0' }}>× {item.quantity}</p>
+                    </div>
                   </div>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: primaryColor }}>{currency} {(item.price * item.quantity).toFixed(2)}</span>
                 </div>
-              )}
-              <div>
-                <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 4 }}>Notes (optional)</label>
-                <textarea value={checkoutForm.notes} onChange={e => setCheckoutForm(p => ({ ...p, notes: e.target.value }))} placeholder="Any special requests?" rows={2}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #e5e7eb', fontSize: 14, outline: 'none', resize: 'none', boxSizing: 'border-box' }} />
+              ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
+                <span style={{ fontWeight: 700, fontSize: 15 }}>Total</span>
+                <span style={{ fontWeight: 700, fontSize: 17, color: primaryColor }}>{currency} {cartTotal.toFixed(2)}</span>
               </div>
             </div>
-            <button onClick={handleSubmitOrder} disabled={isSubmitting || !checkoutForm.name || !checkoutForm.phone}
-              style={{ width: '100%', padding: 14, background: isSubmitting || !checkoutForm.name || !checkoutForm.phone ? '#94a3b8' : primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 4 }}>Notes (optional)</label>
+              <textarea
+                value={checkoutForm.notes}
+                onChange={e => setCheckoutForm(p => ({ ...p, notes: e.target.value }))}
+                placeholder="Any special requests?"
+                rows={2}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #e5e7eb', fontSize: 14, outline: 'none', resize: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+            <button
+              onClick={handleSubmitOrder}
+              disabled={isSubmitting}
+              style={{ width: '100%', padding: 14, background: isSubmitting ? '#94a3b8' : primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
+            >
               {isSubmitting ? 'Placing order...' : `Place order · ${currency} ${cartTotal.toFixed(2)}`}
             </button>
           </div>
@@ -356,7 +389,7 @@ export default function Storefront() {
               <div style={{ width: '100%', maxWidth: 320, background: '#f8fafc', borderRadius: 16, padding: 20, textAlign: 'center', marginBottom: 20, border: '0.5px solid #e5e7eb' }}>
                 <p style={{ fontWeight: 600, fontSize: 14, margin: '0 0 4px' }}>{tenant.payment_qr_label || 'Scan to pay'}</p>
                 <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 14px' }}>Amount: <strong style={{ color: primaryColor }}>{currency} {lastCartTotal.toFixed(2)}</strong></p>
-                <img src={tenant.payment_qr_url} style={{ width: 180, height: 180, objectFit: 'contain', borderRadius: 12, border: '0.5px solid #e5e7eb', background: 'white', padding: 8, marginBottom: 12 }} />
+                <img src={tenant.payment_qr_url} style={{ width: 180, height: 180, objectFit: 'contain', borderRadius: 12, border: '0.5px solid #e5e7eb', background: 'white', padding: 8, marginBottom: 12, display: 'block', margin: '0 auto 12px' }} />
                 {tenant.payment_reference && (
                   <div style={{ background: '#fff', borderRadius: 8, padding: '8px 12px', marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '0.5px solid #e5e7eb' }}>
                     <span style={{ fontSize: 13, fontWeight: 500 }}>{tenant.payment_reference}</span>
@@ -376,7 +409,7 @@ export default function Storefront() {
         </div>
       )}
 
-      {products.length > 0 && !showCart && !showCheckout && (
+      {products.length > 0 && !showCart && !showCheckout && !showOrderHistory && (
         <MenuAssistantWidget products={products} tenant={tenant} storefront={storefrontConfig} onProductSelect={() => {}} onAddToCart={addToCart} />
       )}
     </>
