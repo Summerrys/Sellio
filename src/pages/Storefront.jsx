@@ -402,10 +402,41 @@ export default function Storefront() {
                 )}
               </div>
             )}
-            <button onClick={() => { setOrderSuccess(false); setLastCart([]); setLastCartTotal(0); }}
-              style={{ width: '100%', maxWidth: 320, padding: 14, background: 'none', border: '0.5px solid #e5e7eb', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#0f172a' }}>
-              Back to menu
-            </button>
+            <>
+                      {tenant.country !== 'Malaysia' && (
+                        <a
+                          href={tenant.payment_reference
+                            ? `paynowto://uen?uen=${encodeURIComponent(tenant.payment_reference)}&amount=${lastCartTotal.toFixed(2)}&editable=0`
+                            : 'paynowto://'
+                          }
+                          style={{
+                            display: 'block', width: '100%', maxWidth: 320,
+                            padding: 14, borderRadius: 12, fontSize: 14, fontWeight: 600,
+                            textAlign: 'center', textDecoration: 'none',
+                            background: '#e2001a', color: 'white', marginBottom: 12,
+                          }}
+                        >
+                          💳 Pay via PayNow
+                        </a>
+                      )}
+                      {tenant.country === 'Malaysia' && (
+                        <a
+                          href="tngd://"
+                          style={{
+                            display: 'block', width: '100%', maxWidth: 320,
+                            padding: 14, borderRadius: 12, fontSize: 14, fontWeight: 600,
+                            textAlign: 'center', textDecoration: 'none',
+                            background: '#0070ba', color: 'white', marginBottom: 12,
+                          }}
+                        >
+                          💳 Pay via Touch 'n Go
+                        </a>
+                      )}
+                      <button onClick={() => { setOrderSuccess(false); setLastCart([]); setLastCartTotal(0); }}
+                        style={{ width: '100%', maxWidth: 320, padding: 14, background: 'none', border: '0.5px solid #e5e7eb', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#0f172a' }}>
+                        Back to menu
+                      </button>
+                    </>
           </div>
         </div>
       )}
