@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, X, Send } from 'lucide-react';
+import { Sparkles, X, Send, ShoppingCart } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 
-export default function MenuAssistantWidget({ products, tenant, onProductSelect, storefront, externalOpen, onExternalClose }) {
+export default function MenuAssistantWidget({ products, tenant, onProductSelect, onAddToCart, storefront, externalOpen, onExternalClose }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [conversationHistory, setConversationHistory] = useState([]);
+  const [cartFeedback, setCartFeedback] = useState(null);
   const messagesEndRef = useRef(null);
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const currency = tenant?.currency || '$';
@@ -25,7 +26,7 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
     if (externalOpen) {
       setOpen(true);
       setMessages(prev => prev.length === 0
-        ? [{ role: 'assistant', content: "Hi! 👋 I'm your menu assistant. Ask me what's good, what's featured, or what you're in the mood for!" }]
+        ? [{ role: 'assistant', content: "Hi! 👋 I'm your menu assistant. Tell me what you'd like to order, or ask me what's good today!" }]
         : prev
       );
       onExternalClose?.();
@@ -41,6 +42,21 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
       }
       return <span key={i}>{part}</span>;
     });
+  };
+
+  const executeCartActions = (cartActions, allProducts) => {
+    if (!cartActions || cartActions.length === 0 || !onAddToCart) return { addedCount: 0, addedNames: [] };
+    let addedCount = 0;
+    const addedNames = [];
+    for (const action of cartActions) {
+      const product = allProducts.find(p => p.id === action.productId);
+      if (!product) continue;
+      const qty = Math.max(1, Math.floor(action.quantity || 1));
+      for (let i = 0; i < qty; i++) { onAddToCart(product, null); }
+      addedCount += qty;
+      addedNames.push(`${qty}x ${product.name}`);
+    }
+    return { addedCount, addedNames };
   };
 
   const sendMessage = async (text) => {
@@ -74,7 +90,15 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
         return;
       }
 
-      const { text: aiText, recommendedProductIds } = data;
+      const { text: aiText, recommendedProductIds, cartActions } = data;
+
+      if (cartActions && cartActions.length > 0) {
+        const result = executeCartActions(cartActions, products);
+        if (result.addedCount > 0) {
+          setCartFeedback(result);
+          setTimeout(() => setCartFeedback(null), 4000);
+        }
+      }
       const recommendedProducts = (recommendedProductIds || [])
         .map((id) => products.find((p) => p.id === id))
         .filter(Boolean);
@@ -82,7 +106,8 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: aiText,
-        products: recommendedProducts
+        products: recommendedProducts,
+        hasCartAction: cartActions && cartActions.length > 0,
       }]);
 
       // Add AI response to conversation history AFTER receiving response
@@ -117,7 +142,7 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
           if (messages.length === 0) {
             setMessages([{
               role: 'assistant',
-              content: "Hi! 👋 I'm your menu assistant. Ask me what's good, what's featured, or what you're in the mood for!"
+              content: "Hi! 👋 I'm your menu assistant. Tell me what you'd like to order, or ask me what's good today!"
             }]);
           }
         }}
@@ -162,6 +187,21 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
         )}
       </button>
 
+      {cartFeedback && (
+        <div style={{
+          position: 'fixed', bottom: isMobile ? 'calc(65vh + 12px)' : '576px',
+          right: 16, zIndex: 102, background: '#10b981', color: 'white',
+          padding: '10px 16px', borderRadius: 12, fontSize: 13, fontWeight: 600,
+          display: 'flex', alignItems: 'center', gap: 8,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          animation: 'slideUp 0.3s ease', maxWidth: 280,
+        }}>
+          <style>{`@keyframes slideUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }`}</style>
+          <ShoppingCart size={16} color="white" />
+          Added {cartFeedback.addedNames.join(', ')} to cart!
+        </div>
+      )}
+
       {/* Chat Panel */}
       {open && (
         <div
@@ -203,7 +243,7 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#1e293b' }}>Menu Assistant</p>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>Ask me anything</p>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>Ask me or just tell me what you want</p>
             </div>
             <button
               onClick={() => setOpen(false)}
@@ -246,7 +286,16 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
                   wordWrap: 'break-word'
                 }}>
                   <p style={{ margin: 0 }}>{msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content}</p>
-                  
+                  {msg.hasCartAction && (
+                    <div style={{
+                      marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5,
+                      background: '#d1fae5', color: '#065f46', fontSize: 11, fontWeight: 600,
+                      padding: '4px 10px', borderRadius: 20,
+                    }}>
+                      <ShoppingCart size={12} />
+                      Added to cart
+                    </div>
+                  )}
                   {msg.products && msg.products.length > 0 && (
                     <div style={{
                       display: 'flex',
@@ -310,7 +359,21 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
                               {currency} {product.price.toFixed(2)}
                             </p>
                           </div>
-                          <span style={{ fontSize: 11, color: '#94a3b8', flexShrink: 0 }}>Tap →</span>
+                          {onAddToCart && (
+                            <button
+                              onClick={() => {
+                                onAddToCart(product, null);
+                                setCartFeedback({ addedCount: 1, addedNames: [`1x ${product.name}`] });
+                                setTimeout(() => setCartFeedback(null), 4000);
+                              }}
+                              style={{
+                                width: 28, height: 28, borderRadius: '50%', background: primaryColor,
+                                border: 'none', color: 'white', fontSize: 18, cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                flexShrink: 0, lineHeight: 1,
+                              }}
+                            >+</button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -380,7 +443,7 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
                   sendMessage(input);
                 }
               }}
-              placeholder="Ask about our menu..."
+              placeholder="Order or ask about our menu..."
               disabled={loading}
               style={{
                 flex: 1,
