@@ -330,8 +330,8 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
                               src={product.image_url}
                               alt={product.name}
                               style={{
-                                width: 44,
-                                height: 44,
+                                width: 52,
+                                height: 52,
                                 borderRadius: 8,
                                 objectFit: 'cover',
                                 flexShrink: 0
@@ -350,30 +350,48 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
                             }}>
                               {product.name}
                             </p>
-                            <p style={{
-                              fontSize: 12,
-                              color: primaryColor,
-                              fontWeight: 600,
-                              margin: '2px 0 0'
-                            }}>
-                              {currency} {product.price.toFixed(2)}
-                            </p>
+                            {product.description && (
+                              <p style={{
+                                fontSize: 11,
+                                color: '#94a3b8',
+                                margin: '1px 0 2px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {product.description}
+                              </p>
+                            )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                              {product.compare_at_price > product.price && (
+                                <span style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through' }}>
+                                  {currency} {parseFloat(product.compare_at_price).toFixed(2)}
+                                </span>
+                              )}
+                              <span style={{ fontSize: 12, color: primaryColor, fontWeight: 700 }}>
+                                {currency} {parseFloat(product.price).toFixed(2)}
+                              </span>
+                            </div>
                           </div>
-                          {onAddToCart && (
-                            <button
-                              onClick={() => {
-                                onAddToCart(product, null);
-                                setCartFeedback({ addedCount: 1, addedNames: [`1x ${product.name}`] });
-                                setTimeout(() => setCartFeedback(null), 4000);
-                              }}
-                              style={{
-                                width: 28, height: 28, borderRadius: '50%', background: primaryColor,
-                                border: 'none', color: 'white', fontSize: 18, cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                flexShrink: 0, lineHeight: 1,
-                              }}
-                            >+</button>
-                          )}
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                            {onAddToCart && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onAddToCart(product, null);
+                                  setCartFeedback({ addedCount: 1, addedNames: [`1x ${product.name}`] });
+                                  setTimeout(() => setCartFeedback(null), 4000);
+                                }}
+                                style={{
+                                  width: 28, height: 28, borderRadius: '50%', background: primaryColor,
+                                  border: 'none', color: 'white', fontSize: 18, cursor: 'pointer',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  lineHeight: 1,
+                                }}
+                              >+</button>
+                            )}
+                            <span style={{ fontSize: 10, color: '#cbd5e1' }}>tap for details</span>
+                          </div>
                         </div>
                       ))}
                     </div>
