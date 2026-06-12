@@ -241,10 +241,7 @@ export default function Orders() {
   const audioCtxRef = useRef(null);
   const soundEnabledRef = useRef(false);
   const repeatIntervalRef = useRef(null);
-  const [alertInterval, setAlertInterval] = useState(() => {
-    if (typeof window === 'undefined') return 60;
-    return parseInt(localStorage.getItem(`sellio_alert_interval_${window.__tenantId || ''}`) || '60', 10);
-  });
+  const [alertInterval, setAlertInterval] = useState(60);
   const alertIntervalRef = useRef(60);
 
   const isFnB = /f&b|cafe|restaurant|food/i.test(tenant?.industry || '');
@@ -256,6 +253,9 @@ export default function Orders() {
     if (!tenantId) return;
     const stored = localStorage.getItem(`sellio_sound_alerts_${tenantId}`);
     if (stored === 'true') setSoundEnabled(true);
+    const storedInterval = parseInt(localStorage.getItem(`sellio_alert_interval_${tenantId}`) || '60', 10);
+    setAlertInterval(storedInterval);
+    alertIntervalRef.current = storedInterval;
   }, [tenantId]);
 
   useEffect(() => {
@@ -280,32 +280,22 @@ export default function Orders() {
       if (ctx.state === 'suspended') ctx.resume();
       setTimeout(() => {
         const compressor = ctx.createDynamicsCompressor();
-        compressor.threshold.value = -6;
-        compressor.knee.value = 3;
-        compressor.ratio.value = 4;
+        compressor.threshold.value = -3;
+        compressor.knee.value = 2;
+        compressor.ratio.value = 3;
         compressor.attack.value = 0;
         compressor.release.value = 0.1;
         compressor.connect(ctx.destination);
-
-        const osc1 = ctx.createOscillator();
-        const osc2 = ctx.createOscillator();
+        const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-
-        osc1.type = 'sawtooth';
-        osc1.frequency.value = freq;
-        osc2.type = 'square';
-        osc2.frequency.value = freq * 1.005;
-
-        osc1.connect(gain);
-        osc2.connect(gain);
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        osc.connect(gain);
         gain.connect(compressor);
-
-        gain.gain.setValueAtTime(0.85, ctx.currentTime);
+        gain.gain.setValueAtTime(1.0, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-        osc1.start(ctx.currentTime);
-        osc2.start(ctx.currentTime);
-        osc1.stop(ctx.currentTime + duration + 0.05);
-        osc2.stop(ctx.currentTime + duration + 0.05);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + duration + 0.05);
       }, delayMs);
     } catch (e) {
       console.warn('playTone error:', e);
