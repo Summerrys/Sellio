@@ -96,20 +96,47 @@ export default function KitchenDisplay() {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const fallbackPollRef = useRef(null);
   const audioCtxRef = useRef(null);
+  const soundEnabledRef = useRef(false);
 
-  const playTone = (freq, duration) => {
-    if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    const ctx = audioCtxRef.current;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-    osc.start();
-    osc.stop(ctx.currentTime + duration);
+  const playTone = (freq, duration, delayMs = 0) => {
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+      setTimeout(() => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.4, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + duration + 0.05);
+      }, delayMs);
+    } catch (e) {
+      console.warn('playTone error:', e);
+    }
   };
+
+  const playSound = (type) => {
+    if (!soundEnabledRef.current) return;
+    if (type === 'ready') {
+      playTone(880, 0.25, 0);
+      playTone(1100, 0.25, 260);
+      playTone(1320, 0.35, 520);
+    } else {
+      playTone(440, 0.3, 0);
+      playTone(550, 0.3, 320);
+    }
+  };
+
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+  }, [soundEnabled]);
 
   // Listen for native fullscreen exit (Escape key)
   useEffect(() => {
@@ -170,15 +197,14 @@ export default function KitchenDisplay() {
           (payload) => {
             console.log('Kitchen Display real-time update:', payload.eventType, payload.new?.order_number);
             fetchOrders();
-            if (payload.eventType === 'INSERT' && soundEnabled) {
-              playTone(440, 0.4);
+            if (payload.eventType === 'INSERT' && soundEnabledRef.current) {
+              playSound('new');
             }
             if (payload.eventType === 'UPDATE' &&
                 payload.new?.status === 'ready' &&
                 payload.old?.status !== 'ready' &&
-                soundEnabled) {
-              setTimeout(() => playTone(880, 0.2), 0);
-              setTimeout(() => playTone(1100, 0.2), 250);
+                soundEnabledRef.current) {
+              playSound('ready');
             }
           }
         )
@@ -246,6 +272,27 @@ export default function KitchenDisplay() {
             </button>
           )}
           <h1 className="text-xl sm:text-3xl font-black truncate flex-1">{tenant?.name || 'Kitchen'} — Kitchen Display</h1>
+          <button
+            onClick={() => {
+              const newVal = !soundEnabled;
+              setSoundEnabled(newVal);
+              soundEnabledRef.current = newVal;
+              if (tenantId) localStorage.setItem(`sellio_sound_alerts_${tenantId}`, String(newVal));
+              if (newVal) {
+                if (!audioCtxRef.current) {
+                  audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtxRef.current.state === 'suspended') {
+                  audioCtxRef.current.resume().then(() => playSound('new'));
+                } else {
+                  playSound('new');
+                }
+              }
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-white/40 text-white bg-transparent hover:bg-white/10 transition-colors flex-shrink-0"
+          >
+            {soundEnabled ? '🔔' : '🔕'}
+          </button>
           {!isFullscreen && (
             <button
               onClick={handleEnterFullscreen}

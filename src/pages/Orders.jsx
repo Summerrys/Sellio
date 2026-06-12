@@ -256,27 +256,39 @@ export default function Orders() {
     soundEnabledRef.current = soundEnabled;
   }, [soundEnabled]);
 
-  const playToneNow = (freq, duration) => {
-    if (!audioCtxRef.current) return;
-    const ctx = audioCtxRef.current;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-    osc.start();
-    osc.stop(ctx.currentTime + duration);
+  const playTone = (freq, duration, delayMs = 0) => {
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+      setTimeout(() => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.4, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + duration + 0.05);
+      }, delayMs);
+    } catch (e) {
+      console.warn('playTone error:', e);
+    }
   };
 
   const playSound = (type) => {
-    if (!audioCtxRef.current) return;
+    if (!soundEnabledRef.current) return;
     if (type === 'ready') {
-      playToneNow(880, 0.2);
-      setTimeout(() => playToneNow(1100, 0.2), 200);
+      playTone(880, 0.25, 0);
+      playTone(1100, 0.25, 260);
+      playTone(1320, 0.35, 520);
     } else {
-      playToneNow(440, 0.4);
+      playTone(440, 0.3, 0);
+      playTone(550, 0.3, 320);
     }
   };
 
@@ -287,11 +299,12 @@ export default function Orders() {
     if (newVal) {
       if (!audioCtxRef.current) {
         audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      } else if (audioCtxRef.current.state === 'suspended') {
-        audioCtxRef.current.resume();
       }
-      // Play a test tone so user knows sound is working
-      setTimeout(() => playSound('new'), 100);
+      if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().then(() => playSound('new'));
+      } else {
+        playSound('new');
+      }
     }
   };
 
