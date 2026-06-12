@@ -222,23 +222,27 @@ export default function Dashboard() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-900">
-            {getGreeting()}, {tenant?.name || 'there'}!
+            {getGreeting()}, {tenant?.name || 'there'}!{' '}
               <button
                 onClick={() => setAiOpen(true)}
-                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 6, verticalAlign: 'top' }}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-block', verticalAlign: 'middle', marginLeft: 4, position: 'relative' }}
                 title="Ask Sellio AI"
               >
                 <img
                   src="https://assets.apptelier.sg/sellio/Logo_AISellio_Assistant.png"
                   alt="Sellio AI"
-                  style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.18))', flexShrink: 0 }}
+                  style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.18))', display: 'block' }}
                 />
                 <span style={{
+                  position: 'absolute',
+                  bottom: -2,
+                  left: '100%',
+                  marginLeft: 6,
                   background: 'white',
                   border: '1px solid rgba(224,68,154,0.2)',
-                  borderRadius: '16px 16px 16px 4px',
-                  padding: '5px 12px',
-                  fontSize: 11,
+                  borderRadius: '10px 10px 10px 2px',
+                  padding: '3px 8px',
+                  fontSize: 10,
                   fontWeight: 700,
                   whiteSpace: 'nowrap',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
@@ -246,6 +250,7 @@ export default function Dashboard() {
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
+                  lineHeight: 1.4,
                 }}>Ask me anything ✨</span>
               </button>
           </h1>
