@@ -13,20 +13,36 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Coffee, UtensilsCrossed, IceCream, Salad, Sandwich,
-  Drumstick, Tag, Gift, LayoutGrid, ShoppingCart, Clock
+  Drumstick, Tag, Gift, LayoutGrid, ShoppingCart, Clock,
+  Cpu, Glasses, Shirt, Trophy, BookOpen, Home, PawPrint,
+  Gem, Wrench, Scissors, Sparkles
 } from 'lucide-react';
 
 // ── Category icon resolver ──────────────────────────────────────────────────
 function getCategoryIcon(name = '') {
   const n = name.toLowerCase();
-  if (/drink|beverage|coffee|tea|juice|milk|boba/.test(n)) return Coffee;
-  if (/food|meal|rice|noodle|pasta|main/.test(n)) return UtensilsCrossed;
-  if (/dessert|cake|sweet|pastry|ice.?cream/.test(n)) return IceCream;
-  if (/snack|appetizer|starter/.test(n)) return Salad;
-  if (/pizza|burger|sandwich|wrap/.test(n)) return Sandwich;
-  if (/chicken|meat|beef|pork/.test(n)) return Drumstick;
-  if (/set|combo|bundle|promo/.test(n)) return Tag;
-  if (/merch|gift/.test(n)) return Gift;
+  // F&B
+  if (/drink|beverage|coffee|tea|juice|milk|boba|bubble/.test(n)) return Coffee;
+  if (/food|meal|rice|noodle|pasta|main|dinner|lunch/.test(n)) return UtensilsCrossed;
+  if (/dessert|cake|sweet|pastry|ice.?cream|waffle|crepe/.test(n)) return IceCream;
+  if (/snack|appetizer|starter|side/.test(n)) return Salad;
+  if (/pizza|burger|sandwich|wrap|toast/.test(n)) return Sandwich;
+  if (/chicken|meat|beef|pork|seafood|fish/.test(n)) return Drumstick;
+  if (/set|combo|bundle|promo|deal/.test(n)) return Tag;
+  // Retail
+  if (/electron|gadget|tech|device|phone|computer|laptop|tablet/.test(n)) return Cpu;
+  if (/eyewear|glasses|spectacle|sunglass|lens|optical/.test(n)) return Glasses;
+  if (/cloth|fashion|apparel|wear|shirt|dress|pant|shoe|bag|accessory/.test(n)) return Shirt;
+  if (/beauty|skincare|cosmetic|makeup|hair|health|wellness/.test(n)) return Sparkles;
+  if (/toy|game|sport|outdoor|hobby/.test(n)) return Trophy;
+  if (/book|stationery|office|school/.test(n)) return BookOpen;
+  if (/home|furniture|decor|kitchen|garden/.test(n)) return Home;
+  if (/pet|animal/.test(n)) return PawPrint;
+  if (/jewel|watch|ring|necklace/.test(n)) return Gem;
+  if (/merch|gift|souvenir/.test(n)) return Gift;
+  // Services
+  if (/repair|consult|appointment|service/.test(n)) return Wrench;
+  if (/salon|spa|nail|massage/.test(n)) return Scissors;
   return LayoutGrid;
 }
 
