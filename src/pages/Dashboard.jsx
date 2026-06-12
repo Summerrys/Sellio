@@ -222,10 +222,10 @@ export default function Dashboard() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-900">
-            {getGreeting()}, {tenant?.name || 'there'}!{' '}
+            {getGreeting()}, {tenant?.name || 'there'}!
               <button
                 onClick={() => setAiOpen(true)}
-                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'flex-end', verticalAlign: 'middle', marginLeft: 6, position: 'relative' }}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 6, verticalAlign: 'top' }}
                 title="Ask Sellio AI"
               >
                 <img
@@ -234,34 +234,19 @@ export default function Dashboard() {
                   style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.18))', flexShrink: 0 }}
                 />
                 <span style={{
-                  position: 'absolute',
-                  bottom: -22,
-                  left: 22,
                   background: 'white',
-                  border: '1px solid #f1e0f5',
-                  borderRadius: 10,
-                  padding: '3px 9px',
-                  fontSize: 10,
+                  border: '1px solid rgba(224,68,154,0.2)',
+                  borderRadius: '16px 16px 16px 4px',
+                  padding: '5px 12px',
+                  fontSize: 11,
                   fontWeight: 700,
                   whiteSpace: 'nowrap',
-                  boxShadow: '0 3px 10px rgba(0,0,0,0.10)',
-                  color: 'transparent',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                   backgroundImage: 'linear-gradient(135deg, #fb923c, #e0449a)',
-                  WebkitTextFillColor: 'transparent',
                   WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
-                  zIndex: 10,
                 }}>Ask me anything ✨</span>
-                <span style={{
-                  position: 'absolute',
-                  bottom: -9,
-                  left: 26,
-                  width: 0, height: 0,
-                  borderLeft: '5px solid transparent',
-                  borderRight: '5px solid transparent',
-                  borderBottom: '6px solid white',
-                  zIndex: 11,
-                }} />
               </button>
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">Today's overview</p>
