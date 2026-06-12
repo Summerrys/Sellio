@@ -39,6 +39,7 @@ import AppLoader from '@/components/ui-custom/AppLoader';
 import PricingModal from './components/subscription/PricingModal';
 import TrialReminderModal from './components/subscription/TrialReminderModal';
 import AccountProfileModal from './components/profile/AccountProfileModal';
+import MerchantAssistantWidget from './components/merchant/MerchantAssistantWidget';
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth'];
 
@@ -449,6 +450,9 @@ function AppLayout({ children, currentPageName }) {
           onUpgrade={() => { setShowTrialModal(false); setShowPricingModal(true); }}
           onDismiss={() => { sessionStorage.setItem('trial_modal_dismissed', 'true'); setShowTrialModal(false); }}
         />
+      )}
+      {currentPageName !== 'Onboarding' && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (
+        <MerchantAssistantWidget />
       )}
     </div>
   );
