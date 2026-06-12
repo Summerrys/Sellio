@@ -214,19 +214,44 @@ export function TenantProvider({ children }) {
 
   const { data: tenantUser, isLoading: tenantUserLoading } = useQuery({
     queryKey: ['tenantUser', user?.email],
-    queryFn: () => db.entities.TenantUser.filter({ user_email: user.email, status: 'active' }),
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data } = await supabase
+        .from('tenant_users')
+        .select('*')
+        .eq('user_email', user.email)
+        .eq('status', 'active')
+        .limit(10);
+      return data || [];
+    },
     enabled: !!user?.email,
   });
 
   const { data: tenant, isLoading: tenantLoading } = useQuery({
     queryKey: ['currentTenant', currentTenantId],
-    queryFn: () => db.entities.Tenant.filter({ id: currentTenantId }),
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('id', currentTenantId)
+        .limit(1);
+      return data || [];
+    },
     enabled: !!currentTenantId,
   });
 
   const { data: role } = useQuery({
     queryKey: ['userRole', tenantUser?.[0]?.role_id],
-    queryFn: () => db.entities.Role.filter({ id: tenantUser[0].role_id }),
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data } = await supabase
+        .from('roles')
+        .select('*')
+        .eq('id', tenantUser[0].role_id)
+        .limit(1);
+      return data || [];
+    },
     enabled: !!tenantUser?.[0]?.role_id,
   });
 
@@ -298,7 +323,7 @@ export function TenantProvider({ children }) {
       }
       // Fall back to fetching from tenant's custom roles by name
       if (currentTenantId) {
-        db.entities.Role.filter({ tenant_id: currentTenantId }).then(roles => {
+        getSupabase().then(supabase => supabase.from('roles').select('*').eq('tenant_id', currentTenantId)).then(({ data: roles }) => {
           const matched = roles?.find(r => r.name?.toLowerCase() === devRoleOverride.toLowerCase());
           if (matched?.permissions) setUserPermissions(matched.permissions);
           else setUserPermissions([]);
