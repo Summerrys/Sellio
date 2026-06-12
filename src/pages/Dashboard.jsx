@@ -225,29 +225,43 @@ export default function Dashboard() {
             {getGreeting()}, {tenant?.name || 'there'}!{' '}
               <button
                 onClick={() => setAiOpen(true)}
-                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', verticalAlign: 'middle', marginLeft: 6, position: 'relative' }}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'flex-end', verticalAlign: 'middle', marginLeft: 6, position: 'relative' }}
                 title="Ask Sellio AI"
               >
                 <img
                   src="https://assets.apptelier.sg/sellio/Logo_AISellio_Assistant.png"
                   alt="Sellio AI"
-                  style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.18))' }}
+                  style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.18))', flexShrink: 0 }}
                 />
                 <span style={{
                   position: 'absolute',
-                  top: -22,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  background: 'linear-gradient(135deg, #fb923c, #e0449a)',
-                  color: 'white',
-                  fontSize: 9,
+                  bottom: -22,
+                  left: 22,
+                  background: 'white',
+                  border: '1px solid #f1e0f5',
+                  borderRadius: 10,
+                  padding: '3px 9px',
+                  fontSize: 10,
                   fontWeight: 700,
-                  borderRadius: 999,
-                  padding: '2px 7px',
                   whiteSpace: 'nowrap',
-                  boxShadow: '0 2px 6px rgba(224,68,154,0.35)',
-                  letterSpacing: '0.02em',
-                }}>Ask me anything</span>
+                  boxShadow: '0 3px 10px rgba(0,0,0,0.10)',
+                  color: 'transparent',
+                  backgroundImage: 'linear-gradient(135deg, #fb923c, #e0449a)',
+                  WebkitTextFillColor: 'transparent',
+                  WebkitBackgroundClip: 'text',
+                  backgroundClip: 'text',
+                  zIndex: 10,
+                }}>Ask me anything ✨</span>
+                <span style={{
+                  position: 'absolute',
+                  bottom: -9,
+                  left: 26,
+                  width: 0, height: 0,
+                  borderLeft: '5px solid transparent',
+                  borderRight: '5px solid transparent',
+                  borderBottom: '6px solid white',
+                  zIndex: 11,
+                }} />
               </button>
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">Today's overview</p>
