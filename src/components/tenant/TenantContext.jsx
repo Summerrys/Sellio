@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import db from '@/lib/db';
 import { getSupabase } from '@/lib/supabaseClient';
 
 const TenantContext = createContext(null);
@@ -195,10 +194,28 @@ export function TenantProvider({ children }) {
   const [userPermissions, setUserPermissions] = useState([]);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
+  // Get user from Supabase auth session, then look up app_users by email
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => db.auth.me(),
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser?.email) return null;
+      const { data: appUsers } = await supabase
+        .from('app_users')
+        .select('*')
+        .eq('email', authUser.email)
+        .limit(1);
+      return appUsers?.[0] || { email: authUser.email };
+    },
   });
+
+  // Set currentTenantId immediately from app_users row — don't wait for tenant_users
+  useEffect(() => {
+    if (user?.tenant_id) {
+      setCurrentTenantId(user.tenant_id);
+    }
+  }, [user?.tenant_id]);
 
   // Check for simulate_role — only apply for superadmin users
   useEffect(() => {
@@ -295,14 +312,12 @@ export function TenantProvider({ children }) {
     }
   }, [user, devRoleOverride]);
 
+  // Secondary: tenant_users can override if it resolves a tenant_id that app_users doesn't have
   useEffect(() => {
-    if (tenantUser?.length > 0) {
+    if (tenantUser?.length > 0 && tenantUser[0].tenant_id) {
       setCurrentTenantId(tenantUser[0].tenant_id);
-    } else if (user?.tenant_id) {
-      // Fallback: use tenant_id from session (e.g. right after onboarding)
-      setCurrentTenantId(user.tenant_id);
     }
-  }, [tenantUser, user]);
+  }, [tenantUser]);
 
   useEffect(() => {
     // Dev simulate_role override
