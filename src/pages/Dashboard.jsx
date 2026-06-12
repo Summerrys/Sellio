@@ -13,6 +13,7 @@ import {
   Shield, Settings, BarChart2, ChevronRight, AlertTriangle, Paintbrush
 } from 'lucide-react';
 import StorefrontDesigner from '../components/storefront/StorefrontDesigner';
+import MerchantAssistantWidget from '../components/merchant/MerchantAssistantWidget';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 
@@ -92,6 +93,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showDesigner, setShowDesigner] = React.useState(false);
+  const [aiOpen, setAiOpen] = React.useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -220,7 +222,19 @@ export default function Dashboard() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-900">
-            {getGreeting()}, {tenant?.name || 'there'} 👋!
+            {getGreeting()}, {tenant?.name || 'there'}{' '}
+              <button
+                onClick={() => setAiOpen(true)}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', verticalAlign: 'middle', marginLeft: 4 }}
+                title="Ask Sellio AI"
+              >
+                <img
+                  src="https://assets.apptelier.sg/sellio/Logo_AISellio_Assistant.png"
+                  alt="Sellio AI"
+                  style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.15))' }}
+                />
+              </button>
+              !
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">Today's overview</p>
           <p className="text-xs text-slate-400 mt-0.5">{todayLabel}</p>
@@ -266,6 +280,7 @@ export default function Dashboard() {
         tenantId={tenantId}
         tenantSlug={tenant?.slug}
       />
+      <MerchantAssistantWidget externalOpen={aiOpen} onExternalClose={() => setAiOpen(false)} />
 
       {/* Stats Row — 4 compact cards always in a row */}
       <div className="grid grid-cols-4 gap-2">
