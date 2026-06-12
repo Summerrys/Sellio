@@ -682,7 +682,20 @@ export default function Auth() {
         const { error } = await supabase.auth.signInWithPassword({ email: appUserRow.email, password: formData.password });
         if (error) throw error;
 
-        setAppUser(appUserRow);
+        // If tenant_id is missing from app_users, look it up from tenant_users
+        let tenantId = appUserRow.tenant_id;
+        if (!tenantId) {
+          const { data: tuRows } = await supabase
+            .from('tenant_users')
+            .select('tenant_id')
+            .eq('user_email', appUserRow.email)
+            .eq('status', 'active')
+            .limit(1);
+          tenantId = tuRows?.[0]?.tenant_id || null;
+        }
+
+        const userForCookie = { ...appUserRow, tenant_id: tenantId };
+        setAppUser(userForCookie);
         showSuccess('Welcome back!');
         setTimeout(() => {
           window.location.href = createPageUrl(appUserRow.onboarding_completed ? 'Dashboard' : 'Onboarding');
