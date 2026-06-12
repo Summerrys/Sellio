@@ -151,40 +151,36 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
           bottom: '80px',
           right: '16px',
           zIndex: 100,
-          width: 52,
-          height: 52,
+          width: 64,
+          height: 64,
           borderRadius: '50%',
-          background: buttonBackground,
+          background: 'none',
           border: 'none',
           cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-          transition: 'transform 0.2s'
+          padding: 0,
+          filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.20))',
         }}
-        onMouseEnter={e => e.target.style.transform = 'scale(1.1)'}
-        onMouseLeave={e => e.target.style.transform = 'scale(1)'}
       >
         {!open && (
           <div style={{
             position: 'absolute',
-            top: 0,
-            right: 0,
+            top: 2,
+            right: 2,
             width: 10,
             height: 10,
             borderRadius: '50%',
             background: '#10b981',
-            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            zIndex: 1,
           }}>
             <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }`}</style>
           </div>
         )}
-        {!open ? (
-          <Sparkles size={24} color="white" />
-        ) : (
-          <X size={24} color="white" />
-        )}
+        <img
+          src="https://assets.apptelier.sg/sellio/Logo_AISellio_Assistant.png"
+          alt="Sellio Assistant"
+          style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', display: 'block' }}
+        />
       </button>
 
       {cartFeedback && (
@@ -229,18 +225,11 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
             justifyContent: 'space-between',
             gap: 12
           }}>
-            <div style={{
-              width: 40,
-              height: 40,
-              borderRadius: '50%',
-              background: primaryColor,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0
-            }}>
-              <span style={{ fontSize: 20 }}>✦</span>
-            </div>
+            <img
+              src="https://assets.apptelier.sg/sellio/Logo_AISellio_Assistant.png"
+              alt="Sellio Assistant"
+              style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+            />
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#1e293b' }}>Menu Assistant</p>
               <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>Ask me or just tell me what you want</p>
