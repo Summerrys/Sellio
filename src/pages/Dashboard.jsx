@@ -222,19 +222,33 @@ export default function Dashboard() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-900">
-            {getGreeting()}, {tenant?.name || 'there'}{' '}
+            {getGreeting()}, {tenant?.name || 'there'}!{' '}
               <button
                 onClick={() => setAiOpen(true)}
-                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', verticalAlign: 'middle', marginLeft: 4 }}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', verticalAlign: 'middle', marginLeft: 6, position: 'relative' }}
                 title="Ask Sellio AI"
               >
                 <img
                   src="https://assets.apptelier.sg/sellio/Logo_AISellio_Assistant.png"
                   alt="Sellio AI"
-                  style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.15))' }}
+                  style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.18))' }}
                 />
+                <span style={{
+                  position: 'absolute',
+                  top: -22,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: 'linear-gradient(135deg, #fb923c, #e0449a)',
+                  color: 'white',
+                  fontSize: 9,
+                  fontWeight: 700,
+                  borderRadius: 999,
+                  padding: '2px 7px',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 2px 6px rgba(224,68,154,0.35)',
+                  letterSpacing: '0.02em',
+                }}>Ask me anything</span>
               </button>
-              !
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">Today's overview</p>
           <p className="text-xs text-slate-400 mt-0.5">{todayLabel}</p>
