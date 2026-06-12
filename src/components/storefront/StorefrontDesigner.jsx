@@ -129,70 +129,219 @@ const COLOR_PRESETS = [
   '#0d9488', '#10b981', '#f59e0b', '#475569', '#111827',
 ];
 
+function PremiumColorPicker({ value, onChange }) {
+  const [showPicker, setShowPicker] = useState(false);
+  const [hue, setHue] = useState(0);
+  const [saturation, setSaturation] = useState(70);
+  const [brightness, setBrightness] = useState(80);
+  const [hexInput, setHexInput] = useState(value || '#fb923c');
+  const gradientBoxRef = useRef(null);
+  const hueBarRef = useRef(null);
+
+  const hsvToHex = (h, s, v) => {
+    s /= 100; v /= 100;
+    const f = (n, k = (n + h / 60) % 6) => v - v * s * Math.max(Math.min(k, 4 - k, 1), 0);
+    return '#' + [f(5), f(3), f(1)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
+  };
+
+  const hexToHsv = (hex) => {
+    const r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, b = parseInt(hex.slice(5,7),16)/255;
+    const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max - min;
+    let h = 0;
+    if (d !== 0) {
+      if (max === r) h = ((g - b) / d) % 6;
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h = Math.round(h * 60); if (h < 0) h += 360;
+    }
+    return { h, s: max === 0 ? 0 : Math.round(d / max * 100), v: Math.round(max * 100) };
+  };
+
+  useEffect(() => {
+    if (value && /^#[0-9a-fA-F]{6}$/.test(value)) {
+      const hsv = hexToHsv(value);
+      setHue(hsv.h); setSaturation(hsv.s); setBrightness(hsv.v);
+      setHexInput(value);
+    }
+  }, [value]);
+
+  const currentColor = hsvToHex(hue, saturation, brightness);
+
+  const handleGradientClick = (e) => {
+    const rect = gradientBoxRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+    const newS = Math.round(x * 100);
+    const newV = Math.round((1 - y) * 100);
+    setSaturation(newS); setBrightness(newV);
+    const hex = hsvToHex(hue, newS, newV);
+    setHexInput(hex); onChange(hex);
+  };
+
+  const handleGradientTouch = (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = gradientBoxRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
+    const y = Math.max(0, Math.min(1, (touch.clientY - rect.top) / rect.height));
+    const newS = Math.round(x * 100);
+    const newV = Math.round((1 - y) * 100);
+    setSaturation(newS); setBrightness(newV);
+    const hex = hsvToHex(hue, newS, newV);
+    setHexInput(hex); onChange(hex);
+  };
+
+  const handleHueClick = (e) => {
+    const rect = hueBarRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const newH = Math.round(x * 360);
+    setHue(newH);
+    const hex = hsvToHex(newH, saturation, brightness);
+    setHexInput(hex); onChange(hex);
+  };
+
+  const handleHueTouch = (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = hueBarRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
+    const newH = Math.round(x * 360);
+    setHue(newH);
+    const hex = hsvToHex(newH, saturation, brightness);
+    setHexInput(hex); onChange(hex);
+  };
+
+  const handleHexInput = (val) => {
+    setHexInput(val);
+    if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+      const hsv = hexToHsv(val);
+      setHue(hsv.h); setSaturation(hsv.s); setBrightness(hsv.v);
+      onChange(val);
+    }
+  };
+
+  const thumbX = `${saturation}%`;
+  const thumbY = `${100 - brightness}%`;
+  const hueX = `${(hue / 360) * 100}%`;
+  const pureHueColor = hsvToHex(hue, 100, 100);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div
+        onClick={() => setShowPicker(p => !p)}
+        style={{
+          width: '100%', height: 44, borderRadius: 10, background: value || '#fb923c',
+          cursor: 'pointer', border: '1px solid rgba(0,0,0,0.08)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'opacity 0.15s',
+        }}
+      >
+        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em' }}>
+          {showPicker ? 'Close picker ↑' : 'Tap to pick colour ↓'}
+        </span>
+      </div>
+
+      {showPicker && (
+        <div style={{ background: '#f8fafc', borderRadius: 14, padding: 14, border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div
+            ref={gradientBoxRef}
+            onClick={handleGradientClick}
+            onTouchMove={handleGradientTouch}
+            onTouchStart={handleGradientTouch}
+            style={{
+              width: '100%', height: 150, borderRadius: 10, position: 'relative',
+              background: pureHueColor, cursor: 'crosshair', touchAction: 'none',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, white, transparent)', borderRadius: 10 }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent, black)', borderRadius: 10 }} />
+            <div style={{
+              position: 'absolute', left: thumbX, top: thumbY,
+              width: 20, height: 20, borderRadius: '50%',
+              border: '3px solid white',
+              background: currentColor,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+              transform: 'translate(-50%, -50%)',
+              pointerEvents: 'none',
+            }} />
+          </div>
+
+          <div
+            ref={hueBarRef}
+            onClick={handleHueClick}
+            onTouchMove={handleHueTouch}
+            onTouchStart={handleHueTouch}
+            style={{
+              width: '100%', height: 24, borderRadius: 12, position: 'relative',
+              background: 'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)',
+              cursor: 'pointer', touchAction: 'none',
+              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.15)',
+            }}
+          >
+            <div style={{
+              position: 'absolute', left: hueX, top: '50%',
+              width: 28, height: 28, borderRadius: '50%',
+              background: pureHueColor,
+              border: '3px solid white',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+              transform: 'translate(-50%, -50%)',
+              pointerEvents: 'none',
+            }} />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 8, background: currentColor, flexShrink: 0, boxShadow: '0 1px 4px rgba(0,0,0,0.15)', border: '1px solid rgba(0,0,0,0.08)' }} />
+            <div style={{ flex: 1, background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 500 }}>#</span>
+              <input
+                value={hexInput.replace('#', '')}
+                onChange={e => handleHexInput('#' + e.target.value)}
+                maxLength={6}
+                style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13, fontWeight: 600, color: '#0f172a', fontFamily: 'monospace', background: 'transparent' }}
+                placeholder="fb923c"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+        {COLOR_PRESETS.map(color => (
+          <button
+            key={color}
+            type="button"
+            onClick={() => { onChange(color); setHexInput(color); setShowPicker(false); const hsv = hexToHsv(color); setHue(hsv.h); setSaturation(hsv.s); setBrightness(hsv.v); }}
+            style={{
+              width: 28, height: 28, borderRadius: '50%', background: color,
+              border: (value || '').toLowerCase() === color ? '2.5px solid #0f172a' : '2px solid transparent',
+              cursor: 'pointer', flexShrink: 0, position: 'relative',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              outline: (value || '').toLowerCase() === color ? '2px solid white' : 'none',
+              outlineOffset: -4,
+            }}
+          >
+            {(value || '').toLowerCase() === color && (
+              <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 13, fontWeight: 700, lineHeight: 1 }}>✓</span>
+            )}
+          </button>
+        ))}
+      </div>
+      <p style={{ fontSize: 11, color: '#94a3b8', marginTop: -4 }}>Tap the swatch to open the colour picker, or pick a preset</p>
+    </div>
+  );
+}
+
 // Banner tab content — colour + text only (image upload lives on the banner canvas)
 function BannerTabContent({ form, onChange }) {
   const currentColor = form.banner_bg_color || '#6366f1';
-  const colorInputRef = useRef(null);
-
-  const handleHexInput = (val) => {
-    if (/^#[0-9a-fA-F]{0,6}$/.test(val)) onChange('banner_bg_color', val);
-  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
         <SectionLabel>Brand Colour</SectionLabel>
-        {/* Large clickable swatch → opens native OS color picker */}
-        <div
-          onClick={() => colorInputRef.current?.click()}
-          style={{
-            width: '100%', height: 48, borderRadius: 10, background: currentColor,
-            cursor: 'pointer', border: '1px solid rgba(0,0,0,0.08)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.12)', marginBottom: 10,
-            transition: 'opacity 0.15s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
-          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-        />
-        <input
-          ref={colorInputRef}
-          type="color"
-          value={currentColor}
-          onChange={e => onChange('banner_bg_color', e.target.value)}
-          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
-        />
-
-        {/* Hex input */}
-        <Input
-          value={currentColor}
-          onChange={e => handleHexInput(e.target.value)}
-          className="font-mono text-sm"
-          placeholder="#f97316"
-        />
-
-        {/* Preset swatches */}
-        <div style={{ display: 'flex', gap: 7, marginTop: 10, flexWrap: 'wrap' }}>
-          {COLOR_PRESETS.map(color => (
-            <button
-              key={color}
-              type="button"
-              onClick={() => onChange('banner_bg_color', color)}
-              style={{
-                width: 28, height: 28, borderRadius: '50%', background: color,
-                border: currentColor.toLowerCase() === color ? '2.5px solid #0f172a' : '2px solid transparent',
-                cursor: 'pointer', flexShrink: 0, position: 'relative',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                outline: currentColor.toLowerCase() === color ? '2px solid white' : 'none',
-                outlineOffset: -4,
-              }}
-            >
-              {currentColor.toLowerCase() === color && (
-                <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 13, fontWeight: 700, lineHeight: 1 }}>✓</span>
-              )}
-            </button>
-          ))}
-        </div>
-        <p className="text-xs text-slate-400 mt-2">Tap the swatch to open the colour picker, or pick a preset</p>
+        <PremiumColorPicker value={currentColor} onChange={v => onChange('banner_bg_color', v)} />
       </div>
       <div>
         <SectionLabel>Headline</SectionLabel>
