@@ -240,6 +240,12 @@ export default function Orders() {
   const fallbackPollRef = useRef(null);
   const audioCtxRef = useRef(null);
   const soundEnabledRef = useRef(false);
+  const repeatIntervalRef = useRef(null);
+  const [alertInterval, setAlertInterval] = useState(() => {
+    if (typeof window === 'undefined') return 60;
+    return parseInt(localStorage.getItem(`sellio_alert_interval_${window.__tenantId || ''}`) || '60', 10);
+  });
+  const alertIntervalRef = useRef(60);
 
   const isFnB = /f&b|cafe|restaurant|food/i.test(tenant?.industry || '');
   const currency = tenant?.settings?.currency || tenant?.currency || 'SGD';
@@ -256,6 +262,15 @@ export default function Orders() {
     soundEnabledRef.current = soundEnabled;
   }, [soundEnabled]);
 
+  useEffect(() => {
+    alertIntervalRef.current = alertInterval;
+    if (tenantId) localStorage.setItem(`sellio_alert_interval_${tenantId}`, String(alertInterval));
+  }, [alertInterval, tenantId]);
+
+  useEffect(() => {
+    return () => stopRepeatAlerts();
+  }, []);
+
   const playTone = (freq, duration, delayMs = 0) => {
     try {
       if (!audioCtxRef.current) {
@@ -264,16 +279,33 @@ export default function Orders() {
       const ctx = audioCtxRef.current;
       if (ctx.state === 'suspended') ctx.resume();
       setTimeout(() => {
-        const osc = ctx.createOscillator();
+        const compressor = ctx.createDynamicsCompressor();
+        compressor.threshold.value = -6;
+        compressor.knee.value = 3;
+        compressor.ratio.value = 4;
+        compressor.attack.value = 0;
+        compressor.release.value = 0.1;
+        compressor.connect(ctx.destination);
+
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0.4, ctx.currentTime);
+
+        osc1.type = 'sawtooth';
+        osc1.frequency.value = freq;
+        osc2.type = 'square';
+        osc2.frequency.value = freq * 1.005;
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(compressor);
+
+        gain.gain.setValueAtTime(0.85, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + duration + 0.05);
+        osc1.start(ctx.currentTime);
+        osc2.start(ctx.currentTime);
+        osc1.stop(ctx.currentTime + duration + 0.05);
+        osc2.stop(ctx.currentTime + duration + 0.05);
       }, delayMs);
     } catch (e) {
       console.warn('playTone error:', e);
@@ -283,13 +315,32 @@ export default function Orders() {
   const playSound = (type) => {
     if (!soundEnabledRef.current) return;
     if (type === 'ready') {
-      playTone(880, 0.25, 0);
-      playTone(1100, 0.25, 260);
-      playTone(1320, 0.35, 520);
+      playTone(880, 0.3, 0);
+      playTone(1100, 0.3, 280);
+      playTone(1320, 0.4, 560);
+      playTone(1100, 0.3, 840);
     } else {
-      playTone(440, 0.3, 0);
-      playTone(550, 0.3, 320);
+      playTone(440, 0.35, 0);
+      playTone(550, 0.35, 300);
+      playTone(660, 0.35, 600);
     }
+  };
+
+  const stopRepeatAlerts = () => {
+    if (repeatIntervalRef.current) {
+      clearInterval(repeatIntervalRef.current);
+      repeatIntervalRef.current = null;
+    }
+  };
+
+  const startRepeatAlerts = (checkFn, soundType) => {
+    stopRepeatAlerts();
+    const secs = alertIntervalRef.current || 60;
+    repeatIntervalRef.current = setInterval(() => {
+      if (!soundEnabledRef.current) { stopRepeatAlerts(); return; }
+      if (checkFn()) playSound(soundType);
+      else stopRepeatAlerts();
+    }, secs * 1000);
   };
 
   const handleSoundToggle = (newVal) => {
@@ -341,17 +392,25 @@ export default function Orders() {
 
             // Sound alerts via real-time events
             if (soundEnabledRef.current && payload.eventType === 'INSERT' && payload.new?.status === 'pending') {
-              if (!audioCtxRef.current) {
-                audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-              }
               playSound('new');
+              startRepeatAlerts(
+                () => orders.some(o => o.status === 'pending') || payload.new?.status === 'pending',
+                'new'
+              );
             }
             if (soundEnabledRef.current && payload.eventType === 'UPDATE' &&
                 payload.new?.status === 'ready' && payload.old?.status !== 'ready') {
-              if (!audioCtxRef.current) {
-                audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-              }
               playSound('ready');
+              startRepeatAlerts(
+                () => orders.some(o => o.status === 'ready'),
+                'ready'
+              );
+            }
+            if (payload.eventType === 'UPDATE' &&
+                (payload.new?.status === 'confirmed' || payload.new?.status === 'completed')) {
+              const stillHasPending = orders.some(o => o.status === 'pending' && o.id !== payload.new?.id);
+              const stillHasReady = orders.some(o => o.status === 'ready' && o.id !== payload.new?.id);
+              if (!stillHasPending && !stillHasReady) stopRepeatAlerts();
             }
           }
         )
@@ -485,12 +544,29 @@ export default function Orders() {
                   <Monitor className="w-4 h-4" /> Kitchen Display
                 </button>
               )}
-              <div className="flex items-center gap-1.5">
-                <Switch id="sound" checked={soundEnabled} onCheckedChange={handleSoundToggle} className="scale-90" />
-                <Label htmlFor="sound" className="flex items-center gap-1 cursor-pointer text-xs text-slate-600">
-                  {soundEnabled ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
-                  Sound Alerts
-                </Label>
+              <div className="flex flex-col items-end gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Switch id="sound" checked={soundEnabled} onCheckedChange={handleSoundToggle} className="scale-90" />
+                  <Label htmlFor="sound" className="flex items-center gap-1 cursor-pointer text-xs text-slate-600">
+                    {soundEnabled ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
+                    Sound Alerts
+                  </Label>
+                </div>
+                {soundEnabled && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-slate-400">Repeat:</span>
+                    {[30, 60, 120].map(s => (
+                      <button
+                        key={s}
+                        onClick={() => setAlertInterval(s)}
+                        className={`text-[10px] px-1.5 py-0.5 rounded font-medium transition-colors ${alertInterval === s ? 'text-white' : 'bg-slate-100 text-slate-500'}`}
+                        style={alertInterval === s ? { background: 'var(--color-primary-gradient)' } : {}}
+                      >
+                        {s === 30 ? '30s' : s === 60 ? '1m' : '2m'}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
