@@ -239,6 +239,7 @@ export default function Orders() {
   const lastSeenDateRef = useRef(null);
   const fallbackPollRef = useRef(null);
   const audioCtxRef = useRef(null);
+  const soundEnabledRef = useRef(false);
 
   const isFnB = /f&b|cafe|restaurant|food/i.test(tenant?.industry || '');
   const currency = tenant?.settings?.currency || tenant?.currency || 'SGD';
@@ -250,6 +251,10 @@ export default function Orders() {
     const stored = localStorage.getItem(`sellio_sound_alerts_${tenantId}`);
     if (stored === 'true') setSoundEnabled(true);
   }, [tenantId]);
+
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+  }, [soundEnabled]);
 
   const playToneNow = (freq, duration) => {
     if (!audioCtxRef.current) return;
@@ -277,9 +282,16 @@ export default function Orders() {
 
   const handleSoundToggle = (newVal) => {
     setSoundEnabled(newVal);
+    soundEnabledRef.current = newVal;
     if (tenantId) localStorage.setItem(`sellio_sound_alerts_${tenantId}`, String(newVal));
-    if (newVal && !audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    if (newVal) {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      } else if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume();
+      }
+      // Play a test tone so user knows sound is working
+      setTimeout(() => playSound('new'), 100);
     }
   };
 
@@ -315,11 +327,17 @@ export default function Orders() {
             fetchOrders();
 
             // Sound alerts via real-time events
-            if (soundEnabled && payload.eventType === 'INSERT' && payload.new?.status === 'pending') {
+            if (soundEnabledRef.current && payload.eventType === 'INSERT' && payload.new?.status === 'pending') {
+              if (!audioCtxRef.current) {
+                audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+              }
               playSound('new');
             }
-            if (soundEnabled && payload.eventType === 'UPDATE' &&
+            if (soundEnabledRef.current && payload.eventType === 'UPDATE' &&
                 payload.new?.status === 'ready' && payload.old?.status !== 'ready') {
+              if (!audioCtxRef.current) {
+                audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+              }
               playSound('ready');
             }
           }
