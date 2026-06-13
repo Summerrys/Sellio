@@ -12,7 +12,7 @@ import ProductGrid from '../components/products/ProductGrid';
 import ProductFormDialog from '../components/products/ProductFormDialog.jsx';
 import ProductImportDialog from '../components/products/ProductImportDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package, ScanLine, Pencil, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package, ScanLine, Trash2, CheckCircle2, AlertCircle, ImageIcon, Lightbulb, Loader2, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
@@ -39,21 +39,20 @@ const TEMPLATE_ROWS = [
 ];
 
 function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess }) {
-  const [image, setImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [scanning, setScanning] = useState(false);
-  const [scannedItems, setScannedItems] = useState([]);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
-  const [step, setStep] = useState('upload'); // 'upload' | 'review' | 'done'
+  const { tenant } = useTenant();
+  const [image, setImage] = React.useState(null);
+  const [imagePreview, setImagePreview] = React.useState(null);
+  const [scanning, setScanning] = React.useState(false);
+  const [analyzingImages, setAnalyzingImages] = React.useState(false);
+  const [scannedItems, setScannedItems] = React.useState([]);
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState(null);
+  const [step, setStep] = React.useState('upload');
   const fileInputRef = React.useRef(null);
   const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
+  const primaryGradient = 'var(--color-primary-gradient)';
 
-  const reset = () => {
-    setImage(null); setImagePreview(null); setScanning(false);
-    setScannedItems([]); setSaving(false); setError(null); setStep('upload');
-  };
-
+  const reset = () => { setImage(null); setImagePreview(null); setScanning(false); setAnalyzingImages(false); setScannedItems([]); setSaving(false); setError(null); setStep('upload'); };
   const handleClose = () => { reset(); onOpenChange(false); };
 
   const handleFile = (file) => {
@@ -65,9 +64,26 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
     setError(null);
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    handleFile(e.dataTransfer.files[0]);
+  const analyzeItemImages = async (items, base64, mediaType) => {
+    setAnalyzingImages(true);
+    try {
+      const analyzed = await Promise.all(items.map(async (item) => {
+        try {
+          const res = await fetch('https://selliosg.base44.app/api/functions/analyzeProductImage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageBase64: base64, productName: item.name }),
+          });
+          const data = await res.json();
+          return { ...item, image_url: data?.imageUrl || null, _aiAnalyzed: true };
+        } catch {
+          return { ...item, image_url: null };
+        }
+      }));
+      return analyzed;
+    } finally {
+      setAnalyzingImages(false);
+    }
   };
 
   const handleScan = async () => {
@@ -75,11 +91,7 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
     setScanning(true); setError(null);
     try {
       const reader = new FileReader();
-      const base64 = await new Promise((res, rej) => {
-        reader.onload = e => res(e.target.result.split(',')[1]);
-        reader.onerror = rej;
-        reader.readAsDataURL(image);
-      });
+      const base64 = await new Promise((res, rej) => { reader.onload = e => res(e.target.result.split(',')[1]); reader.onerror = rej; reader.readAsDataURL(image); });
       const mediaType = image.type || 'image/jpeg';
       const res = await fetch(`${SUPABASE_URL}/functions/v1/scanMenu`, {
         method: 'POST',
@@ -89,21 +101,17 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Scan failed');
       if (!data.items?.length) throw new Error('No items found. Try a clearer photo.');
-      setScannedItems(data.items.map((item, i) => ({ ...item, _id: i, _selected: true })));
-      setStep('review');
-    } catch (e) {
-      setError(e.message);
-    } finally {
+      const rawItems = data.items.map((item, i) => ({ ...item, _id: i, _selected: true, image_url: null }));
       setScanning(false);
-    }
+      setScannedItems(rawItems);
+      setStep('review');
+      const analyzed = await analyzeItemImages(rawItems, base64, mediaType);
+      setScannedItems(analyzed.map((item, i) => ({ ...item, _id: i, _selected: true })));
+    } catch (e) { setError(e.message); setScanning(false); }
   };
 
-  const updateItem = (id, field, value) => {
-    setScannedItems(prev => prev.map(item => item._id === id ? { ...item, [field]: value } : item));
-  };
-
+  const updateItem = (id, field, value) => setScannedItems(prev => prev.map(item => item._id === id ? { ...item, [field]: value } : item));
   const removeItem = (id) => setScannedItems(prev => prev.filter(item => item._id !== id));
-
   const toggleItem = (id) => setScannedItems(prev => prev.map(item => item._id === id ? { ...item, _selected: !item._selected } : item));
 
   const handleSave = async () => {
@@ -111,73 +119,62 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
     if (!selected.length) return;
     setSaving(true); setError(null);
     try {
-      const supabase = (await import('@/lib/supabaseClient')).getSupabase ? await (await import('@/lib/supabaseClient')).getSupabase() : null;
-      if (!supabase) throw new Error('Cannot connect to database');
-
-      // Create missing categories
+      const { getSupabase } = await import('@/lib/supabaseClient');
+      const supabase = await getSupabase();
       const uniqueCats = [...new Set(selected.map(i => i.category).filter(Boolean))];
       const catMap = {};
       categories.forEach(c => { catMap[c.name.toLowerCase()] = c.id; });
-
       for (const catName of uniqueCats) {
         if (!catMap[catName.toLowerCase()]) {
-          const slug = catName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          const slug = catName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now();
           const { data: newCat } = await supabase.from('categories').insert({ tenant_id: tenantId, name: catName, slug, is_active: true }).select().single();
           if (newCat) catMap[catName.toLowerCase()] = newCat.id;
         }
       }
-
-      // Insert products
       const productRows = selected.map(item => ({
         tenant_id: tenantId,
         name: item.name,
         price: parseFloat(item.price) || 0,
         description: item.description || null,
         category_id: catMap[item.category?.toLowerCase()] || null,
-        slug: item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now(),
+        image_url: item.image_url || null,
+        slug: item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now() + Math.random().toString(36).slice(2, 5),
         is_active: true,
         variants: item.variants || [],
       }));
-
       const { data: insertedProducts, error: prodError } = await supabase.from('products').insert(productRows).select();
       if (prodError) throw prodError;
-
-      // Create inventory rows
       if (insertedProducts?.length) {
-        await supabase.from('inventory_items').insert(
-          insertedProducts.map(p => ({ tenant_id: tenantId, product_id: p.id, current_stock: 0, low_stock_threshold: 5, par_level: 0, unit: 'pcs' }))
-        );
+        await supabase.from('inventory_items').insert(insertedProducts.map(p => ({ tenant_id: tenantId, product_id: p.id, current_stock: 0, low_stock_threshold: 5, par_level: 0, unit: 'pcs' })));
       }
-
       setStep('done');
       onSuccess?.();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setSaving(false);
-    }
+    } catch (e) { setError(e.message); } finally { setSaving(false); }
   };
 
   if (!open) return null;
+  const selectedCount = scannedItems.filter(i => i._selected).length;
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }}>
       <div style={{ width: '100%', maxWidth: 560, background: 'white', borderRadius: '20px 20px 0 0', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #fb923c22, #e0449a22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <ScanLine size={18} style={{ color: '#e0449a' }} />
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(var(--color-primary), 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <ScanLine size={18} color="rgb(var(--color-primary))" />
           </div>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Scan Menu</p>
             <p style={{ margin: '1px 0 0', fontSize: 12, color: '#64748b' }}>
               {step === 'upload' && 'Upload a photo of your menu'}
-              {step === 'review' && `${scannedItems.length} items found — review and edit before saving`}
+              {step === 'review' && `${scannedItems.length} items found — review before saving`}
               {step === 'done' && 'Products added successfully!'}
             </p>
           </div>
-          <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#94a3b8', padding: 4 }}>✕</button>
+          <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4, display: 'flex', alignItems: 'center' }}>
+            <X size={20} />
+          </button>
         </div>
 
         {/* Body */}
@@ -185,23 +182,21 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
 
           {/* Step: Upload */}
           {step === 'upload' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div
-                onDrop={handleDrop}
+                onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); }}
                 onDragOver={e => e.preventDefault()}
                 onClick={() => fileInputRef.current?.click()}
-                style={{
-                  border: `2px dashed ${image ? '#e0449a' : '#e2e8f0'}`,
-                  borderRadius: 14, padding: 32, textAlign: 'center', cursor: 'pointer',
-                  background: image ? '#fdf2f8' : '#f8fafc', transition: 'all 0.2s',
-                }}
+                style={{ border: `2px dashed ${image ? 'rgb(var(--color-primary))' : '#e2e8f0'}`, borderRadius: 14, padding: imagePreview ? 16 : 32, textAlign: 'center', cursor: 'pointer', background: image ? 'rgba(var(--color-primary), 0.04)' : '#f8fafc', transition: 'all 0.2s' }}
               >
                 <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleFile(e.target.files[0])} />
                 {imagePreview ? (
-                  <img src={imagePreview} style={{ maxHeight: 220, maxWidth: '100%', borderRadius: 10, objectFit: 'contain', margin: '0 auto', display: 'block' }} />
+                  <img src={imagePreview} style={{ maxHeight: 200, maxWidth: '100%', borderRadius: 10, objectFit: 'contain', margin: '0 auto', display: 'block' }} />
                 ) : (
                   <>
-                    <div style={{ fontSize: 40, marginBottom: 12 }}>📷</div>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                      <ImageIcon size={40} color="#94a3b8" />
+                    </div>
                     <p style={{ fontWeight: 600, fontSize: 14, color: '#374151', margin: '0 0 4px' }}>Tap to upload menu photo</p>
                     <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>JPG, PNG supported · Clear photos work best</p>
                   </>
@@ -213,8 +208,8 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
                   <button onClick={() => { setImage(null); setImagePreview(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', fontSize: 13, fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>
                     Change Photo
                   </button>
-                  <button onClick={handleScan} disabled={scanning} style={{ flex: 2, padding: '10px', borderRadius: 10, border: 'none', background: scanning ? '#cbd5e1' : 'linear-gradient(135deg, #fb923c, #e0449a)', color: 'white', fontSize: 13, fontWeight: 700, cursor: scanning ? 'not-allowed' : 'pointer' }}>
-                    {scanning ? '🔍 Scanning...' : '✨ Scan Menu'}
+                  <button onClick={handleScan} disabled={scanning} style={{ flex: 2, padding: '10px', borderRadius: 10, border: 'none', background: scanning ? '#cbd5e1' : primaryGradient, color: 'white', fontSize: 13, fontWeight: 700, cursor: scanning ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    {scanning ? <><Loader2 size={14} className="animate-spin" /> Scanning...</> : <><ScanLine size={14} /> Scan Menu</>}
                   </button>
                 </div>
               )}
@@ -225,8 +220,9 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
                 </div>
               )}
 
-              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#92400e' }}>
-                💡 <strong>Tips:</strong> Use a clear, well-lit photo. Ensure text is readable. Works best with printed menus.
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#92400e', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <Lightbulb size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+                <span><strong>Tips:</strong> Use a clear, well-lit photo. Ensure text is readable. Works best with printed menus.</span>
               </div>
             </div>
           )}
@@ -234,91 +230,83 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
           {/* Step: Review */}
           {step === 'review' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>{scannedItems.filter(i => i._selected).length} of {scannedItems.length} selected</p>
-                <button onClick={() => setScannedItems(prev => prev.map(i => ({ ...i, _selected: true })))} style={{ fontSize: 12, color: '#e0449a', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Select all</button>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>
+                  {analyzingImages ? '✨ Fetching product images...' : `${selectedCount} of ${scannedItems.length} selected`}
+                </p>
+                <button onClick={() => setScannedItems(prev => prev.map(i => ({ ...i, _selected: true })))} style={{ fontSize: 12, color: 'rgb(var(--color-primary))', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Select all</button>
               </div>
 
               {scannedItems.map(item => (
-                <div key={item._id} style={{ background: item._selected ? '#fdf9ff' : '#f8fafc', border: `1px solid ${item._selected ? '#e0449a33' : '#e2e8f0'}`, borderRadius: 12, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <input type="checkbox" checked={item._selected} onChange={() => toggleItem(item._id)} style={{ width: 16, height: 16, accentColor: '#e0449a', flexShrink: 0 }} />
+                <div key={item._id} style={{ background: item._selected ? 'rgba(var(--color-primary), 0.04)' : '#f8fafc', border: `1px solid ${item._selected ? 'rgba(var(--color-primary), 0.25)' : '#e2e8f0'}`, borderRadius: 12, padding: '10px 12px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+
+                  {/* Checkbox */}
+                  <input type="checkbox" checked={item._selected} onChange={() => toggleItem(item._id)} style={{ width: 16, height: 16, accentColor: 'rgb(var(--color-primary))', flexShrink: 0, marginTop: 3 }} />
+
+                  {/* Product image thumbnail */}
+                  <div style={{ width: 44, height: 44, borderRadius: 8, background: '#f1f5f9', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0' }}>
+                    {item.image_url
+                      ? <img src={item.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : analyzingImages ? <Loader2 size={14} color="#94a3b8" className="animate-spin" /> : <ImageIcon size={16} color="#cbd5e1" />
+                    }
+                  </div>
+
+                  {/* Fields */}
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {/* Name row */}
                     <input
                       value={item.name}
                       onChange={e => updateItem(item._id, 'name', e.target.value)}
-                      style={{ flex: 1, fontWeight: 600, fontSize: 14, color: '#0f172a', border: 'none', background: 'transparent', outline: 'none', padding: 0 }}
+                      style={{ width: '100%', fontWeight: 600, fontSize: 13, color: '#0f172a', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', outline: 'none', background: 'white', boxSizing: 'border-box' }}
                       placeholder="Product name"
                     />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                      <span style={{ fontSize: 12, color: '#64748b' }}>$</span>
-                      <input
-                        type="number"
-                        value={item.price}
-                        onChange={e => updateItem(item._id, 'price', e.target.value)}
-                        style={{ width: 64, fontSize: 14, fontWeight: 700, color: '#e0449a', border: 'none', background: 'transparent', outline: 'none', textAlign: 'right', padding: 0 }}
-                      />
+                    {/* Price + Category row */}
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: 6, background: 'white', overflow: 'hidden', width: 90, flexShrink: 0 }}>
+                        <span style={{ fontSize: 11, color: '#94a3b8', padding: '0 4px 0 6px', fontWeight: 500 }}>$</span>
+                        <input type="number" value={item.price} onChange={e => updateItem(item._id, 'price', e.target.value)} style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'rgb(var(--color-primary))', border: 'none', outline: 'none', padding: '4px 6px 4px 0', background: 'transparent', width: '100%' }} />
+                      </div>
+                      <input value={item.category || ''} onChange={e => updateItem(item._id, 'category', e.target.value)} placeholder="Category" style={{ flex: 1, fontSize: 11, color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', background: 'white', outline: 'none', minWidth: 0 }} />
                     </div>
-                    <button onClick={() => removeItem(item._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', padding: 2 }}>
-                      <Trash2 size={14} />
-                    </button>
+                    {/* Description row */}
+                    <input value={item.description || ''} onChange={e => updateItem(item._id, 'description', e.target.value)} placeholder="Description (optional)" style={{ width: '100%', fontSize: 11, color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', background: 'white', outline: 'none', boxSizing: 'border-box' }} />
                   </div>
-                  <div style={{ display: 'flex', gap: 8, paddingLeft: 26 }}>
-                    <input
-                      value={item.category || ''}
-                      onChange={e => updateItem(item._id, 'category', e.target.value)}
-                      placeholder="Category"
-                      style={{ flex: 1, fontSize: 11, color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, padding: '3px 8px', background: 'white', outline: 'none' }}
-                    />
-                    <input
-                      value={item.description || ''}
-                      onChange={e => updateItem(item._id, 'description', e.target.value)}
-                      placeholder="Description (optional)"
-                      style={{ flex: 2, fontSize: 11, color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, padding: '3px 8px', background: 'white', outline: 'none' }}
-                    />
-                  </div>
+
+                  {/* Delete */}
+                  <button onClick={() => removeItem(item._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', padding: 2, flexShrink: 0, marginTop: 2 }}>
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               ))}
 
-              {error && (
-                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#dc2626' }}>
-                  {error}
-                </div>
-              )}
+              {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#dc2626' }}>{error}</div>}
             </div>
           )}
 
           {/* Step: Done */}
           {step === 'done' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 0', gap: 16 }}>
-              <CheckCircle2 size={56} style={{ color: '#10b981' }} />
+              <CheckCircle2 size={56} color="#10b981" />
               <p style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: 0 }}>Products Added!</p>
-              <p style={{ fontSize: 14, color: '#64748b', margin: 0, textAlign: 'center' }}>
-                {scannedItems.filter(i => i._selected).length} products have been added to your catalog.
-              </p>
+              <p style={{ fontSize: 14, color: '#64748b', margin: 0, textAlign: 'center' }}>{selectedCount} products have been added to your catalog.</p>
             </div>
           )}
         </div>
 
         {/* Footer */}
         {step === 'review' && (
-          <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10 }}>
-            <button onClick={() => setStep('upload')} style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', fontSize: 13, fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>
-              ← Rescan
+          <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10, flexShrink: 0 }}>
+            <button onClick={() => setStep('upload')} style={{ flex: 1, padding: 11, borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', fontSize: 13, fontWeight: 600, color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <ScanLine size={14} /> Rescan
             </button>
-            <button
-              onClick={handleSave}
-              disabled={saving || !scannedItems.some(i => i._selected)}
-              style={{ flex: 2, padding: '11px', borderRadius: 10, border: 'none', background: saving ? '#cbd5e1' : 'linear-gradient(135deg, #fb923c, #e0449a)', color: 'white', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}
-            >
-              {saving ? 'Saving...' : `Add ${scannedItems.filter(i => i._selected).length} Products`}
+            <button onClick={handleSave} disabled={saving || !selectedCount} style={{ flex: 2, padding: 11, borderRadius: 10, border: 'none', background: saving || !selectedCount ? '#cbd5e1' : primaryGradient, color: 'white', fontSize: 13, fontWeight: 700, cursor: saving || !selectedCount ? 'not-allowed' : 'pointer' }}>
+              {saving ? 'Saving...' : `Add ${selectedCount} Products`}
             </button>
           </div>
         )}
         {step === 'done' && (
-          <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9' }}>
-            <button onClick={handleClose} style={{ width: '100%', padding: '11px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #fb923c, #e0449a)', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-              Done
-            </button>
+          <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', flexShrink: 0 }}>
+            <button onClick={handleClose} style={{ width: '100%', padding: 11, borderRadius: 10, border: 'none', background: primaryGradient, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Done</button>
           </div>
         )}
       </div>
