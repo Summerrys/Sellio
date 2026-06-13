@@ -382,6 +382,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
 
           {/* AI Assistant */}
+          <div onTouchStart={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
           <AIProductAssistant
             ref={aiAssistantRef}
             onApply={async (data) => {
@@ -416,6 +417,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
             currency={tenant?.currency || 'SGD'}
             categories={categories}
           />
+          </div>
 
 
 
