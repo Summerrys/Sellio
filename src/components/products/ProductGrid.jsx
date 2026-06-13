@@ -23,47 +23,51 @@ function StockBadge({ product }) {
 
 export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMode = 'list', selectionMode = false, selectedIds = new Set(), onLongPress, onToggleSelect }) {
 
-  const makeLongPressProps = (productId, onEditFn) => {
-    let timer = null;
-    let moved = false;
-    let touchHandled = false;
-    return {
-      onTouchStart: (e) => {
-        moved = false;
-        touchHandled = false;
-        timer = setTimeout(() => {
-          if (!moved) {
-            touchHandled = true;
-            onLongPress?.(productId);
-          }
-        }, 500);
-      },
-      onTouchMove: () => { moved = true; clearTimeout(timer); },
-      onTouchEnd: (e) => {
-        clearTimeout(timer);
-        if (!moved && !touchHandled) {
-          touchHandled = true;
-          if (selectionMode) {
-            onToggleSelect?.(productId);
-          } else {
-            onEditFn();
-          }
+  const timerRef = React.useRef(null);
+  const movedRef = React.useRef(false);
+  const longPressedRef = React.useRef(false);
+  const activeProductRef = React.useRef(null);
+
+  const makeLongPressProps = (productId, onEditFn) => ({
+    onTouchStart: (e) => {
+      movedRef.current = false;
+      longPressedRef.current = false;
+      activeProductRef.current = productId;
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        if (!movedRef.current && activeProductRef.current === productId) {
+          longPressedRef.current = true;
+          onLongPress?.(productId);
         }
-      },
-      onMouseDown: () => {
-        touchHandled = false;
-        timer = setTimeout(() => { touchHandled = true; onLongPress?.(productId); }, 500);
-      },
-      onMouseUp: () => clearTimeout(timer),
-      onMouseLeave: () => clearTimeout(timer),
-      onClick: (e) => {
-        if (touchHandled) { touchHandled = false; return; }
-        if (selectionMode) onToggleSelect?.(productId);
-        else onEditFn();
-      },
-      style: { userSelect: 'none', WebkitUserSelect: 'none' },
-    };
-  };
+      }, 500);
+    },
+    onTouchMove: () => {
+      movedRef.current = true;
+      clearTimeout(timerRef.current);
+    },
+    onTouchEnd: (e) => {
+      clearTimeout(timerRef.current);
+      if (movedRef.current || longPressedRef.current) return;
+      e.preventDefault();
+      if (selectionMode) {
+        onToggleSelect?.(productId);
+      } else {
+        onEditFn();
+      }
+    },
+    onContextMenu: (e) => {
+      e.preventDefault();
+    },
+    onClick: (e) => {
+      if (longPressedRef.current) { longPressedRef.current = false; return; }
+      if (selectionMode) {
+        onToggleSelect?.(productId);
+      } else {
+        onEditFn();
+      }
+    },
+    style: { userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' },
+  });
 
   if (viewMode === 'list') {
     return (
