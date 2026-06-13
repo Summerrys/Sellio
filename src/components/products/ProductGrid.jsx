@@ -26,14 +26,41 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
   const makeLongPressProps = (productId, onEditFn) => {
     let timer = null;
     let moved = false;
+    let touchHandled = false;
     return {
-      onTouchStart: () => { moved = false; timer = setTimeout(() => { if (!moved) onLongPress?.(productId); }, 500); },
+      onTouchStart: (e) => {
+        moved = false;
+        touchHandled = false;
+        timer = setTimeout(() => {
+          if (!moved) {
+            touchHandled = true;
+            onLongPress?.(productId);
+          }
+        }, 500);
+      },
       onTouchMove: () => { moved = true; clearTimeout(timer); },
-      onTouchEnd: () => { clearTimeout(timer); if (!moved && selectionMode) onToggleSelect?.(productId); else if (!moved && !selectionMode) onEditFn(); },
-      onMouseDown: () => { timer = setTimeout(() => onLongPress?.(productId), 500); },
+      onTouchEnd: (e) => {
+        clearTimeout(timer);
+        if (!moved && !touchHandled) {
+          touchHandled = true;
+          if (selectionMode) {
+            onToggleSelect?.(productId);
+          } else {
+            onEditFn();
+          }
+        }
+      },
+      onMouseDown: () => {
+        touchHandled = false;
+        timer = setTimeout(() => { touchHandled = true; onLongPress?.(productId); }, 500);
+      },
       onMouseUp: () => clearTimeout(timer),
       onMouseLeave: () => clearTimeout(timer),
-      onClick: () => { if (selectionMode) onToggleSelect?.(productId); else onEditFn(); },
+      onClick: (e) => {
+        if (touchHandled) { touchHandled = false; return; }
+        if (selectionMode) onToggleSelect?.(productId);
+        else onEditFn();
+      },
       style: { userSelect: 'none', WebkitUserSelect: 'none' },
     };
   };

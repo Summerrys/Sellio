@@ -43,7 +43,6 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
   const [image, setImage] = React.useState(null);
   const [imagePreview, setImagePreview] = React.useState(null);
   const [scanning, setScanning] = React.useState(false);
-  const [analyzingImages, setAnalyzingImages] = React.useState(false);
   const [scannedItems, setScannedItems] = React.useState([]);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState(null);
@@ -52,7 +51,7 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
   const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
   const primaryGradient = 'var(--color-primary-gradient)';
 
-  const reset = () => { setImage(null); setImagePreview(null); setScanning(false); setAnalyzingImages(false); setScannedItems([]); setSaving(false); setError(null); setStep('upload'); };
+  const reset = () => { setImage(null); setImagePreview(null); setScanning(false); setScannedItems([]); setSaving(false); setError(null); setStep('upload'); };
   const handleClose = () => { reset(); onOpenChange(false); };
 
   const handleFile = (file) => {
@@ -62,28 +61,6 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
     reader.onload = e => setImagePreview(e.target.result);
     reader.readAsDataURL(file);
     setError(null);
-  };
-
-  const analyzeItemImages = async (items, base64, mediaType) => {
-    setAnalyzingImages(true);
-    try {
-      const analyzed = await Promise.all(items.map(async (item) => {
-        try {
-          const res = await fetch('https://selliosg.base44.app/api/functions/analyzeProductImage', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageBase64: base64, productName: item.name }),
-          });
-          const data = await res.json();
-          return { ...item, image_url: data?.imageUrl || null, _aiAnalyzed: true };
-        } catch {
-          return { ...item, image_url: null };
-        }
-      }));
-      return analyzed;
-    } finally {
-      setAnalyzingImages(false);
-    }
   };
 
   const handleScan = async () => {
@@ -105,8 +82,6 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
       setScanning(false);
       setScannedItems(rawItems);
       setStep('review');
-      const analyzed = await analyzeItemImages(rawItems, base64, mediaType);
-      setScannedItems(analyzed.map((item, i) => ({ ...item, _id: i, _selected: true })));
     } catch (e) { setError(e.message); setScanning(false); }
   };
 
@@ -232,7 +207,7 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
                 <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>
-                  {analyzingImages ? '✨ Fetching product images...' : `${selectedCount} of ${scannedItems.length} selected`}
+                  {`${selectedCount} of ${scannedItems.length} selected`}
                 </p>
                 <button onClick={() => setScannedItems(prev => prev.map(i => ({ ...i, _selected: true })))} style={{ fontSize: 12, color: 'rgb(var(--color-primary))', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Select all</button>
               </div>
@@ -247,7 +222,7 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
                   <div style={{ width: 44, height: 44, borderRadius: 8, background: '#f1f5f9', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0' }}>
                     {item.image_url
                       ? <img src={item.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : analyzingImages ? <Loader2 size={14} color="#94a3b8" className="animate-spin" /> : <ImageIcon size={16} color="#cbd5e1" />
+                      : <ImageIcon size={16} color="#cbd5e1" />
                     }
                   </div>
 
