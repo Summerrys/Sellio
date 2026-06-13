@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PullToRefresh from '../components/ui-custom/PullToRefresh';
 import { getSupabase } from '@/lib/supabaseClient';
@@ -12,7 +12,7 @@ import ProductGrid from '../components/products/ProductGrid';
 import ProductFormDialog from '../components/products/ProductFormDialog.jsx';
 import ProductImportDialog from '../components/products/ProductImportDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package } from 'lucide-react';
+import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package, ScanLine, Pencil, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
@@ -38,6 +38,294 @@ const TEMPLATE_ROWS = [
   'Simple Snack,,No variants,Food,9.90,5.00,,200,20,false,true,false,"snack",,',
 ];
 
+function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess }) {
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [scanning, setScanning] = useState(false);
+  const [scannedItems, setScannedItems] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [step, setStep] = useState('upload'); // 'upload' | 'review' | 'done'
+  const fileInputRef = React.useRef(null);
+  const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
+
+  const reset = () => {
+    setImage(null); setImagePreview(null); setScanning(false);
+    setScannedItems([]); setSaving(false); setError(null); setStep('upload');
+  };
+
+  const handleClose = () => { reset(); onOpenChange(false); };
+
+  const handleFile = (file) => {
+    if (!file) return;
+    setImage(file);
+    const reader = new FileReader();
+    reader.onload = e => setImagePreview(e.target.result);
+    reader.readAsDataURL(file);
+    setError(null);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    handleFile(e.dataTransfer.files[0]);
+  };
+
+  const handleScan = async () => {
+    if (!image) return;
+    setScanning(true); setError(null);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise((res, rej) => {
+        reader.onload = e => res(e.target.result.split(',')[1]);
+        reader.onerror = rej;
+        reader.readAsDataURL(image);
+      });
+      const mediaType = image.type || 'image/jpeg';
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/scanMenu`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64, mediaType, tenantId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Scan failed');
+      if (!data.items?.length) throw new Error('No items found. Try a clearer photo.');
+      setScannedItems(data.items.map((item, i) => ({ ...item, _id: i, _selected: true })));
+      setStep('review');
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const updateItem = (id, field, value) => {
+    setScannedItems(prev => prev.map(item => item._id === id ? { ...item, [field]: value } : item));
+  };
+
+  const removeItem = (id) => setScannedItems(prev => prev.filter(item => item._id !== id));
+
+  const toggleItem = (id) => setScannedItems(prev => prev.map(item => item._id === id ? { ...item, _selected: !item._selected } : item));
+
+  const handleSave = async () => {
+    const selected = scannedItems.filter(i => i._selected);
+    if (!selected.length) return;
+    setSaving(true); setError(null);
+    try {
+      const supabase = (await import('@/lib/supabaseClient')).getSupabase ? await (await import('@/lib/supabaseClient')).getSupabase() : null;
+      if (!supabase) throw new Error('Cannot connect to database');
+
+      // Create missing categories
+      const uniqueCats = [...new Set(selected.map(i => i.category).filter(Boolean))];
+      const catMap = {};
+      categories.forEach(c => { catMap[c.name.toLowerCase()] = c.id; });
+
+      for (const catName of uniqueCats) {
+        if (!catMap[catName.toLowerCase()]) {
+          const slug = catName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          const { data: newCat } = await supabase.from('categories').insert({ tenant_id: tenantId, name: catName, slug, is_active: true }).select().single();
+          if (newCat) catMap[catName.toLowerCase()] = newCat.id;
+        }
+      }
+
+      // Insert products
+      const productRows = selected.map(item => ({
+        tenant_id: tenantId,
+        name: item.name,
+        price: parseFloat(item.price) || 0,
+        description: item.description || null,
+        category_id: catMap[item.category?.toLowerCase()] || null,
+        slug: item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now(),
+        is_active: true,
+        variants: item.variants || [],
+      }));
+
+      const { data: insertedProducts, error: prodError } = await supabase.from('products').insert(productRows).select();
+      if (prodError) throw prodError;
+
+      // Create inventory rows
+      if (insertedProducts?.length) {
+        await supabase.from('inventory_items').insert(
+          insertedProducts.map(p => ({ tenant_id: tenantId, product_id: p.id, current_stock: 0, low_stock_threshold: 5, par_level: 0, unit: 'pcs' }))
+        );
+      }
+
+      setStep('done');
+      onSuccess?.();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }}>
+      <div style={{ width: '100%', maxWidth: 560, background: 'white', borderRadius: '20px 20px 0 0', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+        {/* Header */}
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #fb923c22, #e0449a22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <ScanLine size={18} style={{ color: '#e0449a' }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Scan Menu</p>
+            <p style={{ margin: '1px 0 0', fontSize: 12, color: '#64748b' }}>
+              {step === 'upload' && 'Upload a photo of your menu'}
+              {step === 'review' && `${scannedItems.length} items found — review and edit before saving`}
+              {step === 'done' && 'Products added successfully!'}
+            </p>
+          </div>
+          <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#94a3b8', padding: 4 }}>✕</button>
+        </div>
+
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
+
+          {/* Step: Upload */}
+          {step === 'upload' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div
+                onDrop={handleDrop}
+                onDragOver={e => e.preventDefault()}
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  border: `2px dashed ${image ? '#e0449a' : '#e2e8f0'}`,
+                  borderRadius: 14, padding: 32, textAlign: 'center', cursor: 'pointer',
+                  background: image ? '#fdf2f8' : '#f8fafc', transition: 'all 0.2s',
+                }}
+              >
+                <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleFile(e.target.files[0])} />
+                {imagePreview ? (
+                  <img src={imagePreview} style={{ maxHeight: 220, maxWidth: '100%', borderRadius: 10, objectFit: 'contain', margin: '0 auto', display: 'block' }} />
+                ) : (
+                  <>
+                    <div style={{ fontSize: 40, marginBottom: 12 }}>📷</div>
+                    <p style={{ fontWeight: 600, fontSize: 14, color: '#374151', margin: '0 0 4px' }}>Tap to upload menu photo</p>
+                    <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>JPG, PNG supported · Clear photos work best</p>
+                  </>
+                )}
+              </div>
+
+              {imagePreview && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => { setImage(null); setImagePreview(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', fontSize: 13, fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>
+                    Change Photo
+                  </button>
+                  <button onClick={handleScan} disabled={scanning} style={{ flex: 2, padding: '10px', borderRadius: 10, border: 'none', background: scanning ? '#cbd5e1' : 'linear-gradient(135deg, #fb923c, #e0449a)', color: 'white', fontSize: 13, fontWeight: 700, cursor: scanning ? 'not-allowed' : 'pointer' }}>
+                    {scanning ? '🔍 Scanning...' : '✨ Scan Menu'}
+                  </button>
+                </div>
+              )}
+
+              {error && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#dc2626', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <AlertCircle size={16} /> {error}
+                </div>
+              )}
+
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#92400e' }}>
+                💡 <strong>Tips:</strong> Use a clear, well-lit photo. Ensure text is readable. Works best with printed menus.
+              </div>
+            </div>
+          )}
+
+          {/* Step: Review */}
+          {step === 'review' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>{scannedItems.filter(i => i._selected).length} of {scannedItems.length} selected</p>
+                <button onClick={() => setScannedItems(prev => prev.map(i => ({ ...i, _selected: true })))} style={{ fontSize: 12, color: '#e0449a', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Select all</button>
+              </div>
+
+              {scannedItems.map(item => (
+                <div key={item._id} style={{ background: item._selected ? '#fdf9ff' : '#f8fafc', border: `1px solid ${item._selected ? '#e0449a33' : '#e2e8f0'}`, borderRadius: 12, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <input type="checkbox" checked={item._selected} onChange={() => toggleItem(item._id)} style={{ width: 16, height: 16, accentColor: '#e0449a', flexShrink: 0 }} />
+                    <input
+                      value={item.name}
+                      onChange={e => updateItem(item._id, 'name', e.target.value)}
+                      style={{ flex: 1, fontWeight: 600, fontSize: 14, color: '#0f172a', border: 'none', background: 'transparent', outline: 'none', padding: 0 }}
+                      placeholder="Product name"
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                      <span style={{ fontSize: 12, color: '#64748b' }}>$</span>
+                      <input
+                        type="number"
+                        value={item.price}
+                        onChange={e => updateItem(item._id, 'price', e.target.value)}
+                        style={{ width: 64, fontSize: 14, fontWeight: 700, color: '#e0449a', border: 'none', background: 'transparent', outline: 'none', textAlign: 'right', padding: 0 }}
+                      />
+                    </div>
+                    <button onClick={() => removeItem(item._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', padding: 2 }}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, paddingLeft: 26 }}>
+                    <input
+                      value={item.category || ''}
+                      onChange={e => updateItem(item._id, 'category', e.target.value)}
+                      placeholder="Category"
+                      style={{ flex: 1, fontSize: 11, color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, padding: '3px 8px', background: 'white', outline: 'none' }}
+                    />
+                    <input
+                      value={item.description || ''}
+                      onChange={e => updateItem(item._id, 'description', e.target.value)}
+                      placeholder="Description (optional)"
+                      style={{ flex: 2, fontSize: 11, color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, padding: '3px 8px', background: 'white', outline: 'none' }}
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {error && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#dc2626' }}>
+                  {error}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step: Done */}
+          {step === 'done' && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 0', gap: 16 }}>
+              <CheckCircle2 size={56} style={{ color: '#10b981' }} />
+              <p style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: 0 }}>Products Added!</p>
+              <p style={{ fontSize: 14, color: '#64748b', margin: 0, textAlign: 'center' }}>
+                {scannedItems.filter(i => i._selected).length} products have been added to your catalog.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        {step === 'review' && (
+          <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10 }}>
+            <button onClick={() => setStep('upload')} style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', fontSize: 13, fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>
+              ← Rescan
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || !scannedItems.some(i => i._selected)}
+              style={{ flex: 2, padding: '11px', borderRadius: 10, border: 'none', background: saving ? '#cbd5e1' : 'linear-gradient(135deg, #fb923c, #e0449a)', color: 'white', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}
+            >
+              {saving ? 'Saving...' : `Add ${scannedItems.filter(i => i._selected).length} Products`}
+            </button>
+          </div>
+        )}
+        {step === 'done' && (
+          <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9' }}>
+            <button onClick={handleClose} style={{ width: '100%', padding: '11px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #fb923c, #e0449a)', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              Done
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Products() {
   const { tenantId, tenant } = useTenant();
   const queryClient = useQueryClient();
@@ -55,6 +343,7 @@ export default function Products() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [editingProduct, setEditingProduct] = useState(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [scanMenuOpen, setScanMenuOpen] = useState(false);
 
   // Auto-open new product dialog when navigated from Sell button (?new=1)
   const urlParams = new URLSearchParams(window.location.search);
@@ -222,6 +511,16 @@ export default function Products() {
                   <span className="hidden sm:inline">Import</span>
                 </Button>
                 <Button
+                  onClick={() => setScanMenuOpen(true)}
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 border-orange-300 text-orange-600 hover:bg-orange-50"
+                >
+                  <ScanLine className="w-4 h-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Scan Menu</span>
+                  <span className="sm:hidden">Scan</span>
+                </Button>
+                <Button
                   onClick={handleAdd}
                   size="sm"
                   className="text-white gap-1.5"
@@ -331,6 +630,18 @@ export default function Products() {
           onOpenChange={setImportDialogOpen}
           tenantId={tenantId}
           categories={categories}
+        />
+
+        {/* Scan Menu Dialog */}
+        <ScanMenuDialog
+          open={scanMenuOpen}
+          onOpenChange={setScanMenuOpen}
+          tenantId={tenantId}
+          categories={categories}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
+            queryClient.invalidateQueries({ queryKey: ['categories', tenantId] });
+          }}
         />
       </div>
       </PullToRefresh>
