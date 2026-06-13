@@ -23,30 +23,31 @@ function StockBadge({ product }) {
 
 export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMode = 'list', selectionMode = false, selectedIds = new Set(), onLongPress, onToggleSelect }) {
 
-  const lpState = React.useRef({ timer: null, moved: false, longPressed: false, activeId: null });
+  const timerRef = React.useRef(null);
+  const movedRef = React.useRef(false);
+  const longPressedRef = React.useRef(false);
+  const activeProductRef = React.useRef(null);
 
   const makeLongPressProps = (productId, onEditFn) => ({
     onTouchStart: (e) => {
-      const s = lpState.current;
-      s.moved = false;
-      s.longPressed = false;
-      s.activeId = productId;
-      clearTimeout(s.timer);
-      s.timer = setTimeout(() => {
-        if (!s.moved && s.activeId === productId) {
-          s.longPressed = true;
+      movedRef.current = false;
+      longPressedRef.current = false;
+      activeProductRef.current = productId;
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        if (!movedRef.current && activeProductRef.current === productId) {
+          longPressedRef.current = true;
           onLongPress?.(productId);
         }
       }, 500);
     },
     onTouchMove: () => {
-      lpState.current.moved = true;
-      clearTimeout(lpState.current.timer);
+      movedRef.current = true;
+      clearTimeout(timerRef.current);
     },
     onTouchEnd: (e) => {
-      const s = lpState.current;
-      clearTimeout(s.timer);
-      if (s.moved || s.longPressed) return;
+      clearTimeout(timerRef.current);
+      if (movedRef.current || longPressedRef.current) return;
       e.preventDefault();
       if (selectionMode) {
         onToggleSelect?.(productId);
@@ -54,10 +55,11 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
         onEditFn();
       }
     },
-    onContextMenu: (e) => e.preventDefault(),
+    onContextMenu: (e) => {
+      e.preventDefault();
+    },
     onClick: (e) => {
-      const s = lpState.current;
-      if (s.longPressed) { s.longPressed = false; return; }
+      if (longPressedRef.current) { longPressedRef.current = false; return; }
       if (selectionMode) {
         onToggleSelect?.(productId);
       } else {
