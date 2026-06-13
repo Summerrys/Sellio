@@ -2,7 +2,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit2, AlertCircle, Package } from 'lucide-react';
+import { Edit2, AlertCircle, Package, CheckCircle2, Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import PriceDisplay from './PriceDisplay';
 
@@ -21,21 +21,47 @@ function StockBadge({ product }) {
   return <Badge className="bg-green-100 text-green-700 border-green-300" style={{ color: '#166534' }}>{stock} in stock</Badge>;
 }
 
-export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMode = 'list' }) {
+export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMode = 'list', selectionMode = false, selectedIds = new Set(), onLongPress, onToggleSelect }) {
+
+  const makeLongPressProps = (productId, onEditFn) => {
+    let timer = null;
+    let moved = false;
+    return {
+      onTouchStart: () => { moved = false; timer = setTimeout(() => { if (!moved) onLongPress?.(productId); }, 500); },
+      onTouchMove: () => { moved = true; clearTimeout(timer); },
+      onTouchEnd: () => { clearTimeout(timer); if (!moved && selectionMode) onToggleSelect?.(productId); else if (!moved && !selectionMode) onEditFn(); },
+      onMouseDown: () => { timer = setTimeout(() => onLongPress?.(productId), 500); },
+      onMouseUp: () => clearTimeout(timer),
+      onMouseLeave: () => clearTimeout(timer),
+      onClick: () => { if (selectionMode) onToggleSelect?.(productId); else onEditFn(); },
+      style: { userSelect: 'none', WebkitUserSelect: 'none' },
+    };
+  };
+
   if (viewMode === 'list') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {products.map((product) => (
           <div
             key={product.id}
-            onClick={() => onEdit(product)}
+            {...makeLongPressProps(product.id, () => onEdit(product))}
             style={{
-              display: 'flex', gap: '12px', background: 'white',
-              borderRadius: '12px', border: '0.5px solid #e5e7eb',
+              display: 'flex', gap: '12px', background: selectedIds.has(product.id) ? 'rgba(var(--color-primary), 0.06)' : 'white',
+              borderRadius: '12px', border: `0.5px solid ${selectedIds.has(product.id) ? 'rgb(var(--color-primary))' : '#e5e7eb'}`,
               padding: '12px', cursor: 'pointer',
               opacity: product.is_active === false ? 0.6 : 1,
+              transition: 'all 0.15s',
+              userSelect: 'none', WebkitUserSelect: 'none',
             }}
           >
+            {selectionMode && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, width: 20 }}>
+                {selectedIds.has(product.id)
+                  ? <CheckCircle2 size={18} color="rgb(var(--color-primary))" />
+                  : <Circle size={18} color="#cbd5e1" />
+                }
+              </div>
+            )}
             <div style={{ width: 72, height: 72, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
               {product.image_url ? (
                 <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -72,11 +98,13 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
       {products.map((product) => (
         <Card
           key={product.id}
+          {...makeLongPressProps(product.id, () => onEdit(product))}
           className={cn(
             "group border-0 shadow-sm hover:shadow-md transition-all overflow-hidden cursor-pointer",
-            !product.is_active && "opacity-60"
+            !product.is_active && "opacity-60",
+            selectedIds.has(product.id) && "ring-2 ring-[rgb(var(--color-primary))]"
           )}
-          onClick={() => onEdit(product)}
+          style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
         >
           <div className="aspect-square bg-slate-100 relative overflow-hidden" style={{ position: 'relative' }}>
             {product.image_url ? (
@@ -93,6 +121,14 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
             )}
             {product.is_featured && (
               <span style={{ position: 'absolute', top: 8, left: 8, background: '#fbbf24', color: 'white', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 999, zIndex: 1 }}>⭐ Featured</span>
+            )}
+            {selectionMode && (
+              <div style={{ position: 'absolute', top: 6, right: 6, zIndex: 2 }}>
+                {selectedIds.has(product.id)
+                  ? <CheckCircle2 size={22} color="rgb(var(--color-primary))" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />
+                  : <Circle size={22} color="white" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />
+                }
+              </div>
             )}
           </div>
           <div className="p-3">

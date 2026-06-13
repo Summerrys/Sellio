@@ -12,7 +12,7 @@ import ProductGrid from '../components/products/ProductGrid';
 import ProductFormDialog from '../components/products/ProductFormDialog.jsx';
 import ProductImportDialog from '../components/products/ProductImportDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package, ScanLine, Trash2, CheckCircle2, AlertCircle, ImageIcon, Lightbulb, Loader2, X } from 'lucide-react';
+import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package, ScanLine, Trash2, CheckCircle2, AlertCircle, ImageIcon, Lightbulb, Loader2, X, CheckSquare } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
@@ -332,6 +332,9 @@ export default function Products() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [scanMenuOpen, setScanMenuOpen] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   // Auto-open new product dialog when navigated from Sell button (?new=1)
   const urlParams = new URLSearchParams(window.location.search);
@@ -450,6 +453,44 @@ export default function Products() {
       queryClient.invalidateQueries({ queryKey: ['categories', tenantId] }),
     ]), [queryClient, tenantId]);
 
+  const handleLongPress = (productId) => {
+    setSelectionMode(true);
+    setSelectedIds(new Set([productId]));
+  };
+
+  const handleToggleSelect = (productId) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    setSelectedIds(new Set(filteredProducts.map(p => p.id)));
+  };
+
+  const handleCancelSelection = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+    setDeleteConfirm(false);
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedIds.size) return;
+    try {
+      const supabase = await getSupabase();
+      const ids = [...selectedIds];
+      await supabase.from('inventory_items').delete().in('product_id', ids);
+      await supabase.from('products').delete().in('id', ids);
+      await queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
+      handleCancelSelection();
+    } catch (e) {
+      console.error('Bulk delete failed:', e);
+    }
+  };
+
   return (
     <RequirePermission permission="products.view">
       <PullToRefresh onRefresh={handleRefresh}>
@@ -521,6 +562,36 @@ export default function Products() {
               </RequirePermission>
           </div>
         </div>
+
+        {/* Selection toolbar */}
+        {selectionMode && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(var(--color-primary), 0.06)', borderRadius: 12, border: '1px solid rgba(var(--color-primary), 0.2)', marginBottom: 4 }}>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'rgb(var(--color-primary))' }}>
+              {selectedIds.size} selected
+            </span>
+            <button onClick={handleSelectAll} style={{ fontSize: 12, fontWeight: 600, color: 'rgb(var(--color-primary))', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}>
+              Select all ({filteredProducts.length})
+            </button>
+            {!deleteConfirm ? (
+              <button
+                onClick={() => setDeleteConfirm(true)}
+                disabled={!selectedIds.size}
+                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 8, border: 'none', background: selectedIds.size ? '#ef4444' : '#cbd5e1', color: 'white', fontSize: 12, fontWeight: 700, cursor: selectedIds.size ? 'pointer' : 'not-allowed' }}
+              >
+                <Trash2 size={13} /> Delete
+              </button>
+            ) : (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>Delete {selectedIds.size}?</span>
+                <button onClick={handleBulkDelete} style={{ padding: '5px 10px', borderRadius: 7, border: 'none', background: '#ef4444', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Yes</button>
+                <button onClick={() => setDeleteConfirm(false)} style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid #e2e8f0', background: 'white', fontSize: 12, fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>No</button>
+              </div>
+            )}
+            <button onClick={handleCancelSelection} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center' }}>
+              <X size={18} />
+            </button>
+          </div>
+        )}
 
         {/* Filters and View Toggle */}
         <div className="flex flex-col gap-3">
@@ -596,11 +667,15 @@ export default function Products() {
             onAction={handleAdd}
           />
         ) : (
-          <ProductGrid 
-            products={filteredProducts} 
+          <ProductGrid
+            products={filteredProducts}
             onEdit={handleEdit}
             currency={tenant?.currency || 'SGD'}
             viewMode={viewMode}
+            selectionMode={selectionMode}
+            selectedIds={selectedIds}
+            onLongPress={handleLongPress}
+            onToggleSelect={handleToggleSelect}
           />
         )}
 
