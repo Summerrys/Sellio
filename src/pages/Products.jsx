@@ -248,8 +248,8 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
                   </div>
 
                   {/* Delete */}
-                  <button onClick={() => removeItem(item._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', padding: 2, flexShrink: 0, marginTop: 2 }}>
-                    <Trash2 size={14} />
+                  <button onClick={() => removeItem(item._id)} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, cursor: 'pointer', color: '#ef4444', padding: '4px 6px', flexShrink: 0, marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Trash2 size={13} />
                   </button>
                 </div>
               ))}
