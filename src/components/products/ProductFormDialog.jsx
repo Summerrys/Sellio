@@ -68,6 +68,34 @@ import AIProductAssistant, { cleanupDeletedImages } from './AIProductAssistant';
 import StockAdjustmentPanel from '../inventory/StockAdjustmentPanel';
 import { Pencil, Plus } from 'lucide-react';
 
+const syncProductVariants = async (supabase, productId, tenantId, variants) => {
+  try {
+    await supabase.from('product_variants').delete().eq('product_id', productId).eq('tenant_id', tenantId);
+    if (!variants?.length) return;
+    const rows = [];
+    let sortOrder = 0;
+    for (const group of variants) {
+      if (!group.options?.length) continue;
+      for (const option of group.options) {
+        rows.push({
+          tenant_id: tenantId,
+          product_id: productId,
+          name: option.label || option.name || '',
+          type: group.name || group.type || 'option',
+          price_modifier: parseFloat(option.price_modifier) || 0,
+          sort_order: sortOrder++,
+          is_active: true,
+        });
+      }
+    }
+    if (rows.length > 0) {
+      await supabase.from('product_variants').insert(rows);
+    }
+  } catch (e) {
+    console.warn('syncProductVariants error:', e.message);
+  }
+};
+
 const deleteImageFromStorage = async (imageUrl) => {
   console.log('deleteImageFromStorage called with:', imageUrl);
   if (!imageUrl || !imageUrl.includes('supabase')) {
@@ -248,6 +276,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         const { error } = await supabase.from('products').update(payload).eq('id', product.id);
         if (error) throw new Error(error.message);
 
+        await syncProductVariants(supabase, product.id, tenantId, formData.variants);
         toast.success('Product updated');
         queryClient.setQueryData(['products', tenantId], (old) => {
           if (!Array.isArray(old)) return old;
@@ -281,6 +310,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
 
         // Show the trigger-generated SKU briefly before closing
         setSavedSku(inserted.sku || '');
+        await syncProductVariants(supabase, inserted.id, tenantId, formData.variants);
         toast.success('Product created');
         queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
         if (aiAssistantRef.current) await cleanupDeletedImages(aiAssistantRef.current);

@@ -107,7 +107,9 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
                 {product.is_featured && <Badge className="bg-amber-500 text-white border-0 text-[10px] px-1.5 py-0">Featured</Badge>}
                 {product.is_active === false && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Inactive</Badge>}
                 {product.variants?.length > 0 && (
-                  <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 999, background: 'rgba(var(--color-primary), 0.12)', color: 'rgb(var(--color-primary))', flexShrink: 0, whiteSpace: 'nowrap' }}>VARIANTS</span>
+                  <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: 'linear-gradient(135deg, #fb923c22, #e0449a22)', color: '#e0449a', border: '1px solid #e0449a44', flexShrink: 0, whiteSpace: 'nowrap', letterSpacing: '0.04em' }}>
+                    {product.variants.length} VARIANT{product.variants.length > 1 ? 'S' : ''}
+                  </span>
                 )}
               </div>
               <p style={{ fontSize: 12, color: '#6b7280', margin: '2px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.description}</p>
@@ -167,7 +169,9 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
             <div className="flex items-center gap-1 flex-wrap mb-1">
               <h3 className="font-semibold text-slate-900 truncate text-sm">{product.name}</h3>
               {product.variants?.length > 0 && (
-                <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 999, background: 'rgba(var(--color-primary), 0.12)', color: 'rgb(var(--color-primary))', whiteSpace: 'nowrap', flexShrink: 0 }}>VARIANTS</span>
+                <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: 'linear-gradient(135deg, #fb923c22, #e0449a22)', color: '#e0449a', border: '1px solid #e0449a44', whiteSpace: 'nowrap', flexShrink: 0, letterSpacing: '0.04em' }}>
+                  {product.variants.length} VARIANT{product.variants.length > 1 ? 'S' : ''}
+                </span>
               )}
             </div>
             <div className="flex items-center justify-between gap-1 flex-wrap">

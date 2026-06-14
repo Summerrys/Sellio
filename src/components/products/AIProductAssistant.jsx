@@ -383,34 +383,65 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
               <ImagePlus className="w-4 h-4" />
               Add photo without AI
             </button>
-            {currentProductName && (
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!currentProductName?.trim()) return;
-                  setStep('uploading');
-                  try {
-                    const query = encodeURIComponent(currentProductName.trim());
-                    const res = await fetch(`https://api.unsplash.com/search/photos?query=${query}&per_page=1&orientation=squarish&client_id=YOUR_UNSPLASH_KEY`);
-                    const data = await res.json();
-                    const imageUrl = data?.results?.[0]?.urls?.regular;
-                    if (imageUrl) {
-                      onImageChange?.(imageUrl);
-                      setPreview(imageUrl);
+            <div className="mt-2 border-t border-slate-200 pt-3">
+              <p className="text-xs text-slate-400 text-center mb-2">Or find a stock image</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  defaultValue={currentProductName || ''}
+                  placeholder='Tell me what it is...'
+                  id="stock-image-search-input"
+                  className="flex-1 text-sm px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-slate-400"
+                  onKeyDown={async (e) => {
+                    if (e.key !== 'Enter') return;
+                    const query = e.target.value.trim();
+                    if (!query) return;
+                    setStep('uploading');
+                    try {
+                      const encoded = encodeURIComponent(query);
+                      const imageUrl = `https://source.unsplash.com/400x400/?${encoded}&t=${Date.now()}`;
+                      const imgRes = await fetch(imageUrl);
+                      const blob = await imgRes.blob();
+                      const file = new File([blob], `stock-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                      const publicUrl = await uploadToStorage(file);
+                      onImageChange?.(publicUrl);
+                      setPreview(publicUrl);
                       setStep('image_only');
-                    } else {
+                    } catch {
                       setStep('idle');
+                      toast.error('Could not find stock image');
                     }
-                  } catch {
-                    setStep('idle');
-                  }
-                }}
-                className="w-full mt-1 flex items-center justify-center gap-2 text-sm text-indigo-500 hover:text-indigo-700 py-2"
-              >
-                <Search className="w-4 h-4" />
-                Find stock image for "{currentProductName}"
-              </button>
-            )}
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const input = document.getElementById('stock-image-search-input');
+                    const query = input?.value?.trim() || currentProductName?.trim();
+                    if (!query) return;
+                    setStep('uploading');
+                    try {
+                      const encoded = encodeURIComponent(query);
+                      const imageUrl = `https://source.unsplash.com/400x400/?${encoded}&t=${Date.now()}`;
+                      const imgRes = await fetch(imageUrl);
+                      const blob = await imgRes.blob();
+                      const file = new File([blob], `stock-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                      const publicUrl = await uploadToStorage(file);
+                      onImageChange?.(publicUrl);
+                      setPreview(publicUrl);
+                      setStep('image_only');
+                    } catch {
+                      setStep('idle');
+                      toast.error('Could not find stock image');
+                    }
+                  }}
+                  className="px-3 py-2 rounded-lg text-white text-sm font-medium flex-shrink-0"
+                  style={{ background: 'var(--color-primary-gradient)' }}
+                >
+                  <Search className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
             <input ref={plainImageInputRef} type="file" accept="image/*" className="hidden" onChange={handlePlainImageSelect} />
           </div>
         )}
