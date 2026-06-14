@@ -40,6 +40,8 @@ export default function Storefront() {
   const [placedOrderNumber, setPlacedOrderNumber] = useState('');
   const [copied, setCopied] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [businessHours, setBusinessHours] = useState([]);
+  const [isStoreOpen, setIsStoreOpen] = useState(true);
   const [checkoutForm, setCheckoutForm] = useState({
     name: '', phone: '', notes: '', orderType: isDineIn ? 'dine_in' : 'takeaway', tableNumber: '', address: ''
   });
@@ -74,6 +76,32 @@ export default function Storefront() {
           const { data: existingSession } = await supabase.from('table_sessions').select('id').eq('table_id', tableId).eq('tenant_id', tenantId).eq('status', 'active').maybeSingle();
           if (!existingSession) {
             await supabase.from('table_sessions').insert({ table_id: tableId, tenant_id: tenantId, status: 'active', started_at: new Date().toISOString(), total_amount: 0 });
+          }
+        }
+      }
+      // Fetch business hours only for dine-in (QR scan)
+      if (tableId && tenantData?.id) {
+        const { data: hoursData } = await supabase
+          .from('business_hours')
+          .select('day_of_week, open_time, close_time, is_closed')
+          .eq('tenant_id', tenantData.id);
+        if (hoursData?.length) {
+          setBusinessHours(hoursData);
+          const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+          const now = new Date();
+          const todayName = days[now.getDay()];
+          const todayHours = hoursData.find(h => h.day_of_week === todayName);
+          if (todayHours) {
+            if (todayHours.is_closed) {
+              setIsStoreOpen(false);
+            } else if (todayHours.open_time && todayHours.close_time) {
+              const [openH, openM] = todayHours.open_time.split(':').map(Number);
+              const [closeH, closeM] = todayHours.close_time.split(':').map(Number);
+              const currentMins = now.getHours() * 60 + now.getMinutes();
+              const openMins = openH * 60 + openM;
+              const closeMins = closeH * 60 + closeM;
+              setIsStoreOpen(currentMins >= openMins && currentMins < closeMins);
+            }
           }
         }
       }
@@ -204,27 +232,41 @@ export default function Storefront() {
 
   return (
     <>
-      <StorefrontView
-        tenant={tenant}
-        storefrontConfig={storefrontConfig}
-        theme={theme}
-        products={products}
-        categories={categories}
-        showBackButton={!isDineIn}
-        onProductModalChange={setShowProductModal}
-        cart={cart}
-        setCart={setCart}
-        showCart={showCart}
-        setShowCart={setShowCart}
-        showOrderHistory={showOrderHistory}
-        setShowOrderHistory={(v) => { setShowOrderHistory(v); if (v) loadOrderHistory(); }}
-        onAddToCart={addToCart}
-        cartCount={cartCount}
-        cartTotal={cartTotal}
-      />
+      {isDineIn && !isStoreOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 300,
+          background: '#1e293b', color: 'white',
+          padding: '10px 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          fontSize: 13, fontWeight: 600,
+        }}>
+          <span style={{ fontSize: 16 }}>🔒</span>
+          Store is currently closed — orders are not accepted at this time
+        </div>
+      )}
+      <div style={isDineIn && !isStoreOpen ? { paddingTop: 44 } : {}}>
+        <StorefrontView
+          tenant={tenant}
+          storefrontConfig={storefrontConfig}
+          theme={theme}
+          products={products}
+          categories={categories}
+          showBackButton={!isDineIn}
+          onProductModalChange={setShowProductModal}
+          cart={cart}
+          setCart={setCart}
+          showCart={showCart}
+          setShowCart={setShowCart}
+          showOrderHistory={showOrderHistory}
+          setShowOrderHistory={(v) => { setShowOrderHistory(v); if (v) loadOrderHistory(); }}
+          onAddToCart={isDineIn && !isStoreOpen ? () => {} : addToCart}
+          cartCount={cartCount}
+          cartTotal={cartTotal}
+        />
+      </div>
 
       {/* ── FLOATING CART BUTTON ── */}
-      {cartCount > 0 && !showCart && !showCheckout && (
+      {cartCount > 0 && !showCart && !showCheckout && (!isDineIn || isStoreOpen) && (
         <div style={{ position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 50 }}>
           <button onClick={() => setShowCart(true)} style={{
             background: primaryColor, color: 'white', border: 'none',
@@ -279,7 +321,13 @@ export default function Storefront() {
                   <span style={{ fontWeight: 600, fontSize: 15 }}>Total</span>
                   <span style={{ fontWeight: 700, fontSize: 18, color: primaryColor }}>{currency} {cartTotal.toFixed(2)}</span>
                 </div>
-                <button onClick={() => { setShowCart(false); setShowCheckout(true); }} style={{ width: '100%', padding: 14, background: primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Proceed to checkout</button>
+                {isDineIn && !isStoreOpen ? (
+                  <div style={{ width: '100%', padding: 14, background: '#f1f5f9', color: '#94a3b8', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, textAlign: 'center' }}>
+                    🔒 Store is closed
+                  </div>
+                ) : (
+                  <button onClick={() => { setShowCart(false); setShowCheckout(true); }} style={{ width: '100%', padding: 14, background: primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Proceed to checkout</button>
+                )}
               </>
             )}
           </div>
@@ -370,13 +418,19 @@ export default function Storefront() {
                 style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #e5e7eb', fontSize: 14, outline: 'none', resize: 'none', boxSizing: 'border-box' }}
               />
             </div>
-            <button
-              onClick={handleSubmitOrder}
-              disabled={isSubmitting}
-              style={{ width: '100%', padding: 14, background: isSubmitting ? '#94a3b8' : primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
-            >
-              {isSubmitting ? 'Placing order...' : `Place order · ${currency} ${cartTotal.toFixed(2)}`}
-            </button>
+            {isDineIn && !isStoreOpen ? (
+              <div style={{ width: '100%', padding: 14, background: '#f1f5f9', color: '#94a3b8', borderRadius: 12, fontSize: 15, fontWeight: 600, textAlign: 'center' }}>
+                🔒 Store is closed — cannot place order
+              </div>
+            ) : (
+              <button
+                onClick={handleSubmitOrder}
+                disabled={isSubmitting}
+                style={{ width: '100%', padding: 14, background: isSubmitting ? '#94a3b8' : primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
+              >
+                {isSubmitting ? 'Placing order...' : `Place order · ${currency} ${cartTotal.toFixed(2)}`}
+              </button>
+            )}
           </div>
         </div>
       )}
