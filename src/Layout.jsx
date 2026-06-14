@@ -230,35 +230,30 @@ function AppLayout({ children, currentPageName }) {
     if (!trialEnd) return;
     const hoursLeft = Math.max(0, Math.floor((new Date(trialEnd) - new Date()) / (1000 * 60 * 60)));
     if (hoursLeft > 24) return;
+    if (!tenantId) return;
 
-    // At 12hrs or less, check Stripe to see if subscription will auto-renew
-    if (hoursLeft <= 12 && tenantId) {
-      getSupabase().then(async supabase => {
-        try {
-          const { data, error } = await supabase.functions.invoke('checkSubscriptionStatus', {
-            body: { tenantId },
-          });
-          if (error) throw error;
-          if (data?.willAutoRenew) {
-            // Subscription is active and will auto-renew — no need to show modal
-            console.log('Trial will auto-renew, suppressing modal');
-            return;
-          }
-          // Not auto-renewing — show modal and disable dismiss
-          setCanDismissTrialModal(false);
-          setShowTrialModal(true);
-        } catch (e) {
-          console.warn('checkSubscriptionStatus failed, showing modal anyway:', e.message);
-          // Fail safe: show modal but allow dismiss
-          setCanDismissTrialModal(true);
-          setShowTrialModal(true);
+    // Always check Stripe when under 24hrs to see if subscription will auto-renew
+    getSupabase().then(async supabase => {
+      try {
+        const { data, error } = await supabase.functions.invoke('checkSubscriptionStatus', {
+          body: { tenantId },
+        });
+        if (error) throw error;
+        if (data?.willAutoRenew) {
+          // Subscription is active and will auto-renew — suppress modal entirely
+          console.log('Trial will auto-renew, suppressing modal');
+          return;
         }
-      });
-    } else {
-      // Between 12-24hrs: show modal, allow dismiss
-      setCanDismissTrialModal(true);
-      setShowTrialModal(true);
-    }
+        // Not auto-renewing — show modal
+        // Disable dismiss if <=12hrs left
+        setCanDismissTrialModal(hoursLeft > 12);
+        setShowTrialModal(true);
+      } catch (e) {
+        console.warn('checkSubscriptionStatus failed, showing modal anyway:', e.message);
+        setCanDismissTrialModal(true);
+        setShowTrialModal(true);
+      }
+    });
   }, [subscription, user, tenantId]);
 
   const isLocked = subscription && (

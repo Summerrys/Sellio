@@ -99,25 +99,7 @@ export default function MerchantAssistantWidget({ externalOpen, onExternalClose 
         @keyframes maBounce { 0%,60%,100% { transform:translateY(0); } 30% { transform:translateY(-6px); } }
       `}</style>
 
-      {/* Idle balloon — shows once after 30s */}
-      {showBalloon && !open && (
-        <div
-          onClick={openChat}
-          style={{
-            position: 'fixed', bottom: 100, right: 16, zIndex: 199,
-            cursor: 'pointer', animation: 'maSlideUp 0.25s ease',
-          }}
-        >
-          <div style={{
-            background: 'white', borderRadius: 14, padding: '10px 14px',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.12)', fontSize: 13,
-            color: '#374151', fontWeight: 500, whiteSpace: 'nowrap', position: 'relative',
-          }}>
-            💡 Ask me about your business
-            <div style={{ position: 'absolute', bottom: -8, right: 22, width: 0, height: 0, borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderTop: '8px solid white', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.06))' }} />
-          </div>
-        </div>
-      )}
+
 
       {/* Chat panel */}
       {open && (
