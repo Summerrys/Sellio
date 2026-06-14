@@ -171,7 +171,7 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
             width: 10,
             height: 10,
             borderRadius: '50%',
-            background: '#10b981',
+            background: (!isPreview && !isStoreOpen) ? '#ef4444' : '#10b981',
             animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
             zIndex: 1,
           }}>

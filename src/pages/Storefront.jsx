@@ -253,15 +253,12 @@ export default function Storefront() {
           display: 'flex', alignItems: 'center', gap: 14,
           borderTop: '1px solid rgba(255,255,255,0.08)',
         }}>
-          {/* Storefront + clock composite icon */}
           <div style={{ position: 'relative', flexShrink: 0, width: 40, height: 40 }}>
             <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-              {/* Store icon */}
               <rect x="6" y="14" width="22" height="16" rx="1.5" stroke="white" strokeWidth="1.8" fill="none"/>
               <path d="M4 14 L8 8 H26 L30 14" stroke="white" strokeWidth="1.8" strokeLinejoin="round" fill="none"/>
               <rect x="13" y="20" width="8" height="10" rx="1" stroke="white" strokeWidth="1.5" fill="none"/>
               <path d="M4 14 H30" stroke="white" strokeWidth="1.5"/>
-              {/* Clock badge — bottom right */}
               <circle cx="30" cy="30" r="8" fill="#0f172a" stroke="white" strokeWidth="1.5"/>
               <circle cx="30" cy="30" r="6" fill="#334155"/>
               <path d="M30 26.5 V30 L32.5 32.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -269,16 +266,39 @@ export default function Storefront() {
           </div>
           <div>
             <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'white', lineHeight: 1.3 }}>The store is closed.</p>
-            {todayHours && !todayHours.is_closed && todayHours.open_time && todayHours.close_time && (
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.3 }}>
-                Open {todayHours.open_time.replace(':','').replace(/^0/, '')} – {todayHours.close_time.replace(':','').replace(/^0/, '')}
-              </p>
-            )}
-            {todayHours?.is_closed && (
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.3 }}>
-                Closed today
-              </p>
-            )}
+            <p style={{ margin: '3px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
+              {(() => {
+                if (!businessHours?.length) return null;
+                const DAY_SHORT = { monday:'Mon', tuesday:'Tue', wednesday:'Wed', thursday:'Thu', friday:'Fri', saturday:'Sat', sunday:'Sun' };
+                const ORDER = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+                const fmt = (t) => {
+                  if (!t) return '';
+                  const [h, m] = t.split(':').map(Number);
+                  const ampm = h >= 12 ? 'PM' : 'AM';
+                  const h12 = h % 12 || 12;
+                  return m === 0 ? `${h12}${ampm}` : `${h12}:${String(m).padStart(2,'0')}${ampm}`;
+                };
+                const open = ORDER.map(d => businessHours.find(h => h.day_of_week === d)).filter(h => h && !h.is_closed);
+                if (!open.length) return 'Closed all week';
+                const groups = [];
+                let cur = null;
+                for (const h of open) {
+                  if (cur && cur.open_time === h.open_time && cur.close_time === h.close_time) {
+                    cur.days.push(h.day_of_week);
+                  } else {
+                    if (cur) groups.push(cur);
+                    cur = { days: [h.day_of_week], open_time: h.open_time, close_time: h.close_time };
+                  }
+                }
+                if (cur) groups.push(cur);
+                return groups.map(g => {
+                  const dayStr = g.days.length === 1
+                    ? DAY_SHORT[g.days[0]]
+                    : `${DAY_SHORT[g.days[0]]} – ${DAY_SHORT[g.days[g.days.length - 1]]}`;
+                  return `Open ${dayStr}, ${fmt(g.open_time)} – ${fmt(g.close_time)}`;
+                }).join(' · ');
+              })()}
+            </p>
           </div>
         </div>
       )}
@@ -535,8 +555,16 @@ export default function Storefront() {
         </div>
       )}
 
-      {products.length > 0 && !showCart && !showCheckout && !showOrderHistory && !showProductModal && (
-        <MenuAssistantWidget products={products} tenant={tenant} storefront={storefrontConfig} onProductSelect={() => {}} onAddToCart={addToCart} />
+      {products.length > 0 && !showCart && !showCheckout && !showOrderHistory && !showProductModal && (isPreview || isStoreOpen) && (
+        <MenuAssistantWidget
+          products={products}
+          tenant={tenant}
+          storefront={storefrontConfig}
+          onProductSelect={() => {}}
+          onAddToCart={addToCart}
+          isStoreOpen={isStoreOpen}
+          isPreview={isPreview}
+        />
       )}
     </>
   );
