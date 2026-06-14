@@ -249,7 +249,10 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         if (error) throw new Error(error.message);
 
         toast.success('Product updated');
-        queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
+        queryClient.setQueryData(['products', tenantId], (old) => {
+          if (!Array.isArray(old)) return old;
+          return old.map(p => p.id === product.id ? { ...p, ...payload } : p);
+        });
         if (aiAssistantRef.current) await cleanupDeletedImages(aiAssistantRef.current);
         onOpenChange(false);
       } else {
@@ -410,6 +413,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
               const updated = await db.entities.Category.filter({ tenant_id: tenantId });
               setCategories(updated);
             }}
+            currentProductName={formData.name}
             currentImageUrl={formData.image_url}
             additionalImagesOnOpen={product?.images || []}
             tenantId={tenantId}

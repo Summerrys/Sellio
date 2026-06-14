@@ -106,6 +106,9 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
                 <p style={{ fontWeight: 600, fontSize: 14, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</p>
                 {product.is_featured && <Badge className="bg-amber-500 text-white border-0 text-[10px] px-1.5 py-0">Featured</Badge>}
                 {product.is_active === false && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Inactive</Badge>}
+                {product.variants?.length > 0 && (
+                  <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 999, background: 'rgba(var(--color-primary), 0.12)', color: 'rgb(var(--color-primary))', flexShrink: 0, whiteSpace: 'nowrap' }}>VARIANTS</span>
+                )}
               </div>
               <p style={{ fontSize: 12, color: '#6b7280', margin: '2px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.description}</p>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, flexWrap: 'wrap', gap: 4 }}>
@@ -161,7 +164,12 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
             )}
           </div>
           <div className="p-3">
-            <h3 className="font-semibold text-slate-900 mb-1 truncate text-sm">{product.name}</h3>
+            <div className="flex items-center gap-1 flex-wrap mb-1">
+              <h3 className="font-semibold text-slate-900 truncate text-sm">{product.name}</h3>
+              {product.variants?.length > 0 && (
+                <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 999, background: 'rgba(var(--color-primary), 0.12)', color: 'rgb(var(--color-primary))', whiteSpace: 'nowrap', flexShrink: 0 }}>VARIANTS</span>
+              )}
+            </div>
             <div className="flex items-center justify-between gap-1 flex-wrap">
               <p className="text-sm font-bold text-[rgb(var(--color-primary))]">
                 <PriceDisplay price={product.price} compareAtPrice={product.compare_at_price} currency={currency} />

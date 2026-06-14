@@ -445,7 +445,10 @@ export default function StorefrontView({
 
         {/* Powered by footer */}
         <div style={{ textAlign: 'center', padding: '16px 0 24px', color: '#c8d0dc', fontSize: 9, letterSpacing: '0.03em' }}>
-          Powered by Sellio
+          Powered by{' '}
+          <span style={{ fontWeight: 700, background: 'linear-gradient(90deg, #fb923c, #e0449a, #8b2fc9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            Sellio
+          </span>
         </div>
       </div>
 

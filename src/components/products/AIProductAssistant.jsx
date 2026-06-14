@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useImperativeHandle } from 'react';
-import { Sparkles, Upload, Loader2, Check, AlertCircle, X, Wand2, ImagePlus, Pencil, Plus } from 'lucide-react';
+import { Sparkles, Upload, Loader2, Check, AlertCircle, X, Wand2, ImagePlus, Pencil, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -17,7 +17,7 @@ export const cleanupDeletedImages = async (componentRef) => {
   }
 };
 
-function AIProductAssistantComponent({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange, onAdditionalImagesChange, additionalImagesOnOpen, onImageDelete, onCategoriesRefresh }, ref) {
+function AIProductAssistantComponent({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange, onAdditionalImagesChange, additionalImagesOnOpen, onImageDelete, onCategoriesRefresh, currentProductName }, ref) {
    const [step, setStep] = useState(currentImageUrl ? 'image_only' : 'idle');
    const [preview, setPreview] = useState(currentImageUrl || null);
    const [additionalImages, setAdditionalImages] = useState(additionalImagesOnOpen || []);
@@ -383,6 +383,34 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
               <ImagePlus className="w-4 h-4" />
               Add photo without AI
             </button>
+            {currentProductName && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!currentProductName?.trim()) return;
+                  setStep('uploading');
+                  try {
+                    const query = encodeURIComponent(currentProductName.trim());
+                    const res = await fetch(`https://api.unsplash.com/search/photos?query=${query}&per_page=1&orientation=squarish&client_id=YOUR_UNSPLASH_KEY`);
+                    const data = await res.json();
+                    const imageUrl = data?.results?.[0]?.urls?.regular;
+                    if (imageUrl) {
+                      onImageChange?.(imageUrl);
+                      setPreview(imageUrl);
+                      setStep('image_only');
+                    } else {
+                      setStep('idle');
+                    }
+                  } catch {
+                    setStep('idle');
+                  }
+                }}
+                className="w-full mt-1 flex items-center justify-center gap-2 text-sm text-indigo-500 hover:text-indigo-700 py-2"
+              >
+                <Search className="w-4 h-4" />
+                Find stock image for "{currentProductName}"
+              </button>
+            )}
             <input ref={plainImageInputRef} type="file" accept="image/*" className="hidden" onChange={handlePlainImageSelect} />
           </div>
         )}

@@ -45,6 +45,18 @@ export default function Storefront() {
   const [isStoreOpen, setIsStoreOpen] = useState(true);
   const [todayHours, setTodayHours] = useState(null);
   const SESSION_ORDERS_KEY = `sf_session_orders_${tenantSlug}_${tableId || 'notab'}`;
+  const [customerId, setCustomerId] = useState(null);
+  const DEVICE_ID_KEY = 'sellio_device_id';
+  const getOrCreateDeviceId = () => {
+    try {
+      let id = localStorage.getItem(DEVICE_ID_KEY);
+      if (!id) {
+        id = 'dev_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem(DEVICE_ID_KEY, id);
+      }
+      return id;
+    } catch { return null; }
+  };
   const [sessionOrderIds, setSessionOrderIds] = useState(() => {
     try { const s = localStorage.getItem(`sf_session_orders_${tenantSlug}_${tableId || 'notab'}`); return s ? JSON.parse(s) : []; } catch { return []; }
   });
@@ -148,6 +160,34 @@ export default function Storefront() {
     else setCart(prev => prev.map(i => i.key === key ? { ...i, quantity: qty } : i));
   };
 
+  useEffect(() => {
+    if (!tenant?.id) return;
+    const deviceId = getOrCreateDeviceId();
+    if (!deviceId) return;
+    getSupabase().then(async supabase => {
+      try {
+        const { data: existing } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('tenant_id', tenant.id)
+          .eq('device_id', deviceId)
+          .maybeSingle();
+        if (existing) {
+          setCustomerId(existing.id);
+        } else {
+          const { data: newCustomer } = await supabase
+            .from('customers')
+            .insert({ tenant_id: tenant.id, device_id: deviceId })
+            .select('id')
+            .single();
+          if (newCustomer) setCustomerId(newCustomer.id);
+        }
+      } catch (e) {
+        console.warn('Customer tracking error:', e.message);
+      }
+    });
+  }, [tenant?.id]);
+
   const loadOrderHistory = async () => {
     if (!tenant) return;
     const supabase = await getSupabase();
@@ -180,6 +220,7 @@ export default function Storefront() {
       notes: checkoutForm.notes || null, items: savedCart,
       subtotal: savedCartTotal, total_amount: savedCartTotal,
       payment_status: 'unpaid', payment_method: 'pending',
+      customer_id: customerId || null,
     }).select().single();
 
     if (!error && order) {
@@ -206,7 +247,22 @@ export default function Storefront() {
         }
       }
 
-      setLastCart(savedCart); setLastCartTotal(savedCartTotal);
+      // Update customer stats
+    if (customerId && order) {
+      getSupabase().then(async supabase => {
+        try {
+          const { data: cust } = await supabase.from('customers').select('total_orders, total_spent, first_order_at').eq('id', customerId).single();
+          await supabase.from('customers').update({
+            total_orders: (cust?.total_orders || 0) + 1,
+            total_spent: (parseFloat(cust?.total_spent) || 0) + savedCartTotal,
+            last_order_at: new Date().toISOString(),
+            first_order_at: cust?.first_order_at || new Date().toISOString(),
+            updated_date: new Date().toISOString(),
+          }).eq('id', customerId);
+        } catch (e) { console.warn('Customer stats update error:', e.message); }
+      });
+    }
+    setLastCart(savedCart); setLastCartTotal(savedCartTotal);
       setPlacedOrderNumber(orderNumber); setCart([]);
       try { localStorage.removeItem(CART_KEY); } catch {}
       // Track this order in session
