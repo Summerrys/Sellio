@@ -399,19 +399,19 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
                   <Switch checked={row.enabled} onCheckedChange={v => updateHour(row.day, 'enabled', v)} />
                   <span className="text-sm font-medium text-slate-700 w-8 flex-shrink-0">{row.label}</span>
                   {row.enabled ? (
-                    <div className="flex items-center gap-2 flex-1">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
                       <input
                         type="time"
                         value={row.open}
                         onChange={e => updateHour(row.day, 'open', e.target.value)}
-                        className="flex-1 h-9 px-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-slate-400"
+                        style={{ width: 0, flex: 1, height: 36, padding: '0 8px', fontSize: 13, border: '1px solid #e2e8f0', borderRadius: 8, outline: 'none', background: 'white', minWidth: 0 }}
                       />
-                      <span className="text-slate-400 text-xs flex-shrink-0">to</span>
+                      <span style={{ fontSize: 11, color: '#94a3b8', flexShrink: 0 }}>to</span>
                       <input
                         type="time"
                         value={row.close}
                         onChange={e => updateHour(row.day, 'close', e.target.value)}
-                        className="flex-1 h-9 px-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-slate-400"
+                        style={{ width: 0, flex: 1, height: 36, padding: '0 8px', fontSize: 13, border: '1px solid #e2e8f0', borderRadius: 8, outline: 'none', background: 'white', minWidth: 0 }}
                       />
                     </div>
                   ) : (
