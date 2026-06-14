@@ -46,6 +46,7 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
 
   const executeCartActions = (cartActions, allProducts) => {
     if (!cartActions || cartActions.length === 0 || !onAddToCart) return { addedCount: 0, addedNames: [] };
+    if (!isPreview && !isStoreOpen) return { addedCount: 0, addedNames: [] };
     let addedCount = 0;
     const addedNames = [];
     for (const action of cartActions) {
@@ -366,7 +367,7 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
                             </div>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                            {onAddToCart && (
+                            {onAddToCart && (isPreview || isStoreOpen) && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -381,6 +382,9 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
                                   lineHeight: 1,
                                 }}
                               >+</button>
+                            )}
+                            {(!isPreview && !isStoreOpen) && (
+                              <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🔒</div>
                             )}
                             <span style={{ fontSize: 10, color: '#cbd5e1' }}>tap for details</span>
                           </div>
