@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Building2, MapPin, Camera, X, Save, Percent, Loader2, Pencil, Hash, Receipt, ChevronDown, ChevronUp } from 'lucide-react';
+import { Building2, MapPin, Camera, X, Save, Percent, Loader2, Pencil, Hash, Receipt, ChevronDown, ChevronUp, Clock } from 'lucide-react';
 import PrinterSettings from '@/components/settings/PrinterSettings';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
@@ -64,6 +64,17 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
   const [locationOpen, setLocationOpen] = useState(false);
   const [taxOpen, setTaxOpen] = useState(false);
   const [orderSettingsOpen, setOrderSettingsOpen] = useState(false);
+  const [businessHoursOpen, setBusinessHoursOpen] = useState(false);
+  const [businessHours, setBusinessHours] = useState([
+    { day: 'monday',    label: 'Mon', enabled: true,  open: '09:00', close: '22:00' },
+    { day: 'tuesday',   label: 'Tue', enabled: true,  open: '09:00', close: '22:00' },
+    { day: 'wednesday', label: 'Wed', enabled: true,  open: '09:00', close: '22:00' },
+    { day: 'thursday',  label: 'Thu', enabled: true,  open: '09:00', close: '22:00' },
+    { day: 'friday',    label: 'Fri', enabled: true,  open: '09:00', close: '22:00' },
+    { day: 'saturday',  label: 'Sat', enabled: false, open: '09:00', close: '22:00' },
+    { day: 'sunday',    label: 'Sun', enabled: false, open: '09:00', close: '22:00' },
+  ]);
+  const [isSavingHours, setIsSavingHours] = useState(false);
   const [form, setForm] = useState({
     name: '',
     branch_name: '',
@@ -116,6 +127,22 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
     });
     setLogoPreview(tenant.logo_url || null);
   }, [tenant]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    const fetchHours = async () => {
+      const supabase = await getSupabase();
+      const { data } = await supabase.from('business_hours').select('day_of_week, open_time, close_time, is_closed').eq('tenant_id', tenantId);
+      if (data?.length) {
+        setBusinessHours(prev => prev.map(row => {
+          const found = data.find(d => d.day_of_week === row.day);
+          if (!found) return row;
+          return { ...row, enabled: !found.is_closed, open: found.open_time || '09:00', close: found.close_time || '22:00' };
+        }));
+      }
+    };
+    fetchHours();
+  }, [tenantId]);
 
   const handleCountryChange = (country) => {
     const cfg = COUNTRY_CONFIG[country];
@@ -211,6 +238,32 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const saveBusinessHours = async () => {
+    setIsSavingHours(true);
+    try {
+      const supabase = await getSupabase();
+      const rows = businessHours.map(row => ({
+        tenant_id: tenantId,
+        day_of_week: row.day,
+        open_time: row.enabled ? row.open : null,
+        close_time: row.enabled ? row.close : null,
+        is_closed: !row.enabled,
+      }));
+      await supabase.from('business_hours').delete().eq('tenant_id', tenantId);
+      const { error } = await supabase.from('business_hours').insert(rows);
+      if (error) throw error;
+      toast.success('Business hours saved');
+    } catch (err) {
+      toast.error(err.message || 'Failed to save hours');
+    } finally {
+      setIsSavingHours(false);
+    }
+  };
+
+  const updateHour = (day, field, value) => {
+    setBusinessHours(prev => prev.map(row => row.day === day ? { ...row, [field]: value } : row));
   };
 
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
@@ -323,6 +376,58 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
               <Label className="text-xs text-slate-600 mb-1 block">Address</Label>
               <Input className="h-10" value={form.address} onChange={e => set('address', e.target.value)} placeholder="123 Street, City" />
             </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Business Hours */}
+      <Card className="border border-slate-100 shadow-sm overflow-hidden">
+        <button type="button" className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors" onClick={() => setBusinessHoursOpen(o => !o)}>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-primary-gradient, #6366f1)' }}>
+              <Clock className="w-3.5 h-3.5 text-white" />
+            </div>
+            <h3 className="text-sm font-semibold text-slate-800">Business Hours</h3>
+          </div>
+          {businessHoursOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+        </button>
+        {businessHoursOpen && (
+          <div className="px-6 pb-6 border-t border-slate-100">
+            <div className="pt-4 space-y-3">
+              {businessHours.map(row => (
+                <div key={row.day} className="flex items-center gap-3">
+                  <Switch checked={row.enabled} onCheckedChange={v => updateHour(row.day, 'enabled', v)} />
+                  <span className="text-sm font-medium text-slate-700 w-8 flex-shrink-0">{row.label}</span>
+                  {row.enabled ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <input
+                        type="time"
+                        value={row.open}
+                        onChange={e => updateHour(row.day, 'open', e.target.value)}
+                        className="flex-1 h-9 px-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-slate-400"
+                      />
+                      <span className="text-slate-400 text-xs flex-shrink-0">to</span>
+                      <input
+                        type="time"
+                        value={row.close}
+                        onChange={e => updateHour(row.day, 'close', e.target.value)}
+                        className="flex-1 h-9 px-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-slate-400"
+                      />
+                    </div>
+                  ) : (
+                    <span className="text-xs text-slate-400 flex-1">Closed</span>
+                  )}
+                </div>
+              ))}
+            </div>
+            <Button
+              onClick={saveBusinessHours}
+              disabled={isSavingHours}
+              className="mt-4 h-9 gap-2 w-full"
+              style={{ background: 'var(--color-primary-gradient)', color: '#fff' }}
+            >
+              {isSavingHours ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...</> : <><Save className="w-3.5 h-3.5" /> Save Hours</>}
+            </Button>
           </div>
         )}
       </Card>
