@@ -68,6 +68,20 @@ import AIProductAssistant, { cleanupDeletedImages } from './AIProductAssistant';
 import StockAdjustmentPanel from '../inventory/StockAdjustmentPanel';
 import { Pencil, Plus } from 'lucide-react';
 
+const VARIANT_TYPE_MAP = {
+  size: 'size', sizes: 'size',
+  color: 'color', colours: 'color', colors: 'color', colour: 'color',
+  addon: 'addon', 'add-on': 'addon', addons: 'addon', 'add-ons': 'addon',
+  topping: 'addon', toppings: 'addon', extra: 'addon', extras: 'addon',
+  option: 'other', options: 'other', other: 'other',
+};
+
+const normalizeVariantType = (raw) => {
+  if (!raw) return 'addon';
+  const key = raw.toLowerCase().trim();
+  return VARIANT_TYPE_MAP[key] || 'addon';
+};
+
 const syncProductVariants = async (supabase, productId, tenantId, variants) => {
   try {
     await supabase.from('product_variants').delete().eq('product_id', productId).eq('tenant_id', tenantId);
@@ -76,12 +90,13 @@ const syncProductVariants = async (supabase, productId, tenantId, variants) => {
     let sortOrder = 0;
     for (const group of variants) {
       if (!group.options?.length) continue;
+      const variantType = normalizeVariantType(group.type || group.name);
       for (const option of group.options) {
         rows.push({
           tenant_id: tenantId,
           product_id: productId,
           name: option.label || option.name || '',
-          type: group.name || group.type || 'option',
+          type: variantType,
           price_modifier: parseFloat(option.price_modifier) || 0,
           sort_order: sortOrder++,
           is_active: true,
@@ -89,10 +104,12 @@ const syncProductVariants = async (supabase, productId, tenantId, variants) => {
       }
     }
     if (rows.length > 0) {
-      await supabase.from('product_variants').insert(rows);
+      const { error } = await supabase.from('product_variants').insert(rows);
+      if (error) console.error('syncProductVariants insert error:', error.message, rows);
+      else console.log(`syncProductVariants: synced ${rows.length} variants for product ${productId}`);
     }
   } catch (e) {
-    console.warn('syncProductVariants error:', e.message);
+    console.error('syncProductVariants error:', e.message);
   }
 };
 
