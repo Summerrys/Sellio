@@ -508,8 +508,8 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
           </Section>
 
           {/* Variants */}
-          <Section title="Variants & Add-ons" defaultOpen={false}>
-            <ProductFormVariants formData={formData} onChange={update} />
+          <Section title="Variants & Add-ons" defaultOpen={!!formData.variants?.length}>
+            <ProductFormVariants formData={{ ...formData, currency: tenant?.currency || 'SGD' }} onChange={update} />
           </Section>
         </div>
 

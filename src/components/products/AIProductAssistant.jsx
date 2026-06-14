@@ -17,6 +17,52 @@ export const cleanupDeletedImages = async (componentRef) => {
   }
 };
 
+function StockImageSearch({ defaultValue, onResult, onError, themeColor }) {
+  const [query, setQuery] = React.useState(defaultValue || '');
+  const [searching, setSearching] = React.useState(false);
+
+  const doSearch = async () => {
+    const q = query.trim();
+    if (!q) return;
+    setSearching(true);
+    try {
+      const sources = [
+        `https://loremflickr.com/400/400/${encodeURIComponent(q)}?lock=${Date.now()}`,
+        `https://picsum.photos/seed/${encodeURIComponent(q)}/400/400`,
+      ];
+      let found = false;
+      for (const url of sources) {
+        try {
+          const res = await fetch(url, { method: 'HEAD' });
+          if (res.ok || res.redirected) { onResult(url); found = true; break; }
+        } catch {}
+      }
+      if (!found) onError();
+    } catch { onError(); } finally { setSearching(false); }
+  };
+
+  return (
+    <div style={{ display: 'flex', gap: 8 }}>
+      <input
+        type="text"
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') doSearch(); }}
+        placeholder="Tell me what it is..."
+        style={{ flex: 1, fontSize: 13, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, outline: 'none' }}
+      />
+      <button
+        type="button"
+        onClick={doSearch}
+        disabled={searching || !query.trim()}
+        style={{ padding: '8px 12px', borderRadius: 8, background: searching ? '#cbd5e1' : themeColor, border: 'none', cursor: searching ? 'not-allowed' : 'pointer', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+      >
+        {searching ? <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} /> : <Search style={{ width: 16, height: 16 }} />}
+      </button>
+    </div>
+  );
+}
+
 function AIProductAssistantComponent({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange, onAdditionalImagesChange, additionalImagesOnOpen, onImageDelete, onCategoriesRefresh, currentProductName }, ref) {
    const [step, setStep] = useState(currentImageUrl ? 'image_only' : 'idle');
    const [preview, setPreview] = useState(currentImageUrl || null);
@@ -360,87 +406,56 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
         {/* ── IDLE: AI upload prompt ── */}
         {step === 'idle' && (
           <div className="p-4">
-            <label className="flex flex-col items-center justify-center gap-3 pb-4 cursor-pointer text-center border-b border-slate-200">
+            <div className="flex flex-col items-center gap-3 pb-4 border-b border-slate-200">
               <div className="w-12 h-12 rounded-xl bg-[rgb(var(--color-primary))]/10 flex items-center justify-center">
                 <Wand2 className="w-6 h-6 text-[rgb(var(--color-primary))]" />
               </div>
-              <div>
+              <div className="text-center">
                 <p className="text-sm font-semibold text-slate-800">Auto-fill with AI</p>
-                <p className="text-xs text-slate-500 mt-0.5">Upload a product photo — AI will generate the name, description, price & category</p>
+                <p className="text-xs text-slate-500 mt-0.5">Upload a photo — AI generates name, price & category</p>
               </div>
-              <div className="flex items-center gap-2 mt-1 px-4 py-2 text-white text-sm font-medium rounded-lg" style={{ background: themeColor }}>
-                <Upload className="w-4 h-4" />
-                Choose Image for AI
-              </div>
-              <p className="text-xs text-slate-400">PNG, JPG up to 5MB</p>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
-            </label>
-            <button
-              type="button"
-              onClick={() => plainImageInputRef.current?.click()}
-              className="w-full mt-3 flex items-center justify-center gap-2 text-sm text-slate-500 hover:text-slate-700 py-2"
-            >
-              <ImagePlus className="w-4 h-4" />
-              Add photo without AI
-            </button>
-            <div className="mt-2 border-t border-slate-200 pt-3">
-              <p className="text-xs text-slate-400 text-center mb-2">Or find a stock image</p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  defaultValue={currentProductName || ''}
-                  placeholder='Tell me what it is...'
-                  id="stock-image-search-input"
-                  className="flex-1 text-sm px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-slate-400"
-                  onKeyDown={async (e) => {
-                    if (e.key !== 'Enter') return;
-                    const query = e.target.value.trim();
-                    if (!query) return;
-                    setStep('uploading');
-                    try {
-                      const encoded = encodeURIComponent(query);
-                      const imageUrl = `https://source.unsplash.com/400x400/?${encoded}&t=${Date.now()}`;
-                      const imgRes = await fetch(imageUrl);
-                      const blob = await imgRes.blob();
-                      const file = new File([blob], `stock-${Date.now()}.jpg`, { type: 'image/jpeg' });
-                      const publicUrl = await uploadToStorage(file);
-                      onImageChange?.(publicUrl);
-                      setPreview(publicUrl);
-                      setStep('image_only');
-                    } catch {
-                      setStep('idle');
-                      toast.error('Could not find stock image');
-                    }
-                  }}
-                />
+              <div className="flex gap-2 w-full">
+                <label className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-white text-sm font-medium rounded-lg cursor-pointer" style={{ background: themeColor }}>
+                  <Upload className="w-4 h-4 flex-shrink-0" />
+                  <span>AI Analyse</span>
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+                </label>
                 <button
                   type="button"
-                  onClick={async () => {
-                    const input = document.getElementById('stock-image-search-input');
-                    const query = input?.value?.trim() || currentProductName?.trim();
-                    if (!query) return;
-                    setStep('uploading');
-                    try {
-                      const encoded = encodeURIComponent(query);
-                      const imageUrl = `https://source.unsplash.com/400x400/?${encoded}&t=${Date.now()}`;
-                      const imgRes = await fetch(imageUrl);
-                      const blob = await imgRes.blob();
-                      const file = new File([blob], `stock-${Date.now()}.jpg`, { type: 'image/jpeg' });
-                      const publicUrl = await uploadToStorage(file);
-                      onImageChange?.(publicUrl);
-                      setPreview(publicUrl);
-                      setStep('image_only');
-                    } catch {
-                      setStep('idle');
-                      toast.error('Could not find stock image');
-                    }
-                  }}
-                  className="px-3 py-2 rounded-lg text-white text-sm font-medium flex-shrink-0"
-                  style={{ background: 'var(--color-primary-gradient)' }}
+                  onClick={() => plainImageInputRef.current?.click()}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-medium rounded-lg border border-slate-300 text-slate-600 bg-white hover:bg-slate-50"
                 >
-                  <Search className="w-4 h-4" />
+                  <ImagePlus className="w-4 h-4 flex-shrink-0" />
+                  <span>Upload Photo</span>
                 </button>
               </div>
+              <p className="text-xs text-slate-400">PNG, JPG up to 5MB</p>
+            </div>
+            <div className="mt-2 border-t border-slate-200 pt-3">
+              <p className="text-xs text-slate-400 text-center mb-2">Or find a stock image</p>
+              <StockImageSearch
+                defaultValue={currentProductName || ''}
+                onResult={async (imageUrl) => {
+                  setStep('uploading');
+                  try {
+                    const imgRes = await fetch(imageUrl);
+                    const blob = await imgRes.blob();
+                    const file = new File([blob], `stock-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                    const publicUrl = await uploadToStorage(file);
+                    onImageChange?.(publicUrl);
+                    setPreview(publicUrl);
+                    setStep('image_only');
+                  } catch {
+                    setStep('idle');
+                    toast.error('Could not load stock image');
+                  }
+                }}
+                onError={() => {
+                  setStep('idle');
+                  toast.error('No image found, try different keywords');
+                }}
+                themeColor={themeColor}
+              />
             </div>
             <input ref={plainImageInputRef} type="file" accept="image/*" className="hidden" onChange={handlePlainImageSelect} />
           </div>
