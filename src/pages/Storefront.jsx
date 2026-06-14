@@ -43,6 +43,7 @@ export default function Storefront() {
   const [showProductModal, setShowProductModal] = useState(false);
   const [businessHours, setBusinessHours] = useState([]);
   const [isStoreOpen, setIsStoreOpen] = useState(true);
+  const [todayHours, setTodayHours] = useState(null);
   const SESSION_ORDERS_KEY = `sf_session_orders_${tenantSlug}_${tableId || 'notab'}`;
   const [sessionOrderIds, setSessionOrderIds] = useState(() => {
     try { const s = localStorage.getItem(`sf_session_orders_${tenantSlug}_${tableId || 'notab'}`); return s ? JSON.parse(s) : []; } catch { return []; }
@@ -97,6 +98,7 @@ export default function Storefront() {
           const todayName = days[now.getDay()];
           const todayHours = hoursData.find(h => h.day_of_week === todayName);
           if (todayHours) {
+            setTodayHours(todayHours);
             if (todayHours.is_closed) {
               setIsStoreOpen(false);
             } else if (todayHours.open_time && todayHours.close_time) {
@@ -243,17 +245,44 @@ export default function Storefront() {
     <>
       {!isStoreOpen && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 300,
-          background: '#1e293b', color: 'white',
-          padding: '10px 16px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          fontSize: 13, fontWeight: 600,
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 300,
+          background: 'rgba(15,23,42,0.95)',
+          backdropFilter: 'blur(8px)',
+          color: 'white',
+          padding: '14px 20px',
+          display: 'flex', alignItems: 'center', gap: 14,
+          borderTop: '1px solid rgba(255,255,255,0.08)',
         }}>
-          <span style={{ fontSize: 16 }}>🔒</span>
-          Store is currently closed — orders are not accepted at this time
+          {/* Storefront + clock composite icon */}
+          <div style={{ position: 'relative', flexShrink: 0, width: 40, height: 40 }}>
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+              {/* Store icon */}
+              <rect x="6" y="14" width="22" height="16" rx="1.5" stroke="white" strokeWidth="1.8" fill="none"/>
+              <path d="M4 14 L8 8 H26 L30 14" stroke="white" strokeWidth="1.8" strokeLinejoin="round" fill="none"/>
+              <rect x="13" y="20" width="8" height="10" rx="1" stroke="white" strokeWidth="1.5" fill="none"/>
+              <path d="M4 14 H30" stroke="white" strokeWidth="1.5"/>
+              {/* Clock badge — bottom right */}
+              <circle cx="30" cy="30" r="8" fill="#0f172a" stroke="white" strokeWidth="1.5"/>
+              <circle cx="30" cy="30" r="6" fill="#334155"/>
+              <path d="M30 26.5 V30 L32.5 32.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <div>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'white', lineHeight: 1.3 }}>The store is closed.</p>
+            {todayHours && !todayHours.is_closed && todayHours.open_time && todayHours.close_time && (
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.3 }}>
+                Open {todayHours.open_time.replace(':','').replace(/^0/, '')} – {todayHours.close_time.replace(':','').replace(/^0/, '')}
+              </p>
+            )}
+            {todayHours?.is_closed && (
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.3 }}>
+                Closed today
+              </p>
+            )}
+          </div>
         </div>
       )}
-      <div style={!isStoreOpen ? { paddingTop: 44 } : {}}>
+      <div style={!isStoreOpen ? { paddingBottom: 68 } : {}}>
         <StorefrontView
           tenant={tenant}
           storefrontConfig={storefrontConfig}
