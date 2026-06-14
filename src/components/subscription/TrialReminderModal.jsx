@@ -16,12 +16,16 @@ export default function TrialReminderModal({ hoursLeft, onUpgrade, onDismiss }) 
         >
           Choose a Plan
         </button>
-        <button
-          onClick={onDismiss}
-          className="w-full py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:bg-slate-50 transition-colors border border-slate-200"
-        >
-          Remind me later
-        </button>
+        {onDismiss ? (
+          <button
+            onClick={onDismiss}
+            className="w-full py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:bg-slate-50 transition-colors border border-slate-200"
+          >
+            Remind me later
+          </button>
+        ) : (
+          <p className="text-xs font-semibold text-red-500 mt-1">⚠️ Subscription not active — please choose a plan to continue.</p>
+        )}
         <p className="text-xs text-slate-400 mt-4">Your data is safe and won't be deleted immediately.</p>
       </div>
     </div>
