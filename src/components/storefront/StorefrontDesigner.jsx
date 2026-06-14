@@ -836,7 +836,7 @@ export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug
   const [previewCategories, setPreviewCategories] = useState([]);
   const [previewTenant, setPreviewTenant] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-  const storeUrl = `https://sellio.apptelier.sg/store/${tenantSlug}`;
+  const storeUrl = `https://sellio.apptelier.sg/store/${tenantSlug}?preview=true`;
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 1024);

@@ -15,6 +15,7 @@ const STATUS_COLORS = {
 export default function Storefront() {
   const { tenantSlug, tableId } = useParams();
   const isDineIn = !!tableId;
+  const isPreview = new URLSearchParams(window.location.search).get('preview') === 'true';
 
   const [tenant, setTenant] = useState(null);
   const [theme, setTheme] = useState(null);
@@ -42,6 +43,10 @@ export default function Storefront() {
   const [showProductModal, setShowProductModal] = useState(false);
   const [businessHours, setBusinessHours] = useState([]);
   const [isStoreOpen, setIsStoreOpen] = useState(true);
+  const SESSION_ORDERS_KEY = `sf_session_orders_${tenantSlug}_${tableId || 'notab'}`;
+  const [sessionOrderIds, setSessionOrderIds] = useState(() => {
+    try { const s = localStorage.getItem(`sf_session_orders_${tenantSlug}_${tableId || 'notab'}`); return s ? JSON.parse(s) : []; } catch { return []; }
+  });
   const [checkoutForm, setCheckoutForm] = useState({
     name: '', phone: '', notes: '', orderType: isDineIn ? 'dine_in' : 'takeaway', tableNumber: '', address: ''
   });
@@ -79,8 +84,8 @@ export default function Storefront() {
           }
         }
       }
-      // Fetch business hours only for dine-in (QR scan)
-      if (tableId && tenantData?.id) {
+      // Fetch business hours for all visitors — skip enforcement only for merchant preview
+      if (!isPreview && tenantData?.id) {
         const { data: hoursData } = await supabase
           .from('business_hours')
           .select('day_of_week, open_time, close_time, is_closed')
@@ -144,9 +149,9 @@ export default function Storefront() {
   const loadOrderHistory = async () => {
     if (!tenant) return;
     const supabase = await getSupabase();
-    let query = supabase.from('orders').select('*').eq('tenant_id', tenant.id).order('created_date', { ascending: false }).limit(20);
-    if (tableId) query = query.eq('table_id', tableId);
-    const { data } = await query;
+    const currentSessionOrders = (() => { try { const s = localStorage.getItem(SESSION_ORDERS_KEY); return s ? JSON.parse(s) : []; } catch { return []; } })();
+    if (!currentSessionOrders.length) { setOrderHistory([]); return; }
+    const { data } = await supabase.from('orders').select('*').in('id', currentSessionOrders).order('created_date', { ascending: false });
     setOrderHistory(data || []);
   };
 
@@ -202,6 +207,10 @@ export default function Storefront() {
       setLastCart(savedCart); setLastCartTotal(savedCartTotal);
       setPlacedOrderNumber(orderNumber); setCart([]);
       try { localStorage.removeItem(CART_KEY); } catch {}
+      // Track this order in session
+      const updatedSessionOrders = [...sessionOrderIds, order.id];
+      setSessionOrderIds(updatedSessionOrders);
+      try { localStorage.setItem(SESSION_ORDERS_KEY, JSON.stringify(updatedSessionOrders)); } catch {}
       setShowCheckout(false); setIsSubmitting(false); setOrderSuccess(true);
     } else {
       setIsSubmitting(false);
@@ -232,7 +241,7 @@ export default function Storefront() {
 
   return (
     <>
-      {isDineIn && !isStoreOpen && (
+      {!isStoreOpen && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 300,
           background: '#1e293b', color: 'white',
@@ -244,7 +253,7 @@ export default function Storefront() {
           Store is currently closed — orders are not accepted at this time
         </div>
       )}
-      <div style={isDineIn && !isStoreOpen ? { paddingTop: 44 } : {}}>
+      <div style={!isStoreOpen ? { paddingTop: 44 } : {}}>
         <StorefrontView
           tenant={tenant}
           storefrontConfig={storefrontConfig}
@@ -259,14 +268,14 @@ export default function Storefront() {
           setShowCart={setShowCart}
           showOrderHistory={showOrderHistory}
           setShowOrderHistory={(v) => { setShowOrderHistory(v); if (v) loadOrderHistory(); }}
-          onAddToCart={isDineIn && !isStoreOpen ? () => {} : addToCart}
+          onAddToCart={!isStoreOpen ? () => {} : addToCart}
           cartCount={cartCount}
           cartTotal={cartTotal}
         />
       </div>
 
       {/* ── FLOATING CART BUTTON ── */}
-      {cartCount > 0 && !showCart && !showCheckout && (!isDineIn || isStoreOpen) && (
+      {cartCount > 0 && !showCart && !showCheckout && isStoreOpen && (
         <div style={{ position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 50 }}>
           <button onClick={() => setShowCart(true)} style={{
             background: primaryColor, color: 'white', border: 'none',
@@ -321,7 +330,7 @@ export default function Storefront() {
                   <span style={{ fontWeight: 600, fontSize: 15 }}>Total</span>
                   <span style={{ fontWeight: 700, fontSize: 18, color: primaryColor }}>{currency} {cartTotal.toFixed(2)}</span>
                 </div>
-                {isDineIn && !isStoreOpen ? (
+                {!isStoreOpen ? (
                   <div style={{ width: '100%', padding: 14, background: '#f1f5f9', color: '#94a3b8', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, textAlign: 'center' }}>
                     🔒 Store is closed
                   </div>
@@ -418,7 +427,7 @@ export default function Storefront() {
                 style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #e5e7eb', fontSize: 14, outline: 'none', resize: 'none', boxSizing: 'border-box' }}
               />
             </div>
-            {isDineIn && !isStoreOpen ? (
+            {!isStoreOpen ? (
               <div style={{ width: '100%', padding: 14, background: '#f1f5f9', color: '#94a3b8', borderRadius: 12, fontSize: 15, fontWeight: 600, textAlign: 'center' }}>
                 🔒 Store is closed — cannot place order
               </div>
