@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, X, Send, ShoppingCart } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 
-export default function MenuAssistantWidget({ products, tenant, onProductSelect, onAddToCart, storefront, externalOpen, onExternalClose }) {
+export default function MenuAssistantWidget({ products, tenant, onProductSelect, onAddToCart, storefront, externalOpen, onExternalClose, isStoreOpen = true, isPreview = false }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -77,7 +77,8 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
         body: {
           messages: updatedHistory,
           products: products,
-          tenant: tenant
+          tenant: tenant,
+          isStoreOpen: isPreview ? true : isStoreOpen,
         }
       });
 
@@ -232,7 +233,9 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
             />
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#1e293b' }}>Menu Assistant</p>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>Ask me or just tell me what you want</p>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: (!isPreview && !isStoreOpen) ? '#ef4444' : '#64748b' }}>
+                {(!isPreview && !isStoreOpen) ? '🔒 Store is currently closed' : 'Ask me or just tell me what you want'}
+              </p>
             </div>
             <button
               onClick={() => setOpen(false)}
@@ -434,6 +437,11 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
           </div>
 
           {/* Input Area */}
+          {(!isPreview && !isStoreOpen) ? (
+            <div style={{ padding: '14px 16px', borderTop: '1px solid #f1f5f9', background: '#fef2f2', textAlign: 'center' }}>
+              <p style={{ margin: 0, fontSize: 13, color: '#dc2626', fontWeight: 600 }}>🔒 Ordering is unavailable outside business hours</p>
+            </div>
+          ) : (
           <div style={{
             padding: '12px',
             borderTop: '1px solid #f1f5f9',
@@ -481,6 +489,7 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
               <Send size={18} color="white" />
             </button>
           </div>
+          )}
         </div>
       )}
     </>
