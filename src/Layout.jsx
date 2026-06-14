@@ -208,6 +208,7 @@ function AppLayout({ children, currentPageName }) {
   const [subscription, setSubscription] = useState(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [showTrialModal, setShowTrialModal] = useState(false);
+  const [canDismissTrialModal, setCanDismissTrialModal] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
   const { appUser: customUser, clearAppUser } = useAppUser();
@@ -228,8 +229,37 @@ function AppLayout({ children, currentPageName }) {
     const trialEnd = subscription.current_period_end;
     if (!trialEnd) return;
     const hoursLeft = Math.max(0, Math.floor((new Date(trialEnd) - new Date()) / (1000 * 60 * 60)));
-    if (hoursLeft <= 24) setShowTrialModal(true);
-  }, [subscription, user]);
+    if (hoursLeft > 24) return;
+
+    // At 12hrs or less, check Stripe to see if subscription will auto-renew
+    if (hoursLeft <= 12 && tenantId) {
+      getSupabase().then(async supabase => {
+        try {
+          const { data, error } = await supabase.functions.invoke('checkSubscriptionStatus', {
+            body: { tenantId },
+          });
+          if (error) throw error;
+          if (data?.willAutoRenew) {
+            // Subscription is active and will auto-renew — no need to show modal
+            console.log('Trial will auto-renew, suppressing modal');
+            return;
+          }
+          // Not auto-renewing — show modal and disable dismiss
+          setCanDismissTrialModal(false);
+          setShowTrialModal(true);
+        } catch (e) {
+          console.warn('checkSubscriptionStatus failed, showing modal anyway:', e.message);
+          // Fail safe: show modal but allow dismiss
+          setCanDismissTrialModal(true);
+          setShowTrialModal(true);
+        }
+      });
+    } else {
+      // Between 12-24hrs: show modal, allow dismiss
+      setCanDismissTrialModal(true);
+      setShowTrialModal(true);
+    }
+  }, [subscription, user, tenantId]);
 
   const isLocked = subscription && (
     subscription.status === 'cancelled' ||
@@ -448,7 +478,7 @@ function AppLayout({ children, currentPageName }) {
         <TrialReminderModal
           hoursLeft={Math.max(0, Math.floor((new Date(subscription.current_period_end) - new Date()) / (1000 * 60 * 60)))}
           onUpgrade={() => { setShowTrialModal(false); setShowPricingModal(true); }}
-          onDismiss={() => { sessionStorage.setItem('trial_modal_dismissed', 'true'); setShowTrialModal(false); }}
+          onDismiss={canDismissTrialModal ? () => { sessionStorage.setItem('trial_modal_dismissed', 'true'); setShowTrialModal(false); } : null}
         />
       )}
 
