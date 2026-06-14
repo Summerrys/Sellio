@@ -473,7 +473,7 @@ function AppLayout({ children, currentPageName }) {
         clearAppUser={clearAppUser}
       />
       <RoleSwitcher />
-      <PricingModal open={showPricingModal} onOpenChange={setShowPricingModal} tenantId={tenantId} currentTier={subscription?.tier ?? null} />
+      <PricingModal open={showPricingModal} onOpenChange={setShowPricingModal} tenantId={tenantId} currentTier={subscription?.tier ?? null} hasUsedTrial={!!tenant?.has_used_trial} />
       {showTrialModal && (
         <TrialReminderModal
           hoursLeft={Math.max(0, Math.floor((new Date(subscription.current_period_end) - new Date()) / (1000 * 60 * 60)))}
