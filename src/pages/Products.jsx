@@ -334,6 +334,8 @@ export default function Products() {
       });
     },
     enabled: !!tenantId,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: categories = [] } = useQuery({
