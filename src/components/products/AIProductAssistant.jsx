@@ -20,43 +20,78 @@ export const cleanupDeletedImages = async (componentRef) => {
 function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
   const [query, setQuery] = React.useState('');
   const [searching, setSearching] = React.useState(false);
-  const [resultUrl, setResultUrl] = React.useState(null);
+  const [uploading, setUploading] = React.useState(false);
+  // photos: array of { previewUrl, downloadUrl, downloadLocation, alt }
+  const [photos, setPhotos] = React.useState([]);
+  const [currentIndex, setCurrentIndex] = React.useState(0);
+
+  const currentPhoto = photos[currentIndex] || null;
 
   const doSearch = async () => {
     const q = query.trim();
     if (!q || searching) return;
     setSearching(true);
-    setResultUrl(null);
+    setPhotos([]);
+    setCurrentIndex(0);
     try {
       const supabase = await (await import('@/lib/supabaseClient')).getSupabase();
       const { data, error } = await supabase.functions.invoke('findProductImage', {
-        body: { query: q, tenantId },
+        body: { query: q },
       });
       if (error) throw new Error(error.message);
-      if (data?.imageUrl) {
-        setResultUrl(data.imageUrl);
+      if (data?.photos?.length > 0) {
+        setPhotos(data.photos);
+        setCurrentIndex(0);
       } else {
-        onError('No image found. Try a different keyword.');
+        onError('No images found. Try a different keyword.');
       }
     } catch (e) {
-      console.error('Stock image search error:', e.message);
+      console.error('StockImageSearch error:', e.message);
       onError('Search failed. Please try again.');
     } finally {
       setSearching(false);
     }
   };
 
-  const handleAccept = () => {
-    if (resultUrl) {
-      onResult(resultUrl);
-      setResultUrl(null);
+  const handleAccept = async () => {
+    if (!currentPhoto) return;
+    setUploading(true);
+    try {
+      // Ping Unsplash download endpoint (their API policy requirement — silent)
+      fetch(currentPhoto.downloadLocation).catch(() => {});
+
+      // Fetch full-quality image and upload to Supabase Storage
+      const imgRes = await fetch(currentPhoto.downloadUrl);
+      if (!imgRes.ok) throw new Error('Failed to fetch image');
+      const blob = await imgRes.blob();
+
+      const supabase = await (await import('@/lib/supabaseClient')).getSupabase();
+      const filename = `${tenantId}/products/stock-${Date.now()}-photo.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(filename, blob, { contentType: 'image/jpeg', upsert: true });
+      if (uploadError) throw new Error(uploadError.message);
+      const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(filename);
+
+      onResult(urlData.publicUrl);
+      setPhotos([]);
       setQuery('');
+      setCurrentIndex(0);
+    } catch (e) {
+      console.error('Accept error:', e.message);
+      onError('Failed to save image. Please try again.');
+    } finally {
+      setUploading(false);
     }
   };
 
   const handleDiscard = () => {
-    setResultUrl(null);
+    setPhotos([]);
+    setCurrentIndex(0);
   };
+
+  const handlePrev = () => setCurrentIndex(i => Math.max(0, i - 1));
+  const handleNext = () => setCurrentIndex(i => Math.min(photos.length - 1, i + 1));
 
   return (
     <div style={{
@@ -113,27 +148,47 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
         </button>
       </div>
 
-      {/* Result preview */}
-      {resultUrl && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-          <img src={resultUrl} alt="Stock result" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e2e8f0', flexShrink: 0 }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>Image found! Use it?</p>
+      {/* Result preview with navigation */}
+      {currentPhoto && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+          {/* Prev arrow */}
+          <button type="button" onClick={handlePrev} disabled={currentIndex === 0} aria-label="Previous image"
+            style={{ width: 28, height: 28, borderRadius: 6, flexShrink: 0, background: currentIndex === 0 ? '#f1f5f9' : 'white', border: '1px solid #e2e8f0', cursor: currentIndex === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: currentIndex === 0 ? 0.4 : 1 }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+
+          {/* Thumbnail */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <img src={currentPhoto.previewUrl} alt={currentPhoto.alt || 'Stock image'}
+              style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e2e8f0', display: 'block' }} />
+            {uploading && (
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.8)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ width: 16, height: 16, border: '2px solid #94a3b8', borderTopColor: 'rgb(var(--color-primary))', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+              </div>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={handleAccept}
-            aria-label="Use this image"
-            style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: themeColor, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
+
+          {/* Counter + label */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 2px' }}>Use this photo?</p>
+            <p style={{ fontSize: 11, color: '#94a3b8', margin: 0, fontWeight: 500 }}>{currentIndex + 1} / {photos.length}</p>
+          </div>
+
+          {/* Next arrow */}
+          <button type="button" onClick={handleNext} disabled={currentIndex === photos.length - 1} aria-label="Next image"
+            style={{ width: 28, height: 28, borderRadius: 6, flexShrink: 0, background: currentIndex === photos.length - 1 ? '#f1f5f9' : 'white', border: '1px solid #e2e8f0', cursor: currentIndex === photos.length - 1 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: currentIndex === photos.length - 1 ? 0.4 : 1 }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+
+          {/* Accept (tick) */}
+          <button type="button" onClick={handleAccept} disabled={uploading} aria-label="Use this image"
+            style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: uploading ? '#e2e8f0' : themeColor, border: 'none', cursor: uploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </button>
-          <button
-            type="button"
-            onClick={handleDiscard}
-            aria-label="Discard image"
-            style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: '#f1f5f9', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
+
+          {/* Discard (cross) */}
+          <button type="button" onClick={handleDiscard} disabled={uploading} aria-label="Discard"
+            style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: '#f1f5f9', border: '1px solid #e2e8f0', cursor: uploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
