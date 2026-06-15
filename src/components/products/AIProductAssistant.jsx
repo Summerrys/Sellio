@@ -17,7 +17,7 @@ export const cleanupDeletedImages = async (componentRef) => {
   }
 };
 
-function StockImageSearch({ defaultValue, onResult, onError, themeColor }) {
+function StockImageSearch({ defaultValue, onResult, onError, themeColor, tenantId }) {
   const [query, setQuery] = React.useState(defaultValue || '');
   const [searching, setSearching] = React.useState(false);
 
@@ -26,19 +26,22 @@ function StockImageSearch({ defaultValue, onResult, onError, themeColor }) {
     if (!q) return;
     setSearching(true);
     try {
-      const sources = [
-        `https://loremflickr.com/400/400/${encodeURIComponent(q)}?lock=${Date.now()}`,
-        `https://picsum.photos/seed/${encodeURIComponent(q)}/400/400`,
-      ];
-      let found = false;
-      for (const url of sources) {
-        try {
-          const res = await fetch(url, { method: 'HEAD' });
-          if (res.ok || res.redirected) { onResult(url); found = true; break; }
-        } catch {}
+      const supabase = await (await import('@/lib/supabaseClient')).getSupabase();
+      const { data, error } = await supabase.functions.invoke('findProductImage', {
+        body: { query: q, tenantId },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.imageUrl) {
+        onResult(data.imageUrl);
+      } else {
+        onError();
       }
-      if (!found) onError();
-    } catch { onError(); } finally { setSearching(false); }
+    } catch (e) {
+      console.error('Stock image search error:', e.message);
+      onError();
+    } finally {
+      setSearching(false);
+    }
   };
 
   return (
@@ -431,9 +434,10 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
               </div>
               <p className="text-xs text-slate-400">PNG, JPG up to 5MB</p>
             </div>
-            <div className="mt-2 border-t border-slate-200 pt-3">
+            <div className="mt-2 pt-2">
               <p className="text-xs text-slate-400 text-center mb-2">Or find a stock image</p>
               <StockImageSearch
+                tenantId={tenantId}
                 defaultValue={currentProductName || ''}
                 onResult={async (imageUrl) => {
                   setStep('uploading');

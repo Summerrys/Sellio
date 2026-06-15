@@ -2,12 +2,25 @@ import React from 'react';
 
 export default function ProductFormVariants({ formData, onChange }) {
   const variants = formData.variants || [];
+  const currency = formData.currency || 'SGD';
 
   const inferType = (name) => {
-    if (/size/i.test(name)) return 'size';
-    if (/colou?r/i.test(name)) return 'color';
-    if (/add.?on|topping|extra/i.test(name)) return 'addon';
+    if (!name) return 'other';
+    const n = name.toLowerCase();
+    if (/size|small|medium|large/.test(n)) return 'size';
+    if (/colou?r/.test(n)) return 'color';
+    if (/add.?on|topping|extra/.test(n)) return 'addon';
     return 'other';
+  };
+
+  const getOptionLabel = (group) => {
+    const n = (group.name || '').toLowerCase();
+    if (/size/.test(n)) return 'Size';
+    if (/colou?r/.test(n)) return 'Colour';
+    if (/add.?on|topping|extra/.test(n)) return 'Add-on';
+    if (/price/.test(n)) return 'Price';
+    if (group.name?.trim()) return group.name;
+    return 'Option';
   };
 
   const addGroup = () => {
@@ -17,12 +30,12 @@ export default function ProductFormVariants({ formData, onChange }) {
   const removeGroup = (gi) => onChange({ variants: variants.filter((_, i) => i !== gi) });
 
   const addOption = (gi) => {
-    const updated = variants.map((g, i) => i === gi ? { ...g, options: [...g.options, { label: '', price_modifier: 0 }] } : g);
+    const updated = variants.map((g, i) => i === gi ? { ...g, options: [...(g.options || []), { label: '', price_modifier: 0 }] } : g);
     onChange({ variants: updated });
   };
 
   const removeOption = (gi, oi) => {
-    const updated = variants.map((g, i) => i === gi ? { ...g, options: g.options.filter((_, j) => j !== oi) } : g);
+    const updated = variants.map((g, i) => i === gi ? { ...g, options: (g.options || []).filter((_, j) => j !== oi) } : g);
     onChange({ variants: updated });
   };
 
@@ -33,14 +46,14 @@ export default function ProductFormVariants({ formData, onChange }) {
 
   const updateOptionLabel = (gi, oi, value) => {
     const updated = variants.map((g, i) =>
-      i === gi ? { ...g, options: g.options.map((o, j) => j === oi ? { ...o, label: value } : o) } : g
+      i === gi ? { ...g, options: (g.options || []).map((o, j) => j === oi ? { ...o, label: value } : o) } : g
     );
     onChange({ variants: updated });
   };
 
   const updateOptionPrice = (gi, oi, value) => {
     const updated = variants.map((g, i) =>
-      i === gi ? { ...g, options: g.options.map((o, j) => j === oi ? { ...o, price_modifier: value === '' ? 0 : parseFloat(value) || 0 } : o) } : g
+      i === gi ? { ...g, options: (g.options || []).map((o, j) => j === oi ? { ...o, price_modifier: value === '' ? 0 : parseFloat(value) || 0 } : o) } : g
     );
     onChange({ variants: updated });
   };
@@ -48,44 +61,53 @@ export default function ProductFormVariants({ formData, onChange }) {
   return (
     <div>
       {variants.map((group, gi) => (
-        <div key={gi} style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 12, marginBottom: 12, background: '#fafafa' }}>
-          {/* Group header — text input only, no dropdown */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
-            <input
-              value={group.name}
-              onChange={e => updateGroupName(gi, e.target.value)}
-              placeholder="e.g. Size, Color, Add-ons, Toppings..."
-              style={{ flex: 1, fontWeight: 600, fontSize: 13, padding: '6px 10px', border: '1px solid #e5e7eb', borderRadius: 8, outline: 'none', background: 'white' }}
-            />
+        <div key={gi} style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 14, marginBottom: 12, background: '#fafafa' }}>
+          {/* Group name row */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Group Name</label>
+              <input
+                value={group.name}
+                onChange={e => updateGroupName(gi, e.target.value)}
+                placeholder="e.g. Size, Color, Toppings, Add-ons..."
+                style={{ width: '100%', fontWeight: 600, fontSize: 13, padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, outline: 'none', background: 'white', boxSizing: 'border-box' }}
+              />
+            </div>
             <button
               type="button"
               onClick={() => removeGroup(gi)}
-              style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, fontSize: 18, lineHeight: 1 }}
+              style={{ color: '#ef4444', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '6px 8px', cursor: 'pointer', flexShrink: 0, marginTop: 18, display: 'flex', alignItems: 'center' }}
             >✕</button>
+          </div>
+
+          {/* Column headers */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 4, paddingLeft: 2 }}>
+            <span style={{ flex: 1, fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{getOptionLabel(group)}</span>
+            <span style={{ width: 90, fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right', flexShrink: 0 }}>+{currency}</span>
+            <span style={{ width: 24, flexShrink: 0 }} />
           </div>
 
           {/* Options */}
           {(group.options || []).map((option, oi) => (
             <div key={oi} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
               <input
-                value={option.label}
+                value={option.label ?? ''}
                 onChange={e => updateOptionLabel(gi, oi, e.target.value)}
-                placeholder="Option name"
-                style={{ flex: 1, padding: '6px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, outline: 'none', background: 'white' }}
+                placeholder={`${getOptionLabel(group)} name`}
+                style={{ flex: 1, padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, outline: 'none', background: 'white' }}
               />
-              <span style={{ fontSize: 12, color: '#6b7280', flexShrink: 0 }}>+{formData.currency || 'SGD'}</span>
               <input
                 type="number"
                 inputMode="decimal"
-                value={option.price_modifier ?? ''}
+                value={option.price_modifier ?? 0}
                 onChange={e => updateOptionPrice(gi, oi, e.target.value)}
                 placeholder="0"
-                style={{ width: 72, padding: '6px 8px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, outline: 'none', background: 'white', textAlign: 'right' }}
+                style={{ width: 90, padding: '7px 8px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, outline: 'none', background: 'white', textAlign: 'right', flexShrink: 0 }}
               />
               <button
                 type="button"
                 onClick={() => removeOption(gi, oi)}
-                style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, fontSize: 16 }}
+                style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, fontSize: 16, width: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >✕</button>
             </div>
           ))}
@@ -93,7 +115,7 @@ export default function ProductFormVariants({ formData, onChange }) {
           <button
             type="button"
             onClick={() => addOption(gi)}
-            style={{ fontSize: 12, color: 'rgb(var(--color-primary))', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', marginTop: 4 }}
+            style={{ fontSize: 12, color: 'rgb(var(--color-primary))', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', marginTop: 6 }}
           >+ Add option</button>
         </div>
       ))}
