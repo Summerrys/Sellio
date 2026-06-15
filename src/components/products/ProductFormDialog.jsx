@@ -82,24 +82,35 @@ const normalizeVariantType = (raw) => {
   return VARIANT_TYPE_MAP[key] || 'addon';
 };
 
-const syncProductVariants = async (supabase, productId, tenantId, variants) => {
+const syncProductVariants = async (supabase, productId, tenantId, variants, productSku) => {
   try {
     await supabase.from('product_variants').delete().eq('product_id', productId).eq('tenant_id', tenantId);
     if (!variants?.length) return;
+
+    let sku = productSku;
+    if (!sku) {
+      const { data: prod } = await supabase.from('products').select('sku').eq('id', productId).single();
+      sku = prod?.sku || '';
+    }
+
     const rows = [];
     let sortOrder = 0;
     for (const group of variants) {
       if (!group.options?.length) continue;
       const variantType = normalizeVariantType(group.type || group.name);
       for (const option of group.options) {
+        const variantName = option.label || option.name || '';
+        const suffix = variantName.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase();
+        const variantSku = sku && suffix ? `${sku}-${suffix}` : undefined;
         rows.push({
           tenant_id: tenantId,
           product_id: productId,
-          name: option.label || option.name || '',
+          name: variantName,
           type: variantType,
           price_modifier: parseFloat(option.price_modifier) || 0,
           sort_order: sortOrder++,
           is_active: true,
+          ...(variantSku ? { sku: variantSku } : {}),
         });
       }
     }
@@ -320,7 +331,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         const { error } = await supabase.from('products').update(payload).eq('id', product.id);
         if (error) throw new Error(error.message);
 
-        await syncProductVariants(supabase, product.id, tenantId, formData.variants);
+        await syncProductVariants(supabase, product.id, tenantId, formData.variants, formData.sku || product.sku);
         toast.success('Product updated');
         queryClient.setQueryData(['products', tenantId], (old) => {
           if (!Array.isArray(old)) return old;
@@ -354,7 +365,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
 
         // Show the trigger-generated SKU briefly before closing
         setSavedSku(inserted.sku || '');
-        await syncProductVariants(supabase, inserted.id, tenantId, formData.variants);
+        await syncProductVariants(supabase, inserted.id, tenantId, formData.variants, inserted.sku);
         toast.success('Product created');
         queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
         if (aiAssistantRef.current) await cleanupDeletedImages(aiAssistantRef.current);

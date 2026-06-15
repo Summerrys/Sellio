@@ -17,55 +17,45 @@ export const cleanupDeletedImages = async (componentRef) => {
   }
 };
 
-function StockImageSearch({ defaultValue, onResult, onError, themeColor, tenantId }) {
+function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
   const [query, setQuery] = React.useState('');
   const [searching, setSearching] = React.useState(false);
-  const [messages, setMessages] = React.useState([]);
-  const chatEndRef = React.useRef(null);
-
-  React.useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  const [resultUrl, setResultUrl] = React.useState(null);
 
   const doSearch = async () => {
     const q = query.trim();
     if (!q || searching) return;
     setSearching(true);
-    setMessages(prev => [...prev, { role: 'user', text: q }]);
-    setQuery('');
-
+    setResultUrl(null);
     try {
       const supabase = await (await import('@/lib/supabaseClient')).getSupabase();
       const { data, error } = await supabase.functions.invoke('findProductImage', {
         body: { query: q, tenantId },
       });
-
       if (error) throw new Error(error.message);
-
       if (data?.imageUrl) {
-        const foundUrl = data.imageUrl;
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          text: "Found one! Tap below to use it.",
-          imageUrl: foundUrl,
-        }]);
+        setResultUrl(data.imageUrl);
       } else {
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          text: 'No image found. Try a different keyword — e.g. "iced latte coffee" or "chocolate cake slice".',
-        }]);
-        onError();
+        onError('No image found. Try a different keyword.');
       }
     } catch (e) {
       console.error('Stock image search error:', e.message);
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        text: 'Search failed. Please try again.',
-      }]);
-      onError();
+      onError('Search failed. Please try again.');
     } finally {
       setSearching(false);
     }
+  };
+
+  const handleAccept = () => {
+    if (resultUrl) {
+      onResult(resultUrl);
+      setResultUrl(null);
+      setQuery('');
+    }
+  };
+
+  const handleDiscard = () => {
+    setResultUrl(null);
   };
 
   return (
@@ -76,59 +66,15 @@ function StockImageSearch({ defaultValue, onResult, onError, themeColor, tenantI
       padding: 10,
       display: 'flex',
       flexDirection: 'column',
-      gap: 8,
+      gap: 10,
     }}>
-      {/* Messages */}
-      {messages.length > 0 && (
-        <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 2 }}>
-          {messages.map((msg, i) => (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', gap: 6 }}>
-              <div style={{
-                maxWidth: '82%',
-                padding: '7px 11px',
-                borderRadius: msg.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-                background: msg.role === 'user' ? 'linear-gradient(135deg, #fb923c, #e0449a)' : '#f1f5f9',
-                color: msg.role === 'user' ? 'white' : '#334155',
-                fontSize: 12,
-                lineHeight: 1.4,
-              }}>
-                {msg.text}
-              </div>
-              {msg.imageUrl && (() => {
-                const url = msg.imageUrl;
-                return (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
-                    <img src={url} alt="Stock result" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 10, border: '1.5px solid #e2e8f0' }} />
-                    <button
-                      type="button"
-                      onClick={() => onResult(url)}
-                      style={{ fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 999, background: 'linear-gradient(135deg, #fb923c, #e0449a, #8b2fc9)', color: 'white', border: 'none', cursor: 'pointer', letterSpacing: '0.01em' }}
-                    >
-                      ✓ Use this photo
-                    </button>
-                  </div>
-                );
-              })()}
-            </div>
-          ))}
-          {searching && (
-            <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-              <div style={{ padding: '7px 11px', borderRadius: '12px 12px 12px 2px', background: '#f1f5f9', fontSize: 12, color: '#94a3b8' }}>
-                Searching…
-              </div>
-            </div>
-          )}
-          <div ref={chatEndRef} />
-        </div>
-      )}
-
-      {/* Input row with magic wand icon */}
+      {/* Search input row */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
           <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="url(#wand-grad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="url(#wand-grad-s)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <defs>
-                <linearGradient id="wand-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient id="wand-grad-s" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stopColor="#fb923c"/>
                   <stop offset="50%" stopColor="#e0449a"/>
                   <stop offset="100%" stopColor="#8b2fc9"/>
@@ -151,6 +97,7 @@ function StockImageSearch({ defaultValue, onResult, onError, themeColor, tenantI
           type="button"
           onClick={doSearch}
           disabled={searching || !query.trim()}
+          aria-label="Search"
           style={{
             width: 36, height: 36, borderRadius: 8, flexShrink: 0,
             background: searching || !query.trim() ? '#e2e8f0' : 'linear-gradient(135deg, #fb923c, #e0449a, #8b2fc9)',
@@ -158,7 +105,6 @@ function StockImageSearch({ defaultValue, onResult, onError, themeColor, tenantI
             cursor: searching || !query.trim() ? 'not-allowed' : 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
-          aria-label="Search"
         >
           {searching
             ? <span style={{ width: 14, height: 14, border: '2px solid #94a3b8', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
@@ -166,6 +112,32 @@ function StockImageSearch({ defaultValue, onResult, onError, themeColor, tenantI
           }
         </button>
       </div>
+
+      {/* Result preview */}
+      {resultUrl && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+          <img src={resultUrl} alt="Stock result" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e2e8f0', flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>Image found! Use it?</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleAccept}
+            aria-label="Use this image"
+            style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: 'linear-gradient(135deg, #fb923c, #e0449a, #8b2fc9)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
+          <button
+            type="button"
+            onClick={handleDiscard}
+            aria-label="Discard image"
+            style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: '#f1f5f9', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -542,7 +514,6 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
               <p className="text-xs text-slate-400 text-center mb-2">Or find a stock image with AI ✨</p>
               <StockImageSearch
                 tenantId={tenantId}
-                defaultValue={currentProductName || ''}
                 onResult={async (imageUrl) => {
                   setStep('uploading');
                   try {
@@ -558,9 +529,8 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                     toast.error('Could not load stock image');
                   }
                 }}
-                onError={() => {
-                  setStep('idle');
-                  toast.error('No image found, try different keywords');
+                onError={(msg) => {
+                  toast.error(msg || 'No image found, try different keywords');
                 }}
                 themeColor={themeColor}
               />
