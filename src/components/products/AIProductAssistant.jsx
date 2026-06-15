@@ -20,47 +20,39 @@ export const cleanupDeletedImages = async (componentRef) => {
 function StockImageSearch({ defaultValue, onResult, onError, themeColor, tenantId }) {
   const [query, setQuery] = React.useState('');
   const [searching, setSearching] = React.useState(false);
-  const [messages, setMessages] = React.useState(() => {
-    if (defaultValue) {
-      return [{
-        role: 'assistant',
-        text: `I'll find a photo for "${defaultValue}". Hit search or describe it differently below.`,
-      }];
-    }
-    return [{
-      role: 'assistant',
-      text: "Describe the image you're looking for and I'll find one!",
-    }];
-  });
+  const [messages, setMessages] = React.useState([]);
   const chatEndRef = React.useRef(null);
 
   React.useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const doSearch = async (searchQuery) => {
-    const q = (searchQuery || query).trim();
-    if (!q) return;
+  const doSearch = async () => {
+    const q = query.trim();
+    if (!q || searching) return;
     setSearching(true);
     setMessages(prev => [...prev, { role: 'user', text: q }]);
     setQuery('');
+
     try {
       const supabase = await (await import('@/lib/supabaseClient')).getSupabase();
       const { data, error } = await supabase.functions.invoke('findProductImage', {
         body: { query: q, tenantId },
       });
+
       if (error) throw new Error(error.message);
+
       if (data?.imageUrl) {
+        const foundUrl = data.imageUrl;
         setMessages(prev => [...prev, {
           role: 'assistant',
-          text: "Here's what I found! Tap to use it.",
-          imageUrl: data.imageUrl,
-          onUse: () => onResult(data.imageUrl),
+          text: "Found one! Tap below to use it.",
+          imageUrl: foundUrl,
         }]);
       } else {
         setMessages(prev => [...prev, {
           role: 'assistant',
-          text: "I couldn't find a great match. Try describing it differently — e.g. \"hot coffee cup on wooden table\".",
+          text: 'No image found. Try a different keyword — e.g. "iced latte coffee" or "chocolate cake slice".',
         }]);
         onError();
       }
@@ -68,7 +60,7 @@ function StockImageSearch({ defaultValue, onResult, onError, themeColor, tenantI
       console.error('Stock image search error:', e.message);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        text: "Something went wrong. Please try again.",
+        text: 'Search failed. Please try again.',
       }]);
       onError();
     } finally {
@@ -77,80 +69,100 @@ function StockImageSearch({ defaultValue, onResult, onError, themeColor, tenantI
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* Chat messages area */}
-      <div style={{ maxHeight: 160, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 2 }}>
-        {messages.map((msg, i) => (
-          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-            <div style={{
-              maxWidth: '85%',
-              padding: '6px 10px',
-              borderRadius: msg.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-              background: msg.role === 'user' ? 'rgb(var(--color-primary))' : '#f1f5f9',
-              color: msg.role === 'user' ? 'white' : '#334155',
-              fontSize: 12,
-              lineHeight: '1.4',
-            }}>
-              {msg.text}
-            </div>
-            {msg.imageUrl && (
-              <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
-                <img
-                  src={msg.imageUrl}
-                  alt="Stock result"
-                  style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0' }}
-                />
-                <button
-                  type="button"
-                  onClick={msg.onUse}
-                  style={{ fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 6, background: 'rgb(var(--color-primary))', color: 'white', border: 'none', cursor: 'pointer' }}
-                >
-                  ✓ Use this photo
-                </button>
+    <div style={{
+      border: '1.5px solid transparent',
+      borderRadius: 12,
+      background: 'linear-gradient(white, white) padding-box, linear-gradient(135deg, #fb923c, #e0449a, #8b2fc9) border-box',
+      padding: 10,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 8,
+    }}>
+      {/* Messages */}
+      {messages.length > 0 && (
+        <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 2 }}>
+          {messages.map((msg, i) => (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', gap: 6 }}>
+              <div style={{
+                maxWidth: '82%',
+                padding: '7px 11px',
+                borderRadius: msg.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                background: msg.role === 'user' ? 'linear-gradient(135deg, #fb923c, #e0449a)' : '#f1f5f9',
+                color: msg.role === 'user' ? 'white' : '#334155',
+                fontSize: 12,
+                lineHeight: 1.4,
+              }}>
+                {msg.text}
               </div>
-            )}
-          </div>
-        ))}
-        {searching && (
-          <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-            <div style={{ padding: '6px 10px', borderRadius: '12px 12px 12px 2px', background: '#f1f5f9', fontSize: 12, color: '#94a3b8' }}>
-              Searching...
+              {msg.imageUrl && (() => {
+                const url = msg.imageUrl;
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+                    <img src={url} alt="Stock result" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 10, border: '1.5px solid #e2e8f0' }} />
+                    <button
+                      type="button"
+                      onClick={() => onResult(url)}
+                      style={{ fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 999, background: 'linear-gradient(135deg, #fb923c, #e0449a, #8b2fc9)', color: 'white', border: 'none', cursor: 'pointer', letterSpacing: '0.01em' }}
+                    >
+                      ✓ Use this photo
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
-          </div>
-        )}
-        <div ref={chatEndRef} />
-      </div>
+          ))}
+          {searching && (
+            <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+              <div style={{ padding: '7px 11px', borderRadius: '12px 12px 12px 2px', background: '#f1f5f9', fontSize: 12, color: '#94a3b8' }}>
+                Searching…
+              </div>
+            </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
+      )}
 
-      {/* Input row */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <input
-          type="text"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && !searching) doSearch(); }}
-          placeholder="Describe the image you want..."
-          style={{ flex: 1, fontSize: 13, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, outline: 'none' }}
-        />
+      {/* Input row with magic wand icon */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="url(#wand-grad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <defs>
+                <linearGradient id="wand-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#fb923c"/>
+                  <stop offset="50%" stopColor="#e0449a"/>
+                  <stop offset="100%" stopColor="#8b2fc9"/>
+                </linearGradient>
+              </defs>
+              <path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8 19 13M17.8 6.2 19 5M12.2 6.2 11 5M12.2 11.8 11 13"/>
+              <path d="M3 21l9-9"/>
+            </svg>
+          </span>
+          <input
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') doSearch(); }}
+            placeholder="Find a stock image with AI…"
+            style={{ width: '100%', fontSize: 13, padding: '9px 12px 9px 30px', border: '1px solid #e2e8f0', borderRadius: 8, outline: 'none', background: 'white', boxSizing: 'border-box' }}
+          />
+        </div>
         <button
           type="button"
-          onClick={() => doSearch()}
+          onClick={doSearch}
           disabled={searching || !query.trim()}
           style={{
-            padding: '8px 12px',
-            borderRadius: 8,
-            background: searching || !query.trim() ? '#cbd5e1' : 'rgb(var(--color-primary))',
+            width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+            background: searching || !query.trim() ? '#e2e8f0' : 'linear-gradient(135deg, #fb923c, #e0449a, #8b2fc9)',
             border: 'none',
             cursor: searching || !query.trim() ? 'not-allowed' : 'pointer',
-            color: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
+          aria-label="Search"
         >
           {searching
-            ? <span style={{ width: 16, height: 16, border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
-            : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            ? <span style={{ width: 14, height: 14, border: '2px solid #94a3b8', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+            : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           }
         </button>
       </div>
@@ -527,7 +539,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
               <p className="text-xs text-slate-400">PNG, JPG up to 5MB</p>
             </div>
             <div className="mt-2 pt-2">
-              <p className="text-xs text-slate-400 text-center mb-2">Or find a stock image with AI</p>
+              <p className="text-xs text-slate-400 text-center mb-2">Or find a stock image with AI ✨</p>
               <StockImageSearch
                 tenantId={tenantId}
                 defaultValue={currentProductName || ''}
