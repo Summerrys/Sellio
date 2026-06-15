@@ -18,13 +18,32 @@ export const cleanupDeletedImages = async (componentRef) => {
 };
 
 function StockImageSearch({ defaultValue, onResult, onError, themeColor, tenantId }) {
-  const [query, setQuery] = React.useState(defaultValue || '');
+  const [query, setQuery] = React.useState('');
   const [searching, setSearching] = React.useState(false);
+  const [messages, setMessages] = React.useState(() => {
+    if (defaultValue) {
+      return [{
+        role: 'assistant',
+        text: `I'll find a photo for "${defaultValue}". Hit search or describe it differently below.`,
+      }];
+    }
+    return [{
+      role: 'assistant',
+      text: "Describe the image you're looking for and I'll find one!",
+    }];
+  });
+  const chatEndRef = React.useRef(null);
 
-  const doSearch = async () => {
-    const q = query.trim();
+  React.useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const doSearch = async (searchQuery) => {
+    const q = (searchQuery || query).trim();
     if (!q) return;
     setSearching(true);
+    setMessages(prev => [...prev, { role: 'user', text: q }]);
+    setQuery('');
     try {
       const supabase = await (await import('@/lib/supabaseClient')).getSupabase();
       const { data, error } = await supabase.functions.invoke('findProductImage', {
@@ -32,12 +51,25 @@ function StockImageSearch({ defaultValue, onResult, onError, themeColor, tenantI
       });
       if (error) throw new Error(error.message);
       if (data?.imageUrl) {
-        onResult(data.imageUrl);
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          text: "Here's what I found! Tap to use it.",
+          imageUrl: data.imageUrl,
+          onUse: () => onResult(data.imageUrl),
+        }]);
       } else {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          text: "I couldn't find a great match. Try describing it differently — e.g. \"hot coffee cup on wooden table\".",
+        }]);
         onError();
       }
     } catch (e) {
       console.error('Stock image search error:', e.message);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        text: "Something went wrong. Please try again.",
+      }]);
       onError();
     } finally {
       setSearching(false);
@@ -45,23 +77,83 @@ function StockImageSearch({ defaultValue, onResult, onError, themeColor, tenantI
   };
 
   return (
-    <div style={{ display: 'flex', gap: 8 }}>
-      <input
-        type="text"
-        value={query}
-        onChange={e => setQuery(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter') doSearch(); }}
-        placeholder="Tell me what it is..."
-        style={{ flex: 1, fontSize: 13, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, outline: 'none' }}
-      />
-      <button
-        type="button"
-        onClick={doSearch}
-        disabled={searching || !query.trim()}
-        style={{ padding: '8px 12px', borderRadius: 8, background: searching ? '#cbd5e1' : themeColor, border: 'none', cursor: searching ? 'not-allowed' : 'pointer', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-      >
-        {searching ? <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} /> : <Search style={{ width: 16, height: 16 }} />}
-      </button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* Chat messages area */}
+      <div style={{ maxHeight: 160, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 2 }}>
+        {messages.map((msg, i) => (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+            <div style={{
+              maxWidth: '85%',
+              padding: '6px 10px',
+              borderRadius: msg.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+              background: msg.role === 'user' ? 'rgb(var(--color-primary))' : '#f1f5f9',
+              color: msg.role === 'user' ? 'white' : '#334155',
+              fontSize: 12,
+              lineHeight: '1.4',
+            }}>
+              {msg.text}
+            </div>
+            {msg.imageUrl && (
+              <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+                <img
+                  src={msg.imageUrl}
+                  alt="Stock result"
+                  style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0' }}
+                />
+                <button
+                  type="button"
+                  onClick={msg.onUse}
+                  style={{ fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 6, background: 'rgb(var(--color-primary))', color: 'white', border: 'none', cursor: 'pointer' }}
+                >
+                  ✓ Use this photo
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+        {searching && (
+          <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+            <div style={{ padding: '6px 10px', borderRadius: '12px 12px 12px 2px', background: '#f1f5f9', fontSize: 12, color: '#94a3b8' }}>
+              Searching...
+            </div>
+          </div>
+        )}
+        <div ref={chatEndRef} />
+      </div>
+
+      {/* Input row */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          type="text"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !searching) doSearch(); }}
+          placeholder="Describe the image you want..."
+          style={{ flex: 1, fontSize: 13, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, outline: 'none' }}
+        />
+        <button
+          type="button"
+          onClick={() => doSearch()}
+          disabled={searching || !query.trim()}
+          style={{
+            padding: '8px 12px',
+            borderRadius: 8,
+            background: searching || !query.trim() ? '#cbd5e1' : 'rgb(var(--color-primary))',
+            border: 'none',
+            cursor: searching || !query.trim() ? 'not-allowed' : 'pointer',
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          {searching
+            ? <span style={{ width: 16, height: 16, border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+            : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          }
+        </button>
+      </div>
     </div>
   );
 }
@@ -435,7 +527,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
               <p className="text-xs text-slate-400">PNG, JPG up to 5MB</p>
             </div>
             <div className="mt-2 pt-2">
-              <p className="text-xs text-slate-400 text-center mb-2">Or find a stock image</p>
+              <p className="text-xs text-slate-400 text-center mb-2">Or find a stock image with AI</p>
               <StockImageSearch
                 tenantId={tenantId}
                 defaultValue={currentProductName || ''}

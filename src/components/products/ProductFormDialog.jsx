@@ -192,9 +192,36 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     }
   }, [tenant?.theme_config]);
 
-  const normalizeLegacyVariants = (variants) => {
+  const normalizeLegacyVariants = (variants, basePrice) => {
     if (!variants?.length) return [];
-    if (variants[0]?.options) return variants; // already grouped
+    // Already in grouped format (has .options array)
+    if (variants[0]?.options) return variants;
+
+    // Detect scan format: array of objects with a variant key + price
+    // e.g. [{size:'SMALL',price:3.5},{size:'MEDIUM',price:4.5}]
+    const KNOWN_VARIANT_KEYS = ['size', 'color', 'colour', 'addon', 'add-on', 'flavour', 'flavor', 'type', 'option', 'variant'];
+    const firstItem = variants[0];
+    const allKeys = Object.keys(firstItem || {});
+    const variantKey = allKeys.find(k => KNOWN_VARIANT_KEYS.includes(k.toLowerCase()))
+      || allKeys.find(k => k !== 'price' && k !== 'price_modifier' && k !== 'name' && k !== 'label');
+
+    if (variantKey) {
+      const prices = variants.map(v => parseFloat(v.price) || 0).filter(p => p > 0);
+      const minPrice = prices.length ? Math.min(...prices) : 0;
+      const effectiveBase = parseFloat(basePrice) > 0 ? parseFloat(basePrice) : minPrice;
+
+      const groupName = variantKey.charAt(0).toUpperCase() + variantKey.slice(1).toLowerCase();
+      return [{
+        name: groupName,
+        type: normalizeVariantType(variantKey),
+        options: variants.map(v => ({
+          label: String(v[variantKey] || ''),
+          price_modifier: Math.max(0, Math.round((parseFloat(v.price || 0) - effectiveBase) * 100) / 100),
+        })),
+      }];
+    }
+
+    // Legacy flat format fallback: [{name, label, price_modifier}]
     return [{
       name: 'Options',
       type: 'addon',
@@ -211,7 +238,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
       setFormData({
         ...EMPTY_FORM,
         ...product,
-        variants: normalizeLegacyVariants(product.variants),
+        variants: normalizeLegacyVariants(product.variants, product.price),
         track_inventory: product.track_inventory === true,
         stock_quantity: product.stock_quantity ?? 0,
         low_stock_threshold: product.low_stock_threshold ?? 5,
