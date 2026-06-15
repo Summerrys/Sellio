@@ -17,72 +17,37 @@ export const cleanupDeletedImages = async (componentRef) => {
   }
 };
 
-function StockImageSearch({ onResult, onError, tenantId, uploadToStorage }) {
+function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
   const [query, setQuery] = React.useState('');
   const [searching, setSearching] = React.useState(false);
   const [resultUrl, setResultUrl] = React.useState(null);
-  const [imgError, setImgError] = React.useState(false);
-
-  const PEXELS_KEY = 'YOUR_PEXELS_API_KEY';
 
   const doSearch = async () => {
     const q = query.trim();
     if (!q || searching) return;
     setSearching(true);
     setResultUrl(null);
-    setImgError(false);
-
     try {
       const supabase = await (await import('@/lib/supabaseClient')).getSupabase();
       const { data, error } = await supabase.functions.invoke('findProductImage', {
-        body: { query: q },
+        body: { query: q, tenantId },
       });
       if (error) throw new Error(error.message);
-
-      const keyword = data?.keyword || q;
-      console.log(`StockImageSearch: keyword="${keyword}"`);
-
-      const pexelsRes = await fetch(
-        `https://api.pexels.com/v1/search?query=${encodeURIComponent(keyword)}&per_page=5&orientation=square`,
-        { headers: { Authorization: PEXELS_KEY } }
-      );
-
-      if (!pexelsRes.ok) throw new Error(`Pexels API error: ${pexelsRes.status}`);
-
-      const pexelsData = await pexelsRes.json();
-      const photos = pexelsData.photos || [];
-
-      if (photos.length === 0) {
+      if (data?.imageUrl) {
+        setResultUrl(data.imageUrl);
+      } else {
         onError('No image found. Try a different keyword.');
-        return;
       }
-
-      const idx = keyword.length % photos.length;
-      const photo = photos[idx];
-      const photoUrl = photo.src?.medium || photo.src?.small || photo.src?.original;
-
-      if (!photoUrl) throw new Error('No photo URL in response');
-
-      setResultUrl(photoUrl);
     } catch (e) {
-      console.error('StockImageSearch error:', e.message);
+      console.error('Stock image search error:', e.message);
       onError('Search failed. Please try again.');
     } finally {
       setSearching(false);
     }
   };
 
-  const handleAccept = async () => {
-    if (!resultUrl) return;
-    try {
-      const imgRes = await fetch(resultUrl);
-      const blob = await imgRes.blob();
-      const file = new File([blob], `stock-${Date.now()}.jpg`, { type: 'image/jpeg' });
-      const publicUrl = await uploadToStorage(file);
-      onResult(publicUrl);
-      setResultUrl(null);
-      setQuery('');
-    } catch (e) {
+  const handleAccept = () => {
+    if (resultUrl) {
       onResult(resultUrl);
       setResultUrl(null);
       setQuery('');
@@ -91,10 +56,7 @@ function StockImageSearch({ onResult, onError, tenantId, uploadToStorage }) {
 
   const handleDiscard = () => {
     setResultUrl(null);
-    setImgError(false);
   };
-
-  const primaryGradient = 'linear-gradient(135deg, #fb923c, #e0449a, #8b2fc9)';
 
   return (
     <div style={{
@@ -106,6 +68,7 @@ function StockImageSearch({ onResult, onError, tenantId, uploadToStorage }) {
       flexDirection: 'column',
       gap: 10,
     }}>
+      {/* Search input row */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
           <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>
@@ -137,7 +100,7 @@ function StockImageSearch({ onResult, onError, tenantId, uploadToStorage }) {
           aria-label="Search"
           style={{
             width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-            background: searching || !query.trim() ? '#e2e8f0' : primaryGradient,
+            background: searching || !query.trim() ? '#e2e8f0' : themeColor,
             border: 'none',
             cursor: searching || !query.trim() ? 'not-allowed' : 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -150,22 +113,36 @@ function StockImageSearch({ onResult, onError, tenantId, uploadToStorage }) {
         </button>
       </div>
 
+      {/* Result preview */}
       {resultUrl && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-          {!imgError ? (
-            <img src={resultUrl} alt="Stock result" onError={() => setImgError(true)} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e2e8f0', flexShrink: 0 }} />
-          ) : (
-            <div style={{ width: 64, height: 64, borderRadius: 8, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>🖼️</div>
-          )}
+          <img
+            src={resultUrl}
+            alt="Stock result"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextSibling && (e.currentTarget.nextSibling.style.display = 'flex');
+            }}
+            style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e2e8f0', flexShrink: 0 }}
+          />
+          <div style={{ width: 64, height: 64, borderRadius: 8, background: '#f1f5f9', display: 'none', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>🖼️</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>Image found! Use it?</p>
           </div>
-          <button type="button" onClick={handleAccept} aria-label="Use this image"
-            style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: primaryGradient, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button
+            type="button"
+            onClick={handleAccept}
+            aria-label="Use this image"
+            style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: themeColor, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </button>
-          <button type="button" onClick={handleDiscard} aria-label="Discard image"
-            style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: '#f1f5f9', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button
+            type="button"
+            onClick={handleDiscard}
+            aria-label="Discard image"
+            style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: '#f1f5f9', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
@@ -550,7 +527,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
               <p className="text-xs text-slate-400 text-center mb-2">Or find a stock image with AI ✨</p>
               <StockImageSearch
                 tenantId={tenantId}
-                uploadToStorage={uploadToStorage}
+                themeColor={primaryColorResolved}
                 onResult={(imageUrl) => {
                   onImageChange?.(imageUrl);
                   setPreview(imageUrl);
