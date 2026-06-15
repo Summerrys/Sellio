@@ -116,7 +116,16 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
       {/* Result preview */}
       {resultUrl && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-          <img src={resultUrl} alt="Stock result" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e2e8f0', flexShrink: 0 }} />
+          <img
+            src={resultUrl}
+            alt="Stock result"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextSibling && (e.currentTarget.nextSibling.style.display = 'flex');
+            }}
+            style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e2e8f0', flexShrink: 0 }}
+          />
+          <div style={{ width: 64, height: 64, borderRadius: 8, background: '#f1f5f9', display: 'none', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>🖼️</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>Image found! Use it?</p>
           </div>
@@ -469,6 +478,10 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
   }), []);
 
   const themeColor = 'var(--color-primary-gradient)';
+  const primaryHex = typeof window !== 'undefined'
+    ? (getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '99 102 241')
+    : '99 102 241';
+  const primaryColorResolved = `rgb(${primaryHex})`;
   const hasImage = (step === 'applied' || step === 'image_only') && preview;
 
   return (
@@ -514,6 +527,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
               <p className="text-xs text-slate-400 text-center mb-2">Or find a stock image with AI ✨</p>
               <StockImageSearch
                 tenantId={tenantId}
+                themeColor={primaryColorResolved}
                 onResult={(imageUrl) => {
                   onImageChange?.(imageUrl);
                   setPreview(imageUrl);
@@ -526,7 +540,6 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                 onError={(msg) => {
                   toast.error(msg || 'No image found, try different keywords');
                 }}
-                themeColor={themeColor}
               />
             </div>
             <input ref={plainImageInputRef} type="file" accept="image/*" className="hidden" onChange={handlePlainImageSelect} />
