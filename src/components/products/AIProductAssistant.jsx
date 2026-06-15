@@ -100,7 +100,7 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
           aria-label="Search"
           style={{
             width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-            background: searching || !query.trim() ? '#e2e8f0' : 'linear-gradient(135deg, #fb923c, #e0449a, #8b2fc9)',
+            background: searching || !query.trim() ? '#e2e8f0' : themeColor,
             border: 'none',
             cursor: searching || !query.trim() ? 'not-allowed' : 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -124,7 +124,7 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
             type="button"
             onClick={handleAccept}
             aria-label="Use this image"
-            style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: 'linear-gradient(135deg, #fb923c, #e0449a, #8b2fc9)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: themeColor, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </button>
@@ -514,20 +514,14 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
               <p className="text-xs text-slate-400 text-center mb-2">Or find a stock image with AI ✨</p>
               <StockImageSearch
                 tenantId={tenantId}
-                onResult={async (imageUrl) => {
-                  setStep('uploading');
+                onResult={(imageUrl) => {
+                  onImageChange?.(imageUrl);
+                  setPreview(imageUrl);
+                  setStep('image_only');
                   try {
-                    const imgRes = await fetch(imageUrl);
-                    const blob = await imgRes.blob();
-                    const file = new File([blob], `stock-${Date.now()}.jpg`, { type: 'image/jpeg' });
-                    const publicUrl = await uploadToStorage(file);
-                    onImageChange?.(publicUrl);
-                    setPreview(publicUrl);
-                    setStep('image_only');
-                  } catch {
-                    setStep('idle');
-                    toast.error('Could not load stock image');
-                  }
+                    const pathMatch = imageUrl.match(/product-images\/(.+)$/);
+                    if (pathMatch?.[1]) uploadedPaths.current.push(decodeURIComponent(pathMatch[1]));
+                  } catch {}
                 }}
                 onError={(msg) => {
                   toast.error(msg || 'No image found, try different keywords');

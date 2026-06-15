@@ -502,7 +502,7 @@ function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onA
       </div>
       {isOutOfStock
         ? <span style={{ fontSize: 10, color: '#dc2626', fontWeight: 600, flexShrink: 0 }}>Sold out</span>
-        : <button onClick={(e) => { e.stopPropagation(); onAddToCart(product); }}
+        : <button onClick={(e) => { e.stopPropagation(); if (product.variants?.length > 0) { onProductClick(product); } else { onAddToCart(product); } }}
             style={{ width: 30, height: 30, borderRadius: '50%', background: primaryColor, border: 'none', color: 'white', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}>+</button>
       }
     </div>
@@ -592,7 +592,7 @@ function FeaturedCard({ product, currency, primaryColor, storefrontConfig, showS
           </div>
           {isOutOfStock && showStockBadge
             ? <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600, background: '#fee2e2', padding: '4px 10px', borderRadius: 999 }}>Sold out</span>
-            : !isOutOfStock && <button onClick={(e) => { e.stopPropagation(); onAddToCart(product); }} style={{ background: primaryColor, color: 'white', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Add +</button>
+            : !isOutOfStock && <button onClick={(e) => { e.stopPropagation(); if (product.variants?.length > 0) { onProductClick(product); } else { onAddToCart(product); } }} style={{ background: primaryColor, color: 'white', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Add +</button>
           }
         </div>
       </div>
@@ -628,7 +628,7 @@ function GridCard({ product, currency, primaryColor, storefrontConfig, showStock
             <span style={{ fontSize: 13, fontWeight: 700, color: primaryColor }}>{currency} {parseFloat(product.price).toFixed(2)}</span>
           </div>
           {!isOutOfStock && (
-            <button onClick={(e) => { e.stopPropagation(); onAddToCart(product); }}
+            <button onClick={(e) => { e.stopPropagation(); if (product.variants?.length > 0) { onProductClick(product); } else { onAddToCart(product); } }}
               style={{ width: 28, height: 28, borderRadius: '50%', background: primaryColor, color: 'white', border: 'none', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>+</button>
           )}
         </div>
@@ -729,23 +729,47 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
               <span style={{ fontSize: 20, fontWeight: 700, color: primaryColor }}>{currency} {parseFloat(product.price).toFixed(2)}</span>
             </div>
             {product.description && <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6, margin: '0 0 16px' }}>{product.description}</p>}
-            {product.variants?.length > 0 && (
-              <div style={{ marginBottom: 16 }}>
-                {product.variants.map((group, gi) => (
-                  <div key={gi} style={{ marginBottom: 14 }}>
-                    <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 8px', color: '#0f172a' }}>{group.name}</p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {group.options?.map((opt, oi) => (
-                        <button key={oi} onClick={() => setSelectedVariants(prev => ({ ...prev, [gi]: opt }))}
-                          style={{ padding: '6px 14px', borderRadius: 8, fontSize: 13, border: selectedVariants[gi]?.label === opt.label ? `2px solid ${primaryColor}` : '0.5px solid #e5e7eb', background: selectedVariants[gi]?.label === opt.label ? '#f1f5f9' : 'none', cursor: 'pointer', fontWeight: 500, color: '#0f172a' }}>
-                          {opt.label}{opt.price_modifier > 0 ? ` +${currency} ${opt.price_modifier.toFixed(2)}` : ''}
-                        </button>
-                      ))}
+            {(() => {
+              const normaliseVariants = (rawVariants, basePrice) => {
+                if (!rawVariants?.length) return [];
+                if (rawVariants[0]?.options) return rawVariants;
+                const KNOWN = ['size','color','colour','addon','flavour','flavor','type','option','variant'];
+                const firstItem = rawVariants[0];
+                const keys = Object.keys(firstItem || {});
+                const vKey = keys.find(k => KNOWN.includes(k.toLowerCase())) || keys.find(k => k !== 'price' && k !== 'price_modifier');
+                if (vKey) {
+                  const prices = rawVariants.map(v => parseFloat(v.price) || 0).filter(p => p > 0);
+                  const base = parseFloat(basePrice) > 0 ? parseFloat(basePrice) : (prices.length ? Math.min(...prices) : 0);
+                  const groupName = vKey.charAt(0).toUpperCase() + vKey.slice(1).toLowerCase();
+                  return [{ name: groupName, options: rawVariants.map(v => ({ label: String(v[vKey] || ''), price_modifier: Math.max(0, Math.round((parseFloat(v.price || 0) - base) * 100) / 100) })) }];
+                }
+                return [{ name: 'Options', options: rawVariants.map(v => ({ label: v.name || v.label || '', price_modifier: v.price_modifier || 0 })) }];
+              };
+
+              const normalisedVariants = normaliseVariants(product.variants, product.price);
+              if (!normalisedVariants.length) return null;
+
+              return (
+                <div style={{ marginBottom: 16 }}>
+                  {normalisedVariants.map((group, gi) => (
+                    <div key={gi} style={{ marginBottom: 14 }}>
+                      <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 8px', color: '#0f172a' }}>{group.name}</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        {(group.options || []).map((opt, oi) => {
+                          const isSelected = selectedVariants[gi]?.label === opt.label;
+                          return (
+                            <button key={oi} onClick={() => setSelectedVariants(prev => ({ ...prev, [gi]: opt }))}
+                              style={{ padding: '8px 16px', borderRadius: 999, fontSize: 13, border: isSelected ? `2px solid ${primaryColor}` : '1.5px solid #e2e8f0', background: isSelected ? `${primaryColor}15` : 'white', cursor: 'pointer', fontWeight: isSelected ? 700 : 500, color: isSelected ? primaryColor : '#374151', transition: 'all 0.15s' }}>
+                              {opt.label}{opt.price_modifier > 0 ? ` +${currency} ${parseFloat(opt.price_modifier).toFixed(2)}` : ''}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              );
+            })()}
             <button
               onClick={() => {
                 const combinedVariant = Object.values(selectedVariants).length > 0
