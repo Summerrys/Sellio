@@ -119,7 +119,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
       logo_url: tenant.logo_url || '',
       order_id_prefix: tenant.order_id_prefix || 'ORD',
       order_id_start: tenant.order_id_start || 1,
-      receipt_paper_size: tenant.receipt_paper_size || 'thermal_58',
+      receipt_paper_size: tenant.receipt_paper_size || 'thermal_80',
       receipt_show_logo: tenant.receipt_show_logo !== false,
       receipt_show_tax: tenant.receipt_show_tax !== false,
       receipt_show_order_number: tenant.receipt_show_order_number !== false,
