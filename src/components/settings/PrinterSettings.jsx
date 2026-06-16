@@ -48,7 +48,7 @@ export default function PrinterSettings({ tenantId, merchantName }) {
     if (!cfg) return;
     setMode(cfg.mode || 'bluetooth');
     if (cfg.mode === 'bluetooth' && cfg.deviceName) {
-      setBtDevice({ name: cfg.deviceName });
+      setBtDevice({ name: cfg.deviceName, deviceId: cfg.deviceId || null });
       setProtocol(cfg.protocol || 'escpos');
     }
     if (cfg.mode === 'network') {
@@ -116,8 +116,17 @@ export default function PrinterSettings({ tenantId, merchantName }) {
         acceptAllDevices: true,
         optionalServices: ALL_BT_SERVICES,
       });
-      setBtDevice({ name: device.name });
-      savePrinterConfig(tenantId, { mode: 'bluetooth', deviceName: device.name });
+      // CRITICAL: cache device object so Test Print never needs to re-pair
+      setBtDeviceCache(device);
+      const detectedProtocol = /label|tspl|tsc/i.test(device.name) ? 'tspl' : 'escpos';
+      setProtocol(detectedProtocol);
+      setBtDevice({ name: device.name, deviceId: device.id });
+      savePrinterConfig(tenantId, {
+        mode: 'bluetooth',
+        deviceName: device.name,
+        deviceId: device.id,
+        protocol: detectedProtocol,
+      });
       toast.success(`Connected: ${device.name}`);
     } catch (err) {
       if (err.name !== 'NotFoundError') toast.error('Bluetooth scan failed');
@@ -136,11 +145,15 @@ export default function PrinterSettings({ tenantId, merchantName }) {
       });
       // Cache the device object — subsequent prints reuse it without pairing dialog
       setBtDeviceCache(device);
-      setBtDevice({ name: device.name });
-      // Auto-detect protocol: label printers use TSPL, thermal receipt printers use ESC/POS
       const detectedProtocol = /label|tspl|tsc/i.test(device.name) ? 'tspl' : 'escpos';
       setProtocol(detectedProtocol);
-      savePrinterConfig(tenantId, { mode: 'bluetooth', deviceName: device.name, protocol: detectedProtocol });
+      setBtDevice({ name: device.name, deviceId: device.id });
+      savePrinterConfig(tenantId, {
+        mode: 'bluetooth',
+        deviceName: device.name,
+        deviceId: device.id,
+        protocol: detectedProtocol,
+      });
       toast.success(`Connected: ${device.name}`);
     } catch (err) {
       if (err.name !== 'NotFoundError') toast.error(`Failed to connect to ${deviceName}`);
@@ -246,41 +259,19 @@ export default function PrinterSettings({ tenantId, merchantName }) {
                     <CheckCircle className="w-4 h-4 text-green-600" />
                     <div>
                       <p className="text-sm font-medium text-green-800">{btDevice.name}</p>
-                      <p className="text-xs text-green-600">Connected</p>
+                      <p className="text-xs text-green-600">Connected · {protocol === 'tspl' ? 'TSPL Label' : 'ESC/POS Receipt'}</p>
+                      {btDevice.deviceId && (
+                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                          ID: {btDevice.deviceId.replace(/[^a-fA-F0-9]/g, '').slice(0, 16).toUpperCase()}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <button type="button" onClick={handleDisconnectBt} className="text-xs text-red-500 hover:text-red-700 font-medium">
                     Disconnect
                   </button>
                 </div>
-                {/* Print protocol selector */}
-                <div>
-                  <Label className="text-xs text-slate-600 mb-1 block">Print Protocol</Label>
-                  <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
-                    {[
-                      { value: 'escpos', label: 'ESC/POS', sub: 'Thermal receipt' },
-                      { value: 'tspl', label: 'TSPL', sub: 'Label printer' },
-                    ].map(opt => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => {
-                          setProtocol(opt.value);
-                          const cfg = loadPrinterConfig(tenantId);
-                          savePrinterConfig(tenantId, { ...cfg, protocol: opt.value });
-                        }}
-                        className="flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-all flex flex-col items-center gap-0.5"
-                        style={protocol === opt.value
-                          ? { background: 'var(--color-primary-gradient, #6366f1)', color: '#fff' }
-                          : { color: '#64748b' }
-                        }
-                      >
-                        <span className="font-bold">{opt.label}</span>
-                        <span style={{ fontSize: 10, opacity: 0.8 }}>{opt.sub}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+
               </div>
             ) : (
               <button
