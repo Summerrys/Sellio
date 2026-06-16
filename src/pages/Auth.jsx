@@ -591,26 +591,33 @@ export default function Auth() {
     }
     setForgotLoading(true);
     try {
-      const supabase = await getSupabase();
-      const { error } = await supabase.auth.updateUser({ password: forgotNewPassword });
-      if (error) throw error;
-      const newHash = await hashPassword(forgotNewPassword);
-
-      // Update password_hash in app_users.
-      // If forgotFullPhone is set (OTP flow), look up by phone.
-      // If not (email recovery flow), look up by the current session's email.
       if (forgotFullPhone) {
-        await supabase.from('app_users').update({ password_hash: newHash }).eq('phone', forgotFullPhone);
+        // ── OTP / staff path ────────────────────────────────────────────────
+        // No active Supabase session exists after WhatsApp OTP verification.
+        // Use resetPasswordWithOTP edge function which uses admin API (no session needed).
+        const res = await fetch('https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1/resetPasswordWithOTP', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: forgotFullPhone, newPassword: forgotNewPassword }),
+        });
+        const result = await res.json();
+        if (!res.ok || result.error) throw new Error(result.error || 'Failed to reset password');
       } else {
+        // ── Email recovery path ─────────────────────────────────────────────
+        // Session exists from clicking the Supabase recovery email link.
+        // auth.updateUser() works normally here.
+        const supabase = await getSupabase();
+        const { error } = await supabase.auth.updateUser({ password: forgotNewPassword });
+        if (error) throw error;
+        const newHash = await hashPassword(forgotNewPassword);
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user?.email) {
           await supabase.from('app_users').update({ password_hash: newHash }).eq('email', session.user.email);
         }
+        await supabase.auth.signOut();
       }
 
       toast.success('Password updated successfully!');
-      // Sign out so the merchant logs in fresh with their new password
-      await supabase.auth.signOut();
       setTimeout(() => { window.location.href = `${getBaseUrl()}/Auth`; }, 800);
     } catch (err) {
       toast.error(err.message || 'Failed to update password.');
