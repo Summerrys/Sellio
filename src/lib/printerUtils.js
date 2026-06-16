@@ -17,15 +17,13 @@ const BLE_PRINTER_PROFILES = [
 
 export const ALL_BT_SERVICES = BLE_PRINTER_PROFILES.map(p => p.service);
 
-// Module-level BT device cache — avoids re-pairing dialog on every print within same session
-let _btDevice = null;
-
+// BT device cache stored on window — survives React re-renders and module re-evaluations
 export function setBtDeviceCache(device) {
-  _btDevice = device || null;
+  window.__sellioBtDevice = device || null;
 }
 
 export function getCachedBtDevice() {
-  return _btDevice;
+  return window.__sellioBtDevice || null;
 }
 
 export function buildReceipt(lines) {
@@ -108,49 +106,91 @@ export function buildTestReceipt(merchantName, paperSize = 'thermal_80') {
   ]);
 }
 
-// Send ESC/POS bytes via Bluetooth GATT
+// Build TSPL (TSC Printer Language) receipt bytes for label printers
+// TSPL uses ASCII text commands — completely different from ESC/POS binary
+export function buildTSPLReceipt(lines) {
+  const LINE_H = 40;    // dots per line (font "3" height ~32 + 8 spacing)
+  const MARGIN_Y = 20;  // top margin in dots
+  const FOOTER_H = 40;  // extra space at bottom before cut
+
+  let totalDots = MARGIN_Y;
+  lines.forEach(() => { totalDots += LINE_H; });
+  totalDots += FOOTER_H;
+  const heightMM = Math.ceil(totalDots / 8); // 200 DPI: 8 dots per mm
+
+  let tspl = '';
+  tspl += `SIZE 80 mm, ${heightMM} mm\r\n`;
+  tspl += `GAP 0 mm, 0 mm\r\n`;
+  tspl += `DIRECTION 0\r\n`;
+  tspl += `DENSITY 8\r\n`;
+  tspl += `SPEED 1\r\n`;
+  tspl += `CLS\r\n`;
+
+  let y = MARGIN_Y;
+  lines.forEach(line => {
+    const safe = (line.text || '').replace(/\\/g, '\\\\').replace(/"/g, "'");
+    tspl += `TEXT 10, ${y}, "3", 0, 1, 1, "${safe}"\r\n`;
+    y += LINE_H;
+  });
+
+  tspl += `PRINT 1\r\n`;
+  return new TextEncoder().encode(tspl);
+}
+
+export function buildTSPLTestReceipt(merchantName) {
+  const now = new Date().toLocaleString('en-SG', { dateStyle: 'short', timeStyle: 'short' });
+  const sep = '--------------------------------';
+  return buildTSPLReceipt([
+    { text: merchantName || 'My Store' },
+    { text: '** TEST PRINT **' },
+    { text: now },
+    { text: sep },
+    { text: 'Table: T-01' },
+    { text: 'Order: ORD-000001' },
+    { text: sep },
+    { text: '1x Kopi O              SGD 1.50' },
+    { text: '2x Nasi Lemak          SGD 7.00' },
+    { text: '1x Teh Tarik           SGD 1.80' },
+    { text: sep },
+    { text: 'TOTAL:         SGD 10.30' },
+    { text: sep },
+    { text: 'Thank you for your visit!' },
+    { text: 'Powered by Sellio' },
+  ]);
+}
+
+// Send bytes via Bluetooth GATT — NEVER calls requestDevice() (no pairing dialog)
+// Call setBtDeviceCache(device) from PrinterSettings after initial pairing
 export async function sendViaBluetooth(deviceName, bytes) {
   if (!navigator.bluetooth) throw new Error('Web Bluetooth not supported');
 
-  let device = _btDevice;
+  let device = window.__sellioBtDevice;
 
-  // 1. Try module-level cache first — no dialog needed
-  // 2. Try getDevices() — returns previously permitted devices without showing picker (Chrome 85+)
+  // Try getDevices() — returns previously-permitted devices without a dialog (Chrome 85+)
   if (!device) {
     try {
-      const paired = await navigator.bluetooth.getDevices();
-      device = paired.find(d => d.name === deviceName) || null;
-      if (device) _btDevice = device;
+      const devices = await navigator.bluetooth.getDevices();
+      device = devices.find(d => d.name === deviceName) || null;
+      if (device) window.__sellioBtDevice = device;
     } catch {}
   }
 
-  // 3. Fall back to requestDevice — shows browser pairing dialog
   if (!device) {
-    device = await navigator.bluetooth.requestDevice({
-      filters: [{ name: deviceName }],
-      optionalServices: ALL_BT_SERVICES,
-    }).catch(() =>
-      navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: ALL_BT_SERVICES,
-      })
-    );
-    _btDevice = device;
+    throw new Error('Printer not connected. Please go to Settings → Receipt → Printer and reconnect.');
   }
 
   const server = await device.gatt.connect();
   let lastError;
 
-  // Try each BLE profile until one works
   for (const profile of BLE_PRINTER_PROFILES) {
     try {
       const service = await server.getPrimaryService(profile.service);
       const characteristic = await service.getCharacteristic(profile.char);
 
-      const CHUNK = 512;
+      // BLE MTU minimum is 20 bytes — use small chunks for maximum compatibility
+      const CHUNK = 20;
       for (let i = 0; i < bytes.length; i += CHUNK) {
         const chunk = bytes.slice(i, i + CHUNK);
-        // Prefer writeValueWithoutResponse — no ACK wait, works better for most BLE printers
         try {
           if (characteristic.properties?.writeWithoutResponse) {
             await characteristic.writeValueWithoutResponse(chunk);
@@ -158,20 +198,20 @@ export async function sendViaBluetooth(deviceName, bytes) {
             await characteristic.writeValue(chunk);
           }
         } catch {
-          // Fallback to writeValue if writeValueWithoutResponse fails
           await characteristic.writeValue(chunk);
         }
+        // Small delay between chunks to avoid buffer overflow on slower printers
+        if (i + CHUNK < bytes.length) await new Promise(r => setTimeout(r, 10));
       }
       // Keep connection alive — don't disconnect so next print is instant
-      return; // success
+      return;
     } catch (e) {
       lastError = e;
-      // try next profile
     }
   }
 
   throw new Error(
-    `Printer not compatible. Tried ${BLE_PRINTER_PROFILES.length} Bluetooth profiles. ` +
+    `No compatible printer service found. Tried ${BLE_PRINTER_PROFILES.length} profiles. ` +
     `Last error: ${lastError?.message}. Try Network/IP mode if issue persists.`
   );
 }
