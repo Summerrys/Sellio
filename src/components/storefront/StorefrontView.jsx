@@ -18,6 +18,10 @@ import {
   Gem, Wrench, Scissors, Sparkles
 } from 'lucide-react';
 
+// ── Currency symbol helper ───────────────────────────────────────────────────
+// Returns display symbol: SGD→"$", MYR→"RM ", USD→"$", GBP→"£", EUR→"€"
+const getCurrencySymbol = (c) => ({ SGD:'$', MYR:'RM ', USD:'$', AUD:'A$', GBP:'£', EUR:'€' }[c] || (c + ' '));
+
 // ── Category icon resolver ──────────────────────────────────────────────────
 function getCategoryIcon(name = '') {
   const n = name.toLowerCase();
@@ -495,9 +499,9 @@ function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onA
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {product.compare_at_price > product.price && (
-            <span style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through' }}>{currency} {parseFloat(product.compare_at_price).toFixed(2)}</span>
+            <span style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through' }}>{getCurrencySymbol(currency)}{parseFloat(product.compare_at_price).toFixed(2)}</span>
           )}
-          <p style={{ fontSize: 13, fontWeight: 700, color: primaryColor, margin: 0 }}>{currency} {parseFloat(product.price).toFixed(2)}</p>
+          <p style={{ fontSize: 13, fontWeight: 700, color: primaryColor, margin: 0 }}>{getCurrencySymbol(currency)}{parseFloat(product.price).toFixed(2)}</p>
         </div>
       </div>
       {isOutOfStock
@@ -586,9 +590,9 @@ function FeaturedCard({ product, currency, primaryColor, storefrontConfig, showS
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {product.compare_at_price > product.price && (
-              <span style={{ fontSize: 12, color: '#94a3b8', textDecoration: 'line-through' }}>{currency} {parseFloat(product.compare_at_price).toFixed(2)}</span>
+              <span style={{ fontSize: 12, color: '#94a3b8', textDecoration: 'line-through' }}>{getCurrencySymbol(currency)}{parseFloat(product.compare_at_price).toFixed(2)}</span>
             )}
-            <span style={{ fontSize: 15, fontWeight: 700, color: primaryColor }}>{currency} {parseFloat(product.price).toFixed(2)}</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: primaryColor }}>{getCurrencySymbol(currency)}{parseFloat(product.price).toFixed(2)}</span>
           </div>
           {isOutOfStock && showStockBadge
             ? <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600, background: '#fee2e2', padding: '4px 10px', borderRadius: 999 }}>Sold out</span>
@@ -623,9 +627,9 @@ function GridCard({ product, currency, primaryColor, storefrontConfig, showStock
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {product.compare_at_price > product.price && (
-              <span style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through' }}>{currency} {parseFloat(product.compare_at_price).toFixed(2)}</span>
+              <span style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through' }}>{getCurrencySymbol(currency)}{parseFloat(product.compare_at_price).toFixed(2)}</span>
             )}
-            <span style={{ fontSize: 13, fontWeight: 700, color: primaryColor }}>{currency} {parseFloat(product.price).toFixed(2)}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: primaryColor }}>{getCurrencySymbol(currency)}{parseFloat(product.price).toFixed(2)}</span>
           </div>
           {!isOutOfStock && (
             <button onClick={(e) => { e.stopPropagation(); if (product.variants?.length > 0) { onProductClick(product); } else { onAddToCart(product); } }}
@@ -724,9 +728,9 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
             <p style={{ fontWeight: 700, fontSize: 18, margin: '0 0 6px', color: '#0f172a' }}>{product.name}</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
               {product.compare_at_price > product.price && (
-                <span style={{ fontSize: 13, color: '#94a3b8', textDecoration: 'line-through' }}>{currency} {parseFloat(product.compare_at_price).toFixed(2)}</span>
+                <span style={{ fontSize: 13, color: '#94a3b8', textDecoration: 'line-through' }}>{getCurrencySymbol(currency)}{parseFloat(product.compare_at_price).toFixed(2)}</span>
               )}
-              <span style={{ fontSize: 20, fontWeight: 700, color: primaryColor }}>{currency} {parseFloat(product.price).toFixed(2)}</span>
+              <span style={{ fontSize: 20, fontWeight: 700, color: primaryColor }}>{getCurrencySymbol(currency)}{parseFloat(product.price).toFixed(2)}</span>
             </div>
             {product.description && <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6, margin: '0 0 16px' }}>{product.description}</p>}
             {(() => {
@@ -760,7 +764,7 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                           return (
                             <button key={oi} onClick={() => setSelectedVariants(prev => ({ ...prev, [gi]: opt }))}
                               style={{ padding: '8px 16px', borderRadius: 999, fontSize: 13, border: isSelected ? `2px solid ${primaryColor}` : '1.5px solid #e2e8f0', background: isSelected ? `${primaryColor}15` : 'white', cursor: 'pointer', fontWeight: isSelected ? 700 : 500, color: isSelected ? primaryColor : '#374151', transition: 'all 0.15s' }}>
-                              {opt.label}{opt.price_modifier > 0 ? ` +${currency} ${parseFloat(opt.price_modifier).toFixed(2)}` : ''}
+                              {opt.label}{opt.price_modifier > 0 ? ` +${getCurrencySymbol(currency)}${parseFloat(opt.price_modifier).toFixed(2)}` : ''}
                             </button>
                           );
                         })}
@@ -779,7 +783,7 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                 onClose();
               }}
               style={{ width: '100%', padding: 14, background: primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
-              Add to order · {currency} {(parseFloat(product.price) + Object.values(selectedVariants).reduce((sum, v) => sum + (v.price_modifier || 0), 0)).toFixed(2)}
+              Add to order · {getCurrencySymbol(currency)}{(parseFloat(product.price) + Object.values(selectedVariants).reduce((sum, v) => sum + (v.price_modifier || 0), 0)).toFixed(2)}
             </button>
           </div>
         </div>

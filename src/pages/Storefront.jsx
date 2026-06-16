@@ -144,6 +144,7 @@ export default function Storefront() {
   const cartTotal = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
   const primaryColor = storefrontConfig?.banner_bg_color || theme?.primary_color || '#6366f1';
   const currency = tenant?.currency || 'SGD';
+  const sym = { SGD:'$', MYR:'RM ', USD:'$', AUD:'A$', GBP:'£', EUR:'€' }[currency] || (currency + ' ');
   const isFnB = /f&b|cafe|restaurant|food|beverage/i.test(tenant?.industry || '');
 
   const addToCart = (product, variant = null) => {
@@ -389,7 +390,7 @@ export default function Storefront() {
             whiteSpace: 'nowrap',
           }}>
             <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>{cartCount}</span>
-            {currency} {cartTotal.toFixed(2)}
+            {sym}{cartTotal.toFixed(2)}
           </button>
         </div>
       )}
@@ -404,9 +405,13 @@ export default function Storefront() {
               <button onClick={() => setShowCart(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22, lineHeight: 1 }}>✕</button>
             </div>
             {isDineIn && table && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f8fafc', borderRadius: 8, padding: '8px 12px', marginBottom: 12 }}>
-                <span style={{ fontSize: 14 }}>🪑</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{table.name}</span>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `${primaryColor}12`, borderRadius: 20, padding: '6px 12px 6px 8px', border: `1px solid ${primaryColor}25`, marginBottom: 12 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="7" width="18" height="3" rx="1.5"/>
+                  <line x1="7" y1="10" x2="5" y2="19"/>
+                  <line x1="17" y1="10" x2="19" y2="19"/>
+                </svg>
+                <span style={{ fontSize: 13, fontWeight: 600, color: primaryColor }}>{table.name}</span>
               </div>
             )}
             {cart.length === 0 ? (
@@ -422,7 +427,7 @@ export default function Storefront() {
                     <div style={{ flex: 1 }}>
                       <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 2px', color: '#0f172a' }}>{item.name}</p>
                       {item.variant && <p style={{ fontSize: 11, color: '#94a3b8', margin: '0 0 4px' }}>{item.variant}</p>}
-                      <p style={{ fontWeight: 700, fontSize: 13, color: primaryColor, margin: 0 }}>{currency} {(item.price * item.quantity).toFixed(2)}</p>
+                      <p style={{ fontWeight: 700, fontSize: 13, color: primaryColor, margin: 0 }}>{sym}{(item.price * item.quantity).toFixed(2)}</p>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                                       <button onClick={() => updateQuantity(item.key, item.quantity - 1)} style={{ width: 28, height: 28, background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 300, lineHeight: 1 }}>−</button>
@@ -433,7 +438,7 @@ export default function Storefront() {
                 ))}
                 <div style={{ borderTop: '0.5px solid #e5e7eb', paddingTop: 12, marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ fontWeight: 600, fontSize: 15 }}>Total</span>
-                  <span style={{ fontWeight: 700, fontSize: 18, color: primaryColor }}>{currency} {cartTotal.toFixed(2)}</span>
+                  <span style={{ fontWeight: 700, fontSize: 18, color: primaryColor }}>{sym}{cartTotal.toFixed(2)}</span>
                 </div>
                 {!isStoreOpen ? (
                   <div style={{ width: '100%', padding: 14, background: '#f1f5f9', color: '#94a3b8', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, textAlign: 'center' }}>
@@ -499,9 +504,13 @@ export default function Storefront() {
               <button onClick={() => setShowCheckout(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22 }}>✕</button>
             </div>
             {isDineIn && table && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f8fafc', borderRadius: 8, padding: '8px 12px', marginBottom: 14 }}>
-                <span style={{ fontSize: 14 }}>🪑</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{table.name}</span>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `${primaryColor}12`, borderRadius: 20, padding: '6px 12px 6px 8px', border: `1px solid ${primaryColor}25`, marginBottom: 14 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="7" width="18" height="3" rx="1.5"/>
+                  <line x1="7" y1="10" x2="5" y2="19"/>
+                  <line x1="17" y1="10" x2="19" y2="19"/>
+                </svg>
+                <span style={{ fontSize: 13, fontWeight: 600, color: primaryColor }}>{table.name}</span>
               </div>
             )}
             <div style={{ marginBottom: 14 }}>
@@ -514,12 +523,12 @@ export default function Storefront() {
                       <p style={{ fontSize: 12, color: '#64748b', margin: '2px 0 0' }}>× {item.quantity}</p>
                     </div>
                   </div>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: primaryColor }}>{currency} {(item.price * item.quantity).toFixed(2)}</span>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: primaryColor }}>{sym}{(item.price * item.quantity).toFixed(2)}</span>
                 </div>
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
                 <span style={{ fontWeight: 700, fontSize: 15 }}>Total</span>
-                <span style={{ fontWeight: 700, fontSize: 17, color: primaryColor }}>{currency} {cartTotal.toFixed(2)}</span>
+                <span style={{ fontWeight: 700, fontSize: 17, color: primaryColor }}>{sym}{cartTotal.toFixed(2)}</span>
               </div>
             </div>
             <div style={{ marginBottom: 16 }}>
@@ -542,7 +551,7 @@ export default function Storefront() {
                 disabled={isSubmitting}
                 style={{ width: '100%', padding: 14, background: isSubmitting ? '#94a3b8' : primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
               >
-                {isSubmitting ? 'Placing order...' : `Place order · ${currency} ${cartTotal.toFixed(2)}`}
+                {isSubmitting ? 'Placing order...' : `Place order · ${sym}${cartTotal.toFixed(2)}`}
               </button>
             )}
           </div>
@@ -567,7 +576,14 @@ export default function Storefront() {
               {table && (
                 <>
                   <span style={{ color: '#cbd5e1', fontSize: 12 }}>·</span>
-                  <span style={{ fontSize: 13, color: '#64748b' }}>🪑 {table.name}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#64748b' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="7" width="18" height="3" rx="1.5"/>
+                  <line x1="7" y1="10" x2="5" y2="19"/>
+                  <line x1="17" y1="10" x2="19" y2="19"/>
+                </svg>
+                {table.name}
+              </span>
                 </>
               )}
             </div>
@@ -593,19 +609,19 @@ export default function Storefront() {
                 ))}
                 <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 12, paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Total</span>
-                  <span style={{ fontSize: 16, fontWeight: 800, color: primaryColor }}>{currency} {lastCartTotal.toFixed(2)}</span>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: primaryColor }}>{sym}{lastCartTotal.toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
-            {/* Payment QR card */}
-            {tenant.payment_qr_url && (
+            {/* Payment QR card — shown only when merchant has uploaded QR */}
+            {tenant.payment_qr_url ? (
               <div style={{ width: '100%', background: 'white', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                 <div style={{ padding: '14px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#0f172a', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
                     {tenant.payment_qr_label || 'Pay via QR Code'}
                   </p>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: primaryColor }}>{currency} {lastCartTotal.toFixed(2)}</span>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: primaryColor }}>{sym}{lastCartTotal.toFixed(2)}</span>
                 </div>
                 <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   {/* QR code with long-press hint */}
@@ -648,7 +664,7 @@ export default function Storefront() {
                     {[
                       { step: '1', text: 'Open your banking app (DBS PayLah, OCBC, UOB etc.)' },
                       { step: '2', text: 'Long press the QR code above → Save image → Scan from photo' },
-                      { step: '3', text: `Enter ${currency} ${lastCartTotal.toFixed(2)} and confirm your payment` },
+                      { step: '3', text: `Enter ${sym}${lastCartTotal.toFixed(2)} and confirm your payment` },
                     ].map(({ step, text }) => (
                       <div key={step} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: step !== '3' ? 8 : 0 }}>
                         <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
@@ -658,6 +674,20 @@ export default function Storefront() {
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+            ) : (
+              /* Fallback when payment QR is not configured */
+              <div style={{ width: '100%', background: 'white', borderRadius: 16, border: '1px solid #e2e8f0', padding: '18px 16px', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: `${primaryColor}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                    <line x1="1" y1="10" x2="23" y2="10"/>
+                  </svg>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Pay at the counter</p>
+                  <p style={{ margin: 0, fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>Please proceed to the counter with your order number. Our staff will assist you with payment.</p>
                 </div>
               </div>
             )}
