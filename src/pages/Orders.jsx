@@ -96,15 +96,17 @@ function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate, on
   const useThemeButton = THEME_BUTTON_STATUSES.has(order.status);
   const showPrint = order.status === 'ready' || order.status === 'completed';
   const [printing, setPrinting] = useState(false);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [receiptPrinting, setReceiptPrinting] = useState(false);
 
-  const handlePrint = async () => {
+  const handleActualPrint = async () => {
     const cfg = loadPrinterConfig(tenantId);
     if (!cfg) {
-      // Fall back to browser print dialog
       printReceipt(order, currency, merchantName);
+      setShowReceipt(false);
       return;
     }
-    setPrinting(true);
+    setReceiptPrinting(true);
     const bytes = buildOrderReceipt(order, currency, merchantName);
     try {
       if (cfg.mode === 'bluetooth' && cfg.deviceName) {
@@ -115,113 +117,193 @@ function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate, on
         printReceipt(order, currency, merchantName);
       }
       toast.success('Printed ✓');
+      setShowReceipt(false);
     } catch (err) {
       toast.error(`Print failed: ${err.message}`);
     } finally {
-      setPrinting(false);
+      setReceiptPrinting(false);
     }
   };
 
   return (
-    <div
-      className="rounded-xl border border-slate-200 overflow-hidden shadow-sm"
-      style={{ borderLeft: `4px solid ${accent.border}`, background: accent.bg }}
-    >
-      <div className="p-4">
-        {/* Header row */}
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-slate-900 text-sm">#{order.order_number || order.id?.slice(-6)}</span>
-            {order.table_name && (
-              <span className="text-xs bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-medium">
-                🪑 {order.table_name}
-              </span>
-            )}
-            {order.order_type && (
-              <span className="text-xs text-slate-500">
-                {order.order_type === 'dine_in' ? 'Dine In' : order.order_type === 'takeaway' ? 'Takeaway' : order.order_type}
-              </span>
-            )}
-          </div>
-          <span className="text-xs text-slate-400 flex-shrink-0">{elapsed}</span>
-        </div>
-
-        {/* Customer */}
-        {customerName && (
-          <p className="text-xs text-slate-500 mb-2">{customerName}</p>
-        )}
-
-        {/* Items */}
-        <div className="space-y-1 mb-3">
-          {(order.items || []).map((item, idx) => (
-            <div key={idx} className="flex justify-between text-sm">
-              <span className="text-slate-800 font-medium">
-                {item.quantity}× {item.name || item.product_name}
-                {item.variant ? <span className="text-slate-500 font-normal"> ({item.variant})</span> : ''}
-              </span>
-              {item.price != null && (
-                <span className="text-slate-500 text-xs">{currency} {((item.price || 0) * (item.quantity || 1)).toFixed(2)}</span>
+    <>
+      <div
+        className="rounded-xl border border-slate-200 overflow-hidden shadow-sm"
+        style={{ borderLeft: `4px solid ${accent.border}`, background: accent.bg }}
+      >
+        <div className="p-4">
+          {/* Header row */}
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-slate-900 text-sm">#{order.order_number || order.id?.slice(-6)}</span>
+              {order.table_name && (
+                <span className="text-xs bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-medium">
+                  🪑 {order.table_name}
+                </span>
+              )}
+              {order.order_type && (
+                <span className="text-xs text-slate-500">
+                  {order.order_type === 'dine_in' ? 'Dine In' : order.order_type === 'takeaway' ? 'Takeaway' : order.order_type}
+                </span>
               )}
             </div>
-          ))}
-        </div>
+            <span className="text-xs text-slate-400 flex-shrink-0">{elapsed}</span>
+          </div>
 
-        {/* Notes */}
-        {order.notes && (
-          <p className="text-xs text-slate-500 italic mb-2">📝 {order.notes}</p>
-        )}
+          {/* Customer */}
+          {customerName && (
+            <p className="text-xs text-slate-500 mb-2">{customerName}</p>
+          )}
 
-        {/* Total */}
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-bold text-slate-900">{currency} {parseFloat(order.total_amount || 0).toFixed(2)}</span>
-          {order.status === 'completed' && (
-            <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">✓ Completed</span>
-          )}
-        </div>
+          {/* Items */}
+          <div className="space-y-1 mb-3">
+            {(order.items || []).map((item, idx) => (
+              <div key={idx} className="flex justify-between text-sm">
+                <span className="text-slate-800 font-medium">
+                  {item.quantity}× {item.name || item.product_name}
+                  {item.variant ? <span className="text-slate-500 font-normal"> ({item.variant})</span> : ''}
+                </span>
+                {item.price != null && (
+                  <span className="text-slate-500 text-xs">{currency} {((item.price || 0) * (item.quantity || 1)).toFixed(2)}</span>
+                )}
+              </div>
+            ))}
+          </div>
 
-        {/* Action buttons */}
-        <div className={showPrint || (order.payment_status !== 'paid' && (order.status === 'completed' || order.status === 'ready')) ? 'flex flex-col gap-2' : ''}>
-          {order.payment_status !== 'paid' && (order.status === 'completed' || order.status === 'ready') && (
-            <button
-              onClick={() => onMarkPaid(order)}
-              className="w-full py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
-              style={{ border: '1.5px solid #16a34a', color: '#16a34a', background: '#f0fdf4' }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.color = '#fff'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#f0fdf4'; e.currentTarget.style.color = '#16a34a'; }}
-            >
-              💳 Mark as Paid
-            </button>
+          {/* Notes */}
+          {order.notes && (
+            <p className="text-xs text-slate-500 italic mb-2">📝 {order.notes}</p>
           )}
-          {showPrint && (
-            <button
-              onClick={handlePrint}
-              disabled={printing}
-              className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold flex-1 transition-colors disabled:opacity-70"
-              style={{ border: '1.5px solid rgb(var(--color-primary))', color: 'rgb(var(--color-primary))', background: 'transparent' }}
-              onMouseEnter={e => { if (!printing) e.currentTarget.style.background = 'rgba(var(--color-primary),0.08)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-            >
-              {printing
-                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending...</>
-                : <><Printer className="w-3.5 h-3.5" /> Receipt</>
-              }
-            </button>
-          )}
-          {action && (
-            <button
-              onClick={() => onStatusUpdate(order.id, action.next)}
-              className={`py-2.5 rounded-lg text-sm font-semibold text-white active:scale-95 transition-transform ${showPrint ? 'flex-1' : 'w-full'}`}
-              style={useThemeButton
-                ? { background: 'var(--color-primary-gradient, rgb(var(--color-primary)))' }
-                : { background: '#334155' }
-              }
-            >
-              {action.label}
-            </button>
-          )}
+
+          {/* Total */}
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-bold text-slate-900">{currency} {parseFloat(order.total_amount || 0).toFixed(2)}</span>
+            {order.status === 'completed' && (
+              <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">✓ Completed</span>
+            )}
+          </div>
+
+          {/* Action buttons */}
+          <div className={showPrint || (order.payment_status !== 'paid' && (order.status === 'completed' || order.status === 'ready')) ? 'flex flex-col gap-2' : ''}>
+            {order.payment_status !== 'paid' && (order.status === 'completed' || order.status === 'ready') && (
+              <button
+                onClick={() => onMarkPaid(order)}
+                className="w-full py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
+                style={{ border: '1.5px solid #16a34a', color: '#16a34a', background: '#f0fdf4' }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#f0fdf4'; e.currentTarget.style.color = '#16a34a'; }}
+              >
+                💳 Mark as Paid
+              </button>
+            )}
+            {showPrint && (
+              <button
+                onClick={() => setShowReceipt(true)}
+                className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold flex-1 transition-colors"
+                style={{ border: '1.5px solid rgb(var(--color-primary))', color: 'rgb(var(--color-primary))', background: 'transparent' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(var(--color-primary),0.08)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                <Printer className="w-3.5 h-3.5" /> Receipt
+              </button>
+            )}
+            {action && (
+              <button
+                onClick={() => onStatusUpdate(order.id, action.next)}
+                className={`py-2.5 rounded-lg text-sm font-semibold text-white active:scale-95 transition-transform ${showPrint ? 'flex-1' : 'w-full'}`}
+                style={useThemeButton
+                  ? { background: 'var(--color-primary-gradient, rgb(var(--color-primary)))' }
+                  : { background: '#334155' }
+                }
+              >
+                {action.label}
+              </button>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Receipt Preview Sheet */}
+      {showReceipt && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 500, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', background: 'rgba(0,0,0,0.6)' }}
+          onClick={() => setShowReceipt(false)}
+        >
+          <div
+            style={{ background: '#f8fafc', borderRadius: '20px 20px 0 0', maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', background: 'white', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Receipt Preview</p>
+              <button
+                onClick={() => setShowReceipt(false)}
+                style={{ width: 32, height: 32, borderRadius: 8, background: '#f1f5f9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#64748b' }}
+              >✕</button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px' }}>
+              <div style={{ background: 'white', borderRadius: 12, padding: '24px 20px', fontFamily: '"Courier New", Courier, monospace', fontSize: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', maxWidth: 360, margin: '0 auto' }}>
+                <p style={{ textAlign: 'center', fontWeight: 700, fontSize: 15, margin: '0 0 2px', letterSpacing: '0.02em' }}>{merchantName || 'Receipt'}</p>
+                <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '0 0 12px' }}>
+                  {new Date(order.created_date || Date.now()).toLocaleString('en-SG', { dateStyle: 'medium', timeStyle: 'short' })}
+                </p>
+                <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
+                <p style={{ margin: '5px 0', fontSize: 12 }}><strong>Order:</strong> #{order.order_number || order.id?.slice(-6)}</p>
+                {order.table_name && <p style={{ margin: '5px 0', fontSize: 12 }}><strong>Table:</strong> {order.table_name}</p>}
+                {order.customer_name && order.customer_name.toLowerCase() !== 'nil' && (
+                  <p style={{ margin: '5px 0', fontSize: 12 }}><strong>Customer:</strong> {order.customer_name}</p>
+                )}
+                <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
+                {(order.items || []).map((item, i) => {
+                  const lineTotal = ((item.price || item.unit_price || 0) * (item.quantity || 1)).toFixed(2);
+                  return (
+                    <div key={i} style={{ marginBottom: 6 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                        <span style={{ flex: 1, marginRight: 8 }}>{item.quantity}× {item.name || item.product_name}</span>
+                        <span style={{ flexShrink: 0, fontWeight: 500 }}>{currency} {lineTotal}</span>
+                      </div>
+                      {item.variant && <p style={{ margin: '2px 0 0 14px', color: '#64748b', fontSize: 11 }}>({item.variant})</p>}
+                    </div>
+                  );
+                })}
+                <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
+                {order.subtotal && parseFloat(order.subtotal) > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                    <span>Subtotal</span><span>{currency} {parseFloat(order.subtotal || 0).toFixed(2)}</span>
+                  </div>
+                )}
+                {order.tax_amount && parseFloat(order.tax_amount) > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                    <span>Tax</span><span>{currency} {parseFloat(order.tax_amount || 0).toFixed(2)}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 13, marginTop: 6, padding: '6px 0', borderTop: '1px solid #e2e8f0' }}>
+                  <span>TOTAL</span><span>{currency} {parseFloat(order.total_amount || 0).toFixed(2)}</span>
+                </div>
+                <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
+                <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '4px 0' }}>Thank you for your visit!</p>
+                <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: 10, margin: '4px 0' }}>Powered by Sellio</p>
+              </div>
+            </div>
+            <div style={{ padding: '12px 16px 28px', display: 'flex', gap: 8, background: 'white', borderTop: '1px solid #f1f5f9', flexShrink: 0 }}>
+              <button
+                onClick={() => setShowReceipt(false)}
+                style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', fontSize: 13, fontWeight: 600, color: '#64748b', cursor: 'pointer' }}
+              >Close</button>
+              <button
+                onClick={handleActualPrint}
+                disabled={receiptPrinting}
+                style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: receiptPrinting ? '#e2e8f0' : 'var(--color-primary-gradient, rgb(var(--color-primary)))', fontSize: 13, fontWeight: 600, color: receiptPrinting ? '#94a3b8' : 'white', cursor: receiptPrinting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+              >
+                {receiptPrinting
+                  ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Sending…</>
+                  : <><Printer size={14} /> Print Receipt</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
