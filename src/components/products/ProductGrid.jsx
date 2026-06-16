@@ -2,7 +2,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit2, AlertCircle, Package, CheckCircle2, Circle } from 'lucide-react';
+import { Edit2, AlertCircle, Package, CheckCircle2, Circle, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import PriceDisplay from './PriceDisplay';
 
@@ -20,6 +20,15 @@ function StockBadge({ product }) {
   }
   return <Badge className="bg-green-100 text-green-700 border-green-300" style={{ color: '#166534' }}>{stock} in stock</Badge>;
 }
+
+// Counts variant GROUPS (not raw array length).
+// Scan format [{size:'SMALL',price:3.5},...] = 1 group.
+// Grouped format [{name:'Size', options:[...]},...] = n groups.
+const countVariantGroups = (variants) => {
+  if (!variants?.length) return 0;
+  if (variants[0]?.options !== undefined) return variants.length;
+  return 1; // scan format — all items belong to one group
+};
 
 export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMode = 'list', selectionMode = false, selectedIds = new Set(), onLongPress, onToggleSelect }) {
 
@@ -106,18 +115,21 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
                 <p style={{ fontWeight: 600, fontSize: 14, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</p>
                 {product.is_featured && <Badge className="bg-amber-500 text-white border-0 text-[10px] px-1.5 py-0">Featured</Badge>}
                 {product.is_active === false && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Inactive</Badge>}
-                {product.variants?.length > 0 && (
-                  <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: 'linear-gradient(135deg, #fb923c22, #e0449a22)', color: '#e0449a', border: '1px solid #e0449a44', flexShrink: 0, whiteSpace: 'nowrap', letterSpacing: '0.04em' }}>
-                    {product.variants.length} VARIANT{product.variants.length > 1 ? 'S' : ''}
-                  </span>
-                )}
               </div>
               <p style={{ fontSize: 12, color: '#6b7280', margin: '2px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.description}</p>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, flexWrap: 'wrap', gap: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 4, gap: 4 }}>
                 <p style={{ color: 'rgb(var(--color-primary))', fontWeight: 600, fontSize: 14, margin: 0 }}>
                   <PriceDisplay price={product.price} compareAtPrice={product.compare_at_price} currency={currency} />
                 </p>
-                <StockBadge product={product} />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                  {countVariantGroups(product.variants) > 0 && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 999, background: 'rgba(var(--color-primary), 0.08)', color: 'rgb(var(--color-primary))', border: '1px solid rgba(var(--color-primary), 0.2)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      <Layers size={9} />
+                      {countVariantGroups(product.variants)} {countVariantGroups(product.variants) === 1 ? 'VARIANT' : 'VARIANTS'}
+                    </span>
+                  )}
+                  <StockBadge product={product} />
+                </div>
               </div>
             </div>
           </div>
@@ -168,17 +180,20 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
           <div className="p-3">
             <div className="flex items-center gap-1 flex-wrap mb-1">
               <h3 className="font-semibold text-slate-900 truncate text-sm">{product.name}</h3>
-              {product.variants?.length > 0 && (
-                <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: 'linear-gradient(135deg, #fb923c22, #e0449a22)', color: '#e0449a', border: '1px solid #e0449a44', whiteSpace: 'nowrap', flexShrink: 0, letterSpacing: '0.04em' }}>
-                  {product.variants.length} VARIANT{product.variants.length > 1 ? 'S' : ''}
-                </span>
-              )}
             </div>
             <div className="flex items-center justify-between gap-1 flex-wrap">
               <p className="text-sm font-bold text-[rgb(var(--color-primary))]">
                 <PriceDisplay price={product.price} compareAtPrice={product.compare_at_price} currency={currency} />
               </p>
-              <StockBadge product={product} />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+                {countVariantGroups(product.variants) > 0 && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 999, background: 'rgba(var(--color-primary), 0.08)', color: 'rgb(var(--color-primary))', border: '1px solid rgba(var(--color-primary), 0.2)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    <Layers size={9} />
+                    {countVariantGroups(product.variants)} {countVariantGroups(product.variants) === 1 ? 'VARIANT' : 'VARIANTS'}
+                  </span>
+                )}
+                <StockBadge product={product} />
+              </div>
             </div>
           </div>
         </Card>
