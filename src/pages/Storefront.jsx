@@ -551,62 +551,124 @@ export default function Storefront() {
 
       {/* ── ORDER SUCCESS ── */}
       {orderSuccess && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#fff', overflowY: 'auto' }}>
-          <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100vh' }}>
-            <div style={{ fontSize: 56, marginBottom: 12 }}>🎉</div>
-            <p style={{ fontWeight: 700, fontSize: 22, margin: '0 0 4px', textAlign: 'center' }}>Order placed!</p>
-            <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 20px' }}>Order #{placedOrderNumber}</p>
-            {tenant.payment_qr_url && (
-              <div style={{ width: '100%', maxWidth: 320, background: '#f8fafc', borderRadius: 16, padding: 20, textAlign: 'center', marginBottom: 20, border: '0.5px solid #e5e7eb' }}>
-                <p style={{ fontWeight: 600, fontSize: 14, margin: '0 0 4px' }}>{tenant.payment_qr_label || 'Scan to pay'}</p>
-                <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 14px' }}>Amount: <strong style={{ color: primaryColor }}>{currency} {lastCartTotal.toFixed(2)}</strong></p>
-                <img src={tenant.payment_qr_url} style={{ width: 180, height: 180, objectFit: 'contain', borderRadius: 12, border: '0.5px solid #e5e7eb', background: 'white', padding: 8, marginBottom: 12, display: 'block', margin: '0 auto 12px' }} />
-                {tenant.payment_reference && (
-                  <div style={{ background: '#fff', borderRadius: 8, padding: '8px 12px', marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '0.5px solid #e5e7eb' }}>
-                    <span style={{ fontSize: 13, fontWeight: 500 }}>{tenant.payment_reference}</span>
-                    <button onClick={() => { navigator.clipboard.writeText(tenant.payment_reference); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                      style={{ fontSize: 11, color: primaryColor, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
-                      {copied ? '✓ Copied' : 'Copy'}
-                    </button>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#f8fafc', overflowY: 'auto' }}>
+          <div style={{ padding: '40px 16px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100vh', maxWidth: 400, margin: '0 auto' }}>
+
+            {/* Success icon */}
+            <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, flexShrink: 0 }}>
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+
+            <p style={{ fontWeight: 800, fontSize: 24, margin: '0 0 6px', textAlign: 'center', color: '#0f172a', letterSpacing: '-0.01em' }}>Order placed!</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28 }}>
+              <span style={{ fontSize: 13, color: '#64748b', fontFamily: 'monospace', fontWeight: 600 }}>#{placedOrderNumber}</span>
+              {table && (
+                <>
+                  <span style={{ color: '#cbd5e1', fontSize: 12 }}>·</span>
+                  <span style={{ fontSize: 13, color: '#64748b' }}>🪑 {table.name}</span>
+                </>
+              )}
+            </div>
+
+            {/* Order summary card */}
+            <div style={{ width: '100%', background: 'white', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+              <div style={{ padding: '14px 16px', borderBottom: '1px solid #f1f5f9' }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#0f172a', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Your Order</p>
+              </div>
+              <div style={{ padding: '12px 16px' }}>
+                {lastCart.map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: idx < lastCart.length - 1 ? 10 : 0, paddingBottom: idx < lastCart.length - 1 ? 10 : 0, borderBottom: idx < lastCart.length - 1 ? '1px dashed #f1f5f9' : 'none' }}>
+                    <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {item.quantity}× {item.name}
+                      </p>
+                      {item.variant && (
+                        <p style={{ margin: '2px 0 0', fontSize: 11, color: '#94a3b8' }}>{item.variant}</p>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#374151', flexShrink: 0 }}>{currency} {(item.price * item.quantity).toFixed(2)}</span>
                   </div>
-                )}
+                ))}
+                <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 12, paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Total</span>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: primaryColor }}>{currency} {lastCartTotal.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment QR card */}
+            {tenant.payment_qr_url && (
+              <div style={{ width: '100%', background: 'white', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                <div style={{ padding: '14px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#0f172a', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+                    {tenant.payment_qr_label || 'Pay via QR Code'}
+                  </p>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: primaryColor }}>{currency} {lastCartTotal.toFixed(2)}</span>
+                </div>
+                <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  {/* QR code with long-press hint */}
+                  <div style={{ position: 'relative', marginBottom: 20 }}>
+                    <img
+                      src={tenant.payment_qr_url}
+                      alt="Payment QR Code"
+                      style={{ width: 200, height: 200, objectFit: 'contain', borderRadius: 12, border: '1px solid #e2e8f0', background: 'white', padding: 10, display: 'block' }}
+                    />
+                    <div style={{
+                      position: 'absolute', bottom: -1, left: '50%', transform: 'translateX(-50%)',
+                      background: 'rgba(15,23,42,0.8)', borderRadius: 999, padding: '4px 10px',
+                      whiteSpace: 'nowrap', backdropFilter: 'blur(4px)',
+                    }}>
+                      <span style={{ fontSize: 10, color: 'white', fontWeight: 600, letterSpacing: '0.02em' }}>
+                        👆 Long press to save &amp; scan
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Reference number */}
+                  {tenant.payment_reference && (
+                    <div style={{ width: '100%', background: '#f8fafc', borderRadius: 10, padding: '10px 14px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #f1f5f9' }}>
+                      <div>
+                        <p style={{ margin: 0, fontSize: 10, color: '#94a3b8', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Reference</p>
+                        <p style={{ margin: '2px 0 0', fontSize: 13, fontWeight: 700, color: '#0f172a', fontFamily: 'monospace' }}>{tenant.payment_reference}</p>
+                      </div>
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(tenant.payment_reference); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                        style={{ fontSize: 12, color: copied ? '#16a34a' : primaryColor, background: copied ? '#dcfce7' : `${primaryColor}15`, border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s', minHeight: 32, minWidth: 60 }}
+                      >
+                        {copied ? '✓ Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Step-by-step instructions */}
+                  <div style={{ width: '100%', background: '#fffbeb', borderRadius: 12, padding: '14px 16px', border: '1px solid #fde68a' }}>
+                    <p style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>How to pay</p>
+                    {[
+                      { step: '1', text: 'Open your banking app (DBS PayLah, OCBC, UOB etc.)' },
+                      { step: '2', text: 'Long press the QR code above → Save image → Scan from photo' },
+                      { step: '3', text: `Enter ${currency} ${lastCartTotal.toFixed(2)} and confirm your payment` },
+                    ].map(({ step, text }) => (
+                      <div key={step} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: step !== '3' ? 8 : 0 }}>
+                        <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                          <span style={{ fontSize: 11, fontWeight: 800, color: 'white' }}>{step}</span>
+                        </div>
+                        <p style={{ margin: 0, fontSize: 13, color: '#78350f', lineHeight: 1.5 }}>{text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
-            <>
-                      {tenant.country !== 'Malaysia' && (
-                        <a
-                          href={tenant.payment_reference
-                            ? `paynowto://uen?uen=${encodeURIComponent(tenant.payment_reference)}&amount=${lastCartTotal.toFixed(2)}&editable=0`
-                            : 'paynowto://'
-                          }
-                          style={{
-                            display: 'block', width: '100%', maxWidth: 320,
-                            padding: 14, borderRadius: 12, fontSize: 14, fontWeight: 600,
-                            textAlign: 'center', textDecoration: 'none',
-                            background: '#e2001a', color: 'white', marginBottom: 12,
-                          }}
-                        >
-                          💳 Pay via PayNow
-                        </a>
-                      )}
-                      {tenant.country === 'Malaysia' && (
-                        <a
-                          href="tngd://"
-                          style={{
-                            display: 'block', width: '100%', maxWidth: 320,
-                            padding: 14, borderRadius: 12, fontSize: 14, fontWeight: 600,
-                            textAlign: 'center', textDecoration: 'none',
-                            background: '#0070ba', color: 'white', marginBottom: 12,
-                          }}
-                        >
-                          💳 Pay via Touch 'n Go
-                        </a>
-                      )}
-                      <button onClick={() => { setOrderSuccess(false); setLastCart([]); setLastCartTotal(0); }}
-                        style={{ width: '100%', maxWidth: 320, padding: 14, background: 'none', border: '0.5px solid #e5e7eb', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#0f172a' }}>
-                        Back to menu
-                      </button>
-                    </>
+
+            {/* Back to menu */}
+            <button
+              onClick={() => { setOrderSuccess(false); setLastCart([]); setLastCartTotal(0); }}
+              style={{ width: '100%', minHeight: 52, padding: '14px 16px', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: 14, fontSize: 15, fontWeight: 700, cursor: 'pointer', color: '#374151', touchAction: 'manipulation', transition: 'background 0.15s' }}
+            >
+              Back to menu
+            </button>
           </div>
         </div>
       )}
