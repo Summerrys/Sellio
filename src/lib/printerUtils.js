@@ -106,39 +106,96 @@ export function buildTestReceipt(merchantName, paperSize = 'thermal_80') {
   ]);
 }
 
-// Build TSPL (TSC Printer Language) receipt bytes for label printers
-// TSPL uses ASCII text commands — completely different from ESC/POS binary
-// Build TSPL receipt bytes for label printers.
-// labelWidthMM / labelHeightMM: physical label size (default 76x130mm).
-// gapMM: gap between pre-cut labels (0 for continuous roll).
-// Font "0" (8x8 dots) at 2x scale is the most universally supported TSPL font.
+// Build TSPL receipt using BITMAP command — renders text to canvas as 1-bit pixel data.
+// Bypasses TSPL font support entirely. Works on all TSPL-compatible BLE label printers.
 export function buildTSPLReceipt(lines, labelWidthMM = 76, labelHeightMM = 130, gapMM = 3) {
-  // Font "0" at 2x scale: each character is 16x16 dots
-  const CHAR_H = 16;        // font "0" height (8 dots) × 2x scale
-  const LINE_SPACING = 6;   // dots of spacing between lines
-  const LINE_H = CHAR_H + LINE_SPACING; // 22 dots per line
-  const MARGIN_LEFT = 10;   // dots from left edge
-  const MARGIN_TOP = 15;    // dots from top edge
+  const DPI = 203; // Standard label printer DPI
+  const dotWidth = Math.round(labelWidthMM * DPI / 25.4); // 608 dots for 76mm
+  const widthBytes = Math.ceil(dotWidth / 8);              // 76 bytes per row
+  const maxDotHeight = Math.round(labelHeightMM * DPI / 25.4); // max dots for label height
 
-  let tspl = '';
-  tspl += `SIZE ${labelWidthMM} mm, ${labelHeightMM} mm\r\n`;
-  tspl += `GAP ${gapMM} mm, 0 mm\r\n`;   // gap between pre-cut labels
-  tspl += `DIRECTION 0\r\n`;
-  tspl += `DENSITY 8\r\n`;
-  tspl += `SPEED 1\r\n`;
-  tspl += `CLS\r\n`;
+  // Text rendering sizes (canvas pixels = printer dots at 203 DPI)
+  const FONT_BODY = 22;
+  const FONT_BOLD = 26;
+  const LINE_H = 32;     // dots between baselines
+  const MARGIN_TOP = 20;
+  const MARGIN_LEFT = 10;
+
+  // Calculate actual canvas height needed (don't render empty space)
+  const dotHeight = Math.min(
+    MARGIN_TOP + lines.length * LINE_H + 30,
+    maxDotHeight
+  );
+
+  // Render receipt onto an offscreen canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = dotWidth;
+  canvas.height = dotHeight;
+  const ctx = canvas.getContext('2d');
+
+  // White background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#000000';
+  ctx.textBaseline = 'top';
 
   let y = MARGIN_TOP;
   lines.forEach(line => {
-    // Escape double quotes and backslashes — required by TSPL string syntax
-    const safe = (line.text || '').replace(/\\/g, '\\\\').replace(/"/g, "'");
-    // Font "0" at 2x scale — most universally supported across all TSPL label printers
-    tspl += `TEXT ${MARGIN_LEFT}, ${y}, "0", 0, 2, 2, "${safe}"\r\n`;
+    const text = line.text || '';
+    const fs = line.bold ? FONT_BOLD : FONT_BODY;
+    ctx.font = line.bold
+      ? `bold ${fs}px "Courier New", Courier, monospace`
+      : `${fs}px "Courier New", Courier, monospace`;
+
+    if (line.align === 'center') {
+      const textWidth = ctx.measureText(text).width;
+      const x = Math.max(MARGIN_LEFT, (canvas.width - textWidth) / 2);
+      ctx.fillText(text, x, y);
+    } else {
+      ctx.fillText(text, MARGIN_LEFT, y);
+    }
     y += LINE_H;
   });
 
-  tspl += `PRINT 1\r\n`;
-  return new TextEncoder().encode(tspl);
+  // Convert canvas pixels → 1-bit per pixel bitmap
+  // Dark pixel (gray < 128) → bit 1 (print ink); light → bit 0 (no ink)
+  const imageData = ctx.getImageData(0, 0, dotWidth, dotHeight);
+  const px = imageData.data; // RGBA flat array
+  const bitmapData = new Uint8Array(widthBytes * dotHeight);
+
+  for (let row = 0; row < dotHeight; row++) {
+    for (let col = 0; col < dotWidth; col++) {
+      const i = (row * dotWidth + col) * 4;
+      const gray = px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114;
+      if (gray < 128) {
+        // Set the corresponding bit in the bitmap (MSB first)
+        bitmapData[row * widthBytes + Math.floor(col / 8)] |= (0x80 >> (col % 8));
+      }
+    }
+  }
+
+  // Build TSPL byte sequence:
+  // [ASCII header] + [raw binary bitmap] + [ASCII footer]
+  // No separator between the last comma and bitmap data — printer reads widthBytes×height bytes
+  const header = [
+    `SIZE ${labelWidthMM} mm, ${labelHeightMM} mm`,
+    `GAP ${gapMM} mm, 0 mm`,
+    `DIRECTION 0`,
+    `CLS`,
+    `BITMAP 0, 0, ${widthBytes}, ${dotHeight}, 0,`,
+  ].join('\r\n') + ''; // last line has no \r\n — bitmap data follows immediately
+
+  const footer = `\r\nPRINT 1\r\n`;
+
+  const hBytes = new TextEncoder().encode(header);
+  const fBytes = new TextEncoder().encode(footer);
+
+  const result = new Uint8Array(hBytes.length + bitmapData.length + fBytes.length);
+  result.set(hBytes, 0);
+  result.set(bitmapData, hBytes.length);
+  result.set(fBytes, hBytes.length + bitmapData.length);
+
+  return result;
 }
 
 export function buildTSPLTestReceipt(merchantName) {
@@ -191,8 +248,9 @@ export async function sendViaBluetooth(deviceName, bytes) {
       const service = await server.getPrimaryService(profile.service);
       const characteristic = await service.getCharacteristic(profile.char);
 
-      // BLE MTU minimum is 20 bytes — use small chunks for maximum compatibility
-      const CHUNK = 20;
+      // 200-byte chunks: fast for both ESC/POS (<2KB) and TSPL bitmap (~35KB).
+      // 5ms delay between chunks prevents BLE stack overflow on slower printers.
+      const CHUNK = 200;
       for (let i = 0; i < bytes.length; i += CHUNK) {
         const chunk = bytes.slice(i, i + CHUNK);
         try {
@@ -202,10 +260,14 @@ export async function sendViaBluetooth(deviceName, bytes) {
             await characteristic.writeValue(chunk);
           }
         } catch {
-          await characteristic.writeValue(chunk);
+          // If 200-byte chunk fails (small MTU printer), retry with 20-byte chunk
+          const SMALL = 20;
+          for (let j = 0; j < chunk.length; j += SMALL) {
+            await characteristic.writeValue(chunk.slice(j, j + SMALL));
+            if (j + SMALL < chunk.length) await new Promise(r => setTimeout(r, 10));
+          }
         }
-        // Small delay between chunks to avoid buffer overflow on slower printers
-        if (i + CHUNK < bytes.length) await new Promise(r => setTimeout(r, 10));
+        if (i + CHUNK < bytes.length) await new Promise(r => setTimeout(r, 5));
       }
       // Keep connection alive — don't disconnect so next print is instant
       return;
