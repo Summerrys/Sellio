@@ -108,28 +108,32 @@ export function buildTestReceipt(merchantName, paperSize = 'thermal_80') {
 
 // Build TSPL (TSC Printer Language) receipt bytes for label printers
 // TSPL uses ASCII text commands — completely different from ESC/POS binary
-export function buildTSPLReceipt(lines) {
-  const LINE_H = 40;    // dots per line (font "3" height ~32 + 8 spacing)
-  const MARGIN_Y = 20;  // top margin in dots
-  const FOOTER_H = 40;  // extra space at bottom before cut
-
-  let totalDots = MARGIN_Y;
-  lines.forEach(() => { totalDots += LINE_H; });
-  totalDots += FOOTER_H;
-  const heightMM = Math.ceil(totalDots / 8); // 200 DPI: 8 dots per mm
+// Build TSPL receipt bytes for label printers.
+// labelWidthMM / labelHeightMM: physical label size (default 76x130mm).
+// gapMM: gap between pre-cut labels (0 for continuous roll).
+// Font "0" (8x8 dots) at 2x scale is the most universally supported TSPL font.
+export function buildTSPLReceipt(lines, labelWidthMM = 76, labelHeightMM = 130, gapMM = 3) {
+  // Font "0" at 2x scale: each character is 16x16 dots
+  const CHAR_H = 16;        // font "0" height (8 dots) × 2x scale
+  const LINE_SPACING = 6;   // dots of spacing between lines
+  const LINE_H = CHAR_H + LINE_SPACING; // 22 dots per line
+  const MARGIN_LEFT = 10;   // dots from left edge
+  const MARGIN_TOP = 15;    // dots from top edge
 
   let tspl = '';
-  tspl += `SIZE 80 mm, ${heightMM} mm\r\n`;
-  tspl += `GAP 0 mm, 0 mm\r\n`;
+  tspl += `SIZE ${labelWidthMM} mm, ${labelHeightMM} mm\r\n`;
+  tspl += `GAP ${gapMM} mm, 0 mm\r\n`;   // gap between pre-cut labels
   tspl += `DIRECTION 0\r\n`;
   tspl += `DENSITY 8\r\n`;
   tspl += `SPEED 1\r\n`;
   tspl += `CLS\r\n`;
 
-  let y = MARGIN_Y;
+  let y = MARGIN_TOP;
   lines.forEach(line => {
+    // Escape double quotes and backslashes — required by TSPL string syntax
     const safe = (line.text || '').replace(/\\/g, '\\\\').replace(/"/g, "'");
-    tspl += `TEXT 10, ${y}, "3", 0, 1, 1, "${safe}"\r\n`;
+    // Font "0" at 2x scale — most universally supported across all TSPL label printers
+    tspl += `TEXT ${MARGIN_LEFT}, ${y}, "0", 0, 2, 2, "${safe}"\r\n`;
     y += LINE_H;
   });
 
