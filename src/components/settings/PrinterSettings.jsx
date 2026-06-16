@@ -7,7 +7,7 @@ import { Bluetooth, Wifi, CheckCircle, Loader2, AlertCircle, Printer, X, Signal 
 import {
   loadPrinterConfig, savePrinterConfig, clearPrinterConfig,
   testNetworkPrinter, buildTestReceipt, sendViaBluetooth, sendViaEpsonEPos,
-  ALL_BT_SERVICES,
+  ALL_BT_SERVICES, setBtDeviceCache,
 } from '@/lib/printerUtils';
 
 const BT_SUPPORTED = typeof navigator !== 'undefined' && !!navigator.bluetooth;
@@ -129,6 +129,8 @@ export default function PrinterSettings({ tenantId, merchantName }) {
         filters: [{ name: deviceName }],
         optionalServices: ALL_BT_SERVICES,
       });
+      // Cache device object — subsequent prints reuse this without showing pairing dialog
+      setBtDeviceCache(device);
       setBtDevice({ name: device.name });
       savePrinterConfig(tenantId, { mode: 'bluetooth', deviceName: device.name });
       toast.success(`Connected: ${device.name}`);
@@ -138,6 +140,7 @@ export default function PrinterSettings({ tenantId, merchantName }) {
   };
 
   const handleDisconnectBt = () => {
+    setBtDeviceCache(null);
     setBtDevice(null);
     clearPrinterConfig(tenantId);
     toast.success('Printer disconnected');

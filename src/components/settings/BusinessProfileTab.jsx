@@ -88,7 +88,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
     logo_url: '',
     order_id_prefix: 'ORD',
     order_id_start: 1,
-    receipt_paper_size: 'a4',
+    receipt_paper_size: 'thermal_80',
     receipt_show_logo: true,
     receipt_show_tax: true,
     receipt_show_order_number: true,

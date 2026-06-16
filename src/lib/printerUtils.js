@@ -17,6 +17,17 @@ const BLE_PRINTER_PROFILES = [
 
 export const ALL_BT_SERVICES = BLE_PRINTER_PROFILES.map(p => p.service);
 
+// Module-level BT device cache — avoids re-pairing dialog on every print within same session
+let _btDevice = null;
+
+export function setBtDeviceCache(device) {
+  _btDevice = device || null;
+}
+
+export function getCachedBtDevice() {
+  return _btDevice;
+}
+
 export function buildReceipt(lines) {
   const ESC = 0x1B, GS = 0x1D;
   const INIT = [ESC, 0x40];
@@ -24,7 +35,11 @@ export function buildReceipt(lines) {
   const LEFT = [ESC, 0x61, 0x00];
   const BOLD_ON = [ESC, 0x45, 0x01];
   const BOLD_OFF = [ESC, 0x45, 0x00];
-  const CUT = [GS, 0x56, 0x00];
+  // Feed 6 lines then partial cut — more universally supported than GS V 0x00
+  const FEED_AND_CUT = [
+    ESC, 0x64, 0x06,        // ESC d n — feed 6 lines
+    GS,  0x56, 0x42, 0x00,  // GS V m n — partial cut with feed
+  ];
   const LF = [0x0A];
 
   let bytes = [...INIT, ...CENTER];
@@ -36,7 +51,7 @@ export function buildReceipt(lines) {
     bytes.push(...encoded, ...LF);
     if (line.bold) bytes.push(...BOLD_OFF);
   });
-  bytes.push(...LF, ...LF, ...CUT);
+  bytes.push(...LF, ...LF, ...FEED_AND_CUT);
   return new Uint8Array(bytes);
 }
 
@@ -97,32 +112,57 @@ export function buildTestReceipt(merchantName, paperSize = 'thermal_80') {
 export async function sendViaBluetooth(deviceName, bytes) {
   if (!navigator.bluetooth) throw new Error('Web Bluetooth not supported');
 
-  // Request device — try by name first, fall back to acceptAllDevices
-  // Must declare ALL profile services as optionalServices so browser allows GATT access
-  const device = await navigator.bluetooth.requestDevice({
-    filters: [{ name: deviceName }],
-    optionalServices: ALL_BT_SERVICES,
-  }).catch(() =>
-    navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
+  let device = _btDevice;
+
+  // 1. Try module-level cache first — no dialog needed
+  // 2. Try getDevices() — returns previously permitted devices without showing picker (Chrome 85+)
+  if (!device) {
+    try {
+      const paired = await navigator.bluetooth.getDevices();
+      device = paired.find(d => d.name === deviceName) || null;
+      if (device) _btDevice = device;
+    } catch {}
+  }
+
+  // 3. Fall back to requestDevice — shows browser pairing dialog
+  if (!device) {
+    device = await navigator.bluetooth.requestDevice({
+      filters: [{ name: deviceName }],
       optionalServices: ALL_BT_SERVICES,
-    })
-  );
+    }).catch(() =>
+      navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: ALL_BT_SERVICES,
+      })
+    );
+    _btDevice = device;
+  }
 
   const server = await device.gatt.connect();
   let lastError;
 
-  // Try each profile until one works
+  // Try each BLE profile until one works
   for (const profile of BLE_PRINTER_PROFILES) {
     try {
       const service = await server.getPrimaryService(profile.service);
       const characteristic = await service.getCharacteristic(profile.char);
-      // Write in 512-byte chunks
+
       const CHUNK = 512;
       for (let i = 0; i < bytes.length; i += CHUNK) {
-        await characteristic.writeValue(bytes.slice(i, i + CHUNK));
+        const chunk = bytes.slice(i, i + CHUNK);
+        // Prefer writeValueWithoutResponse — no ACK wait, works better for most BLE printers
+        try {
+          if (characteristic.properties?.writeWithoutResponse) {
+            await characteristic.writeValueWithoutResponse(chunk);
+          } else {
+            await characteristic.writeValue(chunk);
+          }
+        } catch {
+          // Fallback to writeValue if writeValueWithoutResponse fails
+          await characteristic.writeValue(chunk);
+        }
       }
-      await device.gatt.disconnect();
+      // Keep connection alive — don't disconnect so next print is instant
       return; // success
     } catch (e) {
       lastError = e;
@@ -130,10 +170,9 @@ export async function sendViaBluetooth(deviceName, bytes) {
     }
   }
 
-  try { await device.gatt.disconnect(); } catch {}
   throw new Error(
     `Printer not compatible. Tried ${BLE_PRINTER_PROFILES.length} Bluetooth profiles. ` +
-    `Last error: ${lastError?.message}. Try a different printer or use Network/IP mode.`
+    `Last error: ${lastError?.message}. Try Network/IP mode if issue persists.`
   );
 }
 
