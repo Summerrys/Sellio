@@ -669,7 +669,7 @@ export default function Auth() {
                 <div className="flex items-center gap-3 mb-6">
                   <button
                     type="button"
-                    onClick={() => { setForgotMode(false); setForgotStep(1); setForgotPhone(''); setForgotOtp(''); setForgotNewPassword(''); setForgotConfirmPassword(''); }}
+                    onClick={() => { setForgotMode(false); setForgotStep(1); setForgotPhone(''); setForgotStaffEmail(''); setForgotNewPassword(''); setForgotConfirmPassword(''); }}
                     className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 transition-colors border-none cursor-pointer"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
@@ -677,13 +677,13 @@ export default function Auth() {
                   <div>
                     <p className="text-base font-semibold text-slate-800">
                       {forgotStep === 1 && 'Reset Password'}
-                      {forgotStep === 2 && 'Enter OTP'}
+                      {forgotStep === 2 && 'Confirm Your Email'}
                       {forgotStep === 3 && 'New Password'}
                       {forgotStep === 4 && 'Check Your Email'}
                     </p>
                     <p className="text-xs text-slate-400">
                       {forgotStep === 1 && 'Enter your registered phone number'}
-                      {forgotStep === 2 && `Code sent via SMS to ${forgotFullPhone}`}
+                      {forgotStep === 2 && 'We need a valid email to send your reset link'}
                       {forgotStep === 3 && 'Choose a new password'}
                       {forgotStep === 4 && 'Reset link sent'}
                     </p>
@@ -747,40 +747,34 @@ export default function Auth() {
                   </div>
                 )}
 
-                {/* Step 2 — OTP entry (WhatsApp) */}
+                {/* Step 2 — Collect a real email for accounts still on the placeholder address */}
                 {forgotStep === 2 && (
                   <div className="space-y-4">
-                    <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                      </svg>
-                      <p className="text-xs text-blue-800">A 6-digit code has been sent via SMS to your phone number. It expires in 10 minutes.</p>
+                    <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                      <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-800">We don't have a valid email on file for this account yet. Enter one below to receive your password reset link.</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Verification Code</label>
-                      <input
-                        type="number"
-                        placeholder="123456"
-                        value={forgotOtp}
-                        onChange={(e) => setForgotOtp(e.target.value.slice(0, 6))}
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-center tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
-                      />
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          type="email"
+                          placeholder="you@example.com"
+                          value={forgotStaffEmail}
+                          onChange={(e) => setForgotStaffEmail(e.target.value)}
+                          className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
+                        />
+                      </div>
                     </div>
                     <button
                       type="button"
-                      onClick={handleForgotVerifyOTP}
-                      disabled={forgotLoading || forgotOtp.length < 6}
+                      onClick={handleForgotCollectEmail}
+                      disabled={forgotLoading || !forgotStaffEmail.trim()}
                       className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70"
                       style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
                     >
-                      {forgotLoading ? 'Verifying...' : 'Verify Code'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setForgotOtp(''); handleForgotStart(); }}
-                      className="w-full text-xs text-slate-500 hover:text-orange-500 bg-transparent border-none cursor-pointer py-1"
-                    >
-                      Didn't receive it? Resend
+                      {forgotLoading ? 'Sending...' : 'Send Reset Link'}
                     </button>
                   </div>
                 )}
