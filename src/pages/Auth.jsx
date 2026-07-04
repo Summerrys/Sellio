@@ -459,31 +459,18 @@ export default function Auth() {
     }
     setForgotLoading(true);
     try {
-      if (forgotFullPhone) {
-        // ── OTP / staff path ────────────────────────────────────────────────
-        // No active Supabase session exists after WhatsApp OTP verification.
-        // Use resetPasswordWithOTP edge function which uses admin API (no session needed).
-        const res = await fetch('https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1/resetPasswordWithOTP', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: forgotFullPhone, newPassword: forgotNewPassword }),
-        });
-        const result = await res.json();
-        if (!res.ok || result.error) throw new Error(result.error || 'Failed to reset password');
-      } else {
-        // ── Email recovery path ─────────────────────────────────────────────
-        // Session exists from clicking the Supabase recovery email link.
-        // auth.updateUser() works normally here.
-        const supabase = await getSupabase();
-        const { error } = await supabase.auth.updateUser({ password: forgotNewPassword });
-        if (error) throw error;
-        const newHash = await hashPassword(forgotNewPassword);
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user?.email) {
-          await supabase.from('app_users').update({ password_hash: newHash }).eq('email', session.user.email);
-        }
-        await supabase.auth.signOut();
+      // Reached here via the Supabase recovery email link — a session already exists.
+      // This applies to both owners and staff now, since staff also go through the
+      // same resetPasswordForEmail flow after providing a valid email.
+      const supabase = await getSupabase();
+      const { error } = await supabase.auth.updateUser({ password: forgotNewPassword });
+      if (error) throw error;
+      const newHash = await hashPassword(forgotNewPassword);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.email) {
+        await supabase.from('app_users').update({ password_hash: newHash }).eq('email', session.user.email);
       }
+      await supabase.auth.signOut();
 
       toast.success('Password updated successfully!');
       setTimeout(() => { window.location.href = `${getBaseUrl()}/Auth`; }, 800);
