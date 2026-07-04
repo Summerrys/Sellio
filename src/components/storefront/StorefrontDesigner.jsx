@@ -668,6 +668,12 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
   const [drawerTab, setDrawerTab] = useState('banner');
   const [drawerExpanded, setDrawerExpanded] = useState(false);
   const [drawerHeight, setDrawerHeight] = useState(DRAWER_HANDLE_ONLY);
+  const [jumpAnimating, setJumpAnimating] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setJumpAnimating(false), 2000);
+    return () => clearTimeout(timer);
+  }, []);
   const isDraggingDrawer = useRef(false);
   const drawerHeightRef = useRef(DRAWER_HANDLE_ONLY);
   const dragDidMove = useRef(false);
@@ -761,8 +767,19 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
         <div
           onMouseDown={startDrawerDrag}
           onTouchStart={startDrawerDrag}
-          style={{ padding: '10px 0 6px', cursor: 'pointer', flexShrink: 0, touchAction: 'none', userSelect: 'none' }}
+          style={{
+            padding: '10px 0 6px', cursor: 'pointer', flexShrink: 0, touchAction: 'none', userSelect: 'none',
+            animation: jumpAnimating ? 'drawerJump 0.6s ease-in-out 3' : 'none',
+          }}
         >
+          <style>{`
+            @keyframes drawerJump {
+              0%, 100% { transform: translateY(0); }
+              30% { transform: translateY(-10px); }
+              50% { transform: translateY(0); }
+              70% { transform: translateY(-5px); }
+            }
+          `}</style>
           <div style={{ width: 48, height: 5, borderRadius: 3, background: primaryColor, margin: '0 auto', opacity: 0.85 }} />
         </div>
 
