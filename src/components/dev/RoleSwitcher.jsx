@@ -7,6 +7,8 @@ import { useTenant } from '../tenant/TenantContext';
 import { getSupabase } from '@/lib/supabaseClient';
 
 const STORAGE_KEY = 'simulate_role';
+// Empty for now — add specific emails/phones here later to re-enable for those accounts only
+const ROLE_SWITCHER_ALLOWLIST = [];
 
 const ROLES = [
   { id: 'owner', label: 'Owner', icon: Shield, color: 'bg-blue-500' },
@@ -52,6 +54,7 @@ export default function RoleSwitcher() {
   }, [appUser?.email, user?.email]);
 
   if (user?.role !== 'admin') return null;
+  if (!ROLE_SWITCHER_ALLOWLIST.includes(currentEmail)) return null;
 
   const switchRole = (roleId) => {
     if (activeRole === roleId) {
