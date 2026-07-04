@@ -214,7 +214,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
     nextStep();
   };
 
-  const canContinue = (setupTables && localTables.length > 0) || (setupQr && !setupTables) || (!setupTables && !setupQr);
+  const canContinue = (setupTables && localTables.length > 0) || (setupQr && !setupTables);
 
   return (
     <Card className="p-3 sm:p-5 bg-white border-0 shadow-lg w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
@@ -226,28 +226,58 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
         <p className="text-xs text-slate-500">Choose what you'd like to set up.</p>
       </div>
 
-      {/* Feature checkboxes */}
-      <div className="space-y-2 mb-4">
-        <div className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors"
-          onClick={() => setSetupTables(!setupTables)}>
-          <Checkbox checked={setupTables} onChange={(checked) => setSetupTables(checked)} />
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-slate-900">Set up Tables</p>
-            <p className="text-xs text-slate-500">Create physical or virtual tables for your venue</p>
+      {/* Conversational branch — only shown before a choice has been made */}
+      {!setupTables && !setupQr && (
+        <div className="mb-4">
+          <p className="text-sm font-semibold text-slate-800 text-center mb-3">Do you have physical tables where customers sit?</p>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => { setSetupTables(true); setSetupQr(true); }}
+              className="w-full flex items-center gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors text-left"
+            >
+              <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
+                <Table2 className="w-5 h-5 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-slate-900">Yes, we have tables</p>
+                <p className="text-xs text-slate-500">Each table gets its own QR code for scan-to-order at their seat</p>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setSetupTables(false); setSetupQr(true); }}
+              className="w-full flex items-center gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors text-left"
+            >
+              <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
+                <QrCode className="w-5 h-5 text-orange-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-slate-900">No, takeaway / counter only</p>
+                <p className="text-xs text-slate-500">One QR code to print at your counter or takeaway point</p>
+              </div>
+            </button>
           </div>
-          {setupTables && <Table2 className="w-5 h-5 text-green-500" />}
+          <button
+            type="button"
+            onClick={() => { updateFormData({ ...formData, tables: [], singleQrLabel: null, setupTables: false, setupQr: false }); nextStep(); }}
+            className="w-full text-center text-xs text-slate-400 hover:text-slate-600 mt-3 bg-transparent border-none cursor-pointer py-1"
+          >
+            Skip — I'll set this up later
+          </button>
         </div>
+      )}
 
-        <div className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors"
-          onClick={() => setSetupQr(!setupQr)}>
-          <Checkbox checked={setupQr} onChange={(checked) => setSetupQr(checked)} />
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-slate-900">Set up QR Code(s)</p>
-            <p className="text-xs text-slate-500">Generate scannable QR codes for ordering</p>
-          </div>
-          {setupQr && <QrCode className="w-5 h-5 text-orange-500" />}
-        </div>
-      </div>
+      {/* Once a choice is made, show a small "change answer" link above the relevant setup UI */}
+      {(setupTables || setupQr) && (
+        <button
+          type="button"
+          onClick={() => { setSetupTables(false); setSetupQr(false); setLocalTables([]); }}
+          className="text-xs text-slate-400 hover:text-slate-600 mb-3 bg-transparent border-none cursor-pointer flex items-center gap-1"
+        >
+          <ArrowLeft className="w-3 h-3" /> Change answer
+        </button>
+      )}
 
       {/* Tables setup */}
       {setupTables && (
