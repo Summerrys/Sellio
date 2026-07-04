@@ -54,7 +54,7 @@ export default function Auth() {
   const [forgotStep, setForgotStep] = useState(1); // 1=phone, 2=otp, 3=new password, 4=email sent
   const [forgotPhone, setForgotPhone] = useState('');
   const [forgotCountry, setForgotCountry] = useState(COUNTRY_CODES[0]);
-  const [forgotOtp, setForgotOtp] = useState('');
+  const [forgotStaffEmail, setForgotStaffEmail] = useState('');
   const [forgotNewPassword, setForgotNewPassword] = useState('');
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
@@ -409,13 +409,7 @@ export default function Auth() {
         });
         setForgotStep(4);
       } else {
-        const res = await fetch('https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1/sendOTP', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: fullPhone }),
-        });
-        const result = await res.json();
-        if (!res.ok || result.error) throw new Error(result.error || 'Failed to send OTP');
+        // No real email on file yet — collect one before we can send a reset link
         setForgotStep(2);
       }
     } catch (err) {
@@ -425,23 +419,30 @@ export default function Auth() {
     }
   };
 
-  const handleForgotVerifyOTP = async () => {
-    if (!forgotOtp.trim() || forgotOtp.length < 6) {
-      toast.error('Please enter the 6-digit code.');
+  const handleForgotCollectEmail = async () => {
+    const email = forgotStaffEmail.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error('Please enter a valid email address.');
       return;
     }
     setForgotLoading(true);
     try {
-      const res = await fetch('https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1/verifyOTP', {
+      const supabase = await getSupabase();
+      const res = await fetch('https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1/updateStaffEmailForReset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: forgotFullPhone, code: forgotOtp }),
+        body: JSON.stringify({ phone: forgotFullPhone, newEmail: email }),
       });
       const result = await res.json();
-      if (!res.ok || !result.valid) throw new Error('Invalid or expired code. Please try again.');
-      setForgotStep(3);
+      if (!res.ok || result.error) throw new Error(result.error || 'Failed to update email');
+
+      // Same reset-link flow the owner path already uses
+      await supabase.auth.resetPasswordForEmail(result.email, {
+        redirectTo: `${getBaseUrl()}/Auth?type=recovery`,
+      });
+      setForgotStep(4);
     } catch (err) {
-      toast.error(err.message || 'Verification failed.');
+      toast.error(err.message || 'Something went wrong. Please try again.');
     } finally {
       setForgotLoading(false);
     }
