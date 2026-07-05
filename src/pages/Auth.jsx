@@ -267,7 +267,7 @@ export default function Auth() {
 
         const { data: existingAppUser } = await supabase
           .from('app_users')
-          .select('id, created_date, onboarding_completed, tenant_id, role')
+          .select('id, created_date, onboarding_completed, tenant_id, role, phone')
           .eq('email', user.email)
           .limit(1);
 
@@ -307,7 +307,7 @@ export default function Auth() {
 
           const { data: fetchedUser, error: fetchError } = await supabase
             .from('app_users')
-            .select('id, created_date, onboarding_completed, tenant_id, role')
+            .select('id, created_date, onboarding_completed, tenant_id, role, phone')
             .eq('email', user.email)
             .single();
           if (fetchError) throw fetchError;
@@ -326,6 +326,7 @@ export default function Auth() {
           role: existingRow?.role || 'admin',
           onboarding_completed: existingRow?.onboarding_completed || false,
           tenant_id: existingRow?.tenant_id || null,
+          phone: existingRow?.phone || null,
           created_date: existingRow?.created_date || now,
           last_login_at: now,
         };
