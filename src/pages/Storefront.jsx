@@ -621,7 +621,7 @@ function StorefrontInner() {
               <div style={{ width: '100%', background: 'white', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                 <div style={{ padding: '14px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#0f172a', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
-                    {tenant.payment_qr_label || 'Pay via QR Code'}
+                    {tenant.payment_qr_label || t('payViaQr')}
                   </p>
                   <span style={{ fontSize: 15, fontWeight: 800, color: primaryColor }}>{sym}{lastCartTotal.toFixed(2)}</span>
                 </div>
@@ -639,7 +639,7 @@ function StorefrontInner() {
                       whiteSpace: 'nowrap', backdropFilter: 'blur(4px)',
                     }}>
                       <span style={{ fontSize: 10, color: 'white', fontWeight: 600, letterSpacing: '0.02em' }}>
-                        👆 Long press to save &amp; scan
+                        👆 {t('longPressToScan')}
                       </span>
                     </div>
                   </div>
@@ -648,14 +648,14 @@ function StorefrontInner() {
                   {tenant.payment_reference && (
                     <div style={{ width: '100%', background: '#f8fafc', borderRadius: 10, padding: '10px 14px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #f1f5f9' }}>
                       <div>
-                        <p style={{ margin: 0, fontSize: 10, color: '#94a3b8', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Reference</p>
+                        <p style={{ margin: 0, fontSize: 10, color: '#94a3b8', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('reference')}</p>
                         <p style={{ margin: '2px 0 0', fontSize: 13, fontWeight: 700, color: '#0f172a', fontFamily: 'monospace' }}>{tenant.payment_reference}</p>
                       </div>
                       <button
                         onClick={() => { navigator.clipboard.writeText(tenant.payment_reference); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
                         style={{ fontSize: 12, color: copied ? '#16a34a' : primaryColor, background: copied ? '#dcfce7' : `${primaryColor}15`, border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s', minHeight: 32, minWidth: 60 }}
                       >
-                        {copied ? '✓ Copied' : 'Copy'}
+                        {copied ? `✓ ${t('copied')}` : t('copy')}
                       </button>
                     </div>
                   )}
