@@ -21,8 +21,8 @@ const schema = z.object({
 
 const businessTypes = [
   { value: 'food', label: 'F&B/Cafe/Restaurant', Icon: UtensilsCrossed, color: 'text-orange-500' },
-  { value: 'retail', label: 'Retail', Icon: ShoppingBag, color: 'text-blue-500' },
-  { value: 'service', label: 'Service', Icon: Wrench, color: 'text-green-500' },
+  { value: 'retail', label: 'Retail', Icon: ShoppingBag, color: 'text-blue-500', disabled: true },
+  { value: 'service', label: 'Service', Icon: Wrench, color: 'text-green-500', disabled: true },
 ];
 
 const countries = ['Singapore', 'Malaysia'];
@@ -308,10 +308,13 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
               </SelectTrigger>
               <SelectContent>
                 {businessTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
+                  <SelectItem key={type.value} value={type.value} disabled={type.disabled}>
                        <div className="flex items-center gap-2">
-                         <type.Icon className={`w-4 h-4 ${type.color}`} />
-                         {type.label}
+                         <type.Icon className={`w-4 h-4 ${type.disabled ? 'text-slate-300' : type.color}`} />
+                         <span className={type.disabled ? 'text-slate-400' : ''}>{type.label}</span>
+                         {type.disabled && (
+                           <span className="ml-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-400">Coming Soon</span>
+                         )}
                        </div>
                       </SelectItem>
                 ))}
