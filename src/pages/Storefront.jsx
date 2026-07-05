@@ -688,7 +688,7 @@ function StorefrontInner() {
                   </svg>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Pay at the counter</p>
+                  <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{t('payAtCounter')}</p>
                   <p style={{ margin: 0, fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>Please proceed to the counter with your order number. Our staff will assist you with payment.</p>
                 </div>
               </div>
@@ -699,7 +699,7 @@ function StorefrontInner() {
               onClick={() => { setOrderSuccess(false); setLastCart([]); setLastCartTotal(0); }}
               style={{ width: '100%', minHeight: 52, padding: '14px 16px', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: 14, fontSize: 15, fontWeight: 700, cursor: 'pointer', color: '#374151', touchAction: 'manipulation', transition: 'background 0.15s' }}
             >
-              Back to menu
+              {t('backToMenu')}
             </button>
           </div>
         </div>
