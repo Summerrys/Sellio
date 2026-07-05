@@ -19,6 +19,9 @@ const schema = z.object({
   country: z.string().min(1, 'Please select a country'),
 });
 
+import InstallPWAModal from './InstallPWAModal';
+import { canShowInstallPrompt } from '@/lib/pwaInstall';
+
 const businessTypes = [
   { value: 'food', label: 'F&B/Cafe/Restaurant', Icon: UtensilsCrossed, color: 'text-orange-500' },
   { value: 'retail', label: 'Retail', Icon: ShoppingBag, color: 'text-blue-500', disabled: true },
