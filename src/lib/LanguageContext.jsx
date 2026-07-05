@@ -21,6 +21,7 @@ const DICTIONARY = {
     // Product cards / modal
     addToOrder: 'Add to order',
     outOfStock: 'Out of stock',
+    soldOut: 'Sold out',
     unlimited: 'Unlimited',
     inStock: 'in stock',
     size: 'Size',
@@ -80,6 +81,7 @@ const DICTIONARY = {
     orderingUnavailable: '打烊期间无法下单',
     addToOrder: '加入订单',
     outOfStock: '缺货',
+    soldOut: '已售罄',
     unlimited: '不限量',
     inStock: '件有货',
     size: '规格',
@@ -134,6 +136,7 @@ const DICTIONARY = {
     orderingUnavailable: 'Pesanan tidak tersedia semasa kedai tutup',
     addToOrder: 'Tambah ke pesanan',
     outOfStock: 'Kehabisan stok',
+    soldOut: 'Habis dijual',
     unlimited: 'Tanpa had',
     inStock: 'lagi',
     size: 'Saiz',
