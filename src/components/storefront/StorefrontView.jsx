@@ -633,11 +633,11 @@ function FeaturedCard({ product, currency, primaryColor, storefrontConfig, showS
   );
 }
 
-function GridCard({ product, currency, primaryColor, storefrontConfig, showStockBadge, onAddToCart, onProductClick }) {
+function GridCard({ product, currency, primaryColor, storefrontConfig, showStockBadge, onAddToCart, onProductClick, contentMap = {} }) {
   const { t } = useLanguage();
   const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
-  const name = useTranslatedText(product.name);
-  const description = useTranslatedText(product.description);
+  const name = contentMap[product.name] || product.name;
+  const description = contentMap[product.description] || product.description;
   return (
     <div onClick={() => onProductClick(product)} style={{ background: '#fff', borderRadius: 12, border: '0.5px solid #e5e7eb', overflow: 'hidden', cursor: 'pointer' }}>
       <div style={{ position: 'relative' }}>
