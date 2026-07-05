@@ -168,7 +168,7 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
         </div>
         <button
           type="button"
-          onClick={doSearch}
+          onClick={() => doSearch()}
           disabled={searching || !query.trim()}
           aria-label="Search"
           style={{
