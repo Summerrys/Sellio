@@ -250,8 +250,21 @@ export default function StorefrontView({
   const featuredProducts = products.filter(p => p.is_featured === true);
   const hasFeatured = featuredProducts.length > 0;
   const categoriesWithProducts = categories.filter(cat => products.some(p => p.category_id === cat.id));
-  const catNameMap = useTranslatedTexts(categoriesWithProducts.map(c => c.name));
   const uncategorised = products.filter(p => !p.is_featured && !categories.some(c => c.id === p.category_id));
+
+  // ── One batched translation request covers EVERY piece of merchant content
+  // on this page (all product names/descriptions, all category names, the
+  // featured section title) — regardless of which layout is active. This
+  // replaces what used to be a separate network call per product card.
+  const allContentTexts = React.useMemo(() => {
+    const s = new Set();
+    products.forEach(p => { if (p.name) s.add(p.name); if (p.description) s.add(p.description); });
+    categories.forEach(c => { if (c.name) s.add(c.name); });
+    if (storefrontConfig?.featured_section_title) s.add(storefrontConfig.featured_section_title);
+    return [...s];
+  }, [products, categories, storefrontConfig?.featured_section_title]);
+  const contentMap = useTranslatedTexts(allContentTexts);
+  const tr = (text) => contentMap[text] || text;
 
   // Set first active section on load (deals first if present)
   useEffect(() => {
