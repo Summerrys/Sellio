@@ -521,6 +521,7 @@ function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onA
 
 // ── Non-split content (grid / list / carousel) ───────────────────────────────
 function NonSplitContent({ products, categories, primaryColor, currency, storefrontConfig, showStockBadge, onAddToCart, onProductClick }) {
+  const { t } = useLanguage();
   const [selectedCategory, setSelectedCategory] = useState(null);
   const featuredProducts = products.filter(p => p.is_featured === true);
   const specialDealProducts = products.filter(p => p.compare_at_price > p.price && !p.is_featured);
@@ -528,18 +529,19 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
     p.is_featured !== true && (selectedCategory === null || p.category_id === selectedCategory)
   );
   const productLayout = storefrontConfig?.product_layout || 'grid';
+  const catNameMap = useTranslatedTexts(categories.map(c => c.name));
 
   return (
     <>
       {storefrontConfig?.show_category_tabs !== false && categories.length > 0 && (
         <div className="sf-no-scrollbar" style={{ display: 'flex', gap: 8, padding: '14px 16px 0', overflowX: 'auto' }}>
-          {[{ id: null, name: 'All' }, ...categories].map(cat => (
+          {[{ id: null, name: t('all') }, ...categories].map(cat => (
             <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} style={{
               flexShrink: 0, padding: '7px 16px', borderRadius: 20, fontSize: 13, cursor: 'pointer', border: 'none',
               fontWeight: selectedCategory === cat.id ? 600 : 400,
               background: selectedCategory === cat.id ? primaryColor : '#f1f5f9',
               color: selectedCategory === cat.id ? 'white' : '#64748b',
-            }}>{cat.name}</button>
+            }}>{catNameMap[cat.name] || cat.name}</button>
           ))}
         </div>
       )}
@@ -547,7 +549,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
         {storefrontConfig?.show_featured !== false && featuredProducts.length > 0 && (
           <div style={{ marginBottom: 12 }}>
             <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>
-              {storefrontConfig?.featured_section_title || "Today's Picks"} ⭐
+              {t('todaysPicks')} ⭐
             </p>
             {featuredProducts.map(product => <FeaturedCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} />)}
           </div>
