@@ -7,25 +7,19 @@
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#ffffff",
-  "theme_color": "#8b5cf6",
+  "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "https://assets.apptelier.sg/sellio/Logo_Sellio.png",
+      "src": "https://assets.apptelier.sg/sellio/Logo_sellio_just.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://assets.apptelier.sg/sellio/Logo_Sellio.png",
+      "src": "https://assets.apptelier.sg/sellio/Logo_sellio_just.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "https://assets.apptelier.sg/sellio/Logo_Sellio.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
     }
   ]
 }
