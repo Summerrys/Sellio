@@ -48,6 +48,7 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
   const [error, setError] = React.useState(null);
   const [step, setStep] = React.useState('upload');
   const fileInputRef = React.useRef(null);
+  const cameraInputRef = React.useRef(null);
   const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
   const primaryGradient = 'var(--color-primary-gradient)';
 
@@ -158,25 +159,34 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
           {/* Step: Upload */}
           {step === 'upload' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div
-                onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); }}
-                onDragOver={e => e.preventDefault()}
-                onClick={() => fileInputRef.current?.click()}
-                style={{ border: `2px dashed ${image ? 'rgb(var(--color-primary))' : '#e2e8f0'}`, borderRadius: 14, padding: imagePreview ? 16 : 32, textAlign: 'center', cursor: 'pointer', background: image ? 'rgba(var(--color-primary), 0.04)' : '#f8fafc', transition: 'all 0.2s' }}
-              >
-                <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleFile(e.target.files[0])} />
-                {imagePreview ? (
+              {!imagePreview ? (
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, border: '2px dashed #e2e8f0', borderRadius: 14, padding: '24px 12px', background: '#f8fafc', cursor: 'pointer' }}
+                  >
+                    <ImageIcon size={28} color="#94a3b8" />
+                    <span style={{ fontWeight: 600, fontSize: 13, color: '#374151' }}>Upload Photo</span>
+                    <span style={{ fontSize: 11, color: '#94a3b8' }}>Choose from gallery</span>
+                  </button>
+                  <button
+                    onClick={() => cameraInputRef.current?.click()}
+                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, border: '2px dashed #e2e8f0', borderRadius: 14, padding: '24px 12px', background: '#f8fafc', cursor: 'pointer' }}
+                  >
+                    <Camera size={28} color="#94a3b8" />
+                    <span style={{ fontWeight: 600, fontSize: 13, color: '#374151' }}>Take Photo</span>
+                    <span style={{ fontSize: 11, color: '#94a3b8' }}>Use your camera</span>
+                  </button>
+                  <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleFile(e.target.files[0])} />
+                  <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => handleFile(e.target.files[0])} />
+                </div>
+              ) : (
+                <div
+                  style={{ border: `2px dashed rgb(var(--color-primary))`, borderRadius: 14, padding: 16, textAlign: 'center', background: 'rgba(var(--color-primary), 0.04)' }}
+                >
                   <img src={imagePreview} style={{ maxHeight: 200, maxWidth: '100%', borderRadius: 10, objectFit: 'contain', margin: '0 auto', display: 'block' }} />
-                ) : (
-                  <>
-                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-                      <ImageIcon size={40} color="#94a3b8" />
-                    </div>
-                    <p style={{ fontWeight: 600, fontSize: 14, color: '#374151', margin: '0 0 4px' }}>Tap to upload menu photo</p>
-                    <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>JPG, PNG supported · Clear photos work best</p>
-                  </>
-                )}
-              </div>
+                </div>
+              )}
 
               {imagePreview && (
                 <div style={{ display: 'flex', gap: 8 }}>
