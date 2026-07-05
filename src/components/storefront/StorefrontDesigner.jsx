@@ -845,7 +845,7 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
   );
 }
 
-export default function StorefrontDesigner({ open, onClose, tenantId, tenantSlug }) {
+function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
   const [form, setForm] = useState({ ...DEFAULTS });
   const [saving, setSaving] = useState(false);
   const [visible, setVisible] = useState(false);
