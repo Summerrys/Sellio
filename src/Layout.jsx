@@ -210,9 +210,23 @@ function AppLayout({ children, currentPageName }) {
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [canDismissTrialModal, setCanDismissTrialModal] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
 
   const { appUser: customUser, clearAppUser } = useAppUser();
   const { user, tenant, isSuperAdmin, isLoading, hasPermission } = useTenant();
+
+  // Prompt to install as an app whenever a merchant or staff logs in via browser.
+  // Skipped entirely if already running as an installed PWA, or already shown
+  // this browser session (so it doesn't nag on every page navigation).
+  useEffect(() => {
+    if (!customUser) return;
+    if (isStandalone()) return;
+    if (sessionStorage.getItem('sellio_install_prompt_login_shown')) return;
+    if (!canShowInstallPrompt()) return;
+    sessionStorage.setItem('sellio_install_prompt_login_shown', '1');
+    const timer = setTimeout(() => setShowInstallPrompt(true), 600);
+    return () => clearTimeout(timer);
+  }, [customUser]);
 
   const tenantId = tenant?.id;
   useEffect(() => {
