@@ -7,7 +7,7 @@
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "theme_color": "#8b5cf6",
   "icons": [
     {
       "src": "https://assets.apptelier.sg/sellio/Logo_sellio_just.png",
