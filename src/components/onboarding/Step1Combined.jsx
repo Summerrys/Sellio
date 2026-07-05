@@ -12,15 +12,14 @@ import { base44 } from '@/api/base44Client';
 import { getSupabase } from '@/lib/supabaseClient';
 import { generateThemeVariables, COLOR_SETS as POPULAR_PALETTES, DEFAULT_GRADIENT, DEFAULT_PRIMARY, DEFAULT_ACCENT } from '../theme/themeUtils';
 import { cn } from '@/lib/utils';
+import InstallPWAModal from './InstallPWAModal';
+import { canShowInstallPrompt } from '@/lib/pwaInstall';
 
 const schema = z.object({
   businessName: z.string().min(2, 'Business name is required').max(100, 'Business name must be under 100 characters'),
   businessType: z.string().min(1, 'Please select a business type'),
   country: z.string().min(1, 'Please select a country'),
 });
-
-import InstallPWAModal from './InstallPWAModal';
-import { canShowInstallPrompt } from '@/lib/pwaInstall';
 
 const businessTypes = [
   { value: 'food', label: 'F&B/Cafe/Restaurant', Icon: UtensilsCrossed, color: 'text-orange-500' },
