@@ -13,10 +13,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Coffee, UtensilsCrossed, IceCream, Salad, Sandwich,
-import LanguageToggle from './LanguageToggle';
+  Drumstick, Tag, Gift, LayoutGrid, ShoppingCart, Clock,
   Cpu, Glasses, Shirt, Trophy, BookOpen, Home, PawPrint,
   Gem, Wrench, Scissors, Sparkles
 } from 'lucide-react';
+import LanguageToggle from './LanguageToggle';
 
 // ── Currency symbol helper ───────────────────────────────────────────────────
 // Returns display symbol: SGD→"$", MYR→"RM ", USD→"$", GBP→"£", EUR→"€"
