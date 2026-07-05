@@ -600,7 +600,7 @@ export default function Auth() {
 
         const { data: rows } = await supabase
           .from('app_users')
-          .select('id, email, full_name, role, onboarding_completed, tenant_id')
+          .select('id, email, full_name, role, onboarding_completed, tenant_id, phone')
           .eq('phone', fullPhone)
           .limit(1);
 
