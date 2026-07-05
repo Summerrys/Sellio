@@ -103,6 +103,20 @@ export default function KitchenDisplay() {
   const alertIntervalRef = useRef(60);
   const [alertInterval, setAlertInterval] = useState(60);
 
+  // Restore sound preference — app_users.order_alerts (synced with Profile modal & Orders page)
+  // takes priority; localStorage is a fast fallback for the very first render.
+  useEffect(() => {
+    if (!tenantId) return;
+    const stored = localStorage.getItem(`sellio_sound_alerts_${tenantId}`);
+    if (stored === 'true') { setSoundEnabled(true); soundEnabledRef.current = true; }
+    if (appUser?.order_alerts !== undefined) {
+      const dbValue = appUser.order_alerts !== false;
+      setSoundEnabled(dbValue);
+      soundEnabledRef.current = dbValue;
+      localStorage.setItem(`sellio_sound_alerts_${tenantId}`, String(dbValue));
+    }
+  }, [tenantId, appUser?.order_alerts]);
+
   const playTone = (freq, duration, delayMs = 0) => {
     try {
       if (!audioCtxRef.current) {
@@ -355,6 +369,12 @@ export default function KitchenDisplay() {
                 setSoundEnabled(newVal);
                 soundEnabledRef.current = newVal;
                 if (tenantId) localStorage.setItem(`sellio_sound_alerts_${tenantId}`, String(newVal));
+                // Keep app_users.order_alerts in sync so Profile modal & Orders page reflect this too
+                if (appUser?.id) {
+                  getSupabase().then(supabase =>
+                    supabase.from('app_users').update({ order_alerts: newVal }).eq('id', appUser.id)
+                  ).catch(() => {});
+                }
                 if (newVal) {
                   if (!audioCtxRef.current) {
                     audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
