@@ -39,6 +39,8 @@ import AppLoader from '@/components/ui-custom/AppLoader';
 import PricingModal from './components/subscription/PricingModal';
 import TrialReminderModal from './components/subscription/TrialReminderModal';
 import AccountProfileModal from './components/profile/AccountProfileModal';
+import InstallPWAModal from './components/onboarding/InstallPWAModal';
+import { canShowInstallPrompt, isStandalone } from '@/lib/pwaInstall';
 
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth'];
