@@ -247,6 +247,7 @@ export default function StorefrontView({
   const featuredProducts = products.filter(p => p.is_featured === true);
   const hasFeatured = featuredProducts.length > 0;
   const categoriesWithProducts = categories.filter(cat => products.some(p => p.category_id === cat.id));
+  const catNameMap = useTranslatedTexts(categoriesWithProducts.map(c => c.name));
   const uncategorised = products.filter(p => !p.is_featured && !categories.some(c => c.id === p.category_id));
 
   // Set first active section on load (deals first if present)
@@ -420,7 +421,7 @@ export default function StorefrontView({
                       fontSize: 13, fontWeight: 700, padding: '12px 14px 6px',
                       color: '#1e293b', margin: 0, position: 'sticky', top: 0,
                       background: 'white', zIndex: 1, borderBottom: '1px solid #f1f5f9',
-                    }}>{cat.name}</p>
+                    }}>{catNameMap[cat.name] || cat.name}</p>
                     <div style={{ padding: '4px 10px' }}>
                       {catProducts.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={handleAddToCart} onProductClick={handleProductClick} />)}
                     </div>
