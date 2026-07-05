@@ -62,6 +62,26 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
     setPhone(user.phone || '');
     setEmailNotifs(user.email_notifications !== false);
     setOrderAlerts(user.order_alerts !== false);
+
+    // Fallback: cookie may be stale from before phone/preferences were tracked —
+    // refetch fresh from DB so the modal always shows accurate data.
+    if (user.id) {
+      (async () => {
+        try {
+          const supabase = await getSupabase();
+          const { data } = await supabase
+            .from('app_users')
+            .select('phone, email_notifications, order_alerts')
+            .eq('id', user.id)
+            .maybeSingle();
+          if (data) {
+            setPhone(data.phone || '');
+            setEmailNotifs(data.email_notifications !== false);
+            setOrderAlerts(data.order_alerts !== false);
+          }
+        } catch {}
+      })();
+    }
   }, [open, user]);
 
   if (!open) return null;
