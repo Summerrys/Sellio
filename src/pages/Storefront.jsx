@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { getSupabase } from '@/lib/supabaseClient';
 import StorefrontView from '@/components/storefront/StorefrontView';
 import MenuAssistantWidget from '@/components/storefront/MenuAssistantWidget';
+import { LanguageProvider, useLanguage } from '@/lib/LanguageContext';
 
 const STATUS_COLORS = {
   pending: { bg: '#fef3c7', color: '#92400e' },
@@ -12,8 +13,9 @@ const STATUS_COLORS = {
   cancelled: { bg: '#fee2e2', color: '#991b1b' },
 };
 
-export default function Storefront() {
+function StorefrontInner() {
   const { tenantSlug, tableId } = useParams();
+  const { t } = useLanguage();
   const isDineIn = !!tableId;
   const isPreview = new URLSearchParams(window.location.search).get('preview') === 'true';
 
