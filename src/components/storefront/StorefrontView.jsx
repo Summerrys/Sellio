@@ -530,6 +530,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
   );
   const productLayout = storefrontConfig?.product_layout || 'grid';
   const catNameMap = useTranslatedTexts(categories.map(c => c.name));
+  const customFeaturedTitle = useTranslatedText(storefrontConfig?.featured_section_title);
 
   return (
     <>
@@ -549,7 +550,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
         {storefrontConfig?.show_featured !== false && featuredProducts.length > 0 && (
           <div style={{ marginBottom: 12 }}>
             <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>
-              {t('todaysPicks')} ⭐
+              {storefrontConfig?.featured_section_title ? customFeaturedTitle : t('todaysPicks')} ⭐
             </p>
             {featuredProducts.map(product => <FeaturedCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} />)}
           </div>
