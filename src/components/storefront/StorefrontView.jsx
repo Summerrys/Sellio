@@ -465,6 +465,7 @@ export default function StorefrontView({
             showStockBadge={showStockBadge}
             onAddToCart={handleAddToCart}
             onProductClick={handleProductClick}
+            contentMap={contentMap}
           />
         )}
 
