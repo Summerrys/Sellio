@@ -419,7 +419,7 @@ function StorefrontInner() {
             {cart.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0' }}>
                 <p style={{ fontSize: 32, margin: '0 0 8px' }}>🛒</p>
-                <p style={{ color: '#94a3b8', fontSize: 14 }}>Your cart is empty</p>
+                <p style={{ color: '#94a3b8', fontSize: 14 }}>{t('emptyCart')}</p>
               </div>
             ) : (
               <>
