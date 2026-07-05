@@ -310,15 +310,15 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                 {businessTypes.map((type) => (
                   <SelectItem key={type.value} value={type.value} disabled={type.disabled}>
                        <div className="flex items-center gap-2">
-                         <type.Icon className={`w-4 h-4 ${type.disabled ? 'opacity-40' : type.color}`} style={type.disabled ? { color: 'rgb(var(--color-primary))' } : undefined} />
+                         <type.Icon className={`w-4 h-4 ${type.disabled ? 'opacity-40' : type.color}`} style={type.disabled ? { color: '#8b5cf6' } : undefined} />
                          <span className={type.disabled ? 'opacity-60' : ''}>{type.label}</span>
                          {type.disabled && (
                            <span
                              className="ml-1 text-[10px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1"
                              style={{
-                               background: 'rgba(var(--color-primary), 0.1)',
-                               color: 'rgb(var(--color-primary))',
-                               border: '1px solid rgba(var(--color-primary), 0.2)',
+                               background: 'linear-gradient(135deg, rgba(251,146,60,0.12), rgba(139,92,246,0.12))',
+                               color: '#8b5cf6',
+                               border: '1px solid rgba(139,92,246,0.25)',
                              }}
                            >
                              ✨ Coming Soon
