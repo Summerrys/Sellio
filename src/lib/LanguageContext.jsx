@@ -286,3 +286,17 @@ export function useTranslatedTexts(texts) {
 
   return lang === 'en' ? {} : map;
 }
+
+/**
+ * Fire-and-forget background pre-warm. Call this once as soon as storefront
+ * content (products/categories) loads, regardless of the customer's current
+ * language. By the time they actually tap the toggle, translations for the
+ * *other* languages are usually already cached — so the toggle feels instant.
+ * Safe to call repeatedly; fetchTranslations already skips anything cached.
+ */
+export function prewarmTranslations(texts) {
+  const clean = (texts || []).filter(Boolean);
+  if (clean.length === 0) return;
+  fetchTranslations(clean, 'zh');
+  fetchTranslations(clean, 'ms');
+}
