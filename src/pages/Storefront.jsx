@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { getSupabase } from '@/lib/supabaseClient';
 import StorefrontView from '@/components/storefront/StorefrontView';
 import MenuAssistantWidget from '@/components/storefront/MenuAssistantWidget';
-import { LanguageProvider, useLanguage } from '@/lib/LanguageContext';
+import { LanguageProvider, useLanguage, prewarmTranslations } from '@/lib/LanguageContext';
 
 const STATUS_COLORS = {
   pending: { bg: '#fef3c7', color: '#92400e' },
@@ -86,6 +86,15 @@ function StorefrontInner() {
       setStorefrontConfig(storefrontRes.data);
       setCategories(categoriesRes.data || []);
       setProducts(productsRes.data || []);
+
+      // Background pre-warm: translate all product/category content into
+      // zh and ms now, regardless of current language, so the toggle feels
+      // instant later instead of waiting on a translation round trip.
+      const contentToPrewarm = [];
+      (productsRes.data || []).forEach(p => { if (p.name) contentToPrewarm.push(p.name); if (p.description) contentToPrewarm.push(p.description); });
+      (categoriesRes.data || []).forEach(c => { if (c.name) contentToPrewarm.push(c.name); });
+      if (storefrontRes.data?.featured_section_title) contentToPrewarm.push(storefrontRes.data.featured_section_title);
+      prewarmTranslations(contentToPrewarm);
       if (tableId) {
         const { data: tableData } = await supabase.from('tables').select('id, name, zone, capacity').eq('id', tableId).eq('tenant_id', tenantId).single();
         setTable(tableData);
