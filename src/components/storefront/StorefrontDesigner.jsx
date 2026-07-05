@@ -1066,3 +1066,11 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
     </div>
   );
 }
+
+export default function StorefrontDesigner(props) {
+  return (
+    <LanguageProvider>
+      <StorefrontDesignerInner {...props} />
+    </LanguageProvider>
+  );
+}
