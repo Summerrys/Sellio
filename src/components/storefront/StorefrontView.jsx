@@ -437,7 +437,7 @@ export default function StorefrontView({
                       fontSize: 13, fontWeight: 700, padding: '12px 14px 6px',
                       color: '#1e293b', margin: 0, position: 'sticky', top: 0,
                       background: 'white', zIndex: 1, borderBottom: '1px solid #f1f5f9',
-                    }}>{catNameMap[cat.name] || cat.name}</p>
+                    }}>{tr(cat.name)}</p>
                     <div style={{ padding: '4px 10px' }}>
                       {catProducts.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={handleAddToCart} onProductClick={handleProductClick} />)}
                     </div>
