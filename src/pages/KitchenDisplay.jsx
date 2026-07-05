@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
+import { useAppUser } from '@/lib/AppUserContext';
 import { Clock, AlertCircle, ChefHat, ArrowLeft, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -90,6 +91,7 @@ function KDSOrderCard({ order, onBump }) {
 
 export default function KitchenDisplay() {
   const { tenantId, tenant } = useTenant();
+  const { appUser } = useAppUser();
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
