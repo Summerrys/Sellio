@@ -13,7 +13,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Coffee, UtensilsCrossed, IceCream, Salad, Sandwich,
-  Drumstick, Tag, Gift, LayoutGrid, ShoppingCart, Clock,
+import LanguageToggle from './LanguageToggle';
   Cpu, Glasses, Shirt, Trophy, BookOpen, Home, PawPrint,
   Gem, Wrench, Scissors, Sparkles
 } from 'lucide-react';
