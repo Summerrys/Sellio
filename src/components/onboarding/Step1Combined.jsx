@@ -310,10 +310,19 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                 {businessTypes.map((type) => (
                   <SelectItem key={type.value} value={type.value} disabled={type.disabled}>
                        <div className="flex items-center gap-2">
-                         <type.Icon className={`w-4 h-4 ${type.disabled ? 'text-slate-300' : type.color}`} />
-                         <span className={type.disabled ? 'text-slate-400' : ''}>{type.label}</span>
+                         <type.Icon className={`w-4 h-4 ${type.disabled ? 'opacity-40' : type.color}`} style={type.disabled ? { color: 'rgb(var(--color-primary))' } : undefined} />
+                         <span className={type.disabled ? 'opacity-60' : ''}>{type.label}</span>
                          {type.disabled && (
-                           <span className="ml-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-400">Coming Soon</span>
+                           <span
+                             className="ml-1 text-[10px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1"
+                             style={{
+                               background: 'rgba(var(--color-primary), 0.1)',
+                               color: 'rgb(var(--color-primary))',
+                               border: '1px solid rgba(var(--color-primary), 0.2)',
+                             }}
+                           >
+                             ✨ Coming Soon
+                           </span>
                          )}
                        </div>
                       </SelectItem>
