@@ -620,6 +620,7 @@ function FeaturedCard({ product, currency, primaryColor, storefrontConfig, showS
 }
 
 function GridCard({ product, currency, primaryColor, storefrontConfig, showStockBadge, onAddToCart, onProductClick }) {
+  const { t } = useLanguage();
   const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
   const name = useTranslatedText(product.name);
   const description = useTranslatedText(product.description);
@@ -632,7 +633,7 @@ function GridCard({ product, currency, primaryColor, storefrontConfig, showStock
         }
         {isOutOfStock && showStockBadge && (
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: 'white', fontWeight: 700, fontSize: 12 }}>Sold out</span>
+            <span style={{ color: 'white', fontWeight: 700, fontSize: 12 }}>{t('soldOut')}</span>
           </div>
         )}
       </div>
