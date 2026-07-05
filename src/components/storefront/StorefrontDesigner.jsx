@@ -759,27 +759,27 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
         borderRadius: '20px 20px 0 0',
         boxShadow: '0 -4px 24px rgba(0,0,0,0.12)',
         transition: isDraggingDrawer.current ? 'none' : 'height 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        animation: jumpAnimating ? 'drawerJump 0.6s ease-in-out 3' : 'none',
         zIndex: 100,
         display: 'flex', flexDirection: 'column',
         overflow: 'hidden',
       }}>
+        <style>{`
+          @keyframes drawerJump {
+            0%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-14px); }
+            50% { transform: translateY(0); }
+            70% { transform: translateY(-7px); }
+          }
+        `}</style>
         {/* Drag handle */}
         <div
           onMouseDown={startDrawerDrag}
           onTouchStart={startDrawerDrag}
           style={{
             padding: '10px 0 6px', cursor: 'pointer', flexShrink: 0, touchAction: 'none', userSelect: 'none',
-            animation: jumpAnimating ? 'drawerJump 0.6s ease-in-out 3' : 'none',
           }}
         >
-          <style>{`
-            @keyframes drawerJump {
-              0%, 100% { transform: translateY(0); }
-              30% { transform: translateY(-10px); }
-              50% { transform: translateY(0); }
-              70% { transform: translateY(-5px); }
-            }
-          `}</style>
           <div style={{ width: 48, height: 5, borderRadius: 3, background: primaryColor, margin: '0 auto', opacity: 0.85 }} />
         </div>
 
