@@ -483,6 +483,7 @@ export default function StorefrontView({
 
 // ── Product row item (split layout) ─────────────────────────────────────────
 function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onAddToCart, onProductClick, featured = false }) {
+  const { t } = useLanguage();
   const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
   const name = useTranslatedText(product.name);
   const description = useTranslatedText(product.description);
