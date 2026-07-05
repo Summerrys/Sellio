@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { loadPrinterConfig, buildOrderReceipt, sendViaBluetooth, sendViaEpsonEPos } from '@/lib/printerUtils';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
+import { useAppUser } from '@/lib/AppUserContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PullToRefresh from '../components/ui-custom/PullToRefresh';
 import TableCallAlerts from '../components/orders/TableCallAlerts';
@@ -309,6 +310,7 @@ function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate, on
 
 export default function Orders() {
   const { tenantId, tenant, hasPermission } = useTenant();
+  const { appUser } = useAppUser();
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -330,7 +332,8 @@ export default function Orders() {
   const currency = tenant?.settings?.currency || tenant?.currency || 'SGD';
   const canViewOrders = hasPermission?.('orders.view');
 
-  // Restore sound preference from localStorage once tenantId is available
+  // Restore sound preference — app_users.order_alerts (synced with Profile modal & Kitchen Display)
+  // takes priority; localStorage is a fast fallback for the very first render.
   useEffect(() => {
     if (!tenantId) return;
     const stored = localStorage.getItem(`sellio_sound_alerts_${tenantId}`);
@@ -338,7 +341,13 @@ export default function Orders() {
     const storedInterval = parseInt(localStorage.getItem(`sellio_alert_interval_${tenantId}`) || '60', 10);
     setAlertInterval(storedInterval);
     alertIntervalRef.current = storedInterval;
-  }, [tenantId]);
+
+    if (appUser?.order_alerts !== undefined) {
+      const dbValue = appUser.order_alerts !== false;
+      setSoundEnabled(dbValue);
+      localStorage.setItem(`sellio_sound_alerts_${tenantId}`, String(dbValue));
+    }
+  }, [tenantId, appUser?.order_alerts]);
 
   useEffect(() => {
     soundEnabledRef.current = soundEnabled;
@@ -419,6 +428,12 @@ export default function Orders() {
     setSoundEnabled(newVal);
     soundEnabledRef.current = newVal;
     if (tenantId) localStorage.setItem(`sellio_sound_alerts_${tenantId}`, String(newVal));
+    // Keep app_users.order_alerts in sync so Profile modal & Kitchen Display reflect this too
+    if (appUser?.id) {
+      getSupabase().then(supabase =>
+        supabase.from('app_users').update({ order_alerts: newVal }).eq('id', appUser.id)
+      ).catch(() => {});
+    }
     if (newVal) {
       if (!audioCtxRef.current) {
         audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
