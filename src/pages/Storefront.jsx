@@ -593,7 +593,7 @@ function StorefrontInner() {
             {/* Order summary card */}
             <div style={{ width: '100%', background: 'white', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
               <div style={{ padding: '14px 16px', borderBottom: '1px solid #f1f5f9' }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#0f172a', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Your Order</p>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#0f172a', letterSpacing: '0.02em', textTransform: 'uppercase' }}>{t('yourOrderSummary')}</p>
               </div>
               <div style={{ padding: '12px 16px' }}>
                 {lastCart.map((item, idx) => (
