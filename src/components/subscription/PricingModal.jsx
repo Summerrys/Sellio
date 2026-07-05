@@ -63,6 +63,13 @@ const BUTTON_STYLES = {
   pro: { background: '#1e293b' },
 };
 
+// Top accent bar colors, keyed by plan.color — previously only Growth had one
+const ACCENT_BAR = {
+  blue: '#3b82f6',
+  purple: 'var(--color-primary-gradient, linear-gradient(90deg,#6366f1,#8b5cf6))',
+  gold: 'linear-gradient(90deg,#f59e0b,#d97706)',
+};
+
 const PLAN_RANK = { starter: 0, growth: 1, pro: 2 };
 
 export default function PricingModal({ open, onOpenChange, tenantId, currentTier = null, hasUsedTrial = false }) {
@@ -136,8 +143,8 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
                 }`}
                 style={{ minHeight: 480 }}
               >
-                {isGrowth && !isCurrent && (
-                  <div className="absolute -top-px left-0 right-0 h-1 rounded-t-2xl" style={{ background: 'var(--color-primary-gradient, linear-gradient(90deg,#6366f1,#8b5cf6))' }} />
+                {!isCurrent && (
+                  <div className="absolute -top-px left-0 right-0 h-1 rounded-t-2xl" style={{ background: ACCENT_BAR[plan.color] }} />
                 )}
                 {isCurrent && (
                   <div className="absolute -top-px left-0 right-0 h-1 rounded-t-2xl bg-green-400" />
