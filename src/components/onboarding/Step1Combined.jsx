@@ -529,5 +529,10 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
         })()}
       </form>
     </Card>
+
+    <InstallPWAModal
+      open={showInstallPrompt}
+      onClose={() => { setShowInstallPrompt(false); nextStep(); }}
+    />
   );
 }
