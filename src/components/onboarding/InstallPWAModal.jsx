@@ -42,7 +42,7 @@ export default function InstallPWAModal({ open, onClose }) {
                 alt="Sellio"
                 style={{ width: 64, height: 64, borderRadius: 16, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', marginBottom: 14 }}
               />
-              <p style={{ fontSize: 17, fontWeight: 800, color: '#0f172a', margin: '0 0 4px' }}>Install Sellio on your device</p>
+              <p style={{ fontSize: 17, fontWeight: 800, color: '#0f172a', margin: '0 0 4px' }}>Install Sellio</p>
               <p style={{ fontSize: 13, color: '#64748b', margin: 0, lineHeight: 1.5 }}>
                 Get quick access from your home screen — no App Store needed. Launch it like a real app, even offline-friendly for quick glances.
               </p>
@@ -59,7 +59,7 @@ export default function InstallPWAModal({ open, onClose }) {
                 marginBottom: 10,
               }}
             >
-              {installing ? 'Installing…' : 'Install App'}
+              {installing ? 'Installing…' : 'Install Sellio'}
             </button>
             <button
               type="button"
