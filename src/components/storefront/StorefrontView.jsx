@@ -588,6 +588,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
 }
 
 function FeaturedCard({ product, currency, primaryColor, storefrontConfig, showStockBadge, onAddToCart, onProductClick }) {
+  const { t } = useLanguage();
   const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
   const name = useTranslatedText(product.name);
   const description = useTranslatedText(product.description);
@@ -609,8 +610,8 @@ function FeaturedCard({ product, currency, primaryColor, storefrontConfig, showS
             <span style={{ fontSize: 15, fontWeight: 700, color: primaryColor }}>{getCurrencySymbol(currency)}{parseFloat(product.price).toFixed(2)}</span>
           </div>
           {isOutOfStock && showStockBadge
-            ? <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600, background: '#fee2e2', padding: '4px 10px', borderRadius: 999 }}>Sold out</span>
-            : !isOutOfStock && <button onClick={(e) => { e.stopPropagation(); if (product.variants?.length > 0) { onProductClick(product); } else { onAddToCart(product); } }} style={{ background: primaryColor, color: 'white', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Add +</button>
+            ? <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600, background: '#fee2e2', padding: '4px 10px', borderRadius: 999 }}>{t('soldOut')}</span>
+            : !isOutOfStock && <button onClick={(e) => { e.stopPropagation(); if (product.variants?.length > 0) { onProductClick(product); } else { onAddToCart(product); } }} style={{ background: primaryColor, color: 'white', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{t('addToOrder')}</button>
           }
         </div>
       </div>
