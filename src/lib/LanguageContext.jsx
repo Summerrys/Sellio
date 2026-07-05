@@ -12,6 +12,7 @@ const DICTIONARY = {
     all: 'All',
     todaysPicks: "Today's Picks",
     specialDeals: 'Special Deals',
+    other: 'Other',
     search: 'Search',
     loading: 'Loading…',
     // Business hours / closed state
@@ -75,6 +76,7 @@ const DICTIONARY = {
     all: '全部',
     todaysPicks: '今日推荐',
     specialDeals: '特惠优惠',
+    other: '其他',
     search: '搜索',
     loading: '加载中…',
     closedNow: '我们目前已打烊',
@@ -131,6 +133,7 @@ const DICTIONARY = {
     all: 'Semua',
     todaysPicks: 'Pilihan Hari Ini',
     specialDeals: 'Tawaran Istimewa',
+    other: 'Lain-lain',
     search: 'Cari',
     loading: 'Memuatkan…',
     closedNow: 'Kami sedang tutup buat masa ini',
