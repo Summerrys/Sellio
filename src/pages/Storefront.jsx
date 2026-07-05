@@ -719,3 +719,11 @@ function StorefrontInner() {
     </>
   );
 }
+
+export default function Storefront() {
+  return (
+    <LanguageProvider>
+      <StorefrontInner />
+    </LanguageProvider>
+  );
+}
