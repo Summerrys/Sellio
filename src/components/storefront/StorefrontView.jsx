@@ -10,7 +10,7 @@
  * Props when used in live mode:
  *   All state is managed internally via useParams + Supabase fetches
  */
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Coffee, UtensilsCrossed, IceCream, Salad, Sandwich,
   Drumstick, Tag, Gift, LayoutGrid, ShoppingCart, Clock,
@@ -256,7 +256,7 @@ export default function StorefrontView({
   // on this page (all product names/descriptions, all category names, the
   // featured section title) — regardless of which layout is active. This
   // replaces what used to be a separate network call per product card.
-  const allContentTexts = React.useMemo(() => {
+  const allContentTexts = useMemo(() => {
     const s = new Set();
     products.forEach(p => { if (p.name) s.add(p.name); if (p.description) s.add(p.description); });
     categories.forEach(c => { if (c.name) s.add(c.name); });
