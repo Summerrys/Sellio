@@ -658,6 +658,8 @@ function GridCard({ product, currency, primaryColor, storefrontConfig, showStock
 
 // ── Product detail modal ─────────────────────────────────────────────────────
 function ProductDetailModal({ product, currency, primaryColor, storefrontConfig, selectedVariants, setSelectedVariants, activeImageIndex, setActiveImageIndex, onAddToCart, onClose }) {
+  const name = useTranslatedText(product.name);
+  const description = useTranslatedText(product.description);
   const allImages = [product.image_url, ...(product.images || [])].filter(Boolean);
   const activeImage = allImages[activeImageIndex];
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -740,14 +742,14 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
           )}
 
           <div style={{ padding: '20px' }}>
-            <p style={{ fontWeight: 700, fontSize: 18, margin: '0 0 6px', color: '#0f172a' }}>{product.name}</p>
+            <p style={{ fontWeight: 700, fontSize: 18, margin: '0 0 6px', color: '#0f172a' }}>{name}</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
               {product.compare_at_price > product.price && (
                 <span style={{ fontSize: 13, color: '#94a3b8', textDecoration: 'line-through' }}>{getCurrencySymbol(currency)}{parseFloat(product.compare_at_price).toFixed(2)}</span>
               )}
               <span style={{ fontSize: 20, fontWeight: 700, color: primaryColor }}>{getCurrencySymbol(currency)}{parseFloat(product.price).toFixed(2)}</span>
             </div>
-            {product.description && <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6, margin: '0 0 16px' }}>{product.description}</p>}
+            {product.description && <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6, margin: '0 0 16px' }}>{description}</p>}
             {(() => {
               const normaliseVariants = (rawVariants, basePrice) => {
                 if (!rawVariants?.length) return [];
