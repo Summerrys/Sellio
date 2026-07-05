@@ -143,7 +143,7 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Scan Menu</p>
             <p style={{ margin: '1px 0 0', fontSize: 12, color: '#64748b' }}>
-              {step === 'upload' && 'Upload a photo of your menu'}
+              {step === 'upload' && 'Upload or take a photo of your menu'}
               {step === 'review' && `${scannedItems.length} items found — review before saving`}
               {step === 'done' && 'Products added successfully!'}
             </p>
