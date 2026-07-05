@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { X, ArrowLeft, ExternalLink, Upload, ChevronDown, ChevronUp, Pencil, ImagePlus } from 'lucide-react';
 import StorefrontView from '@/components/storefront/StorefrontView';
 import ImageEditModal from '@/components/onboarding/ImageEditModal';
+import { LanguageProvider } from '@/lib/LanguageContext';
 
 const FONTS = [
   { value: 'Inter', label: 'Inter', style: { fontFamily: 'Inter, sans-serif' } },
