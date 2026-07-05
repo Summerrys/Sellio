@@ -540,6 +540,9 @@ function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onA
 // ── Non-split content (grid / list / carousel) ───────────────────────────────
 function NonSplitContent({ products, categories, primaryColor, currency, storefrontConfig, showStockBadge, onAddToCart, onProductClick }) {
   const { t } = useLanguage();
+function NonSplitContent({ products, categories, primaryColor, currency, storefrontConfig, showStockBadge, onAddToCart, onProductClick, contentMap }) {
+  const { t } = useLanguage();
+  const tr = (text) => contentMap[text] || text;
   const [selectedCategory, setSelectedCategory] = useState(null);
   const featuredProducts = products.filter(p => p.is_featured === true);
   const specialDealProducts = products.filter(p => p.compare_at_price > p.price && !p.is_featured);
@@ -547,8 +550,6 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
     p.is_featured !== true && (selectedCategory === null || p.category_id === selectedCategory)
   );
   const productLayout = storefrontConfig?.product_layout || 'grid';
-  const catNameMap = useTranslatedTexts(categories.map(c => c.name));
-  const customFeaturedTitle = useTranslatedText(storefrontConfig?.featured_section_title);
 
   return (
     <>
@@ -560,7 +561,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
               fontWeight: selectedCategory === cat.id ? 600 : 400,
               background: selectedCategory === cat.id ? primaryColor : '#f1f5f9',
               color: selectedCategory === cat.id ? 'white' : '#64748b',
-            }}>{catNameMap[cat.name] || cat.name}</button>
+            }}>{tr(cat.name)}</button>
           ))}
         </div>
       )}
@@ -568,7 +569,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
         {storefrontConfig?.show_featured !== false && featuredProducts.length > 0 && (
           <div style={{ marginBottom: 12 }}>
             <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>
-              {storefrontConfig?.featured_section_title ? customFeaturedTitle : t('todaysPicks')} ⭐
+              {storefrontConfig?.featured_section_title ? tr(storefrontConfig.featured_section_title) : t('todaysPicks')} ⭐
             </p>
             {featuredProducts.map(product => <FeaturedCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} />)}
           </div>
