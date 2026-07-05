@@ -569,7 +569,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
             <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>
               {storefrontConfig?.featured_section_title ? tr(storefrontConfig.featured_section_title) : t('todaysPicks')} ⭐
             </p>
-            {featuredProducts.map(product => <FeaturedCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} />)}
+            {featuredProducts.map(product => <FeaturedCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}
           </div>
         )}
         {specialDealProducts.length > 0 && (
@@ -577,17 +577,17 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
             <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>
               🏷️ Special Deals
             </p>
-            {specialDealProducts.map(product => <FeaturedCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} />)}
+            {specialDealProducts.map(product => <FeaturedCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}
           </div>
         )}
         {productLayout === 'grid' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
-            {filteredProducts.map(product => <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} />)}
+            {filteredProducts.map(product => <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}
           </div>
         )}
         {productLayout === 'list' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {filteredProducts.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={onAddToCart} onProductClick={onProductClick} />)}
+            {filteredProducts.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}
           </div>
         )}
         {filteredProducts.length === 0 && featuredProducts.length === 0 && (
