@@ -80,7 +80,7 @@ function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHist
   const iconBtnBase = { width: 36, height: 36, borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 };
   const iconBtnNeutral = { ...iconBtnBase, background: tintBg };
 
-  const headerHeight = subLine ? 64 : 56;
+  const headerHeight = (subLine ? 64 : 56) + 20;
 
   return (
     <div style={{
@@ -130,20 +130,22 @@ function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHist
         </div>
       </div>
 
-      {/* Right: Language toggle + History + Cart buttons */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-        <LanguageToggle primaryColor={primaryColor} compact />
-        <button onClick={onHistoryClick} style={iconBtnNeutral}>
-          <Clock size={17} color="#374151" />
-        </button>
-        <button onClick={onCartClick} style={{ ...iconBtnNeutral, position: 'relative' }}>
-          <ShoppingCart size={17} color="#374151" />
-          {cartCount > 0 && (
-            <span style={{ position: 'absolute', top: -3, right: -3, minWidth: 17, height: 17, borderRadius: 9, background: '#ef4444', color: 'white', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
-              {cartCount}
-            </span>
-          )}
-        </button>
+      {/* Right: Language toggle (stacked above) + History + Cart buttons */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+        <LanguageToggle primaryColor={primaryColor} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={onHistoryClick} style={iconBtnNeutral}>
+            <Clock size={17} color="#374151" />
+          </button>
+          <button onClick={onCartClick} style={{ ...iconBtnNeutral, position: 'relative' }}>
+            <ShoppingCart size={17} color="#374151" />
+            {cartCount > 0 && (
+              <span style={{ position: 'absolute', top: -3, right: -3, minWidth: 17, height: 17, borderRadius: 9, background: '#ef4444', color: 'white', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
+                {cartCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
