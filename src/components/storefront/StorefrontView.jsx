@@ -18,6 +18,7 @@ import {
   Gem, Wrench, Scissors, Sparkles
 } from 'lucide-react';
 import LanguageToggle from './LanguageToggle';
+import { useLanguage, useTranslatedText, useTranslatedTexts } from '@/lib/LanguageContext';
 
 // ── Currency symbol helper ───────────────────────────────────────────────────
 // Returns display symbol: SGD→"$", MYR→"RM ", USD→"$", GBP→"£", EUR→"€"
