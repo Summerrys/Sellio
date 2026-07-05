@@ -176,6 +176,7 @@ function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY, h
 // ── Category sidebar item ────────────────────────────────────────────────────
 function CategorySidebarItem({ cat, isActive, primaryColor, onClick }) {
   const Icon = getCategoryIcon(cat.name);
+  const catName = useTranslatedText(cat.name);
   const tintBg = hexToRgba(primaryColor, 0.08);
   return (
     <button
@@ -195,7 +196,7 @@ function CategorySidebarItem({ cat, isActive, primaryColor, onClick }) {
         lineHeight: 1.25, overflow: 'hidden',
         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
         wordBreak: 'break-word',
-      }}>{cat.name}</div>
+      }}>{catName}</div>
     </button>
   );
 }
