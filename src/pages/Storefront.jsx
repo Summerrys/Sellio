@@ -610,7 +610,7 @@ function StorefrontInner() {
                   </div>
                 ))}
                 <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 12, paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Total</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{t('total')}</span>
                   <span style={{ fontSize: 16, fontWeight: 800, color: primaryColor }}>{sym}{lastCartTotal.toFixed(2)}</span>
                 </div>
               </div>
