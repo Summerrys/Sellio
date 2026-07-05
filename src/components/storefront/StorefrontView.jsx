@@ -129,8 +129,9 @@ function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHist
         </div>
       </div>
 
-      {/* Right: History + Cart buttons */}
-      <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
+      {/* Right: Language toggle + History + Cart buttons */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <LanguageToggle primaryColor={primaryColor} compact />
         <button onClick={onHistoryClick} style={iconBtnNeutral}>
           <Clock size={17} color="#374151" />
         </button>
