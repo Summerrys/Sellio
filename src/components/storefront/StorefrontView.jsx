@@ -176,9 +176,9 @@ function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY, h
 }
 
 // ── Category sidebar item ────────────────────────────────────────────────────
-function CategorySidebarItem({ cat, isActive, primaryColor, onClick }) {
+function CategorySidebarItem({ cat, isActive, primaryColor, onClick, contentMap = {} }) {
   const Icon = getCategoryIcon(cat.name);
-  const catName = useTranslatedText(cat.name);
+  const catName = contentMap[cat.name] || cat.name;
   const tintBg = hexToRgba(primaryColor, 0.08);
   return (
     <button
@@ -383,7 +383,7 @@ export default function StorefrontView({
             }}>
               {hasFeatured && (
                 <CategorySidebarItem
-                  cat={{ id: '__deals__', name: "Today's Picks ⭐" }}
+                  cat={{ id: '__deals__', name: `${t('todaysPicks')} ⭐` }}
                   isActive={activeCategory === '__deals__'}
                   primaryColor={primaryColor}
                   onClick={() => scrollToCategory('__deals__')}
@@ -396,11 +396,12 @@ export default function StorefrontView({
                   isActive={activeCategory === cat.id}
                   primaryColor={primaryColor}
                   onClick={() => scrollToCategory(cat.id)}
+                  contentMap={contentMap}
                 />
               ))}
               {uncategorised.length > 0 && (
                 <CategorySidebarItem
-                  cat={{ id: 'other', name: 'Other' }}
+                  cat={{ id: 'other', name: t('other') }}
                   isActive={activeCategory === 'other'}
                   primaryColor={primaryColor}
                   onClick={() => scrollToCategory('other')}
