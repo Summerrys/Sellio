@@ -529,7 +529,7 @@ function StorefrontInner() {
                 </div>
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
-                <span style={{ fontWeight: 700, fontSize: 15 }}>Total</span>
+                <span style={{ fontWeight: 700, fontSize: 15 }}>{t('total')}</span>
                 <span style={{ fontWeight: 700, fontSize: 17, color: primaryColor }}>{sym}{cartTotal.toFixed(2)}</span>
               </div>
             </div>
