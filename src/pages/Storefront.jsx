@@ -572,7 +572,7 @@ function StorefrontInner() {
               </svg>
             </div>
 
-            <p style={{ fontWeight: 800, fontSize: 24, margin: '0 0 6px', textAlign: 'center', color: '#0f172a', letterSpacing: '-0.01em' }}>Order placed!</p>
+            <p style={{ fontWeight: 800, fontSize: 24, margin: '0 0 6px', textAlign: 'center', color: '#0f172a', letterSpacing: '-0.01em' }}>{t('orderPlaced')}</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28 }}>
               <span style={{ fontSize: 13, color: '#64748b', fontFamily: 'monospace', fontWeight: 600 }}>#{placedOrderNumber}</span>
               {table && (
