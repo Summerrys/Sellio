@@ -492,6 +492,7 @@ export default function StorefrontView({
           setActiveImageIndex={setActiveImageIndex}
           onAddToCart={handleAddToCart}
           onClose={() => { setSelectedProduct(null); setSelectedVariants({}); setActiveImageIndex(0); onProductModalChange?.(false); }}
+          contentMap={contentMap}
         />
       )}
     </div>
@@ -676,10 +677,10 @@ function GridCard({ product, currency, primaryColor, storefrontConfig, showStock
 }
 
 // ── Product detail modal ─────────────────────────────────────────────────────
-function ProductDetailModal({ product, currency, primaryColor, storefrontConfig, selectedVariants, setSelectedVariants, activeImageIndex, setActiveImageIndex, onAddToCart, onClose }) {
+function ProductDetailModal({ product, currency, primaryColor, storefrontConfig, selectedVariants, setSelectedVariants, activeImageIndex, setActiveImageIndex, onAddToCart, onClose, contentMap = {} }) {
   const { t } = useLanguage();
-  const name = useTranslatedText(product.name);
-  const description = useTranslatedText(product.description);
+  const name = contentMap[product.name] || product.name;
+  const description = contentMap[product.description] || product.description;
   const allImages = [product.image_url, ...(product.images || [])].filter(Boolean);
   const activeImage = allImages[activeImageIndex];
   const [lightboxOpen, setLightboxOpen] = useState(false);
