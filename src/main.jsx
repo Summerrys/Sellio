@@ -3,10 +3,11 @@ import ReactDOM from 'react-dom/client'
 import App from '@/App.jsx'
 import '@/index.css'
 
-// Unregister any stale service workers to prevent caching stale JS chunks
+// Register our minimal PWA service worker (required for install prompts on Chrome/Android).
+// It intentionally does no caching — see public/sw.js.
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then((registrations) => {
-    registrations.forEach((reg) => reg.unregister());
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
   });
 }
 
