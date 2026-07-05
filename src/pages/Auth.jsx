@@ -528,7 +528,7 @@ export default function Auth() {
       if (isLogin) {
         const { data: rows, error: lookupError } = await supabase
           .from('app_users')
-          .select('id, email, full_name, role, onboarding_completed, tenant_id, password_hash')
+          .select('id, email, full_name, role, onboarding_completed, tenant_id, password_hash, phone')
           .eq('phone', fullPhone)
           .limit(1);
 
