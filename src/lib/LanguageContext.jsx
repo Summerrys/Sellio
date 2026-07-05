@@ -10,6 +10,7 @@ const DICTIONARY = {
     poweredBy: 'Powered by',
     menu: 'Menu',
     all: 'All',
+    todaysPicks: "Today's Picks",
     search: 'Search',
     loading: 'Loading…',
     // Business hours / closed state
@@ -70,6 +71,7 @@ const DICTIONARY = {
     poweredBy: '技术支持',
     menu: '菜单',
     all: '全部',
+    todaysPicks: '今日推荐',
     search: '搜索',
     loading: '加载中…',
     closedNow: '我们目前已打烊',
@@ -123,6 +125,7 @@ const DICTIONARY = {
     poweredBy: 'Dikuasakan oleh',
     menu: 'Menu',
     all: 'Semua',
+    todaysPicks: 'Pilihan Hari Ini',
     search: 'Cari',
     loading: 'Memuatkan…',
     closedNow: 'Kami sedang tutup buat masa ini',
