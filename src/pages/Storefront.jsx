@@ -662,11 +662,11 @@ function StorefrontInner() {
 
                   {/* Step-by-step instructions */}
                   <div style={{ width: '100%', background: '#fffbeb', borderRadius: 12, padding: '14px 16px', border: '1px solid #fde68a' }}>
-                    <p style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>How to pay</p>
+                    <p style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('howToPay')}</p>
                     {[
-                      { step: '1', text: 'Open your banking app (DBS PayLah, OCBC, UOB etc.)' },
-                      { step: '2', text: 'Long press the QR code above → Save image → Scan from photo' },
-                      { step: '3', text: `Enter ${sym}${lastCartTotal.toFixed(2)} and confirm your payment` },
+                      { step: '1', text: t('payStep1') },
+                      { step: '2', text: t('payStep2') },
+                      { step: '3', text: `${t('payStep3')} (${sym}${lastCartTotal.toFixed(2)})` },
                     ].map(({ step, text }) => (
                       <div key={step} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: step !== '3' ? 8 : 0 }}>
                         <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
