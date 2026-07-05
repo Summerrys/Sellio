@@ -223,6 +223,7 @@ export default function StorefrontView({
   cartCount = 0,
   cartTotal = 0,
 }) {
+  const { t } = useLanguage();
   const tenant = tenantProp;
   const storefrontConfig = storefrontConfigProp;
   const theme = themeProp;
