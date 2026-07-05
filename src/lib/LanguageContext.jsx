@@ -9,6 +9,7 @@ const DICTIONARY = {
     // Storefront header / general
     poweredBy: 'Powered by',
     menu: 'Menu',
+    all: 'All',
     search: 'Search',
     loading: 'Loading…',
     // Business hours / closed state
@@ -68,6 +69,7 @@ const DICTIONARY = {
   zh: {
     poweredBy: '技术支持',
     menu: '菜单',
+    all: '全部',
     search: '搜索',
     loading: '加载中…',
     closedNow: '我们目前已打烊',
@@ -120,6 +122,7 @@ const DICTIONARY = {
   ms: {
     poweredBy: 'Dikuasakan oleh',
     menu: 'Menu',
+    all: 'Semua',
     search: 'Cari',
     loading: 'Memuatkan…',
     closedNow: 'Kami sedang tutup buat masa ini',
