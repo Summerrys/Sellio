@@ -484,6 +484,8 @@ export default function StorefrontView({
 // ── Product row item (split layout) ─────────────────────────────────────────
 function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onAddToCart, onProductClick, featured = false }) {
   const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
+  const name = useTranslatedText(product.name);
+  const description = useTranslatedText(product.description);
   return (
     <div
       onClick={() => onProductClick(product)}
@@ -499,9 +501,9 @@ function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onA
         )}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 2px', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</p>
+        <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 2px', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</p>
         {storefrontConfig?.show_product_description !== false && product.description && (
-          <p style={{ fontSize: 11, color: '#64748b', margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.description}</p>
+          <p style={{ fontSize: 11, color: '#64748b', margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{description}</p>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {product.compare_at_price > product.price && (
