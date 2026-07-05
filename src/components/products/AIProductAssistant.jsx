@@ -148,49 +148,48 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
         </button>
       </div>
 
-      {/* Result preview with navigation */}
+      {/* Result preview with navigation — stacked vertically so nothing crops on narrow screens */}
       {currentPhoto && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-          {/* Prev arrow */}
-          <button type="button" onClick={handlePrev} disabled={currentIndex === 0} aria-label="Previous image"
-            style={{ width: 28, height: 28, borderRadius: 6, flexShrink: 0, background: currentIndex === 0 ? '#f1f5f9' : 'white', border: '1px solid #e2e8f0', cursor: currentIndex === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: currentIndex === 0 ? 0.4 : 1 }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
+        <div style={{ padding: 10, background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Image row with prev/next arrows, centered */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+            <button type="button" onClick={handlePrev} disabled={currentIndex === 0} aria-label="Previous image"
+              style={{ width: 28, height: 28, borderRadius: 6, flexShrink: 0, background: currentIndex === 0 ? '#f1f5f9' : 'white', border: '1px solid #e2e8f0', cursor: currentIndex === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: currentIndex === 0 ? 0.4 : 1 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
 
-          {/* Thumbnail */}
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <img src={currentPhoto.previewUrl} alt={currentPhoto.alt || 'Stock image'}
-              style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e2e8f0', display: 'block' }} />
-            {uploading && (
-              <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.8)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ width: 16, height: 16, border: '2px solid #94a3b8', borderTopColor: 'rgb(var(--color-primary))', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
-              </div>
-            )}
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <img src={currentPhoto.previewUrl} alt={currentPhoto.alt || 'Stock image'}
+                style={{ width: 84, height: 84, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e2e8f0', display: 'block' }} />
+              {uploading && (
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.8)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ width: 16, height: 16, border: '2px solid #94a3b8', borderTopColor: 'rgb(var(--color-primary))', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+                </div>
+              )}
+            </div>
+
+            <button type="button" onClick={handleNext} disabled={currentIndex === photos.length - 1} aria-label="Next image"
+              style={{ width: 28, height: 28, borderRadius: 6, flexShrink: 0, background: currentIndex === photos.length - 1 ? '#f1f5f9' : 'white', border: '1px solid #e2e8f0', cursor: currentIndex === photos.length - 1 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: currentIndex === photos.length - 1 ? 0.4 : 1 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
           </div>
 
-          {/* Counter + label */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 2px' }}>Use this photo?</p>
-            <p style={{ fontSize: 11, color: '#94a3b8', margin: 0, fontWeight: 500 }}>{currentIndex + 1} / {photos.length}</p>
+          {/* Counter, centered below image */}
+          <p style={{ fontSize: 11, color: '#94a3b8', margin: 0, fontWeight: 500, textAlign: 'center' }}>{currentIndex + 1} / {photos.length}</p>
+
+          {/* Accept / Discard row, full width, below everything */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" onClick={handleDiscard} disabled={uploading} aria-label="Discard"
+              style={{ flex: 1, padding: '9px', borderRadius: 8, background: '#f1f5f9', border: '1px solid #e2e8f0', cursor: uploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#64748b' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Discard
+            </button>
+            <button type="button" onClick={handleAccept} disabled={uploading} aria-label="Use this image"
+              style={{ flex: 1, padding: '9px', borderRadius: 8, background: uploading ? '#e2e8f0' : themeColor, border: 'none', cursor: uploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'white' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Use Photo
+            </button>
           </div>
-
-          {/* Next arrow */}
-          <button type="button" onClick={handleNext} disabled={currentIndex === photos.length - 1} aria-label="Next image"
-            style={{ width: 28, height: 28, borderRadius: 6, flexShrink: 0, background: currentIndex === photos.length - 1 ? '#f1f5f9' : 'white', border: '1px solid #e2e8f0', cursor: currentIndex === photos.length - 1 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: currentIndex === photos.length - 1 ? 0.4 : 1 }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-
-          {/* Accept (tick) */}
-          <button type="button" onClick={handleAccept} disabled={uploading} aria-label="Use this image"
-            style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: uploading ? '#e2e8f0' : themeColor, border: 'none', cursor: uploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          </button>
-
-          {/* Discard (cross) */}
-          <button type="button" onClick={handleDiscard} disabled={uploading} aria-label="Discard"
-            style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: '#f1f5f9', border: '1px solid #e2e8f0', cursor: uploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
         </div>
       )}
     </div>
