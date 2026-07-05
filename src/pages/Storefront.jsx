@@ -485,7 +485,7 @@ function StorefrontInner() {
                       </div>
                     ))}
                     <div style={{ borderTop: '0.5px solid #e5e7eb', marginTop: 8, paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 13 }}>
-                      <span>Total</span>
+                      <span>{t('total')}</span>
                       <span style={{ color: primaryColor }}>{currency} {parseFloat(order.total_amount || 0).toFixed(2)}</span>
                     </div>
                   </div>
