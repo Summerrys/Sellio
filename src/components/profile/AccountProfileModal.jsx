@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
-import { ChevronRight, X, Loader2, Eye, EyeOff } from 'lucide-react';
+import { ChevronRight, X, Loader2, Eye, EyeOff, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
@@ -48,6 +48,8 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
 
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [orderAlerts, setOrderAlerts] = useState(true);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+  const [confirmToggle, setConfirmToggle] = useState(null); // 'email' | 'orders' | null
 
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
 
@@ -58,6 +60,8 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
     if (!open || !user) return;
     setFullName(user.full_name || '');
     setPhone(user.phone || '');
+    setEmailNotifs(user.email_notifications !== false);
+    setOrderAlerts(user.order_alerts !== false);
   }, [open, user]);
 
   if (!open) return null;
@@ -103,7 +107,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
       const supabase = await getSupabase();
       const { error } = await supabase
         .from('app_users')
-        .update({ full_name: fullName, phone })
+        .update({ full_name: fullName })
         .eq('id', user.id);
       if (error) throw error;
       toast.success('Profile saved');
@@ -130,6 +134,48 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
     } finally {
       setIsUpdatingPassword(false);
     }
+  };
+
+  const persistPref = async (field, value) => {
+    setSavingPrefs(true);
+    try {
+      const supabase = await getSupabase();
+      const { error } = await supabase.from('app_users').update({ [field]: value }).eq('id', user.id);
+      if (error) throw error;
+    } catch (err) {
+      toast.error('Failed to save preference');
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
+
+  const handleEmailNotifsToggle = (checked) => {
+    if (!checked) {
+      setConfirmToggle('email');
+      return;
+    }
+    setEmailNotifs(true);
+    persistPref('email_notifications', true);
+  };
+
+  const handleOrderAlertsToggle = (checked) => {
+    if (!checked) {
+      setConfirmToggle('orders');
+      return;
+    }
+    setOrderAlerts(true);
+    persistPref('order_alerts', true);
+  };
+
+  const confirmDisable = () => {
+    if (confirmToggle === 'email') {
+      setEmailNotifs(false);
+      persistPref('email_notifications', false);
+    } else if (confirmToggle === 'orders') {
+      setOrderAlerts(false);
+      persistPref('order_alerts', false);
+    }
+    setConfirmToggle(null);
   };
 
   const handleSignOut = () => {
@@ -226,8 +272,11 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
               <Input className="h-10" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Your name" />
             </div>
             <div>
-              <Label className="text-xs text-slate-500 mb-1 block">Phone</Label>
-              <Input className="h-10" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+65 9123 4567" />
+              <Label className="text-xs text-slate-500 mb-1 block flex items-center gap-1.5">
+                Phone <Lock className="w-3 h-3 text-slate-300" />
+              </Label>
+              <Input className="h-10 bg-slate-50 text-slate-500 cursor-not-allowed" value={phone} disabled readOnly placeholder="Not set" />
+              <p className="text-[11px] text-slate-400 mt-1">This is the number you use to log in and can't be changed here.</p>
             </div>
             <Button
               onClick={handleSaveProfile}
@@ -310,14 +359,19 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
           <SectionHeader title="Preferences" />
           <SectionCard>
             <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-700">Email notifications</p>
-              <Switch checked={emailNotifs} onCheckedChange={setEmailNotifs} />
+              <div>
+                <p className="text-sm text-slate-700">Email notifications</p>
+                <p className="text-[11px] text-slate-400">Password resets & account emails</p>
+              </div>
+              <Switch checked={emailNotifs} disabled={savingPrefs} onCheckedChange={handleEmailNotifsToggle} />
             </div>
             <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-700">Order alerts</p>
-              <Switch checked={orderAlerts} onCheckedChange={setOrderAlerts} />
+              <div>
+                <p className="text-sm text-slate-700">Order alerts</p>
+                <p className="text-[11px] text-slate-400">Sound alert for new orders</p>
+              </div>
+              <Switch checked={orderAlerts} disabled={savingPrefs} onCheckedChange={handleOrderAlertsToggle} />
             </div>
-            <p className="text-xs text-slate-400">Notification settings coming soon</p>
           </SectionCard>
 
           {/* Danger Zone */}
@@ -352,6 +406,28 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={handleDeleteAccount}>
               Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirm disabling notifications */}
+      <AlertDialog open={!!confirmToggle} onOpenChange={(v) => !v && setConfirmToggle(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmToggle === 'email' ? 'Turn off email notifications?' : 'Turn off order alerts?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmToggle === 'email'
+                ? "If turned off, you won't be able to receive password reset links or other account and marketing emails in future."
+                : "If turned off, you won't be notified when new orders come in — on this page, in Orders, or on the Kitchen Display."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={confirmDisable}>
+              Turn Off
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
