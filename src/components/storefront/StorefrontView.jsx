@@ -661,6 +661,7 @@ function GridCard({ product, currency, primaryColor, storefrontConfig, showStock
 
 // ── Product detail modal ─────────────────────────────────────────────────────
 function ProductDetailModal({ product, currency, primaryColor, storefrontConfig, selectedVariants, setSelectedVariants, activeImageIndex, setActiveImageIndex, onAddToCart, onClose }) {
+  const { t } = useLanguage();
   const name = useTranslatedText(product.name);
   const description = useTranslatedText(product.description);
   const allImages = [product.image_url, ...(product.images || [])].filter(Boolean);
@@ -803,7 +804,7 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                 onClose();
               }}
               style={{ width: '100%', padding: 14, background: primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
-              Add to order · {getCurrencySymbol(currency)}{(parseFloat(product.price) + Object.values(selectedVariants).reduce((sum, v) => sum + (v.price_modifier || 0), 0)).toFixed(2)}
+              {t('addToOrder')} · {getCurrencySymbol(currency)}{(parseFloat(product.price) + Object.values(selectedVariants).reduce((sum, v) => sum + (v.price_modifier || 0), 0)).toFixed(2)}
             </button>
           </div>
         </div>
