@@ -545,7 +545,7 @@ function StorefrontInner() {
             </div>
             {!isStoreOpen ? (
               <div style={{ width: '100%', padding: 14, background: '#f1f5f9', color: '#94a3b8', borderRadius: 12, fontSize: 15, fontWeight: 600, textAlign: 'center' }}>
-                🔒 Store is closed — cannot place order
+                🔒 {t('orderingUnavailable')}
               </div>
             ) : (
               <button
@@ -553,7 +553,7 @@ function StorefrontInner() {
                 disabled={isSubmitting}
                 style={{ width: '100%', padding: 14, background: isSubmitting ? '#94a3b8' : primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
               >
-                {isSubmitting ? 'Placing order...' : `Place order · ${sym}${cartTotal.toFixed(2)}`}
+                {isSubmitting ? t('placingOrder') : `${t('placeOrder')} · ${sym}${cartTotal.toFixed(2)}`}
               </button>
             )}
           </div>
