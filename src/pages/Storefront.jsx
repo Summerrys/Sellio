@@ -289,11 +289,28 @@ function StorefrontInner() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontFamily: 'Inter, sans-serif', background: '#ffffff' }}>
+        <style>{`
+          @keyframes sellio-bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-8px); } }
+          @keyframes sellio-pulse-logo { 0%, 100% { transform: scale(1.0); } 50% { transform: scale(1.05); } }
+          .sellio-dot-1 { animation: sellio-bounce 1.2s ease-in-out infinite 0ms; background: #fb923c; }
+          .sellio-dot-2 { animation: sellio-bounce 1.2s ease-in-out infinite 200ms; background: #e0449a; }
+          .sellio-dot-3 { animation: sellio-bounce 1.2s ease-in-out infinite 400ms; background: #8b2fc9; }
+          .sellio-logo-pulse { animation: sellio-pulse-logo 1.5s ease-in-out infinite; }
+        `}</style>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 40, height: 40, border: '3px solid #e2e8f0', borderTop: '3px solid #6366f1', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ color: '#94a3b8', fontSize: 14 }}>Loading menu...</p>
+          <img
+            src="https://assets.apptelier.sg/sellio/Logo_Sellio.png"
+            alt="Sellio"
+            className="sellio-logo-pulse"
+            style={{ width: 80, objectFit: 'contain', marginBottom: 20 }}
+          />
+          <div style={{ display: 'flex', gap: 7, justifyContent: 'center', marginBottom: 14 }}>
+            <span className="sellio-dot-1" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
+            <span className="sellio-dot-2" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
+            <span className="sellio-dot-3" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
+          </div>
+          <p style={{ color: '#94a3b8', fontSize: 14, margin: 0 }}>Loading menu...</p>
         </div>
       </div>
     );
