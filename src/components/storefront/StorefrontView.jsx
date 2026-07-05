@@ -402,7 +402,7 @@ export default function StorefrontView({
               {/* Special Deals section */}
               {hasFeatured && (
                 <div ref={el => categoryRefs.current['__deals__'] = el} data-category-id="__deals__">
-                  <p style={{ fontSize: 13, fontWeight: 700, padding: '12px 14px 6px', color: '#1e293b', margin: 0, position: 'sticky', top: 0, background: 'white', zIndex: 1, borderBottom: '1px solid #f1f5f9' }}>Today's Picks ⭐</p>
+                  <p style={{ fontSize: 13, fontWeight: 700, padding: '12px 14px 6px', color: '#1e293b', margin: 0, position: 'sticky', top: 0, background: 'white', zIndex: 1, borderBottom: '1px solid #f1f5f9' }}>{t('todaysPicks')} ⭐</p>
                   <div style={{ padding: '4px 10px' }}>
                     {featuredProducts.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={handleAddToCart} onProductClick={handleProductClick} featured={true} />)}
                   </div>
