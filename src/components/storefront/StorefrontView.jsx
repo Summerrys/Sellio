@@ -575,7 +575,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
         {specialDealProducts.length > 0 && (
           <div style={{ marginBottom: 12 }}>
             <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>
-              🏷️ Special Deals
+              🏷️ {t('specialDeals')}
             </p>
             {specialDealProducts.map(product => <FeaturedCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}
           </div>
