@@ -1,8 +1,8 @@
 {
-  "name": "Sellio — Point of Sale",
+  "name": "Sellio",
   "short_name": "Sellio",
   "description": "Sellio POS — manage orders, products, and your storefront on the go.",
-  "start_url": "/Dashboard",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
