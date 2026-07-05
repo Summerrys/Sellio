@@ -483,6 +483,7 @@ function AppLayout({ children, currentPageName }) {
         onOpenPricing={() => setShowPricingModal(true)}
         clearAppUser={clearAppUser}
       />
+      <InstallPWAModal open={showInstallPrompt} onClose={() => setShowInstallPrompt(false)} />
       <RoleSwitcher />
       <PricingModal open={showPricingModal} onOpenChange={setShowPricingModal} tenantId={tenantId} currentTier={subscription?.tier ?? null} hasUsedTrial={!!tenant?.has_used_trial} />
       {showTrialModal && (
