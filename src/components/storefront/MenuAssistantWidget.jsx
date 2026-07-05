@@ -2,7 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, X, Send, ShoppingCart } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 
+import { useLanguage } from '@/lib/LanguageContext';
+
 export default function MenuAssistantWidget({ products, tenant, onProductSelect, onAddToCart, storefront, externalOpen, onExternalClose, isStoreOpen = true, isPreview = false }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -462,7 +465,7 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
                   sendMessage(input);
                 }
               }}
-              placeholder="Order or ask about our menu..."
+              placeholder={t('menuAssistantPlaceholder')}
               disabled={loading}
               style={{
                 flex: 1,
