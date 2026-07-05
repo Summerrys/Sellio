@@ -33,10 +33,12 @@ export function isIOS() {
 
 export function canShowInstallPrompt() {
   if (isStandalone() || installed) return false;
-  // Android/desktop Chrome: only show if the browser actually fired the event.
-  // iOS Safari never fires beforeinstallprompt, but "Add to Home Screen" is still
-  // possible manually — we show instructions instead of a native prompt there.
-  return !!deferredEvent || isIOS();
+  // Always show something when accessed via a regular browser tab (not the
+  // installed app). If the native beforeinstallprompt event has already fired,
+  // clicking Install triggers it directly. Otherwise (event hasn't fired yet,
+  // Chrome heuristics not met, or iOS Safari which never fires it at all) the
+  // modal falls back to manual "Add to Home Screen" instructions at click time.
+  return true;
 }
 
 export async function promptInstall() {
@@ -44,6 +46,11 @@ export async function promptInstall() {
   const result = await deferredEvent.prompt();
   deferredEvent = null;
   return result; // { outcome: 'accepted' | 'dismissed' }
+}
+
+export function isAndroid() {
+  if (typeof navigator === 'undefined') return false;
+  return /android/i.test(navigator.userAgent);
 }
 
 export function hasNativePrompt() {
