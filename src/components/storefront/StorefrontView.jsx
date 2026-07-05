@@ -601,11 +601,11 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
   );
 }
 
-function FeaturedCard({ product, currency, primaryColor, storefrontConfig, showStockBadge, onAddToCart, onProductClick }) {
+function FeaturedCard({ product, currency, primaryColor, storefrontConfig, showStockBadge, onAddToCart, onProductClick, contentMap = {} }) {
   const { t } = useLanguage();
   const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
-  const name = useTranslatedText(product.name);
-  const description = useTranslatedText(product.description);
+  const name = contentMap[product.name] || product.name;
+  const description = contentMap[product.description] || product.description;
   return (
     <div onClick={() => onProductClick(product)} style={{ display: 'flex', background: '#f8fafc', borderRadius: 14, overflow: 'hidden', marginBottom: 10, border: '0.5px solid #e5e7eb', cursor: 'pointer' }}>
       {product.image_url && <img src={product.image_url} style={{ width: 110, height: 110, objectFit: 'cover', flexShrink: 0 }} />}
