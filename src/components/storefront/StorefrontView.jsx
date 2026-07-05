@@ -588,14 +588,16 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
 
 function FeaturedCard({ product, currency, primaryColor, storefrontConfig, showStockBadge, onAddToCart, onProductClick }) {
   const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
+  const name = useTranslatedText(product.name);
+  const description = useTranslatedText(product.description);
   return (
     <div onClick={() => onProductClick(product)} style={{ display: 'flex', background: '#f8fafc', borderRadius: 14, overflow: 'hidden', marginBottom: 10, border: '0.5px solid #e5e7eb', cursor: 'pointer' }}>
       {product.image_url && <img src={product.image_url} style={{ width: 110, height: 110, objectFit: 'cover', flexShrink: 0 }} />}
       <div style={{ flex: 1, padding: 12, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
         <div>
-          <p style={{ fontWeight: 600, fontSize: 14, margin: '0 0 3px', color: '#0f172a' }}>{product.name}</p>
+          <p style={{ fontWeight: 600, fontSize: 14, margin: '0 0 3px', color: '#0f172a' }}>{name}</p>
           {storefrontConfig?.show_product_description !== false && product.description && (
-            <p style={{ fontSize: 12, color: '#64748b', margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{product.description}</p>
+            <p style={{ fontSize: 12, color: '#64748b', margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{description}</p>
           )}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
