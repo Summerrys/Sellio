@@ -439,7 +439,7 @@ function StorefrontInner() {
                   </div>
                 ))}
                 <div style={{ borderTop: '0.5px solid #e5e7eb', paddingTop: 12, marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontWeight: 600, fontSize: 15 }}>Total</span>
+                  <span style={{ fontWeight: 600, fontSize: 15 }}>{t('total')}</span>
                   <span style={{ fontWeight: 700, fontSize: 18, color: primaryColor }}>{sym}{cartTotal.toFixed(2)}</span>
                 </div>
                 {!isStoreOpen ? (
