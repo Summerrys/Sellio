@@ -689,7 +689,7 @@ function StorefrontInner() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{t('payAtCounter')}</p>
-                  <p style={{ margin: 0, fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>Please proceed to the counter with your order number. Our staff will assist you with payment.</p>
+                  <p style={{ margin: 0, fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>{t('payAtCounterDesc')}</p>
                 </div>
               </div>
             )}
