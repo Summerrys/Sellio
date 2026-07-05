@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLanguage, SUPPORTED_LANGUAGES } from '@/lib/LanguageContext';
 
-// Short collapsed labels per the merchant's request: ENG / CHI / MY
-const SHORT_LABEL = { en: 'ENG', zh: 'CHI', ms: 'MY' };
+// Short collapsed labels per the merchant's request: EN / 中 / MY
+const SHORT_LABEL = { en: 'EN', zh: '中', ms: 'MY' };
+// Flag shown to the left of each label for quick visual identification
+const FLAG = { en: '🇬🇧', zh: '🇨🇳', ms: '🇲🇾' };
 
 export default function LanguageToggle({ primaryColor = '#6366f1' }) {
   const { lang, setLang } = useLanguage();
@@ -49,6 +51,9 @@ export default function LanguageToggle({ primaryColor = '#6366f1' }) {
               type="button"
               onClick={() => (isActive && !expanded ? setExpanded(true) : handleSelect(code))}
               style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
                 padding: '4px 9px',
                 borderRadius: 999,
                 border: 'none',
@@ -62,6 +67,7 @@ export default function LanguageToggle({ primaryColor = '#6366f1' }) {
                 whiteSpace: 'nowrap',
               }}
             >
+              <span style={{ fontSize: 11, lineHeight: 1 }}>{FLAG[code]}</span>
               {SHORT_LABEL[code]}
             </button>
           );
