@@ -24,24 +24,29 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
   // photos: array of { previewUrl, downloadUrl, downloadLocation, alt }
   const [photos, setPhotos] = React.useState([]);
   const [currentIndex, setCurrentIndex] = React.useState(0);
+  const [page, setPage] = React.useState(1);
+  const [lastQuery, setLastQuery] = React.useState('');
 
   const currentPhoto = photos[currentIndex] || null;
 
-  const doSearch = async () => {
+  const doSearch = async (pageOverride) => {
     const q = query.trim();
     if (!q || searching) return;
+    const targetPage = pageOverride || 1;
     setSearching(true);
     setPhotos([]);
     setCurrentIndex(0);
     try {
       const supabase = await (await import('@/lib/supabaseClient')).getSupabase();
       const { data, error } = await supabase.functions.invoke('findProductImage', {
-        body: { query: q },
+        body: { query: q, page: targetPage },
       });
       if (error) throw new Error(error.message);
       if (data?.photos?.length > 0) {
         setPhotos(data.photos);
         setCurrentIndex(0);
+        setPage(data.page || targetPage);
+        setLastQuery(q);
       } else {
         onError('No images found. Try a different keyword.');
       }
@@ -51,6 +56,39 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
     } finally {
       setSearching(false);
     }
+  };
+
+  const handleRegenerate = () => {
+    // Cycle through sets 1-6 (30 images total), then loop back to set 1
+    const nextPage = (page % 6) + 1;
+    setQuery(lastQuery);
+    // doSearch reads `query` state, but we want to search with lastQuery immediately
+    // without waiting for a state update, so call directly with the remembered term.
+    (async () => {
+      if (!lastQuery || searching) return;
+      setSearching(true);
+      setPhotos([]);
+      setCurrentIndex(0);
+      try {
+        const supabase = await (await import('@/lib/supabaseClient')).getSupabase();
+        const { data, error } = await supabase.functions.invoke('findProductImage', {
+          body: { query: lastQuery, page: nextPage },
+        });
+        if (error) throw new Error(error.message);
+        if (data?.photos?.length > 0) {
+          setPhotos(data.photos);
+          setCurrentIndex(0);
+          setPage(data.page || nextPage);
+        } else {
+          onError('No more images found. Try a different keyword.');
+        }
+      } catch (e) {
+        console.error('Regenerate error:', e.message);
+        onError('Search failed. Please try again.');
+      } finally {
+        setSearching(false);
+      }
+    })();
   };
 
   const handleAccept = async () => {
@@ -175,7 +213,14 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
           </div>
 
           {/* Counter, centered below image */}
-          <p style={{ fontSize: 11, color: '#94a3b8', margin: 0, fontWeight: 500, textAlign: 'center' }}>{currentIndex + 1} / {photos.length}</p>
+          <p style={{ fontSize: 11, color: '#94a3b8', margin: 0, fontWeight: 500, textAlign: 'center' }}>{currentIndex + 1} / {photos.length} · Set {page}/6</p>
+
+          {/* Regenerate — fetch next set of 5 (cycles 1-6, then loops) */}
+          <button type="button" onClick={handleRegenerate} disabled={searching || uploading} aria-label="Regenerate more options"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '7px', borderRadius: 8, background: 'white', border: '1px dashed #cbd5e1', cursor: searching || uploading ? 'not-allowed' : 'pointer', fontSize: 11.5, fontWeight: 600, color: '#64748b' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+            More options
+          </button>
 
           {/* Accept / Discard row, full width, below everything */}
           <div style={{ display: 'flex', gap: 8 }}>
