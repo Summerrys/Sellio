@@ -58,9 +58,9 @@ export default function InstallPWAModal({ open, onClose }) {
           <>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: 20 }}>
               <img
-                src="https://assets.apptelier.sg/sellio/Logo_sellio_just.png"
+                src="https://assets.apptelier.sg/sellio/Logo_sellio.png"
                 alt="Sellio"
-                style={{ width: 64, height: 64, borderRadius: 16, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', marginBottom: 14 }}
+                style={{ width: 64, height: 64, objectFit: 'contain', borderRadius: 16, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', marginBottom: 14 }}
               />
               <p style={{ fontSize: 17, fontWeight: 800, color: '#0f172a', margin: '0 0 4px' }}>Install Sellio</p>
               <p style={{ fontSize: 13, color: '#64748b', margin: 0, lineHeight: 1.5 }}>
