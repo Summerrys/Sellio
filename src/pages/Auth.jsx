@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { createPageUrl } from '../utils';
 import { useAppUser } from '@/lib/AppUserContext';
 import AuthPricingModal from '@/components/auth/AuthPricingModal';
+import AppLoader from '@/components/ui-custom/AppLoader';
 
 const BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
 
@@ -642,11 +643,7 @@ export default function Auth() {
   const showForm = isLogin || signupMode === 'allowed' || (signupMode === 'pricing_wall' && BYPASS_EMAILS.includes(formData.email.trim().toLowerCase()));
 
   if (authChecking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'radial-gradient(ellipse at top left, #faeee6 0%, #fdf6f2 30%, #ffffff 60%, #fdf4f0 100%)' }}>
-        <div className="w-6 h-6 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
-      </div>
-    );
+    return <AppLoader visible={true} />;
   }
 
   return (
@@ -912,10 +909,20 @@ export default function Auth() {
               </div>
             )}
 
-            {/* Token checking spinner */}
+            {/* Token checking — matches the bouncing-dots style used everywhere else */}
             {checkingToken && (
               <div className="flex flex-col items-center justify-center py-8 gap-3">
-                <div className="w-6 h-6 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
+                <style>{`
+                  @keyframes sellio-bounce-inline { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-8px); } }
+                  .sellio-dot-inline-1 { animation: sellio-bounce-inline 1.2s ease-in-out infinite 0ms; background: #fb923c; }
+                  .sellio-dot-inline-2 { animation: sellio-bounce-inline 1.2s ease-in-out infinite 200ms; background: #e0449a; }
+                  .sellio-dot-inline-3 { animation: sellio-bounce-inline 1.2s ease-in-out infinite 400ms; background: #8b2fc9; }
+                `}</style>
+                <div style={{ display: 'flex', gap: 7 }}>
+                  <span className="sellio-dot-inline-1" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
+                  <span className="sellio-dot-inline-2" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
+                  <span className="sellio-dot-inline-3" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
+                </div>
                 <p className="text-sm text-slate-500">Verifying your payment...</p>
               </div>
             )}
