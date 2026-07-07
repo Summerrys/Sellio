@@ -86,6 +86,7 @@ export default function AuthPricingModal({ onClose }) {
                 key={plan.key}
                 style={{
                   position: 'relative', background: '#fff', borderRadius: 16, display: 'flex', flexDirection: 'column',
+                  overflow: 'hidden',
                   boxShadow: isGrowth ? '0 4px 24px rgba(139,92,246,0.15)' : '0 1px 4px rgba(0,0,0,0.06)',
                   border: isGrowth ? '2px solid #a78bfa' : '1px solid #e2e8f0',
                 }}
