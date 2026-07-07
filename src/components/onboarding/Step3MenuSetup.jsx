@@ -74,8 +74,44 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const [aiResult, setAiResult] = useState(null);
   const [aiError, setAiError] = useState('');
   const [itemDescription, setItemDescription] = useState('');
+  const { appUser } = useAppUser();
+  const [planMaxProducts, setPlanMaxProducts] = useState(null); // null = unknown/unlimited
+  const [planTier, setPlanTier] = useState(null);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 
   const MAX_IMAGES = 10;
+
+  // Resolve the merchant's plan (chosen at Stripe checkout, before onboarding) so we
+  // can warn them here instead of letting them build a menu the backend will trim down.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        let storedUser = appUser;
+        if (!storedUser?.email) storedUser = cookieUtils.get();
+        const ownerEmail = storedUser?.email || formData.adminEmail;
+        if (!ownerEmail) return;
+        const supabase = await getSupabase();
+        const { data: invite } = await supabase
+          .from('merchant_invites')
+          .select('plan')
+          .eq('email', ownerEmail)
+          .maybeSingle();
+        if (cancelled) return;
+        const planRaw = (invite?.plan || 'starter').toLowerCase();
+        const tier = ONBOARDING_BYPASS_EMAILS.includes(ownerEmail) ? 'pro'
+                   : planRaw.includes('pro') ? 'pro'
+                   : planRaw.includes('growth') ? 'growth'
+                   : 'starter';
+        setPlanTier(tier);
+        setPlanMaxProducts(ONBOARDING_PLAN_LIMITS[tier] ?? 10);
+      } catch (e) {
+        console.warn('Could not resolve plan for product-limit check (non-fatal):', e.message);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Shared path builder — uses pendingTenantId so all onboarding images are under the correct tenant folder
   const buildTempPath = (tenantId, filename) => {
