@@ -654,12 +654,12 @@ export default function Auth() {
         .orange-scroll::-webkit-scrollbar-thumb { background: #fe7824; border-radius: 4px; }
       `}</style>
       <div
-        className="min-h-screen flex flex-col items-center justify-start p-4 pt-8"
+        className="h-[100dvh] w-full flex flex-col items-center justify-center p-4 overflow-hidden"
         style={{ background: 'radial-gradient(ellipse at top left, #faeee6 0%, #fdf6f2 30%, #ffffff 60%, #fdf4f0 100%)' }}
         onClick={() => setShowCountryDropdown(false)}
       >
         {/* Auth card — always visible */}
-        <div className="w-full max-w-sm mb-8">
+        <div className="w-full max-w-sm sm:max-w-md max-h-full overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-xl p-8">
             {forgotMode ? (
               <div>
