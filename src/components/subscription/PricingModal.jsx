@@ -143,20 +143,16 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
             return (
               <div
                 key={plan.key}
-                className={`relative bg-white rounded-2xl flex flex-col overflow-hidden ${
-                  isCurrent
-                    ? 'shadow-lg ring-2 ring-offset-1 ring-green-400'
-                    : isGrowth
-                    ? 'shadow-lg ring-2 ring-offset-1'
-                    : 'shadow-sm border border-slate-200'
+                className={`relative bg-white rounded-2xl flex flex-col overflow-hidden border-2 ${
+                  isCurrent || isGrowth ? 'shadow-lg' : 'shadow-sm'
                 }`}
-                style={{ minHeight: 480 }}
+                style={{ minHeight: 480, borderColor: isCurrent ? CURRENT_BORDER_COLOR : BORDER_COLOR[plan.color] }}
               >
                 {!isCurrent && (
-                  <div className="absolute -top-px left-0 right-0 h-1 rounded-t-2xl" style={{ background: ACCENT_BAR[plan.color] }} />
+                  <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style={{ background: ACCENT_BAR[plan.color] }} />
                 )}
                 {isCurrent && (
-                  <div className="absolute -top-px left-0 right-0 h-1 rounded-t-2xl bg-green-400" />
+                  <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-green-400" />
                 )}
                 <div className="p-5 flex flex-col h-full" style={{ minHeight: 480 }}>
                   <div className="flex items-center justify-between mb-1">
