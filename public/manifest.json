@@ -3,7 +3,7 @@
   "short_name": "Sellio",
   "description": "Sellio POS — manage orders, products, and your storefront on the go.",
   "start_url": "/Splash",
-  "scope": "/Splash",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#ffffff",
