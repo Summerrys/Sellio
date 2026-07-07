@@ -397,6 +397,14 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
 
   const addItem = async () => {
     if (!selectedCategory || !itemName.trim() || !itemPrice.trim()) return;
+
+    // Block adding a NEW item once the resolved plan's product limit is reached.
+    // (Editing an existing item doesn't change the count, so it's exempt.)
+    if (editingItemId === null && planMaxProducts != null && (formData.products || []).length >= planMaxProducts) {
+      setUpgradeModalOpen(true);
+      return;
+    }
+
     setUploading(true);
     // Upload any edited images that aren't yet in storage (imageFiles[i] != null)
     let finalUrls = [...imageUrls];
