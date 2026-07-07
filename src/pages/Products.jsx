@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import ProductGrid from '../components/products/ProductGrid';
 import ProductFormDialog from '../components/products/ProductFormDialog.jsx';
 import ProductImportDialog from '../components/products/ProductImportDialog';
+import PricingModal from '../components/subscription/PricingModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package, ScanLine, Trash2, CheckCircle2, AlertCircle, ImageIcon, Lightbulb, Loader2, X, CheckSquare, Camera } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -38,7 +39,7 @@ const TEMPLATE_ROWS = [
   'Simple Snack,,No variants,Food,9.90,5.00,,200,20,false,true,false,"snack",,',
 ];
 
-function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess }) {
+function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess, maxProducts, currentProductCount, onLimitExceeded }) {
   const { tenant } = useTenant();
   const [image, setImage] = React.useState(null);
   const [imagePreview, setImagePreview] = React.useState(null);
@@ -93,6 +94,12 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
   const handleSave = async () => {
     const selected = scannedItems.filter(i => i._selected);
     if (!selected.length) return;
+    // Enforce the plan's product limit — don't let a scan push the merchant over their cap.
+    if (maxProducts != null && (currentProductCount + selected.length) > maxProducts) {
+      const remaining = Math.max(maxProducts - currentProductCount, 0);
+      setError(`Your plan allows up to ${maxProducts} products (${remaining} slot${remaining === 1 ? '' : 's'} left). Deselect some items or upgrade your plan to add all ${selected.length}.`);
+      return;
+    }
     setSaving(true); setError(null);
     try {
       const { getSupabase } = await import('@/lib/supabaseClient');
@@ -264,7 +271,19 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess })
                 </div>
               ))}
 
-              {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#dc2626' }}>{error}</div>}
+              {error && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#dc2626', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <span>{error}</span>
+                  {maxProducts != null && (currentProductCount + selectedCount) > maxProducts && (
+                    <button
+                      onClick={() => { handleClose(); onLimitExceeded?.(); }}
+                      style={{ alignSelf: 'flex-start', padding: '6px 12px', borderRadius: 8, border: 'none', background: '#dc2626', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Upgrade Plan
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
