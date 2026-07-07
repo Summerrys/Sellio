@@ -194,7 +194,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
           return (
             <div
               key={plan.key}
-              className={`relative bg-white rounded-2xl flex flex-col flex-shrink-0 w-[82vw] mx-1 md:mx-0 md:w-auto ${
+              className={`relative bg-white rounded-2xl flex flex-col flex-shrink-0 w-[82vw] mx-1 md:mx-0 md:w-auto overflow-hidden ${
                 isCurrent
                   ? 'shadow-xl ring-2 ring-offset-2 ring-green-400'
                   : isGrowth
