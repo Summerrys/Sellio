@@ -720,10 +720,22 @@ export default function Products() {
           onOpenChange={setScanMenuOpen}
           tenantId={tenantId}
           categories={categories}
+          maxProducts={maxProducts}
+          currentProductCount={products.length}
+          onLimitExceeded={() => setUpgradeModalOpen(true)}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
             queryClient.invalidateQueries({ queryKey: ['categories', tenantId] });
           }}
+        />
+
+        {/* Plan upgrade prompt — shown when the merchant hits their plan's product limit */}
+        <PricingModal
+          open={upgradeModalOpen}
+          onOpenChange={setUpgradeModalOpen}
+          tenantId={tenantId}
+          currentTier={subscription?.tier ?? null}
+          hasUsedTrial={tenant?.has_used_trial ?? false}
         />
       </div>
       </PullToRefresh>
