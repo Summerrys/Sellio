@@ -13,6 +13,18 @@ import { generateThemeVariables } from '../theme/themeUtils';
 import { getThemeCSSColors, DEFAULT_COLORS } from '@/lib/themeConstants';
 import { toast } from 'sonner';
 import { deleteImageFromStorage } from '@/lib/imageStorage';
+import { useAppUser, cookieUtils } from '@/lib/AppUserContext';
+import PricingModal from '../subscription/PricingModal';
+
+// Mirrors PLAN_LIMITS in the complete-onboarding edge function — keep in sync.
+// Used here only to warn the merchant *before* they submit; the edge function
+// and the DB's enforce_product_limit trigger are the real source of truth.
+const ONBOARDING_BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
+const ONBOARDING_PLAN_LIMITS = {
+  starter: 10,
+  growth: 50,
+  pro: null,
+};
 
 
 
