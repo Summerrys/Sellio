@@ -557,10 +557,11 @@ export default function Products() {
                   <span className="hidden sm:inline">Import</span>
                 </Button>
                 <Button
-                  onClick={() => setScanMenuOpen(true)}
+                  onClick={handleOpenScanMenu}
                   variant="outline"
                   size="sm"
-                  className="gap-1.5 border-orange-300 text-orange-600 hover:bg-orange-50"
+                  className={atProductLimit ? "gap-1.5 border-slate-300 text-slate-400" : "gap-1.5 border-orange-300 text-orange-600 hover:bg-orange-50"}
+                  title={atProductLimit ? `Product limit reached (${maxProducts}) — upgrade to add more` : undefined}
                 >
                   <ScanLine className="w-4 h-4 sm:mr-1" />
                   <span className="hidden sm:inline">Scan Menu</span>
@@ -570,11 +571,12 @@ export default function Products() {
                   onClick={handleAdd}
                   size="sm"
                   className="text-white gap-1.5"
-                  style={{ background: 'var(--color-primary-gradient)' }}
+                  style={{ background: atProductLimit ? '#cbd5e1' : 'var(--color-primary-gradient)' }}
+                  title={atProductLimit ? `Product limit reached (${maxProducts}) — upgrade to add more` : undefined}
                 >
                   <Plus className="w-4 h-4" />
-                  <span className="hidden sm:inline">Add Product</span>
-                  <span className="sm:hidden">Add</span>
+                  <span className="hidden sm:inline">{atProductLimit ? 'Limit Reached' : 'Add Product'}</span>
+                  <span className="sm:hidden">{atProductLimit ? 'Limit' : 'Add'}</span>
                 </Button>
               </RequirePermission>
           </div>
