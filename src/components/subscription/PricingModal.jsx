@@ -134,7 +134,7 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
             return (
               <div
                 key={plan.key}
-                className={`relative bg-white rounded-2xl flex flex-col ${
+                className={`relative bg-white rounded-2xl flex flex-col overflow-hidden ${
                   isCurrent
                     ? 'shadow-lg ring-2 ring-offset-1 ring-green-400'
                     : isGrowth
