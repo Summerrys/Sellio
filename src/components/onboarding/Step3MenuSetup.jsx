@@ -845,6 +845,14 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         />
       )}
 
+      {/* Plan upgrade prompt — shown if a manual or AI-assisted item would exceed the plan's product limit */}
+      <PricingModal
+        open={upgradeModalOpen}
+        onOpenChange={setUpgradeModalOpen}
+        currentTier={planTier}
+        hasUsedTrial={false}
+      />
+
       <div className="flex gap-2 sm:gap-3 pt-3 sm:pt-4">
         <Button
           type="button"
