@@ -5,6 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
+
 function toSlug(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
@@ -27,16 +29,75 @@ function fail(step, name, error) {
 
 async function cleanupTenant(supabase, tenantId) {
   console.log('Cleaning up tenant:', tenantId);
-  await supabase.from('products').delete().eq('tenant_id', tenantId);
-  await supabase.from('categories').delete().eq('tenant_id', tenantId);
-  await supabase.from('business_hours').delete().eq('tenant_id', tenantId);
-  await supabase.from('tables').delete().eq('tenant_id', tenantId);
-  await supabase.from('theme_configs').delete().eq('tenant_id', tenantId);
-  await supabase.from('subscriptions').delete().eq('tenant_id', tenantId);
-  await supabase.from('roles').delete().eq('tenant_id', tenantId);
-  await supabase.from('tenant_users').delete().eq('tenant_id', tenantId);
-  await supabase.from('tenants').delete().eq('id', tenantId);
+  const tables = [
+    ['inventory_items', 'tenant_id'],
+    ['products', 'tenant_id'],
+    ['categories', 'tenant_id'],
+    ['business_hours', 'tenant_id'],
+    ['tables', 'tenant_id'],
+    ['theme_configs', 'tenant_id'],
+    ['subscriptions', 'tenant_id'],
+    ['roles', 'tenant_id'],
+    ['tenant_users', 'tenant_id'],
+    ['tenants', 'id'],
+  ];
+  for (const [table, col] of tables) {
+    const { error } = await supabase.from(table).delete().eq(col, tenantId);
+    if (error) console.warn(`  cleanup ${table} error:`, error.message);
+  }
   console.log('✓ Cleanup done for tenant:', tenantId);
+}
+
+async function moveFileToPermanent(supabase, tempUrl, permanentPath, bucket = 'product-images') {
+  try {
+    const urlParts = tempUrl.split(`/${bucket}/`);
+    const tempPath = urlParts[1];
+    const { error: copyError } = await supabase.storage
+      .from(bucket)
+      .copy(tempPath, permanentPath);
+    if (copyError) {
+      console.warn(`  copy error (${tempPath} → ${permanentPath}):`, copyError.message);
+      return { url: tempUrl, success: false };
+    }
+    await supabase.storage.from(bucket).remove([tempPath]);
+    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(permanentPath);
+    console.log(`  ✓ Moved: ${tempPath} → ${permanentPath}`);
+    return { url: urlData.publicUrl, success: true };
+  } catch (e) {
+    console.warn(`  move exception (${permanentPath}):`, e.message);
+    return { url: tempUrl, success: false };
+  }
+}
+
+async function deleteStorageFolder(supabase, bucket, prefix) {
+  const allPaths: string[] = [];
+
+  async function listAll(folderPath) {
+    const { data: items, error } = await supabase.storage
+      .from(bucket)
+      .list(folderPath, { limit: 1000 });
+
+    if (error || !items?.length) return;
+
+    for (const item of items) {
+      const fullPath = `${folderPath}/${item.name}`;
+      if (item.id) {
+        allPaths.push(fullPath);
+      } else {
+        await listAll(fullPath);
+      }
+    }
+  }
+
+  await listAll(prefix);
+
+  if (allPaths.length > 0) {
+    const { error } = await supabase.storage.from(bucket).remove(allPaths);
+    if (error) console.warn(`  deleteStorageFolder remove error:`, error.message);
+    else console.log(`  ✓ Deleted ${allPaths.length} files under ${prefix}/`);
+  } else {
+    console.log(`  ✓ No files found under ${prefix}/`);
+  }
 }
 
 Deno.serve(async (req) => {
@@ -69,426 +130,421 @@ Deno.serve(async (req) => {
     const industry = formData.businessType || formData.industry || '';
     const isFnB = /f&b|cafe|restaurant|food/i.test(industry);
 
-    // ── Step 0: Cleanup previous incomplete onboarding ───────────────────────
+    const { data: invite } = await supabase
+      .from('merchant_invites')
+      .select('phone, currency, plan, stripe_subscription_id, stripe_customer_id')
+      .eq('email', ownerEmail)
+      .maybeSingle();
+
+    const stripePhone = invite?.phone || null;
+    const stripeCurrency = invite?.currency || 'SGD';
+    const stripeSubscriptionId = invite?.stripe_subscription_id || null;
+    const stripeCustomerId = invite?.stripe_customer_id || null;
+
+    const planRaw = (invite?.plan || 'starter').toLowerCase();
+    const tier = BYPASS_EMAILS.includes(ownerEmail) ? 'pro'
+               : planRaw.includes('pro') ? 'pro'
+               : planRaw.includes('growth') ? 'growth'
+               : 'starter';
+
+    const MAX_ROLES = { starter: 3, growth: 5, pro: null }[tier];
+
+    const PLAN_LIMITS = {
+      starter: { max_orders: 100,  max_products: 10,   max_users: 3    },
+      growth:  { max_orders: 1000, max_products: 50,   max_users: 5    },
+      pro:     { max_orders: null, max_products: null,  max_users: null },
+    };
+    const limits = PLAN_LIMITS[tier] || PLAN_LIMITS.starter;
+
+    // FIX: enforce the plan's product limit at onboarding time. Previously the
+    // subscription row (and its max_products) was only inserted at the very end
+    // of this function — AFTER products were already bulk-inserted — so there
+    // was nothing for the DB's enforce_product_limit trigger to check against,
+    // and a merchant could seed any number of products regardless of tier.
+    // Clamping here (and moving the subscription insert earlier below) closes
+    // that gap.
+    if (limits.max_products != null && formData.products?.length > limits.max_products) {
+      console.warn(`⚠ Trimming onboarding products from ${formData.products.length} to plan limit ${limits.max_products} for tier "${tier}"`);
+      formData.products = formData.products.slice(0, limits.max_products);
+    }
+
+    let allowedSlugs;
+    if (tier === 'starter') {
+      allowedSlugs = ['owner', 'manager', 'staff'];
+    } else {
+      allowedSlugs = ['owner', 'manager', 'staff', 'cashier',
+                      isFnB ? 'kitchen-staff' : 'inventory-staff'];
+    }
+
     console.log('→ Step 0: cleanup check...');
     try {
-      const { data: appUser } = await supabase
-        .from('app_users')
-        .select('onboarding_completed, tenant_id')
-        .eq('id', user_id)
-        .maybeSingle();
-
-      if (appUser && appUser.onboarding_completed === false) {
-        const { data: tuRow } = await supabase
-          .from('tenant_users')
-          .select('tenant_id')
-          .eq('user_email', ownerEmail)
-          .maybeSingle();
-
-        const staleId = tuRow?.tenant_id || appUser.tenant_id || null;
-        if (staleId) {
-          await cleanupTenant(supabase, staleId);
-          await supabase.from('app_users').update({ tenant_id: null }).eq('id', user_id);
-        }
-      }
-
-      const { data: slugTenant } = await supabase
-        .from('tenants').select('id').eq('slug', tenantSlug).maybeSingle();
-      if (slugTenant) {
-        await cleanupTenant(supabase, slugTenant.id);
-      }
+      const cleanupIds = new Set();
+      const { data: tuRow } = await supabase.from('tenant_users').select('tenant_id').eq('user_email', ownerEmail).maybeSingle();
+      if (tuRow?.tenant_id) cleanupIds.add(tuRow.tenant_id);
+      const { data: appUser } = await supabase.from('app_users').select('onboarding_completed, tenant_id').eq('email', ownerEmail).maybeSingle();
+      if (appUser?.tenant_id) cleanupIds.add(appUser.tenant_id);
+      const { data: slugTenant } = await supabase.from('tenants').select('id').eq('slug', tenantSlug).maybeSingle();
+      if (slugTenant?.id) cleanupIds.add(slugTenant.id);
+      const { data: ownerTenants } = await supabase.from('tenants').select('id').eq('owner_email', ownerEmail);
+      ownerTenants?.forEach(t => cleanupIds.add(t.id));
+      for (const id of cleanupIds) { await cleanupTenant(supabase, id); }
+      await supabase.from('app_users').update({ tenant_id: null, onboarding_completed: false }).eq('email', ownerEmail);
       console.log('✓ Step 0 cleanup done');
-    } catch (e) {
-      console.warn('Step 0 cleanup warning (non-fatal):', e.message);
-    }
+    } catch (e) { console.warn('Step 0 cleanup warning (non-fatal):', e.message); }
 
-    // ── Generate tenant UUID upfront (reuse pendingTenantId if provided, so temp storage paths match) ──
-    if (!formData.pendingTenantId) {
-      console.warn('⚠️ pendingTenantId not provided — temp image paths may not match');
-    }
     const newTenantId = formData.pendingTenantId || crypto.randomUUID();
-    console.log('→ newTenantId:', newTenantId);
 
-    // ── Step 1: Upload logo if provided ──────────────────────────────────────
-    let logoUrl = null;
-    console.log('→ Step 1: logo upload...');
-    if (formData.logoBase64 || formData.logoFile) {
-      try {
-        const tempLogoPath = `temp/onboarding/${newTenantId}/logo/logo.png`;
-        const permanentLogoPath = `${newTenantId}/logo/logo.png`;
-
-        const { error: copyError } = await supabase.storage
-          .from('product-images')
-          .copy(tempLogoPath, permanentLogoPath);
-
-        if (!copyError) {
-          await supabase.storage.from('product-images').remove([tempLogoPath]);
-          const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(permanentLogoPath);
-          logoUrl = urlData.publicUrl;
-          console.log('✓ Step 1 logo moved from temp:', logoUrl);
-        } else {
-          // Fallback: re-upload from base64
-          console.warn('Step 1 logo temp copy failed, falling back to base64:', copyError.message);
-          const base64Data = formData.logoBase64 || formData.logoFile;
-          const base64Clean = base64Data.replace(/^data:[^;]+;base64,/, '');
-          const bytes = Uint8Array.from(atob(base64Clean), c => c.charCodeAt(0));
-          const { error: uploadError } = await supabase.storage
-            .from('product-images')
-            .upload(permanentLogoPath, bytes, { contentType: 'image/png', upsert: true });
-          if (!uploadError) {
-            const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(permanentLogoPath);
-            logoUrl = urlData.publicUrl;
-            console.log('✓ Step 1 logo uploaded via base64 fallback:', logoUrl);
-          } else {
-            console.warn('Step 1 logo base64 fallback also failed:', uploadError.message);
-            logoUrl = formData.logoUrl || null;
-          }
-        }
-      } catch (e) {
-        console.warn('Step 1 logo upload warning (non-fatal):', e.message);
-        logoUrl = formData.logoUrl || null;
-      }
-    } else {
-      logoUrl = formData.logoUrl || null;
-      console.log('✓ Step 1 logo skipped (no file), using:', logoUrl);
+    let logoUrl = formData.logoUrl || null;
+    if (logoUrl && logoUrl.includes('/temp/onboarding/')) {
+      const filename = logoUrl.split('/').pop();
+      const result = await moveFileToPermanent(supabase, logoUrl, `${newTenantId}/logo/${filename}`);
+      logoUrl = result.url;
     }
 
-    // ── Step 2: Move product images from temp to permanent storage ───────────
     const productImageMap = {};
-    console.log('→ Step 2: product image uploads...');
+    const productImagesArrayMap = {};
     if (formData.products?.length > 0) {
       for (const product of formData.products) {
-        const slug = toSlug(product.name);
-        const tempPath = `temp/onboarding/${newTenantId}/products/${slug}.png`;
-        const permanentPath = `${newTenantId}/products/${slug}.png`;
-
-        try {
-          const { error: copyError } = await supabase.storage
-            .from('product-images')
-            .copy(tempPath, permanentPath);
-
-          if (!copyError) {
-            await supabase.storage.from('product-images').remove([tempPath]);
-            const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(permanentPath);
+        if (product.image_url && product.image_url.includes('/temp/onboarding/')) {
+          const filename = product.image_url.split('/').pop();
+          const result = await moveFileToPermanent(supabase, product.image_url, `${newTenantId}/products/${filename}`);
+          productImageMap[product.name] = result.url;
+        } else if (product.imageBase64) {
+          try {
+            const base64Clean = product.imageBase64.replace(/^data:[^;]+;base64,/, '');
+            const bytes = Uint8Array.from(atob(base64Clean), c => c.charCodeAt(0));
+            const filename = `${toSlug(product.name)}-${Date.now()}.png`;
+            const path = `${newTenantId}/products/${filename}`;
+            const { error } = await supabase.storage.from('product-images').upload(path, bytes, { contentType: 'image/png', upsert: true });
+            if (error) throw error;
+            const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
             productImageMap[product.name] = urlData.publicUrl;
-            console.log(`✓ Step 2 product image moved: ${product.name}`);
-          } else {
-            // Fallback: base64 upload if temp file doesn't exist
-            console.warn(`Step 2 temp copy failed for "${product.name}": ${copyError.message}`);
-            if (product.imageBase64) {
-              const base64Clean = product.imageBase64.replace(/^data:[^;]+;base64,/, '');
-              const bytes = Uint8Array.from(atob(base64Clean), c => c.charCodeAt(0));
-              const { error: uploadError } = await supabase.storage
-                .from('product-images')
-                .upload(permanentPath, bytes, { contentType: 'image/png', upsert: true });
-              if (!uploadError) {
-                const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(permanentPath);
-                productImageMap[product.name] = urlData.publicUrl;
-                console.log(`✓ Step 2 product image uploaded via base64 fallback: ${product.name}`);
-              } else {
-                console.warn(`Step 2 base64 fallback failed for "${product.name}":`, uploadError.message);
-                productImageMap[product.name] = product.image_url || null;
-              }
-            } else {
-              productImageMap[product.name] = product.image_url || null;
-            }
+          } catch (e) {
+            console.warn(`base64 upload warning for "${product.name}":`, e.message);
+            productImageMap[product.name] = product.image_url || null;
           }
-        } catch (e) {
-          console.warn(`Step 2 product image warning for "${product.name}" (non-fatal):`, e.message);
+        } else {
           productImageMap[product.name] = product.image_url || null;
         }
+        const movedAdditional: string[] = [];
+        if (product.images?.length > 0) {
+          for (const imgUrl of product.images) {
+            if (!imgUrl) continue;
+            if (imgUrl.includes('/temp/onboarding/')) {
+              const filename = imgUrl.split('/').pop();
+              const result = await moveFileToPermanent(supabase, imgUrl, `${newTenantId}/products/${filename}`);
+              movedAdditional.push(result.url);
+            } else { movedAdditional.push(imgUrl); }
+          }
+        }
+        productImagesArrayMap[product.name] = movedAdditional;
       }
     }
-    console.log('✓ Step 2 product images done');
 
-    // ── Step 3: Insert tenant ─────────────────────────────────────────────────
     console.log('→ Step 3: insert tenant...');
     let tenant;
     try {
+      const taxRate = formData.taxRate ?? (formData.country === 'Singapore' ? 9 : formData.country === 'Malaysia' ? 6 : 0);
       const { data, error } = await supabase.from('tenants').insert({
-        id: newTenantId,
-        name: businessName,
-        slug: tenantSlug,
-        industry,
-        country: formData.country || null,
-        logo_url: logoUrl,
-        owner_email: ownerEmail,
-        status: 'trial',
-        plan: 'free',
-        currency: formData.currency || 'SGD',
-        settings: {
-          branch_name: formData.branchName || null,
-          tax_rate: formData.taxRate ?? (formData.country === 'Singapore' ? 9 : formData.country === 'Malaysia' ? 6 : 0),
-          tax_inclusive: formData.taxInclusive ?? false,
-        },
+        id: newTenantId, name: businessName, slug: tenantSlug, industry,
+        country: formData.country || null, logo_url: logoUrl, owner_email: ownerEmail,
+        phone: stripePhone || null,
+        address: formData.branchAddress || formData.address || null,
+        status: 'trial', plan: 'free', currency: formData.currency || 'SGD',
+        settings: { branch_name: formData.branchName || null, tax_rate: taxRate, tax_inclusive: formData.taxInclusive ?? false },
       }).select().single();
       if (error) throw error;
       tenant = data;
       console.log('✓ Step 3 tenant inserted:', tenant.id);
     } catch (e) { return fail(3, 'tenants', e); }
 
-    // ── Step 4: Insert theme_config ───────────────────────────────────────────
     console.log('→ Step 4: insert theme_config...');
     try {
       const { error } = await supabase.from('theme_configs').insert({
         tenant_id: newTenantId,
-        primary_color: formData.customPrimary || '#0369A1',
-        accent_color: formData.customSecondary || '#E0F2FE',
-        color_set_name: formData.theme || 'Ocean Blue',
+        primary_color: formData.customPrimary || '#3b82f6',
+        accent_color: formData.customSecondary || '#9333ea',
+        color_set_name: formData.theme || 'Default',
         logo_url: logoUrl,
       });
       if (error) throw error;
       console.log('✓ Step 4 theme_config inserted');
     } catch (e) { return fail(4, 'theme_configs', e); }
 
-    // ── Step 5: Insert roles ──────────────────────────────────────────────────
     console.log('→ Step 5: insert roles...');
     let ownerRole;
     try {
-      // Fetch all permission keys from Supabase permissions table
-      const { data: permRows } = await supabase
-        .from('permissions')
-        .select('key');
-
-      const allKeys = permRows?.map(p => p.key) || [];
-      if (allKeys.length === 0) {
-        console.warn('⚠ Step 5 permissions table returned empty — roles will be inserted with empty permissions');
-      } else {
-        console.log('✓ Step 5 fetched', allKeys.length, 'permissions from DB');
-      }
-
-      const pick = (keys) => allKeys.length === 0 ? [] : keys.filter(k => allKeys.includes(k));
-
-      const ROLE_PERMISSIONS = {
-        'Owner': allKeys,
-        'Manager': pick([
-          'staff.view','staff.edit',
-          'products.view','products.create','products.edit',
-          'categories.view','categories.create','categories.edit',
-          'inventory.view','inventory.adjust','inventory.restock',
-          'orders.view','orders.create','orders.update',
-          'tables.view','tables.manage',
-          'payments.view',
-          'reports.view',
-          'suppliers.view',
-        ]),
-        'Cashier': pick([
-          'products.view','categories.view',
-          'orders.view','orders.create','orders.update',
-          'tables.view',
-          'payments.view','payments.process',
-        ]),
-        'Kitchen Staff': pick([
-          'products.view',
-          'orders.view','orders.update',
-          'inventory.view',
-        ]),
-        'Inventory Staff': pick([
-          'products.view',
-          'inventory.view','inventory.edit','inventory.adjust','inventory.restock',
-          'categories.view',
-          'suppliers.view','suppliers.manage',
-        ]),
-        'Staff': pick([
-          'products.view',
-          'orders.view','orders.create',
-          'tables.view',
-        ]),
+      const ROLE_DEFS = {
+        'owner': {
+          tenant_id: newTenantId, name: 'Owner', slug: 'owner', is_system: true,
+          description: 'Business owner with full access',
+          permissions: [
+            'orders.view','orders.create','orders.edit','orders.update','orders.cancel',
+            'products.view','products.create','products.edit','products.delete',
+            'categories.view','categories.create','categories.edit','categories.delete',
+            'inventory.view','inventory.edit','inventory.adjust','inventory.restock',
+            'inventory.stock_take','inventory.delivery_order',
+            'tables.view','tables.create','tables.edit','tables.delete','tables.manage',
+            'staff.view','staff.create','staff.edit','staff.delete',
+            'roles.view','roles.create','roles.edit','roles.delete',
+            'reports.view','reports.export',
+            'settings.view','settings.edit',
+            'payments.view','payments.process','payments.refund',
+            'theme.edit',
+            'suppliers.view','suppliers.manage',
+          ],
+        },
+        'manager': {
+          tenant_id: newTenantId, name: 'Manager', slug: 'manager', is_system: false,
+          description: 'Day-to-day operations management',
+          permissions: [
+            'staff.view','staff.edit',
+            'products.view','products.create','products.edit',
+            'categories.view','categories.create','categories.edit',
+            'inventory.view','inventory.adjust','inventory.restock',
+            'inventory.stock_take','inventory.delivery_order',
+            'orders.view','orders.create','orders.update',
+            'tables.view','tables.manage',
+            'payments.view',
+            'reports.view',
+            'suppliers.view','suppliers.manage',
+          ],
+        },
+        'cashier': {
+          tenant_id: newTenantId, name: 'Cashier', slug: 'cashier', is_system: false,
+          description: 'Process orders and payments',
+          permissions: [
+            'products.view','categories.view',
+            'orders.view','orders.create','orders.update',
+            'tables.view',
+            'payments.view','payments.process',
+          ],
+        },
+        'kitchen-staff': {
+          tenant_id: newTenantId, name: 'Kitchen Staff', slug: 'kitchen-staff', is_system: false,
+          description: 'View and update order preparation status',
+          permissions: ['products.view','orders.view','orders.update','inventory.view'],
+        },
+        'inventory-staff': {
+          tenant_id: newTenantId, name: 'Inventory Staff', slug: 'inventory-staff', is_system: false,
+          description: 'Stock and inventory management',
+          permissions: [
+            'products.view',
+            'inventory.view','inventory.adjust','inventory.restock',
+            'inventory.stock_take','inventory.delivery_order',
+            'categories.view',
+            'suppliers.view','suppliers.manage',
+          ],
+        },
+        'staff': {
+          tenant_id: newTenantId, name: 'Staff', slug: 'staff', is_system: false,
+          description: 'Basic staff access',
+          permissions: ['products.view','orders.view','orders.create','tables.view'],
+        },
       };
 
-      const { data, error } = await supabase.from('roles').insert([
-        { tenant_id: newTenantId, name: 'Owner',          slug: 'owner',          permissions: ROLE_PERMISSIONS['Owner'],          is_system: true  },
-        { tenant_id: newTenantId, name: 'Manager',        slug: 'manager',        permissions: ROLE_PERMISSIONS['Manager'],        is_system: false },
-        { tenant_id: newTenantId, name: 'Cashier',        slug: 'cashier',        permissions: ROLE_PERMISSIONS['Cashier'],        is_system: false },
-        { tenant_id: newTenantId, name: 'Kitchen Staff',  slug: 'kitchen_staff',  permissions: ROLE_PERMISSIONS['Kitchen Staff'],  is_system: false },
-        { tenant_id: newTenantId, name: 'Inventory Staff',slug: 'inventory_staff',permissions: ROLE_PERMISSIONS['Inventory Staff'],is_system: false },
-        { tenant_id: newTenantId, name: 'Staff',          slug: 'staff',          permissions: ROLE_PERMISSIONS['Staff'],          is_system: false },
-      ]).select();
+      const rolesToSeed = allowedSlugs.filter(slug => ROLE_DEFS[slug]).map(slug => ROLE_DEFS[slug]);
+      const { data, error } = await supabase.from('roles').insert(rolesToSeed).select();
       if (error) throw error;
-      ownerRole = data.find(r => r.name === 'Owner');
+      ownerRole = data.find(r => r.slug === 'owner');
+      if (!ownerRole) throw new Error('Owner role not found after insert');
       console.log('✓ Step 5 roles inserted:', data.map(r => r.name));
     } catch (e) { return fail(5, 'roles', e); }
 
-    // ── Step 6: Insert tenant_users ───────────────────────────────────────────
     console.log('→ Step 6: insert tenant_users...');
     try {
       const { error } = await supabase.from('tenant_users').insert({
-        tenant_id: newTenantId,
-        user_email: ownerEmail,
-        role_id: ownerRole.id,
-        role_name: 'Owner',
-        is_owner: true,
-        status: 'active',
+        tenant_id: newTenantId, user_email: ownerEmail,
+        role_id: ownerRole.id, role_name: 'Owner', is_owner: true, status: 'active',
       });
       if (error) throw error;
       console.log('✓ Step 6 tenant_users inserted');
     } catch (e) { return fail(6, 'tenant_users', e); }
 
-    // ── Step 7: Update app_users ──────────────────────────────────────────────
-    console.log('→ Step 7: update app_users by email:', ownerEmail);
+    console.log('→ Step 7: update app_users...');
     let updatedUser;
     try {
-      const { data, error } = await supabase.from('app_users')
-        .update({ onboarding_completed: true, tenant_id: newTenantId })
-        .eq('email', ownerEmail)
-        .select()
-        .maybeSingle();
-      if (error) throw error;
-      updatedUser = data;
-      console.log('✓ Step 7 app_users updated:', updatedUser ? 'row found' : 'no row matched (continuing)');
+      const { data: existingUser } = await supabase.from('app_users').select('id, phone').eq('email', ownerEmail).maybeSingle();
+      if (existingUser) {
+        const { data, error } = await supabase.from('app_users')
+          .update({
+            onboarding_completed: true,
+            tenant_id: newTenantId,
+            ...(stripePhone ? { phone: stripePhone } : {}),
+          })
+          .eq('email', ownerEmail).select().maybeSingle();
+        if (error) throw error;
+        updatedUser = data;
+      } else {
+        const { data, error } = await supabase.from('app_users')
+          .insert({ email: ownerEmail, phone: stripePhone, onboarding_completed: true, tenant_id: newTenantId })
+          .select().maybeSingle();
+        if (error) throw error;
+        updatedUser = data;
+      }
+      console.log('✓ Step 7 app_users done');
     } catch (e) { return fail(7, 'app_users', e); }
 
-    // ── Step 8: Insert business_hours ─────────────────────────────────────────
-    if (formData.operatingHours) {
-      console.log('→ Step 8: insert business_hours...');
-      try {
-        const dayMap = {
-          Monday: 'monday', Tuesday: 'tuesday', Wednesday: 'wednesday',
-          Thursday: 'thursday', Friday: 'friday', Saturday: 'saturday', Sunday: 'sunday',
-        };
-        const hoursRows = Object.entries(formData.operatingHours).map(([day, config]) => ({
-          tenant_id: newTenantId,
-          day_of_week: dayMap[day] || day.toLowerCase(),
-          open_time: config.enabled ? config.start : null,
-          close_time: config.enabled ? config.end : null,
-          is_closed: !config.enabled,
-        }));
-        const { error } = await supabase.from('business_hours').insert(hoursRows);
-        if (error) throw error;
-        console.log('✓ Step 8 business_hours inserted:', hoursRows.length);
-      } catch (e) { return fail(8, 'business_hours', e); }
-    } else {
-      console.log('✓ Step 8 business_hours skipped (no data)');
-    }
+    try {
+      await supabase.from('merchant_invites')
+        .update({ status: 'registered', updated_date: new Date().toISOString() })
+        .eq('email', ownerEmail).eq('status', 'pending');
+    } catch (e) { console.warn('Step 7b warning:', e.message); }
 
-    // ── Step 9: Insert categories ─────────────────────────────────────────────
-    const categoryMap = {};
-    if (formData.products?.length > 0) {
-      const uniqueCategories = [...new Set(formData.products.map(p => p.category).filter(Boolean))];
-      if (uniqueCategories.length > 0) {
-        console.log('→ Step 9: insert categories:', uniqueCategories);
-        try {
-          const categoryRows = uniqueCategories.map(cat => ({
-            tenant_id: newTenantId,
-            name: cat,
-            slug: toSlug(cat),
-            is_active: true,
-          }));
-          const { data, error } = await supabase.from('categories').insert(categoryRows).select();
-          if (error) throw error;
-          data.forEach(c => { categoryMap[c.name] = c.id; });
-          console.log('✓ Step 9 categories inserted:', data.length);
-        } catch (e) { return fail(9, 'categories', e); }
-      } else {
-        console.log('✓ Step 9 categories skipped (no categories in products)');
-      }
-    } else {
-      console.log('✓ Step 9 categories skipped (no products)');
-    }
-
-    // ── Step 10: Insert products ──────────────────────────────────────────────
-    if (formData.products?.length > 0) {
-      console.log('→ Step 10: insert products:', formData.products.length);
-      try {
-        const productRows = formData.products.map(p => ({
-          tenant_id: newTenantId,
-          category_id: categoryMap[p.category] || null,
-          name: p.name,
-          slug: toSlug(p.name),
-          description: p.description || null,
-          price: p.price,
-          stock_quantity: p.stock_quantity || 0,
-          low_stock_threshold: p.low_stock_threshold || 5,
-          image_url: productImageMap[p.name] || p.image_url || null,
-          images: p.images && p.images.length > 0 ? p.images : null,
-          is_active: true,
-        }));
-        const { data: insertedProducts, error } = await supabase.from('products').insert(productRows).select('id, stock_quantity, low_stock_threshold');
-        if (error) throw error;
-        console.log('✓ Step 10 products inserted:', productRows.length);
-
-        // Insert inventory_items for each product
-        const inventoryRows = insertedProducts.map(p => ({
-          tenant_id: newTenantId,
-          product_id: p.id,
-          current_stock: p.stock_quantity || 0,
-          low_stock_threshold: p.low_stock_threshold || 5,
-          unit: 'pcs',
-        }));
-        const { error: invError } = await supabase.from('inventory_items').insert(inventoryRows);
-        if (invError) console.warn('Step 10 inventory_items insert warning (non-fatal):', invError.message);
-        else console.log('✓ Step 10 inventory_items inserted:', inventoryRows.length);
-      } catch (e) { return fail(10, 'products', e); }
-    } else {
-      console.log('✓ Step 10 products skipped (none provided)');
-    }
-
-    // ── Step 11: Insert tables (F&B only) ─────────────────────────────────────
-    if (isFnB) {
-      const tableRows = [];
-      if (formData.tables?.length > 0) {
-      for (const t of formData.tables) {
-        const tableId = t.id || crypto.randomUUID();
-        const qrUrl = t.qr_code_url || `https://sellio.apptelier.sg/order/${tenantSlug}/${tableId}`;
-        tableRows.push({
-          id: tableId,
-          tenant_id: newTenantId,
-          name: t.label || t.name,
-          capacity: parseInt(t.pax) || parseInt(t.capacity) || 2,
-          zone: t.zone || null,
-          status: 'available',
-          sort_order: tableRows.length,
-          qr_code_url: qrUrl,
-        });
-      }
-      } else if (formData.tableCount > 0) {
-        for (let i = 0; i < formData.tableCount; i++) {
-          const tableId = crypto.randomUUID();
-          tableRows.push({
-            id: tableId,
-            tenant_id: newTenantId,
-            name: `T${i + 1}`,
-            capacity: 4,
-            status: 'available',
-            qr_code_url: `https://sellio.apptelier.sg/order/${tenantSlug}/${tableId}`,
-          });
-        }
-      }
-      if (tableRows.length > 0) {
-        console.log('→ Step 11: insert tables:', tableRows.length);
-        try {
-          const { error } = await supabase.from('tables').insert(tableRows);
-          if (error) throw error;
-          console.log('✓ Step 11 tables inserted:', tableRows.length);
-        } catch (e) { return fail(11, 'tables', e); }
-      } else {
-        console.log('✓ Step 11 tables skipped (none provided)');
-      }
-    } else {
-      console.log('✓ Step 11 tables skipped (not F&B)');
-    }
-
-    // ── Step 12: Insert subscription ──────────────────────────────────────────
-    console.log('→ Step 12: insert subscription...');
+    // ── Step 8: insert subscription ───────────────────────────────────────────
+    // MOVED: this used to run last (after products/tables were already
+    // inserted). It's now created right after the tenant/roles/users exist and
+    // BEFORE categories/products, so subscriptions.max_products is in place
+    // for the enforce_product_limit DB trigger to check against when Step 11
+    // inserts the onboarding products below.
+    console.log('→ Step 8: insert subscription...');
     try {
       const now = new Date();
       const trialEnd = new Date(now);
       trialEnd.setDate(trialEnd.getDate() + 3);
       const { error } = await supabase.from('subscriptions').insert({
-        tenant_id: newTenantId,
-        tier: 'free',
-        status: 'trial',
+        tenant_id: newTenantId, tier, status: 'trial',
         billing_cycle: 'monthly',
         current_period_start: now.toISOString(),
         current_period_end: trialEnd.toISOString(),
-        currency: formData.currency || 'SGD',
+        currency: stripeCurrency,
+        max_roles: MAX_ROLES,
+        max_orders: limits.max_orders,
+        max_products: limits.max_products,
+        max_users: limits.max_users,
+        stripe_subscription_id: stripeSubscriptionId,
+        stripe_customer_id: stripeCustomerId,
       });
       if (error) throw error;
-      console.log('✓ Step 12 subscription inserted');
-    } catch (e) { return fail(12, 'subscriptions', e); }
+
+      // FIX: mark has_used_trial immediately when the initial 3-day trial starts.
+      // Previously this only got set inside stripe-webhook's in-app-upgrade branch,
+      // meaning it stayed false through the entire trial period. Any later upgrade
+      // would then incorrectly qualify for ANOTHER free trial via UpgradeWall's
+      // hasUsedTrial check, instead of going straight to a full paid subscription.
+      await supabase.from('tenants').update({ has_used_trial: true }).eq('id', newTenantId);
+
+      console.log('✓ Step 8 subscription inserted | tier:', tier, '| max_products:', limits.max_products, '| has_used_trial set true');
+    } catch (e) { return fail(8, 'subscriptions', e); }
+
+    const rawHours = formData.operatingHours || formData.businessHours || formData.operating_hours;
+    if (rawHours) {
+      try {
+        const validDays = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+        const hoursRows = Object.entries(rawHours).map(([day, config]: [string, any]) => {
+          const normalizedDay = day.trim().toLowerCase();
+          return {
+            tenant_id: newTenantId,
+            day_of_week: validDays.includes(normalizedDay) ? normalizedDay : null,
+            open_time: config.enabled ? (config.start || config.open || config.openTime || '09:00') : null,
+            close_time: config.enabled ? (config.end || config.close || config.closeTime || '22:00') : null,
+            is_closed: !config.enabled,
+          };
+        }).filter(r => r.day_of_week !== null);
+        if (hoursRows.length > 0) {
+          const { error } = await supabase.from('business_hours').insert(hoursRows);
+          if (error) throw error;
+          console.log('✓ Step 9 business_hours inserted:', hoursRows.length);
+        }
+      } catch (e) { return fail(9, 'business_hours', e); }
+    }
+
+    const categoryMap = {};
+    if (formData.products?.length > 0) {
+      const uniqueCategories = [...new Set(formData.products.map((p: any) => p.category).filter(Boolean))];
+      if (uniqueCategories.length > 0) {
+        try {
+          const { data, error } = await supabase.from('categories')
+            .insert(uniqueCategories.map((cat: any) => ({ tenant_id: newTenantId, name: cat, slug: toSlug(String(cat)), is_active: true })))
+            .select();
+          if (error) throw error;
+          data.forEach((c: any) => { categoryMap[c.name] = c.id; });
+          console.log('✓ Step 10 categories inserted:', data.length);
+        } catch (e) { return fail(10, 'categories', e); }
+      }
+    }
+
+    if (formData.products?.length > 0) {
+      try {
+        const productRows = formData.products.map((p) => ({
+          tenant_id: newTenantId,
+          category_id: categoryMap[p.category] || null,
+          name: p.name, slug: toSlug(p.name),
+          price: parseFloat(p.price) || 0,
+          image_url: productImageMap[p.name] || p.image_url || null,
+          images: productImagesArrayMap[p.name] ?? p.images ?? [],
+          description: p.description || null,
+          is_active: true,
+        }));
+        const { data: insertedProducts, error } = await supabase.from('products').insert(productRows).select();
+        if (error) throw error;
+        console.log('✓ Step 11 products inserted:', insertedProducts.length);
+        const inventoryRows = insertedProducts.map(p => ({
+          tenant_id: newTenantId, product_id: p.id,
+          current_stock: 0, low_stock_threshold: 5, par_level: 0, unit: 'pcs',
+        }));
+        const { error: invErr } = await supabase.from('inventory_items').insert(inventoryRows);
+        if (invErr) console.warn('Step 11b inventory_items warning:', invErr.message);
+      } catch (e) { return fail(11, 'products', e); }
+    }
+
+    if (isFnB) {
+      const tableRows: any[] = [];
+      if (formData.tables?.length > 0) {
+        for (const t of formData.tables) {
+          const tableId = t.id || crypto.randomUUID();
+          tableRows.push({
+            id: tableId, tenant_id: newTenantId,
+            name: t.label || t.name || `Table ${tableRows.length + 1}`,
+            capacity: parseInt(t.pax) || parseInt(t.capacity) || 2,
+            zone: t.zone || null,
+            status: 'available', sort_order: tableRows.length,
+            qr_code_url: `https://sellio.apptelier.sg/order/${tenantSlug}/${tableId}`,
+          });
+        }
+      } else if (formData.tableCount > 0) {
+        for (let i = 0; i < formData.tableCount; i++) {
+          const tableId = crypto.randomUUID();
+          tableRows.push({
+            id: tableId, tenant_id: newTenantId,
+            name: `Table ${i + 1}`,
+            capacity: parseInt(formData.tablePax) || 4,
+            zone: null,
+            status: 'available', sort_order: i,
+            qr_code_url: `https://sellio.apptelier.sg/order/${tenantSlug}/${tableId}`,
+          });
+        }
+      } else if (formData.singleQrLabel) {
+        // FIX: takeaway/counter-only QR ("No, takeaway/counter only" path) was never
+        // persisted anywhere. Auto-create one default "table" row representing it so
+        // merchants can revisit, download, or reprint it from the Tables page.
+        const tableId = crypto.randomUUID();
+        tableRows.push({
+          id: tableId, tenant_id: newTenantId,
+          name: formData.singleQrLabel || 'Takeaway / Counter',
+          capacity: 0,
+          zone: null,
+          status: 'available', sort_order: 0,
+          qr_code_url: `https://sellio.apptelier.sg/order/${tenantSlug}/${tableId}`,
+        });
+      }
+      if (tableRows.length > 0) {
+        try {
+          const { error } = await supabase.from('tables').insert(tableRows);
+          if (error) throw error;
+          console.log('✓ Step 12 tables inserted:', tableRows.length);
+        } catch (e) { return fail(12, 'tables', e); }
+      }
+    }
+
+    try {
+      await deleteStorageFolder(supabase, 'product-images', `temp/onboarding/${newTenantId}`);
+    } catch (e) { console.warn('Step 13 temp cleanup warning:', e.message); }
 
     console.log('=== completeOnboarding SUCCESS ===', { tenant_id: newTenantId });
-    return Response.json({ success: true, tenant_id: newTenantId, user: updatedUser }, { headers: corsHeaders });
+    return Response.json({
+      success: true, tenant_id: newTenantId, tenant_slug: tenantSlug, user: updatedUser,
+    }, { headers: corsHeaders });
 
   } catch (error) {
     console.error('completeOnboarding unexpected error:', error);
