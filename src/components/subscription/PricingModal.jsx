@@ -70,6 +70,15 @@ const ACCENT_BAR = {
   gold: 'linear-gradient(90deg,#f59e0b,#d97706)',
 };
 
+// Solid border colors per plan — used for the full card border so every plan
+// (not just Growth/current) gets a colored outline matching its accent bar.
+const BORDER_COLOR = {
+  blue: '#3b82f6',
+  purple: '#8b5cf6',
+  gold: '#d97706',
+};
+const CURRENT_BORDER_COLOR = '#4ade80';
+
 const PLAN_RANK = { starter: 0, growth: 1, pro: 2 };
 
 export default function PricingModal({ open, onOpenChange, tenantId, currentTier = null, hasUsedTrial = false }) {
