@@ -319,7 +319,7 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess, m
 }
 
 export default function Products() {
-  const { tenantId, tenant } = useTenant();
+  const { tenantId, tenant, subscription } = useTenant();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState(
@@ -336,6 +336,7 @@ export default function Products() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [scanMenuOpen, setScanMenuOpen] = useState(false);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -402,9 +403,19 @@ export default function Products() {
     setShowDialog(true);
   };
 
+  // null max_products = unlimited (Pro plan)
+  const maxProducts = subscription?.max_products ?? null;
+  const atProductLimit = maxProducts != null && products.length >= maxProducts;
+
   const handleAdd = () => {
+    if (atProductLimit) { setUpgradeModalOpen(true); return; }
     setEditingProduct(null);
     setShowDialog(true);
+  };
+
+  const handleOpenScanMenu = () => {
+    if (atProductLimit) { setUpgradeModalOpen(true); return; }
+    setScanMenuOpen(true);
   };
 
   const csvEscape = (val) => {
