@@ -786,7 +786,17 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         {/* Added Items List */}
         {(formData.products || []).length > 0 && (
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-            <h3 className="text-sm font-bold text-slate-900 mb-3">Added Items ({formData.products.length})</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-slate-900">Added Items ({formData.products.length}{planMaxProducts != null ? ` / ${planMaxProducts}` : ''})</h3>
+              {planMaxProducts != null && formData.products.length >= planMaxProducts && (
+                <button
+                  onClick={() => setUpgradeModalOpen(true)}
+                  className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200"
+                >
+                  Limit reached — Upgrade
+                </button>
+              )}
+            </div>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {(formData.products || []).map((item, idx) => (
                 <div key={item.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-slate-100">
