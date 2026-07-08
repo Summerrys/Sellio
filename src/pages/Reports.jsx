@@ -13,7 +13,8 @@ import { BarChart3 } from 'lucide-react';
 import { subDays, isWithinInterval } from 'date-fns';
 
 export default function Reports() {
-  const { tenantId, tenant } = useTenant();
+  const { tenantId, tenant, hasPermission } = useTenant();
+  const canExport = hasPermission('reports.export');
   const [dateRange, setDateRange] = useState({
     from: subDays(new Date(), 30),
     to: new Date(),
@@ -78,11 +79,13 @@ export default function Reports() {
           title="Reports & Analytics"
           description="View detailed insights and performance metrics"
           actions={
-            <ExportButton 
-              data={orders} 
-              filename="sales_report"
-              type="sales"
-            />
+            canExport ? (
+              <ExportButton 
+                data={orders} 
+                filename="sales_report"
+                type="sales"
+              />
+            ) : undefined
           }
         />
 
