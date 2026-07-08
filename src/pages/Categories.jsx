@@ -187,7 +187,7 @@ function CategoriesContent() {
             <div className="flex items-center gap-2"><Switch checked={form.is_active} onCheckedChange={v => setForm({ ...form, is_active: v })} /><Label>Active</Label></div>
           </div>
           <DialogFooter className="flex flex-row items-center gap-3 pt-2">
-            {editing && (
+            {editing && canDelete && (
               <Button
                 variant="outline"
                 className={`flex-shrink-0 transition-all ${confirmDelete ? 'border-red-500 bg-red-50 text-red-600 hover:bg-red-100' : 'text-red-500 border-red-200 hover:bg-red-50'}`}
@@ -199,19 +199,21 @@ function CategoriesContent() {
               </Button>
             )}
             <div className="flex flex-1 gap-3">
-              <Button variant="outline" className="flex-1" onClick={close}>Cancel</Button>
-              <Button
-                className="flex-1 text-white"
-                style={{ background: 'var(--color-primary-gradient)' }}
-                onClick={() => saveMutation.mutate(form)}
-                disabled={!form.name || saveMutation.isPending}
-              >
-                {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : editing ? 'Save Changes' : 'Create'}
-              </Button>
+              <Button variant="outline" className="flex-1" onClick={close}>{(editing ? canEdit : canCreate) ? 'Cancel' : 'Close'}</Button>
+              {(editing ? canEdit : canCreate) && (
+                <Button
+                  className="flex-1 text-white"
+                  style={{ background: 'var(--color-primary-gradient)' }}
+                  onClick={() => saveMutation.mutate(form)}
+                  disabled={!form.name || saveMutation.isPending}
+                >
+                  {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : editing ? 'Save Changes' : 'Create'}
+                </Button>
+              )}
             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </PermissionGate>
+    </>
   );
 }
