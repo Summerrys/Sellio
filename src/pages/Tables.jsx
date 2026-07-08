@@ -77,7 +77,10 @@ const saveQRToStorage = async (supabase, tableId, tableName, orderingUrl, tenant
 // ────────────────────────────────────────────────────────────────────────────
 
 export default function Tables() {
-  const { tenantId, tenant } = useTenant();
+  const { tenantId, tenant, hasPermission } = useTenant();
+  const canCreate = hasPermission('tables.create');
+  const canEdit = hasPermission('tables.edit');
+  const canDelete = hasPermission('tables.delete');
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState('grid');
   const [searchQuery, setSearchQuery] = useState('');
