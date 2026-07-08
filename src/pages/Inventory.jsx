@@ -325,8 +325,8 @@ function InventoryContent() {
                   return (
                     <div
                       key={product.id}
-                      onClick={() => setSelectedProduct(product)}
-                      className="bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-slate-300 hover:shadow-sm transition-all active:scale-[0.99]"
+                      onClick={() => canAdjust && setSelectedProduct(product)}
+                      className={`bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:shadow-sm transition-all active:scale-[0.99] ${canAdjust ? 'cursor-pointer' : 'cursor-default'}`}
                       style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '10px 12px' }}
                     >
                       {product.image_url
