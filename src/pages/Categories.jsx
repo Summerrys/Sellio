@@ -112,7 +112,7 @@ function CategoriesContent() {
           {categories.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)).map(cat => {
             const count = products.filter(p => p.category_id === cat.id).length;
             return (
-              <Card key={cat.id} onClick={() => open(cat)} className="border-0 shadow-sm p-4 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer active:scale-[0.99]">
+              <Card key={cat.id} onClick={() => canEdit && open(cat)} className={`border-0 shadow-sm p-4 hover:shadow-md hover:border-slate-300 transition-all active:scale-[0.99] ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}>
                 <div className="flex items-start justify-between">
                   <div className="min-w-0">
                     <h3 className="text-sm font-semibold text-slate-800 leading-tight">{cat.name}</h3>
@@ -120,17 +120,23 @@ function CategoriesContent() {
                     {cat.description && <p className="text-xs text-slate-500 mt-2 line-clamp-2">{cat.description}</p>}
                     {!cat.is_active && <span className="inline-block mt-2 text-xs text-slate-400 bg-slate-50 px-2 py-0.5 rounded">Inactive</span>}
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                    <button onClick={(e) => { e.stopPropagation(); open(cat); }}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-colors"
-                      style={{ color: 'rgb(var(--color-primary))' }}>
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(cat.id); }}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors text-red-400 hover:text-red-500">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  {(canEdit || canDelete) && (
+                    <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                      {canEdit && (
+                        <button onClick={(e) => { e.stopPropagation(); open(cat); }}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-colors"
+                          style={{ color: 'rgb(var(--color-primary))' }}>
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(cat.id); }}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors text-red-400 hover:text-red-500">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </Card>
             );
@@ -141,23 +147,29 @@ function CategoriesContent() {
           {categories.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)).map(cat => {
             const count = products.filter(p => p.category_id === cat.id).length;
             return (
-              <Card key={cat.id} onClick={() => open(cat)} className="border-0 shadow-sm px-4 py-3 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer active:scale-[0.99]">
+              <Card key={cat.id} onClick={() => canEdit && open(cat)} className={`border-0 shadow-sm px-4 py-3 hover:shadow-md hover:border-slate-300 transition-all active:scale-[0.99] ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}>
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
                     <h3 className="text-sm font-semibold text-slate-800 leading-tight">{cat.name}</h3>
                     <p className="text-xs text-slate-400">{count} product{count !== 1 ? 's' : ''}{!cat.is_active ? ' · Inactive' : ''}</p>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button onClick={(e) => { e.stopPropagation(); open(cat); }}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-colors"
-                      style={{ color: 'rgb(var(--color-primary))' }}>
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(cat.id); }}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors text-red-400 hover:text-red-500">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  {(canEdit || canDelete) && (
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {canEdit && (
+                        <button onClick={(e) => { e.stopPropagation(); open(cat); }}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-colors"
+                          style={{ color: 'rgb(var(--color-primary))' }}>
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(cat.id); }}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors text-red-400 hover:text-red-500">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </Card>
             );
