@@ -216,7 +216,23 @@ function AppLayout({ children, currentPageName }) {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
 
   const { appUser: customUser, clearAppUser } = useAppUser();
-  const { user, tenant, tenantId, subscription, isSuperAdmin, isLoading, hasPermission } = useTenant();
+  const { user, tenant, isSuperAdmin, isLoading, hasPermission } = useTenant();
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+
+  // Prompt to install as an app whenever a merchant or staff logs in via browser.
+  // Skipped entirely if already running as an installed PWA, or already shown
+  // this browser session (so it doesn't nag on every page navigation).
+  useEffect(() => {
+    if (!customUser) return;
+    if (isStandalone()) return;
+    if (sessionStorage.getItem('sellio_install_prompt_login_shown')) return;
+    if (!canShowInstallPrompt()) return;
+    sessionStorage.setItem('sellio_install_prompt_login_shown', '1');
+    const timer = setTimeout(() => setShowInstallPrompt(true), 600);
+    return () => clearTimeout(timer);
+  }, [customUser]);
+
+  const tenantId = tenant?.id;
 
   // Lightweight product count (head-only) so the Sell FAB can gate against the
   // plan's product limit the same way the Products page's Add/Scan buttons do —
@@ -235,22 +251,7 @@ function AppLayout({ children, currentPageName }) {
   });
   const maxProducts = subscription?.max_products ?? null;
   const atProductLimit = maxProducts != null && productCount >= maxProducts;
-  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 
-  // Prompt to install as an app whenever a merchant or staff logs in via browser.
-  // Skipped entirely if already running as an installed PWA, or already shown
-  // this browser session (so it doesn't nag on every page navigation).
-  useEffect(() => {
-    if (!customUser) return;
-    if (isStandalone()) return;
-    if (sessionStorage.getItem('sellio_install_prompt_login_shown')) return;
-    if (!canShowInstallPrompt()) return;
-    sessionStorage.setItem('sellio_install_prompt_login_shown', '1');
-    const timer = setTimeout(() => setShowInstallPrompt(true), 600);
-    return () => clearTimeout(timer);
-  }, [customUser]);
-
-  const tenantId = tenant?.id;
   useEffect(() => {
     if (!tenantId) return;
     getSupabase().then(supabase =>
