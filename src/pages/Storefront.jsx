@@ -80,7 +80,7 @@ function StorefrontInner() {
         supabase.from('theme_configs').select('*').eq('tenant_id', tenantId).maybeSingle(),
         supabase.from('storefront_configs').select('*').eq('tenant_id', tenantId).maybeSingle(),
         supabase.from('categories').select('id, name, slug, sort_order').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').order('sort_order'),
-        supabase.from('products').select('id, name, description, price, compare_at_price, image_url, images, category_id, is_featured, is_active, stock_quantity, track_inventory, low_stock_threshold, variants, tags').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null'),
+        supabase.from('products').select('id, name, description, price, compare_at_price, image_url, images, category_id, is_featured, is_active, stock_quantity, track_inventory, low_stock_threshold, variants, tags').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').order('id', { ascending: true }),
       ]);
       setTheme(themeRes.data);
       setStorefrontConfig(storefrontRes.data);
