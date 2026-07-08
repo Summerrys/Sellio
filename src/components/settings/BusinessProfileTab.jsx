@@ -15,8 +15,8 @@ import ImageEditModal from '@/components/onboarding/ImageEditModal';
 
 const INDUSTRIES = [
   { value: 'f&b', label: 'F&B / Cafe / Restaurant' },
-  { value: 'retail', label: 'Retail' },
-  { value: 'service', label: 'Service' },
+  { value: 'retail', label: 'Retail', disabled: true },
+  { value: 'service', label: 'Service', disabled: true },
 ];
 
 const COUNTRIES = ['Singapore', 'Malaysia'];
@@ -328,7 +328,25 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
             <Select value={form.industry} onValueChange={v => set('industry', v)}>
               <SelectTrigger className="h-10"><SelectValue placeholder="Select industry" /></SelectTrigger>
               <SelectContent>
-                {INDUSTRIES.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
+                {INDUSTRIES.map(i => (
+                  <SelectItem key={i.value} value={i.value} disabled={i.disabled}>
+                    <div className="flex items-center gap-2">
+                      <span className={i.disabled ? 'opacity-60' : ''}>{i.label}</span>
+                      {i.disabled && (
+                        <span
+                          className="ml-1 text-[10px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1"
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(251,146,60,0.12), rgba(139,92,246,0.12))',
+                            color: '#8b5cf6',
+                            border: '1px solid rgba(139,92,246,0.25)',
+                          }}
+                        >
+                          ✨ Coming Soon
+                        </span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
