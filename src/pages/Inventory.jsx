@@ -23,7 +23,9 @@ export default function Inventory() {
 }
 
 function InventoryContent() {
-  const { tenantId, tenant } = useTenant();
+  const { tenantId, tenant, hasPermission } = useTenant();
+  const canAdjust = hasPermission('inventory.adjust');
+  const canStockTake = hasPermission('inventory.stock_take');
   const queryClient = useQueryClient();
   const handleRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['inventoryMerged', tenantId] });
