@@ -130,7 +130,7 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
           <div className="space-y-1.5">
             <Label>Full Name <span className="text-red-500">*</span></Label>
             <Input
-              placeholder="e.g. Sarah Tan"
+              placeholder="Sarah"
               value={form.fullName}
               onChange={set('fullName')}
             />
@@ -151,7 +151,7 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
                 </SelectContent>
               </Select>
               <Input
-                placeholder="82228103"
+                placeholder="91234567"
                 value={form.phone}
                 onChange={set('phone')}
                 inputMode="numeric"
