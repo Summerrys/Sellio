@@ -210,12 +210,38 @@ export function TenantProvider({ children }) {
     },
   });
 
-  // Set currentTenantId immediately from app_users row — don't wait for tenant_users
+  // Set currentTenantId immediately from app_users row for a fast initial render —
+  // don't wait for tenant_users.
   useEffect(() => {
     if (user?.tenant_id) {
       setCurrentTenantId(user.tenant_id);
     }
   }, [user?.tenant_id]);
+
+  // FIX: app_users.tenant_id is a single denormalized field and can go stale —
+  // e.g. it keeps pointing at a tenant that was later deleted/recreated, or was
+  // never correctly synced after a staff invite. tenant_users is the actual
+  // source of truth for "which tenant(s) can this person access" (it's what
+  // createStaffUser and the onboarding flow both write when granting access).
+  // Once tenant_users loads, reconcile against it: if the current tenantId isn't
+  // among this person's active memberships, switch to their real one and
+  // self-heal the stale app_users row so this doesn't recur on next login. This
+  // is what was causing newly-created Manager/Staff logins (or any account whose
+  // app_users.tenant_id had gone stale) to land on a blank, unlinked workspace
+  // instead of the tenant they were actually invited to.
+  useEffect(() => {
+    if (!user?.email || !tenantUser) return;
+    if (tenantUser.length === 0) return; // no active membership to reconcile against
+    const matchesCurrent = tenantUser.some(tu => tu.tenant_id === currentTenantId);
+    if (!matchesCurrent) {
+      const correctTenantId = tenantUser[0].tenant_id;
+      console.warn('app_users.tenant_id was stale/mismatched for', user.email, '— correcting to', correctTenantId);
+      setCurrentTenantId(correctTenantId);
+      getSupabase().then(supabase =>
+        supabase.from('app_users').update({ tenant_id: correctTenantId }).eq('email', user.email)
+      );
+    }
+  }, [user?.email, tenantUser, currentTenantId]);
 
   // Check for simulate_role — only apply for superadmin users
   useEffect(() => {
