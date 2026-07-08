@@ -219,7 +219,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 pb-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-xl font-bold text-slate-900">
             {getGreeting()}, {tenant?.name || 'there'}!{' '}
