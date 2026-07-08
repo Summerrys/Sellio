@@ -450,17 +450,18 @@ function AppLayout({ children, currentPageName }) {
           {/* Center: Sell FAB */}
           <div className="flex-1 flex flex-col items-center justify-end pb-1" style={{ minHeight: 60 }}>
             <button
-              onClick={() => setIsNewProductOpen(true)}
+              onClick={() => atProductLimit ? setUpgradeModalOpen(true) : setIsNewProductOpen(true)}
               className="flex flex-col items-center gap-0.5 -mt-5"
               style={{ outline: 'none' }}
+              title={atProductLimit ? `Product limit reached (${maxProducts}) — upgrade to add more` : undefined}
             >
               <div
                 className="w-8 h-8 rounded-xl flex items-center justify-center shadow-lg"
-                style={{ background: 'var(--color-primary-gradient)' }}
+                style={{ background: atProductLimit ? '#cbd5e1' : 'var(--color-primary-gradient)' }}
               >
                 <Plus className="w-5 h-5 text-white" strokeWidth={2.5} />
               </div>
-              <span className="text-xs font-semibold" style={{ color: 'rgb(var(--color-primary))' }}>Sell</span>
+              <span className="text-xs font-semibold" style={{ color: atProductLimit ? '#94a3b8' : 'rgb(var(--color-primary))' }}>{atProductLimit ? 'Limit' : 'Sell'}</span>
             </button>
           </div>
 
