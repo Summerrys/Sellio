@@ -368,6 +368,8 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         await syncProductVariants(supabase, inserted.id, tenantId, formData.variants, inserted.sku);
         toast.success('Product created');
         queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
+        // Keep the Layout's Sell-FAB product-count (used for the plan-limit gate) in sync too.
+        queryClient.invalidateQueries({ queryKey: ['productCount', tenantId] });
         if (aiAssistantRef.current) await cleanupDeletedImages(aiAssistantRef.current);
 
         // Wait 1.2s so user sees the generated SKU, then close
@@ -390,6 +392,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
       await db.entities.Product.delete(product.id);
       toast.success('Product deleted');
       queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
+      queryClient.invalidateQueries({ queryKey: ['productCount', tenantId] });
       onOpenChange(false);
     } catch (err) {
       toast.error(err.message || 'Failed to delete product');
