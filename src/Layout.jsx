@@ -497,6 +497,15 @@ function AppLayout({ children, currentPageName }) {
         tenantId={tenant?.id}
       />
 
+      {/* Plan upgrade prompt — shown when the Sell FAB is tapped after hitting the product limit */}
+      <PricingModal
+        open={upgradeModalOpen}
+        onOpenChange={setUpgradeModalOpen}
+        tenantId={tenantId}
+        currentTier={subscription?.tier ?? null}
+        hasUsedTrial={tenant?.has_used_trial ?? false}
+      />
+
       <AccountProfileModal
         open={showProfileModal}
         onClose={() => setShowProfileModal(false)}
