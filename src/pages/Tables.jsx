@@ -631,16 +631,18 @@ export default function Tables() {
                               >
                                 <Download style={{ width: '14px', height: '14px', color: '#64748b' }} />
                               </button>
-                              <button
-                                onClick={() => handleEdit(table)}
-                                style={{ width: '28px', height: '28px', borderRadius: '6px', border: '0.5px solid #e2e8f0', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                              >
-                                <Pencil style={{ width: '14px', height: '14px', color: '#64748b' }} />
-                              </button>
+                              {canEdit && (
+                                <button
+                                  onClick={() => handleEdit(table)}
+                                  style={{ width: '28px', height: '28px', borderRadius: '6px', border: '0.5px solid #e2e8f0', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                  <Pencil style={{ width: '14px', height: '14px', color: '#64748b' }} />
+                                </button>
+                              )}
                             </div>
                           </div>
                           <div className="grid grid-cols-4 gap-1" onClick={e => e.stopPropagation()}>
-                            {STATUS_OPTIONS.map(({ key, label, Icon, activeBg, inactiveBg, inactiveColor }) => (
+                            {canEdit && STATUS_OPTIONS.map(({ key, label, Icon, activeBg, inactiveBg, inactiveColor }) => (
                               <button key={key}
                                 onClick={() => handleStatusChange(table, key)}
                                 className="flex flex-col items-center py-1 px-0.5 rounded-lg transition-all active:scale-95 overflow-hidden"
