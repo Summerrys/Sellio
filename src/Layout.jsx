@@ -217,7 +217,26 @@ function AppLayout({ children, currentPageName }) {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
 
   const { appUser: customUser, clearAppUser } = useAppUser();
-  const { user, tenant, isSuperAdmin, isLoading, hasPermission } = useTenant();
+  const { user, tenant, tenantId, subscription, isSuperAdmin, isLoading, hasPermission } = useTenant();
+
+  // Lightweight product count (head-only) so the Sell FAB can gate against the
+  // plan's product limit the same way the Products page's Add/Scan buttons do —
+  // previously the FAB had no limit check at all, so it stayed active and just
+  // let the create fail (or silently succeed past the cap) instead of prompting
+  // an upgrade like every other entry point.
+  const { data: productCount = 0 } = useQuery({
+    queryKey: ['productCount', tenantId],
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { count } = await supabase.from('products').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId);
+      return count ?? 0;
+    },
+    enabled: !!tenantId,
+    staleTime: 60 * 1000,
+  });
+  const maxProducts = subscription?.max_products ?? null;
+  const atProductLimit = maxProducts != null && productCount >= maxProducts;
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 
   // Prompt to install as an app whenever a merchant or staff logs in via browser.
   // Skipped entirely if already running as an installed PWA, or already shown
