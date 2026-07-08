@@ -313,12 +313,29 @@ export function TenantProvider({ children }) {
     }
   }, [user, devRoleOverride]);
 
-  // Secondary: tenant_users can override if it resolves a tenant_id that app_users doesn't have
+  // Secondary: tenant_users is the actual source of truth for "which tenant(s)
+  // can this person access" (it's what createStaffUser and onboarding write when
+  // granting access) — app_users.tenant_id is just a denormalized convenience
+  // field and can go stale (e.g. still pointing at a tenant that was later
+  // deleted, or never synced after an invite). If the resolved tenantId isn't
+  // among this person's active memberships, switch to their real one. This is
+  // what caused newly-created Manager/Staff logins (or any account whose
+  // app_users.tenant_id had drifted) to land on a blank, unlinked workspace
+  // instead of the tenant they were actually invited to.
   useEffect(() => {
-    if (tenantUser?.length > 0 && tenantUser[0].tenant_id) {
-      setCurrentTenantId(tenantUser[0].tenant_id);
+    if (!tenantUser || tenantUser.length === 0) return;
+    const alreadyMatches = tenantUser.some(tu => tu.tenant_id === currentTenantId);
+    if (alreadyMatches) return;
+    const correctTenantId = tenantUser[0].tenant_id;
+    console.warn('app_users.tenant_id was stale/mismatched for', user?.email, '— correcting to', correctTenantId);
+    setCurrentTenantId(correctTenantId);
+    // Best-effort self-heal so future logins don't hit the same stale-pointer issue.
+    if (user?.email) {
+      getSupabase().then(supabase =>
+        supabase.from('app_users').update({ tenant_id: correctTenantId }).eq('email', user.email)
+      );
     }
-  }, [tenantUser]);
+  }, [tenantUser, currentTenantId, user?.email]);
 
   useEffect(() => {
     // Dev simulate_role override
