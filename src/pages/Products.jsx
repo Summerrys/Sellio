@@ -582,9 +582,9 @@ export default function Products() {
           </div>
         </div>
 
-        {/* Selection toolbar */}
+        {/* Selection toolbar — sticky so it stays reachable while scrolling through a long product list */}
         {selectionMode && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(var(--color-primary), 0.06)', borderRadius: 12, border: '1px solid rgba(var(--color-primary), 0.2)', marginBottom: 4 }}>
+          <div style={{ position: 'sticky', top: 8, zIndex: 30, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'white', borderRadius: 12, border: '1px solid rgba(var(--color-primary), 0.25)', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.12)', marginBottom: 4 }}>
             <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'rgb(var(--color-primary))' }}>
               {selectedIds.size} selected
             </span>
