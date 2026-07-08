@@ -177,7 +177,14 @@ function Section({ title, children, defaultOpen = true }) {
 }
 
 export default function ProductFormDialog({ open, onOpenChange, product, tenantId }) {
-    const { tenant } = useTenant();
+    const { tenant, hasPermission } = useTenant();
+    // Granular gating: editing an existing product needs products.edit, creating a
+    // new one needs products.create (already gated upstream at the buttons that open
+    // this dialog, but re-checked here too since the dialog can be reached from
+    // multiple entry points). Someone with only products.view can still open a
+    // product to look at it, but the form renders read-only and Save/Delete hide.
+    const canEdit = product?.id ? hasPermission('products.edit') : hasPermission('products.create');
+    const canDelete = hasPermission('products.delete');
     const queryClient = useQueryClient();
     const [formData, setFormData] = useState(EMPTY_FORM);
     const [categories, setCategories] = useState([]);
