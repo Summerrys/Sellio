@@ -381,10 +381,6 @@ export function TenantProvider({ children }) {
   }, [role, tenantUser, devRoleOverride, user, currentTenantId]);
 
   const PERMISSION_ALIASES = {
-    'orders.edit': 'orders.update',
-    'orders.update': 'orders.edit',
-    'tables.edit': 'tables.manage',
-    'tables.manage': 'tables.edit',
     'inventory.edit': 'inventory.adjust',
     'inventory.adjust': 'inventory.edit',
   };
