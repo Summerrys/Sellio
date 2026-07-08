@@ -401,13 +401,42 @@ Deno.serve(async (req) => {
     console.log('→ Step 8: insert subscription...');
     try {
       const now = new Date();
-      const trialEnd = new Date(now);
-      trialEnd.setDate(trialEnd.getDate() + 3);
+      const fallbackTrialEnd = new Date(now);
+      fallbackTrialEnd.setDate(fallbackTrialEnd.getDate() + 3);
+
+      // FIX: previously this ALWAYS hardcoded status:'trial' with a fixed 3-day
+      // window, even when the merchant had already paid in full at checkout
+      // (e.g. via a NO_TRIAL_LINKS payment link with an immediate charge). That
+      // meant a fully-paid subscription still got recorded locally as a 3-day
+      // trial, so it would show "trial has ended" the moment that fake window
+      // lapsed, regardless of what Stripe actually billed. We now ask Stripe for
+      // the real subscription state (mirrors the in-app-upgrade branch in
+      // stripe-webhook) and only fall back to the 3-day trial when there's
+      // genuinely no Stripe subscription to check.
+      let subStatus = 'trial';
+      let periodStart = now.toISOString();
+      let periodEnd = fallbackTrialEnd.toISOString();
+
+      if (stripeSubscriptionId) {
+        try {
+          const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', { apiVersion: '2026-04-22.dahlia' as any });
+          const stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+          subStatus = stripeSub.status === 'trialing' ? 'trial' : 'active';
+          if (stripeSub.current_period_start) periodStart = new Date(stripeSub.current_period_start * 1000).toISOString();
+          if (stripeSub.current_period_end) periodEnd = new Date(stripeSub.current_period_end * 1000).toISOString();
+          console.log('  ✓ Resolved real Stripe subscription state:', { stripeStatus: stripeSub.status, mappedStatus: subStatus, periodEnd });
+        } catch (e) {
+          console.warn('  Could not fetch Stripe subscription (falling back to 3-day trial):', e.message);
+        }
+      } else {
+        console.warn('  No stripeSubscriptionId on invite — defaulting to 3-day trial');
+      }
+
       const { error } = await supabase.from('subscriptions').insert({
-        tenant_id: newTenantId, tier, status: 'trial',
+        tenant_id: newTenantId, tier, status: subStatus,
         billing_cycle: 'monthly',
-        current_period_start: now.toISOString(),
-        current_period_end: trialEnd.toISOString(),
+        current_period_start: periodStart,
+        current_period_end: periodEnd,
         currency: stripeCurrency,
         max_roles: MAX_ROLES,
         max_orders: limits.max_orders,
@@ -423,9 +452,14 @@ Deno.serve(async (req) => {
       // meaning it stayed false through the entire trial period. Any later upgrade
       // would then incorrectly qualify for ANOTHER free trial via UpgradeWall's
       // hasUsedTrial check, instead of going straight to a full paid subscription.
-      await supabase.from('tenants').update({ has_used_trial: true }).eq('id', newTenantId);
+      // Also FIX: record tenants.stripe_customer_id here too — previously this was
+      // only ever set by stripe-webhook's in-app-upgrade branch, so a merchant's
+      // very first (signup-time) Stripe customer was never linked on the tenant
+      // row, breaking any later webhook event that looks up the tenant by
+      // stripe_customer_id (e.g. customer.subscription.updated).
+      await supabase.from('tenants').update({ has_used_trial: true, stripe_customer_id: stripeCustomerId }).eq('id', newTenantId);
 
-      console.log('✓ Step 8 subscription inserted | tier:', tier, '| max_products:', limits.max_products, '| has_used_trial set true');
+      console.log('✓ Step 8 subscription inserted | tier:', tier, '| status:', subStatus, '| max_products:', limits.max_products, '| has_used_trial set true');
     } catch (e) { return fail(8, 'subscriptions', e); }
 
     const rawHours = formData.operatingHours || formData.businessHours || formData.operating_hours;
