@@ -106,7 +106,7 @@ function CategoriesContent() {
       />
 
       {categories.length === 0 ? (
-        <Card className="border-0 shadow-sm"><EmptyState icon={Grid3X3} title="No categories" description="Create categories to organize your products." actionLabel="Add Category" onAction={() => open(null)} /></Card>
+        <Card className="border-0 shadow-sm"><EmptyState icon={Grid3X3} title="No categories" description="Create categories to organize your products." actionLabel={canCreate ? 'Add Category' : undefined} onAction={canCreate ? () => open(null) : undefined} /></Card>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-2 gap-4">
           {categories.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)).map(cat => {
