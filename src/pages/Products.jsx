@@ -350,7 +350,7 @@ export default function Products() {
     queryFn: async () => {
       const supabase = await getSupabase();
       const [{ data: rawProducts, error }, { data: inventoryItems }] = await Promise.all([
-        supabase.from('products').select('*').eq('tenant_id', tenantId).order('created_date', { ascending: false }),
+        supabase.from('products').select('*').eq('tenant_id', tenantId).order('created_date', { ascending: false }).order('id', { ascending: true }),
         supabase.from('inventory_items').select('product_id, current_stock, low_stock_threshold').eq('tenant_id', tenantId),
       ]);
       if (error) throw error;
