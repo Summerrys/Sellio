@@ -441,8 +441,9 @@ Deno.serve(async (req) => {
           const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', { apiVersion: '2026-04-22.dahlia' as any });
           const stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
           subStatus = stripeSub.status === 'trialing' ? 'trial' : 'active';
-          if (stripeSub.current_period_start) periodStart = new Date(stripeSub.current_period_start * 1000).toISOString();
-          if (stripeSub.current_period_end) periodEnd = new Date(stripeSub.current_period_end * 1000).toISOString();
+          const resolvedPeriod = getSubPeriod(stripeSub);
+          if (resolvedPeriod.start) periodStart = resolvedPeriod.start;
+          if (resolvedPeriod.end) periodEnd = resolvedPeriod.end;
           console.log('  ✓ Resolved real Stripe subscription state:', { stripeStatus: stripeSub.status, mappedStatus: subStatus, periodEnd });
         } catch (e) {
           console.warn('  Could not fetch Stripe subscription (falling back to 3-day trial):', e.message);
