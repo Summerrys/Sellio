@@ -727,6 +727,7 @@ export default function Products() {
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
             queryClient.invalidateQueries({ queryKey: ['categories', tenantId] });
+            queryClient.invalidateQueries({ queryKey: ['productCount', tenantId] });
           }}
         />
 
