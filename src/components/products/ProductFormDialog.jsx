@@ -591,7 +591,8 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
               disabled={saving}
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (product?.id ? 'Save Changes' : 'Create Product')}
-          </Button>
+            </Button>
+          )}
         </div>
       </div>
 
