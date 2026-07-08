@@ -361,14 +361,16 @@ export default function Tables() {
           title="Tables & QR Codes"
           description="Manage your dining tables and QR code ordering"
           actions={
-            <Button
-              onClick={handleAdd}
-              size="sm"
-              className="text-white gap-1.5"
-              style={{ background: 'var(--color-primary-gradient)' }}
-            >
-              <Plus className="w-4 h-4" /> Add Table
-            </Button>
+            canCreate ? (
+              <Button
+                onClick={handleAdd}
+                size="sm"
+                className="text-white gap-1.5"
+                style={{ background: 'var(--color-primary-gradient)' }}
+              >
+                <Plus className="w-4 h-4" /> Add Table
+              </Button>
+            ) : undefined
           }
         />
 
