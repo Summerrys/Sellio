@@ -133,21 +133,23 @@ function InventoryContent() {
             <h1 className="text-2xl font-bold text-slate-900">Inventory</h1>
             <p className="text-sm text-slate-500">Track and manage your stock levels</p>
           </div>
-          <button
-            onClick={handleStartStockTake}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
-            style={{ border: '1.5px solid rgb(var(--color-primary))', color: 'rgb(var(--color-primary))', background: 'rgba(var(--color-primary), 0.08)' }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'var(--color-primary-gradient)';
-              e.currentTarget.style.color = '#fff';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'rgba(var(--color-primary), 0.08)';
-              e.currentTarget.style.color = 'rgb(var(--color-primary))';
-            }}
-          >
-            <ClipboardList className="w-4 h-4" /> Stock Take
-          </button>
+          {canStockTake && (
+            <button
+              onClick={handleStartStockTake}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
+              style={{ border: '1.5px solid rgb(var(--color-primary))', color: 'rgb(var(--color-primary))', background: 'rgba(var(--color-primary), 0.08)' }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'var(--color-primary-gradient)';
+                e.currentTarget.style.color = '#fff';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'rgba(var(--color-primary), 0.08)';
+                e.currentTarget.style.color = 'rgb(var(--color-primary))';
+              }}
+            >
+              <ClipboardList className="w-4 h-4" /> Stock Take
+            </button>
+          )}
         </div>
 
         {/* Summary Cards */}
