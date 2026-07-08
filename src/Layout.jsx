@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { TenantProvider, useTenant } from './components/tenant/TenantContext';
@@ -28,6 +29,7 @@ import {
   Clock
 } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
+import PricingModal from './components/subscription/PricingModal';
 import ProductFormDialog from './components/products/ProductFormDialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
