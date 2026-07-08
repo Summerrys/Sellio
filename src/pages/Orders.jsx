@@ -90,6 +90,8 @@ function printReceipt(order, currency, merchantName) {
 }
 
 function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate, onMarkPaid }) {
+  const { hasPermission } = useTenant();
+  const canEditOrders = hasPermission('orders.edit');
   const action = STATUS_NEXT[order.status];
   const accent = STATUS_ACCENT[order.status] || STATUS_ACCENT.completed;
   const elapsed = formatDistanceToNow(new Date(order.created_date || order.created_at), { addSuffix: true });
@@ -185,8 +187,8 @@ function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate, on
           </div>
 
           {/* Action buttons */}
-          <div className={showPrint || (order.payment_status !== 'paid' && (order.status === 'completed' || order.status === 'ready')) ? 'flex flex-col gap-2' : ''}>
-            {order.payment_status !== 'paid' && (order.status === 'completed' || order.status === 'ready') && (
+          <div className={showPrint || (canEditOrders && order.payment_status !== 'paid' && (order.status === 'completed' || order.status === 'ready')) ? 'flex flex-col gap-2' : ''}>
+            {canEditOrders && order.payment_status !== 'paid' && (order.status === 'completed' || order.status === 'ready') && (
               <button
                 onClick={() => onMarkPaid(order)}
                 className="w-full py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
@@ -208,7 +210,7 @@ function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate, on
                 <Printer className="w-3.5 h-3.5" /> Receipt
               </button>
             )}
-            {action && (
+            {action && canEditOrders && (
               <button
                 onClick={() => onStatusUpdate(order.id, action.next)}
                 className={`py-2.5 rounded-lg text-sm font-semibold text-white active:scale-95 transition-transform ${showPrint ? 'flex-1' : 'w-full'}`}
