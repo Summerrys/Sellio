@@ -77,7 +77,7 @@ function CategoriesContent() {
   };
 
   return (
-    <PermissionGate permission="categories.read">
+    <>
       <PageHeader title="Categories" description="Organize your products into categories"
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -89,16 +89,18 @@ function CategoriesContent() {
                 <List size={16} />
               </button>
             </div>
-            <Button
-              onClick={() => open(null)}
-              size="sm"
-              className="text-white gap-1.5"
-              style={{ background: 'var(--color-primary-gradient)' }}
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Add Category</span>
-              <span className="sm:hidden">Add</span>
-            </Button>
+            {canCreate && (
+              <Button
+                onClick={() => open(null)}
+                size="sm"
+                className="text-white gap-1.5"
+                style={{ background: 'var(--color-primary-gradient)' }}
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Add Category</span>
+                <span className="sm:hidden">Add</span>
+              </Button>
+            )}
           </div>
         }
       />
