@@ -25,7 +25,10 @@ export default function Categories() {
 }
 
 function CategoriesContent() {
-  const { tenantId } = useTenant();
+  const { tenantId, hasPermission } = useTenant();
+  const canCreate = hasPermission('categories.create');
+  const canEdit = hasPermission('categories.edit');
+  const canDelete = hasPermission('categories.delete');
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
