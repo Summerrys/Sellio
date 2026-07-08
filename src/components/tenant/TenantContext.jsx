@@ -66,7 +66,7 @@ const PERMISSIONS = ALL_PERMISSIONS;
 export const PERMISSION_GROUPS = {
   orders: {
     label: 'Orders',
-    permissions: ['orders.view','orders.create','orders.edit','orders.update','orders.cancel'],
+    permissions: ['orders.view','orders.create','orders.edit','orders.cancel'],
   },
   products: {
     label: 'Products',
@@ -78,11 +78,13 @@ export const PERMISSION_GROUPS = {
   },
   inventory: {
     label: 'Inventory',
-    permissions: ['inventory.view','inventory.edit','inventory.adjust','inventory.restock'],
+    // Suppliers live here now, not under Settings — supplier records are
+    // inventory data (who you restock from), not business configuration.
+    permissions: ['inventory.view','inventory.edit','inventory.adjust','inventory.restock','inventory.stock_take','inventory.delivery_order','suppliers.view','suppliers.create','suppliers.edit','suppliers.delete'],
   },
   tables: {
     label: 'Tables & QR',
-    permissions: ['tables.view','tables.create','tables.edit','tables.delete','tables.manage'],
+    permissions: ['tables.view','tables.create','tables.edit','tables.delete'],
   },
   staff: {
     label: 'Staff Management',
@@ -98,11 +100,11 @@ export const PERMISSION_GROUPS = {
   },
   settings: {
     label: 'Settings & Configuration',
-    permissions: ['settings.view','settings.edit','theme.edit','suppliers.view','suppliers.manage'],
+    permissions: ['settings.view','settings.edit','theme.edit'],
   },
   payments: {
     label: 'Payments',
-    permissions: ['payments.view','payments.process','payments.refund'],
+    permissions: ['payments.view','payments.edit'],
   },
 };
 
