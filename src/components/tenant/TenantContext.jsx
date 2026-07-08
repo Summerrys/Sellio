@@ -133,8 +133,8 @@ export const ROLE_TEMPLATES = {
       'products.view', 'products.create', 'products.edit',
       'categories.view', 'categories.create', 'categories.edit',
       'inventory.view', 'inventory.adjust', 'inventory.restock',
-      'orders.view', 'orders.create', 'orders.update',
-      'tables.view', 'tables.manage',
+      'orders.view', 'orders.create', 'orders.edit',
+      'tables.view', 'tables.edit',
       'payments.view',
       'reports.view',
       'suppliers.view',
@@ -146,9 +146,9 @@ export const ROLE_TEMPLATES = {
     permissions: [
       'products.view',
       'categories.view',
-      'orders.view', 'orders.create', 'orders.update',
+      'orders.view', 'orders.create', 'orders.edit',
       'tables.view',
-      'payments.view', 'payments.process',
+      'payments.view',
     ],
   },
   waiter: {
@@ -157,8 +157,8 @@ export const ROLE_TEMPLATES = {
     permissions: [
       'products.view',
       'categories.view',
-      'orders.view', 'orders.create', 'orders.update',
-      'tables.view', 'tables.manage',
+      'orders.view', 'orders.create', 'orders.edit',
+      'tables.view', 'tables.edit',
     ],
   },
   chef: {
@@ -166,7 +166,7 @@ export const ROLE_TEMPLATES = {
     description: 'View and update order preparation status',
     permissions: [
       'products.view',
-      'orders.view', 'orders.update',
+      'orders.view', 'orders.edit',
       'inventory.view',
     ],
   },
