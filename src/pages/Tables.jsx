@@ -564,12 +564,14 @@ export default function Tables() {
                             >
                               <Download style={{ width: '13px', height: '13px' }} /> QR
                             </button>
-                            <button
-                              onClick={() => handleEdit(table)}
-                              style={{ flex: 1, padding: '6px', borderRadius: '8px', border: '0.5px solid #e2e8f0', background: 'none', fontSize: '11px', fontWeight: '600', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                            >
-                              <Pencil style={{ width: '13px', height: '13px' }} /> Edit
-                            </button>
+                            {canEdit && (
+                              <button
+                                onClick={() => handleEdit(table)}
+                                style={{ flex: 1, padding: '6px', borderRadius: '8px', border: '0.5px solid #e2e8f0', background: 'none', fontSize: '11px', fontWeight: '600', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                              >
+                                <Pencil style={{ width: '13px', height: '13px' }} /> Edit
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
