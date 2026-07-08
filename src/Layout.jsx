@@ -386,14 +386,14 @@ function AppLayout({ children, currentPageName }) {
       {/* Main Content */}
       <main
         className={cn(
-          "flex-1 transition-all duration-300 min-h-screen overflow-x-hidden",
+          "flex-1 transition-all duration-300 min-h-screen",
           (currentPageName === 'Onboarding' || window.location.pathname.startsWith('/store/') || window.location.pathname.startsWith('/order/')) ? "pt-0" : "pt-[calc(56px+env(safe-area-inset-top,0px))] lg:pt-0",
           currentPageName !== 'Onboarding' && (collapsed ? "lg:ml-[72px]" : "lg:ml-[260px]")
         )}
-        style={{ paddingBottom: currentPageName !== 'Onboarding' ? 'calc(env(safe-area-inset-bottom, 0px) + 72px)' : undefined }}
+        style={{ paddingBottom: currentPageName !== 'Onboarding' ? 'calc(env(safe-area-inset-bottom, 0px) + 72px)' : undefined, overflowX: 'clip' }}
       >
 
-        <div className="p-2 sm:p-6 lg:p-8 max-w-[1280px] mx-auto overflow-x-hidden">
+        <div className="p-2 sm:p-6 lg:p-8 max-w-[1280px] mx-auto" style={{ overflowX: 'clip' }}>
           {children}
         </div>
       </main>
