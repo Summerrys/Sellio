@@ -583,9 +583,23 @@ export default function Products() {
           </div>
         </div>
 
-        {/* Selection toolbar — sticky so it stays reachable while scrolling through a long product list. top offset clears the fixed mobile header (56px + safe-area) so it docks just below it instead of hiding underneath. */}
+        {/* Selection toolbar — fixed on mobile so it stays reachable while scrolling a long
+            product list, without touching any shared/global layout CSS (position:sticky
+            here previously required loosening overflow-x-hidden on <main>, which caused a
+            page-wide horizontal-overflow regression elsewhere — position:fixed avoids that
+            entirely since it isn't affected by an ancestor's overflow property). On desktop
+            it stays in normal flow like before, since the product list rarely needs scrolling
+            past the toolbar there. */}
         {selectionMode && (
-          <div style={{ position: 'sticky', top: 'calc(56px + env(safe-area-inset-top, 0px) + 8px)', zIndex: 20, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'white', borderRadius: 12, border: '1px solid rgba(var(--color-primary), 0.25)', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.12)', marginBottom: 4 }}>
+          <>
+            {window.innerWidth < 1024 && <div style={{ height: 60 }} />}
+            <div
+              style={
+                window.innerWidth < 1024
+                  ? { position: 'fixed', top: 'calc(56px + env(safe-area-inset-top, 0px) + 8px)', left: 8, right: 8, zIndex: 20, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'white', borderRadius: 12, border: '1px solid rgba(var(--color-primary), 0.25)', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.12)' }
+                  : { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(var(--color-primary), 0.06)', borderRadius: 12, border: '1px solid rgba(var(--color-primary), 0.2)', marginBottom: 4 }
+              }
+            >
             <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'rgb(var(--color-primary))' }}>
               {selectedIds.size} selected
             </span>
@@ -610,7 +624,8 @@ export default function Products() {
             <button onClick={handleCancelSelection} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center' }}>
               <X size={18} />
             </button>
-          </div>
+            </div>
+          </>
         )}
 
         {/* Filters and View Toggle */}
