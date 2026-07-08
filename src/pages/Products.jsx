@@ -582,9 +582,9 @@ export default function Products() {
           </div>
         </div>
 
-        {/* Selection toolbar — sticky so it stays reachable while scrolling through a long product list */}
+        {/* Selection toolbar — sticky so it stays reachable while scrolling through a long product list. top offset clears the fixed mobile header (56px + safe-area) so it docks just below it instead of hiding underneath. */}
         {selectionMode && (
-          <div style={{ position: 'sticky', top: 8, zIndex: 30, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'white', borderRadius: 12, border: '1px solid rgba(var(--color-primary), 0.25)', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.12)', marginBottom: 4 }}>
+          <div style={{ position: 'sticky', top: 'calc(56px + env(safe-area-inset-top, 0px) + 8px)', zIndex: 20, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'white', borderRadius: 12, border: '1px solid rgba(var(--color-primary), 0.25)', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.12)', marginBottom: 4 }}>
             <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'rgb(var(--color-primary))' }}>
               {selectedIds.size} selected
             </span>
