@@ -9,7 +9,6 @@ export const ALL_PERMISSIONS = {
   'orders.view': 'View orders',
   'orders.create': 'Create orders',
   'orders.edit': 'Edit orders',
-  'orders.update': 'Update orders',
   'orders.cancel': 'Cancel orders',
   // Products
   'products.view': 'View products',
@@ -21,17 +20,23 @@ export const ALL_PERMISSIONS = {
   'categories.create': 'Create categories',
   'categories.edit': 'Edit categories',
   'categories.delete': 'Delete categories',
-  // Inventory
+  // Inventory (includes suppliers — moved here from Settings, since supplier
+  // records are inventory data, not business configuration)
   'inventory.view': 'View inventory',
   'inventory.edit': 'Edit inventory',
   'inventory.adjust': 'Adjust stock',
   'inventory.restock': 'Restock inventory',
+  'inventory.stock_take': 'Perform stock takes and closing reports',
+  'inventory.delivery_order': 'Record and manage delivery orders',
+  'suppliers.view': 'View suppliers',
+  'suppliers.create': 'Create suppliers',
+  'suppliers.edit': 'Edit suppliers',
+  'suppliers.delete': 'Delete suppliers',
   // Tables
   'tables.view': 'View tables',
   'tables.create': 'Create tables',
   'tables.edit': 'Edit tables',
   'tables.delete': 'Delete tables',
-  'tables.manage': 'Manage tables',
   // Staff
   'staff.view': 'View staff',
   'staff.create': 'Create staff',
@@ -48,15 +53,11 @@ export const ALL_PERMISSIONS = {
   // Settings
   'settings.view': 'View settings',
   'settings.edit': 'Edit settings',
-  // Payments
+  'theme.edit': 'Modify Theme',
+  // Payments — view + edit only. Actual charge/refund handling lives on
+  // Stripe's side, not in-app, so there's nothing here to "process" or "refund".
   'payments.view': 'View payments',
-  'payments.process': 'Process payments',
-  'payments.refund': 'Refund payments',
-  // Theme
-  'theme.edit': 'Customise theme and branding',
-  // Suppliers
-  'suppliers.view': 'View suppliers',
-  'suppliers.manage': 'Manage suppliers',
+  'payments.edit': 'Modify payments',
 };
 
 const PERMISSIONS = ALL_PERMISSIONS;
