@@ -1,6 +1,25 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import Stripe from 'npm:stripe@14';
 
+// FIX: newer Stripe API versions moved current_period_start/current_period_end
+// off the top-level Subscription object onto each SubscriptionItem (to support
+// multiple items with independent billing cycles). Reading sub.current_period_start
+// directly now returns undefined — which produced new Date(undefined * 1000),
+// an Invalid Date, and .toISOString() throwing RangeError: Invalid time value.
+// That crash is what caused stripe-webhook to 500 on every subscription update,
+// including real successful payments, without ever updating our DB. This helper
+// checks the item level first, with the old top-level field as a fallback for
+// safety, and returns null (never throws) if neither is present.
+function getSubPeriod(sub) {
+  const item = sub.items?.data?.[0];
+  const startSec = sub.current_period_start ?? item?.current_period_start ?? null;
+  const endSec = sub.current_period_end ?? item?.current_period_end ?? null;
+  return {
+    start: typeof startSec === 'number' ? new Date(startSec * 1000).toISOString() : null,
+    end: typeof endSec === 'number' ? new Date(endSec * 1000).toISOString() : null,
+  };
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
