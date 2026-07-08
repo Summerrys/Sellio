@@ -543,7 +543,7 @@ export default function Tables() {
                             ) : null;
                           })()}
                           <div className="grid grid-cols-4 gap-1 mt-2" onClick={e => e.stopPropagation()}>
-                            {STATUS_OPTIONS.map(({ key, label, Icon, activeBg, inactiveBg, inactiveColor }) => (
+                            {canEdit && STATUS_OPTIONS.map(({ key, label, Icon, activeBg, inactiveBg, inactiveColor }) => (
                               <button key={key}
                                 onClick={() => handleStatusChange(table, key)}
                                 className="flex flex-col items-center py-1 px-0.5 rounded-lg transition-all active:scale-95 overflow-hidden"
