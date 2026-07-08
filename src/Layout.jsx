@@ -38,7 +38,6 @@ import { useAppUser } from '@/lib/AppUserContext';
 import { cn } from '@/lib/utils';
 import UpgradeWall from './components/subscription/UpgradeWall';
 import AppLoader from '@/components/ui-custom/AppLoader';
-import PricingModal from './components/subscription/PricingModal';
 import TrialReminderModal from './components/subscription/TrialReminderModal';
 import AccountProfileModal from './components/profile/AccountProfileModal';
 import InstallPWAModal from './components/onboarding/InstallPWAModal';
