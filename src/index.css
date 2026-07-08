@@ -82,6 +82,17 @@
     @apply border-border outline-ring/50;
   }
 
+  /* Prevent horizontal page overflow globally. Deliberately placed on html/body
+     (not on an inner wrapper like <main>) — overflow-x:hidden on a mid-tree div
+     that never actually scrolls internally still registers as a "scroll
+     container" for position:sticky purposes, silently breaking sticky
+     elements inside it. Keeping the containment at the true document root
+     avoids that while still clipping any accidental horizontal overflow. */
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+  }
+
   body {
     @apply bg-background text-foreground;
   }
