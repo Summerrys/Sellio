@@ -235,13 +235,12 @@ export default function Dashboard() {
                 />
                 <span style={{
                   position: 'absolute',
-                  top: '100%',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  marginTop: 4,
+                  bottom: -2,
+                  left: '100%',
+                  marginLeft: 6,
                   background: 'white',
                   border: '1px solid rgba(224,68,154,0.2)',
-                  borderRadius: 10,
+                  borderRadius: '10px 10px 10px 2px',
                   padding: '3px 8px',
                   fontSize: 10,
                   fontWeight: 700,
@@ -252,7 +251,6 @@ export default function Dashboard() {
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
                   lineHeight: 1.4,
-                  zIndex: 5,
                 }}>Ask me anything ✨</span>
               </button>
           </h1>
