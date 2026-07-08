@@ -502,6 +502,7 @@ export default function Products() {
       await supabase.from('inventory_items').delete().in('product_id', ids);
       await supabase.from('products').delete().in('id', ids);
       await queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
+      await queryClient.invalidateQueries({ queryKey: ['productCount', tenantId] });
       handleCancelSelection();
     } catch (e) {
       console.error('Bulk delete failed:', e);
