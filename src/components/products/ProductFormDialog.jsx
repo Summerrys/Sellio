@@ -563,7 +563,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
 
         {/* Footer */}
         <div className="flex gap-3 px-4 py-4 border-t border-slate-100 flex-shrink-0">
-          {product?.id ? (
+          {product?.id && canDelete ? (
            <Button
              variant="outline"
              className={cn("flex-shrink-0 transition-all", confirmDelete ? "border-red-500 bg-red-50 text-red-600 hover:bg-red-100" : "text-red-500 border-red-200 hover:bg-red-50")}
@@ -573,23 +573,24 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
              {confirmDelete ? 'Confirm?' : ''}
            </Button>
-          ) : (
+          ) : (!product?.id &&
            <Button variant="outline" className="flex-1" onClick={handleCancel}>
              Cancel
            </Button>
           )}
           {product?.id && (
            <Button variant="outline" className="flex-1" onClick={() => { setConfirmDelete(false); handleCancel(); }}>
-             Cancel
+             {canEdit ? 'Cancel' : 'Close'}
            </Button>
           )}
-          <Button
-            className="flex-1 text-white"
-            style={{ background: 'var(--color-primary-gradient)' }}
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (product?.id ? 'Save Changes' : 'Create Product')}
+          {canEdit && (
+            <Button
+              className="flex-1 text-white"
+              style={{ background: 'var(--color-primary-gradient)' }}
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (product?.id ? 'Save Changes' : 'Create Product')}
           </Button>
         </div>
       </div>
