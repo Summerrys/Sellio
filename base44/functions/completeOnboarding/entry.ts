@@ -148,7 +148,10 @@ Deno.serve(async (req) => {
     const businessName = formData.businessName;
     const tenantSlug = toSlug(businessName);
     const industry = formData.businessType || formData.industry || '';
-    const isFnB = /f&b|cafe|restaurant|food/i.test(industry);
+    // Keep this regex in sync with isFnBIndustry() in src/lib/industry.js — this
+    // edge function runs in a separate Deno runtime and can't import that frontend
+    // module directly, so the keyword set has to be duplicated here manually.
+    const isFnB = /f&b|cafe|restaurant|food|beverage|bar/i.test(industry);
 
     const { data: invite } = await supabase
       .from('merchant_invites')
