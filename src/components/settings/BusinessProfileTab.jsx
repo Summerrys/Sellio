@@ -14,11 +14,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import ImageEditModal from '@/components/onboarding/ImageEditModal';
 import { INDUSTRY_OPTIONS, normalizeIndustry } from '@/lib/industry';
 
-const INDUSTRIES = [
-  { value: 'f&b', label: 'F&B / Cafe / Restaurant' },
-  { value: 'retail', label: 'Retail', disabled: true },
-  { value: 'service', label: 'Service', disabled: true },
-];
+// FIX: previously had its own local INDUSTRIES + normaliseIndustry copy, separate
+// from onboarding's — the two lists could (and did) drift. Both now import from
+// src/lib/industry.js.
+const INDUSTRIES = INDUSTRY_OPTIONS;
 
 const COUNTRIES = ['Singapore', 'Malaysia'];
 
