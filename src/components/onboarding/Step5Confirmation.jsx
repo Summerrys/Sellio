@@ -41,7 +41,7 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   const taxRate = getTaxRate();
   const taxLabel = getTaxLabel();
 
-  const isFoodBeverage = formData.businessType?.toLowerCase().includes('food') || formData.businessType?.toLowerCase().includes('f&b');
+  const isFoodBeverage = isFnBIndustry(formData.businessType);
 
   const checklistItems = [
     { label: 'Business Profile', completed: !!formData.businessName, optional: false },
