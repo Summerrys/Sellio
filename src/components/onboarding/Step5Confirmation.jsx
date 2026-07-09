@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Rocket, Loader2, CheckCircle2, Circle, Star, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { isFnBIndustry } from '@/lib/industry';
 import { motion } from 'framer-motion';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { useAppUser, cookieUtils } from '@/lib/AppUserContext';
