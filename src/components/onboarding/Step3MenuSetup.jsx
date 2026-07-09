@@ -497,7 +497,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const { primary: primaryColor, secondary: secondaryColor, accent: accentColor } = getThemeCSSColors(formData);
   const chosenColor = formData?.theme ? (formData?.themeColors?.dark || formData?.customPrimary) : null;
   const themeColor = chosenColor || 'linear-gradient(to right, #3b82f6, #9333ea)';
-  const hints = INDUSTRY_HINTS[formData.businessType] || DEFAULT_HINTS;
+  const hints = INDUSTRY_HINTS[normalizeIndustry(formData.businessType)] || DEFAULT_HINTS;
 
   return (
     <Card className="p-3 sm:p-5 bg-white border-0 shadow-lg w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
