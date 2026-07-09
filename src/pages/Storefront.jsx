@@ -156,7 +156,7 @@ function StorefrontInner() {
   const primaryColor = storefrontConfig?.banner_bg_color || theme?.primary_color || '#6366f1';
   const currency = tenant?.currency || 'SGD';
   const sym = { SGD:'$', MYR:'RM ', USD:'$', AUD:'A$', GBP:'£', EUR:'€' }[currency] || (currency + ' ');
-  const isFnB = /f&b|cafe|restaurant|food|beverage/i.test(tenant?.industry || '');
+  const isFnB = isFnBIndustry(tenant?.industry);
 
   const addToCart = (product, variant = null) => {
     const key = `${product.id}-${variant?.label || 'default'}`;
