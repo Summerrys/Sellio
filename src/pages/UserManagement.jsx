@@ -536,8 +536,8 @@ function RolesContent({ onUpgrade }) {
                     <SelectTrigger className="h-9"><SelectValue placeholder="Start from template" /></SelectTrigger>
                     <SelectContent>
                       {Object.entries(ROLE_TEMPLATES).filter(([key]) => {
-                        const industry = tenant?.industry || 'other';
-                        const availableRoles = INDUSTRY_ROLES[industry] || INDUSTRY_ROLES.other;
+                        const industry = normalizeIndustry(tenant?.industry) || 'service';
+                        const availableRoles = INDUSTRY_ROLES[industry] || INDUSTRY_ROLES.service;
                         return key !== 'superadmin' && availableRoles.includes(key);
                       }).map(([key, template]) => (
                         <SelectItem key={key} value={key}>{template.name}</SelectItem>
