@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, UtensilsCrossed, ShoppingBag, Wrench, X, Edit3, Check, Palette, Pipette, Loader2 } from 'lucide-react';
+import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, X, Edit3, Check, Palette, Pipette, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { getSupabase } from '@/lib/supabaseClient';
 import { generateThemeVariables, COLOR_SETS as POPULAR_PALETTES, DEFAULT_GRADIENT, DEFAULT_PRIMARY, DEFAULT_ACCENT } from '../theme/themeUtils';
 import { cn } from '@/lib/utils';
+import { INDUSTRY_OPTIONS } from '@/lib/industry';
 import InstallPWAModal from './InstallPWAModal';
 import { canShowInstallPrompt } from '@/lib/pwaInstall';
 
@@ -21,11 +22,11 @@ const schema = z.object({
   country: z.string().min(1, 'Please select a country'),
 });
 
-const businessTypes = [
-  { value: 'food', label: 'F&B/Cafe/Restaurant', Icon: UtensilsCrossed, color: 'text-orange-500' },
-  { value: 'retail', label: 'Retail', Icon: ShoppingBag, color: 'text-blue-500', disabled: true },
-  { value: 'service', label: 'Service', Icon: Wrench, color: 'text-green-500', disabled: true },
-];
+// FIX: previously stored the value 'food' for the F&B option, while Settings >
+// Business (BusinessProfileTab) used 'f&b' — meaning the very first time a merchant
+// saved their Business Profile, tenants.industry silently changed value. Both now
+// share this one list (src/lib/industry.js) so there's nothing left to drift.
+const businessTypes = INDUSTRY_OPTIONS;
 
 const countries = ['Singapore', 'Malaysia'];
 
