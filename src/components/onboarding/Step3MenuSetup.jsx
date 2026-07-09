@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { deleteImageFromStorage } from '@/lib/imageStorage';
 import { useAppUser, cookieUtils } from '@/lib/AppUserContext';
 import PricingModal from '../subscription/PricingModal';
+import { normalizeIndustry } from '@/lib/industry';
 
 // Mirrors PLAN_LIMITS in the complete-onboarding edge function — keep in sync.
 // Used here only to warn the merchant *before* they submit; the edge function
