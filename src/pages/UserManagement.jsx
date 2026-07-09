@@ -292,8 +292,7 @@ function RolesContent({ onUpgrade }) {
   const [seedingRoles, setSeedingRoles] = useState(false);
 
   // Role cap logic
-  const industry = (tenant?.industry || '').toLowerCase();
-  const isFnB = /f&b|cafe|restaurant|food|bar/.test(industry);
+  const isFnB = isFnBIndustry(tenant?.industry);
   const planCap = isPro ? Infinity : roleCap;
   const roleCapReached = roles.length >= planCap;
   const slotsAvailable = planCap === Infinity ? Infinity : planCap - roles.length;
