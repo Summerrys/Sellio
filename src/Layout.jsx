@@ -35,6 +35,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { base44 } from '@/api/base44Client';
 import { useAppUser } from '@/lib/AppUserContext';
+import { isFnBIndustry } from '@/lib/industry';
 import { cn } from '@/lib/utils';
 import UpgradeWall from './components/subscription/UpgradeWall';
 import AppLoader from '@/components/ui-custom/AppLoader';
