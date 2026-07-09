@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { isFnBIndustry } from '@/lib/industry';
 import Step1Combined from '../components/onboarding/Step1Combined';
 import Step2Business from '../components/onboarding/Step2Business';
 import Step3MenuSetup from '../components/onboarding/Step3MenuSetup';
@@ -82,7 +83,7 @@ export default function Onboarding() {
   };
 
   const getSteps = () => {
-    const isFnB = formData.businessType === 'food' || formData.businessType === 'fnb' || formData.businessType === 'F&B';
+    const isFnB = isFnBIndustry(formData.businessType);
     const baseSteps = [
       { component: Step1Combined, title: 'Business Theme' },
       { component: Step2Business, title: 'Branch Setup' },
