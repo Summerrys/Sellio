@@ -32,16 +32,6 @@ const COUNTRY_CONFIG = {
 };
 const CURRENCY_TO_COUNTRY = { SGD: 'Singapore', MYR: 'Malaysia' };
 
-function normaliseIndustry(raw) {
-  if (!raw) return '';
-  const lower = raw.toLowerCase();
-  if (/f.?b|cafe|restaurant|food/i.test(lower)) return 'f&b';
-  if (/retail|fashion|electronics/i.test(lower)) return 'retail';
-  if (/service|beauty|wellness|health|education/i.test(lower)) return 'service';
-  if (['f&b', 'retail', 'service'].includes(lower)) return lower;
-  return raw;
-}
-
 function Section({ icon: Icon, title, children }) {
   return (
     <div className="space-y-4">
