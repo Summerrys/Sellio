@@ -30,8 +30,14 @@ export function useSubscription() {
   // Normalise to base tier
   const tier = plan.includes('pro') ? 'pro' : plan.includes('growth') ? 'growth' : 'starter';
 
-  const staffCap  = tier === 'pro' ? Infinity : tier === 'growth' ? 5 : 3;
-  const roleCap   = tier === 'pro' ? Infinity : tier === 'growth' ? 5 : 3;
+  // FIX: previously these were hardcoded purely from the tier name, completely
+  // ignoring subscription.max_users/max_roles — the actual columns completeOnboarding
+  // and stripe-webhook write. That meant this hook could silently drift out of sync
+  // with the real plan limits (e.g. if a plan's cap ever changes) despite the DB
+  // being the source of truth everywhere else. Pro stores these as null (unlimited),
+  // so the tier-based fallback still applies correctly in that case.
+  const staffCap = subscription?.max_users ?? (tier === 'pro' ? Infinity : tier === 'growth' ? 5 : 3);
+  const roleCap  = subscription?.max_roles ?? (tier === 'pro' ? Infinity : tier === 'growth' ? 5 : 3);
 
   return {
     subscription,
