@@ -99,7 +99,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
     setForm({
       name: tenant.name || '',
       branch_name: settings.branch_name || '',
-      industry: normaliseIndustry(tenant.industry),
+      industry: normalizeIndustry(tenant.industry),
       country,
       phone: tenant.phone || '',
       currency: storedCurrency,
