@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { loadPrinterConfig, buildOrderReceipt, sendViaBluetooth, sendViaEpsonEPos } from '@/lib/printerUtils';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
+import { isFnBIndustry } from '@/lib/industry';
 import { useAppUser } from '@/lib/AppUserContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PullToRefresh from '../components/ui-custom/PullToRefresh';
