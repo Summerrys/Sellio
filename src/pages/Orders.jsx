@@ -330,7 +330,7 @@ export default function Orders() {
   const [alertInterval, setAlertInterval] = useState(60);
   const alertIntervalRef = useRef(60);
 
-  const isFnB = /f&b|cafe|restaurant|food/i.test(tenant?.industry || '');
+  const isFnB = isFnBIndustry(tenant?.industry);
   const currency = tenant?.settings?.currency || tenant?.currency || 'SGD';
   const canViewOrders = hasPermission?.('orders.view');
 
