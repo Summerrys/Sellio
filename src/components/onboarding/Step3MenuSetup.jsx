@@ -29,7 +29,7 @@ const ONBOARDING_PLAN_LIMITS = {
 
 
 const INDUSTRY_HINTS = {
-  'food': {
+  'f&b': {
     categoryPlaceholder: 'Appetizers, Mains, Desserts...',
     itemPlaceholder: 'eg., Caesar Salad',
     sectionTitle: 'Build your menu',
@@ -49,7 +49,7 @@ const INDUSTRY_HINTS = {
   },
 };
 
-const DEFAULT_HINTS = INDUSTRY_HINTS['food'];
+const DEFAULT_HINTS = INDUSTRY_HINTS['f&b'];
 
 export default function Step3MenuSetup({ formData, updateFormData, nextStep, prevStep }) {
   const [categories, setCategories] = useState(formData.menuCategories || []);
