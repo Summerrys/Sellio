@@ -4,6 +4,7 @@ import { getSupabase } from '@/lib/supabaseClient';
 import StorefrontView from '@/components/storefront/StorefrontView';
 import MenuAssistantWidget from '@/components/storefront/MenuAssistantWidget';
 import { LanguageProvider, useLanguage, prewarmTranslations } from '@/lib/LanguageContext';
+import { isFnBIndustry } from '@/lib/industry';
 
 const STATUS_COLORS = {
   pending: { bg: '#fef3c7', color: '#92400e' },
