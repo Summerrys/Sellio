@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import ImageEditModal from '@/components/onboarding/ImageEditModal';
+import { INDUSTRY_OPTIONS, normalizeIndustry } from '@/lib/industry';
 
 const INDUSTRIES = [
   { value: 'f&b', label: 'F&B / Cafe / Restaurant' },
