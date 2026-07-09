@@ -182,13 +182,15 @@ export const ROLE_TEMPLATES = {
 };
 
 // Industry-specific role visibility
+// FIX: previously keyed by 'restaurant'/'cafe'/'bar'/'salon'/'other' — none of
+// which ever matched tenant.industry (which is 'f&b' | 'retail' | 'service'), so
+// this always silently fell back to the generic list below, even for F&B tenants
+// who should see Cashier/Waiter/Chef template options too. Now keyed by the same
+// canonical values as src/lib/industry.js's normalizeIndustry().
 export const INDUSTRY_ROLES = {
-  restaurant: ['owner', 'admin', 'manager', 'cashier', 'waiter', 'chef', 'staff'],
-  cafe: ['owner', 'admin', 'manager', 'cashier', 'waiter', 'chef', 'staff'],
-  bar: ['owner', 'admin', 'manager', 'cashier', 'waiter', 'chef', 'staff'],
+  'f&b': ['owner', 'admin', 'manager', 'cashier', 'waiter', 'chef', 'staff'],
   retail: ['owner', 'admin', 'manager', 'cashier', 'staff'],
-  salon: ['owner', 'admin', 'manager', 'staff'],
-  other: ['owner', 'admin', 'manager', 'staff'],
+  service: ['owner', 'admin', 'manager', 'staff'],
 };
 
 export function TenantProvider({ children }) {
