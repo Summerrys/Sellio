@@ -38,7 +38,9 @@ const schema = z.object({
 
 export default function EditStaffDialog({ open, onOpenChange, staff, tenantId }) {
   const queryClient = useQueryClient();
-  const { user: currentUser } = useTenant();
+  const { user: currentUser, hasPermission } = useTenant();
+  const hasEditPerm = hasPermission('staff.edit');
+  const hasDeletePerm = hasPermission('staff.delete');
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
@@ -95,7 +97,10 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
 
   if (!staff) return null;
 
-  // Prevent editing yourself or owners
+  // Prevent editing yourself or owners (business rule) — combined with the
+  // staff.edit/staff.delete permission checks below (defense-in-depth; the
+  // dialog should only ever be opened from already-gated entry points, but
+  // this makes it safe even if that changes later).
   const canEdit = !staff.is_owner && staff.user_email !== currentUser?.email;
 
   return (
@@ -131,7 +136,7 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
               <Select
                 value={watch('role_id')}
                 onValueChange={(v) => setValue('role_id', v)}
-                disabled={!canEdit}
+                disabled={!canEdit || !hasEditPerm}
               >
                 <SelectTrigger className="mt-1.5">
                   <SelectValue />
@@ -154,7 +159,7 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
               <Select
                 value={watch('status')}
                 onValueChange={(v) => setValue('status', v)}
-                disabled={!canEdit}
+                disabled={!canEdit || !hasEditPerm}
               >
                 <SelectTrigger className="mt-1.5">
                   <SelectValue />
@@ -187,7 +192,7 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
               <div className="flex gap-2">
                 <Button
                   type="submit"
-                  disabled={updateMutation.isPending || !canEdit}
+                  disabled={updateMutation.isPending || !canEdit || !hasEditPerm}
                   className="flex-1 text-white"
                   style={{ background: 'var(--color-primary-gradient)' }}
                 >
@@ -209,7 +214,7 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
                   Cancel
                 </Button>
               </div>
-              {canEdit && (
+              {canEdit && hasDeletePerm && (
                 <Button
                   type="button"
                   variant="destructive"
