@@ -196,6 +196,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
   };
 
   const handleSave = async () => {
+    if (!canEditSettings) return; // defense-in-depth; Save button is hidden without this permission
     setIsSaving(true);
     try {
       const supabase = await getSupabase();
