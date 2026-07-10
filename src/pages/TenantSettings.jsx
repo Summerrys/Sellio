@@ -222,7 +222,10 @@ function PaymentQRTab({ tenant, tenantId }) {
               style={{ background: 'var(--color-primary-gradient)', color: '#fff' }}
             >
               {isSavingQR ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Save className="w-4 h-4" /> Save Changes</>}
-          </Button>
+            </Button>
+          ) : (
+            <p className="text-xs text-slate-400 text-center">You have view-only access to Settings.</p>
+          )}
         </div>
       </Card>
     </div>
