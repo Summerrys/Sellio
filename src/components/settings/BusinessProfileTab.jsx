@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTenant } from '@/components/tenant/TenantContext';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,8 @@ function Section({ icon: Icon, title, children }) {
 }
 
 export default function BusinessProfileTab({ tenant, tenantId }) {
+  const { hasPermission } = useTenant();
+  const canEditSettings = hasPermission('settings.edit');
   const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
 
