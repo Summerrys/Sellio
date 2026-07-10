@@ -35,6 +35,8 @@ export default function TenantSettings() {
 }
 
 function PaymentQRTab({ tenant, tenantId }) {
+  const { hasPermission } = useTenant();
+  const canEditSettings = hasPermission('settings.edit');
   const queryClient = useQueryClient();
   const paymentQRInputRef = useRef(null);
 
@@ -54,6 +56,7 @@ function PaymentQRTab({ tenant, tenantId }) {
   }, [tenant]);
 
   const handlePaymentQRUpload = async (e) => {
+    if (!canEditSettings) return; // defense-in-depth; upload controls are hidden without this permission
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
@@ -71,6 +74,7 @@ function PaymentQRTab({ tenant, tenantId }) {
   };
 
   const handleRemovePaymentQR = async () => {
+    if (!canEditSettings) return;
     const supabase = await getSupabase();
     await supabase.from('tenants').update({ payment_qr_url: null }).eq('id', tenantId);
     setPaymentQRPreview(null);
@@ -78,6 +82,7 @@ function PaymentQRTab({ tenant, tenantId }) {
   };
 
   const handleSavePaymentQR = async () => {
+    if (!canEditSettings) return;
     setIsSavingQR(true);
     try {
       const supabase = await getSupabase();
