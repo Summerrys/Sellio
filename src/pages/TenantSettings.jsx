@@ -209,17 +209,19 @@ function PaymentQRTab({ tenant, tenantId }) {
                 value={paymentReference}
                 onChange={e => setPaymentReference(e.target.value)}
                 placeholder="e.g. UEN 12345678A"
+                disabled={!canEditSettings}
               />
             </div>
           </div>
 
-          <Button
-            onClick={handleSavePaymentQR}
-            disabled={isSavingQR}
-            className="h-11 gap-2 w-full"
-            style={{ background: 'var(--color-primary-gradient)', color: '#fff' }}
-          >
-            {isSavingQR ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Save className="w-4 h-4" /> Save Changes</>}
+          {canEditSettings ? (
+            <Button
+              onClick={handleSavePaymentQR}
+              disabled={isSavingQR}
+              className="h-11 gap-2 w-full"
+              style={{ background: 'var(--color-primary-gradient)', color: '#fff' }}
+            >
+              {isSavingQR ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Save className="w-4 h-4" /> Save Changes</>}
           </Button>
         </div>
       </Card>
