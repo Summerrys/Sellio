@@ -406,10 +406,15 @@ export default function Auth() {
       const isRealEmail = appUserRow.email && !appUserRow.email.endsWith('@sellio.app');
 
       if (isRealEmail) {
-        await supabase.auth.resetPasswordForEmail(appUserRow.email, {
-          redirectTo: `${getBaseUrl()}/Auth?type=recovery`,
-        });
+        // FIX: previously awaited resetPasswordForEmail before advancing the UI, so the
+        // user sat on a loading spinner for however long that network round-trip took.
+        // The call itself doesn't return anything the UI needs (Supabase's reset-email
+        // response is generic either way), so show the confirmation screen immediately
+        // and let the actual send happen in the background.
         setForgotStep(4);
+        supabase.auth.resetPasswordForEmail(appUserRow.email, {
+          redirectTo: `${getBaseUrl()}/Auth?type=recovery`,
+        }).catch(err => console.warn('resetPasswordForEmail warning:', err.message));
       } else {
         // No real email on file yet — collect one before we can send a reset link
         setForgotStep(2);
