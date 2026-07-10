@@ -4,8 +4,11 @@ import { Button } from '@/components/ui/button';
 import StatusBadge from '../ui-custom/StatusBadge';
 import { Edit2, Crown } from 'lucide-react';
 import { format } from 'date-fns';
+import { useTenant } from '../tenant/TenantContext';
 
 export default function StaffTable({ staff, onEdit }) {
+  const { hasPermission } = useTenant();
+  const canEdit = hasPermission('staff.edit');
   return (
     <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
       {/* Desktop table — hidden on mobile */}
@@ -51,9 +54,11 @@ export default function StaffTable({ staff, onEdit }) {
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <Button variant="ghost" size="sm" onClick={() => onEdit(member)} disabled={member.is_owner}>
-                    <Edit2 className="w-4 h-4" />
-                  </Button>
+                  {canEdit && (
+                    <Button variant="ghost" size="sm" onClick={() => onEdit(member)} disabled={member.is_owner}>
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -88,15 +93,17 @@ export default function StaffTable({ staff, onEdit }) {
             </div>
 
             {/* Edit */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 flex-shrink-0 text-slate-400"
-              onClick={() => onEdit(member)}
-              disabled={member.is_owner}
-            >
-              <Edit2 className="w-4 h-4" />
-            </Button>
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 flex-shrink-0 text-slate-400"
+                onClick={() => onEdit(member)}
+                disabled={member.is_owner}
+              >
+                <Edit2 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         ))}
       </div>
