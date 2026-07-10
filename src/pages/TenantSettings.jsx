@@ -170,17 +170,22 @@ function PaymentQRTab({ tenant, tenantId }) {
             </div>
           ) : (
             <div
-              onClick={() => paymentQRInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors bg-slate-50"
+              onClick={() => canEditSettings && paymentQRInputRef.current?.click()}
+              className={`border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center transition-colors bg-slate-50 ${canEditSettings ? 'cursor-pointer hover:border-slate-400' : 'cursor-default'}`}
               style={{ width: 200, height: 200 }}
             >
               {isUploadingQR ? (
                 <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
-              ) : (
+              ) : canEditSettings ? (
                 <>
                   <QrCode className="w-10 h-10 text-slate-300 mb-2" />
                   <p className="text-xs font-medium text-slate-500">Click to upload</p>
                   <p className="text-[11px] text-slate-400 mt-0.5">PNG, JPG supported</p>
+                </>
+              ) : (
+                <>
+                  <QrCode className="w-10 h-10 text-slate-300 mb-2" />
+                  <p className="text-xs font-medium text-slate-400">No QR uploaded</p>
                 </>
               )}
             </div>
@@ -194,6 +199,7 @@ function PaymentQRTab({ tenant, tenantId }) {
                 value={paymentQRLabel}
                 onChange={e => setPaymentQRLabel(e.target.value)}
                 placeholder="e.g. Scan to pay via PayNow"
+                disabled={!canEditSettings}
               />
             </div>
             <div>
