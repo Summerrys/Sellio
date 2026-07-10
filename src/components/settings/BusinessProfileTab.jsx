@@ -586,14 +586,18 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
         />
       )}
 
-      <Button
-        onClick={handleSave}
-        disabled={isSaving || isUploadingLogo}
-        className="h-11 gap-2 w-full sm:w-auto"
-        style={{ background: 'var(--color-primary-gradient)', color: '#fff' }}
-      >
-        {isSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Save className="w-4 h-4" /> Save Changes</>}
-      </Button>
+      {canEditSettings ? (
+        <Button
+          onClick={handleSave}
+          disabled={isSaving || isUploadingLogo}
+          className="h-11 gap-2 w-full sm:w-auto"
+          style={{ background: 'var(--color-primary-gradient)', color: '#fff' }}
+        >
+          {isSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Save className="w-4 h-4" /> Save Changes</>}
+        </Button>
+      ) : (
+        <p className="text-xs text-slate-400">You have view-only access to Settings.</p>
+      )}
     </div>
   );
 }
