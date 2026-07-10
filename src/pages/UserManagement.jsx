@@ -63,7 +63,8 @@ export default function UserManagement({ embedded = false, onUpgrade }) {
 }
 
 function StaffContent({ onUpgrade }) {
-  const { tenantId } = useTenant();
+  const { tenantId, hasPermission } = useTenant();
+  const canCreateStaff = hasPermission('staff.create');
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState('table');
   const [searchQuery, setSearchQuery] = useState('');
