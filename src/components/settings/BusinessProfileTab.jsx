@@ -235,6 +235,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
   };
 
   const saveBusinessHours = async () => {
+    if (!canEditSettings) return; // defense-in-depth; button is disabled without this permission
     setIsSavingHours(true);
     try {
       const supabase = await getSupabase();
