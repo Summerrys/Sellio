@@ -319,7 +319,7 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess, m
 }
 
 export default function Products() {
-  const { tenantId, tenant, subscription } = useTenant();
+  const { tenantId, tenant, subscription, hasPermission } = useTenant();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState(
@@ -471,6 +471,12 @@ export default function Products() {
     ]), [queryClient, tenantId]);
 
   const handleLongPress = (productId) => {
+    // FIX: long-press multi-select only exists to enable bulk delete — with no
+    // products.delete permission there's nothing useful it can do, so don't let it
+    // open at all (previously it opened regardless, and only the toolbar's Delete
+    // button itself was ever meant to be the gate — except that button wasn't gated
+    // either, so a view/edit-only Manager could still bulk-delete products).
+    if (!hasPermission('products.delete')) return;
     setSelectionMode(true);
     setSelectedIds(new Set([productId]));
   };
