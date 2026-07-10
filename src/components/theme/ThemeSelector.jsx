@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTheme } from './ThemeProvider';
+import { useTenant } from '../tenant/TenantContext';
 import { COLOR_SETS } from './themeUtils';
 import { Card } from '@/components/ui/card';
 import { Check, Palette } from 'lucide-react';
@@ -102,8 +103,11 @@ function CompactSwatch({ colorSet, isSelected, onSelect, disabled }) {
 /* ── main export ────────────────────────────────────────────────── */
 export default function ThemeSelector({ variant = 'full' }) {
   const { currentTheme, setTheme, isSaving } = useTheme();
+  const { hasPermission } = useTenant();
+  const canEditTheme = hasPermission('theme.edit');
 
   const handleSelect = (name) => {
+    if (!canEditTheme) return; // defense-in-depth; swatches are already disabled below
     // Click again on selected theme to revert to default
     setTheme(currentTheme === name ? null : name);
   };
@@ -122,7 +126,7 @@ export default function ThemeSelector({ variant = 'full' }) {
               colorSet={colorSet}
               isSelected={currentTheme === colorSet.name}
               onSelect={handleSelect}
-              disabled={isSaving}
+              disabled={isSaving || !canEditTheme}
             />
           ))}
         </div>
@@ -145,11 +149,12 @@ export default function ThemeSelector({ variant = 'full' }) {
               colorSet={colorSet}
               isSelected={currentTheme === colorSet.name}
               onSelect={handleSelect}
-              disabled={isSaving}
+              disabled={isSaving || !canEditTheme}
             />
           ))}
         </div>
         {isSaving && <p className="text-sm text-slate-500 pt-2">Saving…</p>}
+        {!canEditTheme && <p className="text-xs text-slate-400 pt-2">You have view-only access to the theme.</p>}
       </div>
     </Card>
   );
