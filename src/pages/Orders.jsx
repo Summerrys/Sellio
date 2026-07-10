@@ -227,6 +227,38 @@ function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate, on
               </button>
             )}
           </div>
+
+          {/* Cancel order — covers the "customer decided not to proceed" case. Kept as a
+              separate, deliberately less prominent row so it can't be tapped by accident
+              alongside the main status-progression button. */}
+          {canCancelOrders && !isFinal && (
+            <div className="mt-2">
+              {!confirmCancel ? (
+                <button
+                  onClick={() => setConfirmCancel(true)}
+                  className="w-full py-2 rounded-lg text-xs font-semibold text-red-500 border border-red-200 bg-white hover:bg-red-50 transition-colors"
+                >
+                  Cancel Order
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="flex-1 text-xs text-red-600 font-medium">Cancel this order?</span>
+                  <button
+                    onClick={() => { onStatusUpdate(order.id, 'cancelled'); setConfirmCancel(false); }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors"
+                  >
+                    Yes, cancel
+                  </button>
+                  <button
+                    onClick={() => setConfirmCancel(false)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
+                  >
+                    No
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
