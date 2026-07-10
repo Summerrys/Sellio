@@ -3,16 +3,20 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import StatusBadge from '../ui-custom/StatusBadge';
 import { Trash2, Crown } from 'lucide-react';
 import { format } from 'date-fns';
+import { useTenant } from '../tenant/TenantContext';
 
 export default function StaffCards({ staff, onEdit, onDelete }) {
+  const { hasPermission } = useTenant();
+  const canEdit = hasPermission('staff.edit');
+  const canDelete = hasPermission('staff.delete');
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
       {staff.map((member) => (
         <div
           key={member.id}
-          onClick={() => !member.is_owner && onEdit(member)}
+          onClick={() => !member.is_owner && canEdit && onEdit(member)}
           className="bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col items-center text-center relative"
-          style={{ cursor: member.is_owner ? 'default' : 'pointer' }}
+          style={{ cursor: (!member.is_owner && canEdit) ? 'pointer' : 'default' }}
         >
           {/* Owner crown badge */}
           {member.is_owner && (
@@ -52,7 +56,7 @@ export default function StaffCards({ staff, onEdit, onDelete }) {
           </p>
 
           {/* Trash icon — bottom right, only for non-owners */}
-          {!member.is_owner && onDelete && (
+          {!member.is_owner && canDelete && onDelete && (
             <button
               className="absolute bottom-2 right-2 w-7 h-7 flex items-center justify-center rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
               onClick={(e) => { e.stopPropagation(); onDelete(member); }}
