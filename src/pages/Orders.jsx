@@ -93,6 +93,9 @@ function printReceipt(order, currency, merchantName) {
 function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate, onMarkPaid }) {
   const { hasPermission } = useTenant();
   const canEditOrders = hasPermission('orders.edit');
+  const canCancelOrders = hasPermission('orders.cancel');
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const isFinal = order.status === 'completed' || order.status === 'cancelled';
   const action = STATUS_NEXT[order.status];
   const accent = STATUS_ACCENT[order.status] || STATUS_ACCENT.completed;
   const elapsed = formatDistanceToNow(new Date(order.created_date || order.created_at), { addSuffix: true });
