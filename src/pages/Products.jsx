@@ -501,7 +501,7 @@ export default function Products() {
   };
 
   const handleBulkDelete = async () => {
-    if (!selectedIds.size) return;
+    if (!selectedIds.size || !hasPermission('products.delete')) return;
     try {
       const supabase = await getSupabase();
       const ids = [...selectedIds];
