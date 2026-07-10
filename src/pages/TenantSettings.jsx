@@ -142,25 +142,29 @@ function PaymentQRTab({ tenant, tenantId }) {
                 )}
 
                 {/* X — top right */}
-                <button
-                  type="button"
-                  onClick={handleRemovePaymentQR}
-                  className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-white border border-slate-200 shadow-md flex items-center justify-center hover:bg-red-50 hover:border-red-300 transition-colors z-10"
-                >
-                  <X className="w-3.5 h-3.5 text-slate-500" />
-                </button>
+                {canEditSettings && (
+                  <button
+                    type="button"
+                    onClick={handleRemovePaymentQR}
+                    className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-white border border-slate-200 shadow-md flex items-center justify-center hover:bg-red-50 hover:border-red-300 transition-colors z-10"
+                  >
+                    <X className="w-3.5 h-3.5 text-slate-500" />
+                  </button>
+                )}
 
                 {/* Replace — center overlay */}
-                <button
-                  type="button"
-                  onClick={() => paymentQRInputRef.current?.click()}
-                  className="absolute inset-0 flex items-center justify-center transition-opacity rounded-2xl"
-                  style={{ opacity: qrHovered ? 1 : 0 }}
-                >
-                  <div className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center">
-                    <RefreshCw className="w-4 h-4 text-white" />
-                  </div>
-                </button>
+                {canEditSettings && (
+                  <button
+                    type="button"
+                    onClick={() => paymentQRInputRef.current?.click()}
+                    className="absolute inset-0 flex items-center justify-center transition-opacity rounded-2xl"
+                    style={{ opacity: qrHovered ? 1 : 0 }}
+                  >
+                    <div className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center">
+                      <RefreshCw className="w-4 h-4 text-white" />
+                    </div>
+                  </button>
+                )}
               </div>
               <p className="text-xs text-slate-400">QR uploaded ✓</p>
             </div>
