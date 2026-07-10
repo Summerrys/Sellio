@@ -211,7 +211,7 @@ function StaffContent({ onUpgrade }) {
         {isLoading ? (
           <div className="text-center py-12 text-slate-400">Loading staff...</div>
         ) : filteredStaff.length === 0 ? (
-          <EmptyState icon={Users} title={searchQuery || statusFilter !== 'all' || roleFilter !== 'all' ? "No staff found" : "No staff members yet"} description={searchQuery || statusFilter !== 'all' || roleFilter !== 'all' ? "Try adjusting your filters" : "Add your first team member to get started"} actionLabel="Add Staff" onAction={() => setCreateOpen(true)} />
+          <EmptyState icon={Users} title={searchQuery || statusFilter !== 'all' || roleFilter !== 'all' ? "No staff found" : "No staff members yet"} description={searchQuery || statusFilter !== 'all' || roleFilter !== 'all' ? "Try adjusting your filters" : "Add your first team member to get started"} actionLabel={canCreateStaff ? 'Add Staff' : undefined} onAction={canCreateStaff ? () => setCreateOpen(true) : undefined} />
         ) : viewMode === 'table' ? (
           <StaffTable staff={filteredStaff} onEdit={setEditingStaff} />
         ) : (
