@@ -433,7 +433,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
             </div>
             <Button
               onClick={saveBusinessHours}
-              disabled={isSavingHours}
+              disabled={isSavingHours || !canEditSettings}
               className="mt-4 h-9 gap-2 w-full"
               style={{ background: 'var(--color-primary-gradient)', color: '#fff' }}
             >
