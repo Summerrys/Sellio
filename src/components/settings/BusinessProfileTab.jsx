@@ -47,6 +47,24 @@ function Section({ icon: Icon, title, children }) {
   );
 }
 
+// Wraps just the actual form controls in a section — not the section's own
+// expand/collapse header, which should stay clickable either way so a
+// view-only user can still open a section to read it. <fieldset disabled>
+// turns off every input/select/switch/button inside at once (className=
+// "contents" keeps it from affecting layout). The transparent overlay is a
+// belt-and-suspenders catch for clicks landing on already-disabled elements,
+// which don't reliably fire pointer events across browsers — the overlay
+// always will, and is what actually shows the no-access message.
+function GatedFields({ canEdit, onBlocked, children, className }) {
+  if (canEdit) return <fieldset className={cn('contents', className)}>{children}</fieldset>;
+  return (
+    <div className={cn('relative', className)}>
+      <div className="absolute inset-0 z-20 cursor-not-allowed" onClick={onBlocked} />
+      <fieldset disabled className="contents">{children}</fieldset>
+    </div>
+  );
+}
+
 export default function BusinessProfileTab({ tenant, tenantId }) {
   const { hasPermission } = useTenant();
   const canEditSettings = hasPermission('settings.edit');
