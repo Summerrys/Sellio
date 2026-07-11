@@ -263,8 +263,26 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
 
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
 
+  const showNoAccessMessage = () => toast.error("You don't have access to edit these settings.");
+
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-2xl space-y-6 relative">
+      {/* FIX: previously only the Save buttons were gated — every input, select,
+          switch, and toggle button underneath was fully interactive regardless of
+          settings.edit, so a view-only user could type/click through the whole form
+          and only discover nothing would persist once they went looking for a save
+          button that wasn't there. <fieldset disabled> turns off every form control
+          in one shot (className="contents" keeps it from affecting layout at all).
+          The transparent overlay on top is a belt-and-suspenders catch for clicks
+          landing on already-disabled elements, which don't reliably fire pointer
+          events across browsers — the overlay always will, and surfaces the message. */}
+      {!canEditSettings && (
+        <div
+          className="absolute inset-0 z-20 cursor-not-allowed"
+          onClick={showNoAccessMessage}
+        />
+      )}
+      <fieldset disabled={!canEditSettings} className="contents">
       {/* Business Identity */}
       <Card className="border border-slate-100 shadow-sm p-6 space-y-6">
         <Section icon={Building2} title="Business Identity">
