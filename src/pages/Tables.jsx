@@ -536,8 +536,8 @@ export default function Tables() {
                           {table.status === 'occupied' && (() => {
                             const activeSession = activeSessions.find(s => s.table_id === table.id);
                             return activeSession ? (
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
-                                <span>⏱ {formatDuration(activeSession.started_at)}</span>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginTop: '2px' }}>
+                                <span style={{ color: '#DC2626', fontWeight: '600' }}>⏱ {formatDuration(activeSession.started_at)}</span>
                                 <span style={{ fontWeight: '600', color: '#0f172a' }}>{currency} {(activeSession.total_amount || 0).toFixed(2)}</span>
                               </div>
                             ) : null;
