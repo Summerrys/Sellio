@@ -580,28 +580,36 @@ function RolesContent({ onUpgrade }) {
               </div>
               <div>
                 <Label className="mb-3 block">Permissions ({form.permissions.length} selected)</Label>
-                <div className="space-y-4 max-h-96 overflow-y-auto border border-slate-100 rounded-xl p-4">
-                  {Object.entries(PERMISSION_GROUPS).map(([groupKey, group]) => (
-                    <div key={groupKey} className="space-y-2">
-                      <div className="flex items-center justify-between sticky top-0 bg-white py-1">
-                        <h5 className="text-xs font-semibold uppercase tracking-wider text-slate-700">{group.label}</h5>
-                        <Button type="button" variant="ghost" size="sm" className="h-6 text-xs" onClick={() => {
-                          const allSelected = group.permissions.every(p => form.permissions.includes(p));
-                          setForm(prev => ({ ...prev, permissions: allSelected ? prev.permissions.filter(p => !group.permissions.includes(p)) : [...new Set([...prev.permissions, ...group.permissions])] }));
-                        }}>
-                          {group.permissions.every(p => form.permissions.includes(p)) ? 'Deselect' : 'Select All'}
-                        </Button>
+                <div className="space-y-2.5 max-h-96 overflow-y-auto border border-slate-100 rounded-xl p-3">
+                  {Object.entries(PERMISSION_GROUP_META).map(([groupKey, meta]) => {
+                    const masterOn = isGroupMasterOn(groupKey);
+                    const viewOnly = masterOn && meta.subPermissions.every(sp => !form.permissions.includes(sp.key));
+                    return (
+                      <div key={groupKey} className={`rounded-lg border transition-colors ${masterOn ? 'border-slate-200 bg-slate-50/50' : 'border-slate-100'}`}>
+                        <div className="flex items-center justify-between px-3 py-2.5">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-sm font-semibold text-slate-800 truncate">{meta.masterLabel}</span>
+                            {viewOnly && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium text-slate-500 border-slate-300 flex-shrink-0">
+                                View only
+                              </Badge>
+                            )}
+                          </div>
+                          <Switch checked={masterOn} onCheckedChange={() => toggleGroupMaster(groupKey)} className="flex-shrink-0" />
+                        </div>
+                        {masterOn && meta.subPermissions.length > 0 && (
+                          <div className="grid grid-cols-2 gap-1.5 px-3 pb-3 pt-1 border-t border-slate-100">
+                            {meta.subPermissions.map(sp => (
+                              <label key={sp.key} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded">
+                                <Checkbox checked={form.permissions.includes(sp.key)} onCheckedChange={() => togglePermission(sp.key)} />
+                                <span className="text-xs text-slate-600">{sp.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div className="grid grid-cols-2 gap-2 pl-2">
-                        {group.permissions.map(permKey => (
-                          <label key={permKey} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1.5 rounded">
-                            <Checkbox checked={form.permissions.includes(permKey)} onCheckedChange={() => togglePermission(permKey)} />
-                            <span className="text-xs text-slate-600">{ALL_PERMISSIONS[permKey]}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
