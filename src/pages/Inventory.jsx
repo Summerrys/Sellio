@@ -132,8 +132,6 @@ function InventoryContent() {
     queryClient.invalidateQueries({ queryKey: ['inventoryMerged', tenantId] });
   };
 
-  const handleStartStockTake = () => setShowStockTake(true);
-
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       <div className="space-y-4">
