@@ -154,7 +154,18 @@ function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate, on
                 </span>
               )}
             </div>
-            <span className="text-xs text-slate-400 flex-shrink-0">{elapsed}</span>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {canEditOrders && !isFinal && (
+                <button
+                  onClick={() => setShowEditOrder(true)}
+                  className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-white/60 transition-colors"
+                  title="Edit order"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <span className="text-xs text-slate-400">{elapsed}</span>
+            </div>
           </div>
 
           {/* Customer */}
