@@ -26,7 +26,6 @@ export const ALL_PERMISSIONS = {
   'inventory.edit': 'Edit inventory',
   'inventory.adjust': 'Adjust stock',
   'inventory.restock': 'Restock inventory',
-  'inventory.stock_take': 'Perform stock takes and closing reports',
   'inventory.delivery_order': 'Record and manage delivery orders',
   'suppliers.view': 'View suppliers',
   'suppliers.create': 'Create suppliers',
