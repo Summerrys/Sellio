@@ -681,9 +681,23 @@ function RolesContent({ onUpgrade }) {
                 </div>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter
+              className={cn(
+                "sticky bottom-0 -mx-6 px-6 py-3 mt-2 bg-white border-t transition-colors",
+                isDirty ? "border-slate-200" : "border-transparent"
+              )}
+              style={{ boxShadow: isDirty ? '0 -4px 12px rgba(15, 23, 42, 0.06)' : 'none' }}
+            >
               <Button variant="outline" onClick={close}>Cancel</Button>
-              <Button onClick={() => saveMutation.mutate(form)} disabled={!form.name || saveMutation.isPending} className="text-white" style={{ background: 'var(--color-primary-gradient)' }}>
+              <Button
+                onClick={() => saveMutation.mutate(form)}
+                disabled={!form.name || saveMutation.isPending}
+                className="text-white gap-1.5 relative"
+                style={{ background: 'var(--color-primary-gradient)' }}
+              >
+                {isDirty && !saveMutation.isPending && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white animate-pulse" />
+                )}
                 {saveMutation.isPending ? 'Saving...' : editing ? 'Update Role' : 'Create Role'}
               </Button>
             </DialogFooter>
