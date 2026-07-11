@@ -26,7 +26,6 @@ export default function Inventory() {
 function InventoryContent() {
   const { tenantId, tenant, hasPermission } = useTenant();
   const canAdjust = hasPermission('inventory.adjust');
-  const canStockTake = hasPermission('inventory.stock_take');
 
   // Matches the same no-access message pattern used on Products/Categories.
   const handleProductClick = (product) => {
