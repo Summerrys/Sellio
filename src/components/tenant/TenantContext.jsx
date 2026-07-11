@@ -107,6 +107,118 @@ export const PERMISSION_GROUPS = {
   },
 };
 
+// Toggle-based permission editor metadata. Each group has a single "master"
+// toggle (masterLabel) that implicitly grants its viewKeys — there's no separate
+// "View X" checkbox to configure, since every sub-permission already requires
+// being able to see the thing before creating/editing/deleting it. Sub-toggles
+// only make sense (and only render, in the editor UI) once the master is on.
+// This is purely a presentation-layer addition — it still reads/writes the same
+// flat permission-key strings as PERMISSION_GROUPS above, so nothing about how
+// hasPermission() checks permissions changes.
+export const PERMISSION_GROUP_META = {
+  orders: {
+    label: 'Orders',
+    masterLabel: 'Manage Orders',
+    viewKeys: ['orders.view'],
+    subPermissions: [
+      { key: 'orders.create', label: 'Create Orders' },
+      { key: 'orders.edit', label: 'Update Orders' },
+      { key: 'orders.cancel', label: 'Cancel Orders' },
+    ],
+  },
+  products: {
+    label: 'Products',
+    masterLabel: 'Manage Products',
+    viewKeys: ['products.view'],
+    subPermissions: [
+      { key: 'products.create', label: 'Add Products' },
+      { key: 'products.edit', label: 'Update Products' },
+      { key: 'products.delete', label: 'Remove Products' },
+    ],
+  },
+  categories: {
+    label: 'Categories',
+    masterLabel: 'Manage Categories',
+    viewKeys: ['categories.view'],
+    subPermissions: [
+      { key: 'categories.create', label: 'Add Categories' },
+      { key: 'categories.edit', label: 'Update Categories' },
+      { key: 'categories.delete', label: 'Remove Categories' },
+    ],
+  },
+  inventory: {
+    label: 'Inventory',
+    masterLabel: 'Manage Inventory',
+    // Suppliers share this master toggle — they're grouped with inventory
+    // elsewhere in the app too (Settings moved them here for the same reason).
+    viewKeys: ['inventory.view', 'suppliers.view'],
+    subPermissions: [
+      { key: 'inventory.adjust', label: 'Adjust Stock' },
+      { key: 'inventory.restock', label: 'Restock Inventory' },
+      { key: 'inventory.delivery_order', label: 'Delivery Orders' },
+      { key: 'inventory.edit', label: 'Edit Stock Settings' },
+      { key: 'suppliers.create', label: 'Add Suppliers' },
+      { key: 'suppliers.edit', label: 'Update Suppliers' },
+      { key: 'suppliers.delete', label: 'Remove Suppliers' },
+    ],
+  },
+  tables: {
+    label: 'Tables & QR',
+    masterLabel: 'Manage Tables & QR',
+    viewKeys: ['tables.view'],
+    subPermissions: [
+      { key: 'tables.create', label: 'Add Tables' },
+      { key: 'tables.edit', label: 'Update Tables' },
+      { key: 'tables.delete', label: 'Remove Tables' },
+    ],
+  },
+  staff: {
+    label: 'Staff Management',
+    masterLabel: 'Manage Staff',
+    viewKeys: ['staff.view'],
+    subPermissions: [
+      { key: 'staff.create', label: 'Add Staff' },
+      { key: 'staff.edit', label: 'Update Staff' },
+      { key: 'staff.delete', label: 'Remove Staff' },
+    ],
+  },
+  roles: {
+    label: 'Role Management',
+    masterLabel: 'Manage Roles',
+    viewKeys: ['roles.view'],
+    subPermissions: [
+      { key: 'roles.create', label: 'Add Roles' },
+      { key: 'roles.edit', label: 'Update Roles' },
+      { key: 'roles.delete', label: 'Remove Roles' },
+    ],
+  },
+  reports: {
+    label: 'Reports & Analytics',
+    masterLabel: 'Access Reports',
+    viewKeys: ['reports.view'],
+    subPermissions: [
+      { key: 'reports.export', label: 'Export Reports' },
+    ],
+  },
+  settings: {
+    label: 'Settings & Configuration',
+    masterLabel: 'Manage Settings',
+    viewKeys: ['settings.view'],
+    subPermissions: [
+      { key: 'settings.edit', label: 'Edit Business Settings' },
+      { key: 'theme.edit', label: 'Modify Theme' },
+    ],
+  },
+  payments: {
+    label: 'Payments',
+    masterLabel: 'Access Payments',
+    viewKeys: ['payments.view'],
+    subPermissions: [
+      { key: 'payments.edit', label: 'Modify Payments' },
+    ],
+  },
+};
+
 // Predefined role templates
 export const ROLE_TEMPLATES = {
   superadmin: {
