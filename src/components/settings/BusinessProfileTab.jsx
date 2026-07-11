@@ -620,8 +620,6 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
           onClose={() => setShowLogoEditor(false)}
         />
       )}
-      </fieldset>
-
       {canEditSettings ? (
         <Button
           onClick={handleSave}
