@@ -367,6 +367,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
               </SelectContent>
             </Select>
           </div>
+        </GatedFields>
         </Section>
       </Card>
 
