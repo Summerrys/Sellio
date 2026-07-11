@@ -195,7 +195,6 @@ export const PERMISSION_GROUP_META = {
       { key: 'theme.edit', label: 'Modify Theme' },
     ],
   },
-  },
 };
 
 // Predefined role templates
