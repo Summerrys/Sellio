@@ -575,9 +575,9 @@ export default function Tables() {
                             {canDelete && (
                               <button
                                 onClick={() => handleDelete(table)}
-                                style={{ flex: 1, padding: '6px', borderRadius: '8px', border: '0.5px solid #fecaca', background: 'none', fontSize: '11px', fontWeight: '600', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                                style={{ flexShrink: 0, width: '30px', padding: '6px', borderRadius: '8px', border: '0.5px solid #fecaca', background: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                               >
-                                <Trash2 style={{ width: '13px', height: '13px' }} /> Delete
+                                <Trash2 style={{ width: '13px', height: '13px' }} />
                               </button>
                             )}
                           </div>
