@@ -20,17 +20,9 @@ export const ALL_PERMISSIONS = {
   'categories.create': 'Create categories',
   'categories.edit': 'Edit categories',
   'categories.delete': 'Delete categories',
-  // Inventory (includes suppliers — moved here from Settings, since supplier
-  // records are inventory data, not business configuration)
+  // Inventory
   'inventory.view': 'View inventory',
-  'inventory.edit': 'Edit inventory',
   'inventory.adjust': 'Adjust stock',
-  'inventory.restock': 'Restock inventory',
-  'inventory.delivery_order': 'Record and manage delivery orders',
-  'suppliers.view': 'View suppliers',
-  'suppliers.create': 'Create suppliers',
-  'suppliers.edit': 'Edit suppliers',
-  'suppliers.delete': 'Delete suppliers',
   // Tables
   'tables.view': 'View tables',
   'tables.create': 'Create tables',
