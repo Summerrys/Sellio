@@ -413,6 +413,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
               <Label className="text-xs text-slate-600 mb-1 block">Address</Label>
               <Input className="h-10" value={form.address} onChange={e => set('address', e.target.value)} placeholder="123 Street, City" />
             </div>
+          </GatedFields>
           </div>
         )}
       </Card>
