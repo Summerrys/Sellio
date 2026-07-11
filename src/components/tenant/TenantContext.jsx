@@ -470,10 +470,12 @@ export function TenantProvider({ children }) {
     }
   }, [role, tenantUser, devRoleOverride, user, currentTenantId]);
 
-  const PERMISSION_ALIASES = {
-    'inventory.edit': 'inventory.adjust',
-    'inventory.adjust': 'inventory.edit',
-  };
+  // No aliases needed anymore — 'inventory.edit' (the only other permission that
+  // used to alias with 'inventory.adjust') was removed as a dead permission with
+  // no code ever checking it separately. Kept as an empty object rather than
+  // deleting hasPermission's reference to it, in case a genuine alias need comes
+  // up again later.
+  const PERMISSION_ALIASES = {};
 
   const hasPermission = (permission) => {
     const checkInList = (perms) => {
