@@ -431,6 +431,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
         </button>
         {businessHoursOpen && (
           <div className="px-6 pb-6 border-t border-slate-100">
+          <GatedFields canEdit={canEditSettings} onBlocked={showNoAccessMessage}>
             <div className="pt-4 space-y-3">
               {businessHours.map(row => (
                 <div key={row.day} className="flex items-center gap-3">
