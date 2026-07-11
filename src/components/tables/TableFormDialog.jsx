@@ -206,25 +206,37 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={isLoading || !formData.name}
-            className="w-full text-white"
-            style={{ background: 'var(--color-primary-gradient)' }}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              table ? 'Update Table' : 'Create Table'
-            )}
-          </Button>
+        <DialogFooter className="flex flex-row items-center gap-3">
+          {table && canDelete && (
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-shrink-0 text-red-500 border-red-200 hover:bg-red-50"
+              onClick={() => onDelete?.(table)}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          )}
+          <div className="flex flex-1 gap-3">
+            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={isLoading || !formData.name}
+              className="flex-1 text-white"
+              style={{ background: 'var(--color-primary-gradient)' }}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                table ? 'Update Table' : 'Create Table'
+              )}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
