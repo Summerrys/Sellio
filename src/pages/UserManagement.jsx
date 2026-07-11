@@ -293,12 +293,25 @@ function RolesContent({ onUpgrade }) {
   });
 
   const open = (role) => {
+    const initial = role ? { name: role.name, description: role.description || '', permissions: role.permissions || [] } : { name: '', description: '', permissions: [] };
     setEditing(role || null);
-    setForm(role ? { name: role.name, description: role.description || '', permissions: role.permissions || [] } : { name: '', description: '', permissions: [] });
+    setForm(initial);
+    setOriginalForm(initial);
     setShowForm(true);
   };
 
-  const close = () => { setShowForm(false); setEditing(null); setForm({ name: '', description: '', permissions: [] }); };
+  const close = () => { setShowForm(false); setEditing(null); setForm({ name: '', description: '', permissions: [] }); setOriginalForm(null); };
+
+  // Drives the sticky/highlighted save button below — previously "Update Role" only
+  // lived at the very bottom of a long, independently-scrolling permissions list, so
+  // toggling a permission gave no feedback that there was now something to save unless
+  // you scrolled all the way down to notice the button. Comparing against a snapshot
+  // taken when the dialog opened means this also correctly resets after a save.
+  const isDirty = !!originalForm && (
+    form.name !== originalForm.name ||
+    form.description !== originalForm.description ||
+    JSON.stringify([...form.permissions].sort()) !== JSON.stringify([...originalForm.permissions].sort())
+  );
 
   const togglePermission = (perm) => {
     setForm(prev => ({ ...prev, permissions: prev.permissions.includes(perm) ? prev.permissions.filter(p => p !== perm) : [...prev.permissions, perm] }));
