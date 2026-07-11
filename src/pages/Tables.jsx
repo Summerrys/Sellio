@@ -647,6 +647,14 @@ export default function Tables() {
                                   <Pencil style={{ width: '14px', height: '14px', color: '#64748b' }} />
                                 </button>
                               )}
+                              {canDelete && (
+                                <button
+                                  onClick={() => handleDelete(table)}
+                                  style={{ width: '28px', height: '28px', borderRadius: '6px', border: '0.5px solid #fecaca', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                  <Trash2 style={{ width: '14px', height: '14px', color: '#ef4444' }} />
+                                </button>
+                              )}
                             </div>
                           </div>
                           <div className="grid grid-cols-4 gap-1" onClick={e => e.stopPropagation()}>
