@@ -121,7 +121,7 @@ function CategoriesContent() {
           {categories.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)).map(cat => {
             const count = products.filter(p => p.category_id === cat.id).length;
             return (
-              <Card key={cat.id} onClick={() => canEdit && open(cat)} className={`border-0 shadow-sm p-4 hover:shadow-md hover:border-slate-300 transition-all active:scale-[0.99] ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}>
+              <Card key={cat.id} onClick={() => handleCardClick(cat)} className={`border-0 shadow-sm p-4 hover:shadow-md hover:border-slate-300 transition-all active:scale-[0.99] ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}>
                 <div className="flex items-start justify-between">
                   <div className="min-w-0">
                     <h3 className="text-sm font-semibold text-slate-800 leading-tight">{cat.name}</h3>
@@ -156,7 +156,7 @@ function CategoriesContent() {
           {categories.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)).map(cat => {
             const count = products.filter(p => p.category_id === cat.id).length;
             return (
-              <Card key={cat.id} onClick={() => canEdit && open(cat)} className={`border-0 shadow-sm px-4 py-3 hover:shadow-md hover:border-slate-300 transition-all active:scale-[0.99] ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}>
+              <Card key={cat.id} onClick={() => handleCardClick(cat)} className={`border-0 shadow-sm px-4 py-3 hover:shadow-md hover:border-slate-300 transition-all active:scale-[0.99] ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}>
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
                     <h3 className="text-sm font-semibold text-slate-800 leading-tight">{cat.name}</h3>
