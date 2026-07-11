@@ -599,32 +599,67 @@ function RolesContent({ onUpgrade }) {
                 <Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="What this role can do" rows={2} />
               </div>
               <div>
-                <Label className="mb-3 block">Permissions ({form.permissions.length} selected)</Label>
-                <div className="space-y-2.5 max-h-96 overflow-y-auto border border-slate-100 rounded-xl p-3">
+                <div className="flex items-center justify-between mb-3">
+                  <Label className="text-sm font-semibold text-slate-800">Permissions</Label>
+                  <span className="text-xs font-medium text-slate-400">{form.permissions.length} selected</span>
+                </div>
+                <div className="space-y-2 max-h-[26rem] overflow-y-auto pr-1 -mr-1">
                   {Object.entries(PERMISSION_GROUP_META).map(([groupKey, meta]) => {
+                    const visual = GROUP_VISUALS[groupKey];
+                    const Icon = visual.icon;
                     const masterOn = isGroupMasterOn(groupKey);
-                    const viewOnly = masterOn && meta.subPermissions.every(sp => !form.permissions.includes(sp.key));
+                    const activeSubCount = meta.subPermissions.filter(sp => form.permissions.includes(sp.key)).length;
+                    const viewOnly = masterOn && activeSubCount === 0;
                     return (
-                      <div key={groupKey} className={`rounded-lg border transition-colors ${masterOn ? 'border-slate-200 bg-slate-50/50' : 'border-slate-100'}`}>
-                        <div className="flex items-center justify-between px-3 py-2.5">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-sm font-semibold text-slate-800 truncate">{meta.masterLabel}</span>
-                            {viewOnly && (
-                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium text-slate-500 border-slate-300 flex-shrink-0">
-                                View only
-                              </Badge>
+                      <div
+                        key={groupKey}
+                        className="rounded-2xl border bg-white transition-all duration-200"
+                        style={{ borderColor: masterOn ? `${visual.accent}33` : '#f1f5f9', boxShadow: masterOn ? '0 1px 3px rgba(15, 23, 42, 0.04)' : 'none' }}
+                      >
+                        <div className="flex items-center gap-3 px-3.5 py-3">
+                          <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-opacity", visual.iconBg, !masterOn && "opacity-40 grayscale")}>
+                            <Icon className={cn("w-4.5 h-4.5", visual.iconColor)} style={{ width: 18, height: 18 }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={cn("text-sm font-semibold truncate", masterOn ? "text-slate-800" : "text-slate-400")}>{meta.masterLabel}</span>
+                              {viewOnly && (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 flex-shrink-0">
+                                  View only
+                                </span>
+                              )}
+                            </div>
+                            {masterOn && activeSubCount > 0 && (
+                              <span className="text-[11px] text-slate-400">{activeSubCount} of {meta.subPermissions.length} extra {activeSubCount === 1 ? 'permission' : 'permissions'} on</span>
                             )}
                           </div>
-                          <Switch checked={masterOn} onCheckedChange={() => toggleGroupMaster(groupKey)} className="flex-shrink-0" />
+                          <Switch
+                            checked={masterOn}
+                            onCheckedChange={() => toggleGroupMaster(groupKey)}
+                            className="flex-shrink-0 data-[state=unchecked]:bg-slate-200"
+                            style={masterOn ? { backgroundColor: visual.accent } : undefined}
+                          />
                         </div>
                         {masterOn && meta.subPermissions.length > 0 && (
-                          <div className="grid grid-cols-2 gap-1.5 px-3 pb-3 pt-1 border-t border-slate-100">
-                            {meta.subPermissions.map(sp => (
-                              <label key={sp.key} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded">
-                                <Checkbox checked={form.permissions.includes(sp.key)} onCheckedChange={() => togglePermission(sp.key)} />
-                                <span className="text-xs text-slate-600">{sp.label}</span>
-                              </label>
-                            ))}
+                          <div className="flex flex-wrap gap-1.5 px-3.5 pb-3.5 pt-0.5">
+                            {meta.subPermissions.map(sp => {
+                              const checked = form.permissions.includes(sp.key);
+                              return (
+                                <button
+                                  key={sp.key}
+                                  type="button"
+                                  onClick={() => togglePermission(sp.key)}
+                                  className={cn(
+                                    "flex items-center gap-1 pl-2 pr-2.5 py-1.5 rounded-full text-xs font-medium border transition-all",
+                                    checked ? "text-white border-transparent shadow-sm" : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50"
+                                  )}
+                                  style={checked ? { backgroundColor: visual.accent } : undefined}
+                                >
+                                  <Check className={cn("w-3 h-3 transition-opacity", checked ? "opacity-100" : "opacity-0 w-0")} />
+                                  {sp.label}
+                                </button>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
