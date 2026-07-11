@@ -485,6 +485,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
         </button>
         {taxOpen && (
           <div className="px-6 pb-6 space-y-4 border-t border-slate-100">
+          <GatedFields canEdit={canEditSettings} onBlocked={showNoAccessMessage} className="space-y-4">
             <div className="pt-4">
               <Label className="text-xs text-slate-600 mb-1 block">Tax Rate (%)</Label>
               <Input className="h-10" type="number" min="0" max="100" step="0.1" value={form.tax_rate} onChange={e => set('tax_rate', e.target.value)} placeholder="e.g. 9" />
@@ -496,6 +497,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
               </div>
               <Switch checked={form.tax_inclusive} onCheckedChange={v => set('tax_inclusive', v)} />
             </div>
+          </GatedFields>
           </div>
         )}
       </Card>
