@@ -285,6 +285,31 @@ function RolesContent({ onUpgrade }) {
     setForm(prev => ({ ...prev, permissions: prev.permissions.includes(perm) ? prev.permissions.filter(p => p !== perm) : [...prev.permissions, perm] }));
   };
 
+  // Toggle-based permission editor helpers. A group's master toggle is "on" if
+  // its view permission(s) OR any of its sub-permissions are present — this
+  // matters when opening an existing role that predates this UI (or was edited
+  // via the old flat-checkbox editor) and might have an unusual combination like
+  // a delete permission without the matching view permission. The first save
+  // through this editor normalizes that: turning the master off always strips
+  // the whole group, and turning it on always includes view.
+  const isGroupMasterOn = (groupKey) => {
+    const meta = PERMISSION_GROUP_META[groupKey];
+    return meta.viewKeys.some(k => form.permissions.includes(k))
+      || meta.subPermissions.some(sp => form.permissions.includes(sp.key));
+  };
+
+  const toggleGroupMaster = (groupKey) => {
+    const meta = PERMISSION_GROUP_META[groupKey];
+    const allGroupKeys = [...meta.viewKeys, ...meta.subPermissions.map(sp => sp.key)];
+    const currentlyOn = isGroupMasterOn(groupKey);
+    setForm(prev => ({
+      ...prev,
+      permissions: currentlyOn
+        ? prev.permissions.filter(p => !allGroupKeys.includes(p))
+        : [...new Set([...prev.permissions, ...meta.viewKeys])],
+    }));
+  };
+
   const applyTemplate = (templateKey) => {
     const template = ROLE_TEMPLATES[templateKey];
     if (template) setForm({ name: form.name || template.name, description: form.description || template.description, permissions: template.permissions });
