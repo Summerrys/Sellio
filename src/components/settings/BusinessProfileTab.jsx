@@ -467,6 +467,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
             >
               {isSavingHours ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...</> : <><Save className="w-3.5 h-3.5" /> Save Hours</>}
             </Button>
+          </GatedFields>
           </div>
         )}
       </Card>
