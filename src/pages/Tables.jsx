@@ -691,6 +691,8 @@ export default function Tables() {
           tenantId={tenantId}
           tenant={tenant}
           allTables={tables}
+          canDelete={canDelete}
+          onDelete={(t) => { setShowFormDialog(false); handleDelete(t); }}
         />
 
         <QRCodeGenerator
