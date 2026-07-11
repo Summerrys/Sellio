@@ -274,6 +274,20 @@ function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate, on
         </div>
       </div>
 
+      {/* Edit Order Sheet */}
+      {showEditOrder && (
+        <EditOrderModal
+          order={order}
+          tenantId={tenantId}
+          currency={currency}
+          onClose={() => setShowEditOrder(false)}
+          onSaved={(updatedOrder) => {
+            setShowEditOrder(false);
+            onOrderUpdated?.(updatedOrder);
+          }}
+        />
+      )}
+
       {/* Receipt Preview Sheet */}
       {showReceipt && (
         <div
