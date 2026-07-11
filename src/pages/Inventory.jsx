@@ -10,8 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import StockAdjustmentPanel from '../components/inventory/StockAdjustmentPanel';
 import InventoryLogTable from '../components/inventory/InventoryLogTable';
 import StockHistoryList from '../components/inventory/StockHistoryList';
-import StockTakeOverlay from '../components/stocktake/StockTakeOverlay';
-import { Package, Search, ClipboardList, LayoutGrid, List, Activity, ChevronRight } from 'lucide-react';
+import { Package, Search, LayoutGrid, List, Activity, ChevronRight } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Switch } from '@/components/ui/switch';
 
@@ -46,7 +45,6 @@ function InventoryContent() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [showStockTake, setShowStockTake] = useState(false);
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('inventory_view_mode') || 'list');
 
   const handleViewToggle = (mode) => {
