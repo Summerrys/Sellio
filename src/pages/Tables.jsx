@@ -572,6 +572,14 @@ export default function Tables() {
                                 <Pencil style={{ width: '13px', height: '13px' }} /> Edit
                               </button>
                             )}
+                            {canDelete && (
+                              <button
+                                onClick={() => handleDelete(table)}
+                                style={{ flex: 1, padding: '6px', borderRadius: '8px', border: '0.5px solid #fecaca', background: 'none', fontSize: '11px', fontWeight: '600', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                              >
+                                <Trash2 style={{ width: '13px', height: '13px' }} /> Delete
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
