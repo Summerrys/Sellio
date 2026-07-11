@@ -221,12 +221,11 @@ export const ROLE_TEMPLATES = {
       'staff.view', 'staff.edit',
       'products.view', 'products.create', 'products.edit',
       'categories.view', 'categories.create', 'categories.edit',
-      'inventory.view', 'inventory.adjust', 'inventory.restock',
+      'inventory.view', 'inventory.adjust',
       'orders.view', 'orders.create', 'orders.edit',
       'tables.view', 'tables.edit',
       'payments.view',
       'reports.view',
-      'suppliers.view',
     ],
   },
   cashier: {
