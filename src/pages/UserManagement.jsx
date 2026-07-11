@@ -45,7 +45,6 @@ const GROUP_VISUALS = {
   roles:      { icon: Shield,        iconBg: 'bg-amber-50',   iconColor: 'text-amber-600',   accent: '#d97706' },
   reports:    { icon: BarChart3,     iconBg: 'bg-cyan-50',    iconColor: 'text-cyan-600',    accent: '#0891b2' },
   settings:   { icon: Settings2,     iconBg: 'bg-slate-100',  iconColor: 'text-slate-600',   accent: '#64748b' },
-  payments:   { icon: CreditCard,    iconBg: 'bg-green-50',   iconColor: 'text-green-600',   accent: '#16a34a' },
 };
 
 export default function UserManagement({ embedded = false, onUpgrade }) {
