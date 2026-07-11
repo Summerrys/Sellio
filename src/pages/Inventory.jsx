@@ -405,12 +405,6 @@ function InventoryContent() {
             queryClient.invalidateQueries({ queryKey: ['inventoryMerged', tenantId] });
           }}
         />
-
-        {/* Stock Take Overlay */}
-        <StockTakeOverlay
-          open={showStockTake}
-          onClose={() => setShowStockTake(false)}
-        />
       </div>
     </PullToRefresh>
   );
