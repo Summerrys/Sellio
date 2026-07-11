@@ -416,9 +416,21 @@ export function TenantProvider({ children }) {
     tenantId: currentTenantId,
     tenantUser: tenantUser?.[0] || null,
     isSuperAdmin,
+    // FIX: previously fell back to `!!user?.tenant_id` when tenantUser hadn't loaded
+    // is_owner yet. That fallback was too broad — app_users.tenant_id is set for EVERY
+    // staff member (owner, Manager, Cashier, all of them), not just the actual owner.
+    // That made isOwner silently evaluate to true for any logged-in staff account,
+    // which meant RequirePermission's "owners bypass all permission checks" branch fired
+    // for non-owners too — e.g. a Manager with products.create/edit/delete explicitly
+    // removed could still see and use the Download/Upload/Scan/Add buttons, since
+    // RequirePermission short-circuited on isOwner before ever checking the actual
+    // permission. hasPermission() itself never had this bug (it reads tenantUser's real
+    // is_owner flag directly), which is why permission checks done inline in click
+    // handlers worked correctly while RequirePermission-wrapped buttons didn't — now
+    // both use the same, correct source of truth.
     isOwner: devRoleOverride
       ? devRoleOverride === 'owner'
-      : (tenantUser?.[0]?.is_owner || !!user?.tenant_id || false),
+      : (tenantUser?.[0]?.is_owner || false),
     permissions: userPermissions,
     hasPermission,
     hasAnyPermission,
