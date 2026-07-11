@@ -29,6 +29,26 @@ import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Link } from 'react-router-dom';
 
+// Visual identity per permission group in the toggle-based Roles editor — reuses
+// the exact same color language as Dashboard's Quick Access cards (Orders=blue,
+// Products=purple, Categories=pink, Tables=teal) so the palette feels like one
+// consistent product rather than a one-off for this screen. Hex values are used
+// (rather than dynamic Tailwind classes like `bg-${color}-600`) for the Switch/
+// checkbox checked-states specifically, since Tailwind's build-time class
+// scanner can't see interpolated class names and would silently drop them.
+const GROUP_VISUALS = {
+  orders:     { icon: ClipboardList, iconBg: 'bg-blue-50',    iconColor: 'text-blue-600',    accent: '#3b82f6' },
+  products:   { icon: ShoppingBag,   iconBg: 'bg-purple-50',  iconColor: 'text-purple-600',  accent: '#8b5cf6' },
+  categories: { icon: Grid3X3,       iconBg: 'bg-pink-50',    iconColor: 'text-pink-600',    accent: '#ec4899' },
+  inventory:  { icon: Package,       iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', accent: '#10b981' },
+  tables:     { icon: QrCode,        iconBg: 'bg-teal-50',    iconColor: 'text-teal-600',    accent: '#0d9488' },
+  staff:      { icon: Users,         iconBg: 'bg-indigo-50',  iconColor: 'text-indigo-600',  accent: '#6366f1' },
+  roles:      { icon: Shield,        iconBg: 'bg-amber-50',   iconColor: 'text-amber-600',   accent: '#d97706' },
+  reports:    { icon: BarChart3,     iconBg: 'bg-cyan-50',    iconColor: 'text-cyan-600',    accent: '#0891b2' },
+  settings:   { icon: Settings2,     iconBg: 'bg-slate-100',  iconColor: 'text-slate-600',   accent: '#64748b' },
+  payments:   { icon: CreditCard,    iconBg: 'bg-green-50',   iconColor: 'text-green-600',   accent: '#16a34a' },
+};
+
 export default function UserManagement({ embedded = false, onUpgrade }) {
   const [activeTab, setActiveTab] = useState('staff');
 
