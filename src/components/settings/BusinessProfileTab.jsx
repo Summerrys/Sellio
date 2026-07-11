@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import ImageEditModal from '@/components/onboarding/ImageEditModal';
 import { INDUSTRY_OPTIONS, normalizeIndustry } from '@/lib/industry';
+import { cn } from '@/lib/utils';
 
 // FIX: previously had its own local INDUSTRIES + normaliseIndustry copy, separate
 // from onboarding's — the two lists could (and did) drift. Both now import from
