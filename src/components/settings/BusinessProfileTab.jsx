@@ -384,6 +384,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
         </button>
         {locationOpen && (
           <div className="px-6 pb-6 space-y-4 border-t border-slate-100">
+          <GatedFields canEdit={canEditSettings} onBlocked={showNoAccessMessage} className="space-y-4">
             <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-xs text-slate-600 mb-1 block">Country</Label>
