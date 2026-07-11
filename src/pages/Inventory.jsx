@@ -285,7 +285,7 @@ function InventoryContent() {
                   return (
                     <div
                       key={product.id}
-                      onClick={() => canAdjust && setSelectedProduct(product)}
+                      onClick={() => handleProductClick(product)}
                       className={`bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-slate-300 hover:shadow-sm transition-all active:scale-[0.99] ${canAdjust ? 'cursor-pointer' : 'cursor-default'}`}
                     >
                       {/* Square image — matches ProductGrid */}
