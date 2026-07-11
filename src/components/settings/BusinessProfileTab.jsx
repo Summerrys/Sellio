@@ -519,6 +519,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
         </button>
         {receiptOpen && (
           <div className="px-6 pb-6 space-y-4 border-t border-slate-100">
+          <GatedFields canEdit={canEditSettings} onBlocked={showNoAccessMessage} className="space-y-4">
             {/* Paper Size */}
             <div className="pt-4">
               <Label className="text-xs text-slate-600 mb-2 block">Paper Size</Label>
@@ -570,6 +571,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
 
             {/* Printer connection */}
             <PrinterSettings tenantId={tenantId} merchantName={form.name} />
+          </GatedFields>
           </div>
         )}
       </Card>
