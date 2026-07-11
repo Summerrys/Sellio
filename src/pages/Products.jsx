@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PullToRefresh from '../components/ui-custom/PullToRefresh';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
+import { toast } from 'sonner';
 import RequirePermission from '../components/auth/RequirePermission';
 import EmptyState from '../components/ui-custom/EmptyState';
 import { Button } from '@/components/ui/button';
@@ -399,6 +400,14 @@ export default function Products() {
   });
 
   const handleEdit = (product) => {
+    // FIX: previously any user who could see the Products page could click into any
+    // product regardless of edit permission — Save/Delete were hidden inside the dialog,
+    // but the dialog itself still opened, which read as "I can almost edit this" rather
+    // than a clean no-access state. Block the click entirely for view-only users instead.
+    if (!hasPermission('products.edit')) {
+      toast.error("You don't have access to edit products.");
+      return;
+    }
     setEditingProduct(product);
     setShowDialog(true);
   };
