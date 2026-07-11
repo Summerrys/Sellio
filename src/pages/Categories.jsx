@@ -69,6 +69,15 @@ function CategoriesContent() {
   });
 
   const open = (cat) => { setEditing(cat || null); setForm(cat ? { name: cat.name, description: cat.description || '', is_active: cat.is_active !== false, sort_order: cat.sort_order || 0 } : { name: '', description: '', is_active: true, sort_order: 0 }); setConfirmDelete(false); setShowForm(true); };
+
+  // Matches the same no-access message used on the Products page for consistency.
+  const handleCardClick = (cat) => {
+    if (!canEdit) {
+      toast.error("You don't have access to edit categories.");
+      return;
+    }
+    open(cat);
+  };
   const close = () => { setShowForm(false); setEditing(null); setConfirmDelete(false); };
 
   const handleDelete = () => {
