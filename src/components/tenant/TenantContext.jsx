@@ -69,9 +69,7 @@ export const PERMISSION_GROUPS = {
   },
   inventory: {
     label: 'Inventory',
-    // Suppliers live here now, not under Settings — supplier records are
-    // inventory data (who you restock from), not business configuration.
-    permissions: ['inventory.view','inventory.edit','inventory.adjust','inventory.restock','inventory.delivery_order','suppliers.view','suppliers.create','suppliers.edit','suppliers.delete'],
+    permissions: ['inventory.view','inventory.adjust'],
   },
   tables: {
     label: 'Tables & QR',
@@ -91,11 +89,10 @@ export const PERMISSION_GROUPS = {
   },
   settings: {
     label: 'Settings & Configuration',
-    permissions: ['settings.view','settings.edit','theme.edit'],
-  },
-  payments: {
-    label: 'Payments',
-    permissions: ['payments.view','payments.edit'],
+    // Payments now lives here too — the Payment QR is configured from within
+    // Settings, so it makes more sense as part of "can this person manage
+    // Settings" rather than its own separate top-level permission group.
+    permissions: ['settings.view','settings.edit','theme.edit','payments.view','payments.edit'],
   },
 };
 
