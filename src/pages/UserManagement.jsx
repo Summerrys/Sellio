@@ -259,7 +259,22 @@ function RolesContent({ onUpgrade }) {
 
   const { data: roles = [] } = useQuery({
     queryKey: ['allRoles', tenantId],
-    queryFn: () => db.entities.Role.filter({ tenant_id: tenantId }),
+    queryFn: async () => {
+      // FIX: db.entities.Role.filter() had no order() clause at all, so Postgres
+      // returned rows in whatever physical order it felt like — stable-ish on first
+      // load, but an UPDATE rewrites that row's physical tuple, which could (and did)
+      // reshuffle where it appeared in the list. Same root cause as the earlier
+      // Products-page reordering bug; same fix, a deterministic tiebreak.
+      const supabase = await getSupabase();
+      const { data, error } = await supabase
+        .from('roles')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('created_date', { ascending: true })
+        .order('id', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
     enabled: !!tenantId,
   });
 
