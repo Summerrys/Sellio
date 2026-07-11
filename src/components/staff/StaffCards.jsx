@@ -3,18 +3,28 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import StatusBadge from '../ui-custom/StatusBadge';
 import { Trash2, Crown } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 import { useTenant } from '../tenant/TenantContext';
 
 export default function StaffCards({ staff, onEdit, onDelete }) {
   const { hasPermission } = useTenant();
   const canEdit = hasPermission('staff.edit');
   const canDelete = hasPermission('staff.delete');
+
+  const handleCardClick = (member) => {
+    if (member.is_owner) return; // business rule, not a permission gap — no message needed
+    if (!canEdit) {
+      toast.error("You don't have access to edit staff.");
+      return;
+    }
+    onEdit(member);
+  };
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
       {staff.map((member) => (
         <div
           key={member.id}
-          onClick={() => !member.is_owner && canEdit && onEdit(member)}
+          onClick={() => handleCardClick(member)}
           className="bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col items-center text-center relative"
           style={{ cursor: (!member.is_owner && canEdit) ? 'pointer' : 'default' }}
         >
