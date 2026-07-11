@@ -540,6 +540,7 @@ export default function Products() {
           </div>
           <p className="text-sm text-slate-500 -mt-3">Manage your product catalog</p>
           <div className="flex flex-wrap items-center gap-2">
+              <RequirePermission permission="products.create" silent>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
@@ -558,8 +559,7 @@ export default function Products() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <RequirePermission permission="products.create" silent>
-                <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm">
+              <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm">
                   <Upload className="w-4 h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Import</span>
                 </Button>
