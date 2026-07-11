@@ -79,7 +79,7 @@ export const PERMISSION_GROUPS = {
     label: 'Inventory',
     // Suppliers live here now, not under Settings — supplier records are
     // inventory data (who you restock from), not business configuration.
-    permissions: ['inventory.view','inventory.edit','inventory.adjust','inventory.restock','inventory.stock_take','inventory.delivery_order','suppliers.view','suppliers.create','suppliers.edit','suppliers.delete'],
+    permissions: ['inventory.view','inventory.edit','inventory.adjust','inventory.restock','inventory.delivery_order','suppliers.view','suppliers.create','suppliers.edit','suppliers.delete'],
   },
   tables: {
     label: 'Tables & QR',
