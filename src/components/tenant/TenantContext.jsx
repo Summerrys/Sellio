@@ -138,17 +138,9 @@ export const PERMISSION_GROUP_META = {
   inventory: {
     label: 'Inventory',
     masterLabel: 'Manage Inventory',
-    // Suppliers share this master toggle — they're grouped with inventory
-    // elsewhere in the app too (Settings moved them here for the same reason).
-    viewKeys: ['inventory.view', 'suppliers.view'],
+    viewKeys: ['inventory.view'],
     subPermissions: [
       { key: 'inventory.adjust', label: 'Adjust Stock' },
-      { key: 'inventory.restock', label: 'Restock Inventory' },
-      { key: 'inventory.delivery_order', label: 'Delivery Orders' },
-      { key: 'inventory.edit', label: 'Edit Stock Settings' },
-      { key: 'suppliers.create', label: 'Add Suppliers' },
-      { key: 'suppliers.edit', label: 'Update Suppliers' },
-      { key: 'suppliers.delete', label: 'Remove Suppliers' },
     ],
   },
   tables: {
@@ -192,19 +184,17 @@ export const PERMISSION_GROUP_META = {
   settings: {
     label: 'Settings & Configuration',
     masterLabel: 'Manage Settings',
-    viewKeys: ['settings.view'],
+    // Payments view is bundled in here too — the Payment QR lives inside the
+    // Settings page itself, so "can see Settings" naturally includes "can see
+    // the payment QR that's configured there". Modify Payments is still its
+    // own separate sub-toggle, same as Edit Business Settings and Modify Theme.
+    viewKeys: ['settings.view', 'payments.view'],
     subPermissions: [
       { key: 'settings.edit', label: 'Edit Business Settings' },
+      { key: 'payments.edit', label: 'Modify Payments' },
       { key: 'theme.edit', label: 'Modify Theme' },
     ],
   },
-  payments: {
-    label: 'Payments',
-    masterLabel: 'Access Payments',
-    viewKeys: ['payments.view'],
-    subPermissions: [
-      { key: 'payments.edit', label: 'Modify Payments' },
-    ],
   },
 };
 
