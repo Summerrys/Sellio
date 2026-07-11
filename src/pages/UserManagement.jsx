@@ -253,6 +253,7 @@ function RolesContent({ onUpgrade }) {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: '', description: '', permissions: [] });
+  const [originalForm, setOriginalForm] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
   const [mobilePreviewRole, setMobilePreviewRole] = useState(null);
 
