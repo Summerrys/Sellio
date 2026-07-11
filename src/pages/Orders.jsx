@@ -814,6 +814,7 @@ export default function Orders() {
                   tenantId={tenantId}
                   onStatusUpdate={handleStatusUpdate}
                   onMarkPaid={handleMarkPaid}
+                  onOrderUpdated={(updatedOrder) => setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o))}
                 />
               ))}
             </div>
