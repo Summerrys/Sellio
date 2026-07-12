@@ -12,7 +12,7 @@ import SalesReport from '../components/reports/SalesReport';
 import ProductPerformance from '../components/reports/ProductPerformance';
 import ExportButton from '../components/reports/ExportButton';
 import PricingModal from '../components/subscription/PricingModal';
-import { BarChart3, Lock, TrendingUp, Package, Users, Sparkles } from 'lucide-react';
+import { BarChart3, Lock, Package, Users, Sparkles } from 'lucide-react';
 import { subDays, isWithinInterval } from 'date-fns';
 
 const TIER_LABELS = { starter: 'Basic Reports', growth: 'Advanced Reports', pro: 'Custom Reports' };
