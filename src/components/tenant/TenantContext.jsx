@@ -5,6 +5,11 @@ import { getSupabase } from '@/lib/supabaseClient';
 const TenantContext = createContext(null);
 
 export const ALL_PERMISSIONS = {
+  // Dashboard — the Dashboard page itself is always visible to everyone; these
+  // two just gate specific features on it (AI chat, storefront design/preview
+  // access), not the page as a whole.
+  'dashboard.ai_assistant': 'AI Assistant',
+  'dashboard.design_store': 'Design Store',
   // Orders
   'orders.view': 'View orders',
   'orders.create': 'Create orders',
