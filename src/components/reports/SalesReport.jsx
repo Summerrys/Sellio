@@ -24,13 +24,15 @@ function StatCard({ label, value, icon: Icon, iconBg, iconColor }) {
   );
 }
 
-export default function SalesReport({ orders, categories = [], currency, themeColors, isStarter = true }) {
+export default function SalesReport({ orders, products = [], categories = [], currency, themeColors, isStarter = true }) {
   // FIX: order line items only ever carry {name, price, quantity, product_id, variant}
-  // — there's no item.total (needs price*quantity) and no item.category (category
-  // lives on the product, resolved here via category_id -> name, not on the item
-  // itself). Reading the old, nonexistent field names silently produced NaN/undefined
+  // — there's no item.total (needs price*quantity) and no item.category_id either.
+  // Category lives on the *product*, so resolving it means item.product_id -> product
+  // -> product.category_id -> category name, not reading it off the item directly.
+  // Reading the old, nonexistent field names silently produced NaN/undefined
   // throughout this whole report.
   const categoryNameById = categories.reduce((acc, c) => { acc[c.id] = c.name; return acc; }, {});
+  const productById = products.reduce((acc, p) => { acc[p.id] = p; return acc; }, {});
 
   // Revenue over time
   const revenueByDate = orders.reduce((acc, order) => {
@@ -49,7 +51,8 @@ export default function SalesReport({ orders, categories = [], currency, themeCo
   // product whose category was later deleted) falls into "Uncategorized".
   const revenueByCategory = orders.reduce((acc, order) => {
     order.items?.forEach(item => {
-      const category = (item.category_id && categoryNameById[item.category_id]) || 'Uncategorized';
+      const product = productById[item.product_id];
+      const category = (product?.category_id && categoryNameById[product.category_id]) || 'Uncategorized';
       const lineTotal = (item.price || 0) * (item.quantity || 0);
       acc[category] = (acc[category] || 0) + lineTotal;
     });
