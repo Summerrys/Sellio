@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CalendarIcon } from 'lucide-react';
@@ -44,22 +44,20 @@ export default function DateRangePicker({ dateRange, onChange }) {
 
   return (
     <div className="flex items-center gap-2">
-      <Select value={activeValue} onValueChange={handleSelect}>
-        <SelectTrigger className="h-9 w-auto min-w-[140px] gap-1.5 rounded-full border-slate-200 text-sm font-medium">
-          <CalendarIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-          <SelectValue>{activeValue === 'custom' ? customLabel : presets.find(p => p.value === activeValue)?.label}</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {presets.map(p => (
-            <SelectItem key={p.value} value={p.value}>{p.value === 'custom' ? customLabel : p.label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <span />
-        </PopoverTrigger>
+        <PopoverAnchor asChild>
+          <Select value={activeValue} onValueChange={handleSelect}>
+            <SelectTrigger className="h-9 w-auto min-w-[140px] gap-1.5 rounded-full border-slate-200 text-sm font-medium">
+              <CalendarIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+              <SelectValue>{activeValue === 'custom' ? customLabel : presets.find(p => p.value === activeValue)?.label}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {presets.map(p => (
+                <SelectItem key={p.value} value={p.value}>{p.value === 'custom' ? customLabel : p.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </PopoverAnchor>
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar
             mode="range"
