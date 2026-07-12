@@ -64,7 +64,7 @@ export default function Reports() {
         .from('orders')
         .select('*')
         .eq('tenant_id', tenantId)
-        .is('deleted_at', null)
+        .eq('is_deleted', false)
         .order('created_date', { ascending: false })
         .limit(1000);
       if (error) throw error;
