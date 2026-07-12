@@ -607,28 +607,8 @@ function RolesContent({ onUpgrade }) {
                 </button>
               </div>
               {/* Permissions list */}
-              <div className="overflow-y-auto px-5 py-4 space-y-4">
-                {Object.entries(PERMISSION_GROUPS).map(([key, group]) => {
-                  const rolePerms = mobilePreviewRole.permissions || [];
-                  const groupPerms = group.permissions.filter(p => rolePerms.includes(p));
-                  if (groupPerms.length === 0) return null;
-                  return (
-                    <div key={key}>
-                      <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">{group.label}</p>
-                      <div className="space-y-1.5">
-                        {groupPerms.map(perm => (
-                          <div key={perm} className="flex items-center gap-2 text-xs text-slate-600">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                            {ALL_PERMISSIONS[perm]}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-                {(mobilePreviewRole.permissions || []).length === 0 && (
-                  <p className="text-sm text-slate-400 text-center py-4">No permissions assigned</p>
-                )}
+              <div className="overflow-y-auto px-5 py-4">
+                <RolePermissionSummary role={mobilePreviewRole} />
               </div>
             </div>
           </div>
