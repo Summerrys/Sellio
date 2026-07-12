@@ -22,7 +22,7 @@ import StaffImportDialog from '../components/staff/StaffImportDialog';
 import StaffTable from '../components/staff/StaffTable';
 import StaffCards from '../components/staff/StaffCards';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Shield, Plus, Pencil, Trash2, Copy, Users, CheckCircle2, UserPlus, Search, LayoutGrid, List, Download, Upload, FileDown, FileSpreadsheet, X, Info, ClipboardList, ShoppingBag, Grid3X3, Package, QrCode, BarChart3, Settings2, CreditCard, Check } from 'lucide-react';
+import { Shield, Plus, Pencil, Trash2, Copy, Users, CheckCircle2, UserPlus, Search, LayoutGrid, List, Download, Upload, FileDown, FileSpreadsheet, X, Info, ClipboardList, ShoppingBag, Grid3X3, Package, QrCode, BarChart3, Settings2, CreditCard, Check, LayoutDashboard } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
