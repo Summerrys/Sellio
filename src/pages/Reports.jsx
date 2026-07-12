@@ -174,6 +174,7 @@ export default function Reports() {
                 orders={orders}
                 currency={tenant?.currency || 'SGD'}
                 themeColors={themeColors}
+                isStarter={isStarter}
               />
             </TabsContent>
 
