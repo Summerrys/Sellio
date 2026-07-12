@@ -303,6 +303,12 @@ export default function Dashboard() {
         tenantSlug={tenant?.slug}
       />
       <MerchantAssistantWidget externalOpen={aiOpen} onExternalClose={() => setAiOpen(false)} />
+      <TakeOrdersModal
+        open={showTakeOrders}
+        onClose={() => setShowTakeOrders(false)}
+        tenantId={tenantId}
+        tenantSlug={tenant?.slug}
+      />
 
       {/* Stats Row — 4 compact cards always in a row */}
       <div className="grid grid-cols-4 gap-2">
