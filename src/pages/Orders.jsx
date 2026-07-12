@@ -518,6 +518,7 @@ export default function Orders() {
       .from('orders')
       .select('*')
       .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
       .order('created_date', { ascending: false });
     if (!error) setOrders(data || []);
     setIsLoading(false);
