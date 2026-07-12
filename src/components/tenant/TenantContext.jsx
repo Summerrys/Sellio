@@ -60,6 +60,10 @@ const PERMISSIONS = ALL_PERMISSIONS;
 
 // Permission groups for UI organization
 export const PERMISSION_GROUPS = {
+  dashboard: {
+    label: 'Dashboard',
+    permissions: ['dashboard.ai_assistant','dashboard.design_store'],
+  },
   orders: {
     label: 'Orders',
     permissions: ['orders.view','orders.create','orders.edit','orders.cancel'],
