@@ -114,6 +114,19 @@ export const PERMISSION_GROUPS = {
 // flat permission-key strings as PERMISSION_GROUPS above, so nothing about how
 // hasPermission() checks permissions changes.
 export const PERMISSION_GROUP_META = {
+  // No master toggle here — the Dashboard page itself is always visible to
+  // everyone, so there's nothing for a master switch to represent. These two
+  // are independent, always-shown toggles (empty viewKeys/subPermissions is how
+  // the Roles editor UI knows to render this group without a Switch header).
+  dashboard: {
+    label: 'Dashboard',
+    masterLabel: null,
+    viewKeys: [],
+    subPermissions: [
+      { key: 'dashboard.ai_assistant', label: 'AI Assistant' },
+      { key: 'dashboard.design_store', label: 'Design Store' },
+    ],
+  },
   orders: {
     label: 'Orders',
     masterLabel: 'Manage Orders',
