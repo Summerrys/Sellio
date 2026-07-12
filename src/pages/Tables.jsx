@@ -215,7 +215,16 @@ export default function Tables() {
   }, [localTables.map(t => t.id).join(','), tenantId]); // only re-run when table IDs change
 
   const deleteMutation = useMutation({
-    mutationFn: (tableId) => base44.functions.invoke('manageTable', { action: 'delete', tenant_id: tenantId, table_id: tableId }),
+    // FIX: this was the one remaining call in the whole Tables page still going
+    // through the old pre-migration Base44 SDK function runtime (base44.functions.
+    // invoke) instead of a direct Supabase call — create/update in TableFormDialog
+    // already moved off it. That endpoint is no longer reachable, which is what
+    // surfaced as "Network Error" whenever someone tried to delete a table.
+    mutationFn: async (tableId) => {
+      const supabase = await getSupabase();
+      const { error } = await supabase.from('tables').delete().eq('id', tableId).eq('tenant_id', tenantId);
+      if (error) throw error;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tables', tenantId] });
       toast.success('Table deleted');
