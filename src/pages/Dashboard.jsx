@@ -238,12 +238,12 @@ export default function Dashboard() {
                 />
                 <span style={{
                   position: 'absolute',
-                  bottom: -2,
-                  left: '100%',
-                  marginLeft: 6,
+                  top: '100%',
+                  right: 0,
+                  marginTop: 6,
                   background: 'white',
                   border: '1px solid rgba(224,68,154,0.2)',
-                  borderRadius: '10px 10px 10px 2px',
+                  borderRadius: '10px 2px 10px 10px',
                   padding: '3px 8px',
                   fontSize: 10,
                   fontWeight: 700,
