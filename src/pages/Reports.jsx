@@ -200,6 +200,7 @@ export default function Reports() {
             ) : (
               <SalesReport
                 orders={orders}
+                products={products}
                 categories={categories}
                 currency={tenant?.currency || 'SGD'}
                 themeColors={themeColors}
