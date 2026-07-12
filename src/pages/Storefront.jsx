@@ -400,7 +400,7 @@ function StorefrontInner() {
           theme={theme}
           products={products}
           categories={categories}
-          showBackButton={!isDineIn}
+          showBackButton={!isDineIn || isStaffMode}
           onProductModalChange={setShowProductModal}
           cart={cart}
           setCart={setCart}
