@@ -18,10 +18,16 @@ function StatCard({ label, value, icon: Icon, iconBg, iconColor }) {
   );
 }
 
-// stockHistory: rows from stock_history within the selected date range.
-// inventoryItems: current stock levels (not date-filtered — it's a live snapshot).
-export default function InventoryReport({ stockHistory, inventoryItems, themeColors }) {
-  const lowStockItems = (inventoryItems || []).filter(i => i.current_stock <= (i.low_stock_threshold ?? 0));
+// stockHistory: rows from stock_history within the selected date range (these DO
+// carry product_name directly, captured at adjustment time).
+// inventoryItems: current stock levels (not date-filtered — a live snapshot). This
+// table does NOT store product_name, only product_id, so it needs products passed
+// in to resolve a readable name — same class of gap as the order-items bug earlier.
+export default function InventoryReport({ stockHistory, inventoryItems, products = [], themeColors }) {
+  const productNameById = products.reduce((acc, p) => { acc[p.id] = p.name; return acc; }, {});
+  const lowStockItems = (inventoryItems || [])
+    .filter(i => i.current_stock <= (i.low_stock_threshold ?? 0))
+    .map(i => ({ ...i, product_name: productNameById[i.product_id] || 'Unknown product' }));
 
   const netChange = stockHistory.reduce((sum, h) => sum + (h.change_amount || 0), 0);
 
