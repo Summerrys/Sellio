@@ -36,6 +36,7 @@ import { Link } from 'react-router-dom';
 // checkbox checked-states specifically, since Tailwind's build-time class
 // scanner can't see interpolated class names and would silently drop them.
 const GROUP_VISUALS = {
+  dashboard:  { icon: LayoutDashboard, iconBg: 'bg-orange-50',  iconColor: 'text-orange-600',  accent: '#f97316' },
   orders:     { icon: ClipboardList, iconBg: 'bg-blue-50',    iconColor: 'text-blue-600',    accent: '#3b82f6' },
   products:   { icon: ShoppingBag,   iconBg: 'bg-purple-50',  iconColor: 'text-purple-600',  accent: '#8b5cf6' },
   categories: { icon: Grid3X3,       iconBg: 'bg-pink-50',    iconColor: 'text-pink-600',    accent: '#ec4899' },
