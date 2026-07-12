@@ -223,8 +223,9 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">
-            {getGreeting()}, {tenant?.name || 'there'}!{' '}
+          <h1 className="text-xl font-bold text-slate-900 leading-snug">
+            {getGreeting()}<br />
+            {tenant?.name || 'there'}!{' '}
               {hasPermission('dashboard.ai_assistant') && (
               <button
                 onClick={() => setAiOpen(true)}
@@ -238,12 +239,12 @@ export default function Dashboard() {
                 />
                 <span style={{
                   position: 'absolute',
-                  top: '100%',
-                  right: 0,
-                  marginTop: 6,
+                  bottom: -2,
+                  left: '100%',
+                  marginLeft: 6,
                   background: 'white',
                   border: '1px solid rgba(224,68,154,0.2)',
-                  borderRadius: '10px 2px 10px 10px',
+                  borderRadius: '10px 10px 10px 2px',
                   padding: '3px 8px',
                   fontSize: 10,
                   fontWeight: 700,
