@@ -287,9 +287,12 @@ export default function Reports() {
                 onUpgrade={() => setShowPricing(true)}
               />
             ) : (
-              <div className="text-center py-12 text-slate-400 text-sm">
-                Inventory reports coming soon
-              </div>
+              <InventoryReport
+                stockHistory={filteredStockHistory}
+                inventoryItems={inventoryItems}
+                products={products}
+                themeColors={themeColors}
+              />
             )}
           </TabsContent>
 
@@ -302,9 +305,12 @@ export default function Reports() {
                 onUpgrade={() => setShowPricing(true)}
               />
             ) : (
-              <div className="text-center py-12 text-slate-400 text-sm">
-                Customer insights coming soon
-              </div>
+              <CustomerInsights
+                customers={customers}
+                dateRange={{ from: startOfDay(dateRange.from), to: endOfDay(dateRange.to) }}
+                currency={tenant?.currency || 'SGD'}
+                themeColors={themeColors}
+              />
             )}
           </TabsContent>
 
