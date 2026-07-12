@@ -161,9 +161,17 @@ export default function Tables() {
               );
             }
             if (payload.eventType === 'INSERT') {
-              setLocalTables(prev => [...prev, payload.new]);
+              // FIX: previously appended unconditionally. The person who just created
+              // the table already gets it into state via TableFormDialog's own
+              // invalidateQueries() refetch — this realtime handler firing for that
+              // same INSERT (a near-guaranteed race, not an edge case) would append it
+              // a second time, since neither localTables nor the query cache were ever
+              // checked for an existing row with that id first. That's what showed up
+              // as "created 1 table, got 2" — a duplicate in local state, not an actual
+              // second row in the database.
+              setLocalTables(prev => prev.some(t => t.id === payload.new.id) ? prev : [...prev, payload.new]);
               queryClient.setQueryData(['tables', tenantId], (prev) =>
-                prev ? [...prev, payload.new] : prev
+                prev ? (prev.some(t => t.id === payload.new.id) ? prev : [...prev, payload.new]) : prev
               );
             }
             if (payload.eventType === 'DELETE') {
