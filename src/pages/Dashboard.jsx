@@ -351,6 +351,26 @@ export default function Dashboard() {
         </RequirePermission>
       </div>
 
+      {/* Take Orders — staff-assisted order entry, only shown when the account can
+          actually create orders. Reuses the public storefront for the actual cart/
+          checkout, this button just supplies the missing Dine-in/Takeaway/table step. */}
+      {hasPermission('orders.create') && (
+        <button
+          onClick={() => setShowTakeOrders(true)}
+          className="w-full flex items-center gap-3 p-4 rounded-2xl text-white active:scale-[0.98] transition-transform"
+          style={{ background: 'linear-gradient(135deg, #fb923c, #e0449a, #8b5cf6)', boxShadow: '0 4px 16px rgba(224, 68, 154, 0.3)' }}
+        >
+          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+            <ShoppingCart className="w-5 h-5" />
+          </div>
+          <div className="text-left flex-1">
+            <p className="text-sm font-bold">Take Orders</p>
+            <p className="text-xs text-white/80">Order on behalf of a customer</p>
+          </div>
+          <ChevronRight className="w-5 h-5 text-white/80" />
+        </button>
+      )}
+
       {/* Feature Grid */}
       <div>
         <h2 className="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wide">Quick Access</h2>
