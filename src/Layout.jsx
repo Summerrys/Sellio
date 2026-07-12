@@ -452,7 +452,18 @@ function AppLayout({ children, currentPageName }) {
           {/* Center: Sell FAB */}
           <div className="flex-1 flex flex-col items-center justify-end pb-1" style={{ minHeight: 60 }}>
             <button
-              onClick={() => atProductLimit ? setUpgradeModalOpen(true) : setIsNewProductOpen(true)}
+              onClick={() => {
+                // FIX: previously only checked the plan's product-count limit — never
+                // whether the account actually has products.create at all, so someone
+                // with that permission explicitly turned off could still open Add
+                // Product from here even though the Products page itself correctly
+                // blocks them.
+                if (!hasPermission('products.create')) {
+                  toast.error("You don't have access to add products.");
+                  return;
+                }
+                atProductLimit ? setUpgradeModalOpen(true) : setIsNewProductOpen(true);
+              }}
               className="flex flex-col items-center gap-0.5 -mt-5"
               style={{ outline: 'none' }}
               title={atProductLimit ? `Product limit reached (${maxProducts}) — upgrade to add more` : undefined}
