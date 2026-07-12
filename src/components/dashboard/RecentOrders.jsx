@@ -27,6 +27,7 @@ export default function RecentOrders({ tenantId }) {
         .from('orders')
         .select('*')
         .eq('tenant_id', tenantId)
+        .is('deleted_at', null)
         .order('created_date', { ascending: false })
         .limit(5);
       return data || [];
