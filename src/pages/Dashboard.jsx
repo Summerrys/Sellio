@@ -95,6 +95,7 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const [showDesigner, setShowDesigner] = React.useState(false);
   const [aiOpen, setAiOpen] = React.useState(false);
+  const [showTakeOrders, setShowTakeOrders] = React.useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
