@@ -153,6 +153,11 @@ export default function Reports() {
     return isWithinInterval(orderDate, { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) });
   });
 
+  const filteredStockHistory = stockHistory.filter(h => {
+    if (!dateRange?.from || !dateRange?.to) return true;
+    return isWithinInterval(new Date(h.created_date), { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) });
+  });
+
   // Get theme colors
   const themeColors = {
     primary: tenant?.settings?.theme?.primary_color || '#1e293b',
