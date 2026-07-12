@@ -13,6 +13,7 @@ import {
   Shield, Settings, BarChart2, ChevronRight, AlertTriangle, Paintbrush
 } from 'lucide-react';
 import StorefrontDesigner from '../components/storefront/StorefrontDesigner';
+import TakeOrdersModal from '../components/dashboard/TakeOrdersModal';
 import MerchantAssistantWidget from '../components/merchant/MerchantAssistantWidget';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
