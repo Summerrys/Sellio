@@ -48,6 +48,62 @@ const GROUP_VISUALS = {
   settings:   { icon: Settings2,     iconBg: 'bg-slate-100',  iconColor: 'text-slate-600',   accent: '#64748b' },
 };
 
+// Read-only, color-coded summary of a role's permissions — mirrors the same icon
+// badges/colors/chip language used in the editable Roles form (GROUP_VISUALS +
+// PERMISSION_GROUP_META), just rendered as a static list instead of toggles.
+// Shared between the desktop sidebar preview and the mobile preview modal so
+// they can never visually drift apart from each other.
+function RolePermissionSummary({ role }) {
+  const rolePerms = role?.permissions || [];
+  const groups = Object.entries(PERMISSION_GROUP_META).map(([groupKey, meta]) => {
+    const visual = GROUP_VISUALS[groupKey];
+    const hasMaster = !!meta.masterLabel;
+    const grantedView = meta.viewKeys.some(k => rolePerms.includes(k));
+    const grantedSubs = meta.subPermissions.filter(sp => rolePerms.includes(sp.key));
+    const granted = hasMaster ? (grantedView || grantedSubs.length > 0) : grantedSubs.length > 0;
+    return { groupKey, meta, visual, grantedSubs, granted };
+  }).filter(g => g.granted);
+
+  if (groups.length === 0) {
+    return <p className="text-xs text-slate-400 text-center py-6">No permissions granted</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {groups.map(({ groupKey, meta, visual, grantedSubs }) => {
+        const Icon = visual.icon;
+        return (
+          <div key={groupKey} className="rounded-xl border border-slate-100 p-2.5">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0", visual.iconBg)}>
+                <Icon className={cn("w-3 h-3", visual.iconColor)} />
+              </div>
+              <span className="text-xs font-semibold text-slate-800">{meta.masterLabel || meta.label}</span>
+            </div>
+            <div className="flex flex-wrap gap-1 pl-8">
+              {grantedSubs.length === 0 ? (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                  View only
+                </span>
+              ) : (
+                grantedSubs.map(sp => (
+                  <span
+                    key={sp.key}
+                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full text-white"
+                    style={{ background: visual.accent }}
+                  >
+                    {sp.label}
+                  </span>
+                ))
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function UserManagement({ embedded = false, onUpgrade }) {
   const [activeTab, setActiveTab] = useState('staff');
 
