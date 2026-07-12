@@ -223,6 +223,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-xl font-bold text-slate-900">
             {getGreeting()}, {tenant?.name || 'there'}!{' '}
+              {hasPermission('dashboard.ai_assistant') && (
               <button
                 onClick={() => setAiOpen(true)}
                 style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-block', verticalAlign: 'middle', marginLeft: 4, position: 'relative' }}
