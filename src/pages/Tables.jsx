@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import db from '@/lib/db';
-import { base44 } from '@/api/base44Client';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
