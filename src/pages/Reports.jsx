@@ -14,22 +14,24 @@ import ExportButton from '../components/reports/ExportButton';
 import PricingModal from '../components/subscription/PricingModal';
 import { BarChart3, Lock, Package, Users, Sparkles } from 'lucide-react';
 import { subDays, isWithinInterval } from 'date-fns';
+import { toast } from 'sonner';
 
-const TIER_LABELS = { starter: 'Basic Reports', growth: 'Advanced Reports', pro: 'Custom Reports' };
+const TIER_LABELS = { starter: 'Basic', growth: 'Advanced', pro: 'Custom' };
 
-// Small reusable "this needs a higher plan" panel — used for both locked tabs and
-// the locked export action, so the upsell always looks and behaves the same way.
+// Small reusable "this needs a higher plan" panel — used for locked tabs, where a
+// deliberate "here's what you're missing" moment makes sense (unlike the export
+// button, which is a small in-context action and just gets a toast instead).
 function UpgradePanel({ icon: Icon, title, description, onUpgrade }) {
   return (
-    <div className="flex flex-col items-center text-center py-14 px-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60">
-      <div className="w-14 h-14 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center mb-4">
-        <Icon className="w-6 h-6 text-slate-400" />
+    <div className="flex flex-col items-center text-center py-12 px-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60">
+      <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center mb-3">
+        <Icon className="w-5 h-5 text-slate-400" />
       </div>
       <div className="flex items-center gap-1.5 mb-1.5">
         <Lock className="w-3.5 h-3.5 text-slate-400" />
         <p className="text-sm font-semibold text-slate-700">{title}</p>
       </div>
-      <p className="text-sm text-slate-500 max-w-xs mb-5">{description}</p>
+      <p className="text-xs sm:text-sm text-slate-500 max-w-xs mb-5">{description}</p>
       <Button
         onClick={onUpgrade}
         size="sm"
@@ -45,17 +47,14 @@ function UpgradePanel({ icon: Icon, title, description, onUpgrade }) {
 export default function Reports() {
   const { tenantId, tenant, hasPermission } = useTenant();
   const { tier, isStarter } = useSubscription();
-  const canExport = hasPermission('reports.export') && !isStarter;
+  const hasExportPermission = hasPermission('reports.export');
+  const canExport = hasExportPermission && !isStarter;
   const [dateRange, setDateRange] = useState({
     from: subDays(new Date(), 30),
     to: new Date(),
   });
   const [showPricing, setShowPricing] = useState(false);
 
-  // FIX: previously fetched via the legacy base44.entities.*.filter() SDK layer,
-  // the same pre-migration pattern that turned out to be broken for table deletes
-  // elsewhere in the app. Moved to a direct Supabase query, matching every other
-  // page, so this doesn't become the next hidden "Network Error" waiting to happen.
   const { data: allOrders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ['reportsOrders', tenantId],
     queryFn: async () => {
@@ -84,6 +83,23 @@ export default function Reports() {
     enabled: !!tenantId,
   });
 
+  // FIX: "Product Performance" was reading item.product_name/item.total/item.category
+  // on order line items — none of which actually exist on a stored order (real fields
+  // are name/price/quantity/product_id; category lives on the *product*, not the
+  // item). That produced "undefined" names and NaN revenue throughout, which is what
+  // showed up as the tab "not loading properly". Fetching categories here so both
+  // report components can resolve a product's category by id correctly.
+  const { data: categories = [] } = useQuery({
+    queryKey: ['reportsCategories', tenantId],
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase.from('categories').select('id, name').eq('tenant_id', tenantId);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!tenantId,
+  });
+
   // Filter orders by date range
   const orders = allOrders.filter(order => {
     if (!dateRange?.from || !dateRange?.to) return true;
@@ -97,13 +113,16 @@ export default function Reports() {
     accent: tenant?.settings?.theme?.accent_color || '#f59e0b',
   };
 
-  // CSS variables for charts
   const chartStyles = `
     :root {
       --chart-primary: ${themeColors.primary};
       --chart-accent: ${themeColors.accent};
     }
   `;
+
+  const handleBlockedExport = () => {
+    toast.error("You don't have access to export reports on the Starter plan.");
+  };
 
   if (ordersLoading) {
     return (
@@ -116,14 +135,16 @@ export default function Reports() {
   return (
     <RequirePermission permission="reports.view">
       <style>{chartStyles}</style>
-      <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex items-start justify-between gap-2">
           <PageHeader
             title="Reports & Analytics"
             description="View detailed insights and performance metrics"
           />
+          {/* Compact on mobile — was a wide pill competing with the title for space;
+              now just a small tag that wraps under the title if needed. */}
           <span
-            className="text-[11px] font-semibold px-2.5 py-1 rounded-full flex-shrink-0"
+            className="text-[10px] font-semibold px-2 py-1 rounded-full flex-shrink-0 whitespace-nowrap mt-1"
             style={{ background: 'var(--color-primary-gradient)', color: 'white' }}
           >
             {TIER_LABELS[tier] || TIER_LABELS.starter}
@@ -131,9 +152,9 @@ export default function Reports() {
         </div>
 
         {/* Date Range + Export row */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <DateRangePicker dateRange={dateRange} onChange={setDateRange} />
-          <span className="text-sm text-slate-400">{orders.length} order{orders.length === 1 ? '' : 's'} in range</span>
+          <span className="text-xs text-slate-400 flex-shrink-0">{orders.length} order{orders.length === 1 ? '' : 's'}</span>
           <div className="ml-auto">
             {canExport ? (
               <ExportButton
@@ -141,93 +162,108 @@ export default function Reports() {
                 filename="sales_report"
                 type="sales"
               />
-            ) : hasPermission('reports.export') ? (
-              // Has the role-level permission, just not the plan tier for it.
-              <Button variant="outline" size="sm" className="gap-1.5 text-slate-400 border-slate-200" onClick={() => setShowPricing(true)}>
+            ) : hasExportPermission ? (
+              // Has the role-level permission, just not the plan tier for it — a small
+              // toast is enough here, no need to launch the pricing modal for a click
+              // on what's otherwise a minor, in-context action.
+              <Button variant="outline" size="sm" className="gap-1.5 text-slate-400 border-slate-200" onClick={handleBlockedExport}>
                 <Lock className="w-3.5 h-3.5" /> Export
               </Button>
             ) : null}
           </div>
         </div>
 
-        {orders.length === 0 ? (
-          <div className="text-center py-12">
-            <BarChart3 className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500 text-lg">No data for selected period</p>
-            <p className="text-slate-400 text-sm mt-2">Try selecting a different date range</p>
-          </div>
-        ) : (
-          <Tabs defaultValue="sales" className="space-y-6">
-            <TabsList className="flex-wrap h-auto gap-1">
-              <TabsTrigger value="sales">Sales Report</TabsTrigger>
-              <TabsTrigger value="products">Product Performance</TabsTrigger>
-              <TabsTrigger value="inventory" className="gap-1.5">
+        <Tabs defaultValue="sales" className="space-y-4 sm:space-y-6">
+          {/* Horizontally scrollable on mobile instead of wrapping — 5 tabs (2 with
+              lock icons) wrapped into a cramped, uneven grid at phone width. */}
+          <div className="overflow-x-auto no-scrollbar -mx-1 px-1">
+            <TabsList className="inline-flex w-max">
+              <TabsTrigger value="sales" className="whitespace-nowrap">Sales</TabsTrigger>
+              <TabsTrigger value="products" className="whitespace-nowrap">Products</TabsTrigger>
+              <TabsTrigger value="inventory" className="gap-1.5 whitespace-nowrap">
                 {isStarter && <Lock className="w-3 h-3" />} Inventory
               </TabsTrigger>
-              <TabsTrigger value="customers" className="gap-1.5">
-                {isStarter && <Lock className="w-3 h-3" />} Customer Insights
+              <TabsTrigger value="customers" className="gap-1.5 whitespace-nowrap">
+                {isStarter && <Lock className="w-3 h-3" />} Customers
               </TabsTrigger>
-              <TabsTrigger value="staff">Staff Performance</TabsTrigger>
+              <TabsTrigger value="staff" className="whitespace-nowrap">Staff</TabsTrigger>
             </TabsList>
+          </div>
 
-            <TabsContent value="sales">
+          <TabsContent value="sales">
+            {orders.length === 0 ? (
+              <div className="text-center py-12">
+                <BarChart3 className="w-14 h-14 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500">No data for selected period</p>
+                <p className="text-slate-400 text-sm mt-1">Try a different date range</p>
+              </div>
+            ) : (
               <SalesReport
                 orders={orders}
+                categories={categories}
                 currency={tenant?.currency || 'SGD'}
                 themeColors={themeColors}
                 isStarter={isStarter}
               />
-            </TabsContent>
+            )}
+          </TabsContent>
 
-            <TabsContent value="products">
+          <TabsContent value="products">
+            {orders.length === 0 ? (
+              <div className="text-center py-12">
+                <BarChart3 className="w-14 h-14 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500">No data for selected period</p>
+                <p className="text-slate-400 text-sm mt-1">Try a different date range</p>
+              </div>
+            ) : (
               <ProductPerformance
                 orders={orders}
                 products={products}
+                categories={categories}
                 currency={tenant?.currency || 'SGD'}
                 themeColors={themeColors}
               />
-            </TabsContent>
+            )}
+          </TabsContent>
 
-            <TabsContent value="inventory">
-              {isStarter ? (
-                <UpgradePanel
-                  icon={Package}
-                  title="Inventory Reports — Growth plan and above"
-                  description="See stock movement, low-stock trends, and restock frequency over time."
-                  onUpgrade={() => setShowPricing(true)}
-                />
-              ) : (
-                <div className="text-center py-12 text-slate-400">
-                  Inventory reports coming soon
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="customers">
-              {isStarter ? (
-                <UpgradePanel
-                  icon={Users}
-                  title="Customer Insights — Growth plan and above"
-                  description="See repeat vs. new customers and your top spenders."
-                  onUpgrade={() => setShowPricing(true)}
-                />
-              ) : (
-                <div className="text-center py-12 text-slate-400">
-                  Customer insights coming soon
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="staff">
-              {/* Staying "coming soon" regardless of plan — not tier-gated, genuinely
-                  not built yet. Staff performance is hard to differentiate for most
-                  F&B teams; ordering-frequency-based tracking may come later. */}
-              <div className="text-center py-12 text-slate-400">
-                Staff performance reports coming soon
+          <TabsContent value="inventory">
+            {isStarter ? (
+              <UpgradePanel
+                icon={Package}
+                title="Inventory Reports — Growth plan and above"
+                description="See stock movement, low-stock trends, and restock frequency over time."
+                onUpgrade={() => setShowPricing(true)}
+              />
+            ) : (
+              <div className="text-center py-12 text-slate-400 text-sm">
+                Inventory reports coming soon
               </div>
-            </TabsContent>
-          </Tabs>
-        )}
+            )}
+          </TabsContent>
+
+          <TabsContent value="customers">
+            {isStarter ? (
+              <UpgradePanel
+                icon={Users}
+                title="Customer Insights — Growth plan and above"
+                description="See repeat vs. new customers and your top spenders."
+                onUpgrade={() => setShowPricing(true)}
+              />
+            ) : (
+              <div className="text-center py-12 text-slate-400 text-sm">
+                Customer insights coming soon
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="staff">
+            {/* Staying "coming soon" regardless of plan — not tier-gated, genuinely
+                not built yet. */}
+            <div className="text-center py-12 text-slate-400 text-sm">
+              Staff performance reports coming soon
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       <PricingModal
