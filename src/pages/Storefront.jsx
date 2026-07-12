@@ -19,6 +19,11 @@ function StorefrontInner() {
   const { t } = useLanguage();
   const isDineIn = !!tableId;
   const isPreview = new URLSearchParams(window.location.search).get('preview') === 'true';
+  // Set by the staff-facing "Take Orders" flow on the Dashboard, so a staff member
+  // taking a dine-in order still gets a way back to the admin app — a real customer
+  // arriving via a table's QR code never would (there's nothing to "go back" to), so
+  // this only shows the back button for dine-in in this specific staff-initiated case.
+  const isStaffMode = new URLSearchParams(window.location.search).get('staff') === 'true';
 
   const [tenant, setTenant] = useState(null);
   const [theme, setTheme] = useState(null);
