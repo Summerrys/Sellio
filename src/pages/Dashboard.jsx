@@ -118,6 +118,7 @@ export default function Dashboard() {
         .from('orders')
         .select('id', { count: 'exact', head: true })
         .eq('tenant_id', tenantId)
+        .is('deleted_at', null)
         .gte('created_date', today.toISOString());
 
       // Revenue (paid orders today)
@@ -126,6 +127,7 @@ export default function Dashboard() {
         .select('total_amount')
         .eq('tenant_id', tenantId)
         .eq('payment_status', 'paid')
+        .is('deleted_at', null)
         .gte('created_date', today.toISOString());
 
       const revenue = (paidOrders || []).reduce((sum, o) => sum + (o.total_amount || 0), 0);
@@ -136,6 +138,7 @@ export default function Dashboard() {
         .select('id', { count: 'exact', head: true })
         .eq('tenant_id', tenantId)
         .in('status', ['pending', 'confirmed'])
+        .is('deleted_at', null)
         .gte('created_date', today.toISOString());
 
       return { count: count || 0, revenue, pending: pending || 0 };
