@@ -302,6 +302,7 @@ Deno.serve(async (req) => {
           tenant_id: newTenantId, name: 'Owner', slug: 'owner', is_system: true,
           description: 'Business owner with full access',
           permissions: [
+            'dashboard.ai_assistant','dashboard.design_store',
             'orders.view','orders.create','orders.edit','orders.cancel',
             'products.view','products.create','products.edit','products.delete',
             'categories.view','categories.create','categories.edit','categories.delete',
