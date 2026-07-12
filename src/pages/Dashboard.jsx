@@ -259,10 +259,7 @@ export default function Dashboard() {
               </button>
               )}
           </h1>
-          {/* Extra top margin when the AI bubble is showing — it's absolutely
-              positioned below the icon now, so it floats over this line rather
-              than pushing it down; without the reserved space they'd overlap. */}
-          <p className={cn("text-sm text-slate-500", hasPermission('dashboard.ai_assistant') ? 'mt-5' : 'mt-0.5')}>Today's overview</p>
+          <p className="text-sm text-slate-500 mt-0.5">Today's overview</p>
           <p className="text-xs text-slate-400 mt-0.5">{todayLabel}</p>
         </div>
         {tenant?.slug && hasPermission('dashboard.design_store') && (
