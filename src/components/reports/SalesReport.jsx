@@ -7,29 +7,35 @@ import {
 import { TrendingUp, DollarSign, ShoppingCart } from 'lucide-react';
 import { format } from 'date-fns';
 
-// Compact stat card built for a 3-across mobile grid \u2014 icon badge instead of a
+// Compact stat card built for a 3-across mobile grid — icon badge instead of a
 // bare floating icon, tighter type scale so three of these comfortably fit a
 // phone width without wrapping or truncating awkwardly.
-function StatCard({ label, value, sublabel, icon: Icon, iconBg, iconColor }) {
+function StatCard({ label, value, icon: Icon, iconBg, iconColor }) {
   return (
     <Card className="border-slate-100 shadow-sm">
-      <CardContent className="p-3 sm:p-4">
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${iconBg}`}>
-          <Icon className={`w-4 h-4 ${iconColor}`} />
+      <CardContent className="p-2.5 sm:p-4">
+        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center mb-1.5 sm:mb-2 ${iconBg}`}>
+          <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${iconColor}`} />
         </div>
-        <p className="text-[11px] sm:text-xs text-slate-500 leading-tight">{label}</p>
-        <p className="text-base sm:text-xl font-bold text-slate-900 leading-tight mt-0.5 truncate">{value}</p>
-        {sublabel && <p className="text-[10px] sm:text-xs text-slate-400 truncate mt-0.5">{sublabel}</p>}
+        <p className="text-[10px] sm:text-xs text-slate-500 leading-tight">{label}</p>
+        <p className="text-sm sm:text-xl font-bold text-slate-900 leading-tight mt-0.5 truncate">{value}</p>
       </CardContent>
     </Card>
   );
 }
 
-export default function SalesReport({ orders, currency, themeColors, isStarter = true }) {
+export default function SalesReport({ orders, categories = [], currency, themeColors, isStarter = true }) {
+  // FIX: order line items only ever carry {name, price, quantity, product_id, variant}
+  // — there's no item.total (needs price*quantity) and no item.category (category
+  // lives on the product, resolved here via category_id -> name, not on the item
+  // itself). Reading the old, nonexistent field names silently produced NaN/undefined
+  // throughout this whole report.
+  const categoryNameById = categories.reduce((acc, c) => { acc[c.id] = c.name; return acc; }, {});
+
   // Revenue over time
   const revenueByDate = orders.reduce((acc, order) => {
     const date = format(new Date(order.created_date), 'MMM dd');
-    acc[date] = (acc[date] || 0) + order.total_amount;
+    acc[date] = (acc[date] || 0) + (order.total_amount || 0);
     return acc;
   }, {});
 
@@ -38,11 +44,14 @@ export default function SalesReport({ orders, currency, themeColors, isStarter =
     revenue: parseFloat(revenue.toFixed(2)),
   }));
 
-  // Revenue by category
+  // Revenue by category — category isn't on the item, so we can only attribute it
+  // when the order actually stored a product's category_id; anything else (or a
+  // product whose category was later deleted) falls into "Uncategorized".
   const revenueByCategory = orders.reduce((acc, order) => {
     order.items?.forEach(item => {
-      const category = item.category || 'Uncategorized';
-      acc[category] = (acc[category] || 0) + item.total;
+      const category = (item.category_id && categoryNameById[item.category_id]) || 'Uncategorized';
+      const lineTotal = (item.price || 0) * (item.quantity || 0);
+      acc[category] = (acc[category] || 0) + lineTotal;
     });
     return acc;
   }, {});
@@ -62,21 +71,21 @@ export default function SalesReport({ orders, currency, themeColors, isStarter =
   }, {});
 
   const paymentData = Object.entries(paymentMethods).map(([method, count]) => ({
-    method: method.replace('_', ' ').toUpperCase(),
+    method: method.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
     count,
   }));
 
   // Key metrics
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
+  const totalRevenue = orders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
   const totalOrders = orders.length;
   const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
   const COLORS = [themeColors.primary, themeColors.accent, '#64748b', '#f59e0b', '#10b981'];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       {/* Key Metrics — always 3 across, even on mobile */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-4">
         <StatCard
           label="Total Revenue"
           value={`${currency} ${totalRevenue.toFixed(2)}`}
@@ -92,7 +101,7 @@ export default function SalesReport({ orders, currency, themeColors, isStarter =
           iconColor="text-blue-600"
         />
         <StatCard
-          label="Avg Order Value"
+          label="Avg Order"
           value={`${currency} ${avgOrderValue.toFixed(2)}`}
           icon={TrendingUp}
           iconBg="bg-purple-50"
@@ -103,17 +112,17 @@ export default function SalesReport({ orders, currency, themeColors, isStarter =
       {/* Revenue Over Time — plain line for Starter, gradient-filled area for
           Growth and above. Same data, just a richer render at higher tiers. */}
       <Card className="border-slate-100 shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Revenue Over Time</CardTitle>
+        <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+          <CardTitle className="text-sm sm:text-base">Revenue Over Time</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={260}>
+        <CardContent className="px-1 sm:px-6 pb-3 sm:pb-6">
+          <ResponsiveContainer width="100%" height={220}>
             {isStarter ? (
-              <LineChart data={revenueData} margin={{ left: -20 }}>
+              <LineChart data={revenueData} margin={{ left: -20, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <Tooltip formatter={(value) => [`${currency} ${value}`, 'Revenue']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 13 }} />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={36} />
+                <Tooltip formatter={(value) => [`${currency} ${value}`, 'Revenue']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
                 <Line
                   type="monotone"
                   dataKey="revenue"
@@ -125,7 +134,7 @@ export default function SalesReport({ orders, currency, themeColors, isStarter =
                 />
               </LineChart>
             ) : (
-              <AreaChart data={revenueData} margin={{ left: -20 }}>
+              <AreaChart data={revenueData} margin={{ left: -20, right: 8 }}>
                 <defs>
                   <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={themeColors.primary} stopOpacity={0.35} />
@@ -133,9 +142,9 @@ export default function SalesReport({ orders, currency, themeColors, isStarter =
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <Tooltip formatter={(value) => [`${currency} ${value}`, 'Revenue']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 13 }} />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={36} />
+                <Tooltip formatter={(value) => [`${currency} ${value}`, 'Revenue']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
                 <Area
                   type="monotone"
                   dataKey="revenue"
@@ -152,20 +161,20 @@ export default function SalesReport({ orders, currency, themeColors, isStarter =
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
         {/* Revenue by Category */}
         <Card className="border-slate-100 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Revenue by Category</CardTitle>
+          <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+            <CardTitle className="text-sm sm:text-base">Revenue by Category</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={categoryData} layout="vertical" margin={{ left: -10 }}>
+          <CardContent className="px-1 sm:px-6 pb-3 sm:pb-6">
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={categoryData} layout="vertical" margin={{ left: -10, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis dataKey="category" type="category" width={90} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <Tooltip formatter={(value) => [`${currency} ${value}`, 'Revenue']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 13 }} />
-                <Bar dataKey="revenue" fill={themeColors.primary} radius={[0, 6, 6, 0]} barSize={18} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis dataKey="category" type="category" width={80} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <Tooltip formatter={(value) => [`${currency} ${value}`, 'Revenue']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
+                <Bar dataKey="revenue" fill={themeColors.primary} radius={[0, 6, 6, 0]} barSize={16} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -174,11 +183,11 @@ export default function SalesReport({ orders, currency, themeColors, isStarter =
         {/* Payment Methods — flat solid slices for Starter, soft radial shading
             plus a donut cut-out for Growth and above. */}
         <Card className="border-slate-100 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Payment Methods</CardTitle>
+          <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+            <CardTitle className="text-sm sm:text-base">Payment Methods</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
+          <CardContent className="px-1 sm:px-6 pb-3 sm:pb-6">
+            <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 {!isStarter && (
                   <defs>
@@ -196,8 +205,8 @@ export default function SalesReport({ orders, currency, themeColors, isStarter =
                   nameKey="method"
                   cx="50%"
                   cy="50%"
-                  innerRadius={isStarter ? 0 : 55}
-                  outerRadius={95}
+                  innerRadius={isStarter ? 0 : 45}
+                  outerRadius={75}
                   paddingAngle={isStarter ? 0 : 2}
                   label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                   labelLine={false}
@@ -211,8 +220,8 @@ export default function SalesReport({ orders, currency, themeColors, isStarter =
                     />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 13 }} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
