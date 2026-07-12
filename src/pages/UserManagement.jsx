@@ -579,30 +579,11 @@ function RolesContent({ onUpgrade }) {
           </div>
 
           {/* Desktop permissions panel — hidden on mobile */}
-          <Card className="hidden lg:block border-0 shadow-sm p-5 lg:sticky lg:top-6 h-fit">
+                    <Card className="hidden lg:block border-0 shadow-sm p-5 lg:sticky lg:top-6 h-fit">
             {selectedRole ? (
               <div>
                 <h3 className="text-sm font-semibold text-slate-900 mb-4">{selectedRole.name}</h3>
-                <div className="space-y-3">
-                  {Object.entries(PERMISSION_GROUPS).map(([key, group]) => {
-                    const rolePerms = selectedRole.permissions || [];
-                    const groupPerms = group.permissions.filter(p => rolePerms.includes(p));
-                    if (groupPerms.length === 0) return null;
-                    return (
-                      <div key={key}>
-                        <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">{group.label}</p>
-                        <div className="space-y-1">
-                          {groupPerms.map(perm => (
-                            <div key={perm} className="flex items-center gap-2 text-xs text-slate-600">
-                              <CheckCircle2 className="w-3 h-3 text-green-500" />
-                              {ALL_PERMISSIONS[perm]}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <RolePermissionSummary role={selectedRole} />
               </div>
             ) : (
               <div className="text-center py-8 text-sm text-slate-400">Select a role to view permissions</div>
