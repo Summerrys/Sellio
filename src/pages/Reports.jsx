@@ -13,7 +13,7 @@ import ProductPerformance from '../components/reports/ProductPerformance';
 import ExportButton from '../components/reports/ExportButton';
 import PricingModal from '../components/subscription/PricingModal';
 import { BarChart3, Lock, Package, Users, Sparkles } from 'lucide-react';
-import { subDays, isWithinInterval } from 'date-fns';
+import { subDays, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { toast } from 'sonner';
 
 const TIER_LABELS = { starter: 'Basic', growth: 'Advanced', pro: 'Custom' };
@@ -104,7 +104,11 @@ export default function Reports() {
   const orders = allOrders.filter(order => {
     if (!dateRange?.from || !dateRange?.to) return true;
     const orderDate = new Date(order.created_date);
-    return isWithinInterval(orderDate, { start: dateRange.from, end: dateRange.to });
+    // FIX: 'Today'/'Yesterday' presets (and a single-day custom pick) set from/to
+    // to the exact same millisecond, not a full day span — normalizing to day
+    // boundaries here, once, covers every source of a range (presets, custom
+    // calendar picks) rather than needing each one to remember to do it right.
+    return isWithinInterval(orderDate, { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) });
   });
 
   // Get theme colors
