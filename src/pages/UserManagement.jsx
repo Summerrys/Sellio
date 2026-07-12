@@ -635,9 +635,13 @@ function RolesContent({ onUpgrade }) {
                   {Object.entries(PERMISSION_GROUP_META).map(([groupKey, meta]) => {
                     const visual = GROUP_VISUALS[groupKey];
                     const Icon = visual.icon;
-                    const masterOn = isGroupMasterOn(groupKey);
+                    // Groups with no masterLabel (currently just "dashboard") have no
+                    // master switch at all — they're always expanded, since there's no
+                    // "view" concept for a page that's permanently visible to everyone.
+                    const hasMaster = !!meta.masterLabel;
+                    const masterOn = hasMaster ? isGroupMasterOn(groupKey) : true;
                     const activeSubCount = meta.subPermissions.filter(sp => form.permissions.includes(sp.key)).length;
-                    const viewOnly = masterOn && activeSubCount === 0;
+                    const viewOnly = hasMaster && masterOn && activeSubCount === 0;
                     return (
                       <div
                         key={groupKey}
@@ -650,23 +654,25 @@ function RolesContent({ onUpgrade }) {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className={cn("text-sm font-semibold truncate", masterOn ? "text-slate-800" : "text-slate-400")}>{meta.masterLabel}</span>
+                              <span className={cn("text-sm font-semibold truncate", masterOn ? "text-slate-800" : "text-slate-400")}>{meta.masterLabel || meta.label}</span>
                               {viewOnly && (
                                 <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 flex-shrink-0">
                                   View only
                                 </span>
                               )}
                             </div>
-                            {masterOn && activeSubCount > 0 && (
+                            {hasMaster && masterOn && activeSubCount > 0 && (
                               <span className="text-[11px] text-slate-400">{activeSubCount} of {meta.subPermissions.length} extra {activeSubCount === 1 ? 'permission' : 'permissions'} on</span>
                             )}
                           </div>
-                          <Switch
-                            checked={masterOn}
-                            onCheckedChange={() => toggleGroupMaster(groupKey)}
-                            className="flex-shrink-0 data-[state=unchecked]:bg-slate-200"
-                            style={masterOn ? { backgroundColor: visual.accent } : undefined}
-                          />
+                          {hasMaster && (
+                            <Switch
+                              checked={masterOn}
+                              onCheckedChange={() => toggleGroupMaster(groupKey)}
+                              className="flex-shrink-0 data-[state=unchecked]:bg-slate-200"
+                              style={masterOn ? { backgroundColor: visual.accent } : undefined}
+                            />
+                          )}
                         </div>
                         {masterOn && meta.subPermissions.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 px-3.5 pb-3.5 pt-0.5">
