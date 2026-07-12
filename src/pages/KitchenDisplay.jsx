@@ -243,6 +243,7 @@ export default function KitchenDisplay() {
       .select('*')
       .eq('tenant_id', tenantId)
       .in('status', ['pending', 'confirmed', 'preparing', 'ready'])
+      .is('deleted_at', null)
       .order('created_date', { ascending: true });
     if (!error) setOrders(data || []);
     setIsLoading(false);
