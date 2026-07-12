@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import DateRangePicker from '../components/reports/DateRangePicker';
 import SalesReport from '../components/reports/SalesReport';
 import ProductPerformance from '../components/reports/ProductPerformance';
+import InventoryReport from '../components/reports/InventoryReport';
+import CustomerInsights from '../components/reports/CustomerInsights';
 import ExportButton from '../components/reports/ExportButton';
 import PricingModal from '../components/subscription/PricingModal';
 import { BarChart3, Lock, Package, Users, Sparkles } from 'lucide-react';
@@ -94,6 +96,46 @@ export default function Reports() {
     queryFn: async () => {
       const supabase = await getSupabase();
       const { data, error } = await supabase.from('categories').select('id, name').eq('tenant_id', tenantId);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!tenantId,
+  });
+
+  // Growth+ only — fetched regardless of tier (cheap, avoids a loading flicker if
+  // someone upgrades mid-session), the tab itself decides whether to render them.
+  const { data: stockHistory = [] } = useQuery({
+    queryKey: ['reportsStockHistory', tenantId],
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase
+        .from('stock_history')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('created_date', { ascending: false })
+        .limit(1000);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!tenantId,
+  });
+
+  const { data: inventoryItems = [] } = useQuery({
+    queryKey: ['reportsInventoryItems', tenantId],
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase.from('inventory_items').select('*').eq('tenant_id', tenantId);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!tenantId,
+  });
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ['reportsCustomers', tenantId],
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase.from('customers').select('*').eq('tenant_id', tenantId);
       if (error) throw error;
       return data || [];
     },
