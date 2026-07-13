@@ -86,7 +86,7 @@ export default function InventoryReport({ stockHistory, inventoryItems, products
               {lowStockItems.slice(0, 12).map((item) => (
                 <div key={item.id} className="p-2.5 sm:p-3 bg-red-50/60 rounded-xl border border-red-100">
                   <p className="font-medium text-slate-800 text-xs sm:text-sm truncate">{item.product_name}</p>
-                  <p className="text-[10px] sm:text-xs text-red-500">{item.current_stock} left \u00b7 threshold {item.low_stock_threshold}</p>
+                  <p className="text-[10px] sm:text-xs text-red-500">{item.current_stock} left · threshold {item.low_stock_threshold}</p>
                 </div>
               ))}
             </div>
