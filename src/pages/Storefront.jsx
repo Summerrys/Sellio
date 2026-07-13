@@ -291,13 +291,20 @@ function StorefrontInner() {
       try { localStorage.setItem(SESSION_ORDERS_KEY, JSON.stringify(updatedSessionOrders)); } catch {}
       setShowCheckout(false); setIsSubmitting(false); setOrderSuccess(true);
     } else {
-      // FIX: previously silent — on failure (most commonly the plan's monthly
-      // order limit being reached) the checkout button just re-enabled with zero
-      // explanation, looking like a broken app rather than a real, expected limit.
-      const message = error?.message?.includes('Order limit reached')
-        ? "This store has reached its monthly order limit. Need more? Professional plan gives you unlimited orders!"
-        : "Something went wrong placing your order. Please try again.";
-      toast.error(message);
+      const isLimitReached = error?.message?.includes('Order limit reached');
+      // Different audiences need different messages here: a real customer scanning
+      // a table QR or browsing the online menu has no use for an upgrade nudge —
+      // they can't act on it, and it's just confusing. Staff using "Take Orders"
+      // (identified by isStaffMode) are the ones who can actually do something
+      // about the plan, so they get the upgrade message as a toast instead of a
+      // blocking modal.
+      if (isLimitReached && !isStaffMode) {
+        setShowLimitReachedModal(true);
+      } else if (isLimitReached) {
+        toast.error("This store has reached its monthly order limit. Need more? Professional plan gives you unlimited orders!");
+      } else {
+        toast.error("Something went wrong placing your order. Please try again.");
+      }
       setIsSubmitting(false);
     }
   };
