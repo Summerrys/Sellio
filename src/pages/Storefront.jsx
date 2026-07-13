@@ -44,6 +44,7 @@ function StorefrontInner() {
   const [showOrderHistory, setShowOrderHistory] = useState(false);
   const [orderHistory, setOrderHistory] = useState([]);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [showLimitReachedModal, setShowLimitReachedModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastCart, setLastCart] = useState([]);
   const [lastCartTotal, setLastCartTotal] = useState(0);
