@@ -294,7 +294,7 @@ function StorefrontInner() {
       // order limit being reached) the checkout button just re-enabled with zero
       // explanation, looking like a broken app rather than a real, expected limit.
       const message = error?.message?.includes('Order limit reached')
-        ? "This store has reached its monthly order limit. Please contact the merchant directly."
+        ? "This store has reached its monthly order limit. Need more? Professional plan gives you unlimited orders!"
         : "Something went wrong placing your order. Please try again.";
       toast.error(message);
       setIsSubmitting(false);
