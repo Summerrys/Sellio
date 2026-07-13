@@ -1,18 +1,20 @@
 import { X } from 'lucide-react';
 
 // Custom Joyride tooltip \u2014 replaces the library's default look with something that
-// matches the app's own visual language (brand gradient, rounded cards), and gives
-// us full control over the Skip button so it can trigger a confirm step instead of
-// immediately closing the tour (Joyride's built-in skip button can't do that).
+// matches the app's own visual language (brand gradient, rounded cards). The Skip
+// (X) button deliberately does NOT use Joyride's own skipProps.onClick \u2014 that would
+// close the tour immediately, before we get a chance to show a confirm step. Instead
+// it calls onRequestSkip, supplied by the hook that renders this component, which
+// opens the confirm modal and only actually skips if the merchant confirms there.
 export default function TourTooltip({
   index,
   step,
   size,
   backProps,
   primaryProps,
-  skipProps,
   isLastStep,
   tooltipProps,
+  onRequestSkip,
 }) {
   return (
     <div
@@ -31,7 +33,7 @@ export default function TourTooltip({
           <p style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a', paddingRight: 8 }}>{step.title}</p>
         )}
         <button
-          {...skipProps}
+          onClick={onRequestSkip}
           style={{ background: '#f1f5f9', border: 'none', borderRadius: 8, width: 26, height: 26, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
           title="Skip tour"
         >
