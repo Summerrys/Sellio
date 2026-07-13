@@ -158,10 +158,25 @@ export default function Reports() {
     return isWithinInterval(new Date(h.created_date), { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) });
   });
 
-  // Get theme colors
+  const { data: themeConfig } = useQuery({
+    queryKey: ['reportsThemeConfig', tenantId],
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase.from('theme_configs').select('*').eq('tenant_id', tenantId).maybeSingle();
+      if (error) throw error;
+      return data || null;
+    },
+    enabled: !!tenantId,
+  });
+
+  // FIX: was reading tenant?.settings?.theme?.primary_color, a path that doesn't
+  // exist anywhere in the schema — theme colors live in their own theme_configs
+  // table (same one ThemeProvider reads from for the rest of the app's UI). That
+  // meant every chart silently fell back to the dark navy/grey default regardless
+  // of the merchant's actual brand colors.
   const themeColors = {
-    primary: tenant?.settings?.theme?.primary_color || '#1e293b',
-    accent: tenant?.settings?.theme?.accent_color || '#f59e0b',
+    primary: themeConfig?.primary_color || '#1e293b',
+    accent: themeConfig?.accent_color || '#f59e0b',
   };
 
   const chartStyles = `
