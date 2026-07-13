@@ -301,7 +301,7 @@ function StorefrontInner() {
       if (isLimitReached && !isStaffMode) {
         setShowLimitReachedModal(true);
       } else if (isLimitReached) {
-        toast.error("This store has reached its monthly order limit. Need more? Professional plan gives you unlimited orders!");
+        toast.error("This store has reached its monthly order limit. Please contact your Manager to upgrade the plan.");
       } else {
         toast.error("Something went wrong placing your order. Please try again.");
       }
