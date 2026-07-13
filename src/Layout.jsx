@@ -63,6 +63,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
     { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view' },
     ...(isFnBIndustry(tenant?.industry) ? [{ label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view' }] : []),
     { label: 'User Management', icon: Users, page: 'UserManagement', permission: 'staff.view' },
+    { label: 'Reports', icon: BarChart3, page: 'Reports', permission: 'reports.view' },
     { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view' },
   ];
 
