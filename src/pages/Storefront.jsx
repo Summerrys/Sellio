@@ -608,6 +608,29 @@ function StorefrontInner() {
         </div>
       )}
 
+      {/* ── ORDER LIMIT REACHED (customers only — staff get a toast instead) ── */}
+      {showLimitReachedModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', padding: 20 }}>
+          <div style={{ background: 'white', borderRadius: 20, padding: '28px 24px', maxWidth: 340, width: '100%', textAlign: 'center' }}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"/>
+              </svg>
+            </div>
+            <p style={{ fontWeight: 800, fontSize: 18, margin: '0 0 8px', color: '#0f172a' }}>Online Ordering Unavailable</p>
+            <p style={{ fontSize: 14, color: '#64748b', margin: '0 0 20px', lineHeight: 1.5 }}>
+              We're unable to process online orders right now. Please approach one of our staff to place your order.
+            </p>
+            <button
+              onClick={() => setShowLimitReachedModal(false)}
+              style={{ width: '100%', padding: '12px', borderRadius: 12, border: 'none', background: '#0f172a', color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── ORDER SUCCESS ── */}
       {orderSuccess && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#f8fafc', overflowY: 'auto' }}>
