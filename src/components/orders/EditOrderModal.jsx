@@ -207,6 +207,68 @@ export default function EditOrderModal({ order, tenantId, currency, onClose, onS
                 <span>{currency} {subtotal.toFixed(2)}</span>
               </div>
             </>
+          ) : pickingVariantsFor ? (
+            <>
+              <button
+                onClick={() => setPickingVariantsFor(null)}
+                style={{ fontSize: 12, fontWeight: 600, color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 12 }}
+              >
+                ← Back to menu
+              </button>
+              <p style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{pickingVariantsFor.name}</p>
+              <p style={{ margin: '0 0 16px', fontSize: 13, color: '#64748b' }}>{currency} {(pickingVariantsFor.price || 0).toFixed(2)}</p>
+              {normaliseEditVariants(pickingVariantsFor.variants).map((group, gi) => {
+                const isMultiSelect = group.type === 'addon';
+                const selectedForGroup = selectedVariants[gi];
+                const selectedList = isMultiSelect ? (Array.isArray(selectedForGroup) ? selectedForGroup : []) : null;
+                return (
+                  <div key={gi} style={{ marginBottom: 16 }}>
+                    <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 8px', color: '#0f172a' }}>{group.name || (isMultiSelect ? 'Add-ons' : 'Options')}</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {(group.options || []).map((opt, oi) => {
+                        const isSelected = isMultiSelect
+                          ? selectedList.some(v => v.label === opt.label)
+                          : selectedForGroup?.label === opt.label;
+                        const handleClick = () => {
+                          if (isMultiSelect) {
+                            setSelectedVariants(prev => {
+                              const current = Array.isArray(prev[gi]) ? prev[gi] : [];
+                              const exists = current.some(v => v.label === opt.label);
+                              const next = exists ? current.filter(v => v.label !== opt.label) : [...current, opt];
+                              return { ...prev, [gi]: next };
+                            });
+                          } else {
+                            setSelectedVariants(prev => ({ ...prev, [gi]: opt }));
+                          }
+                        };
+                        return (
+                          <button
+                            key={oi}
+                            onClick={handleClick}
+                            style={{ padding: '8px 14px', borderRadius: 999, fontSize: 13, border: isSelected ? '2px solid rgb(var(--color-primary))' : '1.5px solid #e2e8f0', background: isSelected ? 'rgba(var(--color-primary),0.08)' : 'white', cursor: 'pointer', fontWeight: isSelected ? 700 : 500, color: isSelected ? 'rgb(var(--color-primary))' : '#374151' }}
+                          >
+                            {opt.label}{opt.price_modifier > 0 ? ` +${currency} ${parseFloat(opt.price_modifier).toFixed(2)}` : ''}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+              <button
+                onClick={() => {
+                  const allSelected = Object.values(selectedVariants).flatMap(v => Array.isArray(v) ? v : (v ? [v] : []));
+                  const label = allSelected.length > 0 ? allSelected.map(v => v.label).join(', ') : null;
+                  const priceModifier = allSelected.reduce((sum, v) => sum + (v.price_modifier || 0), 0);
+                  addProduct(pickingVariantsFor, label, priceModifier);
+                  setPickingVariantsFor(null);
+                  setSelectedVariants({});
+                }}
+                style={{ width: '100%', padding: '12px', borderRadius: 12, border: 'none', background: 'var(--color-primary-gradient)', color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer', marginTop: 8 }}
+              >
+                Add to Order
+              </button>
+            </>
           ) : (
             <>
               <div style={{ position: 'relative', marginBottom: 12 }}>
