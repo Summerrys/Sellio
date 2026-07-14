@@ -306,6 +306,15 @@ function TenantSettingsContent() {
     <PermissionGate permission="settings.view">
       <PageHeader title="Settings" description="Configure your business and manage roles" />
 
+      {settingsTour.isOwner && (
+        <button
+          onClick={settingsTour.replayTour}
+          className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-slate-600 mb-4 -mt-2 transition-colors"
+        >
+          <RefreshCw className="w-3 h-3" /> Replay Tour
+        </button>
+      )}
+
       <div>
         <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-6">
           <button
