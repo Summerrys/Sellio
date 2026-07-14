@@ -552,6 +552,23 @@ export default function KitchenDisplay() {
             )}
           </div>
         </div>
+
+        {/* Expanded order overlay — tapping the backdrop (not the card) closes it,
+            so staff can quickly check one order and get right back to the board. */}
+        {expandedOrder && orders.some(o => o.id === expandedOrder.id) && (
+          <div
+            className="md:hidden fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70"
+            onClick={() => setExpandedOrder(null)}
+          >
+            <div className="w-full max-w-sm" onClick={e => e.stopPropagation()}>
+              <KDSOrderCard
+                order={orders.find(o => o.id === expandedOrder.id)}
+                onBump={(...args) => { handleBump(...args); setExpandedOrder(null); }}
+              />
+            </div>
+          </div>
+        )}
+        </>
       )}
     </div>
     </>
