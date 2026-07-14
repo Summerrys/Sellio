@@ -1,3 +1,15 @@
+import React from 'react';
+
+const BRAND_GRADIENT = 'linear-gradient(135deg, #fb923c, #e0449a, #8b5cf6)';
+
+function BrandWord({ children }) {
+  return (
+    <span style={{ backgroundImage: BRAND_GRADIENT, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontWeight: 800 }}>
+      {children}
+    </span>
+  );
+}
+
 // Step definitions for all 4 tour stages, matching the script agreed with the
 // merchant. Each function takes light context (plan tier, whether real data
 // exists) since a couple of steps adapt or disappear based on that.
@@ -7,7 +19,7 @@ export function getDashboardSteps({ hasTakeOrders }) {
     {
       target: 'body',
       placement: 'center',
-      title: 'Welcome to Sellio! 👋',
+      title: <>Welcome to <BrandWord>Sellio</BrandWord>! 👋</>,
       content: "Let's take a 60-second look around before you start selling.",
     },
     {
