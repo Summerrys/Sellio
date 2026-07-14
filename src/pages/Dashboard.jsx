@@ -94,6 +94,7 @@ function FeatureCard({ icon: Icon, label, color, onClick }) {
 
 export default function Dashboard() {
   const { tenantId, tenant, hasPermission } = useTenant();
+  const dashboardTour = useProductTour('dashboard');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showDesigner, setShowDesigner] = React.useState(false);
