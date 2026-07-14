@@ -99,7 +99,6 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
   const { hasPermission } = useTenant();
   const canEditOrders = hasPermission('orders.edit');
   const canCancelOrders = hasPermission('orders.cancel');
-  const [confirmCancel, setConfirmCancel] = useState(false);
   const [showEditOrder, setShowEditOrder] = useState(false);
   const [showPaymentQR, setShowPaymentQR] = useState(false);
   const isFinal = order.status === 'completed' || order.status === 'cancelled';
