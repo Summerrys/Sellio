@@ -237,6 +237,7 @@ function PaymentQRTab({ tenant, tenantId }) {
 
 function TenantSettingsContent() {
   const { tenantId, tenant, subscription } = useTenant();
+  const settingsTour = useProductTour('settings');
   const queryClient = useQueryClient();
 
   const [settingsTab, setSettingsTab] = useState('business');
