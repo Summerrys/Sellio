@@ -223,16 +223,18 @@ function AppLayout({ children, currentPageName }) {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   // Derived straight from the persisted tour progress rather than an ephemeral
   // signal — so it's correct on a fresh page load too, not just while the
-  // Dashboard tour happens to be open. Each nav item pulses only once the stage
-  // BEFORE it is done and its own stage isn't yet: Products lights up once
-  // Dashboard is finished, Orders once Products is finished, Settings once
-  // Orders is finished. Once Settings is done too, nothing pulses.
+  // Dashboard tour happens to be open. Once Dashboard is done, every remaining
+  // not-yet-visited stage pulses together (not one at a time waiting on its
+  // neighbor) — each one just drops out of the set as its own stage completes,
+  // so Products/Orders/Settings all light up at once after Dashboard, then
+  // narrows down to just Orders+Settings once Products is done, then just
+  // Settings once Orders is done too.
   const tourProgress = user?.tour_progress || {};
-  const tourActive = isOwner && !user?.has_seen_tour;
+  const tourActive = isOwner && !user?.has_seen_tour && !!tourProgress.dashboard;
   const navPulse = {
-    products: tourActive && !!tourProgress.dashboard && !tourProgress.products,
-    orders: tourActive && !!tourProgress.products && !tourProgress.orders,
-    settings: tourActive && !!tourProgress.orders && !tourProgress.settings,
+    products: tourActive && !tourProgress.products,
+    orders: tourActive && !tourProgress.orders,
+    settings: tourActive && !tourProgress.settings,
   };
 
   // Prompt to install as an app whenever a merchant or staff logs in via browser.
