@@ -299,8 +299,8 @@ export default function StorefrontView({
     setActiveCategory(categoryId);
   };
 
-  const handleAddToCart = (product, variant = null) => {
-    if (onAddToCart) onAddToCart(product, variant);
+  const handleAddToCart = (product, variant = null, notes = null) => {
+    if (onAddToCart) onAddToCart(product, variant, notes);
   };
 
   const handleProductClick = (product) => {
