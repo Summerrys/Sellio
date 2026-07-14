@@ -91,7 +91,7 @@ function printReceipt(order, currency, merchantName) {
   win.document.close();
 }
 
-function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate, onMarkPaid, onOrderUpdated }) {
+function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate, onMarkPaid, onOrderUpdated, tourTag = false }) {
   const { hasPermission } = useTenant();
   const canEditOrders = hasPermission('orders.edit');
   const canCancelOrders = hasPermission('orders.cancel');
@@ -137,6 +137,7 @@ function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate, on
   return (
     <>
       <div
+        {...(tourTag ? { 'data-tour': 'order-card' } : {})}
         className="rounded-xl border border-slate-200 overflow-hidden shadow-sm"
         style={{ borderLeft: `4px solid ${accent.border}`, background: accent.bg }}
       >
