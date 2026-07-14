@@ -114,6 +114,48 @@ function KDSCompactCard({ order, onExpand }) {
   );
 }
 
+// Tablet-tier card — iPad has real room, so unlike the phone's ID-only card
+// this shows the order ID, items, and any notes so staff can see what's
+// actually in the order without expanding first. Still compact next to the
+// full desktop card (no giant buttons, no per-item cards) and still requires
+// a tap to open the expand overlay and actually advance the order's status.
+function KDSMediumCard({ order, onExpand }) {
+  const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.preparing;
+  const elapsed = Math.floor((Date.now() - new Date(order.created_date)) / 60000);
+  const isCritical = elapsed > 20;
+
+  return (
+    <button
+      onClick={() => onExpand(order)}
+      className={`w-full rounded-xl border-4 p-3 text-left text-white ${cfg.bg}`}
+      style={isCritical ? { animation: 'kdsBorderPulse 1.4s ease-in-out infinite' } : undefined}
+    >
+      <div className="flex items-start justify-between mb-1.5">
+        <p className="text-base font-black leading-tight">{order.order_number || `#${order.id?.slice(-4)}`}</p>
+        <span className="text-xs font-semibold opacity-80 flex items-center gap-1 flex-shrink-0">
+          <Clock className="w-3 h-3" /><ElapsedTimer createdDate={order.created_date} />
+        </span>
+      </div>
+      {order.table_name && (
+        <p className="text-xs font-semibold opacity-80 mb-1.5">{order.table_name}</p>
+      )}
+      <div className="space-y-0.5 mb-1.5">
+        {(order.items || []).map((item, idx) => (
+          <p key={idx} className="text-sm font-medium leading-snug">
+            {item.quantity}× {item.name}{item.variant ? ` (${item.variant})` : ''}
+          </p>
+        ))}
+      </div>
+      {order.notes && (
+        <div className="bg-yellow-300 text-slate-900 rounded-lg px-2 py-1 flex items-center gap-1.5 mt-1.5">
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+          <p className="text-xs font-semibold leading-snug">{order.notes}</p>
+        </div>
+      )}
+    </button>
+  );
+}
+
 export default function KitchenDisplay() {
   const { tenantId, tenant } = useTenant();
   const { appUser } = useAppUser();
