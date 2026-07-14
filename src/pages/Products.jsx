@@ -325,6 +325,7 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess, m
 
 export default function Products() {
   const { tenantId, tenant, subscription, hasPermission } = useTenant();
+  const productsTour = useProductTour('products');
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState(
