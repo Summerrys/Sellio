@@ -392,6 +392,43 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
           </div>
         </div>
       )}
+
+      {/* Payment QR Sheet — frontline staff shows this to the customer, collects
+          payment, then confirms from right here rather than a separate blind
+          "Mark as Paid" button with nothing guiding the actual payment step. */}
+      {showPaymentQR && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, background: 'rgba(0,0,0,0.6)' }}
+          onClick={() => setShowPaymentQR(false)}
+        >
+          <div
+            style={{ background: 'white', borderRadius: 20, padding: '24px 22px', maxWidth: 340, width: '100%', textAlign: 'center' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <p style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{paymentQrLabel || 'Scan to Pay'}</p>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#64748b' }}>
+              #{order.order_number || order.id?.slice(-6)} · {currency} {parseFloat(order.total_amount || 0).toFixed(2)}
+            </p>
+            <img
+              src={paymentQrUrl}
+              alt="Payment QR"
+              style={{ width: '100%', maxWidth: 240, aspectRatio: '1', objectFit: 'contain', borderRadius: 12, border: '1px solid #f1f5f9', margin: '0 auto 20px' }}
+            />
+            <button
+              onClick={() => { onMarkPaid(order); setShowPaymentQR(false); }}
+              style={{ width: '100%', padding: '13px', borderRadius: 12, border: 'none', background: '#16a34a', color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}
+            >
+              💳 Mark as Paid
+            </button>
+            <button
+              onClick={() => setShowPaymentQR(false)}
+              style={{ width: '100%', padding: '11px', borderRadius: 12, border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
