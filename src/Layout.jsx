@@ -442,8 +442,8 @@ function AppLayout({ children, currentPageName }) {
           {/* Left: Dashboard, Products */}
           {[
             { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
-            { label: 'Products', icon: ShoppingBag, page: 'Products' },
-          ].map(({ label, icon: Icon, page }) => {
+            { label: 'Products', icon: ShoppingBag, page: 'Products', pulse: true },
+          ].map(({ label, icon: Icon, page, pulse }) => {
             const isActive = currentPageName === page;
             return (
               <Link
@@ -451,11 +451,19 @@ function AppLayout({ children, currentPageName }) {
                 to={createPageUrl(page)}
                 onClick={() => handleTabNavigate(page, isActive)}
                 className={cn(
-                  "flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors min-h-[60px]",
+                  "relative flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors min-h-[60px]",
                   isActive ? "text-[rgb(var(--color-primary))]" : "text-slate-400"
                 )}
               >
-                <Icon className="w-5 h-5" />
+                <span className="relative">
+                  <Icon className="w-5 h-5" />
+                  {pulse && tourNavPulse && (
+                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--color-primary-gradient)' }} />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ background: 'var(--color-primary-gradient)' }} />
+                    </span>
+                  )}
+                </span>
                 <span>{label}</span>
               </Link>
             );
@@ -492,9 +500,9 @@ function AppLayout({ children, currentPageName }) {
 
           {/* Right: Orders, Settings */}
           {[
-            { label: 'Orders', icon: ClipboardList, page: 'Orders' },
-            { label: 'Settings', icon: Settings, page: 'TenantSettings' },
-          ].map(({ label, icon: Icon, page }) => {
+            { label: 'Orders', icon: ClipboardList, page: 'Orders', pulse: true },
+            { label: 'Settings', icon: Settings, page: 'TenantSettings', pulse: true },
+          ].map(({ label, icon: Icon, page, pulse }) => {
             const isActive = currentPageName === page;
             return (
               <Link
@@ -502,11 +510,19 @@ function AppLayout({ children, currentPageName }) {
                 to={createPageUrl(page)}
                 onClick={() => handleTabNavigate(page, isActive)}
                 className={cn(
-                  "flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors min-h-[60px]",
+                  "relative flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors min-h-[60px]",
                   isActive ? "text-[rgb(var(--color-primary))]" : "text-slate-400"
                 )}
               >
-                <Icon className="w-5 h-5" />
+                <span className="relative">
+                  <Icon className="w-5 h-5" />
+                  {pulse && tourNavPulse && (
+                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--color-primary-gradient)' }} />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ background: 'var(--color-primary-gradient)' }} />
+                    </span>
+                  )}
+                </span>
                 <span>{label}</span>
               </Link>
             );
