@@ -141,9 +141,14 @@ function KDSMediumCard({ order, onExpand }) {
       )}
       <div className="space-y-0.5 mb-1.5">
         {(order.items || []).map((item, idx) => (
-          <p key={idx} className="text-sm font-medium leading-snug">
-            {item.quantity}× {item.name}{item.variant ? ` (${item.variant})` : ''}
-          </p>
+          <div key={idx}>
+            <p className="text-sm font-medium leading-snug">
+              {item.quantity}× {item.name}{item.variant ? ` (${item.variant})` : ''}
+            </p>
+            {item.notes && (
+              <p className="text-xs italic opacity-80 pl-3">📝 {item.notes}</p>
+            )}
+          </div>
         ))}
       </div>
       {order.notes && (
