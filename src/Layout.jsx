@@ -425,6 +425,7 @@ function AppLayout({ children, currentPageName }) {
       {/* Mobile Bottom Tab Bar — never show on public storefront routes */}
       {currentPageName !== 'Onboarding' && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (
         <nav
+          data-tour="bottom-nav"
           className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-30 flex items-stretch"
           style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
