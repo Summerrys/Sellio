@@ -529,7 +529,7 @@ export default function Products() {
       <PullToRefresh onRefresh={handleRefresh}>
       <div className="space-y-6">
         <div className="flex flex-col gap-3 mb-6">
-          <div className="flex items-center justify-between mb-1">
+          <div data-tour="products-header" className="flex items-center justify-between mb-1">
             <h1 className="text-2xl font-bold text-slate-900">Products</h1>
             <button
               onClick={() => navigate('/Inventory')}
@@ -573,6 +573,7 @@ export default function Products() {
                   <span className="hidden sm:inline">Import</span>
                 </Button>
                 <Button
+                  data-tour="scan-menu-btn"
                   onClick={handleOpenScanMenu}
                   variant="outline"
                   size="sm"
@@ -584,6 +585,7 @@ export default function Products() {
                   <span className="sm:hidden">Scan</span>
                 </Button>
                 <Button
+                  data-tour="add-product-btn"
                   onClick={handleAdd}
                   size="sm"
                   className="text-white gap-1.5"
