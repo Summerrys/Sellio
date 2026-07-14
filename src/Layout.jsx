@@ -445,7 +445,7 @@ function AppLayout({ children, currentPageName }) {
           {/* Left: Dashboard, Products */}
           {[
             { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
-            { label: 'Products', icon: ShoppingBag, page: 'Products', pulse: true },
+            { label: 'Products', icon: ShoppingBag, page: 'Products', pulse: navPulse.products },
           ].map(({ label, icon: Icon, page, pulse }) => {
             const isActive = currentPageName === page;
             return (
@@ -460,7 +460,7 @@ function AppLayout({ children, currentPageName }) {
               >
                 <span className="relative">
                   <Icon className="w-5 h-5" />
-                  {pulse && tourNavPulse && (
+                  {pulse && (
                     <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--color-primary-gradient)' }} />
                       <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ background: 'var(--color-primary-gradient)' }} />
