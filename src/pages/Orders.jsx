@@ -826,6 +826,8 @@ export default function Orders() {
                   order={order}
                   currency={currency}
                   merchantName={tenant?.name}
+                  paymentQrUrl={tenant?.payment_qr_url}
+                  paymentQrLabel={tenant?.payment_qr_label}
                   tenantId={tenantId}
                   onStatusUpdate={handleStatusUpdate}
                   onMarkPaid={handleMarkPaid}
