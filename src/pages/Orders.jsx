@@ -238,8 +238,8 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
             )}
             {showPrint && (
               <button
-                onClick={() => setShowReceipt(true)}
-                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg text-sm font-semibold flex-shrink-0 transition-colors"
+                onClick={(e) => { e.stopPropagation(); setShowReceipt(true); }}
+                className="flex-1 h-11 flex items-center justify-center gap-1.5 rounded-lg text-sm font-semibold transition-colors"
                 style={{ border: '1.5px solid rgb(var(--color-primary))', color: 'rgb(var(--color-primary))', background: 'transparent' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(var(--color-primary),0.08)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
