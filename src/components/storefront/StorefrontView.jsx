@@ -793,14 +793,40 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
 
               return (
                 <div style={{ marginBottom: 16 }}>
-                  {normalisedVariants.map((group, gi) => (
+                  {normalisedVariants.map((group, gi) => {
+                    // FIX: selection behavior never actually looked at group.type —
+                    // every group behaved as single-select (clicking replaced the
+                    // previous choice), even for 'addon' groups where a customer
+                    // should be able to pick several (e.g. extra egg + extra pork).
+                    // 'addon' groups now toggle independently; everything else
+                    // (size/color/other) keeps the original single-select behavior
+                    // unchanged, so this doesn't affect any other product's existing
+                    // single-choice options.
+                    const isMultiSelect = group.type === 'addon';
+                    const selectedForGroup = selectedVariants[gi];
+                    const selectedList = isMultiSelect ? (Array.isArray(selectedForGroup) ? selectedForGroup : []) : null;
+                    return (
                     <div key={gi} style={{ marginBottom: 14 }}>
-                      <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 8px', color: '#0f172a' }}>{group.name}</p>
+                      <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 8px', color: '#0f172a' }}>{group.name || (isMultiSelect ? 'Add-ons' : 'Options')}</p>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                         {(group.options || []).map((opt, oi) => {
-                          const isSelected = selectedVariants[gi]?.label === opt.label;
+                          const isSelected = isMultiSelect
+                            ? selectedList.some(v => v.label === opt.label)
+                            : selectedForGroup?.label === opt.label;
+                          const handleClick = () => {
+                            if (isMultiSelect) {
+                              setSelectedVariants(prev => {
+                                const current = Array.isArray(prev[gi]) ? prev[gi] : [];
+                                const exists = current.some(v => v.label === opt.label);
+                                const next = exists ? current.filter(v => v.label !== opt.label) : [...current, opt];
+                                return { ...prev, [gi]: next };
+                              });
+                            } else {
+                              setSelectedVariants(prev => ({ ...prev, [gi]: opt }));
+                            }
+                          };
                           return (
-                            <button key={oi} onClick={() => setSelectedVariants(prev => ({ ...prev, [gi]: opt }))}
+                            <button key={oi} onClick={handleClick}
                               style={{ padding: '8px 16px', borderRadius: 999, fontSize: 13, border: isSelected ? `2px solid ${primaryColor}` : '1.5px solid #e2e8f0', background: isSelected ? `${primaryColor}15` : 'white', cursor: 'pointer', fontWeight: isSelected ? 700 : 500, color: isSelected ? primaryColor : '#374151', transition: 'all 0.15s' }}>
                               {opt.label}{opt.price_modifier > 0 ? ` +${getCurrencySymbol(currency)}${parseFloat(opt.price_modifier).toFixed(2)}` : ''}
                             </button>
@@ -808,20 +834,26 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                         })}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               );
             })()}
             <button
               onClick={() => {
-                const combinedVariant = Object.values(selectedVariants).length > 0
-                  ? { label: Object.values(selectedVariants).map(v => v.label).join(', '), price_modifier: Object.values(selectedVariants).reduce((sum, v) => sum + (v.price_modifier || 0), 0) }
+                // Flattens both single-select picks (plain objects) and multi-select
+                // picks (arrays) into one combined label/price, so everything
+                // downstream (cart, order storage, Kitchen Display, receipts) still
+                // just sees one string — none of that needs to change.
+                const allSelected = Object.values(selectedVariants).flatMap(v => Array.isArray(v) ? v : (v ? [v] : []));
+                const combinedVariant = allSelected.length > 0
+                  ? { label: allSelected.map(v => v.label).join(', '), price_modifier: allSelected.reduce((sum, v) => sum + (v.price_modifier || 0), 0) }
                   : null;
                 onAddToCart(product, combinedVariant);
                 onClose();
               }}
               style={{ width: '100%', padding: 14, background: primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
-              {t('addToOrder')} · {getCurrencySymbol(currency)}{(parseFloat(product.price) + Object.values(selectedVariants).reduce((sum, v) => sum + (v.price_modifier || 0), 0)).toFixed(2)}
+              {t('addToOrder')} · {getCurrencySymbol(currency)}{(parseFloat(product.price) + Object.values(selectedVariants).flatMap(v => Array.isArray(v) ? v : (v ? [v] : [])).reduce((sum, v) => sum + (v.price_modifier || 0), 0)).toFixed(2)}
             </button>
           </div>
         </div>
