@@ -16,8 +16,9 @@ function normaliseEditVariants(rawVariants) {
 // the Storefront checkout writes into orders.items (key, product_id, name, price,
 // image_url, quantity, variant) so nothing downstream needs to special-case
 // merchant-edited orders vs customer-placed ones.
-export default function EditOrderModal({ order, tenantId, currency, onClose, onSaved }) {
+export default function EditOrderModal({ order, tenantId, currency, canCancel = false, onClose, onSaved, onCancelOrder }) {
   const [items, setItems] = useState(() => (order.items || []).map(i => ({ ...i })));
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [notes, setNotes] = useState(order.notes || '');
   const [saving, setSaving] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
