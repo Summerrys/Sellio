@@ -258,7 +258,17 @@ export default function KitchenDisplay() {
   }, []);
 
   const handleEnterFullscreen = () => {
-    document.documentElement.requestFullscreen().catch(() => {});
+    // FIX: iPadOS/iOS Safari has never supported the Fullscreen API for regular
+    // elements (only <video> has a separate proprietary method) — calling
+    // requestFullscreen() there throws synchronously rather than returning a
+    // rejected promise, so .catch() never ran and this whole function aborted
+    // before ever reaching setIsFullscreen(true). The CSS-driven pseudo-
+    // fullscreen wrapper below doesn't actually depend on the native API
+    // succeeding, so wrapping this in try/catch is enough to make sure we
+    // always still reach it.
+    try {
+      document.documentElement.requestFullscreen?.()?.catch?.(() => {});
+    } catch (e) { /* not supported on this browser — CSS fullscreen still applies */ }
     setIsFullscreen(true);
   };
 
