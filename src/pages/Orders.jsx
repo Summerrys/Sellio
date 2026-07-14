@@ -217,8 +217,8 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 // from inside that same modal — rather than a blind "Mark as Paid"
                 // button with no payment prompt attached to it.
                 <button
-                  onClick={() => setShowPaymentQR(true)}
-                  className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-lg transition-colors"
+                  onClick={(e) => { e.stopPropagation(); setShowPaymentQR(true); }}
+                  className="flex-1 h-11 flex items-center justify-center rounded-lg transition-colors"
                   style={{ border: '1.5px solid #16a34a', color: '#16a34a', background: '#f0fdf4' }}
                   title="Show payment QR"
                 >
