@@ -209,23 +209,40 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
             )}
           </div>
 
-          {/* Action buttons */}
-          <div className={showPrint || (canEditOrders && order.payment_status !== 'paid' && (order.status === 'completed' || order.status === 'ready')) ? 'flex flex-col gap-2' : ''}>
+          {/* Action buttons — one consistent horizontal row across every status
+              (wraps only if it truly has to on a very narrow screen), instead of the
+              previous mix of a sometimes-column wrapper plus a separate full-width
+              Cancel block underneath. */}
+          <div className="flex items-center gap-2 flex-wrap">
             {canEditOrders && order.payment_status !== 'paid' && (order.status === 'completed' || order.status === 'ready') && (
-              <button
-                onClick={() => onMarkPaid(order)}
-                className="w-full py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
-                style={{ border: '1.5px solid #16a34a', color: '#16a34a', background: '#f0fdf4' }}
-                onMouseEnter={e => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.color = '#fff'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = '#f0fdf4'; e.currentTarget.style.color = '#16a34a'; }}
-              >
-                💳 Mark as Paid
-              </button>
+              paymentQrUrl ? (
+                // Frontline staff workflow: show the QR, let the customer pay, confirm
+                // from inside that same modal — rather than a blind "Mark as Paid"
+                // button with no payment prompt attached to it.
+                <button
+                  onClick={() => setShowPaymentQR(true)}
+                  className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-lg transition-colors"
+                  style={{ border: '1.5px solid #16a34a', color: '#16a34a', background: '#f0fdf4' }}
+                  title="Show payment QR"
+                >
+                  <QrCode className="w-5 h-5" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => onMarkPaid(order)}
+                  className="flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-1.5 min-w-[120px]"
+                  style={{ border: '1.5px solid #16a34a', color: '#16a34a', background: '#f0fdf4' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.color = '#fff'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#f0fdf4'; e.currentTarget.style.color = '#16a34a'; }}
+                >
+                  💳 Mark as Paid
+                </button>
+              )
             )}
             {showPrint && (
               <button
                 onClick={() => setShowReceipt(true)}
-                className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold flex-1 transition-colors"
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg text-sm font-semibold flex-shrink-0 transition-colors"
                 style={{ border: '1.5px solid rgb(var(--color-primary))', color: 'rgb(var(--color-primary))', background: 'transparent' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(var(--color-primary),0.08)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
@@ -237,7 +254,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
               <button
                 data-tour="order-status-btn"
                 onClick={() => onStatusUpdate(order.id, action.next)}
-                className={`py-2.5 rounded-lg text-sm font-semibold text-white active:scale-95 transition-transform ${showPrint ? 'flex-1' : 'w-full'}`}
+                className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white active:scale-95 transition-transform min-w-[120px]"
                 style={useThemeButton
                   ? { background: 'var(--color-primary-gradient, rgb(var(--color-primary)))' }
                   : { background: '#334155' }
@@ -246,28 +263,29 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 {action.label}
               </button>
             )}
+            {/* Cancel — a compact icon rather than its own full-width row, so it sits
+                in the same horizontal row as everything else but stays visually
+                de-emphasized (small, muted) so it still can't be tapped by accident
+                alongside the main actions. */}
+            {canCancelOrders && !isFinal && !confirmCancel && (
+              <button
+                onClick={() => setConfirmCancel(true)}
+                className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-lg text-red-400 border border-red-200 bg-white hover:bg-red-50 hover:text-red-500 transition-colors"
+                title="Cancel order"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
-          {/* Cancel order — covers the "customer decided not to proceed" case. Kept as a
-              separate, deliberately less prominent row so it can't be tapped by accident
-              alongside the main status-progression button. */}
-          {canCancelOrders && !isFinal && (
-            <div className="mt-2">
-              {!confirmCancel ? (
-                <button
-                  onClick={() => setConfirmCancel(true)}
-                  className="w-full py-2 rounded-lg text-xs font-semibold text-red-500 border border-red-200 bg-white hover:bg-red-50 transition-colors"
-                >
-                  Cancel Order
-                </button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <span className="flex-1 text-xs text-red-600 font-medium">Cancel this order?</span>
-                  <button
-                    onClick={() => { onStatusUpdate(order.id, 'cancelled'); setConfirmCancel(false); }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors"
-                  >
-                    Yes, cancel
+          {confirmCancel && (
+            <div className="flex items-center gap-2 mt-2">
+              <span className="flex-1 text-xs text-red-600 font-medium">Cancel this order?</span>
+              <button
+                onClick={() => { onStatusUpdate(order.id, 'cancelled'); setConfirmCancel(false); }}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors"
+              >
+                Yes, cancel
                   </button>
                   <button
                     onClick={() => setConfirmCancel(false)}
