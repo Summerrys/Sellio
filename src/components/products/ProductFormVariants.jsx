@@ -1,21 +1,34 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Check, X } from 'lucide-react';
+import { Plus, Trash2, Check, X, Circle, CheckSquare } from 'lucide-react';
 
-const VARIANT_TYPE_COLORS = {
-  size:  { bg: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8', dot: '#3b82f6' },
-  color: { bg: '#fdf4ff', border: '#e9d5ff', text: '#7e22ce', dot: '#a855f7' },
-  addon: { bg: '#fff7ed', border: '#fed7aa', text: '#c2410c', dot: '#f97316' },
-  other: { bg: '#f8fafc', border: '#e2e8f0', text: '#475569', dot: '#94a3b8' },
+// FIX: this used to auto-detect single-vs-multi-select from keywords in the
+// group's name ("size" \u2192 single, "add-on"/"extra" \u2192 multi, anything else \u2192
+// whatever the save-time fallback happened to default to). That was genuinely
+// confusing and error-prone in practice \u2014 a merchant naming a group "Options"
+// or "Temperature" had no visible indication of which behavior they'd get, and
+// a real test case (Small/Medium/Large/Hot/Cold) ended up entirely
+// multi-selectable by accident. Selection mode is now a direct, explicit choice
+// per group, completely decoupled from whatever the merchant names it.
+const SELECTION_MODES = {
+  single: {
+    label: 'Single choice',
+    description: 'Customer picks exactly one (e.g. Small, Medium, or Large)',
+    icon: Circle,
+    bg: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8', dot: '#3b82f6',
+  },
+  multi: {
+    label: 'Multiple choice',
+    description: 'Customer can pick as many as they like (e.g. Extra Egg + Extra Cheese)',
+    icon: CheckSquare,
+    bg: '#fff7ed', border: '#fed7aa', text: '#c2410c', dot: '#f97316',
+  },
 };
 
-const inferType = (name) => {
-  if (!name) return 'other';
-  const n = name.toLowerCase();
-  if (/size|small|medium|large|regular|xl/.test(n)) return 'size';
-  if (/colou?r/.test(n)) return 'color';
-  if (/add.?on|topping|extra|sauce|syrup/.test(n)) return 'addon';
-  return 'other';
-};
+// The two DB-facing type values this maps to. Any other historical type value
+// (size/color, from before this change) is still treated as 'single' for
+// display and behavior — nothing about existing single-select groups changes.
+const typeToMode = (type) => (type === 'addon' ? 'multi' : 'single');
+const modeToType = (mode) => (mode === 'multi' ? 'addon' : 'other');
 
 function OptionChip({ option, onEdit, onRemove, currency }) {
   return (
@@ -129,12 +142,44 @@ function OptionEditor({ option, onSave, onCancel, currency, placeholder }) {
   );
 }
 
+// Explicit single/multi toggle \u2014 the one thing that replaces all the old
+// name-based guessing. Two clearly-labeled buttons, only one active at a time.
+function SelectionModeToggle({ mode, onChange }) {
+  return (
+    <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+      {Object.entries(SELECTION_MODES).map(([key, cfg]) => {
+        const Icon = cfg.icon;
+        const active = mode === key;
+        return (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onChange(key)}
+            style={{
+              flex: 1, display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 10px', borderRadius: 10,
+              border: active ? `2px solid ${cfg.dot}` : '1.5px solid #e2e8f0',
+              background: active ? cfg.bg : 'white',
+              cursor: 'pointer', textAlign: 'left',
+            }}
+          >
+            <Icon style={{ width: 14, height: 14, color: active ? cfg.dot : '#94a3b8', flexShrink: 0 }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: active ? cfg.text : '#64748b' }}>{cfg.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ProductFormVariants({ formData, onChange }) {
   const variants = formData.variants || [];
   const currency = formData.currency || 'SGD';
   const [editingOption, setEditingOption] = useState(null);
 
   const addGroup = () => {
+    // New groups default to single-select \u2014 the safer choice \u2014 and require an
+    // explicit tap to become multi-select, rather than silently guessing.
     const newVariants = [...variants, { name: '', type: 'other', options: [] }];
     onChange({ variants: newVariants });
     setEditingOption({ gi: newVariants.length - 1, oi: 'new' });
@@ -146,9 +191,13 @@ export default function ProductFormVariants({ formData, onChange }) {
   };
 
   const updateGroupName = (gi, value) => {
-    const updated = variants.map((g, i) =>
-      i === gi ? { ...g, name: value, type: inferType(value) } : g
-    );
+    // Name no longer affects type at all \u2014 purely descriptive now.
+    const updated = variants.map((g, i) => (i === gi ? { ...g, name: value } : g));
+    onChange({ variants: updated });
+  };
+
+  const updateGroupMode = (gi, mode) => {
+    const updated = variants.map((g, i) => (i === gi ? { ...g, type: modeToType(mode) } : g));
     onChange({ variants: updated });
   };
 
@@ -179,8 +228,8 @@ export default function ProductFormVariants({ formData, onChange }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {variants.map((group, gi) => {
-        const typeKey = group.type || inferType(group.name) || 'other';
-        const colors = VARIANT_TYPE_COLORS[typeKey] || VARIANT_TYPE_COLORS.other;
+        const mode = typeToMode(group.type);
+        const colors = SELECTION_MODES[mode];
         const isEditingNew = editingOption?.gi === gi && editingOption?.oi === 'new';
 
         return (
@@ -206,7 +255,7 @@ export default function ProductFormVariants({ formData, onChange }) {
               <input
                 value={group.name}
                 onChange={e => updateGroupName(gi, e.target.value)}
-                placeholder="Group name  (e.g. Size, Add-ons…)"
+                placeholder="Group name  (e.g. Size, Temperature, Add-ons…)"
                 style={{
                   flex: 1, fontSize: 13, fontWeight: 600,
                   color: colors.text,
@@ -230,8 +279,13 @@ export default function ProductFormVariants({ formData, onChange }) {
               </button>
             </div>
 
-            {/* Options area */}
+            {/* Selection mode + options area */}
             <div style={{ padding: '10px 12px 12px' }}>
+              <SelectionModeToggle mode={mode} onChange={(m) => updateGroupMode(gi, m)} />
+              <p style={{ fontSize: 11, color: '#94a3b8', margin: '-4px 0 10px', lineHeight: 1.4 }}>
+                {colors.description}
+              </p>
+
               {(group.options || []).length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
                   {(group.options || []).map((option, oi) => {
