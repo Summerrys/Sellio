@@ -274,14 +274,25 @@ export default function EditOrderModal({ order, tenantId, currency, onClose, onS
                   </div>
                 );
               })}
+              <div style={{ marginBottom: 16 }}>
+                <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 8px', color: '#0f172a' }}>Note for this item (optional)</p>
+                <textarea
+                  value={itemNotes}
+                  onChange={e => setItemNotes(e.target.value)}
+                  placeholder="e.g. No onions, extra spicy..."
+                  rows={2}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, resize: 'none', fontFamily: 'inherit' }}
+                />
+              </div>
               <button
                 onClick={() => {
                   const allSelected = Object.values(selectedVariants).flatMap(v => Array.isArray(v) ? v : (v ? [v] : []));
                   const label = allSelected.length > 0 ? allSelected.map(v => v.label).join(', ') : null;
                   const priceModifier = allSelected.reduce((sum, v) => sum + (v.price_modifier || 0), 0);
-                  addProduct(pickingVariantsFor, label, priceModifier);
+                  addProduct(pickingVariantsFor, label, priceModifier, itemNotes.trim() || null);
                   setPickingVariantsFor(null);
                   setSelectedVariants({});
+                  setItemNotes('');
                 }}
                 style={{ width: '100%', padding: '12px', borderRadius: 12, border: 'none', background: 'var(--color-primary-gradient)', color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer', marginTop: 8 }}
               >
