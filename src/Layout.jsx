@@ -219,18 +219,21 @@ function AppLayout({ children, currentPageName }) {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
 
   const { appUser: customUser, clearAppUser } = useAppUser();
-  const { user, tenant, isSuperAdmin, isLoading, hasPermission } = useTenant();
+  const { user, tenant, isSuperAdmin, isLoading, hasPermission, isOwner } = useTenant();
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
-  // Set by Dashboard.jsx while the tour's bottom-nav step is on screen — draws
-  // attention to Products/Orders/Settings so it's obvious those are the tappable
-  // targets the tour is talking about, and doubles as confirmation that tapping
-  // one really does work immediately (spotlightClicks is on for that step).
-  const { data: tourNavPulse } = useQuery({
-    queryKey: ['tourNavPulse'],
-    queryFn: () => false,
-    initialData: false,
-    staleTime: Infinity,
-  });
+  // Derived straight from the persisted tour progress rather than an ephemeral
+  // signal — so it's correct on a fresh page load too, not just while the
+  // Dashboard tour happens to be open. Each nav item pulses only once the stage
+  // BEFORE it is done and its own stage isn't yet: Products lights up once
+  // Dashboard is finished, Orders once Products is finished, Settings once
+  // Orders is finished. Once Settings is done too, nothing pulses.
+  const tourProgress = user?.tour_progress || {};
+  const tourActive = isOwner && !user?.has_seen_tour;
+  const navPulse = {
+    products: tourActive && !!tourProgress.dashboard && !tourProgress.products,
+    orders: tourActive && !!tourProgress.products && !tourProgress.orders,
+    settings: tourActive && !!tourProgress.orders && !tourProgress.settings,
+  };
 
   // Prompt to install as an app whenever a merchant or staff logs in via browser.
   // Skipped entirely if already running as an installed PWA, or already shown
