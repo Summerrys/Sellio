@@ -262,40 +262,16 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 {action.label}
               </button>
             )}
-            {/* Cancel — a compact icon rather than its own full-width row, so it sits
-                in the same horizontal row as everything else but stays visually
-                de-emphasized (small, muted) so it still can't be tapped by accident
-                alongside the main actions. */}
-            {canCancelOrders && !isFinal && !confirmCancel && (
-              <button
-                onClick={() => setConfirmCancel(true)}
-                className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-lg text-red-400 border border-red-200 bg-white hover:bg-red-50 hover:text-red-500 transition-colors"
-                title="Cancel order"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
           </div>
-
-          {confirmCancel && (
-            <div className="flex items-center gap-2 mt-2">
-              <span className="flex-1 text-xs text-red-600 font-medium">Cancel this order?</span>
-              <button
-                onClick={() => { onStatusUpdate(order.id, 'cancelled'); setConfirmCancel(false); }}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors"
-              >
-                Yes, cancel
-              </button>
-              <button
-                onClick={() => setConfirmCancel(false)}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
-              >
-                No
-              </button>
-            </div>
-          )}
         </div>
       </div>
+
+      <style>{`
+        @keyframes orderActionPulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(15, 23, 42, 0.25); }
+          50% { box-shadow: 0 0 0 6px rgba(15, 23, 42, 0); }
+        }
+      `}</style>
 
       {/* Edit Order Sheet */}
       {showEditOrder && (
