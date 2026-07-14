@@ -368,6 +368,7 @@ export default function Dashboard() {
           checkout, this button just supplies the missing Dine-in/Takeaway/table step. */}
       {hasPermission('orders.create') && (
         <button
+          data-tour="take-orders-btn"
           onClick={() => setShowTakeOrders(true)}
           className="w-full flex items-center gap-3 p-4 rounded-2xl text-white active:scale-[0.98] transition-transform"
           style={{ background: 'linear-gradient(135deg, #fb923c, #e0449a, #8b5cf6)', boxShadow: '0 4px 16px rgba(224, 68, 154, 0.3)' }}
