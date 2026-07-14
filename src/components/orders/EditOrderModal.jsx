@@ -180,6 +180,9 @@ export default function EditOrderModal({ order, tenantId, currency, onClose, onS
                         {item.name}{item.variant ? <span style={{ color: '#94a3b8', fontWeight: 400 }}> ({item.variant})</span> : ''}
                       </p>
                       <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>{currency} {(item.price || 0).toFixed(2)} each</p>
+                      {item.notes && (
+                        <p style={{ margin: '2px 0 0', fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>📝 {item.notes}</p>
+                      )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <button onClick={() => updateQty(idx, -1)} style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
