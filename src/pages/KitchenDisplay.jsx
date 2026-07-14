@@ -92,6 +92,28 @@ function KDSOrderCard({ order, onBump }) {
   );
 }
 
+// Mobile-only compact card — fits 4 columns on a phone without scrolling.
+// Deliberately minimal (just the order ID + the same glowing border) since
+// there's only ~80-90px of width per column to work with; tapping it opens
+// the full KDSOrderCard as an overlay for the actual details/actions.
+function KDSCompactCard({ order, onExpand }) {
+  const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.preparing;
+  const elapsed = Math.floor((Date.now() - new Date(order.created_date)) / 60000);
+  const isCritical = elapsed > 20;
+
+  return (
+    <button
+      onClick={() => onExpand(order)}
+      className={`w-full rounded-xl border-4 py-3 px-1.5 flex items-center justify-center text-white ${cfg.bg}`}
+      style={isCritical ? { animation: 'kdsBorderPulse 1.4s ease-in-out infinite' } : undefined}
+    >
+      <span className="text-[11px] font-black leading-tight text-center break-words">
+        {order.order_number || `#${order.id?.slice(-4)}`}
+      </span>
+    </button>
+  );
+}
+
 export default function KitchenDisplay() {
   const { tenantId, tenant } = useTenant();
   const { appUser } = useAppUser();
