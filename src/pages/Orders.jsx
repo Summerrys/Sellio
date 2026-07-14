@@ -143,7 +143,8 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
     <>
       <div
         {...(tourTag ? { 'data-tour': 'order-card' } : {})}
-        className="rounded-xl border border-slate-200 overflow-hidden shadow-sm"
+        onClick={() => { if (canEditOrders && !isFinal) setShowEditOrder(true); }}
+        className={`rounded-xl border border-slate-200 overflow-hidden shadow-sm ${canEditOrders && !isFinal ? 'cursor-pointer active:opacity-90 transition-opacity' : ''}`}
         style={{ borderLeft: `4px solid ${accent.border}`, background: accent.bg }}
       >
         <div className="p-4">
