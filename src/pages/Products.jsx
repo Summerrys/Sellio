@@ -712,17 +712,25 @@ export default function Products() {
         {isLoading ? (
           <SkeletonList count={5} lines={2} imageSize={64} />
         ) : filteredProducts.length === 0 ? (
-          <EmptyState
-            icon={ShoppingBag}
-            title={searchQuery || categoryFilter !== 'all' || statusFilter !== 'all' 
-              ? "No products found" 
-              : "No products yet"}
-            description={searchQuery || categoryFilter !== 'all' || statusFilter !== 'all'
-              ? "Try adjusting your filters"
-              : "Start building your catalog by adding your first product"}
-            actionLabel="Add Product"
-            onAction={handleAdd}
-          />
+          <>
+            <EmptyState
+              icon={ShoppingBag}
+              title={searchQuery || categoryFilter !== 'all' || statusFilter !== 'all' 
+                ? "No products found" 
+                : "No products yet"}
+              description={searchQuery || categoryFilter !== 'all' || statusFilter !== 'all'
+                ? "Try adjusting your filters"
+                : "Start building your catalog by adding your first product"}
+              actionLabel="Add Product"
+              onAction={handleAdd}
+            />
+            {/* Tour needs a card to point at even with zero real products yet */}
+            {productsTour.eligible && (
+              <div className="max-w-[220px] mt-4">
+                <DummyProductCard currency={tenant?.currency || 'SGD'} />
+              </div>
+            )}
+          </>
         ) : (
           <ProductGrid
             products={filteredProducts}
@@ -733,6 +741,16 @@ export default function Products() {
             selectedIds={selectedIds}
             onLongPress={handleLongPress}
             onToggleSelect={handleToggleSelect}
+            tourTagFirstCard={productsTour.eligible}
+          />
+        )}
+
+        {productsTour.eligible && (
+          <TourGuide
+            steps={getProductsSteps({ tier: subscription?.tier })}
+            run={productsTour.eligible}
+            onFinish={productsTour.completeStage}
+            tour={productsTour}
           />
         )}
 
