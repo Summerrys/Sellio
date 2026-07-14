@@ -1,17 +1,25 @@
 import Joyride, { STATUS } from 'react-joyride';
 import { AlertTriangle } from 'lucide-react';
 
+const BRAND_GRADIENT = 'linear-gradient(135deg, #fb923c, #e0449a, #8b5cf6)';
+
 // Shared wrapper around react-joyride, used identically by all 4 stages
 // (Dashboard/Products/Orders/Settings). Every step gets a Skip button; tapping
 // it opens a confirm modal before actually ending the tour, so a stray tap
 // doesn't silently lose someone's place.
-export default function TourGuide({ steps, run, onFinish, tour }) {
+export default function TourGuide({ steps, run, onFinish, tour, onStepChange }) {
   const handleCallback = (data) => {
-    const { status, action } = data;
+    const { status, action, index, type } = data;
     if (status === STATUS.FINISHED) {
       onFinish();
     } else if (action === 'skip') {
       tour.requestSkip();
+    }
+    if (type === 'step:after' || type === 'tooltip') {
+      onStepChange?.(index);
+    }
+    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
+      onStepChange?.(-1);
     }
   };
 
@@ -25,6 +33,12 @@ export default function TourGuide({ steps, run, onFinish, tour }) {
         showProgress
         disableScrolling={false}
         disableScrollParentFix
+        // FIX: the fixed top header (logo/bell/menu bar) was overlapping the top
+        // of whatever element Joyride scrolled into view, since it only scrolls
+        // a target to the very top of the viewport with no allowance for that
+        // sticky bar — which is what cropped the stat cards. This offset reserves
+        // space for it.
+        scrollOffset={80}
         callback={handleCallback}
         locale={{ back: 'Back', close: 'Close', last: 'Done', next: 'Next', skip: 'Skip' }}
         floaterProps={{ disableFlip: false }}
@@ -35,12 +49,17 @@ export default function TourGuide({ steps, run, onFinish, tour }) {
             arrowColor: '#fff',
             backgroundColor: '#fff',
             textColor: '#0f172a',
-            // FIX: react-joyride defaults to a fixed 380px tooltip width — wider
-            // than most phone screens (360–390px), so it was overflowing the
-            // viewport and getting visually cropped/cut off on mobile.
             width: 'min(340px, calc(100vw - 32px))',
           },
-          tooltip: { borderRadius: 16, padding: 18 },
+          tooltip: {
+            borderRadius: 16,
+            padding: 18,
+            // Brand-gradient border on every step's bubble, on every stage.
+            border: '2px solid transparent',
+            backgroundImage: `linear-gradient(#fff, #fff), ${BRAND_GRADIENT}`,
+            backgroundOrigin: 'border-box',
+            backgroundClip: 'padding-box, border-box',
+          },
           tooltipContent: { padding: '8px 0', fontSize: 14, lineHeight: 1.5 },
           buttonNext: { borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700 },
           buttonBack: { fontSize: 13, color: '#64748b' },
