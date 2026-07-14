@@ -286,15 +286,13 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors"
               >
                 Yes, cancel
-                  </button>
-                  <button
-                    onClick={() => setConfirmCancel(false)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
-                  >
-                    No
-                  </button>
-                </div>
-              )}
+              </button>
+              <button
+                onClick={() => setConfirmCancel(false)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
+              >
+                No
+              </button>
             </div>
           )}
         </div>
