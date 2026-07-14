@@ -24,8 +24,10 @@ export default function TourGuide({ steps, run, onFinish, tour }) {
         showSkipButton
         showProgress
         disableScrolling={false}
+        disableScrollParentFix
         callback={handleCallback}
         locale={{ back: 'Back', close: 'Close', last: 'Done', next: 'Next', skip: 'Skip' }}
+        floaterProps={{ disableFlip: false }}
         styles={{
           options: {
             primaryColor: '#8b5cf6',
@@ -33,12 +35,17 @@ export default function TourGuide({ steps, run, onFinish, tour }) {
             arrowColor: '#fff',
             backgroundColor: '#fff',
             textColor: '#0f172a',
+            // FIX: react-joyride defaults to a fixed 380px tooltip width — wider
+            // than most phone screens (360–390px), so it was overflowing the
+            // viewport and getting visually cropped/cut off on mobile.
+            width: 'min(340px, calc(100vw - 32px))',
           },
           tooltip: { borderRadius: 16, padding: 18 },
           tooltipContent: { padding: '8px 0', fontSize: 14, lineHeight: 1.5 },
           buttonNext: { borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700 },
           buttonBack: { fontSize: 13, color: '#64748b' },
           buttonSkip: { fontSize: 13, color: '#94a3b8' },
+          spotlight: { borderRadius: 12 },
         }}
       />
 
