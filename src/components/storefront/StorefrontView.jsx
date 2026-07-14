@@ -245,6 +245,7 @@ export default function StorefrontView({
 
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedVariants, setSelectedVariants] = useState({});
+  const [itemNotes, setItemNotes] = useState('');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const featuredProducts = products.filter(p => p.is_featured === true);
