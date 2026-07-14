@@ -581,11 +581,12 @@ export default function KitchenDisplay() {
         </div>
       ) : (
         <>
-        {/* Mobile: 4 fixed columns, no horizontal scroll — compact cards sorted
-            oldest-first (most urgent) within each column. Tablet/desktop and the
-            fullscreen kiosk view keep the existing full-card layout below,
-            unchanged, since that already has enough room to work well. */}
-        <div className="xl:hidden grid grid-cols-4 gap-1.5">
+        {/* Phone: 4 fixed columns, ID-only compact cards — no room for more.
+            iPad gets its own richer tier below (items + notes visible without
+            expanding, since there's real space to use). Desktop/large screens
+            and the fullscreen kiosk view keep the original full-card layout
+            further down, unchanged. */}
+        <div className="md:hidden grid grid-cols-4 gap-1.5">
           {[
             { label: 'New', color: 'text-amber-400', list: pendingOrders },
             { label: 'Confirmed', color: 'text-blue-400', list: confirmedOrders },
@@ -598,6 +599,26 @@ export default function KitchenDisplay() {
                 .sort((a, b) => new Date(a.created_date) - new Date(b.created_date))
                 .map(order => (
                   <KDSCompactCard key={order.id} order={order} onExpand={setExpandedOrder} />
+                ))}
+            </div>
+          ))}
+        </div>
+
+        {/* iPad tier: same 4-column, no-scroll idea, but with real card content
+            (order ID, items, notes) since there's enough width for it here. */}
+        <div className="hidden md:grid xl:hidden grid-cols-4 gap-2">
+          {[
+            { label: 'New', color: 'text-amber-400', list: pendingOrders },
+            { label: 'Confirmed', color: 'text-blue-400', list: confirmedOrders },
+            { label: 'Preparing', color: 'text-purple-400', list: preparingOrders },
+            { label: 'Ready', color: 'text-green-400', list: readyOrders },
+          ].map(col => (
+            <div key={col.label} className="space-y-2">
+              <p className={`text-xs font-bold uppercase tracking-wide text-center ${col.color}`}>{col.label} ({col.list.length})</p>
+              {[...col.list]
+                .sort((a, b) => new Date(a.created_date) - new Date(b.created_date))
+                .map(order => (
+                  <KDSMediumCard key={order.id} order={order} onExpand={setExpandedOrder} />
                 ))}
             </div>
           ))}
