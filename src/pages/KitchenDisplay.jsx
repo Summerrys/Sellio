@@ -39,7 +39,10 @@ function KDSOrderCard({ order, onBump }) {
   const isCritical = elapsed > 20;
 
   return (
-    <div className={`rounded-2xl border-4 p-5 flex flex-col gap-4 ${cfg.bg} text-white ${isCritical ? 'animate-pulse' : ''}`}>
+    <div
+      className={`rounded-2xl border-4 p-5 flex flex-col gap-4 ${cfg.bg} text-white`}
+      style={isCritical ? { animation: 'kdsBorderPulse 1.4s ease-in-out infinite' } : undefined}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">{cfg.label}</p>
