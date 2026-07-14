@@ -305,6 +305,7 @@ function TenantSettingsContent() {
       <div>
         <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-6">
           <button
+            data-tour="settings-business-tab"
             onClick={() => setSettingsTab('business')}
             className="flex-1 h-9 rounded-lg text-[11px] sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5"
             style={settingsTab === 'business' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
@@ -312,6 +313,7 @@ function TenantSettingsContent() {
             <Building2 className="w-4 h-4" /> Business
           </button>
           <button
+            data-tour="settings-payment-tab"
             onClick={() => setSettingsTab('payment_qr')}
             className="flex-1 h-9 rounded-lg text-[11px] sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5"
             style={settingsTab === 'payment_qr' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
@@ -319,6 +321,7 @@ function TenantSettingsContent() {
             <QrCode className="w-4 h-4" /> Payment QR
           </button>
           <button
+            data-tour="settings-theme-tab"
             onClick={() => setSettingsTab('theme')}
             className="flex-1 h-9 rounded-lg text-[11px] sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5"
             style={settingsTab === 'theme' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
@@ -326,6 +329,7 @@ function TenantSettingsContent() {
             <Palette className="w-4 h-4" /> Theme
           </button>
           <button
+            data-tour="settings-users-tab"
             onClick={() => setSettingsTab('users')}
             className="flex-1 h-9 rounded-lg text-[11px] sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5"
             style={settingsTab === 'users' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
