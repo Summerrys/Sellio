@@ -184,13 +184,18 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
           {/* Items */}
           <div className="space-y-1 mb-3">
             {(order.items || []).map((item, idx) => (
-              <div key={idx} className="flex justify-between text-sm">
-                <span className="text-slate-800 font-medium">
-                  {item.quantity}× {item.name || item.product_name}
-                  {item.variant ? <span className="text-slate-500 font-normal"> ({item.variant})</span> : ''}
-                </span>
-                {item.price != null && (
-                  <span className="text-slate-500 text-xs">{currency} {((item.price || 0) * (item.quantity || 1)).toFixed(2)}</span>
+              <div key={idx} className="text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-800 font-medium">
+                    {item.quantity}× {item.name || item.product_name}
+                    {item.variant ? <span className="text-slate-500 font-normal"> ({item.variant})</span> : ''}
+                  </span>
+                  {item.price != null && (
+                    <span className="text-slate-500 text-xs">{currency} {((item.price || 0) * (item.quantity || 1)).toFixed(2)}</span>
+                  )}
+                </div>
+                {item.notes && (
+                  <p className="text-xs text-slate-500 italic pl-4">📝 {item.notes}</p>
                 )}
               </div>
             ))}
