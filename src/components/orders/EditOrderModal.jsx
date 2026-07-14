@@ -370,6 +370,33 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
             >
               {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Save className="w-4 h-4" /> Save Changes</>}
             </button>
+
+            {canCancel && (
+              !confirmCancel ? (
+                <button
+                  onClick={() => setConfirmCancel(true)}
+                  style={{ width: '100%', padding: '10px', marginTop: 8, borderRadius: 10, border: '1px solid #fecaca', background: 'white', color: '#ef4444', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Cancel Order
+                </button>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                  <span style={{ flex: 1, fontSize: 12, color: '#dc2626', fontWeight: 600 }}>Cancel this order?</span>
+                  <button
+                    onClick={onCancelOrder}
+                    style={{ padding: '8px 14px', borderRadius: 10, border: 'none', background: '#ef4444', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Yes, cancel
+                  </button>
+                  <button
+                    onClick={() => setConfirmCancel(false)}
+                    style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    No
+                  </button>
+                </div>
+              )
+            )}
           </div>
         )}
       </div>
