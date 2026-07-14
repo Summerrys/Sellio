@@ -17,6 +17,9 @@ import TakeOrdersModal from '../components/dashboard/TakeOrdersModal';
 import MerchantAssistantWidget from '../components/merchant/MerchantAssistantWidget';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
+import { useProductTour } from '@/hooks/useProductTour';
+import TourGuide from '@/components/tour/TourGuide';
+import { getDashboardSteps } from '@/components/tour/tourSteps';
 
 const featureCards = [
   { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view', color: 'bg-blue-50 text-blue-600 border-blue-100' },
