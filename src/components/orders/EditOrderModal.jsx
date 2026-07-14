@@ -264,7 +264,7 @@ export default function EditOrderModal({ order, tenantId, currency, onClose, onS
                           <button
                             key={oi}
                             onClick={handleClick}
-                            style={{ padding: '8px 14px', borderRadius: 999, fontSize: 13, border: isSelected ? '2px solid rgb(var(--color-primary))' : '1.5px solid #e2e8f0', background: isSelected ? 'rgba(var(--color-primary),0.08)' : 'white', cursor: 'pointer', fontWeight: isSelected ? 700 : 500, color: isSelected ? 'rgb(var(--color-primary))' : '#374151' }}
+                            style={{ padding: '8px 10px', borderRadius: 14, border: isSelected ? '2px solid rgb(var(--color-primary))' : '1.5px solid #e2e8f0', background: isSelected ? 'rgba(var(--color-primary),0.08)' : 'white', cursor: 'pointer', fontWeight: isSelected ? 700 : 500, color: isSelected ? 'rgb(var(--color-primary))' : '#374151', fontSize: 13, textAlign: 'center', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3, minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           >
                             {opt.label}{opt.price_modifier > 0 ? ` +${currency} ${parseFloat(opt.price_modifier).toFixed(2)}` : ''}
                           </button>
