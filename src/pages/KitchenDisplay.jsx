@@ -340,6 +340,18 @@ export default function KitchenDisplay() {
   }
 
   const content = (
+    <>
+      {/* FIX: previously used Tailwind's animate-pulse (opacity-based) on the whole
+          card for overdue orders, which faded the item names, timer, and buttons
+          right along with the border, making the card harder to read while it was
+          flashing. This keyframe only pulses the border/glow — content underneath
+          stays fully readable and static throughout. */}
+      <style>{`
+        @keyframes kdsBorderPulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.7); border-color: rgb(248, 113, 113); }
+          50% { box-shadow: 0 0 0 10px rgba(248, 113, 113, 0); border-color: rgb(220, 38, 38); }
+        }
+      `}</style>
     <div className="min-h-screen bg-slate-900 text-white p-4 sm:p-6">
       <div className="mb-6 pb-4 border-b border-slate-700">
         {/* Top row: Exit button + Title */}
