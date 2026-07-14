@@ -134,6 +134,37 @@ export default function KitchenDisplay() {
   const audioCtxRef = useRef(null);
   const soundEnabledRef = useRef(false);
   const repeatIntervalRef = useRef(null);
+
+  // FIX: the AudioContext used to only get created lazily, the first time a
+  // sound actually needed to play. If sound was already enabled from a
+  // previous session (restored from localStorage/DB) and a new order arrived
+  // via realtime before the user tapped anything this session, that FIRST
+  // creation happened from inside a realtime callback — not a genuine user
+  // gesture. Safari can permanently lock an AudioContext created that way;
+  // calling .resume() on it later doesn't reliably unlock it. This creates
+  // and unlocks the context on the very first tap/touch anywhere on the page,
+  // regardless of whether sound is on yet, so it's ready before any realtime
+  // event gets a chance to create it the unsafe way.
+  useEffect(() => {
+    const unlockAudio = () => {
+      if (!audioCtxRef.current) {
+        try {
+          audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) { return; }
+      }
+      if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().catch(() => {});
+      }
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+    };
+    window.addEventListener('pointerdown', unlockAudio);
+    window.addEventListener('touchstart', unlockAudio);
+    return () => {
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+    };
+  }, []);
   const alertIntervalRef = useRef(60);
   const [alertInterval, setAlertInterval] = useState(60);
 
