@@ -287,6 +287,7 @@ export default function Dashboard() {
         </div>
         {tenant?.slug && hasPermission('dashboard.design_store') && (
           <button
+            data-tour="design-store-btn"
             onClick={() => setShowDesigner(true)}
             style={{
               display: 'flex',
