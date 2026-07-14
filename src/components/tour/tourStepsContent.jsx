@@ -14,7 +14,7 @@ function BrandWord({ children }) {
 // merchant. Each function takes light context (plan tier, whether real data
 // exists) since a couple of steps adapt or disappear based on that.
 
-export function getDashboardSteps({ hasTakeOrders }) {
+export function getDashboardSteps({ hasTakeOrders, hasAiAssistant, hasDesignStore }) {
   const steps = [
     {
       target: 'body',
@@ -22,11 +22,23 @@ export function getDashboardSteps({ hasTakeOrders }) {
       title: <>Welcome to <BrandWord>Sellio</BrandWord>! 👋</>,
       content: "Let's take a 60-second look around before you start selling.",
     },
-    {
-      target: '[data-tour="dashboard-stats"]',
-      content: "This is your daily pulse — revenue, orders, stock health, and active staff, updated live.",
-    },
   ];
+  if (hasAiAssistant) {
+    steps.push({
+      target: '[data-tour="ai-assistant-btn"]',
+      content: "Tap the Sellio AI avatar anytime you have a question about your business — sales trends, what's running low, anything you'd normally have to dig for.",
+    });
+  }
+  if (hasDesignStore) {
+    steps.push({
+      target: '[data-tour="design-store-btn"]',
+      content: "Preview and customize your public storefront here — banner colors, layout — with a live preview, plus a shortcut to open your actual live store.",
+    });
+  }
+  steps.push({
+    target: '[data-tour="dashboard-stats"]',
+    content: "This is your daily pulse — revenue, orders, stock health, and active staff, updated live.",
+  });
   if (hasTakeOrders) {
     steps.push({
       target: '[data-tour="take-orders-btn"]',
