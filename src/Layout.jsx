@@ -452,7 +452,7 @@ function AppLayout({ children, currentPageName }) {
           })}
 
           {/* Center: Sell FAB */}
-          <div className="flex-1 flex flex-col items-center justify-end pb-1" style={{ minHeight: 60 }}>
+          <div data-tour="sell-fab" className="flex-1 flex flex-col items-center justify-end pb-1" style={{ minHeight: 60 }}>
             <button
               onClick={() => {
                 // FIX: previously only checked the plan's product-count limit — never
