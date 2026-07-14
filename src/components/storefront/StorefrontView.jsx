@@ -808,7 +808,7 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                     return (
                     <div key={gi} style={{ marginBottom: 14 }}>
                       <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 8px', color: '#0f172a' }}>{group.name || (isMultiSelect ? 'Add-ons' : 'Options')}</p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                         {(group.options || []).map((opt, oi) => {
                           const isSelected = isMultiSelect
                             ? selectedList.some(v => v.label === opt.label)
