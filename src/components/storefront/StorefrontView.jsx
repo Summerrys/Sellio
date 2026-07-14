@@ -828,7 +828,7 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                           };
                           return (
                             <button key={oi} onClick={handleClick}
-                              style={{ padding: '8px 16px', borderRadius: 999, fontSize: 13, border: isSelected ? `2px solid ${primaryColor}` : '1.5px solid #e2e8f0', background: isSelected ? `${primaryColor}15` : 'white', cursor: 'pointer', fontWeight: isSelected ? 700 : 500, color: isSelected ? primaryColor : '#374151', transition: 'all 0.15s' }}>
+                              style={{ padding: '8px 10px', borderRadius: 14, border: isSelected ? `2px solid ${primaryColor}` : '1.5px solid #e2e8f0', background: isSelected ? `${primaryColor}15` : 'white', cursor: 'pointer', fontWeight: isSelected ? 700 : 500, color: isSelected ? primaryColor : '#374151', transition: 'all 0.15s', fontSize: 13, textAlign: 'center', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3, minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {opt.label}{opt.price_modifier > 0 ? ` +${getCurrencySymbol(currency)}${parseFloat(opt.price_modifier).toFixed(2)}` : ''}
                             </button>
                           );
