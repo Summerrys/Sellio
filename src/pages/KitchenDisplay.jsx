@@ -472,7 +472,30 @@ export default function KitchenDisplay() {
           <p className="text-lg">New orders will appear here automatically</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <>
+        {/* Mobile: 4 fixed columns, no horizontal scroll — compact cards sorted
+            oldest-first (most urgent) within each column. Tablet/desktop and the
+            fullscreen kiosk view keep the existing full-card layout below,
+            unchanged, since that already has enough room to work well. */}
+        <div className="md:hidden grid grid-cols-4 gap-1.5">
+          {[
+            { label: 'New', color: 'text-amber-400', list: pendingOrders },
+            { label: 'Confirmed', color: 'text-blue-400', list: confirmedOrders },
+            { label: 'Preparing', color: 'text-purple-400', list: preparingOrders },
+            { label: 'Ready', color: 'text-green-400', list: readyOrders },
+          ].map(col => (
+            <div key={col.label} className="space-y-1.5">
+              <p className={`text-[10px] font-bold uppercase tracking-wide text-center ${col.color}`}>{col.label}</p>
+              {[...col.list]
+                .sort((a, b) => new Date(a.created_date) - new Date(b.created_date))
+                .map(order => (
+                  <KDSCompactCard key={order.id} order={order} onExpand={setExpandedOrder} />
+                ))}
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden md:grid md:grid-cols-4 gap-6">
           {/* New Orders */}
           <div>
             <h2 className="text-xl font-bold text-amber-400 uppercase tracking-widest mb-4">
