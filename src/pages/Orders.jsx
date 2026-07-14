@@ -380,7 +380,8 @@ function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate, on
 }
 
 export default function Orders() {
-  const { tenantId, tenant, hasPermission } = useTenant();
+  const { tenantId, tenant, hasPermission, subscription } = useTenant();
+  const ordersTour = useProductTour('orders');
   const { appUser } = useAppUser();
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
