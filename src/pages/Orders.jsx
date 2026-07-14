@@ -230,6 +230,7 @@ function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate, on
             )}
             {action && canEditOrders && (
               <button
+                data-tour="order-status-btn"
                 onClick={() => onStatusUpdate(order.id, action.next)}
                 className={`py-2.5 rounded-lg text-sm font-semibold text-white active:scale-95 transition-transform ${showPrint ? 'flex-1' : 'w-full'}`}
                 style={useThemeButton
