@@ -30,7 +30,7 @@ const countVariantGroups = (variants) => {
   return 1; // scan format — all items belong to one group
 };
 
-export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMode = 'list', selectionMode = false, selectedIds = new Set(), onLongPress, onToggleSelect }) {
+export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMode = 'list', selectionMode = false, selectedIds = new Set(), onLongPress, onToggleSelect, tourTagFirstCard = false }) {
 
   const lpState = React.useRef({ timer: null, moved: false, longPressed: false, activeId: null });
 
@@ -79,9 +79,10 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
   if (viewMode === 'list') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {products.map((product) => (
+        {products.map((product, index) => (
           <div
             key={product.id}
+            {...(index === 0 && tourTagFirstCard ? { 'data-tour': 'product-card' } : {})}
             {...makeLongPressProps(product.id, () => onEdit(product))}
             style={{
               display: 'flex', gap: '12px', background: selectedIds.has(product.id) ? 'rgba(var(--color-primary), 0.06)' : 'white',
@@ -141,9 +142,10 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
   // Grid view
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-      {products.map((product) => (
+      {products.map((product, index) => (
         <Card
           key={product.id}
+          {...(index === 0 && tourTagFirstCard ? { 'data-tour': 'product-card' } : {})}
           {...makeLongPressProps(product.id, () => onEdit(product))}
           className={cn(
             "group border-0 shadow-sm hover:shadow-md transition-all overflow-hidden cursor-pointer",
