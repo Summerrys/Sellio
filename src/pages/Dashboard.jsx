@@ -317,6 +317,14 @@ export default function Dashboard() {
         tenantId={tenantId}
         tenantSlug={tenant?.slug}
       />
+      {dashboardTour.eligible && (
+        <TourGuide
+          steps={getDashboardSteps({ hasTakeOrders: hasPermission('orders.create') })}
+          run={dashboardTour.eligible}
+          onFinish={dashboardTour.completeStage}
+          tour={dashboardTour}
+        />
+      )}
 
       {/* Stats Row — 4 compact cards always in a row */}
       <div data-tour="dashboard-stats" className="grid grid-cols-4 gap-2">
