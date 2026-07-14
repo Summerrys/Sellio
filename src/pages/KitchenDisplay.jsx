@@ -280,19 +280,19 @@ export default function KitchenDisplay() {
             fetchOrders();
             if (payload.eventType === 'INSERT' && soundEnabledRef.current) {
               playSound('new');
-              startRepeatAlerts(() => orders.some(o => o.status === 'pending'), 'new');
+              startRepeatAlerts(() => ordersRef.current.some(o => o.status === 'pending'), 'new');
             }
             if (payload.eventType === 'UPDATE' &&
                 payload.new?.status === 'ready' &&
                 payload.old?.status !== 'ready' &&
                 soundEnabledRef.current) {
               playSound('ready');
-              startRepeatAlerts(() => orders.some(o => o.status === 'ready'), 'ready');
+              startRepeatAlerts(() => ordersRef.current.some(o => o.status === 'ready'), 'ready');
             }
             if (payload.eventType === 'UPDATE' &&
                 (payload.new?.status === 'confirmed' || payload.new?.status === 'completed')) {
-              const stillHasPending = orders.some(o => o.status === 'pending' && o.id !== payload.new?.id);
-              const stillHasReady = orders.some(o => o.status === 'ready' && o.id !== payload.new?.id);
+              const stillHasPending = ordersRef.current.some(o => o.status === 'pending' && o.id !== payload.new?.id);
+              const stillHasReady = ordersRef.current.some(o => o.status === 'ready' && o.id !== payload.new?.id);
               if (!stillHasPending && !stillHasReady) stopRepeatAlerts();
             }
           }
