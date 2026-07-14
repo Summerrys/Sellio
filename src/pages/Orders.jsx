@@ -278,10 +278,15 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
           order={order}
           tenantId={tenantId}
           currency={currency}
+          canCancel={canCancelOrders && !isFinal}
           onClose={() => setShowEditOrder(false)}
           onSaved={(updatedOrder) => {
             setShowEditOrder(false);
             onOrderUpdated?.(updatedOrder);
+          }}
+          onCancelOrder={() => {
+            onStatusUpdate(order.id, 'cancelled');
+            setShowEditOrder(false);
           }}
         />
       )}
