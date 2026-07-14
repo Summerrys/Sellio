@@ -95,12 +95,13 @@ function printReceipt(order, currency, merchantName) {
   win.document.close();
 }
 
-function OrderCard({ order, currency, merchantName, tenantId, onStatusUpdate, onMarkPaid, onOrderUpdated, tourTag = false }) {
+function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel, tenantId, onStatusUpdate, onMarkPaid, onOrderUpdated, tourTag = false }) {
   const { hasPermission } = useTenant();
   const canEditOrders = hasPermission('orders.edit');
   const canCancelOrders = hasPermission('orders.cancel');
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [showEditOrder, setShowEditOrder] = useState(false);
+  const [showPaymentQR, setShowPaymentQR] = useState(false);
   const isFinal = order.status === 'completed' || order.status === 'cancelled';
   const action = STATUS_NEXT[order.status];
   const accent = STATUS_ACCENT[order.status] || STATUS_ACCENT.completed;
