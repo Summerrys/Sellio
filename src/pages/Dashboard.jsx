@@ -101,14 +101,6 @@ export default function Dashboard() {
   const [aiOpen, setAiOpen] = React.useState(false);
   const [showTakeOrders, setShowTakeOrders] = React.useState(false);
 
-  // Safety net: if the merchant clicks through the pulsing Products/Orders/
-  // Settings nav link (leaving this page) instead of reaching the tour's
-  // natural end, make sure the pulse doesn't stay stuck "on" for a page that's
-  // no longer showing the tour.
-  useEffect(() => {
-    return () => queryClient.setQueryData(['tourNavPulse'], false);
-  }, [queryClient]);
-
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('upgraded') === '1') {
