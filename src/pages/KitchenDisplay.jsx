@@ -231,7 +231,7 @@ export default function KitchenDisplay() {
       }
       const ctx = audioCtxRef.current;
       if (ctx.state === 'suspended') ctx.resume();
-      setTimeout(() => {
+      const schedule = () => {
         const compressor = ctx.createDynamicsCompressor();
         compressor.threshold.value = -3;
         compressor.knee.value = 2;
@@ -249,7 +249,15 @@ export default function KitchenDisplay() {
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
         osc.start(ctx.currentTime);
         osc.stop(ctx.currentTime + duration + 0.05);
-      }, delayMs);
+      };
+      // FIX: this used to always defer through setTimeout, even for delayMs=0.
+      // That pushes execution to the next event-loop tick, which breaks Safari's
+      // "must start within the same synchronous call as the user gesture" rule
+      // for the very first tone of a sound — even when playSound genuinely was
+      // triggered by a real tap. Scheduling immediately when there's no actual
+      // delay keeps that first tone inside the gesture's call stack.
+      if (delayMs > 0) setTimeout(schedule, delayMs);
+      else schedule();
     } catch (e) {
       console.warn('playTone error:', e);
     }
