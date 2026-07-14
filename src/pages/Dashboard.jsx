@@ -315,7 +315,7 @@ export default function Dashboard() {
       />
 
       {/* Stats Row — 4 compact cards always in a row */}
-      <div className="grid grid-cols-4 gap-2">
+      <div data-tour="dashboard-stats" className="grid grid-cols-4 gap-2">
         <RequirePermission permission="orders.view" silent>
           <StatCard
             compact
