@@ -228,7 +228,14 @@ export default function EditOrderModal({ order, tenantId, currency, onClose, onS
                   {filteredProducts.map(p => (
                     <button
                       key={p.id}
-                      onClick={() => addProduct(p)}
+                      onClick={() => {
+                        if (p.variants?.length) {
+                          setPickingVariantsFor(p);
+                          setSelectedVariants({});
+                        } else {
+                          addProduct(p);
+                        }
+                      }}
                       style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', textAlign: 'left' }}
                     >
                       {p.image_url ? (
