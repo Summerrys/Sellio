@@ -811,10 +811,16 @@ export default function Orders() {
               <p className="text-slate-500">
                 {searchQuery ? 'No orders match your search' : `No ${activeTab !== 'all' ? `${STATUS_TABS.find(t => t.value === activeTab)?.label} ` : ''}orders yet`}
               </p>
+              {/* Tour needs a card to point at even with zero real orders yet */}
+              {ordersTour.eligible && (
+                <div className="max-w-[280px] mx-auto mt-4">
+                  <DummyOrderCard currency={currency} />
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredOrders.map(order => (
+              {filteredOrders.map((order, index) => (
                 <OrderCard
                   key={order.id}
                   order={order}
@@ -824,12 +830,21 @@ export default function Orders() {
                   onStatusUpdate={handleStatusUpdate}
                   onMarkPaid={handleMarkPaid}
                   onOrderUpdated={(updatedOrder) => setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o))}
+                  tourTag={index === 0 && ordersTour.eligible}
                 />
               ))}
             </div>
           )}
         </div>
       </PullToRefresh>
+      {ordersTour.eligible && (
+        <TourGuide
+          steps={getOrdersSteps({ tier: subscription?.tier })}
+          run={ordersTour.eligible}
+          onFinish={ordersTour.completeStage}
+          tour={ordersTour}
+        />
+      )}
     </RequirePermission>
   );
 }
