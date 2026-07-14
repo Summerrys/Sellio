@@ -323,6 +323,14 @@ export default function Dashboard() {
           run={dashboardTour.eligible}
           onFinish={dashboardTour.completeStage}
           tour={dashboardTour}
+          onStepChange={(index) => {
+            // Broadcasts via the query cache so Layout.jsx (which renders the
+            // bottom nav, outside this page) can show pulsing dots on Products/
+            // Orders/Settings exactly while this specific step is on screen.
+            const currentSteps = getDashboardSteps({ hasTakeOrders: hasPermission('orders.create') });
+            const isBottomNavStep = index >= 0 && currentSteps[index]?.target === '[data-tour="bottom-nav"]';
+            queryClient.setQueryData(['tourNavPulse'], isBottomNavStep);
+          }}
         />
       )}
 
