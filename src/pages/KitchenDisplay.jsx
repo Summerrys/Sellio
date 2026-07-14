@@ -487,7 +487,7 @@ export default function KitchenDisplay() {
             oldest-first (most urgent) within each column. Tablet/desktop and the
             fullscreen kiosk view keep the existing full-card layout below,
             unchanged, since that already has enough room to work well. */}
-        <div className="md:hidden grid grid-cols-4 gap-1.5">
+        <div className="xl:hidden grid grid-cols-4 gap-1.5">
           {[
             { label: 'New', color: 'text-amber-400', list: pendingOrders },
             { label: 'Confirmed', color: 'text-blue-400', list: confirmedOrders },
@@ -505,7 +505,7 @@ export default function KitchenDisplay() {
           ))}
         </div>
 
-        <div className="hidden md:grid md:grid-cols-4 gap-6">
+        <div className="hidden xl:grid xl:grid-cols-4 gap-6">
           {/* New Orders */}
           <div>
             <h2 className="text-xl font-bold text-amber-400 uppercase tracking-widest mb-4">
@@ -567,7 +567,7 @@ export default function KitchenDisplay() {
             so staff can quickly check one order and get right back to the board. */}
         {expandedOrder && orders.some(o => o.id === expandedOrder.id) && (
           <div
-            className="md:hidden fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70"
+            className="xl:hidden fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70"
             onClick={() => setExpandedOrder(null)}
           >
             <div className="w-full max-w-sm" onClick={e => e.stopPropagation()}>
