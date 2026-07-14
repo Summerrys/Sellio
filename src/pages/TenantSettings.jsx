@@ -307,12 +307,20 @@ function TenantSettingsContent() {
       <PageHeader title="Settings" description="Configure your business and manage roles" />
 
       {settingsTour.isOwner && (
-        <button
-          onClick={settingsTour.replayTour}
-          className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-slate-600 mb-4 -mt-2 transition-colors"
-        >
-          <RefreshCw className="w-3 h-3" /> Replay Tour
-        </button>
+        <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl border border-slate-100 bg-slate-50/70 mb-5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-white shadow-sm border border-slate-100 flex items-center justify-center flex-shrink-0">
+              <RefreshCw className="w-4 h-4 text-slate-500" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-800">Need a refresher?</p>
+              <p className="text-xs text-slate-500 truncate">Replay the onboarding tour anytime.</p>
+            </div>
+          </div>
+          <Button size="sm" variant="outline" className="flex-shrink-0" onClick={settingsTour.replayTour}>
+            Replay Tour
+          </Button>
+        </div>
       )}
 
       <div>
