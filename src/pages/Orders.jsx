@@ -48,7 +48,7 @@ const STATUS_NEXT = {
 };
 
 // Buttons that use theme color vs neutral
-const THEME_BUTTON_STATUSES = new Set(['pending', 'confirmed', 'preparing']);
+const THEME_BUTTON_STATUSES = new Set(['pending', 'confirmed', 'preparing', 'ready']);
 
 
 function printReceipt(order, currency, merchantName) {
