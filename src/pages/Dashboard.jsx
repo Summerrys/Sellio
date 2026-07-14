@@ -250,6 +250,7 @@ export default function Dashboard() {
             {tenant?.name || 'there'}!{' '}
               {hasPermission('dashboard.ai_assistant') && (
               <button
+                data-tour="ai-assistant-btn"
                 onClick={() => setAiOpen(true)}
                 style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-block', verticalAlign: 'middle', marginLeft: 4, position: 'relative' }}
                 title="Ask Sellio AI"
