@@ -250,12 +250,14 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
             {action && canEditOrders && (
               <button
                 data-tour="order-status-btn"
-                onClick={() => onStatusUpdate(order.id, action.next)}
-                className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white active:scale-95 transition-transform min-w-[120px]"
-                style={useThemeButton
-                  ? { background: 'var(--color-primary-gradient, rgb(var(--color-primary)))' }
-                  : { background: '#334155' }
-                }
+                onClick={(e) => { e.stopPropagation(); onStatusUpdate(order.id, action.next); }}
+                className="flex-1 h-11 rounded-lg text-sm font-semibold text-white active:scale-95 transition-transform"
+                style={{
+                  ...(useThemeButton
+                    ? { background: 'var(--color-primary-gradient, rgb(var(--color-primary)))' }
+                    : { background: '#334155' }),
+                  animation: 'orderActionPulse 2s ease-in-out infinite',
+                }}
               >
                 {action.label}
               </button>
