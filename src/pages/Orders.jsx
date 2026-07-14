@@ -210,7 +210,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
               (wraps only if it truly has to on a very narrow screen), instead of the
               previous mix of a sometimes-column wrapper plus a separate full-width
               Cancel block underneath. */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
             {canEditOrders && order.payment_status !== 'paid' && (order.status === 'completed' || order.status === 'ready') && (
               paymentQrUrl ? (
                 // Frontline staff workflow: show the QR, let the customer pay, confirm
