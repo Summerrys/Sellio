@@ -338,6 +338,12 @@ export default function Dashboard() {
             const currentSteps = getDashboardSteps({ hasTakeOrders: hasPermission('orders.create') });
             const isBottomNavStep = index >= 0 && currentSteps[index]?.target === '[data-tour="bottom-nav"]';
             queryClient.setQueryData(['tourNavPulse'], isBottomNavStep);
+            // Mark this stage done as soon as this step is reached, not only on
+            // the tour's natural final step — clicking through to Products/
+            // Orders/Settings from here is now an expected way to leave mid-tour
+            // (spotlightClicks is on for this step), and progress shouldn't be
+            // lost just because they took the shortcut instead of tapping Next.
+            if (isBottomNavStep) dashboardTour.completeStage();
           }}
         />
       )}
