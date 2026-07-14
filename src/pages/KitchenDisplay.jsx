@@ -368,6 +368,12 @@ export default function KitchenDisplay() {
   }, [tenantId]);
 
   const handleBump = async (orderId, currentStatus) => {
+    // Piggybacks on this genuine tap to keep the AudioContext unlocked on
+    // iPadOS/iOS Safari — every real user gesture is a fresh opportunity to
+    // resume it if the OS suspended it in the background.
+    if (audioCtxRef.current?.state === 'suspended') {
+      audioCtxRef.current.resume().catch(() => {});
+    }
     const nextStatus = NEXT_STATUS[currentStatus];
     if (!nextStatus) return;
     const supabase = await getSupabase();
