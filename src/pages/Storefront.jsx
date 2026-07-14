@@ -413,7 +413,15 @@ function StorefrontInner() {
           </div>
         </div>
       )}
-      <div style={!isStoreOpen ? { paddingBottom: 68 } : {}}>
+      {/* FIX: previously only the add-to-cart callback was disabled while closed -
+          everything else (opening a product's detail modal, category tabs, search,
+          etc.) stayed fully interactive with no accounting for the closed state,
+          and tapping into one of those apparently hit something that crashed to a
+          blank screen. Rather than chase the exact interaction that broke, this
+          makes the whole content area inert while closed - nothing in here can be
+          tapped at all, so there's nothing left that could trigger it. Preview mode
+          stays fully interactive so the merchant can still test/preview normally. */}
+      <div style={!isStoreOpen && !isPreview ? { paddingBottom: 68, pointerEvents: 'none', userSelect: 'none' } : {}}>
         <StorefrontView
           tenant={tenant}
           storefrontConfig={storefrontConfig}
