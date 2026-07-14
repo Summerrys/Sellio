@@ -15,6 +15,15 @@ export default function EditOrderModal({ order, tenantId, currency, onClose, onS
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [search, setSearch] = useState('');
+  // FIX: the product picker used to call addProduct(p) directly on tap, with no
+  // variant argument at all — meaning any item added here always went in at base
+  // price with variant: null, even for products that have variants configured.
+  // Staff editing an in-progress order had no way to actually pick a variant, no
+  // matter what stage (New/Confirmed/Preparing/Ready) the order was in. This adds
+  // the same variant-selection step the customer storefront uses, reusing the
+  // same single-select-vs-multi-select-by-type logic.
+  const [pickingVariantsFor, setPickingVariantsFor] = useState(null);
+  const [selectedVariants, setSelectedVariants] = useState({});
 
   useEffect(() => {
     if (!showPicker || products.length > 0) return;
