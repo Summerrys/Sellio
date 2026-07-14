@@ -7,26 +7,28 @@ const BRAND_GRADIENT = 'linear-gradient(135deg, #fb923c, #e0449a, #8b5cf6)';
 // (Dashboard/Products/Orders/Settings). Every step gets a Skip button; tapping
 // it opens a confirm modal before actually ending the tour, so a stray tap
 // doesn't silently lose someone's place.
-export default function TourGuide({ steps, run, onFinish, tour, onStepChange }) {
+export default function TourGuide({ steps, run, onFinish, tour }) {
   const handleCallback = (data) => {
-    const { status, action, index, type } = data;
+    const { status, action } = data;
     if (status === STATUS.FINISHED) {
       onFinish();
     } else if (action === 'skip') {
       tour.requestSkip();
     }
-    if (type === 'step:after' || type === 'tooltip') {
-      onStepChange?.(index);
-    }
-    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
-      onStepChange?.(-1);
-    }
   };
+
+  // FIX: react-joyride shows a small pulsing "beacon" before the actual tooltip
+  // for any step that doesn't explicitly opt out — meaning every single step
+  // required an extra tap just to reveal its content. That's what looked like
+  // "the tour doesn't launch immediately, there's a pulsing dot you have to tap
+  // first" on the Products page. disableBeacon skips straight to the real
+  // tooltip on every step.
+  const stepsWithoutBeacon = steps.map(step => ({ disableBeacon: true, ...step }));
 
   return (
     <>
       <Joyride
-        steps={steps}
+        steps={stepsWithoutBeacon}
         run={run}
         continuous
         showSkipButton
@@ -41,7 +43,12 @@ export default function TourGuide({ steps, run, onFinish, tour, onStepChange }) 
         scrollOffset={80}
         callback={handleCallback}
         locale={{ back: 'Back', close: 'Close', last: 'Done', next: 'Next', skip: 'Skip' }}
-        floaterProps={{ disableFlip: false }}
+        // FIX: the gradient border only ever applied to the tooltip box itself —
+        // Joyride renders the little triangle pointer as a separate element, so
+        // it stayed plain white and created a visible seam where the two met.
+        // Hiding it entirely (rather than trying to gradient-border something
+        // that small) gives a clean, fully-bordered bubble with no seam.
+        floaterProps={{ hideArrow: true }}
         styles={{
           options: {
             primaryColor: '#8b5cf6',
@@ -54,7 +61,6 @@ export default function TourGuide({ steps, run, onFinish, tour, onStepChange }) 
           tooltip: {
             borderRadius: 16,
             padding: 18,
-            // Brand-gradient border on every step's bubble, on every stage.
             border: '2px solid transparent',
             backgroundImage: `linear-gradient(#fff, #fff), ${BRAND_GRADIENT}`,
             backgroundOrigin: 'border-box',
