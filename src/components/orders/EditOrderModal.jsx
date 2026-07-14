@@ -3,6 +3,15 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { X, Plus, Minus, Trash2, Search, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
+// products.variants is already stored pre-grouped as [{name, type, options}] by
+// the sync that runs whenever a merchant edits variants in the Products page —
+// this just defends against older/malformed rows that might not be in that shape.
+function normaliseEditVariants(rawVariants) {
+  if (!rawVariants?.length) return [];
+  if (rawVariants[0]?.options) return rawVariants;
+  return [{ name: 'Options', type: 'other', options: rawVariants.map(v => ({ label: v.name || v.label || '', price_modifier: v.price_modifier || 0 })) }];
+}
+
 // Edits an existing order's line items and customer notes. Reuses the same item shape
 // the Storefront checkout writes into orders.items (key, product_id, name, price,
 // image_url, quantity, variant) so nothing downstream needs to special-case
