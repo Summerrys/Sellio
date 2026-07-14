@@ -769,7 +769,7 @@ export default function Orders() {
           </div>
 
           {/* Status tabs */}
-          <div className="flex w-full gap-1">
+          <div data-tour="order-tabs" className="flex w-full gap-1">
             {STATUS_TABS.map(tab => {
               const count = tab.value === 'all' ? orders.length : countFor(tab.value);
               const isActive = activeTab === tab.value;
