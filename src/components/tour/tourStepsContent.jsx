@@ -144,7 +144,7 @@ export function getOrdersSteps({ tier }) {
     },
     {
       target: '[data-tour="order-card"]',
-      content: "Need to change an item or the customer changed their mind? Edit or cancel right from the card.",
+      content: "Need to change an item, add a note, or cancel the order? Tap anywhere on the card to open it.",
     },
   ];
   if (tier === 'starter') {
