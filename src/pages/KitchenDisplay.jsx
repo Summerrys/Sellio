@@ -96,6 +96,14 @@ export default function KitchenDisplay() {
   const { tenantId, tenant } = useTenant();
   const { appUser } = useAppUser();
   const [orders, setOrders] = useState([]);
+  // FIX: the realtime subscription below is set up once (useEffect deps: just
+  // [tenantId]) and its callback closure captured `orders` from that one moment
+  // — permanently. The repeat-alert interval was checking that frozen snapshot
+  // forever after, not the actual current list, so it almost always found no
+  // pending order and cancelled itself after a single silent tick. This ref
+  // always holds the latest value for that closure to read instead.
+  const ordersRef = useRef([]);
+  useEffect(() => { ordersRef.current = orders; }, [orders]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
