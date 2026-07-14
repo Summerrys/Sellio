@@ -10,7 +10,7 @@ import TableCallAlerts from '../components/orders/TableCallAlerts';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { ClipboardList, Bell, BellOff, Monitor, Search, Download, Printer, Loader2, Pencil } from 'lucide-react';
+import { ClipboardList, Bell, BellOff, Monitor, Search, Download, Printer, Loader2, Pencil, QrCode, X } from 'lucide-react';
 import EditOrderModal from '@/components/orders/EditOrderModal';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
 import { useProductTour } from '@/hooks/useProductTour';
