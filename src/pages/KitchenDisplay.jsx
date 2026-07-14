@@ -309,6 +309,40 @@ export default function KitchenDisplay() {
     soundEnabledRef.current = soundEnabled;
   }, [soundEnabled]);
 
+  // FIX (Apple devices still not ringing): unlocking the AudioContext once
+  // isn't enough on iPadOS/iOS — Safari suspends it again after a period of
+  // silence, and a genuinely new order arrives via a realtime/websocket event,
+  // not a user gesture, so there's nothing there to re-unlock it in the
+  // moment. The reliable fix used across web apps that need this (chat apps,
+  // background notification sounds) is to never let the context go idle in
+  // the first place: play an inaudible tone on a steady heartbeat the whole
+  // time sound is enabled. Gain is set low enough to be silent in practice,
+  // but it's enough activity to keep Safari from suspending the context.
+  useEffect(() => {
+    if (!soundEnabled) return;
+    const keepAlive = () => {
+      if (document.visibilityState !== 'visible') return;
+      try {
+        if (!audioCtxRef.current) {
+          audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        const ctx = audioCtxRef.current;
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        gain.gain.value = 0.00001;
+        osc.frequency.value = 1;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.05);
+      } catch (e) { /* best effort */ }
+    };
+    keepAlive();
+    const id = setInterval(keepAlive, 20000);
+    return () => clearInterval(id);
+  }, [soundEnabled]);
+
   useEffect(() => {
     if (!tenantId) return;
     const stored = localStorage.getItem(`sellio_sound_alerts_${tenantId}`);
