@@ -233,7 +233,13 @@ export default function EditOrderModal({ order, tenantId, currency, onClose, onS
                 return (
                   <div key={gi} style={{ marginBottom: 16 }}>
                     <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 8px', color: '#0f172a' }}>{group.name || (isMultiSelect ? 'Add-ons' : 'Options')}</p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {/* FIX: flex-wrap sized pills purely by their own text, and
+                        selecting one made it bold (wider) — so two long labels that
+                        fit side-by-side unselected could stop fitting once both were
+                        selected, wrapping unpredictably. A fixed 2-column grid keeps
+                        pill placement consistent regardless of label length or
+                        selection state. */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                       {(group.options || []).map((opt, oi) => {
                         const isSelected = isMultiSelect
                           ? selectedList.some(v => v.label === opt.label)
