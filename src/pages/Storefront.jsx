@@ -166,12 +166,16 @@ function StorefrontInner() {
   const sym = { SGD:'$', MYR:'RM ', USD:'$', AUD:'A$', GBP:'£', EUR:'€' }[currency] || (currency + ' ');
   const isFnB = isFnBIndustry(tenant?.industry);
 
-  const addToCart = (product, variant = null) => {
-    const key = `${product.id}-${variant?.label || 'default'}`;
+  const addToCart = (product, variant = null, notes = null) => {
+    // Notes now factor into the merge key too — otherwise adding the same
+    // product+variant twice with two different special requests would silently
+    // merge into one line and lose one of the notes (or overwrite it), the same
+    // way two different variants already correctly stay as separate lines.
+    const key = `${product.id}-${variant?.label || 'default'}${notes ? `-${notes}` : ''}`;
     setCart(prev => {
       const existing = prev.find(i => i.key === key);
       if (existing) return prev.map(i => i.key === key ? { ...i, quantity: i.quantity + 1 } : i);
-      return [...prev, { key, product_id: product.id, name: product.name, price: product.price + (variant?.price_modifier || 0), image_url: product.image_url, quantity: 1, variant: variant?.label || null }];
+      return [...prev, { key, product_id: product.id, name: product.name, price: product.price + (variant?.price_modifier || 0), image_url: product.image_url, quantity: 1, variant: variant?.label || null, notes: notes || null }];
     });
   };
 
