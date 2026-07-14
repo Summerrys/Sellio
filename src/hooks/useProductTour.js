@@ -1,7 +1,9 @@
 import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '@/components/tenant/TenantContext';
+import { createPageUrl } from '@/utils';
 
 const STAGES = ['dashboard', 'products', 'orders', 'settings'];
 
@@ -12,6 +14,7 @@ const STAGES = ['dashboard', 'products', 'orders', 'settings'];
 export function useProductTour(stageName) {
   const { user, isOwner } = useTenant();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
 
   const progress = user?.tour_progress || {};
@@ -51,7 +54,12 @@ export function useProductTour(stageName) {
   }, [persistProgress]);
 
   // Manually restarts the whole sequence from Stage 1, regardless of progress —
-  // used by the "Replay Tour" entry in Settings.
+  // used by the "Replay Tour" entry in Settings. FIX: previously only reset the
+  // DB flags without navigating anywhere, so replaying from the Settings page
+  // left Stage 1's steps trying to find Dashboard-only elements (stats row, Take
+  // Orders button) that don't exist on Settings — the tour had nothing to anchor
+  // to. Now it sends the merchant back to Dashboard first, where Stage 1 actually
+  // lives.
   const replayTour = useCallback(async () => {
     if (!user?.id) return;
     const supabase = await getSupabase();
@@ -63,7 +71,8 @@ export function useProductTour(stageName) {
       })
       .eq('id', user.id);
     queryClient.invalidateQueries({ queryKey: ['currentUser'] });
-  }, [user?.id, queryClient]);
+    navigate(createPageUrl('Dashboard'));
+  }, [user?.id, queryClient, navigate]);
 
   return {
     eligible,
