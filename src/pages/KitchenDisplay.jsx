@@ -213,6 +213,25 @@ export default function KitchenDisplay() {
     }, secs * 1000);
   };
 
+  // iPadOS/iOS Safari can silently suspend an AudioContext when the tab or app
+  // is backgrounded (screen lock, app-switch, even briefly), and won't resume
+  // it again just because a setInterval callback asks it to — that resume only
+  // reliably takes effect right after a fresh user gesture. This re-primes the
+  // context whenever the page becomes visible again, so a kitchen tablet that's
+  // been sitting idle (screen dimmed, user stepped away) doesn't end up with
+  // alerts that silently stopped working. This is a mitigation for a real
+  // WebKit quirk, not a guaranteed fix — worth re-testing on the actual iPad
+  // after this change.
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && audioCtxRef.current?.state === 'suspended') {
+        audioCtxRef.current.resume().catch(() => {});
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
+
   useEffect(() => {
     soundEnabledRef.current = soundEnabled;
   }, [soundEnabled]);
