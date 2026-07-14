@@ -310,12 +310,13 @@ export default function EditOrderModal({ order, tenantId, currency, onClose, onS
                     <button
                       key={p.id}
                       onClick={() => {
-                        if (p.variants?.length) {
-                          setPickingVariantsFor(p);
-                          setSelectedVariants({});
-                        } else {
-                          addProduct(p);
-                        }
+                        // Always route through the picking step now, even for products
+                        // with no variants — that step is also where the per-item note
+                        // gets added, so a plain product still needs a chance to pick
+                        // one up rather than skipping straight to add.
+                        setPickingVariantsFor(p);
+                        setSelectedVariants({});
+                        setItemNotes('');
                       }}
                       style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', textAlign: 'left' }}
                     >
