@@ -336,7 +336,11 @@ export default function Dashboard() {
       />
       {dashboardTour.eligible && (
         <TourGuide
-          steps={getDashboardSteps({ hasTakeOrders: hasPermission('orders.create') })}
+          steps={getDashboardSteps({
+            hasTakeOrders: hasPermission('orders.create'),
+            hasAiAssistant: hasPermission('dashboard.ai_assistant'),
+            hasDesignStore: hasPermission('dashboard.design_store'),
+          })}
           run={dashboardTour.eligible}
           onFinish={dashboardTour.completeStage}
           tour={dashboardTour}
