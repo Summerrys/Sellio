@@ -371,6 +371,15 @@ function TenantSettingsContent() {
         )}
       </div>
 
+      {settingsTour.eligible && (
+        <TourGuide
+          steps={getSettingsSteps()}
+          run={settingsTour.eligible}
+          onFinish={settingsTour.completeStage}
+          tour={settingsTour}
+        />
+      )}
+
       {/* Account Deletion Dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={(open) => { if (!isDeleting) setShowDeleteConfirm(open); }}>
         <DialogContent className="sm:max-w-md">
