@@ -33,6 +33,7 @@ export default function EditOrderModal({ order, tenantId, currency, onClose, onS
   // same single-select-vs-multi-select-by-type logic.
   const [pickingVariantsFor, setPickingVariantsFor] = useState(null);
   const [selectedVariants, setSelectedVariants] = useState({});
+  const [itemNotes, setItemNotes] = useState('');
 
   useEffect(() => {
     if (!showPicker || products.length > 0) return;
@@ -78,8 +79,11 @@ export default function EditOrderModal({ order, tenantId, currency, onClose, onS
 
   const removeItem = (idx) => setItems(prev => prev.filter((_, i) => i !== idx));
 
-  const addProduct = (product, variantLabel = null, variantPriceModifier = 0) => {
-    const key = `${product.id}-${variantLabel || 'default'}`;
+  const addProduct = (product, variantLabel = null, variantPriceModifier = 0, notes = null) => {
+    // Notes now factor into the merge key too, matching the same fix on the
+    // customer storefront's cart — otherwise adding the same product+variant
+    // twice with two different notes would silently merge into one line.
+    const key = `${product.id}-${variantLabel || 'default'}${notes ? `-${notes}` : ''}`;
     setItems(prev => {
       const existingIdx = prev.findIndex(i => i.key === key);
       if (existingIdx >= 0) {
@@ -90,7 +94,7 @@ export default function EditOrderModal({ order, tenantId, currency, onClose, onS
       return [...prev, {
         key, product_id: product.id, name: product.name,
         price: (product.price || 0) + (variantPriceModifier || 0),
-        image_url: product.image_url, quantity: 1, variant: variantLabel,
+        image_url: product.image_url, quantity: 1, variant: variantLabel, notes: notes || null,
       }];
     });
     setShowPicker(false);
