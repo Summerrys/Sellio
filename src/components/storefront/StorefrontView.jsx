@@ -840,6 +840,16 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                 </div>
               );
             })()}
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 8px', color: '#0f172a' }}>Special Request (optional)</p>
+              <textarea
+                value={itemNotes}
+                onChange={e => setItemNotes(e.target.value)}
+                placeholder="e.g. No onions, extra spicy..."
+                rows={2}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, resize: 'none', fontFamily: 'inherit' }}
+              />
+            </div>
             <button
               onClick={() => {
                 // Flattens both single-select picks (plain objects) and multi-select
@@ -850,7 +860,11 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                 const combinedVariant = allSelected.length > 0
                   ? { label: allSelected.map(v => v.label).join(', '), price_modifier: allSelected.reduce((sum, v) => sum + (v.price_modifier || 0), 0) }
                   : null;
-                onAddToCart(product, combinedVariant);
+                // FIX: notes used to only exist as one order-wide field collected at
+                // checkout — there was no way to attach a note to a specific item, so
+                // adding a second item later (e.g. via Edit Order) had nowhere for its
+                // own note to go. Each cart item now carries its own optional note.
+                onAddToCart(product, combinedVariant, itemNotes.trim() || null);
                 onClose();
               }}
               style={{ width: '100%', padding: 14, background: primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
