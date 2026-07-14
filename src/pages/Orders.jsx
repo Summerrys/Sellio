@@ -688,6 +688,7 @@ export default function Orders() {
             <div className="flex flex-col items-end gap-2 flex-shrink-0">
               {isFnB && (
                 <button
+                  data-tour="kitchen-display-btn"
                   onClick={() => navigate(createPageUrl('KitchenDisplay'))}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors"
                   style={{ border: '1.5px solid rgb(var(--color-primary))', color: 'rgb(var(--color-primary))', background: 'rgba(var(--color-primary), 0.08)' }}
@@ -697,7 +698,7 @@ export default function Orders() {
                   <Monitor className="w-4 h-4" /> Kitchen Display
                 </button>
               )}
-              <div className="flex flex-col items-end gap-1.5">
+              <div data-tour="sound-alerts-toggle" className="flex flex-col items-end gap-1.5">
                 <div className="flex items-center gap-1.5">
                   <Switch id="sound" checked={soundEnabled} onCheckedChange={handleSoundToggle} className="scale-90" />
                   <Label htmlFor="sound" className="flex items-center gap-1 cursor-pointer text-xs text-slate-600">
@@ -750,7 +751,7 @@ export default function Orders() {
           <TableCallAlerts tenantId={tenantId} />
 
           {/* Stats — 4 clickable cards */}
-          <div className="grid grid-cols-4 gap-2">
+          <div data-tour="order-status-cards" className="grid grid-cols-4 gap-2">
             {STAT_CARDS.map(card => {
               const isActive = activeTab === card.status;
               return (
