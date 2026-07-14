@@ -77,9 +77,16 @@ const VARIANT_TYPE_MAP = {
 };
 
 const normalizeVariantType = (raw) => {
-  if (!raw) return 'addon';
+  // FIX: this used to fall back to 'addon' (multi-select) whenever type/name was
+  // empty or unrecognized — the opposite of safe, since it meant any ambiguous
+  // or not-yet-named group silently became multi-selectable rather than the
+  // ordinary single-choice behavior. The editor's own inferType() already
+  // defaults to 'other' (single-select) in the same situation; this now matches
+  // it, so an ambiguous group can never accidentally end up letting a customer
+  // pick both Small AND Large.
+  if (!raw) return 'other';
   const key = raw.toLowerCase().trim();
-  return VARIANT_TYPE_MAP[key] || 'addon';
+  return VARIANT_TYPE_MAP[key] || 'other';
 };
 
 const syncProductVariants = async (supabase, productId, tenantId, variants, productSku) => {
