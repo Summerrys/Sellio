@@ -226,8 +226,8 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 </button>
               ) : (
                 <button
-                  onClick={() => onMarkPaid(order)}
-                  className="flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-1.5 min-w-[120px]"
+                  onClick={(e) => { e.stopPropagation(); onMarkPaid(order); }}
+                  className="flex-1 h-11 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
                   style={{ border: '1.5px solid #16a34a', color: '#16a34a', background: '#f0fdf4' }}
                   onMouseEnter={e => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.color = '#fff'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = '#f0fdf4'; e.currentTarget.style.color = '#16a34a'; }}
