@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -100,6 +100,21 @@ export default function Dashboard() {
   const [showDesigner, setShowDesigner] = React.useState(false);
   const [aiOpen, setAiOpen] = React.useState(false);
   const [showTakeOrders, setShowTakeOrders] = React.useState(false);
+
+  // Safety net: the bottom-nav step lets someone click straight through to
+  // Products/Orders/Settings (spotlightClicks) instead of tapping Next, which
+  // unmounts this page before the tour's natural finish ever fires. Without
+  // this, progress.dashboard would never get marked true, and returning to
+  // Dashboard later would restart Stage 1 from scratch. Uses a ref so the
+  // cleanup always sees the latest eligible/completeStage, not a stale closure
+  // from whenever this effect was first set up.
+  const tourStateRef = useRef({ eligible: false, completeStage: () => {} });
+  tourStateRef.current = { eligible: dashboardTour.eligible, completeStage: dashboardTour.completeStage };
+  useEffect(() => {
+    return () => {
+      if (tourStateRef.current.eligible) tourStateRef.current.completeStage();
+    };
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
