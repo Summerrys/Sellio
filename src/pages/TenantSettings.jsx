@@ -17,6 +17,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import ThemeSelector from '../components/theme/ThemeSelector';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useProductTour } from '@/hooks/useProductTour';
+import TourGuide from '@/components/tour/TourGuide';
+import { getSettingsSteps } from '@/components/tour/tourSteps';
 import {
   Building2, Shield, Plus, Pencil, Trash2, Save, Palette, AlertTriangle,
   Loader2, QrCode, X, RefreshCw, Users
