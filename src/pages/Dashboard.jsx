@@ -385,7 +385,7 @@ export default function Dashboard() {
       )}
 
       {/* Feature Grid */}
-      <div>
+      <div data-tour="quick-access">
         <h2 className="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wide">Quick Access</h2>
         <div
           className="no-scrollbar"
