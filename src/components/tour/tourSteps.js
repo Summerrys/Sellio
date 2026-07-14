@@ -28,10 +28,12 @@ export function getDashboardSteps({ hasTakeOrders }) {
     },
     {
       target: '[data-tour="sell-fab"]',
+      placement: 'top',
       content: "This is your fastest way to add a new product, from anywhere in the app.",
     },
     {
       target: '[data-tour="bottom-nav"]',
+      placement: 'top',
       content: "Let's walk through Products, Orders, and Settings next — we'll go deeper the moment you open each one.",
     },
     {
