@@ -480,7 +480,7 @@ export default function StorefrontView({
         </div>
       </div>
 
-      {/* Product detail modal — live mode only */}
+      {/* Product detail modal - live mode only */}
       {!previewMode && selectedProduct && (
         <ProductDetailModal
           product={selectedProduct}
@@ -489,10 +489,12 @@ export default function StorefrontView({
           storefrontConfig={storefrontConfig}
           selectedVariants={selectedVariants}
           setSelectedVariants={setSelectedVariants}
+          itemNotes={itemNotes}
+          setItemNotes={setItemNotes}
           activeImageIndex={activeImageIndex}
           setActiveImageIndex={setActiveImageIndex}
           onAddToCart={handleAddToCart}
-          onClose={() => { setSelectedProduct(null); setSelectedVariants({}); setActiveImageIndex(0); onProductModalChange?.(false); }}
+          onClose={() => { setSelectedProduct(null); setSelectedVariants({}); setItemNotes(''); setActiveImageIndex(0); onProductModalChange?.(false); }}
           contentMap={contentMap}
         />
       )}
