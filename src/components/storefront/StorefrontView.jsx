@@ -678,7 +678,7 @@ function GridCard({ product, currency, primaryColor, storefrontConfig, showStock
 }
 
 // ── Product detail modal ─────────────────────────────────────────────────────
-function ProductDetailModal({ product, currency, primaryColor, storefrontConfig, selectedVariants, setSelectedVariants, activeImageIndex, setActiveImageIndex, onAddToCart, onClose, contentMap = {} }) {
+function ProductDetailModal({ product, currency, primaryColor, storefrontConfig, selectedVariants, setSelectedVariants, itemNotes, setItemNotes, activeImageIndex, setActiveImageIndex, onAddToCart, onClose, contentMap = {} }) {
   const { t } = useLanguage();
   const name = contentMap[product.name] || product.name;
   const description = contentMap[product.description] || product.description;
