@@ -22,6 +22,10 @@ export function getDashboardSteps({ hasTakeOrders, hasAiAssistant, hasDesignStor
       title: <>Welcome to <BrandWord>Sellio</BrandWord>! 👋</>,
       content: "Let's take a 60-second look around before you start selling.",
     },
+    {
+      target: '[data-tour="avatar-menu-btn"]',
+      content: 'Tap your logo anytime to open the full menu - every page, your storefront link, and account settings all live there.',
+    },
   ];
   if (hasAiAssistant) {
     steps.push({
