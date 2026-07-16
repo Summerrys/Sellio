@@ -457,14 +457,15 @@ export default function StorefrontView({
       />
 
       {/* ── BANNER (below header) ── */}
-      <StorefrontBanner
-        primaryColor={primaryColor}
-        bannerBgImage={bannerBgImage}
-        positionX={storefrontConfig?.banner_position_x}
-        positionY={storefrontConfig?.banner_position_y}
-        headline={storefrontConfig?.banner_headline}
-        tagline={storefrontConfig?.banner_tagline}
-      />
+      <div style={{ position: 'relative' }}>
+        <StorefrontBanner
+          primaryColor={primaryColor}
+          bannerBgImage={bannerBgImage}
+          positionX={storefrontConfig?.banner_position_x}
+          positionY={storefrontConfig?.banner_position_y}
+        />
+        <PromoMarquee messages={promoMessages} primaryColor={primaryColor} />
+      </div>
 
       {/* ── ANNOUNCEMENT BAR ── */}
       {storefrontConfig?.show_announcement_bar && storefrontConfig?.announcement_text && (
