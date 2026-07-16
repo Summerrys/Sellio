@@ -472,7 +472,7 @@ export default function StorefrontView({
           <div style={{ display: 'flex', height: splitPanelHeight, overflow: 'hidden' }}>
             {/* Left category sidebar */}
             <div className="sf-no-scrollbar" style={{
-              width: 'clamp(72px, 20vw, 100px)',
+              width: isDesktop ? 180 : 'clamp(72px, 20vw, 100px)',
               flexShrink: 0,
               overflowY: 'auto',
               height: '100%',
