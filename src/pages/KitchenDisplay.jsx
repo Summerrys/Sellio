@@ -189,26 +189,27 @@ export default function KitchenDisplay() {
   const readyAudioRef = useRef(null);
   const audioUnlockedRef = useRef(false);
 
-  // FIX: the AudioContext used to only get created lazily, the first time a
-  // sound actually needed to play. If sound was already enabled from a
-  // previous session (restored from localStorage/DB) and a new order arrived
-  // via realtime before the user tapped anything this session, that FIRST
-  // creation happened from inside a realtime callback — not a genuine user
-  // gesture. Safari can permanently lock an AudioContext created that way;
-  // calling .resume() on it later doesn't reliably unlock it. This creates
-  // and unlocks the context on the very first tap/touch anywhere on the page,
-  // regardless of whether sound is on yet, so it's ready before any realtime
-  // event gets a chance to create it the unsafe way.
+  // FIX: unlocking just needs one real, silent-in-practice play() + immediate
+  // pause() on each <audio> element during a genuine gesture, before anything
+  // ever tries to play them from a non-gesture context (a realtime event, a
+  // timer). Once unlocked this way, iOS reliably allows the SAME element to be
+  // replayed later without a fresh gesture - this is the standard pattern,
+  // more reliable than the previous AudioContext-based unlock.
   useEffect(() => {
     const unlockAudio = () => {
-      if (!audioCtxRef.current) {
-        try {
-          audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-        } catch (e) { return; }
-      }
-      if (audioCtxRef.current.state === 'suspended') {
-        audioCtxRef.current.resume().catch(() => {});
-      }
+      if (audioUnlockedRef.current) return;
+      try {
+        ensureAudioElements();
+        [newOrderAudioRef.current, readyAudioRef.current].forEach(el => {
+          el.volume = 0;
+          el.play().then(() => {
+            el.pause();
+            el.currentTime = 0;
+            el.volume = 1;
+          }).catch(() => { el.volume = 1; });
+        });
+        audioUnlockedRef.current = true;
+      } catch (e) { /* best effort */ }
       window.removeEventListener('pointerdown', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
     };
