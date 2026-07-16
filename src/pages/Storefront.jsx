@@ -531,6 +531,66 @@ function StorefrontInner() {
         </div>
       )}
 
+      {isDesktop && (
+        <div style={{
+          position: 'fixed', top: 0, right: 0, bottom: 0, width: 340,
+          background: '#fff', borderLeft: '1px solid #e5e7eb', zIndex: 40,
+          display: 'flex', flexDirection: 'column', padding: '20px 16px',
+          overflowY: 'auto',
+        }}>
+          <p style={{ fontWeight: 700, fontSize: 17, margin: '0 0 16px' }}>{t('yourOrder')}</p>
+          {isDineIn && table && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `${primaryColor}12`, borderRadius: 20, padding: '6px 12px 6px 8px', border: `1px solid ${primaryColor}25`, marginBottom: 12, alignSelf: 'flex-start' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="7" width="18" height="3" rx="1.5"/>
+                <line x1="7" y1="10" x2="5" y2="19"/>
+                <line x1="17" y1="10" x2="19" y2="19"/>
+              </svg>
+              <span style={{ fontSize: 13, fontWeight: 600, color: primaryColor }}>{table.name}</span>
+            </div>
+          )}
+          {cart.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '48px 0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <p style={{ fontSize: 32, margin: '0 0 8px' }}>🛒</p>
+              <p style={{ color: '#94a3b8', fontSize: 14 }}>{t('emptyCart')}</p>
+            </div>
+          ) : (
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {cart.map(item => (
+                <div key={item.key} style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, paddingBottom: 12, borderBottom: '0.5px solid #e5e7eb' }}>
+                  {item.image_url && <img src={item.image_url} style={{ width: 52, height: 52, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 2px', color: '#0f172a' }}>{item.name}</p>
+                    {item.variant && <p style={{ fontSize: 11, color: '#94a3b8', margin: '0 0 4px' }}>{item.variant}</p>}
+                    <p style={{ fontWeight: 700, fontSize: 13, color: primaryColor, margin: 0 }}>{sym}{(item.price * item.quantity).toFixed(2)}</p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    <button onClick={() => updateQuantity(item.key, item.quantity - 1)} style={{ width: 26, height: 26, background: 'none', border: 'none', cursor: 'pointer', fontSize: 17, color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 300, lineHeight: 1 }}>−</button>
+                    <span style={{ width: 24, height: 24, borderRadius: '50%', background: `${primaryColor}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: primaryColor }}>{item.quantity}</span>
+                    <button onClick={() => updateQuantity(item.key, item.quantity + 1)} style={{ width: 26, height: 26, background: 'none', border: 'none', cursor: 'pointer', fontSize: 17, color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 300, lineHeight: 1 }}>+</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {cart.length > 0 && (
+            <div style={{ flexShrink: 0, paddingTop: 12 }}>
+              <div style={{ borderTop: '0.5px solid #e5e7eb', paddingTop: 12, marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 600, fontSize: 15 }}>{t('total')}</span>
+                <span style={{ fontWeight: 700, fontSize: 18, color: primaryColor }}>{sym}{cartTotal.toFixed(2)}</span>
+              </div>
+              {!isStoreOpen ? (
+                <div style={{ width: '100%', padding: 14, background: '#f1f5f9', color: '#94a3b8', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, textAlign: 'center' }}>
+                  🔒 Store is closed
+                </div>
+              ) : (
+                <button onClick={() => setShowCheckout(true)} style={{ width: '100%', padding: 14, background: primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>{t('proceedToCheckout')}</button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── ORDER HISTORY ── */}
       {showOrderHistory && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100 }}>
