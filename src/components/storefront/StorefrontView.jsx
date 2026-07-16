@@ -601,20 +601,21 @@ export default function StorefrontView({
 }
 
 // ── Product row item (split layout) ─────────────────────────────────────────
-function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onAddToCart, onProductClick, featured = false, contentMap = {} }) {
+function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onAddToCart, onProductClick, featured = false, contentMap = {}, isDesktop = false }) {
   const { t } = useLanguage();
   const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
   const name = contentMap[product.name] || product.name;
   const description = contentMap[product.description] || product.description;
+  const thumbSize = isDesktop ? 92 : 72;
   return (
     <div
       onClick={() => onProductClick(product)}
-      style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f8f9fa', cursor: 'pointer' }}
+      style={{ display: 'flex', gap: isDesktop ? 14 : 10, alignItems: 'center', padding: isDesktop ? '14px 0' : '10px 0', borderBottom: '1px solid #f8f9fa', cursor: 'pointer' }}
     >
       <div style={{ position: 'relative', flexShrink: 0 }}>
         {product.image_url
-          ? <img src={product.image_url} style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover', display: 'block' }} />
-          : <div style={{ width: 72, height: 72, borderRadius: 10, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🛍️</div>
+          ? <img src={product.image_url} style={{ width: thumbSize, height: thumbSize, borderRadius: 10, objectFit: 'cover', display: 'block' }} />
+          : <div style={{ width: thumbSize, height: thumbSize, borderRadius: 10, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🛍️</div>
         }
         {featured && (
           <span style={{ position: 'absolute', bottom: 4, left: 4, background: '#f59e0b', color: 'white', fontSize: 9, fontWeight: 700, borderRadius: 4, padding: '1px 5px', lineHeight: 1.6 }}>★ Featured</span>
