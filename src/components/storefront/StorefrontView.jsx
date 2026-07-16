@@ -282,6 +282,21 @@ export default function StorefrontView({
   const contentMap = useTranslatedTexts(allContentTexts);
   const tr = (text) => contentMap[text] || text;
 
+  // Filters by name and description (merchants often put distinguishing detail
+  // in the description), independent of which layout is active. When a search
+  // is active it takes over the product list entirely - category/split
+  // sectioning is temporarily bypassed rather than trying to search within
+  // each section separately.
+  const searchActive = searchQuery.trim().length > 0;
+  const searchedProducts = searchActive
+    ? products.filter(p => {
+        const q = searchQuery.trim().toLowerCase();
+        const name = (contentMap[p.name] || p.name || '').toLowerCase();
+        const desc = (contentMap[p.description] || p.description || '').toLowerCase();
+        return name.includes(q) || desc.includes(q);
+      })
+    : null;
+
   // Set first active section on load (deals first if present)
   useEffect(() => {
     if (!activeCategory) {
