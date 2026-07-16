@@ -26,7 +26,10 @@ import {
   ArrowLeft,
   Plus,
   AlertCircle,
-  Clock
+  Clock,
+  Copy,
+  Check,
+  Store
 } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import PricingModal from './components/subscription/PricingModal';
