@@ -62,7 +62,7 @@ function hexToRgba(hex, alpha) {
 }
 
 // ── Sticky header bar ────────────────────────────────────────────────────────
-function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHistoryClick, showBackButton = false }) {
+function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHistoryClick, showBackButton = false, isDesktop = false, searchOpen, setSearchOpen, searchQuery, setSearchQuery }) {
   const branchName = tenant?.settings?.branch_name;
   const address = tenant?.address || '';
   const truncatedAddress = address.length > 25 ? address.slice(0, 25) + '…' : address;
