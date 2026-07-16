@@ -519,7 +519,7 @@ export default function StorefrontView({
                 <div ref={el => categoryRefs.current['__deals__'] = el} data-category-id="__deals__">
                   <p style={{ fontSize: 13, fontWeight: 700, padding: '12px 14px 6px', color: '#1e293b', margin: 0, position: 'sticky', top: 0, background: 'white', zIndex: 1, borderBottom: '1px solid #f1f5f9' }}>{t('todaysPicks')} ⭐</p>
                   <div style={{ padding: '4px 10px' }}>
-                    {featuredProducts.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={handleAddToCart} onProductClick={handleProductClick} featured={true} contentMap={contentMap} />)}
+                    {featuredProducts.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={handleAddToCart} onProductClick={handleProductClick} featured={true} contentMap={contentMap} isDesktop={isDesktop} />)}
                   </div>
                 </div>
               )}
@@ -538,7 +538,7 @@ export default function StorefrontView({
                       background: 'white', zIndex: 1, borderBottom: '1px solid #f1f5f9',
                     }}>{tr(cat.name)}</p>
                     <div style={{ padding: '4px 10px' }}>
-                      {catProducts.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={handleAddToCart} onProductClick={handleProductClick} contentMap={contentMap} />)}
+                      {catProducts.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={handleAddToCart} onProductClick={handleProductClick} contentMap={contentMap} isDesktop={isDesktop} />)}
                     </div>
                   </div>
                 );
@@ -547,7 +547,7 @@ export default function StorefrontView({
                 <div ref={el => categoryRefs.current['other'] = el} data-category-id="other">
                   <p style={{ fontSize: 13, fontWeight: 700, padding: '12px 14px 6px', color: '#1e293b', margin: 0, position: 'sticky', top: 0, background: 'white', zIndex: 1, borderBottom: '1px solid #f1f5f9' }}>{t('other')}</p>
                   <div style={{ padding: '4px 10px' }}>
-                    {uncategorised.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={handleAddToCart} onProductClick={handleProductClick} contentMap={contentMap} />)}
+                    {uncategorised.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={handleAddToCart} onProductClick={handleProductClick} contentMap={contentMap} isDesktop={isDesktop} />)}
                   </div>
                 </div>
               )}
