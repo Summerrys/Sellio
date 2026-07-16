@@ -309,6 +309,20 @@ export default function StorefrontView({
   }, [isDesktopProp]);
   const isDesktop = isDesktopProp !== undefined ? isDesktopProp : isDesktopFallback;
 
+  // Portrait vs landscape, independent of the isDesktop breakpoint - a merchant
+  // asked specifically for 3 Grid columns on tablet portrait and 4 on
+  // landscape, so this needs its own check rather than reusing width alone.
+  const [isLandscape, setIsLandscape] = useState(() => typeof window !== 'undefined' && window.innerWidth > window.innerHeight);
+  useEffect(() => {
+    const check = () => setIsLandscape(window.innerWidth > window.innerHeight);
+    window.addEventListener('resize', check);
+    window.addEventListener('orientationchange', check);
+    return () => {
+      window.removeEventListener('resize', check);
+      window.removeEventListener('orientationchange', check);
+    };
+  }, []);
+
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
