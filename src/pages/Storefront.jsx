@@ -450,6 +450,7 @@ function StorefrontInner() {
           onAddToCart={!isStoreOpen ? () => {} : addToCart}
           cartCount={cartCount}
           cartTotal={cartTotal}
+          isDesktop={isDesktop}
         />
       </div>
 
