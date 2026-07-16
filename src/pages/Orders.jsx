@@ -558,14 +558,7 @@ export default function Orders() {
       ).catch(() => {});
     }
     if (newVal) {
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioCtxRef.current.state === 'suspended') {
-        audioCtxRef.current.resume().then(() => playSound('new'));
-      } else {
-        playSound('new');
-      }
+      playSound('new');
     }
   };
 
