@@ -296,15 +296,18 @@ export default function StorefrontView({
 
   // Screen-size-based (not staff-mode-based, per merchant's explicit direction) -
   // a customer browsing on their own tablet benefits from this too, not just
-  // staff taking orders. One breakpoint, checked via actual viewport width so
-  // it responds correctly to orientation changes (portrait vs landscape iPad),
-  // not a device-type guess.
-  const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768);
+  // staff taking orders. Prefers the isDesktop prop (passed down from
+  // Storefront.jsx, which owns the persistent cart sidebar this needs to stay
+  // in sync with); falls back to computing it locally for preview mode, where
+  // no such prop is passed.
+  const [isDesktopFallback, setIsDesktopFallback] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768);
   useEffect(() => {
-    const check = () => setIsDesktop(window.innerWidth >= 768);
+    if (isDesktopProp !== undefined) return;
+    const check = () => setIsDesktopFallback(window.innerWidth >= 768);
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
-  }, []);
+  }, [isDesktopProp]);
+  const isDesktop = isDesktopProp !== undefined ? isDesktopProp : isDesktopFallback;
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
