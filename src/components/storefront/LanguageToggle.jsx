@@ -6,6 +6,14 @@ const SHORT_LABEL = { en: 'EN', zh: '中', ms: 'MY' };
 // Flag shown to the left of each label for quick visual identification
 const FLAG = { en: '🇬🇧', zh: '🇨🇳', ms: '🇲🇾' };
 
+function hexToRgba(hex, alpha) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export default function LanguageToggle({ primaryColor = '#6366f1' }) {
   const { lang, setLang } = useLanguage();
   const [expanded, setExpanded] = useState(false);
