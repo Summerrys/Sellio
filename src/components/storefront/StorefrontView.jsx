@@ -565,6 +565,7 @@ export default function StorefrontView({
             onAddToCart={handleAddToCart}
             onProductClick={handleProductClick}
             contentMap={contentMap}
+            isDesktop={isDesktop}
           />
         )}
 
