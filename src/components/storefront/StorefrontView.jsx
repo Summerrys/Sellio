@@ -415,6 +415,11 @@ export default function StorefrontView({
         onCartClick={() => setShowCart?.(true)}
         onHistoryClick={() => setShowOrderHistory?.(true)}
         showBackButton={showBackButton}
+        isDesktop={isDesktop}
+        searchOpen={searchOpen}
+        setSearchOpen={setSearchOpen}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
       />
 
       {/* ── BANNER (below header) ── */}
