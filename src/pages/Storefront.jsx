@@ -457,8 +457,8 @@ function StorefrontInner() {
         />
       </div>
 
-      {/* ── FLOATING CART BUTTON ── */}
-      {cartCount > 0 && !showCart && !showCheckout && isStoreOpen && (
+      {/* ── FLOATING CART BUTTON ── (mobile only — desktop has the persistent sidebar) */}
+      {!isDesktop && cartCount > 0 && !showCart && !showCheckout && isStoreOpen && (
         <div style={{ position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 50 }}>
           <button onClick={() => setShowCart(true)} style={{
             background: primaryColor, color: 'white', border: 'none',
