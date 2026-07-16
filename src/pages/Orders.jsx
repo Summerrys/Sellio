@@ -8,7 +8,7 @@ import RequirePermission from '../components/auth/RequirePermission';
 import PullToRefresh from '../components/ui-custom/PullToRefresh';
 import TableCallAlerts from '../components/orders/TableCallAlerts';
 import { Button } from '@/components/ui/button';
-import { getDingUrl } from '@/lib/kdsSounds';
+import { NEW_ORDER_TONE_URL, URGENT_ORDER_TONE_URL } from '@/lib/kdsSounds';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { ClipboardList, Bell, BellOff, Monitor, Search, Download, Printer, Loader2, QrCode } from 'lucide-react';
