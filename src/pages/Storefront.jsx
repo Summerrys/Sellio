@@ -26,6 +26,17 @@ function StorefrontInner() {
   // this only shows the back button for dine-in in this specific staff-initiated case.
   const isStaffMode = new URLSearchParams(window.location.search).get('staff') === 'true';
 
+  // Screen-size-based (not staff-mode-based) - a customer browsing on their own
+  // tablet benefits from the persistent cart sidebar too, not just staff taking
+  // orders. Same breakpoint used inside StorefrontView for the product-listing
+  // adaptations, so the two always agree on what counts as "desktop".
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768);
+  useEffect(() => {
+    const check = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   const [tenant, setTenant] = useState(null);
   const [theme, setTheme] = useState(null);
   const [storefrontConfig, setStorefrontConfig] = useState(null);
