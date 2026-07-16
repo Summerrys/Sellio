@@ -472,8 +472,9 @@ function StorefrontInner() {
         </div>
       )}
 
-      {/* ── CART DRAWER ── */}
-      {showCart && (
+      {/* ── CART DRAWER ── (mobile only — desktop shows the same content in the
+           persistent sidebar instead, so there's never two cart UIs at once) */}
+      {!isDesktop && showCart && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100 }}>
           <div onClick={() => setShowCart(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '20px 20px 0 0', padding: '20px 16px', maxHeight: '80vh', overflowY: 'auto' }}>
