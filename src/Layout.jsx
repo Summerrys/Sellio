@@ -21,7 +21,6 @@ import {
   Building2,
   BarChart3,
   LogOut,
-  Menu,
   X,
   QrCode,
   ArrowLeft,
