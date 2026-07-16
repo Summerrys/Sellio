@@ -15,7 +15,7 @@ import {
   Coffee, UtensilsCrossed, IceCream, Salad, Sandwich,
   Drumstick, Tag, Gift, LayoutGrid, ShoppingCart, Clock,
   Cpu, Glasses, Shirt, Trophy, BookOpen, Home, PawPrint,
-  Gem, Wrench, Scissors, Sparkles
+  Gem, Wrench, Scissors, Sparkles, Search, X, Plus
 } from 'lucide-react';
 import LanguageToggle from './LanguageToggle';
 import { useLanguage, useTranslatedText, useTranslatedTexts } from '@/lib/LanguageContext';
