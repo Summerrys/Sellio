@@ -432,7 +432,14 @@ function StorefrontInner() {
           makes the whole content area inert while closed - nothing in here can be
           tapped at all, so there's nothing left that could trigger it. Preview mode
           stays fully interactive so the merchant can still test/preview normally. */}
-      <div style={!isStoreOpen && !isPreview ? { paddingBottom: 68, pointerEvents: 'none', userSelect: 'none' } : {}}>
+      <div style={{
+        ...(!isStoreOpen && !isPreview ? { paddingBottom: 68, pointerEvents: 'none', userSelect: 'none' } : {}),
+        // Matches the same max-width/centered treatment every other page in the
+        // app already uses on larger screens (Dashboard, Orders, etc.) - makes
+        // Take Order on a tablet feel like part of the same app instead of a
+        // stretched-out mobile page.
+        ...(isDesktop ? { maxWidth: 1280, margin: '0 auto', padding: '0 24px' } : {}),
+      }}>
         <StorefrontView
           tenant={tenant}
           storefrontConfig={storefrontConfig}
