@@ -584,6 +584,7 @@ export default function StorefrontView({
             onProductClick={handleProductClick}
             contentMap={contentMap}
             isDesktop={isDesktop}
+            isLandscape={isLandscape}
           />
         )}
 
