@@ -269,6 +269,7 @@ export default function StorefrontView({
   onAddToCart,
   cartCount = 0,
   cartTotal = 0,
+  isDesktop: isDesktopProp,
 }) {
   const { t } = useLanguage();
   const tenant = tenantProp;
