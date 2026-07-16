@@ -574,15 +574,11 @@ export default function KitchenDisplay() {
                     supabase.from('app_users').update({ order_alerts: newVal }).eq('id', appUser.id)
                   ).catch(() => {});
                 }
+                // Playing directly here is fine now - playSound is <audio>-element
+                // based and this click is itself a genuine gesture (also already
+                // caught by the pointerdown/touchstart unlock listener above it).
                 if (newVal) {
-                  if (!audioCtxRef.current) {
-                    audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-                  }
-                  if (audioCtxRef.current.state === 'suspended') {
-                    audioCtxRef.current.resume().then(() => playSound('new'));
-                  } else {
-                    playSound('new');
-                  }
+                  playSound('new');
                 } else {
                   stopRepeatAlerts();
                 }
