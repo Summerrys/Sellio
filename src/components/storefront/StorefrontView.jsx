@@ -83,6 +83,7 @@ function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHist
   const headerHeight = (subLine ? 64 : 56) + 20;
 
   return (
+    <>
     <div style={{
       position: 'sticky', top: 0, zIndex: 50,
       height: headerHeight,
