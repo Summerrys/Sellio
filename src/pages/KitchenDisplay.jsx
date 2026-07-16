@@ -280,10 +280,11 @@ export default function KitchenDisplay() {
   // after this change.
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && dingAudioRef.current) {
-        const el = dingAudioRef.current;
-        el.volume = 0;
-        el.play().then(() => { el.pause(); el.currentTime = 0; el.volume = 1; }).catch(() => { el.volume = 1; });
+      if (document.visibilityState === 'visible' && newOrderAudioRef.current && urgentAudioRef.current) {
+        [newOrderAudioRef.current, urgentAudioRef.current].forEach(el => {
+          el.volume = 0;
+          el.play().then(() => { el.pause(); el.currentTime = 0; el.volume = 1; }).catch(() => { el.volume = 1; });
+        });
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
