@@ -51,6 +51,15 @@ import { canShowInstallPrompt, isStandalone } from '@/lib/pwaInstall';
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth'];
 
 function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription, onOpenProfile }) {
+  const [linkCopied, setLinkCopied] = useState(false);
+  const storefrontUrl = tenant?.slug ? `https://sellio.apptelier.sg/store/${tenant.slug}` : null;
+  const copyStorefrontLink = () => {
+    if (!storefrontUrl) return;
+    navigator.clipboard.writeText(storefrontUrl).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    });
+  };
   const superAdminItems = [];
 
   // Check if user is admin
