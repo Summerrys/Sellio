@@ -641,7 +641,7 @@ function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onA
 }
 
 // ── Non-split content (grid / list / carousel) ───────────────────────────────
-function NonSplitContent({ products, categories, primaryColor, currency, storefrontConfig, showStockBadge, onAddToCart, onProductClick, contentMap }) {
+function NonSplitContent({ products, categories, primaryColor, currency, storefrontConfig, showStockBadge, onAddToCart, onProductClick, contentMap, isDesktop = false }) {
   const { t } = useLanguage();
   const tr = (text) => contentMap[text] || text;
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -684,13 +684,13 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
           </div>
         )}
         {productLayout === 'grid' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(auto-fill, minmax(200px, 1fr))' : 'repeat(2, 1fr)', gap: 10 }}>
             {filteredProducts.map(product => <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}
           </div>
         )}
         {productLayout === 'list' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {filteredProducts.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: isDesktop ? 640 : 'none' }}>
+            {filteredProducts.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} isDesktop={isDesktop} />)}
           </div>
         )}
         {filteredProducts.length === 0 && featuredProducts.length === 0 && (
