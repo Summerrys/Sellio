@@ -512,16 +512,19 @@ export default function Orders() {
   const playSound = (type, times = 2) => {
     if (!soundEnabledRef.current) return;
     try {
-      if (!dingAudioRef.current) dingAudioRef.current = new Audio(getDingUrl());
-      const el = dingAudioRef.current;
-      for (let i = 0; i < times; i++) {
-        setTimeout(() => {
-          try {
-            el.currentTime = 0;
-            el.play().catch(() => {});
-          } catch (e) { /* best effort */ }
-        }, i * 550);
-      }
+      const isUrgent = type === 'urgent';
+      if (!newOrderAudioRef.current) newOrderAudioRef.current = new Audio(NEW_ORDER_TONE_URL);
+      if (!urgentAudioRef.current) urgentAudioRef.current = new Audio(URGENT_ORDER_TONE_URL);
+      const el = isUrgent ? urgentAudioRef.current : newOrderAudioRef.current;
+      let playsLeft = times;
+      el.onended = null;
+      const playOnce = () => {
+        playsLeft -= 1;
+        el.onended = playsLeft > 0 ? playOnce : null;
+        el.currentTime = 0;
+        el.play().catch(() => {});
+      };
+      playOnce();
     } catch (e) {
       console.warn('playSound error:', e);
     }
@@ -539,8 +542,7 @@ export default function Orders() {
     const secs = alertIntervalRef.current || 60;
     repeatIntervalRef.current = setInterval(() => {
       if (!soundEnabledRef.current) { stopRepeatAlerts(); return; }
-      // 3 dings for the repeat/overdue case vs 2 for the initial notification.
-      if (checkFn()) playSound(soundType, 3);
+      if (checkFn()) playSound('urgent', 3);
       else stopRepeatAlerts();
     }, secs * 1000);
   };
