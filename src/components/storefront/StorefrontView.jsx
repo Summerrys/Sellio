@@ -248,6 +248,21 @@ export default function StorefrontView({
   const [itemNotes, setItemNotes] = useState('');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
+  // Screen-size-based (not staff-mode-based, per merchant's explicit direction) -
+  // a customer browsing on their own tablet benefits from this too, not just
+  // staff taking orders. One breakpoint, checked via actual viewport width so
+  // it responds correctly to orientation changes (portrait vs landscape iPad),
+  // not a device-type guess.
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768);
+  useEffect(() => {
+    const check = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
   const featuredProducts = products.filter(p => p.is_featured === true);
   const hasFeatured = featuredProducts.length > 0;
   const categoriesWithProducts = categories.filter(cat => products.some(p => p.category_id === cat.id));
