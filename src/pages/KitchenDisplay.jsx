@@ -182,36 +182,20 @@ export default function KitchenDisplay() {
   const audioCtxRef = useRef(null);
   const soundEnabledRef = useRef(false);
   const repeatIntervalRef = useRef(null);
-  // Real <audio> elements, one per note per chime, created once and reused for
-  // every play — iOS treats replaying an already-unlocked element far more
-  // reliably than creating fresh Audio objects each time.
-  const newOrderAudioRef = useRef(null);
-  const readyAudioRef = useRef(null);
-  const audioUnlockedRef = useRef(false);
+  const dingAudioRef = useRef(null);
 
-  // FIX: unlocking just needs one real, silent-in-practice play() + immediate
-  // pause() on each <audio> element during a genuine gesture, before anything
-  // ever tries to play them from a non-gesture context (a realtime event, a
-  // timer). Once unlocked this way, iOS reliably allows the SAME element to be
-  // replayed later without a fresh gesture - this is the standard pattern,
-  // more reliable than the previous AudioContext-based unlock.
   useEffect(() => {
     const unlockAudio = () => {
-      if (audioUnlockedRef.current) return;
       try {
-        ensureAudioElements();
-        [newOrderAudioRef.current, readyAudioRef.current].forEach(el => {
-          el.volume = 0;
-          el.play().then(() => {
-            el.pause();
-            el.currentTime = 0;
-            el.volume = 1;
-          }).catch(() => { el.volume = 1; });
-        });
-        audioUnlockedRef.current = true;
+        if (!dingAudioRef.current) dingAudioRef.current = new Audio(getDingUrl());
+        const el = dingAudioRef.current;
+        el.volume = 0;
+        el.play().then(() => {
+          el.pause();
+          el.currentTime = 0;
+          el.volume = 1;
+        }).catch(() => { el.volume = 1; });
       } catch (e) { /* best effort */ }
-      window.removeEventListener('pointerdown', unlockAudio);
-      window.removeEventListener('touchstart', unlockAudio);
     };
     window.addEventListener('pointerdown', unlockAudio);
     window.addEventListener('touchstart', unlockAudio);
