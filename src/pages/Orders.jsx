@@ -504,48 +504,21 @@ export default function Orders() {
     return () => stopRepeatAlerts();
   }, []);
 
-  const playTone = (freq, duration, delayMs = 0) => {
-    try {
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      const ctx = audioCtxRef.current;
-      if (ctx.state === 'suspended') ctx.resume();
-      setTimeout(() => {
-        const compressor = ctx.createDynamicsCompressor();
-        compressor.threshold.value = -3;
-        compressor.knee.value = 2;
-        compressor.ratio.value = 3;
-        compressor.attack.value = 0;
-        compressor.release.value = 0.1;
-        compressor.connect(ctx.destination);
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        osc.connect(gain);
-        gain.connect(compressor);
-        gain.gain.setValueAtTime(1.0, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + duration + 0.05);
-      }, delayMs);
-    } catch (e) {
-      console.warn('playTone error:', e);
-    }
-  };
-
-  const playSound = (type) => {
+  const playSound = (type, times = 2) => {
     if (!soundEnabledRef.current) return;
-    if (type === 'ready') {
-      playTone(880, 0.3, 0);
-      playTone(1100, 0.3, 280);
-      playTone(1320, 0.4, 560);
-      playTone(1100, 0.3, 840);
-    } else {
-      playTone(440, 0.35, 0);
-      playTone(550, 0.35, 300);
-      playTone(660, 0.35, 600);
+    try {
+      if (!dingAudioRef.current) dingAudioRef.current = new Audio(getDingUrl());
+      const el = dingAudioRef.current;
+      for (let i = 0; i < times; i++) {
+        setTimeout(() => {
+          try {
+            el.currentTime = 0;
+            el.play().catch(() => {});
+          } catch (e) { /* best effort */ }
+        }, i * 550);
+      }
+    } catch (e) {
+      console.warn('playSound error:', e);
     }
   };
 
@@ -561,7 +534,8 @@ export default function Orders() {
     const secs = alertIntervalRef.current || 60;
     repeatIntervalRef.current = setInterval(() => {
       if (!soundEnabledRef.current) { stopRepeatAlerts(); return; }
-      if (checkFn()) playSound(soundType);
+      // 3 dings for the repeat/overdue case vs 2 for the initial notification.
+      if (checkFn()) playSound(soundType, 3);
       else stopRepeatAlerts();
     }, secs * 1000);
   };
