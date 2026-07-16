@@ -431,18 +431,21 @@ export default function Orders() {
   const audioCtxRef = useRef(null);
   const soundEnabledRef = useRef(false);
   const repeatIntervalRef = useRef(null);
-  const dingAudioRef = useRef(null);
+  const newOrderAudioRef = useRef(null);
+  const urgentAudioRef = useRef(null);
   useEffect(() => {
     const unlockAudio = () => {
       try {
-        if (!dingAudioRef.current) dingAudioRef.current = new Audio(getDingUrl());
-        const el = dingAudioRef.current;
-        el.volume = 0;
-        el.play().then(() => {
-          el.pause();
-          el.currentTime = 0;
-          el.volume = 1;
-        }).catch(() => { el.volume = 1; });
+        if (!newOrderAudioRef.current) newOrderAudioRef.current = new Audio(NEW_ORDER_TONE_URL);
+        if (!urgentAudioRef.current) urgentAudioRef.current = new Audio(URGENT_ORDER_TONE_URL);
+        [newOrderAudioRef.current, urgentAudioRef.current].forEach(el => {
+          el.volume = 0;
+          el.play().then(() => {
+            el.pause();
+            el.currentTime = 0;
+            el.volume = 1;
+          }).catch(() => { el.volume = 1; });
+        });
       } catch (e) { /* best effort */ }
     };
     window.addEventListener('pointerdown', unlockAudio);
@@ -457,10 +460,12 @@ export default function Orders() {
     const keepAlive = () => {
       if (document.visibilityState !== 'visible') return;
       try {
-        if (!dingAudioRef.current) dingAudioRef.current = new Audio(getDingUrl());
-        const el = dingAudioRef.current;
-        el.volume = 0;
-        el.play().then(() => { el.pause(); el.currentTime = 0; el.volume = 1; }).catch(() => { el.volume = 1; });
+        if (!newOrderAudioRef.current) newOrderAudioRef.current = new Audio(NEW_ORDER_TONE_URL);
+        if (!urgentAudioRef.current) urgentAudioRef.current = new Audio(URGENT_ORDER_TONE_URL);
+        [newOrderAudioRef.current, urgentAudioRef.current].forEach(el => {
+          el.volume = 0;
+          el.play().then(() => { el.pause(); el.currentTime = 0; el.volume = 1; }).catch(() => { el.volume = 1; });
+        });
       } catch (e) { /* best effort */ }
     };
     keepAlive();
