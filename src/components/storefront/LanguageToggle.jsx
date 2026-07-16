@@ -70,7 +70,7 @@ export default function LanguageToggle({ primaryColor = '#6366f1' }) {
                 cursor: 'pointer',
                 transition: 'all 0.15s',
                 background: isActive ? hexToRgba(primaryColor, 0.16) : 'transparent',
-                color: isActive ? primaryColor : '#64748b',
+                color: '#64748b',
                 minHeight: 22,
                 whiteSpace: 'nowrap',
               }}
