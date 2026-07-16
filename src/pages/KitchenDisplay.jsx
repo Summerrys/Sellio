@@ -182,6 +182,12 @@ export default function KitchenDisplay() {
   const audioCtxRef = useRef(null);
   const soundEnabledRef = useRef(false);
   const repeatIntervalRef = useRef(null);
+  // Real <audio> elements, one per note per chime, created once and reused for
+  // every play — iOS treats replaying an already-unlocked element far more
+  // reliably than creating fresh Audio objects each time.
+  const newOrderAudioRef = useRef(null);
+  const readyAudioRef = useRef(null);
+  const audioUnlockedRef = useRef(false);
 
   // FIX: the AudioContext used to only get created lazily, the first time a
   // sound actually needed to play. If sound was already enabled from a
