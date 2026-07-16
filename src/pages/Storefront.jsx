@@ -455,7 +455,7 @@ function StorefrontInner() {
       </div>
 
       {/* ── FLOATING CART BUTTON ── (mobile only — desktop has the persistent sidebar) */}
-      {!isDesktop && cartCount > 0 && !showCart && !showCheckout && isStoreOpen && (
+      {cartCount > 0 && !showCart && !showCheckout && isStoreOpen && (
         <div style={{ position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 50 }}>
           <button onClick={() => setShowCart(true)} style={{
             background: primaryColor, color: 'white', border: 'none',
@@ -471,7 +471,7 @@ function StorefrontInner() {
 
       {/* ── CART DRAWER ── (mobile only — desktop shows the same content in the
            persistent sidebar instead, so there's never two cart UIs at once) */}
-      {!isDesktop && showCart && (
+      {showCart && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100 }}>
           <div onClick={() => setShowCart(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '20px 20px 0 0', padding: '20px 16px', maxHeight: '80vh', overflowY: 'auto' }}>
