@@ -664,7 +664,7 @@ function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onA
 }
 
 // ── Non-split content (grid / list / carousel) ───────────────────────────────
-function NonSplitContent({ products, categories, primaryColor, currency, storefrontConfig, showStockBadge, onAddToCart, onProductClick, contentMap, isDesktop = false }) {
+function NonSplitContent({ products, categories, primaryColor, currency, storefrontConfig, showStockBadge, onAddToCart, onProductClick, contentMap, isDesktop = false, isLandscape = false }) {
   const { t } = useLanguage();
   const tr = (text) => contentMap[text] || text;
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -674,6 +674,11 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
     p.is_featured !== true && (selectedCategory === null || p.category_id === selectedCategory)
   );
   const productLayout = storefrontConfig?.product_layout || 'grid';
+  const isGrid = productLayout === 'grid';
+  // 3 columns on tablet portrait, 4 on landscape, per the merchant's explicit
+  // spec - not the fluid auto-fill used before, which didn't reliably land on
+  // those exact counts.
+  const gridColumns = isDesktop ? (isLandscape ? 4 : 3) : 2;
 
   return (
     <>
@@ -695,7 +700,13 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
             <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>
               {storefrontConfig?.featured_section_title ? tr(storefrontConfig.featured_section_title) : t('todaysPicks')} ⭐
             </p>
-            {featuredProducts.map(product => <FeaturedCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}
+            {isGrid ? (
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, gap: 10 }}>
+                {featuredProducts.map(product => <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}
+              </div>
+            ) : (
+              featuredProducts.map(product => <FeaturedCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)
+            )}
           </div>
         )}
         {specialDealProducts.length > 0 && (
@@ -703,11 +714,17 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
             <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>
               🏷️ {t('specialDeals')}
             </p>
-            {specialDealProducts.map(product => <FeaturedCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}
+            {isGrid ? (
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, gap: 10 }}>
+                {specialDealProducts.map(product => <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}
+              </div>
+            ) : (
+              specialDealProducts.map(product => <FeaturedCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)
+            )}
           </div>
         )}
         {productLayout === 'grid' && (
-          <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(auto-fill, minmax(200px, 1fr))' : 'repeat(2, 1fr)', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, gap: 10 }}>
             {filteredProducts.map(product => <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}
           </div>
         )}
