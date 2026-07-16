@@ -391,9 +391,9 @@ export default function StorefrontView({
   return (
     <div style={{
       fontFamily: `${storefrontConfig?.font_family || 'Inter'}, sans-serif`,
-      maxWidth: previewMode ? '100%' : 480,
+      maxWidth: (previewMode || isDesktop) ? '100%' : 480,
       margin: '0 auto',
-      minHeight: '100vh',
+      minHeight: previewMode ? '100%' : '100vh',
       background: '#f8fafc',
       position: 'relative',
       display: 'flex',
