@@ -444,11 +444,13 @@ export default function KitchenDisplay() {
   }, [tenantId]);
 
   const handleBump = async (orderId, currentStatus) => {
-    // Piggybacks on this genuine tap to keep the AudioContext unlocked on
-    // iPadOS/iOS Safari — every real user gesture is a fresh opportunity to
-    // resume it if the OS suspended it in the background.
-    if (audioCtxRef.current?.state === 'suspended') {
-      audioCtxRef.current.resume().catch(() => {});
+    // Piggybacks on this genuine tap as another chance to re-prime the ding
+    // element, same as the pointerdown/touchstart listener — every real user
+    // gesture helps keep it from going stale on iOS.
+    if (dingAudioRef.current) {
+      const el = dingAudioRef.current;
+      el.volume = 0;
+      el.play().then(() => { el.pause(); el.currentTime = 0; el.volume = 1; }).catch(() => { el.volume = 1; });
     }
     const nextStatus = NEXT_STATUS[currentStatus];
     if (!nextStatus) return;
