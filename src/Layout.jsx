@@ -136,6 +136,28 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
         </div>
       )}
 
+      {/* Storefront link - every merchant has one from the moment onboarding
+          finishes, even before they've touched Design Store, so this is here
+          from day one to make it easy to grab and send out for early promotion. */}
+      {storefrontUrl && !collapsed && (
+        <div className="mx-3 mb-2 p-3 rounded-xl border border-slate-100" style={{ background: 'var(--color-primary-gradient)', opacity: 0.97 }}>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <Store className="w-3.5 h-3.5 text-white" />
+            <p className="text-xs font-semibold text-white">Your Storefront</p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <p className="flex-1 text-[11px] text-white/85 truncate">{storefrontUrl.replace('https://', '')}</p>
+            <button
+              onClick={copyStorefrontLink}
+              className="flex-shrink-0 w-6 h-6 rounded-md bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+              title="Copy link"
+            >
+              {linkCopied ? <Check className="w-3 h-3 text-white" /> : <Copy className="w-3 h-3 text-white" />}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navItems.map((item, idx) => {
