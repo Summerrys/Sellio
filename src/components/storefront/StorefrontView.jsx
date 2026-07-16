@@ -152,7 +152,7 @@ function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHist
         </div>
       </div>
     </div>
-    {!isDesktop && searchOpen && (
+    {searchOpen && (
       <div style={{ padding: '0 14px 10px', background: 'white', position: 'sticky', top: 0, zIndex: 49 }}>
         <div style={{ position: 'relative' }}>
           <Search size={15} color="#94a3b8" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
