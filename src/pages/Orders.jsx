@@ -431,6 +431,42 @@ export default function Orders() {
   const audioCtxRef = useRef(null);
   const soundEnabledRef = useRef(false);
   const repeatIntervalRef = useRef(null);
+  const dingAudioRef = useRef(null);
+  useEffect(() => {
+    const unlockAudio = () => {
+      try {
+        if (!dingAudioRef.current) dingAudioRef.current = new Audio(getDingUrl());
+        const el = dingAudioRef.current;
+        el.volume = 0;
+        el.play().then(() => {
+          el.pause();
+          el.currentTime = 0;
+          el.volume = 1;
+        }).catch(() => { el.volume = 1; });
+      } catch (e) { /* best effort */ }
+    };
+    window.addEventListener('pointerdown', unlockAudio);
+    window.addEventListener('touchstart', unlockAudio);
+    return () => {
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+    };
+  }, []);
+  useEffect(() => {
+    if (!soundEnabled) return;
+    const keepAlive = () => {
+      if (document.visibilityState !== 'visible') return;
+      try {
+        if (!dingAudioRef.current) dingAudioRef.current = new Audio(getDingUrl());
+        const el = dingAudioRef.current;
+        el.volume = 0;
+        el.play().then(() => { el.pause(); el.currentTime = 0; el.volume = 1; }).catch(() => { el.volume = 1; });
+      } catch (e) { /* best effort */ }
+    };
+    keepAlive();
+    const id = setInterval(keepAlive, 20000);
+    return () => clearInterval(id);
+  }, [soundEnabled]);
   const [alertInterval, setAlertInterval] = useState(60);
   const alertIntervalRef = useRef(60);
 
