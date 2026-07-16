@@ -682,7 +682,7 @@ function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onA
 }
 
 // ── Non-split content (grid / list / carousel) ───────────────────────────────
-function NonSplitContent({ products, categories, primaryColor, currency, storefrontConfig, showStockBadge, onAddToCart, onProductClick, contentMap, isDesktop = false, isLandscape = false }) {
+function NonSplitContent({ products, categories, primaryColor, currency, storefrontConfig, showStockBadge, onAddToCart, onProductClick, contentMap, isDesktop = false, isLandscape = false, searchOpen, setSearchOpen }) {
   const { t } = useLanguage();
   const tr = (text) => contentMap[text] || text;
   const [selectedCategory, setSelectedCategory] = useState(null);
