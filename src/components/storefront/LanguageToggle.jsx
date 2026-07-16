@@ -43,7 +43,7 @@ export default function LanguageToggle({ primaryColor = '#6366f1' }) {
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          background: '#f1f5f9',
+          background: hexToRgba(primaryColor, 0.10),
           borderRadius: 999,
           padding: 3,
           gap: expanded ? 2 : 0,
@@ -69,8 +69,8 @@ export default function LanguageToggle({ primaryColor = '#6366f1' }) {
                 fontWeight: 700,
                 cursor: 'pointer',
                 transition: 'all 0.15s',
-                background: isActive ? primaryColor : 'transparent',
-                color: isActive ? 'white' : '#64748b',
+                background: isActive ? hexToRgba(primaryColor, 0.16) : 'transparent',
+                color: isActive ? primaryColor : '#64748b',
                 minHeight: 22,
                 whiteSpace: 'nowrap',
               }}
