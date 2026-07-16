@@ -131,34 +131,13 @@ function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHist
         </div>
       </div>
 
-      {/* Center: Search - always visible on desktop where there's room, tucked
-          between the name and the icons. */}
-      {isDesktop && (
-        <div style={{ flex: 1, maxWidth: 320, margin: '0 16px', position: 'relative' }}>
-          <Search size={15} color="#94a3b8" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
-          <input
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search menu..."
-            style={{ width: '100%', padding: '9px 12px 9px 34px', borderRadius: 20, border: '1px solid #e5e7eb', background: '#f8fafc', fontSize: 13, outline: 'none' }}
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex' }}>
-              <X size={14} />
-            </button>
-          )}
-        </div>
-      )}
-
       {/* Right: Language toggle (stacked above) + Search + History + Cart buttons */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
         <LanguageToggle primaryColor={primaryColor} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {!isDesktop && (
-            <button onClick={() => setSearchOpen(v => !v)} style={{ ...iconBtnNeutral, ...(searchOpen ? { background: primaryColor } : {}) }}>
-              <Search size={17} color={searchOpen ? 'white' : '#374151'} />
-            </button>
-          )}
+          <button onClick={() => setSearchOpen(v => !v)} style={{ ...iconBtnNeutral, ...(searchOpen ? { background: primaryColor } : {}) }}>
+            <Search size={17} color={searchOpen ? 'white' : '#374151'} />
+          </button>
           <button onClick={onHistoryClick} style={iconBtnNeutral}>
             <Clock size={17} color="#374151" />
           </button>
