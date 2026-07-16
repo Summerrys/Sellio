@@ -6,6 +6,7 @@ import { Clock, AlertCircle, ChefHat, ArrowLeft, Maximize2 } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { createPageUrl } from '../utils';
+import { getNewOrderChimeUrls, getReadyChimeUrls } from '@/lib/kdsSounds';
 
 function ElapsedTimer({ createdDate }) {
   const [elapsed, setElapsed] = useState(0);
