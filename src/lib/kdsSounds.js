@@ -1,12 +1,61 @@
-// Pre-rendered short chime tones as data URIs, used by an <audio> element
-// rather than the Web Audio API oscillator approach that was previously used
-// here. This is a deliberate change: iOS/iPadOS Safari has repeatedly proven
-// unreliable at keeping a raw AudioContext playable for sounds triggered from
-// non-gesture contexts (a new order arriving via realtime, a timer-based
-// repeat alert) even after several rounds of unlock/keep-alive/resume
-// mitigations. <audio> elements have a more lenient, better-established
-// autoplay story on iOS once played from a genuine gesture, which is the
-// standard workaround pattern used by chat apps and other tools that need to
-// play notification sounds later, unprompted.
-export const NEW_ORDER_CHIME = 'data:audio/wav;base64,UklGRqZNAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YYJNAAAAABQAUQC0ADoB3wGeAnADTgQxBREG5QalB0kIyQgfCUMJMQnkCFoIkAeHBkAFvgMGAh0AC/7Y+475N/fg9JTyYfBR7nPs0ep46XHoxed955/nL+gw6aLqhOzR7oTxlfT596b7jP+cA8cH+wskEDEUDxipG+8e0CE6JCAmdScvKEYotCd2Jo0k/CHJHvwaoxbMEYcM6AYFAff60/Sz7rTo7eJ63XPY8NMI0M7MVMqqyNrH7cfpyM3KmM1C0cLVCNsD4Z7nwe5Q9i/+PQZbDmcWQB7EJdIsSjMPOQY+FkKyRBVGXUaKRaFDp0CpPLg35zFNKwUkLBziE0gLgQKx+fnwfuhh4MPYw9F8ywnGf8HwvWq7+LmguWK6PLwnvxbD+se/zU7Uejtd48PrOfT+/M8FiQ4JFywf0ibcLS40rjlGPuRBeUT6RWNGsUXmQwtBKj1TOJoyFizhJBcd2BRGDIIDsfr08XDpR+GZ2YXSKcycxvbBSr6muxS6m7k+uvi7xb6XwmDHDc2G07LadeKt6jzz/vvPBI4NFhZFHvslGC2AMxk5zT2IQTtE3UVlRtNFKERrQag97DhMM90suiUAHt3VQg2CBLH78PJk6i/keb2xL0LXP0jrGz+9DwCq/vpxE+jMPQ9F8oTiPsyxYyxi4L9GbGKlz+xQAY+D4c8+8AwtWlaZeQmIP2ELQPzLR9J//c3swXnMcw==';
-export const READY_CHIME = 'data:audio/wav;base64,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9/f22Pas9pf2f/Zi9lb2QfYw9hn2//Wu9YT1YvVD9SL1CPX384/zZfNM8y7z//LZ8sPynvKA8lTyOvIf8gTy1PGx8Zbxb/E+8QzxAvHW8OTw3PDT8ODw5vDx8AXxF/E68UzxaPGT8bnx6vETAj0CVQKSAqoCwALaAtoCJALyAeoBqgFsATkB2AB4AA0Am/9j//X+iP4t/vX9nP1f/RD9uPxd/Az8vfuP+3D7YvtF+0T7WPtu+4z71vsD/Cf8ZfyU/M78EP1H/aH99v0m/qL+7v53/6z/DABbAI4A3QDoACYBUgFsAY4BqgHOAf8BEgIfAisCLQIVAgUC/QHnAcABlQFsATABJgEBAeUAlABlADMA5f+8/2j/Nv8B/8P+lf5c/gz+8f2r/W39M/33/M78o/xz/D38Efzy+8H7lPtl+z/7Cfvj+r76hPpR+in6+PnJ+ab5cfk8+RH54vip+H74Wvgt+P73xffO92z3Uvcq9wr34/az9pn2gPZQ9j72CvbO9av1jfVi9Wr1SfUY9f70zPS29Ib0YfQx9ADzYvKO8pfyzPLy8kPzZ/OM82PzePOc82nzQ/M08zHzHvMe80DzL/Nk84Xzc/Nr8x/z//Le8sTyavKf8oby7fLi8gDzHfMt8xLzMPMR8/DyDvMo8y3zEPMB8/HyKvMV82Xzc/Ny82vzffOo83rzsvOx8+zzuvPZ89/z/PPZ8/rz9fPy8/3z6fPu8xn0BfQE9An0G/QU9CD0IfQY9Cb0OPQq9DL0LvQ99EL0R/Qi9C30MPRP9Db0S/Qi9Cj0GfQu9DP0BvQZ9AL0EfQD9O/z6vP18+7z1PPY8+bz2fPP8+jz2fPn8+/z2/Pd8/nz9PPl8+Xz3vPk8//zzfOr87nzq/Ph87TzuPPT8/HzsvOI8+7zsPPf8+rz8vPv8x30HvQU9Bf0FfQF9CH0BPQE9BX0G/RC9Cf0IfQT9CP0G/QP9Dr0EfQm9C30OPQx9Cf0PvQ+9EX0Q/RG9Ff0RPRC9GX0OvRO9Fz0aPRt9Fj0S/Q49Ez0T/RV9Fz0V/Rk9GX0dfRr9F30VPR29Fj0YvRQ9Ez0LfQ99Bn0EPQ39PDz+/PN89rz9PPI87Xz1PPD87HzoPO+87rzk/O78+bzq/PJ89DztfPU8+jz2fPz89zzzPP680L0FfQg9OrzC/T983zzX/Nu80DzNvNQ8xTzMvNC80vzRPMs80jzWfMi8znzP/Mk8yjzX/Nf80DzKPNK80fzOfM880LzKvNH8yzzXfNa8xzzTvMc82nzT/N082jzUfNe8yfzM/M+8xrzOPMv8yPzP/M083zzUPNP81fzRPMj80PzQPMy80TzT/MZ81LzWfNS8y7zLvNA8yTzOfMj8x/zTfMt80fzT/Mc80jzYfMy8yLzTfMz80vzKvMY8zzzO/Nk8yrzKvMU8x3zMvM0817zaPNo8ynzOvNj80DzXvNA80TzTfNj817zPfM083nzZ/Ng82jzYPNz83jzX/NW82PzXfNJ81vzZfNn82PzT/Nb823zavNZ82XzePNq82vzX/N383zzcvOD83HzWfN+83DzcPNi83bzePNy85XzZvOI84HzevOF83jzePOZ85vzcvOI83XzZ/Nl85nzhvOQ84DziPOZ86bzn/Om85vzq/Or86HzoPO88372XvZi9rn2xvbb9vT2+PYO9zX3Q/di9436IvvT/A38DA0=';
+// Generates short beep tones as real <audio>-playable WAV Blob URLs, entirely
+// at runtime in JS (no embedded audio data to keep in sync or risk corrupting).
+//
+// This replaces the previous Web Audio API oscillator approach. That's a
+// deliberate change: iOS/iPadOS Safari has repeatedly proven unreliable at
+// keeping a raw AudioContext playable for sounds triggered from non-gesture
+// contexts (a new order arriving via realtime, a timer-based repeat alert)
+// even after several rounds of unlock/keep-alive/resume mitigations.
+// <audio> elements have a more lenient, better-established autoplay story on
+// iOS once played from a genuine gesture, which is the standard workaround
+// pattern used by chat apps and other tools that need to play notification
+// sounds later, unprompted.
+function makeBeepDataUrl(freq, duration = 0.14, sampleRate = 8000, volume = 0.6) {
+  const n = Math.floor(sampleRate * duration);
+  const buffer = new ArrayBuffer(44 + n * 2);
+  const view = new DataView(buffer);
+  const writeStr = (offset, str) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  };
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + n * 2, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, 'data');
+  view.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) {
+    const t = i / sampleRate;
+    // Short attack, longer release so it doesn't click at the edges.
+    const envelope = Math.min(1, i / (sampleRate * 0.01), (n - i) / (sampleRate * 0.05));
+    const val = volume * envelope * Math.sin(2 * Math.PI * freq * t);
+    view.setInt16(44 + i * 2, Math.max(-32768, Math.min(32767, val * 32767)), true);
+  }
+  const blob = new Blob([buffer], { type: 'audio/wav' });
+  return URL.createObjectURL(blob);
+}
+
+// Two-note chime for a new order — same rising feel as the previous oscillator
+// version, just rendered as a real short WAV instead.
+function makeTwoNoteChime(freq1, freq2) {
+  return [makeBeepDataUrl(freq1), makeBeepDataUrl(freq2)];
+}
+
+let _newOrderUrls = null;
+let _readyUrls = null;
+
+export function getNewOrderChimeUrls() {
+  if (!_newOrderUrls) _newOrderUrls = makeTwoNoteChime(440, 660);
+  return _newOrderUrls;
+}
+
+export function getReadyChimeUrls() {
+  if (!_readyUrls) _readyUrls = makeTwoNoteChime(880, 1320);
+  return _readyUrls;
+}
