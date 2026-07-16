@@ -444,14 +444,31 @@ export default function StorefrontView({
         background: 'white',
         borderRadius: '20px 20px 0 0',
         flex: 1,
-        overflow: productLayout === 'split' ? 'hidden' : 'visible',
+        overflow: (productLayout === 'split' && !searchActive) ? 'hidden' : 'visible',
         marginTop: -24,
         position: 'relative',
         zIndex: 2,
       }}>
 
-        {/* ── SPLIT LAYOUT ── */}
-        {productLayout === 'split' ? (
+        {searchActive ? (
+          <div style={{ padding: '16px 16px 40px' }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '4px 0 12px' }}>
+              {searchedProducts.length} result{searchedProducts.length === 1 ? '' : 's'} for "{searchQuery.trim()}"
+            </p>
+            {searchedProducts.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 16px' }}>
+                <p style={{ fontSize: 32, margin: '0 0 12px' }}>🔍</p>
+                <p style={{ color: '#94a3b8', fontSize: 14 }}>No products match "{searchQuery.trim()}"</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(auto-fill, minmax(220px, 1fr))' : 'repeat(2, 1fr)', gap: 10 }}>
+                {searchedProducts.map(product => (
+                  <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={handleAddToCart} onProductClick={handleProductClick} contentMap={contentMap} />
+                ))}
+              </div>
+            )}
+          </div>
+        ) : productLayout === 'split' ? (
           <div style={{ display: 'flex', height: splitPanelHeight, overflow: 'hidden' }}>
             {/* Left category sidebar */}
             <div className="sf-no-scrollbar" style={{
