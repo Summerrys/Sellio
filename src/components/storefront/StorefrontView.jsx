@@ -324,6 +324,24 @@ export default function StorefrontView({
   const contentMap = useTranslatedTexts(allContentTexts);
   const tr = (text) => contentMap[text] || text;
 
+  // Promotional marquee - replaces the old static headline/tagline overlay on
+  // the banner, which just repeated the business name already shown right
+  // below it. Reuses those same two fields as an optional custom override
+  // (so a merchant who already set them keeps seeing their own text, no
+  // re-configuration needed) - when both are empty, falls back to
+  // auto-generating from Featured items and Special Deals, so every merchant
+  // gets a working promo banner with zero setup.
+  const promoMessages = useMemo(() => {
+    const custom = [storefrontConfig?.banner_headline, storefrontConfig?.banner_tagline].filter(Boolean);
+    if (custom.length > 0) return custom;
+    const specialDeals = products.filter(p => p.compare_at_price > p.price && !p.is_featured);
+    const auto = [
+      ...featuredProducts.map(p => `⭐ ${tr(p.name)}`),
+      ...specialDeals.map(p => `🏷️ ${tr(p.name)} — now ${getCurrencySymbol(currency)}${parseFloat(p.price).toFixed(2)}`),
+    ];
+    return auto;
+  }, [storefrontConfig?.banner_headline, storefrontConfig?.banner_tagline, featuredProducts, products, contentMap, currency]);
+
   // Filters by name and description (merchants often put distinguishing detail
   // in the description), independent of which layout is active. When a search
   // is active it takes over the product list entirely - category/split
