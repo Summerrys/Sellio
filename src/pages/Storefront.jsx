@@ -432,10 +432,7 @@ function StorefrontInner() {
           makes the whole content area inert while closed - nothing in here can be
           tapped at all, so there's nothing left that could trigger it. Preview mode
           stays fully interactive so the merchant can still test/preview normally. */}
-      <div style={{
-        ...(isDesktop ? { paddingRight: 340 } : {}),
-        ...(!isStoreOpen && !isPreview ? { paddingBottom: 68, pointerEvents: 'none', userSelect: 'none' } : {}),
-      }}>
+      <div style={!isStoreOpen && !isPreview ? { paddingBottom: 68, pointerEvents: 'none', userSelect: 'none' } : {}}>
         <StorefrontView
           tenant={tenant}
           storefrontConfig={storefrontConfig}
