@@ -603,6 +603,8 @@ export default function StorefrontView({
             contentMap={contentMap}
             isDesktop={isDesktop}
             isLandscape={isLandscape}
+            searchOpen={searchOpen}
+            setSearchOpen={setSearchOpen}
           />
         )}
 
