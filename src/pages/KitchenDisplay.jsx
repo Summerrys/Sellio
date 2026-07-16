@@ -221,43 +221,23 @@ export default function KitchenDisplay() {
     }
   }, [tenantId, appUser?.order_alerts]);
 
-  // FIX (iPad still not ringing after multiple oscillator-based mitigations):
-  // replaced the Web Audio API oscillator approach entirely with real <audio>
-  // elements playing short generated WAV tones. iOS has a more lenient,
-  // better-established autoplay story for <audio> elements that have been
-  // played once from a genuine gesture, compared to keeping a raw AudioContext
-  // alive indefinitely. Two reusable <audio> elements (one per alert type)
-  // rather than creating new ones per play, since replaying an
-  // already-unlocked element is what's reliable on iOS - fresh elements
-  // would need their own unlock.
-  const ensureAudioElements = () => {
-    if (!newOrderAudioRef.current) {
-      const [url1] = getNewOrderChimeUrls();
-      newOrderAudioRef.current = new Audio(url1);
-    }
-    if (!readyAudioRef.current) {
-      const [url1] = getReadyChimeUrls();
-      readyAudioRef.current = new Audio(url1);
-    }
-  };
-
-  const playSound = (type) => {
+  // Ding plays `times` times in a row, with a short gap between each - 2 for a
+  // normal new-order/ready notification, 3 when the repeat-alert interval
+  // fires because an order has been sitting unacknowledged past the
+  // merchant's configured threshold, so the two are audibly distinguishable.
+  const playSound = (type, times = 2) => {
     if (!soundEnabledRef.current) return;
     try {
-      ensureAudioElements();
-      const urls = type === 'ready' ? getReadyChimeUrls() : getNewOrderChimeUrls();
-      const el = type === 'ready' ? readyAudioRef.current : newOrderAudioRef.current;
-      // Play each note in the chime by swapping the src and playing again -
-      // reusing the same unlocked element rather than creating fresh ones.
-      urls.forEach((url, i) => {
+      if (!dingAudioRef.current) dingAudioRef.current = new Audio(getDingUrl());
+      const el = dingAudioRef.current;
+      for (let i = 0; i < times; i++) {
         setTimeout(() => {
           try {
-            el.src = url;
             el.currentTime = 0;
             el.play().catch(() => {});
           } catch (e) { /* best effort */ }
-        }, i * 220);
-      });
+        }, i * 550);
+      }
     } catch (e) {
       console.warn('playSound error:', e);
     }
