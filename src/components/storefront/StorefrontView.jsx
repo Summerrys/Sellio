@@ -440,6 +440,8 @@ export default function StorefrontView({
       `}</style>
 
       {/* ── STICKY HEADER ── */}
+      <PromoMarquee messages={promoMessages} primaryColor={primaryColor} />
+
       <StorefrontHeader
         tenant={tenant}
         primaryColor={primaryColor}
@@ -462,7 +464,6 @@ export default function StorefrontView({
           positionX={storefrontConfig?.banner_position_x}
           positionY={storefrontConfig?.banner_position_y}
         />
-        <PromoMarquee messages={promoMessages} primaryColor={primaryColor} />
       </div>
 
       {/* ── ANNOUNCEMENT BAR ── */}
