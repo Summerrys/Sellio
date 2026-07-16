@@ -255,7 +255,10 @@ export default function KitchenDisplay() {
     const secs = alertIntervalRef.current || 60;
     repeatIntervalRef.current = setInterval(() => {
       if (!soundEnabledRef.current) { stopRepeatAlerts(); return; }
-      if (checkFn()) playSound(soundType);
+      // 3 dings for the repeat/overdue case (an order sitting past the
+      // merchant's configured threshold), vs 2 for the initial notification -
+      // audibly distinguishes "still waiting" from "just arrived".
+      if (checkFn()) playSound(soundType, 3);
       else stopRepeatAlerts();
     }, secs * 1000);
   };
