@@ -202,17 +202,15 @@ function PromoMarquee({ messages, primaryColor }) {
   const joined = messages.join('   •   ');
   return (
     <div style={{
-      position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 2,
-      background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(2px)',
-      overflow: 'hidden', padding: '8px 0', whiteSpace: 'nowrap',
+      background: primaryColor, overflow: 'hidden', padding: '7px 0', whiteSpace: 'nowrap',
     }}>
       <style>{`
         @keyframes sfPromoScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
         .sf-promo-track { display: inline-block; animation: sfPromoScroll ${Math.max(12, messages.join(' ').length * 0.25)}s linear infinite; }
       `}</style>
       <div className="sf-promo-track">
-        <span style={{ color: 'white', fontSize: 13, fontWeight: 600, textShadow: '0 1px 4px rgba(0,0,0,0.3)', paddingRight: 40 }}>{joined}</span>
-        <span style={{ color: 'white', fontSize: 13, fontWeight: 600, textShadow: '0 1px 4px rgba(0,0,0,0.3)', paddingRight: 40 }}>{joined}</span>
+        <span style={{ color: 'white', fontSize: 13, fontWeight: 600, paddingRight: 40 }}>{joined}</span>
+        <span style={{ color: 'white', fontSize: 13, fontWeight: 600, paddingRight: 40 }}>{joined}</span>
       </div>
     </div>
   );
