@@ -176,7 +176,7 @@ function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHist
 }
 
 // ── Banner area (below header, behind it effectively) ─────────────────────
-function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY, headline, tagline }) {
+function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY }) {
   return (
     <div style={{
       width: '100%',
@@ -189,12 +189,31 @@ function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY, h
       ),
     }}>
       {/* No dark overlay — image displays at full brightness */}
-      {(headline || tagline) && (
-        <div style={{ position: 'absolute', bottom: 18, left: 16, right: 16, zIndex: 2 }}>
-          {headline && <p style={{ color: 'white', fontWeight: 800, fontSize: 22, margin: '0 0 4px', textShadow: '0 2px 8px rgba(0,0,0,0.3)', lineHeight: 1.2 }}>{headline}</p>}
-          {tagline && <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, margin: 0, textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>{tagline}</p>}
-        </div>
-      )}
+    </div>
+  );
+}
+
+// Scrolling promo ticker — sits right at the bottom edge of the banner, where
+// the old static headline/tagline text used to be. Messages are joined into
+// one continuous string with a separator and duplicated once so the loop
+// wraps seamlessly with no visible gap or jump.
+function PromoMarquee({ messages, primaryColor }) {
+  if (!messages || messages.length === 0) return null;
+  const joined = messages.join('   •   ');
+  return (
+    <div style={{
+      position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 2,
+      background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(2px)',
+      overflow: 'hidden', padding: '8px 0', whiteSpace: 'nowrap',
+    }}>
+      <style>{`
+        @keyframes sfPromoScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        .sf-promo-track { display: inline-block; animation: sfPromoScroll ${Math.max(12, messages.join(' ').length * 0.25)}s linear infinite; }
+      `}</style>
+      <div className="sf-promo-track">
+        <span style={{ color: 'white', fontSize: 13, fontWeight: 600, textShadow: '0 1px 4px rgba(0,0,0,0.3)', paddingRight: 40 }}>{joined}</span>
+        <span style={{ color: 'white', fontSize: 13, fontWeight: 600, textShadow: '0 1px 4px rgba(0,0,0,0.3)', paddingRight: 40 }}>{joined}</span>
+      </div>
     </div>
   );
 }
