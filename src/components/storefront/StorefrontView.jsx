@@ -479,7 +479,7 @@ export default function StorefrontView({
                 <p style={{ color: '#94a3b8', fontSize: 14 }}>No products match "{searchQuery.trim()}"</p>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(auto-fill, minmax(220px, 1fr))' : 'repeat(2, 1fr)', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isDesktop ? (isLandscape ? 4 : 3) : 2}, 1fr)`, gap: 10 }}>
                 {searchedProducts.map(product => (
                   <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={handleAddToCart} onProductClick={handleProductClick} contentMap={contentMap} />
                 ))}
