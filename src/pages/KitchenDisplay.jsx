@@ -236,56 +236,45 @@ export default function KitchenDisplay() {
     }
   }, [tenantId, appUser?.order_alerts]);
 
-  const playTone = (freq, duration, delayMs = 0) => {
-    try {
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      const ctx = audioCtxRef.current;
-      if (ctx.state === 'suspended') ctx.resume();
-      const schedule = () => {
-        const compressor = ctx.createDynamicsCompressor();
-        compressor.threshold.value = -3;
-        compressor.knee.value = 2;
-        compressor.ratio.value = 3;
-        compressor.attack.value = 0;
-        compressor.release.value = 0.1;
-        compressor.connect(ctx.destination);
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        osc.connect(gain);
-        gain.connect(compressor);
-        gain.gain.setValueAtTime(1.0, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + duration + 0.05);
-      };
-      // FIX: this used to always defer through setTimeout, even for delayMs=0.
-      // That pushes execution to the next event-loop tick, which breaks Safari's
-      // "must start within the same synchronous call as the user gesture" rule
-      // for the very first tone of a sound — even when playSound genuinely was
-      // triggered by a real tap. Scheduling immediately when there's no actual
-      // delay keeps that first tone inside the gesture's call stack.
-      if (delayMs > 0) setTimeout(schedule, delayMs);
-      else schedule();
-    } catch (e) {
-      console.warn('playTone error:', e);
+  // FIX (iPad still not ringing after multiple oscillator-based mitigations):
+  // replaced the Web Audio API oscillator approach entirely with real <audio>
+  // elements playing short generated WAV tones. iOS has a more lenient,
+  // better-established autoplay story for <audio> elements that have been
+  // played once from a genuine gesture, compared to keeping a raw AudioContext
+  // alive indefinitely. Two reusable <audio> elements (one per alert type)
+  // rather than creating new ones per play, since replaying an
+  // already-unlocked element is what's reliable on iOS - fresh elements
+  // would need their own unlock.
+  const ensureAudioElements = () => {
+    if (!newOrderAudioRef.current) {
+      const [url1] = getNewOrderChimeUrls();
+      newOrderAudioRef.current = new Audio(url1);
+    }
+    if (!readyAudioRef.current) {
+      const [url1] = getReadyChimeUrls();
+      readyAudioRef.current = new Audio(url1);
     }
   };
 
   const playSound = (type) => {
     if (!soundEnabledRef.current) return;
-    if (type === 'ready') {
-      playTone(880, 0.3, 0);
-      playTone(1100, 0.3, 280);
-      playTone(1320, 0.4, 560);
-      playTone(1100, 0.3, 840);
-    } else {
-      playTone(440, 0.35, 0);
-      playTone(550, 0.35, 300);
-      playTone(660, 0.35, 600);
+    try {
+      ensureAudioElements();
+      const urls = type === 'ready' ? getReadyChimeUrls() : getNewOrderChimeUrls();
+      const el = type === 'ready' ? readyAudioRef.current : newOrderAudioRef.current;
+      // Play each note in the chime by swapping the src and playing again -
+      // reusing the same unlocked element rather than creating fresh ones.
+      urls.forEach((url, i) => {
+        setTimeout(() => {
+          try {
+            el.src = url;
+            el.currentTime = 0;
+            el.play().catch(() => {});
+          } catch (e) { /* best effort */ }
+        }, i * 220);
+      });
+    } catch (e) {
+      console.warn('playSound error:', e);
     }
   };
 
