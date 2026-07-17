@@ -266,6 +266,12 @@ export default function StorefrontView({
   const categoryRefs = useRef({});
   const splitRightRef = useRef(null);
 
+  const headerRef = useRef(null);
+  const [headerHeight, setHeaderHeight] = useState(84);
+  useEffect(() => {
+    if (headerRef.current) setHeaderHeight(headerRef.current.offsetHeight);
+  });
+
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedVariants, setSelectedVariants] = useState({});
   const [itemNotes, setItemNotes] = useState('');
