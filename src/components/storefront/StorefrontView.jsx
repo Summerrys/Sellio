@@ -152,25 +152,6 @@ function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHist
         </div>
       </div>
     </div>
-    {searchOpen && (
-      <div style={{ padding: '0 14px 10px', background: 'white', position: 'sticky', top: 0, zIndex: 49 }}>
-        <div style={{ position: 'relative' }}>
-          <Search size={15} color="#94a3b8" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
-          <input
-            autoFocus
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search menu..."
-            style={{ width: '100%', padding: '10px 12px 10px 34px', borderRadius: 12, border: '1px solid #e5e7eb', background: '#f8fafc', fontSize: 14, outline: 'none' }}
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex' }}>
-              <X size={16} />
-            </button>
-          )}
-        </div>
-      </div>
-    )}
     </>
   );
 }
