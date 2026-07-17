@@ -744,7 +744,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
   return (
     <>
       <div style={{
-        position: 'fixed', top: 56, left: 0, right: 0, zIndex: 45,
+        position: 'fixed', top: headerHeight, left: 0, right: 0, zIndex: 45,
         background: 'white', borderBottom: '1px solid #f1f5f9',
         opacity: showStickyBar ? 1 : 0,
         transform: showStickyBar ? 'translateY(0)' : 'translateY(-8px)',
