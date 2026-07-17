@@ -322,6 +322,13 @@ export default function StorefrontView({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [showFloatingSearch, setShowFloatingSearch] = useState(false);
+  useEffect(() => {
+    const handleScroll = () => setShowFloatingSearch(window.scrollY > 180);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const featuredProducts = products.filter(p => p.is_featured === true);
   const hasFeatured = featuredProducts.length > 0;
   const categoriesWithProducts = categories.filter(cat => products.some(p => p.category_id === cat.id));
