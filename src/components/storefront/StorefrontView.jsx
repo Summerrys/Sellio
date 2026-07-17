@@ -744,20 +744,13 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
 
   return (
     <>
-      <div style={{
-        position: 'fixed', top: headerHeight, left: 0, right: 0, zIndex: 45,
-        background: 'white', borderBottom: '1px solid #f1f5f9',
-        opacity: showStickyBar ? 1 : 0,
-        transform: showStickyBar ? 'translateY(0)' : 'translateY(-8px)',
-        pointerEvents: showStickyBar ? 'auto' : 'none',
-        transition: 'opacity 0.2s ease, transform 0.2s ease',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px' }}>
+      <div style={{ position: 'sticky', top: headerHeight, zIndex: 45, background: 'white' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px 10px 16px' }}>
           {storefrontConfig?.show_category_tabs !== false && categories.length > 0 && (
             <div className="sf-no-scrollbar" style={{ display: 'flex', gap: 8, overflowX: 'auto', flex: 1 }}>
               {[{ id: null, name: t('all') }, ...categories].map(cat => (
                 <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} style={{
-                  flexShrink: 0, padding: '6px 14px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: 'none',
+                  flexShrink: 0, padding: '7px 16px', borderRadius: 20, fontSize: 13, cursor: 'pointer', border: 'none',
                   fontWeight: selectedCategory === cat.id ? 600 : 400,
                   background: selectedCategory === cat.id ? primaryColor : '#f1f5f9',
                   color: selectedCategory === cat.id ? 'white' : '#64748b',
@@ -767,13 +760,13 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
           )}
           <button
             onClick={() => setSearchOpen?.(v => !v)}
-            style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: searchOpen ? primaryColor : `${primaryColor}1A` }}
+            style={{ flexShrink: 0, width: 34, height: 34, borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: searchOpen ? primaryColor : `${primaryColor}1A` }}
           >
-            <Search size={15} color={searchOpen ? 'white' : primaryColor} />
+            <Search size={16} color={searchOpen ? 'white' : primaryColor} />
           </button>
         </div>
         {searchOpen && (
-          <div style={{ padding: '0 14px 10px' }}>
+          <div style={{ padding: '0 14px 12px', borderBottom: '1px solid #f1f5f9' }}>
             <div style={{ position: 'relative' }}>
               <Search size={14} color="#94a3b8" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
               <input
