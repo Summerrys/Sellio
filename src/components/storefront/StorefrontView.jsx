@@ -646,6 +646,7 @@ export default function StorefrontView({
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             showStickyBar={showFloatingSearch}
+            headerHeight={headerHeight}
           />
         )}
 
