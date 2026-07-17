@@ -379,8 +379,8 @@ export default function StorefrontView({
   // Intersection observer for active category tracking
   useEffect(() => {
     if (productLayout !== 'split') return;
-    const root = splitRightRef.current;
-    if (!root) return;
+    const root = previewMode ? splitRightRef.current : null;
+    if (previewMode && !root) return;
     const observer = new IntersectionObserver(
       (entries) => {
         const intersecting = entries.filter(e => e.isIntersecting)
@@ -389,11 +389,11 @@ export default function StorefrontView({
           setActiveCategory(intersecting[0].target.dataset.categoryId);
         }
       },
-      { root, threshold: 0.1, rootMargin: '0px 0px -60% 0px' }
+      { root, threshold: 0.1, rootMargin: previewMode ? '0px 0px -60% 0px' : `-${headerHeight + 40}px 0px -60% 0px` }
     );
     Object.values(categoryRefs.current).forEach(ref => { if (ref) observer.observe(ref); });
     return () => observer.disconnect();
-  }, [productLayout, categories.length, products.length]);
+  }, [productLayout, categories.length, products.length, previewMode, headerHeight]);
 
   const scrollToCategory = (categoryId) => {
     categoryRefs.current[categoryId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
