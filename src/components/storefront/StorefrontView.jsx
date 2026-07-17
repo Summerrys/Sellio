@@ -502,37 +502,30 @@ export default function StorefrontView({
         ) : productLayout === 'split' ? (
           <>
           {!previewMode && (
-            <button
-              onClick={() => setSearchOpen(v => !v)}
-              style={{
-                position: 'fixed', top: headerHeight + 6, right: 14, zIndex: 60,
-                width: 38, height: 38, borderRadius: '50%', border: 'none',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: searchOpen ? primaryColor : 'white',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
-                cursor: 'pointer',
-                opacity: showFloatingSearch ? 1 : 0,
-                transform: showFloatingSearch ? 'translateY(0)' : 'translateY(-8px)',
-                pointerEvents: showFloatingSearch ? 'auto' : 'none',
-                transition: 'opacity 0.2s ease, transform 0.2s ease',
-              }}
-            >
-              <Search size={16} color={searchOpen ? 'white' : primaryColor} />
-            </button>
+            <div style={{ position: 'sticky', top: headerHeight, zIndex: 45, background: 'white', display: 'flex', justifyContent: 'flex-end', padding: '10px 14px' }}>
+              <button
+                onClick={() => setSearchOpen(v => !v)}
+                style={{
+                  width: 34, height: 34, borderRadius: '50%', border: 'none',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: searchOpen ? primaryColor : `${primaryColor}1A`,
+                  cursor: 'pointer',
+                }}
+              >
+                <Search size={16} color={searchOpen ? 'white' : primaryColor} />
+              </button>
+            </div>
           )}
           {!previewMode && searchOpen && (
-            <div style={{
-              position: 'fixed', top: headerHeight + 50, left: 14, right: 14, zIndex: 60,
-              background: 'white', borderRadius: 12, boxShadow: '0 2px 10px rgba(0,0,0,0.15)', padding: 8,
-            }}>
+            <div style={{ position: 'sticky', top: headerHeight + 50, zIndex: 45, background: 'white', padding: '0 14px 12px', borderBottom: '1px solid #f1f5f9' }}>
               <div style={{ position: 'relative' }}>
-                <Search size={14} color="#94a3b8" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
+                <Search size={14} color="#94a3b8" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
                 <input
                   autoFocus
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Search menu..."
-                  style={{ width: '100%', padding: '9px 12px 9px 30px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#f8fafc', fontSize: 13, outline: 'none' }}
+                  style={{ width: '100%', padding: '9px 12px 9px 32px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#f8fafc', fontSize: 13, outline: 'none' }}
                 />
                 {searchQuery && (
                   <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex' }}>
