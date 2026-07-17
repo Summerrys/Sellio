@@ -84,7 +84,7 @@ const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryC
 
   return (
     <>
-    <div style={{
+    <div ref={ref} style={{
       position: 'sticky', top: 0, zIndex: 50,
       height: headerHeight,
       background: '#ffffff',
