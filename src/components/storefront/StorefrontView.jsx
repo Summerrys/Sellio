@@ -786,18 +786,6 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
         )}
       </div>
 
-      {storefrontConfig?.show_category_tabs !== false && categories.length > 0 && (
-        <div className="sf-no-scrollbar" style={{ display: 'flex', gap: 8, padding: '14px 16px 0', overflowX: 'auto' }}>
-          {[{ id: null, name: t('all') }, ...categories].map(cat => (
-            <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} style={{
-              flexShrink: 0, padding: '7px 16px', borderRadius: 20, fontSize: 13, cursor: 'pointer', border: 'none',
-              fontWeight: selectedCategory === cat.id ? 600 : 400,
-              background: selectedCategory === cat.id ? primaryColor : '#f1f5f9',
-              color: selectedCategory === cat.id ? 'white' : '#64748b',
-            }}>{tr(cat.name)}</button>
-          ))}
-        </div>
-      )}
       <div style={{ padding: '16px 16px 0' }}>
         {storefrontConfig?.show_featured !== false && featuredProducts.length > 0 && (
           <div style={{ marginBottom: 12 }}>
