@@ -592,6 +592,9 @@ export default function StorefrontView({
             isLandscape={isLandscape}
             searchOpen={searchOpen}
             setSearchOpen={setSearchOpen}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            showStickyBar={showFloatingSearch}
           />
         )}
 
