@@ -450,26 +450,6 @@ export default function StorefrontView({
       {/* ── STICKY HEADER ── */}
       <PromoMarquee messages={promoMessages} primaryColor={primaryColor} />
 
-      {!previewMode && (
-        <button
-          onClick={() => setSearchOpen(v => !v)}
-          style={{
-            position: 'fixed', top: 70, right: 14, zIndex: 60,
-            width: 40, height: 40, borderRadius: '50%', border: 'none',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: searchOpen ? primaryColor : 'white',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
-            cursor: 'pointer',
-            opacity: showFloatingSearch ? 1 : 0,
-            transform: showFloatingSearch ? 'translateY(0)' : 'translateY(-8px)',
-            pointerEvents: showFloatingSearch ? 'auto' : 'none',
-            transition: 'opacity 0.2s ease, transform 0.2s ease',
-          }}
-        >
-          <Search size={18} color={searchOpen ? 'white' : primaryColor} />
-        </button>
-      )}
-
       <StorefrontHeader
         tenant={tenant}
         primaryColor={primaryColor}
