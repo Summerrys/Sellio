@@ -618,6 +618,7 @@ export default function StorefrontView({
               )}
             </div>
           </div>
+          </>
         ) : (
           /* ── OTHER LAYOUTS ── */
           <NonSplitContent
