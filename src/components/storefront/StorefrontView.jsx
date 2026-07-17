@@ -10,7 +10,7 @@
  * Props when used in live mode:
  *   All state is managed internally via useParams + Supabase fetches
  */
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, forwardRef } from 'react';
 import {
   Coffee, UtensilsCrossed, IceCream, Salad, Sandwich,
   Drumstick, Tag, Gift, LayoutGrid, ShoppingCart, Clock,
