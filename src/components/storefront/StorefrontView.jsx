@@ -522,7 +522,7 @@ export default function StorefrontView({
           )}
           {!previewMode && searchOpen && (
             <div style={{
-              position: 'fixed', top: 106, left: 14, right: 14, zIndex: 60,
+              position: 'fixed', top: headerHeight + 50, left: 14, right: 14, zIndex: 60,
               background: 'white', borderRadius: 12, boxShadow: '0 2px 10px rgba(0,0,0,0.15)', padding: 8,
             }}>
               <div style={{ position: 'relative' }}>
