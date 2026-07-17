@@ -131,14 +131,12 @@ function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHist
         </div>
       </div>
 
-      {/* Right: Language toggle + Search (top row) with History + Cart below */}
+      {/* Right: Language toggle, then History + Cart. Search moved to a
+          scroll-triggered floating button (see ScrollSearchButton below) since
+          it now needs to work regardless of which section is on screen, not
+          just live in the header. */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <LanguageToggle primaryColor={primaryColor} />
-          <button onClick={() => setSearchOpen(v => !v)} style={{ ...iconBtnNeutral, ...(searchOpen ? { background: primaryColor } : {}) }}>
-            <Search size={17} color={searchOpen ? 'white' : '#374151'} />
-          </button>
-        </div>
+        <LanguageToggle primaryColor={primaryColor} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button onClick={onHistoryClick} style={iconBtnNeutral}>
             <Clock size={17} color="#374151" />
