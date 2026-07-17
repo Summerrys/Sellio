@@ -717,17 +717,9 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
       <div style={{ padding: '16px 16px 0' }}>
         {storefrontConfig?.show_featured !== false && featuredProducts.length > 0 && (
           <div style={{ marginBottom: 12 }}>
-            <div style={{ position: 'sticky', top: 64, zIndex: 10, background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0 10px', marginBottom: 0 }}>
-              <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
-                {storefrontConfig?.featured_section_title ? tr(storefrontConfig.featured_section_title) : t('todaysPicks')} ⭐
-              </p>
-              <button
-                onClick={() => setSearchOpen?.(v => !v)}
-                style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: searchOpen ? primaryColor : `${primaryColor}1A` }}
-              >
-                <Search size={15} color={searchOpen ? 'white' : primaryColor} />
-              </button>
-            </div>
+            <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>
+              {storefrontConfig?.featured_section_title ? tr(storefrontConfig.featured_section_title) : t('todaysPicks')} ⭐
+            </p>
             {isGrid ? (
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, gap: 10 }}>
                 {featuredProducts.map(product => <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}
