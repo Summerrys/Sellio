@@ -531,7 +531,7 @@ export default function StorefrontView({
             )}
           </div>
         ) : productLayout === 'split' ? (
-          <div style={{ display: 'flex', height: splitPanelHeight, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', height: splitPanelHeight, overflow: splitPanelOverflow }}>
             {/* Left category sidebar */}
             <div className="sf-no-scrollbar" style={{
               width: isDesktop ? 180 : 'clamp(72px, 20vw, 100px)',
