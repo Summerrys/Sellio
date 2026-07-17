@@ -492,6 +492,48 @@ export default function StorefrontView({
             )}
           </div>
         ) : productLayout === 'split' ? (
+          <>
+          {!previewMode && (
+            <button
+              onClick={() => setSearchOpen(v => !v)}
+              style={{
+                position: 'fixed', top: 62, right: 14, zIndex: 60,
+                width: 38, height: 38, borderRadius: '50%', border: 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: searchOpen ? primaryColor : 'white',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
+                cursor: 'pointer',
+                opacity: showFloatingSearch ? 1 : 0,
+                transform: showFloatingSearch ? 'translateY(0)' : 'translateY(-8px)',
+                pointerEvents: showFloatingSearch ? 'auto' : 'none',
+                transition: 'opacity 0.2s ease, transform 0.2s ease',
+              }}
+            >
+              <Search size={16} color={searchOpen ? 'white' : primaryColor} />
+            </button>
+          )}
+          {!previewMode && searchOpen && (
+            <div style={{
+              position: 'fixed', top: 106, left: 14, right: 14, zIndex: 60,
+              background: 'white', borderRadius: 12, boxShadow: '0 2px 10px rgba(0,0,0,0.15)', padding: 8,
+            }}>
+              <div style={{ position: 'relative' }}>
+                <Search size={14} color="#94a3b8" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  autoFocus
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search menu..."
+                  style={{ width: '100%', padding: '9px 12px 9px 30px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#f8fafc', fontSize: 13, outline: 'none' }}
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex' }}>
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
           <div style={{ display: 'flex', height: splitPanelHeight, overflow: splitPanelOverflow }}>
             {/* Left category sidebar */}
             <div className="sf-no-scrollbar" style={{
