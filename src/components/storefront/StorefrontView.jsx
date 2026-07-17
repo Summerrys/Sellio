@@ -428,7 +428,8 @@ export default function StorefrontView({
   // Determine heights for split layout
   // Header is sticky at top (56px), banner is below header (220px min)
   // Split panel fills rest of viewport
-  const splitPanelHeight = previewMode ? 300 : 'calc(100vh - 56px - 220px)';
+  const splitPanelHeight = previewMode ? 300 : 'auto';
+  const splitPanelOverflow = previewMode ? 'hidden' : 'visible';
 
   return (
     <div style={{
