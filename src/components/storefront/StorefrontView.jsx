@@ -268,9 +268,18 @@ export default function StorefrontView({
 
   const headerRef = useRef(null);
   const [headerHeight, setHeaderHeight] = useState(84);
+  // ResizeObserver instead of a naive every-render measurement - reacts
+  // properly to font-load reflow, orientation change, or the subline
+  // appearing/disappearing, without re-measuring on every single render.
   useEffect(() => {
-    if (headerRef.current) setHeaderHeight(headerRef.current.offsetHeight);
-  });
+    if (!headerRef.current) return;
+    const el = headerRef.current;
+    const update = () => setHeaderHeight(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedVariants, setSelectedVariants] = useState({});
