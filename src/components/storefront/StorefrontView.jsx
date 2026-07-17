@@ -505,7 +505,7 @@ export default function StorefrontView({
             <button
               onClick={() => setSearchOpen(v => !v)}
               style={{
-                position: 'fixed', top: 62, right: 14, zIndex: 60,
+                position: 'fixed', top: headerHeight + 6, right: 14, zIndex: 60,
                 width: 38, height: 38, borderRadius: '50%', border: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: searchOpen ? primaryColor : 'white',
