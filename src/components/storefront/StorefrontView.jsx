@@ -154,7 +154,7 @@ const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryC
     </div>
     </>
   );
-}
+});
 
 // ── Banner area (below header, behind it effectively) ─────────────────────
 function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY }) {
