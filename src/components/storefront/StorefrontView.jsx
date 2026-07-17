@@ -437,8 +437,8 @@ export default function StorefrontView({
       {/* ── STICKY HEADER ── */}
       <PromoMarquee messages={promoMessages} primaryColor={primaryColor} />
 
-      <div ref={headerRef}>
       <StorefrontHeader
+        ref={headerRef}
         tenant={tenant}
         primaryColor={primaryColor}
         cartCount={cartCount}
@@ -451,7 +451,6 @@ export default function StorefrontView({
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
       />
-      </div>
 
       {/* ── BANNER (below header) ── */}
       <div style={{ position: 'relative' }}>
