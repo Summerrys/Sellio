@@ -281,6 +281,18 @@ export default function StorefrontView({
     return () => ro.disconnect();
   }, []);
 
+  const splitSearchBarRef = useRef(null);
+  const [splitSearchBarHeight, setSplitSearchBarHeight] = useState(0);
+  useEffect(() => {
+    if (!splitSearchBarRef.current) { setSplitSearchBarHeight(0); return; }
+    const el = splitSearchBarRef.current;
+    const update = () => setSplitSearchBarHeight(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [previewMode, searchOpen]);
+
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedVariants, setSelectedVariants] = useState({});
   const [itemNotes, setItemNotes] = useState('');
