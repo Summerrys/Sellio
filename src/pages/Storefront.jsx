@@ -326,10 +326,15 @@ function StorefrontInner() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontFamily: 'Inter, sans-serif', background: '#ffffff' }}>
+      <div style={{
+        position: 'fixed', inset: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: 'Inter, sans-serif', background: '#ffffff', zIndex: 1,
+      }}>
         <style>{`
           @keyframes sellio-bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-8px); } }
           @keyframes sellio-pulse-logo { 0%, 100% { transform: scale(1.0); } 50% { transform: scale(1.05); } }
+          .sellio-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; will-change: transform; }
           .sellio-dot-1 { animation: sellio-bounce 1.2s ease-in-out infinite 0ms; background: #fb923c; }
           .sellio-dot-2 { animation: sellio-bounce 1.2s ease-in-out infinite 200ms; background: #e0449a; }
           .sellio-dot-3 { animation: sellio-bounce 1.2s ease-in-out infinite 400ms; background: #8b2fc9; }
@@ -340,12 +345,12 @@ function StorefrontInner() {
             src="https://assets.apptelier.sg/sellio/Logo_Sellio.png"
             alt="Sellio"
             className="sellio-logo-pulse"
-            style={{ width: 80, objectFit: 'contain', marginBottom: 20 }}
+            style={{ width: 80, objectFit: 'contain', marginBottom: 20, display: 'block', marginLeft: 'auto', marginRight: 'auto' }}
           />
-          <div style={{ display: 'flex', gap: 7, justifyContent: 'center', marginBottom: 14 }}>
-            <span className="sellio-dot-1" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
-            <span className="sellio-dot-2" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
-            <span className="sellio-dot-3" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 7, justifyContent: 'center', marginBottom: 14, height: 16 }}>
+            <span className="sellio-dot sellio-dot-1" />
+            <span className="sellio-dot sellio-dot-2" />
+            <span className="sellio-dot sellio-dot-3" />
           </div>
           <p style={{ color: '#94a3b8', fontSize: 14, margin: 0 }}>Loading menu...</p>
         </div>
