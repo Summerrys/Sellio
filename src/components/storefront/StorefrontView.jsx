@@ -522,7 +522,7 @@ export default function StorefrontView({
         ) : productLayout === 'split' ? (
           <>
           {!previewMode && (
-            <div style={{ position: 'sticky', top: headerHeight, zIndex: 45, background: 'white' }}>
+            <div ref={splitSearchBarRef} style={{ position: 'sticky', top: headerHeight, zIndex: 45, background: 'white' }}>
               <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 14px' }}>
                 <button
                   onClick={() => setSearchOpen(v => !v)}
