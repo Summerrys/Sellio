@@ -545,7 +545,6 @@ export default function StorefrontView({
               )}
             </div>
           )}
-          )}
           <div style={{ display: 'flex', height: splitPanelHeight, overflow: splitPanelOverflow }}>
             {/* Left category sidebar */}
             <div className="sf-no-scrollbar" style={{
