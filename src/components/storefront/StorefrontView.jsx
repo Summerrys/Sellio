@@ -586,7 +586,7 @@ export default function StorefrontView({
           </div>
         ) : productLayout === 'split' ? (
           <>
-          {(showFloatingSearch || searchOpen) && (
+          {(isPinned || searchOpen) && (
             <div style={{ position: 'fixed', top: headerHeight + 10, right: 14, zIndex: 45 }}>
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <button
@@ -729,7 +729,7 @@ export default function StorefrontView({
             setSearchOpen={setSearchOpen}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
-            showStickyBar={showFloatingSearch}
+            showStickyBar={isPinned}
             headerHeight={headerHeight}
           />
         )}
