@@ -475,14 +475,17 @@ export default function StorefrontView({
   // Determine heights for split layout
   // Header is sticky at top (56px), banner is below header (220px min)
   // Split panel fills rest of viewport
-  // Split's height/overflow used to be capped and clipped in preview mode
-  // (fixed 300px, hidden overflow) so it would fit inside the small mockup
-  // frame without needing real scroll wiring. That meant the menu never fully
-  // loaded in preview and left dead grey space below it. Now that preview's
-  // outer canvas/mockup container is the thing that scrolls (same idea as the
-  // live page), Split can flow at its natural height in both modes.
-  const splitPanelHeight = 'auto';
-  const splitPanelOverflow = 'visible';
+  // Split now behaves the same in live and preview: the panel pins below the
+  // header once scrolled up to it, and the product list scrolls inside its
+  // own bounded-height right panel from there — matching the requested "card
+  // sticks under header, then the menu itself scrolls" behavior. Live uses
+  // the real viewport (100vh); preview uses the measured mockup-frame height
+  // from above, since 100vh means the real browser window there, not the
+  // small preview canvas.
+  const splitPanelHeight = previewMode
+    ? (previewFrameHeight ? previewFrameHeight - headerHeight : 'auto')
+    : `calc(100vh - ${headerHeight}px)`;
+  const splitPanelOverflow = 'hidden';
 
   return (
     <div ref={rootRef} style={{
