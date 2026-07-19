@@ -265,6 +265,7 @@ export default function StorefrontView({
   const [activeCategory, setActiveCategory] = useState(null);
   const categoryRefs = useRef({});
   const splitRightRef = useRef(null);
+  const rootRef = useRef(null);
 
   const headerRef = useRef(null);
   const [headerHeight, setHeaderHeight] = useState(84);
