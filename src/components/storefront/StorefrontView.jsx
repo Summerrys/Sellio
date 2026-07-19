@@ -358,30 +358,18 @@ export default function StorefrontView({
 
   const [showFloatingSearch, setShowFloatingSearch] = useState(false);
   useEffect(() => {
-    if (!previewMode) {
-      const handleScroll = () => setShowFloatingSearch(window.scrollY > 180);
-      window.addEventListener('scroll', handleScroll, { passive: true });
-      return () => window.removeEventListener('scroll', handleScroll);
-    }
-    // Preview mode never scrolls the real window — StorefrontView sits inside
-    // a fixed-height, internally-scrolling container owned by StorefrontDesigner
-    // (the mobile canvas or the desktop phone mockup). Walk up from our own
-    // root node to find that scrollable ancestor rather than assuming a fixed
-    // DOM depth, since the two preview layouts nest it differently.
-    let el = rootRef.current?.parentElement;
-    let scrollParent = null;
-    let depth = 0;
-    while (el && depth < 8) {
-      const cs = window.getComputedStyle(el);
-      if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') { scrollParent = el; break; }
-      el = el.parentElement;
-      depth++;
-    }
-    if (!scrollParent) return;
-    const handleScroll = () => setShowFloatingSearch(scrollParent.scrollTop > 180);
-    scrollParent.addEventListener('scroll', handleScroll, { passive: true });
-    return () => scrollParent.removeEventListener('scroll', handleScroll);
-  }, [previewMode]);
+    // Split's product list now scrolls inside its own panel (splitRightRef) in
+    // both live and preview — see the sticky-panel setup below — so that's the
+    // single source of truth for the floating search trigger regardless of
+    // mode. (This is currently the only thing showFloatingSearch drives; the
+    // Grid/List search bar is always visible, not scroll-triggered.)
+    if (productLayout !== 'split') return;
+    const el = splitRightRef.current;
+    if (!el) return;
+    const handleScroll = () => setShowFloatingSearch(el.scrollTop > 180);
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [productLayout, splitPanelHeight]);
 
   const featuredProducts = products.filter(p => p.is_featured === true);
   const hasFeatured = featuredProducts.length > 0;
