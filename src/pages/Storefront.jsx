@@ -157,23 +157,9 @@ function StorefrontInner() {
           .eq('tenant_id', tenantData.id);
         if (hoursData?.length) {
           setBusinessHours(hoursData);
-          const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
-          const now = new Date();
-          const todayName = days[now.getDay()];
-          const todayHours = hoursData.find(h => h.day_of_week === todayName);
-          if (todayHours) {
-            setTodayHours(todayHours);
-            if (todayHours.is_closed) {
-              setIsStoreOpen(false);
-            } else if (todayHours.open_time && todayHours.close_time) {
-              const [openH, openM] = todayHours.open_time.split(':').map(Number);
-              const [closeH, closeM] = todayHours.close_time.split(':').map(Number);
-              const currentMins = now.getHours() * 60 + now.getMinutes();
-              const openMins = openH * 60 + openM;
-              const closeMins = closeH * 60 + closeM;
-              setIsStoreOpen(currentMins >= openMins && currentMins < closeMins);
-            }
-          }
+          const { todayHours: computedToday, isOpen } = computeStoreOpenState(hoursData);
+          setTodayHours(computedToday);
+          setIsStoreOpen(isOpen);
         }
       }
       setLoading(false);
