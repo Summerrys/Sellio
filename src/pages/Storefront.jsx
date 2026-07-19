@@ -167,6 +167,58 @@ function StorefrontInner() {
     loadData();
   }, [tenantSlug, tableId]);
 
+  // Keeps open/closed accurate without needing a page refresh. Two separate
+  // triggers, since they cover different gaps: a periodic re-check catches
+  // the clock simply crossing today's open/close time (no DB change involved
+  // at all — the plain useEffect above only ever ran once, on load), and a
+  // Realtime subscription catches the merchant editing hours while a
+  // customer already has the storefront open.
+  const businessHoursRef = useRef(businessHours);
+  useEffect(() => { businessHoursRef.current = businessHours; }, [businessHours]);
+
+  useEffect(() => {
+    if (isPreview || !tenant?.id) return;
+
+    const clockInterval = setInterval(() => {
+      if (!businessHoursRef.current?.length) return;
+      const { todayHours: computedToday, isOpen } = computeStoreOpenState(businessHoursRef.current);
+      setTodayHours(computedToday);
+      setIsStoreOpen(isOpen);
+    }, 30000);
+
+    let channel = null;
+    let cancelled = false;
+    (async () => {
+      const supabase = await getSupabase();
+      if (cancelled) return;
+      channel = supabase
+        .channel(`business_hours_${tenant.id}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'business_hours', filter: `tenant_id=eq.${tenant.id}` },
+          async () => {
+            const { data: hoursData } = await supabase
+              .from('business_hours')
+              .select('day_of_week, open_time, close_time, is_closed')
+              .eq('tenant_id', tenant.id);
+            if (hoursData?.length) {
+              setBusinessHours(hoursData);
+              const { todayHours: computedToday, isOpen } = computeStoreOpenState(hoursData);
+              setTodayHours(computedToday);
+              setIsStoreOpen(isOpen);
+            }
+          }
+        )
+        .subscribe();
+    })();
+
+    return () => {
+      cancelled = true;
+      clearInterval(clockInterval);
+      if (channel) channel.unsubscribe();
+    };
+  }, [tenant?.id, isPreview]);
+
   useEffect(() => {
     if (!tenant) return;
     const primaryColor = storefrontConfig?.banner_bg_color || theme?.primary_color || '#6366f1';
