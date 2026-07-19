@@ -543,7 +543,7 @@ export default function StorefrontView({
         background: 'white',
         borderRadius: '20px 20px 0 0',
         flex: 1,
-        overflow: (productLayout === 'split' && !searchActive) ? 'hidden' : 'visible',
+        overflow: 'visible',
         marginTop: -24,
         position: 'relative',
         zIndex: 2,
