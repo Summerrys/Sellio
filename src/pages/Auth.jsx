@@ -86,23 +86,28 @@ export default function Auth() {
         if (session?.user) {
           const { data: rows } = await supabase
             .from('app_users')
-            .select('onboarding_completed, tenant_id')
+            .select('id, email, full_name, role, phone, onboarding_completed, tenant_id')
             .eq('email', session.user.email)
             .limit(1);
           const appUserRow = rows?.[0];
           if (appUserRow?.onboarding_completed === true && appUserRow?.tenant_id) {
-            // Only redirect owners — staff (is_owner=false) must log in explicitly
+            // Auto-restore session for ANY active tenant member — owner or staff —
+            // as long as their Supabase session is still valid. Previously only
+            // owners were auto-redirected here; staff were forced to log in with
+            // phone+password every time the app was reopened, even with a fully
+            // valid session underneath. Staying logged in until explicit logout
+            // should apply to every role, not just owners.
             const { data: tuRows } = await supabase
               .from('tenant_users')
               .select('is_owner')
               .eq('tenant_id', appUserRow.tenant_id)
               .eq('user_email', session.user.email)
-              .eq('is_owner', true)
               .eq('status', 'active')
               .limit(1);
-            const isOwner = tuRows?.[0]?.is_owner === true;
-            console.log('[Auth] owner check for', session.user.email, '→ isOwner:', isOwner);
-            if (isOwner) {
+            const isActiveMember = !!tuRows?.[0];
+            console.log('[Auth] session recovery for', session.user.email, '→ activeMember:', isActiveMember);
+            if (isActiveMember) {
+              setAppUser(appUserRow);
               window.location.href = '/Dashboard';
               return;
             }
