@@ -606,21 +606,16 @@ export default function StorefrontView({
               )}
             </div>
           )}
-          <div style={{ display: 'flex', height: splitPanelHeight, overflow: splitPanelOverflow }}>
-            {/* Left category sidebar - sticky below the header+search bar on
-                live/desktop so it stays pinned and visible as the now-
-                naturally-flowing content scrolls past it, matching how it
-                used to behave with its own bounded internal scroll. */}
+          <div style={{ display: 'flex', position: 'sticky', top: headerHeight, height: splitPanelHeight, overflow: splitPanelOverflow }}>
+            {/* Left category sidebar - the whole row is now the sticky element
+                (pins below the header once scrolled up to it), so the sidebar
+                itself just needs to fill that row's height; its own overflowY
+                lets a long category list scroll independently if needed. */}
             <div className="sf-no-scrollbar" style={{
               width: isDesktop ? 180 : 'clamp(72px, 20vw, 100px)',
               flexShrink: 0,
               overflowY: 'auto',
-              position: 'sticky',
-              top: headerHeight,
-              // 100vh is the real browser viewport, not the small preview
-              // mockup frame — in preview just let the sidebar size to its own
-              // content instead of forcing a viewport-relative height.
-              height: previewMode ? undefined : `calc(100vh - ${headerHeight}px)`,
+              height: '100%',
               borderRight: '1px solid #f1f5f9',
               background: '#fafafa',
             }}>
