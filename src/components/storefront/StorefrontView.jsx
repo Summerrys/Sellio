@@ -327,9 +327,6 @@ export default function StorefrontView({
     };
   }, []);
 
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-
   const [showFloatingSearch, setShowFloatingSearch] = useState(false);
   useEffect(() => {
     const handleScroll = () => setShowFloatingSearch(window.scrollY > 180);
