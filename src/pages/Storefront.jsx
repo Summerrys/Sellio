@@ -184,7 +184,7 @@ function StorefrontInner() {
   useEffect(() => { businessHoursRef.current = businessHours; }, [businessHours]);
 
   useEffect(() => {
-    if (isPreview || !tenant?.id) return;
+    if (isPreview || isStaffMode || !tenant?.id) return;
 
     const clockInterval = setInterval(() => {
       if (!businessHoursRef.current?.length) return;
