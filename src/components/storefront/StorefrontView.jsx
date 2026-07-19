@@ -332,10 +332,22 @@ export default function StorefrontView({
 
   const [showFloatingSearch, setShowFloatingSearch] = useState(false);
   useEffect(() => {
-    const handleScroll = () => setShowFloatingSearch(window.scrollY > 180);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    // In preview mode the Split layout scrolls inside its own right-hand panel
+    // (splitRightRef) rather than the page/window — the preview canvas gives
+    // Split a fixed height with overflow hidden at the wrapper level, same as
+    // live, but there's no real window scroll happening inside the mockup.
+    // Everything else (Grid/List in preview, and Split live) still tracks the
+    // window as before.
+    const usePreviewSplitScroll = previewMode && productLayout === 'split';
+    const target = usePreviewSplitScroll ? splitRightRef.current : window;
+    if (!target) return;
+    const handleScroll = () => {
+      const y = target === window ? window.scrollY : target.scrollTop;
+      setShowFloatingSearch(y > 180);
+    };
+    target.addEventListener('scroll', handleScroll, { passive: true });
+    return () => target.removeEventListener('scroll', handleScroll);
+  }, [previewMode, productLayout]);
 
   const featuredProducts = products.filter(p => p.is_featured === true);
   const hasFeatured = featuredProducts.length > 0;
