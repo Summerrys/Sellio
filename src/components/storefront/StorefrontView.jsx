@@ -452,7 +452,7 @@ export default function StorefrontView({
   const splitPanelOverflow = previewMode ? 'hidden' : 'visible';
 
   return (
-    <div style={{
+    <div ref={rootRef} style={{
       fontFamily: `${storefrontConfig?.font_family || 'Inter'}, sans-serif`,
       maxWidth: (previewMode || isDesktop) ? '100%' : 480,
       margin: '0 auto',
