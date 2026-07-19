@@ -434,22 +434,13 @@ export default function StorefrontView({
   // Intersection observer for active category tracking
   useEffect(() => {
     if (productLayout !== 'split') return;
-    let root = null;
-    if (previewMode) {
-      // Preview scrolls its outer canvas/mockup container, not the document
-      // — splitRightRef no longer scrolls on its own (see the floating-search
-      // effect above for the same reasoning), so the observer's root needs to
-      // be that same scrollable ancestor instead.
-      let el = rootRef.current?.parentElement;
-      let depth = 0;
-      while (el && depth < 8) {
-        const cs = window.getComputedStyle(el);
-        if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') { root = el; break; }
-        el = el.parentElement;
-        depth++;
-      }
-      if (!root) return;
-    }
+    // splitRightRef is now the scrolling container in both modes (see the
+    // sticky Split panel setup below), so it's the observer root either way
+    // — no more headerHeight-based rootMargin offset needed, since the root
+    // element's own top edge is already where content starts, with no header
+    // overlapping into it the way the page viewport used to.
+    const root = splitRightRef.current;
+    if (!root) return;
     const observer = new IntersectionObserver(
       (entries) => {
         const intersecting = entries.filter(e => e.isIntersecting)
@@ -458,7 +449,7 @@ export default function StorefrontView({
           setActiveCategory(intersecting[0].target.dataset.categoryId);
         }
       },
-      { root, threshold: 0.1, rootMargin: previewMode ? '0px 0px -60% 0px' : `-${headerHeight + 40}px 0px -60% 0px` }
+      { root, threshold: 0.1, rootMargin: '0px 0px -60% 0px' }
     );
     Object.values(categoryRefs.current).forEach(ref => { if (ref) observer.observe(ref); });
     return () => observer.disconnect();
