@@ -281,6 +281,9 @@ export default function StorefrontView({
     return () => ro.disconnect();
   }, []);
 
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
   const splitSearchBarRef = useRef(null);
   const [splitSearchBarHeight, setSplitSearchBarHeight] = useState(0);
   useEffect(() => {
