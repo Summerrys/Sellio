@@ -333,22 +333,30 @@ export default function StorefrontView({
 
   const [showFloatingSearch, setShowFloatingSearch] = useState(false);
   useEffect(() => {
-    // In preview mode the Split layout scrolls inside its own right-hand panel
-    // (splitRightRef) rather than the page/window — the preview canvas gives
-    // Split a fixed height with overflow hidden at the wrapper level, same as
-    // live, but there's no real window scroll happening inside the mockup.
-    // Everything else (Grid/List in preview, and Split live) still tracks the
-    // window as before.
-    const usePreviewSplitScroll = previewMode && productLayout === 'split';
-    const target = usePreviewSplitScroll ? splitRightRef.current : window;
-    if (!target) return;
-    const handleScroll = () => {
-      const y = target === window ? window.scrollY : target.scrollTop;
-      setShowFloatingSearch(y > 180);
-    };
-    target.addEventListener('scroll', handleScroll, { passive: true });
-    return () => target.removeEventListener('scroll', handleScroll);
-  }, [previewMode, productLayout]);
+    if (!previewMode) {
+      const handleScroll = () => setShowFloatingSearch(window.scrollY > 180);
+      window.addEventListener('scroll', handleScroll, { passive: true });
+      return () => window.removeEventListener('scroll', handleScroll);
+    }
+    // Preview mode never scrolls the real window — StorefrontView sits inside
+    // a fixed-height, internally-scrolling container owned by StorefrontDesigner
+    // (the mobile canvas or the desktop phone mockup). Walk up from our own
+    // root node to find that scrollable ancestor rather than assuming a fixed
+    // DOM depth, since the two preview layouts nest it differently.
+    let el = rootRef.current?.parentElement;
+    let scrollParent = null;
+    let depth = 0;
+    while (el && depth < 8) {
+      const cs = window.getComputedStyle(el);
+      if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') { scrollParent = el; break; }
+      el = el.parentElement;
+      depth++;
+    }
+    if (!scrollParent) return;
+    const handleScroll = () => setShowFloatingSearch(scrollParent.scrollTop > 180);
+    scrollParent.addEventListener('scroll', handleScroll, { passive: true });
+    return () => scrollParent.removeEventListener('scroll', handleScroll);
+  }, [previewMode]);
 
   const featuredProducts = products.filter(p => p.is_featured === true);
   const hasFeatured = featuredProducts.length > 0;
