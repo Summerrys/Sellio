@@ -623,7 +623,8 @@ export default function StorefrontView({
               )}
             </div>
           )}
-          <div style={{ display: 'flex', position: 'sticky', top: headerHeight, height: splitPanelHeight, overflow: splitPanelOverflow }}>
+          <div ref={sentinelRef} style={{ height: 1 }} />
+          <div style={{ display: 'flex', position: 'sticky', top: headerHeight, height: isPinned ? splitPanelHeight : 'auto', overflow: isPinned ? splitPanelOverflow : 'visible' }}>
             {/* Left category sidebar - the whole row is now the sticky element
                 (pins below the header once scrolled up to it), so the sidebar
                 itself just needs to fill that row's height; its own overflowY
