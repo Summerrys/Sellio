@@ -732,7 +732,7 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
   return (
     <>
       {/* Canvas area — uses exact same StorefrontView as live store */}
-      <div onClick={() => { if (drawerHeight >= MAX_DRAWER) snapDrawer(DRAWER_HANDLE_ONLY); }} style={{ height: canvasHeight, overflow: 'auto', background: '#f0f2f7', position: 'relative' }}>
+      <div onClick={() => { if (drawerHeight >= MAX_DRAWER) snapDrawer(DRAWER_HANDLE_ONLY); }} style={{ height: canvasHeight, overflow: 'auto', background: '#f0f2f7', position: 'relative', transform: 'translateZ(0)' }}>
         <div style={{ position: 'relative' }}>
           <StorefrontView
             previewMode={true}
@@ -1042,7 +1042,7 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
                 📱 Live Preview
               </div>
               <div style={{ width: 375, flexShrink: 0, border: '8px solid #1e293b', borderRadius: 36, overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.25)' }}>
-                <div style={{ height: 500, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
+                <div style={{ height: 500, overflowY: 'auto', overflowX: 'hidden', position: 'relative', transform: 'translateZ(0)' }}>
                   <StorefrontView
                     previewMode={true}
                     tenant={previewTenant}
