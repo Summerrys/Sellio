@@ -594,9 +594,12 @@ export default function StorefrontView({
               width: isDesktop ? 180 : 'clamp(72px, 20vw, 100px)',
               flexShrink: 0,
               overflowY: 'auto',
-              position: previewMode ? 'static' : 'sticky',
-              top: previewMode ? undefined : headerHeight,
-              height: previewMode ? '100%' : `calc(100vh - ${headerHeight}px)`,
+              position: 'sticky',
+              top: headerHeight,
+              // 100vh is the real browser viewport, not the small preview
+              // mockup frame — in preview just let the sidebar size to its own
+              // content instead of forcing a viewport-relative height.
+              height: previewMode ? undefined : `calc(100vh - ${headerHeight}px)`,
               borderRight: '1px solid #f1f5f9',
               background: '#fafafa',
             }}>
