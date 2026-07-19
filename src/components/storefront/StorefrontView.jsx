@@ -356,20 +356,37 @@ export default function StorefrontView({
     };
   }, []);
 
-  const [showFloatingSearch, setShowFloatingSearch] = useState(false);
+  const sentinelRef = useRef(null);
+  const [isPinned, setIsPinned] = useState(false);
   useEffect(() => {
-    // Split's product list now scrolls inside its own panel (splitRightRef) in
-    // both live and preview — see the sticky-panel setup below — so that's the
-    // single source of truth for the floating search trigger regardless of
-    // mode. (This is currently the only thing showFloatingSearch drives; the
-    // Grid/List search bar is always visible, not scroll-triggered.)
-    if (productLayout !== 'split') return;
-    const el = splitRightRef.current;
-    if (!el) return;
-    const handleScroll = () => setShowFloatingSearch(el.scrollTop > 180);
-    el.addEventListener('scroll', handleScroll, { passive: true });
-    return () => el.removeEventListener('scroll', handleScroll);
-  }, [productLayout]);
+    // Detects the exact moment the Split card's top edge reaches the bottom
+    // of the header (i.e. the moment position:sticky below actually engages)
+    // via a 1px sentinel placed right at the card's top edge. Before that
+    // moment the card is still normal in-flow content, so the whole page (or
+    // preview canvas) scrolls through it like anything else; only once
+    // pinned does the card's height get bounded and its inner panel take
+    // over scrolling — this also drives the floating search button.
+    if (productLayout !== 'split') { setIsPinned(false); return; }
+    if (!sentinelRef.current) return;
+    let root = null;
+    if (previewMode) {
+      let el = rootRef.current?.parentElement;
+      let depth = 0;
+      while (el && depth < 8) {
+        const cs = window.getComputedStyle(el);
+        if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') { root = el; break; }
+        el = el.parentElement;
+        depth++;
+      }
+      if (!root) return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsPinned(!entry.isIntersecting),
+      { root, rootMargin: `-${headerHeight}px 0px 0px 0px`, threshold: 0 }
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [productLayout, previewMode, headerHeight]);
 
   const featuredProducts = products.filter(p => p.is_featured === true);
   const hasFeatured = featuredProducts.length > 0;
