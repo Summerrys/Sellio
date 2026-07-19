@@ -7,12 +7,29 @@ let supabaseInstance = null;
 let initPromise = null;
 
 async function initSupabase() {
-  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
       detectSessionInUrl: true,
       persistSession: true,
+      autoRefreshToken: true,
     },
   });
+
+  // iOS Safari / standalone PWA suspends JS timers while backgrounded, so
+  // supabase-js's internal refresh timer can miss a refresh window while the
+  // app is closed. Re-check the session the moment the app becomes visible
+  // again — getSession() transparently refreshes an expired-but-refreshable
+  // token using the persisted refresh token, rather than waiting on a timer
+  // that may never have fired while backgrounded.
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        client.auth.getSession();
+      }
+    });
+  }
+
+  return client;
 }
 
 export async function getSupabase() {
