@@ -391,7 +391,13 @@ export default function StorefrontView({
   const featuredProducts = products.filter(p => p.is_featured === true);
   const hasFeatured = featuredProducts.length > 0;
   const categoriesWithProducts = categories.filter(cat => products.some(p => p.category_id === cat.id));
-  const uncategorised = products.filter(p => !p.is_featured && !categories.some(c => c.id === p.category_id));
+  // Featured products used to be pulled OUT of their category section
+  // entirely once marked featured (via a !p.is_featured filter here), so they
+  // effectively vanished from their own category once bumped into Today's
+  // Picks. A featured product should show in both places — the highlighted
+  // Today's Picks section up top, AND its normal category section further
+  // down — rather than replacing one with the other.
+  const uncategorised = products.filter(p => !categories.some(c => c.id === p.category_id));
 
   // ── One batched translation request covers EVERY piece of merchant content
   // on this page (all product names/descriptions, all category names, the
