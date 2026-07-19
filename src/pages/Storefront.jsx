@@ -150,7 +150,14 @@ function StorefrontInner() {
         }
       }
       // Fetch business hours for all visitors — skip enforcement only for merchant preview
-      if (!isPreview && tenantData?.id) {
+      // Staff-assisted orders (Take Order from the Dashboard, identified by
+      // ?staff=true) bypass hours enforcement the same way merchant preview
+      // does — a staff member physically taking a walk-in/phone order is
+      // choosing to serve it regardless of the posted hours, so isStoreOpen
+      // simply never gets set to false here, which correctly cascades to
+      // every downstream check (banner, disabled cart, checkout) without
+      // needing to touch each of them individually.
+      if (!isPreview && !isStaffMode && tenantData?.id) {
         const { data: hoursData } = await supabase
           .from('business_hours')
           .select('day_of_week, open_time, close_time, is_closed')
