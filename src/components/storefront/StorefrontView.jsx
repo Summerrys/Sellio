@@ -636,10 +636,7 @@ export default function StorefrontView({
               id="split-right-panel"
               ref={splitRightRef}
               className="sf-no-scrollbar"
-              style={previewMode
-                ? { flex: 1, overflowY: 'auto', height: '100%', paddingBottom: 80 }
-                : { flex: 1, paddingBottom: 80 }
-              }
+              style={{ flex: 1, paddingBottom: 80 }}
             >
               {/* Special Deals section */}
               {hasFeatured && (
