@@ -369,7 +369,7 @@ export default function StorefrontView({
     const handleScroll = () => setShowFloatingSearch(el.scrollTop > 180);
     el.addEventListener('scroll', handleScroll, { passive: true });
     return () => el.removeEventListener('scroll', handleScroll);
-  }, [productLayout, splitPanelHeight]);
+  }, [productLayout]);
 
   const featuredProducts = products.filter(p => p.is_featured === true);
   const hasFeatured = featuredProducts.length > 0;
