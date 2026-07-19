@@ -7,6 +7,28 @@ import { LanguageProvider, useLanguage, prewarmTranslations } from '@/lib/Langua
 import { isFnBIndustry } from '@/lib/industry';
 import { toast } from 'sonner';
 
+// Pure function (no component state) so it can be reused by the initial
+// load, the periodic re-check, and the Realtime handler alike — all it needs
+// is the day's hours rows and the current clock.
+function computeStoreOpenState(hoursData) {
+  if (!hoursData?.length) return { todayHours: null, isOpen: true };
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const now = new Date();
+  const todayName = days[now.getDay()];
+  const today = hoursData.find(h => h.day_of_week === todayName);
+  if (!today) return { todayHours: null, isOpen: true };
+  if (today.is_closed) return { todayHours: today, isOpen: false };
+  if (today.open_time && today.close_time) {
+    const [openH, openM] = today.open_time.split(':').map(Number);
+    const [closeH, closeM] = today.close_time.split(':').map(Number);
+    const currentMins = now.getHours() * 60 + now.getMinutes();
+    const openMins = openH * 60 + openM;
+    const closeMins = closeH * 60 + closeM;
+    return { todayHours: today, isOpen: currentMins >= openMins && currentMins < closeMins };
+  }
+  return { todayHours: today, isOpen: true };
+}
+
 const STATUS_COLORS = {
   pending: { bg: '#fef3c7', color: '#92400e' },
   preparing: { bg: '#dbeafe', color: '#1e40af' },
