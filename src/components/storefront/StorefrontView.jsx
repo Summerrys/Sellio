@@ -521,15 +521,16 @@ export default function StorefrontView({
           </div>
         ) : productLayout === 'split' ? (
           <>
-          {!previewMode && (
-            <div ref={splitSearchBarRef} style={{ position: 'sticky', top: headerHeight, zIndex: 45, background: 'white' }}>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 14px' }}>
+          {!previewMode && (showFloatingSearch || searchOpen) && (
+            <div style={{ position: 'fixed', top: headerHeight + 10, right: 14, zIndex: 45 }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <button
                   onClick={() => setSearchOpen(v => !v)}
                   style={{
                     width: 34, height: 34, borderRadius: '50%', border: 'none',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: searchOpen ? primaryColor : `${primaryColor}1A`,
+                    background: searchOpen ? primaryColor : 'white',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
                     cursor: 'pointer',
                   }}
                 >
@@ -537,7 +538,7 @@ export default function StorefrontView({
                 </button>
               </div>
               {searchOpen && (
-                <div style={{ padding: '0 14px 12px', borderBottom: '1px solid #f1f5f9' }}>
+                <div style={{ marginTop: 8, width: 240, padding: 8, borderRadius: 12, background: 'white', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
                   <div style={{ position: 'relative' }}>
                     <Search size={14} color="#94a3b8" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
                     <input
@@ -545,7 +546,7 @@ export default function StorefrontView({
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
                       placeholder="Search menu..."
-                      style={{ width: '100%', padding: '9px 12px 9px 32px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#f8fafc', fontSize: 13, outline: 'none' }}
+                      style={{ width: '100%', padding: '9px 12px 9px 32px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#f8fafc', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
                     />
                     {searchQuery && (
                       <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex' }}>
