@@ -639,6 +639,7 @@ export default function StorefrontView({
               width: isDesktop ? 180 : 'clamp(72px, 20vw, 100px)',
               flexShrink: 0,
               overflowY: 'auto',
+              overscrollBehavior: 'contain',
               height: '100%',
               borderRight: '1px solid #f1f5f9',
               background: '#fafafa',
@@ -676,7 +677,7 @@ export default function StorefrontView({
               id="split-right-panel"
               ref={splitRightRef}
               className="sf-no-scrollbar"
-              style={{ flex: 1, height: '100%', overflowY: 'auto', paddingBottom: 80 }}
+              style={{ flex: 1, height: '100%', overflowY: 'auto', overscrollBehavior: 'contain', paddingBottom: 80 }}
             >
               {/* Special Deals section */}
               {hasFeatured && (
