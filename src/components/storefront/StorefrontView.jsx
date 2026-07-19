@@ -652,7 +652,7 @@ export default function StorefrontView({
               id="split-right-panel"
               ref={splitRightRef}
               className="sf-no-scrollbar"
-              style={{ flex: 1, paddingBottom: 80 }}
+              style={{ flex: 1, height: '100%', overflowY: 'auto', paddingBottom: 80 }}
             >
               {/* Special Deals section */}
               {hasFeatured && (
