@@ -567,8 +567,8 @@ export default function StorefrontView({
               flexShrink: 0,
               overflowY: 'auto',
               position: previewMode ? 'static' : 'sticky',
-              top: previewMode ? undefined : headerHeight + splitSearchBarHeight,
-              height: previewMode ? '100%' : `calc(100vh - ${headerHeight + splitSearchBarHeight}px)`,
+              top: previewMode ? undefined : headerHeight,
+              height: previewMode ? '100%' : `calc(100vh - ${headerHeight}px)`,
               borderRight: '1px solid #f1f5f9',
               background: '#fafafa',
             }}>
