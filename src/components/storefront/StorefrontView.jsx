@@ -421,8 +421,22 @@ export default function StorefrontView({
   // Intersection observer for active category tracking
   useEffect(() => {
     if (productLayout !== 'split') return;
-    const root = previewMode ? splitRightRef.current : null;
-    if (previewMode && !root) return;
+    let root = null;
+    if (previewMode) {
+      // Preview scrolls its outer canvas/mockup container, not the document
+      // — splitRightRef no longer scrolls on its own (see the floating-search
+      // effect above for the same reasoning), so the observer's root needs to
+      // be that same scrollable ancestor instead.
+      let el = rootRef.current?.parentElement;
+      let depth = 0;
+      while (el && depth < 8) {
+        const cs = window.getComputedStyle(el);
+        if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') { root = el; break; }
+        el = el.parentElement;
+        depth++;
+      }
+      if (!root) return;
+    }
     const observer = new IntersectionObserver(
       (entries) => {
         const intersecting = entries.filter(e => e.isIntersecting)
