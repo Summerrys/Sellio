@@ -688,7 +688,7 @@ export default function StorefrontView({
                 </div>
               )}
               {categoriesWithProducts.map(cat => {
-                const catProducts = products.filter(p => p.category_id === cat.id && !p.is_featured);
+                const catProducts = products.filter(p => p.category_id === cat.id);
                 if (!catProducts.length) return null;
                 return (
                   <div
