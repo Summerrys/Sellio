@@ -281,6 +281,18 @@ export default function StorefrontView({
     return () => ro.disconnect();
   }, []);
 
+  const splitSearchBarRef = useRef(null);
+  const [splitSearchBarHeight, setSplitSearchBarHeight] = useState(0);
+  useEffect(() => {
+    if (!splitSearchBarRef.current) { setSplitSearchBarHeight(0); return; }
+    const el = splitSearchBarRef.current;
+    const update = () => setSplitSearchBarHeight(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [previewMode, searchOpen]);
+
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedVariants, setSelectedVariants] = useState({});
   const [itemNotes, setItemNotes] = useState('');
@@ -510,7 +522,7 @@ export default function StorefrontView({
         ) : productLayout === 'split' ? (
           <>
           {!previewMode && (
-            <div style={{ position: 'sticky', top: headerHeight, zIndex: 45, background: 'white' }}>
+            <div ref={splitSearchBarRef} style={{ position: 'sticky', top: headerHeight, zIndex: 45, background: 'white' }}>
               <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 14px' }}>
                 <button
                   onClick={() => setSearchOpen(v => !v)}
@@ -546,12 +558,17 @@ export default function StorefrontView({
             </div>
           )}
           <div style={{ display: 'flex', height: splitPanelHeight, overflow: splitPanelOverflow }}>
-            {/* Left category sidebar */}
+            {/* Left category sidebar - sticky below the header+search bar on
+                live/desktop so it stays pinned and visible as the now-
+                naturally-flowing content scrolls past it, matching how it
+                used to behave with its own bounded internal scroll. */}
             <div className="sf-no-scrollbar" style={{
               width: isDesktop ? 180 : 'clamp(72px, 20vw, 100px)',
               flexShrink: 0,
               overflowY: 'auto',
-              height: '100%',
+              position: previewMode ? 'static' : 'sticky',
+              top: previewMode ? undefined : headerHeight + splitSearchBarHeight,
+              height: previewMode ? '100%' : `calc(100vh - ${headerHeight + splitSearchBarHeight}px)`,
               borderRight: '1px solid #f1f5f9',
               background: '#fafafa',
             }}>
@@ -588,7 +605,10 @@ export default function StorefrontView({
               id="split-right-panel"
               ref={splitRightRef}
               className="sf-no-scrollbar"
-              style={{ flex: 1, overflowY: 'auto', height: '100%', paddingBottom: 80 }}
+              style={previewMode
+                ? { flex: 1, overflowY: 'auto', height: '100%', paddingBottom: 80 }
+                : { flex: 1, paddingBottom: 80 }
+              }
             >
               {/* Special Deals section */}
               {hasFeatured && (
