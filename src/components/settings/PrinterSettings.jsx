@@ -191,7 +191,10 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
   const handleTestPrint = async () => {
     setTestPrinting(true);
     const cfg = loadPrinterConfig(tenantId);
-    const paperSize = cfg?.paperSize || 'thermal_80';
+    // cfg (the saved printer connection) never actually stored a paperSize
+    // field anywhere in this file's save calls — the real paper-size setting
+    // lives on the tenant record (Business Profile), passed in as a prop.
+    const paperSize = receiptPaperSize || 'thermal_80';
     const activeProtocol = cfg?.protocol || protocol;
     const bytes = activeProtocol === 'tspl'
       ? buildTSPLTestReceipt(merchantName)
