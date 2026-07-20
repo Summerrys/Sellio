@@ -121,7 +121,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
       return;
     }
     setReceiptPrinting(true);
-    const bytes = buildOrderReceipt(order, currency, merchantName);
+    const bytes = buildOrderReceipt(order, currency, merchantName, tenant?.receipt_paper_size);
     try {
       if (cfg.mode === 'bluetooth' && cfg.deviceName) {
         await sendViaBluetooth(cfg.deviceName, bytes);
