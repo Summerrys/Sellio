@@ -127,7 +127,7 @@ export function buildReceipt(lines) {
 
   let bytes = [...INIT, ...CENTER];
   lines.forEach(line => {
-    const encoded = new TextEncoder().encode(line.text);
+    const encoded = encodeMixedText(line.text);
     if (line.bold) bytes.push(...BOLD_ON);
     if (line.align === 'center') bytes.push(...CENTER);
     else bytes.push(...LEFT);
