@@ -22,7 +22,7 @@ const getRSSILabel = (rssi) => {
   return '▮░░░ Weak';
 };
 
-export default function PrinterSettings({ tenantId, merchantName }) {
+export default function PrinterSettings({ tenantId, merchantName, receiptPaperSize }) {
   const [mode, setMode] = useState('bluetooth');
   const [btDevice, setBtDevice] = useState(null);
 
