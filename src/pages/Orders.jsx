@@ -97,7 +97,7 @@ function printReceipt(order, currency, merchantName) {
 }
 
 function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel, tenantId, onStatusUpdate, onMarkPaid, onOrderUpdated, tourTag = false }) {
-  const { hasPermission } = useTenant();
+  const { hasPermission, tenant } = useTenant();
   const canEditOrders = hasPermission('orders.edit');
   const canCancelOrders = hasPermission('orders.cancel');
   const [showEditOrder, setShowEditOrder] = useState(false);
