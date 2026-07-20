@@ -26,6 +26,91 @@ export function getCachedBtDevice() {
   return window.__sellioBtDevice || null;
 }
 
+// --- GBK encoding for Chinese-clone ESC/POS printers ---
+// The BLE printer chipsets this app targets (XPrinter/GOOJPRT and similar,
+// see BLE_PRINTER_PROFILES above) almost universally use the legacy GBK/
+// GB18030 codepage for their built-in Chinese font, entered via the ESC/POS
+// "FS &" Kanji-mode command — not UTF-8. Sending UTF-8 bytes (which is all
+// TextEncoder can ever produce) makes the printer misinterpret them as GBK,
+// producing garbled characters. Rather than hand-transcribing a GBK mapping
+// table (error-prone and unverifiable without the physical printer), the
+// Unicode→GBK reverse map is built at runtime from the browser's own
+// standards-compliant TextDecoder('gbk') — every modern browser, including
+// iOS Safari, ships one as a baseline Encoding Standard requirement — so
+// this is exactly as accurate as the browser's built-in decoder, with zero
+// embedded data to get wrong.
+let _gbkEncodeMap = null;
+function getGbkEncodeMap() {
+  if (_gbkEncodeMap) return _gbkEncodeMap;
+  const map = new Map();
+  const decoder = new TextDecoder('gbk');
+  for (let lead = 0x81; lead <= 0xFE; lead++) {
+    for (let trail = 0x40; trail <= 0xFE; trail++) {
+      if (trail === 0x7F) continue; // not a valid GBK trail byte
+      const decoded = decoder.decode(new Uint8Array([lead, trail]));
+      // A valid mapping decodes to exactly one character, not the U+FFFD
+      // replacement character Decoder uses for unmapped/invalid sequences.
+      if (decoded.length === 1 && decoded.charCodeAt(0) !== 0xFFFD && !map.has(decoded)) {
+        map.set(decoded, [lead, trail]);
+      }
+    }
+  }
+  _gbkEncodeMap = map;
+  return map;
+}
+
+// Encodes text for the printer: plain ASCII passes through as single bytes;
+// anything else is looked up in the GBK map and wrapped in the printer's
+// Kanji-mode toggle (FS & ... FS .) so it's interpreted correctly instead of
+// as raw UTF-8. Characters with no GBK equivalent fall back to '?' rather
+// than being silently mis-rendered as a different, wrong character.
+function encodeMixedText(text) {
+  const FS_KANJI_ON = [0x1C, 0x26];
+  const FS_KANJI_OFF = [0x1C, 0x2E];
+  const gbkMap = getGbkEncodeMap();
+  const bytes = [];
+  let mode = 'ascii'; // 'ascii' | 'kanji'
+  for (const ch of String(text)) {
+    const code = ch.codePointAt(0);
+    if (code < 0x80) {
+      if (mode === 'kanji') { bytes.push(...FS_KANJI_OFF); mode = 'ascii'; }
+      bytes.push(code);
+    } else {
+      if (mode === 'ascii') { bytes.push(...FS_KANJI_ON); mode = 'kanji'; }
+      const gbkBytes = gbkMap.get(ch);
+      if (gbkBytes) bytes.push(...gbkBytes);
+      else bytes.push(0x3F, 0x3F); // '??' placeholder, keeps column alignment close
+    }
+  }
+  if (mode === 'kanji') bytes.push(...FS_KANJI_OFF);
+  return bytes;
+}
+
+// Display width in printer columns: CJK/GBK characters are double-width,
+// everything else is single-width. This is what padLine/itemLine below use
+// to right-align prices correctly regardless of how much Chinese text is in
+// the item name — String.length would undercount CJK width and misalign.
+function displayWidth(text) {
+  let w = 0;
+  for (const ch of String(text)) w += ch.codePointAt(0) < 0x80 ? 1 : 2;
+  return w;
+}
+
+function padLine(left, right, width) {
+  const gap = Math.max(1, width - displayWidth(left) - displayWidth(right));
+  return left + ' '.repeat(gap) + right;
+}
+
+// Puts name + price on one right-aligned line when they fit; when they
+// don't (long and/or CJK-heavy item names on a narrow 58mm roll), the price
+// gets its own right-aligned line below instead of colliding into whatever
+// follows — the bug seen on real 80mm prints where the price wrapped mid-
+// line and overlapped the next separator.
+function itemLine(left, right, width) {
+  if (displayWidth(left) + displayWidth(right) + 1 <= width) return [padLine(left, right, width)];
+  return [left, padLine('', right, width)];
+}
+
 export function buildReceipt(lines) {
   const ESC = 0x1B, GS = 0x1D;
   const INIT = [ESC, 0x40];
