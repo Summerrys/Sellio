@@ -138,27 +138,44 @@ export function buildReceipt(lines) {
   return new Uint8Array(bytes);
 }
 
-export function buildOrderReceipt(order, currency, merchantName) {
+// Mirrors the on-screen "Receipt Preview" sheet in Orders.jsx field-for-field
+// (same section order, same Subtotal/Tax/TOTAL conditions, same footer text)
+// so what prints matches what the merchant already approved on screen. Also
+// now paper-width aware like buildTestReceipt already was — previously this
+// ignored paperSize entirely and always used a hardcoded 32-char separator,
+// which is also part of why long/CJK item lines were overflowing and
+// colliding with the next line on an 80mm roll.
+export function buildOrderReceipt(order, currency, merchantName, paperSize = 'thermal_80') {
+  const wide = paperSize === 'thermal_80' || paperSize === 'a4';
+  const width = wide ? 48 : 32;
+  const sep = '-'.repeat(width);
   const lines = [
     { text: merchantName || 'Receipt', bold: true, align: 'center' },
-    { text: new Date(order.created_date || Date.now()).toLocaleString(), align: 'center' },
-    { text: '--------------------------------', align: 'center' },
+    { text: new Date(order.created_date || Date.now()).toLocaleString('en-SG', { dateStyle: 'medium', timeStyle: 'short' }), align: 'center' },
+    { text: sep, align: 'center' },
     { text: `Order: #${order.order_number || order.id?.slice(-6)}`, bold: false, align: 'left' },
   ];
   if (order.table_name) lines.push({ text: `Table: ${order.table_name}`, align: 'left' });
   if (order.customer_name && order.customer_name.toLowerCase() !== 'nil') {
     lines.push({ text: `Customer: ${order.customer_name}`, align: 'left' });
   }
-  lines.push({ text: '--------------------------------', align: 'center' });
+  lines.push({ text: sep, align: 'center' });
   (order.items || []).forEach(item => {
-    const lineTotal = ((item.price || 0) * (item.quantity || 1)).toFixed(2);
-    lines.push({ text: `${item.quantity}x ${item.name || item.product_name}  ${currency} ${lineTotal}`, align: 'left' });
-    if (item.variant) lines.push({ text: `   (${item.variant})`, align: 'left' });
+    const lineTotal = ((item.price || item.unit_price || 0) * (item.quantity || 1)).toFixed(2);
+    const left = `${item.quantity}x ${item.name || item.product_name}`;
+    const right = `${currency} ${lineTotal}`;
+    itemLine(left, right, width).forEach(text => lines.push({ text, align: 'left' }));
+    if (item.variant) lines.push({ text: `  (${item.variant})`, align: 'left' });
   });
-  lines.push({ text: '--------------------------------', align: 'center' });
-  lines.push({ text: `Total: ${currency} ${parseFloat(order.total_amount || 0).toFixed(2)}`, bold: true, align: 'left' });
-  lines.push({ text: '--------------------------------', align: 'center' });
-  lines.push({ text: 'Thank you!', align: 'center' });
+  lines.push({ text: sep, align: 'center' });
+  const subtotal = parseFloat(order.subtotal || 0);
+  if (subtotal > 0) lines.push({ text: padLine('Subtotal', `${currency} ${subtotal.toFixed(2)}`, width), align: 'left' });
+  const tax = parseFloat(order.tax_amount || 0);
+  if (tax > 0) lines.push({ text: padLine('Tax', `${currency} ${tax.toFixed(2)}`, width), align: 'left' });
+  lines.push({ text: padLine('TOTAL', `${currency} ${parseFloat(order.total_amount || 0).toFixed(2)}`, width), bold: true, align: 'left' });
+  lines.push({ text: sep, align: 'center' });
+  lines.push({ text: 'Thank you for your visit!', align: 'center' });
+  lines.push({ text: 'Powered by Sellio', align: 'center' });
   return buildReceipt(lines);
 }
 
