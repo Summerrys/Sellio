@@ -90,7 +90,8 @@ function printReceipt(order, currency, merchantName) {
     <tr class="total"><td>Total</td><td style="text-align:right">${currency} ${total}</td></tr>
   </table>
   <div class="divider"></div>
-  <p class="center small">Thank you!</p>
+  <p class="center small">Thank you for your visit!</p>
+  <p class="center small" style="color:#94a3b8">Powered by Sellio</p>
   <script>window.onload=()=>window.print();<\/script>
   </body></html>`);
   win.document.close();
