@@ -570,7 +570,7 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
             </div>
 
             {/* Printer connection */}
-            <PrinterSettings tenantId={tenantId} merchantName={form.name} />
+            <PrinterSettings tenantId={tenantId} merchantName={form.name} receiptPaperSize={form.receipt_paper_size} />
           </GatedFields>
           </div>
         )}
