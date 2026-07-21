@@ -105,45 +105,41 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
         </div>
       </div>
 
-      {/* Tenant Badge */}
-      {tenant && !collapsed && (
-        <div className="mx-3 mt-4 mb-2 p-3 rounded-xl bg-slate-50 border border-slate-100">
-          <p className="text-xs font-medium text-slate-900 truncate">{tenant.name}</p>
-          {(() => {
-            const trialEnd = subscription?.current_period_end;
-            const hoursLeft = trialEnd ? Math.max(0, Math.floor((new Date(trialEnd) - new Date()) / (1000 * 60 * 60))) : null;
-            const daysLeft = hoursLeft !== null ? Math.floor(hoursLeft / 24) : null;
-            if (subscription?.status === 'trial' && hoursLeft !== null) {
-              return (
-                <div className="mt-1 flex items-center gap-1.5">
+      {/* Storefront link + business name/plan badge, merged into one card.
+          Every merchant has a storefront from the moment onboarding finishes,
+          even before they've touched Design Store, so this is here from day
+          one to make it easy to grab and send out for early promotion. */}
+      {storefrontUrl && tenant && !collapsed && (
+        <div className="mx-3 mt-4 mb-2 p-3 rounded-xl border border-slate-100" style={{ background: 'var(--color-primary-gradient)', opacity: 0.97 }}>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <Store className="w-3.5 h-3.5 text-white flex-shrink-0" />
+            <p className="text-xs font-semibold text-white truncate flex-1">{tenant.name}</p>
+            {(() => {
+              const trialEnd = subscription?.current_period_end;
+              const hoursLeft = trialEnd ? Math.max(0, Math.floor((new Date(trialEnd) - new Date()) / (1000 * 60 * 60))) : null;
+              const daysLeft = hoursLeft !== null ? Math.floor(hoursLeft / 24) : null;
+              if (subscription?.status === 'trial' && hoursLeft !== null) {
+                return (
                   <span
-                    className="text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1"
+                    className="flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1"
                     style={{
                       background: hoursLeft <= 24
                         ? 'linear-gradient(90deg, #ef4444, #dc2626)'
-                        : 'var(--color-primary-gradient)',
+                        : 'rgba(255,255,255,0.25)',
                       color: '#fff',
                     }}
                   >
-                    <Clock className="w-3 h-3" />
-                    {hoursLeft <= 24 ? `${hoursLeft}h left` : `Trial: ${daysLeft}d left`}
+                    <Clock className="w-2.5 h-2.5" />
+                    {hoursLeft <= 24 ? `${hoursLeft}h left` : `${daysLeft}d left`}
                   </span>
-                </div>
+                );
+              }
+              return (
+                <span className="flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/25 text-white capitalize">
+                  {subscription?.tier || tenant.plan || 'Free'}
+                </span>
               );
-            }
-            return <span className="text-xs text-slate-400 capitalize">{subscription?.tier || tenant.plan || 'Free'} Plan</span>;
-          })()}
-        </div>
-      )}
-
-      {/* Storefront link - every merchant has one from the moment onboarding
-          finishes, even before they've touched Design Store, so this is here
-          from day one to make it easy to grab and send out for early promotion. */}
-      {storefrontUrl && !collapsed && (
-        <div className="mx-3 mb-2 p-3 rounded-xl border border-slate-100" style={{ background: 'var(--color-primary-gradient)', opacity: 0.97 }}>
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <Store className="w-3.5 h-3.5 text-white" />
-            <p className="text-xs font-semibold text-white">Your Storefront</p>
+            })()}
           </div>
           <div className="flex items-center gap-1.5">
             <p className="flex-1 text-[11px] text-white/85 truncate">{storefrontUrl.replace('https://', '')}</p>
