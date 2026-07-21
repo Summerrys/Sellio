@@ -26,6 +26,11 @@ const getRSSILabel = (rssi) => {
 export default function PrinterSettings({ tenantId, merchantName, receiptPaperSize }) {
   const [mode, setMode] = useState('bluetooth');
   const [btDevice, setBtDevice] = useState(null);
+  // Off by default — this changes production behavior (a chit fires for
+  // every new order, unattended) for every merchant using this component,
+  // so it must be an explicit opt-in rather than inherit whatever the
+  // connection state happens to be.
+  const [autoPrintChit, setAutoPrintChit] = useState(false);
 
   // Scan state
   const [showScanSheet, setShowScanSheet] = useState(false);
