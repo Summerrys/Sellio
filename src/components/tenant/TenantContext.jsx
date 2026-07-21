@@ -15,6 +15,7 @@ export const ALL_PERMISSIONS = {
   'orders.create': 'Create orders',
   'orders.edit': 'Edit orders',
   'orders.cancel': 'Cancel orders',
+  'orders.print_chit': 'Print order chits',
   // Products
   'products.view': 'View products',
   'products.create': 'Create products',
