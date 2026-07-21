@@ -53,6 +53,7 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
     const cfg = loadPrinterConfig(tenantId);
     if (!cfg) return;
     setMode(cfg.mode || 'bluetooth');
+    setAutoPrintChit(!!cfg.autoPrintChit);
     if (cfg.mode === 'bluetooth' && cfg.deviceName) {
       setBtDevice({ name: cfg.deviceName, deviceId: cfg.deviceId || null });
       setProtocol(cfg.protocol || 'escpos');
