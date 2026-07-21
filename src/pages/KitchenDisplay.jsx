@@ -35,10 +35,38 @@ const NEXT_STATUS = {
 };
 
 function KDSOrderCard({ order, onBump }) {
+  const { hasPermission, tenant } = useTenant();
+  const canPrintChit = hasPermission('orders.print_chit');
+  const [chitPrinting, setChitPrinting] = useState(false);
   const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.preparing;
   const elapsed = Math.floor((Date.now() - new Date(order.created_date)) / 60000);
   const isUrgent = elapsed > 10;
   const isCritical = elapsed > 20;
+
+  const handlePrintChit = async () => {
+    const printerCfg = loadPrinterConfig(tenant?.id);
+    if (!printerCfg) {
+      toast.error('No printer connected — set one up in Settings → Printer');
+      return;
+    }
+    setChitPrinting(true);
+    const bytes = buildOrderChit(order, tenant?.name, tenant?.receipt_paper_size);
+    try {
+      if (printerCfg.mode === 'bluetooth' && printerCfg.deviceName) {
+        await sendViaBluetooth(printerCfg.deviceName, bytes);
+      } else if (printerCfg.mode === 'network') {
+        await sendViaEpsonEPos(printerCfg.ip, bytes, tenant?.name);
+      } else {
+        toast.error('No printer connected — set one up in Settings → Printer');
+        return;
+      }
+      toast.success('Chit printed ✓');
+    } catch (err) {
+      toast.error(`Print failed: ${err.message}`);
+    } finally {
+      setChitPrinting(false);
+    }
+  };
 
   return (
     <div
