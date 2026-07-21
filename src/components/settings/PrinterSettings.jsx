@@ -195,6 +195,13 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
     }
   };
 
+  const handleToggleAutoPrint = (checked) => {
+    setAutoPrintChit(checked);
+    const cfg = loadPrinterConfig(tenantId) || {};
+    savePrinterConfig(tenantId, { ...cfg, autoPrintChit: checked });
+    toast.success(checked ? 'Auto-print enabled' : 'Auto-print disabled');
+  };
+
   const handleTestPrint = async () => {
     setTestPrinting(true);
     const cfg = loadPrinterConfig(tenantId);
