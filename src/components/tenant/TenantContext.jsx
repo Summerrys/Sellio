@@ -245,7 +245,7 @@ export const ROLE_TEMPLATES = {
       'products.view', 'products.create', 'products.edit',
       'categories.view', 'categories.create', 'categories.edit',
       'inventory.view', 'inventory.adjust',
-      'orders.view', 'orders.create', 'orders.edit',
+      'orders.view', 'orders.create', 'orders.edit', 'orders.print_chit',
       'tables.view', 'tables.edit',
       'payments.view',
       'reports.view',
@@ -257,7 +257,7 @@ export const ROLE_TEMPLATES = {
     permissions: [
       'products.view',
       'categories.view',
-      'orders.view', 'orders.create', 'orders.edit',
+      'orders.view', 'orders.create', 'orders.edit', 'orders.print_chit',
       'tables.view',
       'payments.view',
     ],
@@ -268,7 +268,7 @@ export const ROLE_TEMPLATES = {
     permissions: [
       'products.view',
       'categories.view',
-      'orders.view', 'orders.create', 'orders.edit',
+      'orders.view', 'orders.create', 'orders.edit', 'orders.print_chit',
       'tables.view', 'tables.edit',
     ],
   },
@@ -277,7 +277,7 @@ export const ROLE_TEMPLATES = {
     description: 'View and update order preparation status',
     permissions: [
       'products.view',
-      'orders.view', 'orders.edit',
+      'orders.view', 'orders.edit', 'orders.print_chit',
       'inventory.view',
     ],
   },
