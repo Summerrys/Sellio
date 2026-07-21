@@ -118,6 +118,8 @@ export function buildReceipt(lines) {
   const LEFT = [ESC, 0x61, 0x00];
   const BOLD_ON = [ESC, 0x45, 0x01];
   const BOLD_OFF = [ESC, 0x45, 0x00];
+  const SIZE_LARGE = [GS, 0x21, 0x11]; // GS ! n — double width + double height
+  const SIZE_NORMAL = [GS, 0x21, 0x00];
   // Feed 6 lines then partial cut — more universally supported than GS V 0x00
   const FEED_AND_CUT = [
     ESC, 0x64, 0x06,        // ESC d n — feed 6 lines
@@ -128,11 +130,13 @@ export function buildReceipt(lines) {
   let bytes = [...INIT, ...CENTER];
   lines.forEach(line => {
     const encoded = encodeMixedText(line.text);
+    if (line.large) bytes.push(...SIZE_LARGE);
     if (line.bold) bytes.push(...BOLD_ON);
     if (line.align === 'center') bytes.push(...CENTER);
     else bytes.push(...LEFT);
     bytes.push(...encoded, ...LF);
     if (line.bold) bytes.push(...BOLD_OFF);
+    if (line.large) bytes.push(...SIZE_NORMAL);
   });
   bytes.push(...LF, ...LF, ...FEED_AND_CUT);
   return new Uint8Array(bytes);
