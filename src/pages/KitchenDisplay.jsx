@@ -112,12 +112,24 @@ function KDSOrderCard({ order, onBump }) {
         </div>
       )}
 
-      <Button
-        onClick={() => onBump(order.id, order.status)}
-        className="w-full h-14 text-xl font-bold bg-white text-slate-900 hover:bg-slate-100"
-      >
-        {cfg.btnLabel}
-      </Button>
+      <div className="flex gap-2">
+        {canPrintChit && (
+          <Button
+            onClick={handlePrintChit}
+            disabled={chitPrinting}
+            className="h-14 w-14 flex-shrink-0 bg-white/20 hover:bg-white/30 text-white"
+            title="Print kitchen chit"
+          >
+            {chitPrinting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Printer className="w-5 h-5" />}
+          </Button>
+        )}
+        <Button
+          onClick={() => onBump(order.id, order.status)}
+          className="flex-1 h-14 text-xl font-bold bg-white text-slate-900 hover:bg-slate-100"
+        >
+          {cfg.btnLabel}
+        </Button>
+      </div>
     </div>
   );
 }
