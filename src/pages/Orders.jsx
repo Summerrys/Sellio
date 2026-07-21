@@ -276,6 +276,18 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 <Printer className="w-3.5 h-3.5" /> Receipt
               </button>
             )}
+            {canPrintChit && !isFinal && (
+              <button
+                onClick={handlePrintChit}
+                disabled={chitPrinting}
+                title="Print kitchen chit"
+                className="h-11 w-11 flex-shrink-0 flex items-center justify-center rounded-lg text-sm font-semibold transition-colors border border-slate-300 text-slate-600"
+                onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                {chitPrinting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+              </button>
+            )}
             {action && canEditOrders && (
               <button
                 data-tour="order-status-btn"
