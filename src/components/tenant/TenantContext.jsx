@@ -136,6 +136,7 @@ export const PERMISSION_GROUP_META = {
       { key: 'orders.create', label: 'Create Orders' },
       { key: 'orders.edit', label: 'Update Orders' },
       { key: 'orders.cancel', label: 'Cancel Orders' },
+      { key: 'orders.print_chit', label: 'Print Order Chits' },
     ],
   },
   products: {
