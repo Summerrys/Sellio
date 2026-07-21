@@ -368,6 +368,19 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
             {testPrinting ? 'Sending...' : 'Test Print'}
           </button>
         )}
+
+        {/* Auto-print order chits — off by default; this fires a kitchen chit
+            for every new order automatically, unattended, so it only shows
+            once a printer is actually connected and stays opt-in. */}
+        {isConnected && (
+          <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mt-3">
+            <div>
+              <p className="text-sm font-medium text-slate-700">Auto-print new orders</p>
+              <p className="text-xs text-slate-400">Automatically prints a kitchen chit the instant a new order arrives — no tap required.</p>
+            </div>
+            <Switch checked={autoPrintChit} onCheckedChange={handleToggleAutoPrint} />
+          </div>
+        )}
       </div>
 
       {/* Scan bottom sheet */}
