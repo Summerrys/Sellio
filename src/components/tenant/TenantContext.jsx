@@ -67,7 +67,7 @@ export const PERMISSION_GROUPS = {
   },
   orders: {
     label: 'Orders',
-    permissions: ['orders.view','orders.create','orders.edit','orders.cancel'],
+    permissions: ['orders.view','orders.create','orders.edit','orders.cancel','orders.print_chit'],
   },
   products: {
     label: 'Products',
