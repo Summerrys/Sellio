@@ -183,6 +183,50 @@ export function buildOrderReceipt(order, currency, merchantName, paperSize = 'th
   return buildReceipt(lines);
 }
 
+// Kitchen/staff order chit — deliberately different from the customer
+// receipt above: no pricing or totals at all, large order # / table / time
+// so it reads at a glance, and item notes emphasized since that's the
+// detail staff are most likely to miss when moving fast (allergies, special
+// requests). Reuses the same buildReceipt byte-builder and GBK/width helpers
+// as the receipt, so Chinese item names print correctly here too.
+export function buildOrderChit(order, merchantName, paperSize = 'thermal_80') {
+  const wide = paperSize === 'thermal_80' || paperSize === 'a4';
+  const width = wide ? 48 : 32;
+  const sep = '-'.repeat(width);
+  const orderTypeLabel = {
+    dine_in: 'DINE IN',
+    takeaway: 'TAKEAWAY',
+    delivery: 'DELIVERY',
+    pickup: 'PICKUP',
+  }[order.type] || (order.type ? String(order.type).toUpperCase() : '');
+
+  const lines = [
+    { text: merchantName || 'Order Chit', align: 'center' },
+    { text: sep, align: 'center' },
+    { text: `#${order.order_number || order.id?.slice(-6)}`, bold: true, large: true, align: 'center' },
+  ];
+  if (order.table_name) lines.push({ text: order.table_name.toUpperCase(), bold: true, large: true, align: 'center' });
+  if (orderTypeLabel) lines.push({ text: orderTypeLabel, bold: true, align: 'center' });
+  lines.push({ text: new Date(order.created_date || Date.now()).toLocaleString('en-SG', { dateStyle: 'medium', timeStyle: 'short' }), large: true, align: 'center' });
+  lines.push({ text: sep, align: 'center' });
+
+  (order.items || []).forEach(item => {
+    lines.push({ text: `${item.quantity}x ${item.name || item.product_name}`, bold: true, align: 'left' });
+    if (item.variant) lines.push({ text: `   (${item.variant})`, align: 'left' });
+    if (item.notes) lines.push({ text: `   *** ${item.notes} ***`, bold: true, align: 'left' });
+    lines.push({ text: ' ', align: 'left' });
+  });
+
+  if (order.notes) {
+    lines.push({ text: sep, align: 'center' });
+    lines.push({ text: 'ORDER NOTE:', bold: true, align: 'left' });
+    lines.push({ text: order.notes, bold: true, align: 'left' });
+  }
+
+  lines.push({ text: sep, align: 'center' });
+  return buildReceipt(lines);
+}
+
 export function buildTestReceipt(merchantName, paperSize = 'thermal_80') {
   const wide = paperSize === 'thermal_80' || paperSize === 'a4';
   const sep = '-'.repeat(wide ? 48 : 32);
