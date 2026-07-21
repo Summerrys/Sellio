@@ -101,6 +101,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
   const { hasPermission, tenant } = useTenant();
   const canEditOrders = hasPermission('orders.edit');
   const canCancelOrders = hasPermission('orders.cancel');
+  const canPrintChit = hasPermission('orders.print_chit');
   const [showEditOrder, setShowEditOrder] = useState(false);
   const [showPaymentQR, setShowPaymentQR] = useState(false);
   const isFinal = order.status === 'completed' || order.status === 'cancelled';
@@ -113,6 +114,33 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
   const [printing, setPrinting] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptPrinting, setReceiptPrinting] = useState(false);
+  const [chitPrinting, setChitPrinting] = useState(false);
+
+  const handlePrintChit = async (e) => {
+    e?.stopPropagation();
+    const cfg = loadPrinterConfig(tenantId);
+    if (!cfg) {
+      toast.error('No printer connected — set one up in Settings → Printer');
+      return;
+    }
+    setChitPrinting(true);
+    const bytes = buildOrderChit(order, merchantName, tenant?.receipt_paper_size);
+    try {
+      if (cfg.mode === 'bluetooth' && cfg.deviceName) {
+        await sendViaBluetooth(cfg.deviceName, bytes);
+      } else if (cfg.mode === 'network') {
+        await sendViaEpsonEPos(cfg.ip, bytes, merchantName);
+      } else {
+        toast.error('No printer connected — set one up in Settings → Printer');
+        return;
+      }
+      toast.success('Chit printed ✓');
+    } catch (err) {
+      toast.error(`Print failed: ${err.message}`);
+    } finally {
+      setChitPrinting(false);
+    }
+  };
 
   const handleActualPrint = async () => {
     const cfg = loadPrinterConfig(tenantId);
