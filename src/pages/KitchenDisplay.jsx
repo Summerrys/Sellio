@@ -456,6 +456,21 @@ export default function KitchenDisplay() {
           (payload) => {
             console.log('Kitchen Display real-time update:', payload.eventType, payload.new?.order_number);
             fetchOrders();
+
+            // Auto-print a kitchen chit for new orders — opt-in (see
+            // PrinterSettings), off by default. Same INSERT + pending signal
+            // the sound alert below already listens for.
+            if (payload.eventType === 'INSERT' && payload.new?.status === 'pending') {
+              const printerCfg = loadPrinterConfig(tenantId);
+              if (printerCfg?.autoPrintChit && (printerCfg.mode === 'bluetooth' || printerCfg.mode === 'network')) {
+                const chitBytes = buildOrderChit(payload.new, tenant?.name, tenant?.receipt_paper_size);
+                (printerCfg.mode === 'bluetooth'
+                  ? sendViaBluetooth(printerCfg.deviceName, chitBytes)
+                  : sendViaEpsonEPos(printerCfg.ip, chitBytes, tenant?.name)
+                ).catch(err => console.error('Auto-print chit failed:', err));
+              }
+            }
+
             if (payload.eventType === 'INSERT' && soundEnabledRef.current) {
               playSound('new');
               startRepeatAlerts(() => ordersRef.current.some(o => o.status === 'pending'), 'new');
