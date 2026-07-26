@@ -82,6 +82,17 @@
     @apply border-border outline-ring/50;
   }
 
+  html, body {
+    /* Safety net against horizontal overflow (e.g. a flex child somewhere
+       missing min-width:0 and forcing the page wider than the viewport).
+       Safe to put here specifically: html/body are already the outermost
+       scrolling reference, so this doesn't introduce a new intermediate
+       scroll container between them and any position:sticky descendant the
+       way applying it to an inner wrapper div does — that's what broke the
+       storefront's sticky header/sidebar last time this was attempted. */
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-background text-foreground;
   }
