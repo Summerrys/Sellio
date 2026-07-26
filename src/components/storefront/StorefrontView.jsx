@@ -481,7 +481,7 @@ export default function StorefrontView({
           setActiveCategory(intersecting[0].target.dataset.categoryId);
         }
       },
-      { root, threshold: 0.1, rootMargin: `-${headerHeight}px 0px -60% 0px` }
+      { root, threshold: 0.1, rootMargin: `-${marqueeHeight + headerHeight}px 0px -60% 0px` }
     );
     Object.values(categoryRefs.current).forEach(ref => { if (ref) observer.observe(ref); });
     return () => observer.disconnect();
@@ -764,7 +764,7 @@ export default function StorefrontView({
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             showStickyBar={showFloatingSearch}
-            headerHeight={headerHeight}
+            headerHeight={marqueeHeight + headerHeight}
           />
         )}
 
