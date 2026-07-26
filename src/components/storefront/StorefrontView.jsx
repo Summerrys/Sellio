@@ -582,7 +582,7 @@ export default function StorefrontView({
           </div>
         ) : productLayout === 'split' ? (
           <>
-          {(isPinned || searchOpen) && (
+          {(showFloatingSearch || searchOpen) && (
             <div style={{ position: 'fixed', top: headerHeight + 10, right: 14, zIndex: 45 }}>
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <button
@@ -619,26 +619,27 @@ export default function StorefrontView({
               )}
             </div>
           )}
-          <div ref={sentinelRef} style={{ height: 1 }} />
-          <div style={{ display: 'flex', position: 'sticky', top: headerHeight, height: isPinned ? splitPanelHeight : 'auto', overflow: isPinned ? splitPanelOverflow : 'visible' }}>
-            {/* Left category sidebar - the whole row is now the sticky element
-                (pins below the header once scrolled up to it), so the sidebar
-                itself just needs to fill that row's height; its own overflowY
-                lets a long category list scroll independently if needed. */}
+          {/* Plain normal-flow row — no sticky/bounded-height/overflow on the
+              row itself. The WHOLE PAGE scrolls normally throughout (or the
+              preview canvas, in Design Store); only the sidebar below sticks,
+              via native CSS position:sticky, exactly like any ordinary sticky
+              sidebar would. This replaces a much more complex "pin the whole
+              row + scroll an inner panel" design that fought the browser's
+              own scroll physics — it made scrolling feel unresponsive on real
+              touch devices and broke native pull-to-refresh. */}
+          <div style={{ display: 'flex' }}>
+            {/* Left category sidebar — sticks below the header once scrolled
+                up to it (native CSS sticky handles the timing automatically:
+                it only engages once the banner above has fully scrolled past,
+                exactly matching "locks below the header once the storefront
+                banner is gone"). No bounded height or internal scroll — it
+                just sizes to its own content. */}
             <div className="sf-no-scrollbar" style={{
               width: isDesktop ? 180 : 'clamp(72px, 20vw, 100px)',
               flexShrink: 0,
-              // Explicitly gated on isPinned rather than relying on this flex
-              // item's height:100% silently resolving to nothing when the row
-              // is height:'auto' (not pinned) — percentage-height-of-auto-
-              // height on a flex item is ambiguous enough across browsers that
-              // it was creating an unintended nested scroll region even before
-              // pinning, which is what made scrolling feel broken/unresponsive
-              // on real touch devices (Take Order and the customer QR-scan
-              // storefront both hit this, since both render this component).
-              overflowY: isPinned ? 'auto' : 'visible',
-              overscrollBehavior: isPinned ? 'contain' : 'auto',
-              height: isPinned ? '100%' : 'auto',
+              position: 'sticky',
+              top: headerHeight,
+              alignSelf: 'flex-start',
               borderRight: '1px solid #f1f5f9',
               background: '#fafafa',
             }}>
@@ -670,23 +671,18 @@ export default function StorefrontView({
               )}
             </div>
 
-            {/* Right product panel */}
+            {/* Right product panel — plain normal-flow content, scrolls with
+                the rest of the page all the way to the footer. */}
             <div
               id="split-right-panel"
               ref={splitRightRef}
               className="sf-no-scrollbar"
-              style={{
-                flex: 1,
-                height: isPinned ? '100%' : 'auto',
-                overflowY: isPinned ? 'auto' : 'visible',
-                overscrollBehavior: isPinned ? 'contain' : 'auto',
-                paddingBottom: 80,
-              }}
+              style={{ flex: 1, paddingBottom: 80 }}
             >
               {/* Special Deals section */}
               {hasFeatured && (
                 <div ref={el => categoryRefs.current['__deals__'] = el} data-category-id="__deals__">
-                  <p style={{ fontSize: 13, fontWeight: 700, padding: '12px 14px 6px', color: '#1e293b', margin: 0, position: 'sticky', top: 0, background: 'white', zIndex: 1, borderBottom: '1px solid #f1f5f9' }}>{t('todaysPicks')} ⭐</p>
+                  <p style={{ fontSize: 13, fontWeight: 700, padding: '12px 14px 6px', color: '#1e293b', margin: 0, background: 'white', borderBottom: '1px solid #f1f5f9' }}>{t('todaysPicks')} ⭐</p>
                   <div style={{ padding: '4px 10px' }}>
                     {featuredProducts.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={handleAddToCart} onProductClick={handleProductClick} featured={true} contentMap={contentMap} isDesktop={isDesktop} />)}
                   </div>
