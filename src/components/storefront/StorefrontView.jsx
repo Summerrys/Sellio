@@ -267,31 +267,6 @@ export default function StorefrontView({
   const splitRightRef = useRef(null);
   const rootRef = useRef(null);
 
-  // Height available for the sticky Split panel in preview mode. 100vh (used
-  // live) is the real browser viewport, meaningless inside the small preview
-  // mockup frame, so measure the actual scrollable ancestor that
-  // StorefrontDesigner wraps us in instead — the mobile canvas or the desktop
-  // phone mockup, whichever is active.
-  const [previewFrameHeight, setPreviewFrameHeight] = useState(0);
-  useEffect(() => {
-    if (!previewMode) return;
-    let el = rootRef.current?.parentElement;
-    let depth = 0;
-    let found = null;
-    while (el && depth < 8) {
-      const cs = window.getComputedStyle(el);
-      if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') { found = el; break; }
-      el = el.parentElement;
-      depth++;
-    }
-    if (!found) return;
-    const update = () => setPreviewFrameHeight(found.clientHeight);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(found);
-    return () => ro.disconnect();
-  }, [previewMode]);
-
   const headerRef = useRef(null);
   const [headerHeight, setHeaderHeight] = useState(84);
   // ResizeObserver instead of a naive every-render measurement - reacts
