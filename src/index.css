@@ -82,17 +82,6 @@
     @apply border-border outline-ring/50;
   }
 
-  html {
-    /* iOS Safari's rubber-band bounce is a property of whichever element is
-       actually doing the top-level document scroll — setting this only on
-       body doesn't reliably suppress it in Safari, needs to be on html too.
-       Without this, overscrolling the whole page detaches sticky headers
-       (revealing blank space toward the status bar) and flashes footers
-       into view at the bottom, independent of any per-panel scroll fixes
-       (e.g. the Split storefront layout's own overscroll containment). */
-    overscroll-behavior: none;
-  }
-
   body {
     @apply bg-background text-foreground;
     overscroll-behavior: none;
