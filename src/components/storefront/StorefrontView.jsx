@@ -536,7 +536,7 @@ export default function StorefrontView({
       `}</style>
 
       {/* ── STICKY HEADER ── */}
-      <PromoMarquee messages={promoMessages} primaryColor={primaryColor} />
+      <PromoMarquee ref={marqueeRef} messages={promoMessages} primaryColor={primaryColor} />
 
       <StorefrontHeader
         ref={headerRef}
