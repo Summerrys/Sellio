@@ -178,11 +178,12 @@ function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY })
 // the old static headline/tagline text used to be. Messages are joined into
 // one continuous string with a separator and duplicated once so the loop
 // wraps seamlessly with no visible gap or jump.
-function PromoMarquee({ messages, primaryColor }) {
+const PromoMarquee = forwardRef(function PromoMarquee({ messages, primaryColor }, ref) {
   if (!messages || messages.length === 0) return null;
   const joined = messages.join('   •   ');
   return (
-    <div style={{
+    <div ref={ref} style={{
+      position: 'sticky', top: 0, zIndex: 51,
       background: primaryColor, overflow: 'hidden', padding: '7px 0', whiteSpace: 'nowrap',
     }}>
       <style>{`
