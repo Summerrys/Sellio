@@ -434,13 +434,26 @@ export default function StorefrontView({
   // Intersection observer for active category tracking
   useEffect(() => {
     if (productLayout !== 'split') return;
-    // splitRightRef is now the scrolling container in both modes (see the
-    // sticky Split panel setup below), so it's the observer root either way
-    // — no more headerHeight-based rootMargin offset needed, since the root
-    // element's own top edge is already where content starts, with no header
-    // overlapping into it the way the page viewport used to.
-    const root = splitRightRef.current;
-    if (!root) return;
+    // The page (or, in preview, the preview canvas) is the real scrolling
+    // container again now that Split scrolls as normal in-flow content —
+    // root:null means "the browser viewport" which is correct for live, but
+    // in preview the viewport isn't the actual scrolling frame, so fall back
+    // to the same ancestor-walk used elsewhere for preview. The header still
+    // covers the top portion of that viewport, so rootMargin needs the
+    // headerHeight inset back (unlike when the old design used
+    // splitRightRef as an self-contained root with no header overlap).
+    let root = null;
+    if (previewMode) {
+      let el = rootRef.current?.parentElement;
+      let depth = 0;
+      while (el && depth < 8) {
+        const cs = window.getComputedStyle(el);
+        if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') { root = el; break; }
+        el = el.parentElement;
+        depth++;
+      }
+      if (!root) return;
+    }
     const observer = new IntersectionObserver(
       (entries) => {
         const intersecting = entries.filter(e => e.isIntersecting)
@@ -449,7 +462,7 @@ export default function StorefrontView({
           setActiveCategory(intersecting[0].target.dataset.categoryId);
         }
       },
-      { root, threshold: 0.1, rootMargin: '0px 0px -60% 0px' }
+      { root, threshold: 0.1, rootMargin: `-${headerHeight}px 0px -60% 0px` }
     );
     Object.values(categoryRefs.current).forEach(ref => { if (ref) observer.observe(ref); });
     return () => observer.disconnect();
