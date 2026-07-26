@@ -331,37 +331,39 @@ export default function StorefrontView({
     };
   }, []);
 
-  const sentinelRef = useRef(null);
-  const [isPinned, setIsPinned] = useState(false);
+  // Floating search button visibility — simple scroll-position threshold.
+  // (Split used to derive this from a JS "is the card pinned" state tied to
+  // a whole custom scroll architecture; that architecture caused real
+  // problems — unresponsive/unnatural scrolling and broken pull-to-refresh
+  // — so Split now scrolls as plain normal page content with the sidebar
+  // simply using native CSS position:sticky, same as any ordinary sticky
+  // sidebar. This only needs to know the scroll position to decide whether
+  // to show the button.)
+  const [showFloatingSearch, setShowFloatingSearch] = useState(false);
   useEffect(() => {
-    // Detects the exact moment the Split card's top edge reaches the bottom
-    // of the header (i.e. the moment position:sticky below actually engages)
-    // via a 1px sentinel placed right at the card's top edge. Before that
-    // moment the card is still normal in-flow content, so the whole page (or
-    // preview canvas) scrolls through it like anything else; only once
-    // pinned does the card's height get bounded and its inner panel take
-    // over scrolling — this also drives the floating search button.
-    if (productLayout !== 'split') { setIsPinned(false); return; }
-    if (!sentinelRef.current) return;
-    let root = null;
+    if (productLayout !== 'split') return;
+    let target = window;
     if (previewMode) {
       let el = rootRef.current?.parentElement;
       let depth = 0;
+      let found = null;
       while (el && depth < 8) {
         const cs = window.getComputedStyle(el);
-        if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') { root = el; break; }
+        if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') { found = el; break; }
         el = el.parentElement;
         depth++;
       }
-      if (!root) return;
+      if (!found) return;
+      target = found;
     }
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsPinned(!entry.isIntersecting),
-      { root, rootMargin: `-${headerHeight}px 0px 0px 0px`, threshold: 0 }
-    );
-    observer.observe(sentinelRef.current);
-    return () => observer.disconnect();
-  }, [productLayout, previewMode, headerHeight]);
+    const handleScroll = () => {
+      const y = target === window ? window.scrollY : target.scrollTop;
+      setShowFloatingSearch(y > 180);
+    };
+    handleScroll();
+    target.addEventListener('scroll', handleScroll, { passive: true });
+    return () => target.removeEventListener('scroll', handleScroll);
+  }, [productLayout, previewMode]);
 
   const featuredProducts = products.filter(p => p.is_featured === true);
   const hasFeatured = featuredProducts.length > 0;
