@@ -729,7 +729,7 @@ export default function StorefrontView({
             setSearchOpen={setSearchOpen}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
-            showStickyBar={isPinned}
+            showStickyBar={showFloatingSearch}
             headerHeight={headerHeight}
           />
         )}
