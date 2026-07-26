@@ -62,7 +62,7 @@ function hexToRgba(hex, alpha) {
 }
 
 // ── Sticky header bar ────────────────────────────────────────────────────────
-const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHistoryClick, showBackButton = false, isDesktop = false, searchOpen, setSearchOpen, searchQuery, setSearchQuery }, ref) {
+const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHistoryClick, showBackButton = false, isDesktop = false, searchOpen, setSearchOpen, searchQuery, setSearchQuery, stickyTop = 0 }, ref) {
   const branchName = tenant?.settings?.branch_name;
   const address = tenant?.address || '';
   const truncatedAddress = address.length > 25 ? address.slice(0, 25) + '…' : address;
