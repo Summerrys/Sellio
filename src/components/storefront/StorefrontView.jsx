@@ -502,12 +502,14 @@ export default function StorefrontView({
       position: 'relative',
       display: 'flex',
       flexDirection: 'column',
-      // Defensive safety net: if any content anywhere inside (a long
-      // product name, a flex child missing min-width:0, etc.) ever resists
-      // shrinking again, this stops it from widening the whole page and
-      // scrolling everything off to the right — exactly what just happened
-      // on real mobile devices. Clips rather than silently breaking layout.
-      overflowX: 'hidden',
+      // NOTE: overflow-x:hidden must NOT go here. Any non-visible overflow
+      // value on an ancestor of a position:sticky element breaks that
+      // element's stickiness entirely (it changes what "nearest scrolling
+      // ancestor" resolves to) — this exact line briefly broke the sticky
+      // header/banner/sidebar site-wide. The horizontal-overflow safety net
+      // lives on html/body in index.css instead, which is the real outer
+      // scroll boundary and doesn't sit between these sticky elements and
+      // the page scroll the way this wrapper div does.
     }}>
       <style>{`
         .sf-no-scrollbar::-webkit-scrollbar { display: none; }
