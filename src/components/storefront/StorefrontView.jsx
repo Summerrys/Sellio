@@ -540,6 +540,7 @@ export default function StorefrontView({
 
       <StorefrontHeader
         ref={headerRef}
+        stickyTop={marqueeHeight}
         tenant={tenant}
         primaryColor={primaryColor}
         cartCount={cartCount}
