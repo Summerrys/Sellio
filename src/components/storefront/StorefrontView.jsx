@@ -984,6 +984,8 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
             <p style={{ color: '#94a3b8', fontSize: 14 }}>No products found</p>
           </div>
         )}
+        </>
+        )}
       </div>
     </>
   );
