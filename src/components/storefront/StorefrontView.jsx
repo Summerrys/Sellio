@@ -664,12 +664,18 @@ export default function StorefrontView({
             </div>
 
             {/* Right product panel — plain normal-flow content, scrolls with
-                the rest of the page all the way to the footer. */}
+                the rest of the page all the way to the footer. minWidth: 0
+                is required here: flex items default to min-width:auto, which
+                refuses to shrink below the content's natural width — if any
+                product name/description doesn't wrap the way expected, that
+                silently forces this whole row (and the whole page) wider
+                than the viewport, causing exactly the horizontal overflow
+                that was cutting off the sidebar and header text on mobile. */}
             <div
               id="split-right-panel"
               ref={splitRightRef}
               className="sf-no-scrollbar"
-              style={{ flex: 1, paddingBottom: 80 }}
+              style={{ flex: 1, minWidth: 0, paddingBottom: 80 }}
             >
               {/* Special Deals section */}
               {hasFeatured && (
