@@ -603,7 +603,7 @@ export default function StorefrontView({
         ) : productLayout === 'split' ? (
           <>
           {(showFloatingSearch || searchOpen) && (
-            <div style={{ position: 'fixed', top: headerHeight + 10, right: 14, zIndex: 45 }}>
+            <div style={{ position: 'fixed', top: marqueeHeight + headerHeight + 10, right: 14, zIndex: 45 }}>
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <button
                   onClick={() => setSearchOpen(v => !v)}
