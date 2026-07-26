@@ -582,26 +582,18 @@ export default function StorefrontView({
         zIndex: 2,
       }}>
 
-        {searchActive ? (
-          <div style={{ padding: '16px 16px 40px' }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '4px 0 12px' }}>
-              {searchedProducts.length} result{searchedProducts.length === 1 ? '' : 's'} for "{searchQuery.trim()}"
-            </p>
-            {searchedProducts.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '48px 16px' }}>
-                <p style={{ fontSize: 32, margin: '0 0 12px' }}>🔍</p>
-                <p style={{ color: '#94a3b8', fontSize: 14 }}>No products match "{searchQuery.trim()}"</p>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isDesktop ? (isLandscape ? 4 : 3) : 2}, 1fr)`, gap: 10 }}>
-                {searchedProducts.map(product => (
-                  <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={handleAddToCart} onProductClick={handleProductClick} contentMap={contentMap} />
-                ))}
-              </div>
-            )}
-          </div>
-        ) : productLayout === 'split' ? (
+        {productLayout === 'split' ? (
           <>
+          {/* Floating search button + popup input — now hoisted OUTSIDE the
+              searchActive check entirely (it used to live only in the "not
+              searching yet" branch below, which meant the instant a query
+              existed and searchActive became true, this whole block —
+              including the input the user was actively typing into —
+              unmounted and got replaced by the results view below, which had
+              no input at all. That's exactly why search stopped working
+              after one character: the DOM input the user was typing into
+              was destroyed after the first keystroke. Now it persists across
+              that transition. */}
           {(showFloatingSearch || searchOpen) && (
             <div style={{ position: 'fixed', top: marqueeHeight + headerHeight + 10, right: 14, zIndex: 45 }}>
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -639,6 +631,27 @@ export default function StorefrontView({
               )}
             </div>
           )}
+
+          {searchActive ? (
+            <div style={{ padding: '16px 16px 40px' }}>
+              <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '4px 0 12px' }}>
+                {searchedProducts.length} result{searchedProducts.length === 1 ? '' : 's'} for "{searchQuery.trim()}"
+              </p>
+              {searchedProducts.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '48px 16px' }}>
+                  <p style={{ fontSize: 32, margin: '0 0 12px' }}>🔍</p>
+                  <p style={{ color: '#94a3b8', fontSize: 14 }}>No products match "{searchQuery.trim()}"</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isDesktop ? (isLandscape ? 4 : 3) : 2}, 1fr)`, gap: 10 }}>
+                  {searchedProducts.map(product => (
+                    <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={handleAddToCart} onProductClick={handleProductClick} contentMap={contentMap} />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+          <>
           {/* Plain normal-flow row — no sticky/bounded-height/overflow on the
               row itself. The WHOLE PAGE scrolls normally throughout (or the
               preview canvas, in Design Store); only the sidebar below sticks,
@@ -745,6 +758,8 @@ export default function StorefrontView({
             </div>
           </div>
           </>
+          )}
+          </>
         ) : (
           /* ── OTHER LAYOUTS ── */
           <NonSplitContent
@@ -763,6 +778,8 @@ export default function StorefrontView({
             setSearchOpen={setSearchOpen}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
+            searchActive={searchActive}
+            searchedProducts={searchedProducts}
             showStickyBar={showFloatingSearch}
             headerHeight={marqueeHeight + headerHeight}
           />
