@@ -922,6 +922,24 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
       </div>
 
       <div style={{ padding: '16px 16px 0' }}>
+        {searchActive ? (
+          <>
+            <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '4px 0 12px' }}>
+              {searchedProducts.length} result{searchedProducts.length === 1 ? '' : 's'} for "{searchQuery.trim()}"
+            </p>
+            {searchedProducts.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 16px' }}>
+                <p style={{ fontSize: 32, margin: '0 0 12px' }}>🔍</p>
+                <p style={{ color: '#94a3b8', fontSize: 14 }}>No products match "{searchQuery.trim()}"</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, gap: 10 }}>
+                {searchedProducts.map(product => <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}
+              </div>
+            )}
+          </>
+        ) : (
+        <>
         {storefrontConfig?.show_featured !== false && featuredProducts.length > 0 && (
           <div style={{ marginBottom: 12 }}>
             <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>
