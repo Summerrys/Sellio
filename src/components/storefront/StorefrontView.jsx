@@ -638,9 +638,17 @@ export default function StorefrontView({
             <div className="sf-no-scrollbar" style={{
               width: isDesktop ? 180 : 'clamp(72px, 20vw, 100px)',
               flexShrink: 0,
-              overflowY: 'auto',
-              overscrollBehavior: 'contain',
-              height: '100%',
+              // Explicitly gated on isPinned rather than relying on this flex
+              // item's height:100% silently resolving to nothing when the row
+              // is height:'auto' (not pinned) — percentage-height-of-auto-
+              // height on a flex item is ambiguous enough across browsers that
+              // it was creating an unintended nested scroll region even before
+              // pinning, which is what made scrolling feel broken/unresponsive
+              // on real touch devices (Take Order and the customer QR-scan
+              // storefront both hit this, since both render this component).
+              overflowY: isPinned ? 'auto' : 'visible',
+              overscrollBehavior: isPinned ? 'contain' : 'auto',
+              height: isPinned ? '100%' : 'auto',
               borderRight: '1px solid #f1f5f9',
               background: '#fafafa',
             }}>
@@ -677,7 +685,13 @@ export default function StorefrontView({
               id="split-right-panel"
               ref={splitRightRef}
               className="sf-no-scrollbar"
-              style={{ flex: 1, height: '100%', overflowY: 'auto', overscrollBehavior: 'contain', paddingBottom: 80 }}
+              style={{
+                flex: 1,
+                height: isPinned ? '100%' : 'auto',
+                overflowY: isPinned ? 'auto' : 'visible',
+                overscrollBehavior: isPinned ? 'contain' : 'auto',
+                paddingBottom: 80,
+              }}
             >
               {/* Special Deals section */}
               {hasFeatured && (
