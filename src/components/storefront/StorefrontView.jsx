@@ -282,6 +282,24 @@ export default function StorefrontView({
     return () => ro.disconnect();
   }, []);
 
+  // The promo marquee sits ABOVE the header and needs to be part of the same
+  // locked stack — "top promotion banner AND header bar locked" means both,
+  // not just the header. Measured the same way as headerHeight (rather than
+  // guessing a fixed pixel value) since its content/height can vary, and it
+  // may not render at all if there are no promo messages, in which case this
+  // correctly settles to 0 and the header just sticks at top:0 by itself.
+  const marqueeRef = useRef(null);
+  const [marqueeHeight, setMarqueeHeight] = useState(0);
+  useEffect(() => {
+    if (!marqueeRef.current) { setMarqueeHeight(0); return; }
+    const el = marqueeRef.current;
+    const update = () => setMarqueeHeight(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
