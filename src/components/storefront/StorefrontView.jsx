@@ -485,7 +485,7 @@ export default function StorefrontView({
     );
     Object.values(categoryRefs.current).forEach(ref => { if (ref) observer.observe(ref); });
     return () => observer.disconnect();
-  }, [productLayout, categories.length, products.length, previewMode, headerHeight]);
+  }, [productLayout, categories.length, products.length, previewMode, headerHeight, marqueeHeight]);
 
   const scrollToCategory = (categoryId) => {
     categoryRefs.current[categoryId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
