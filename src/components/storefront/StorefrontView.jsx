@@ -502,6 +502,12 @@ export default function StorefrontView({
       position: 'relative',
       display: 'flex',
       flexDirection: 'column',
+      // Defensive safety net: if any content anywhere inside (a long
+      // product name, a flex child missing min-width:0, etc.) ever resists
+      // shrinking again, this stops it from widening the whole page and
+      // scrolling everything off to the right — exactly what just happened
+      // on real mobile devices. Clips rather than silently breaking layout.
+      overflowX: 'hidden',
     }}>
       <style>{`
         .sf-no-scrollbar::-webkit-scrollbar { display: none; }
