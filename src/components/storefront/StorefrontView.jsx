@@ -658,7 +658,7 @@ export default function StorefrontView({
               width: isDesktop ? 180 : 'clamp(72px, 20vw, 100px)',
               flexShrink: 0,
               position: 'sticky',
-              top: headerHeight,
+              top: marqueeHeight + headerHeight,
               alignSelf: 'flex-start',
               borderRight: '1px solid #f1f5f9',
               background: '#fafafa',
