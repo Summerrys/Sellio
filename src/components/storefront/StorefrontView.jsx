@@ -196,7 +196,7 @@ const PromoMarquee = forwardRef(function PromoMarquee({ messages, primaryColor }
       </div>
     </div>
   );
-}
+});
 
 // ── Category sidebar item ────────────────────────────────────────────────────
 function CategorySidebarItem({ cat, isActive, primaryColor, onClick, contentMap = {} }) {
