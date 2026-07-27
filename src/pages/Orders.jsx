@@ -416,6 +416,19 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
         </div>
       )}
 
+      {/* Order Chit Preview Sheet — same pattern as the Receipt Preview
+          above: show staff exactly what the kitchen printout will contain
+          before committing it to paper. */}
+      {showChit && (
+        <ChitPreviewSheet
+          order={order}
+          merchantName={merchantName}
+          printing={chitPrinting}
+          onClose={() => setShowChit(false)}
+          onPrint={handlePrintChit}
+        />
+      )}
+
       {/* Payment QR Sheet — frontline staff shows this to the customer, collects
           payment, then confirms from right here rather than a separate blind
           "Mark as Paid" button with nothing guiding the actual payment step. */}
