@@ -13,6 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { ClipboardList, Bell, BellOff, Monitor, Search, Download, Printer, Loader2, QrCode } from 'lucide-react';
 import EditOrderModal from '@/components/orders/EditOrderModal';
+import ChitPreviewSheet from '@/components/orders/ChitPreviewSheet';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
 import { useProductTour } from '@/hooks/useProductTour';
 import TourGuide from '@/components/tour/TourGuide';
