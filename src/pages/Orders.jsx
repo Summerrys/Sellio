@@ -137,6 +137,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
         return;
       }
       toast.success('Chit printed ✓');
+      setShowChit(false);
     } catch (err) {
       toast.error(`Print failed: ${err.message}`);
     } finally {
