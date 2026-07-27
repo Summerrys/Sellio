@@ -83,14 +83,17 @@
   }
 
   html, body {
-    /* Safety net against horizontal overflow (e.g. a flex child somewhere
-       missing min-width:0 and forcing the page wider than the viewport).
-       Safe to put here specifically: html/body are already the outermost
-       scrolling reference, so this doesn't introduce a new intermediate
-       scroll container between them and any position:sticky descendant the
-       way applying it to an inner wrapper div does — that's what broke the
-       storefront's sticky header/sidebar last time this was attempted. */
-    overflow-x: hidden;
+    /* Safety net against horizontal overflow. MUST be `clip`, not `hidden`:
+       per spec, overflow-x:hidden with overflow-y:visible silently computes
+       overflow-y to auto — which turned body into a scroll container that
+       never actually scrolls, so every position:sticky element on the LIVE
+       storefront (which sticks relative to the document) computed against
+       that dead scroll container and never engaged. Design Store preview was
+       unaffected only because its own inner canvas is the nearer scrolling
+       ancestor there — which is exactly why preview worked while the public
+       storefront and Take Order didn't. `clip` clips identically but
+       explicitly does NOT create a scroll container. */
+    overflow-x: clip;
   }
 
   body {
