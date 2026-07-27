@@ -39,6 +39,7 @@ function KDSOrderCard({ order, onBump }) {
   const { hasPermission, tenant } = useTenant();
   const canPrintChit = hasPermission('orders.print_chit');
   const [chitPrinting, setChitPrinting] = useState(false);
+  const [showChit, setShowChit] = useState(false);
   const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.preparing;
   const elapsed = Math.floor((Date.now() - new Date(order.created_date)) / 60000);
   const isUrgent = elapsed > 10;
@@ -62,6 +63,7 @@ function KDSOrderCard({ order, onBump }) {
         return;
       }
       toast.success('Chit printed ✓');
+      setShowChit(false);
     } catch (err) {
       toast.error(`Print failed: ${err.message}`);
     } finally {
