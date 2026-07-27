@@ -550,14 +550,17 @@ export default function Orders() {
     return () => stopRepeatAlerts();
   }, []);
 
-  const playSound = (type, times = 2) => {
+  // Ring counts per the merchant spec: new order rings ONCE, urgent rings
+  // TWICE. times can still be passed explicitly, but defaults follow type.
+  const playSound = (type, times) => {
     if (!soundEnabledRef.current) return;
     try {
       const isUrgent = type === 'urgent';
+      const playCount = times ?? (isUrgent ? 2 : 1);
       if (!newOrderAudioRef.current) newOrderAudioRef.current = new Audio(NEW_ORDER_TONE_URL);
       if (!urgentAudioRef.current) urgentAudioRef.current = new Audio(URGENT_ORDER_TONE_URL);
       const el = isUrgent ? urgentAudioRef.current : newOrderAudioRef.current;
-      let playsLeft = times;
+      let playsLeft = playCount;
       el.onended = null;
       const playOnce = () => {
         playsLeft -= 1;
@@ -583,7 +586,7 @@ export default function Orders() {
     const secs = alertIntervalRef.current || 60;
     repeatIntervalRef.current = setInterval(() => {
       if (!soundEnabledRef.current) { stopRepeatAlerts(); return; }
-      if (checkFn()) playSound('urgent', 3);
+      if (checkFn()) playSound('urgent');
       else stopRepeatAlerts();
     }, secs * 1000);
   };
