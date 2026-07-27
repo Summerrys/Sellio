@@ -732,7 +732,11 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
   return (
     <>
       {/* Canvas area — uses exact same StorefrontView as live store */}
-      <div onClick={() => { if (drawerHeight >= MAX_DRAWER) snapDrawer(DRAWER_HANDLE_ONLY); }} style={{ height: canvasHeight, overflow: 'auto', background: '#f0f2f7', position: 'relative' }}>
+      {/* overscroll-behavior:contain: the canvas is an inner scroller, so on
+          iPad its rubber-band momentum would otherwise chain into (and
+          visibly drag) the page around it — the same class of bounce fixed
+          on html/body for the live store in index.css. */}
+      <div onClick={() => { if (drawerHeight >= MAX_DRAWER) snapDrawer(DRAWER_HANDLE_ONLY); }} style={{ height: canvasHeight, overflow: 'auto', background: '#f0f2f7', position: 'relative', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
         <div style={{ position: 'relative' }}>
           <StorefrontView
             previewMode={true}
@@ -1041,8 +1045,16 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'white', border: '1px solid #e2e8f0', borderRadius: 999, padding: '4px 12px', fontSize: 12, color: '#64748b', fontWeight: 500, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: 16 }}>
                 📱 Live Preview
               </div>
-              <div style={{ width: 375, flexShrink: 0, border: '8px solid #1e293b', borderRadius: 36, overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.25)' }}>
-                <div style={{ height: 500, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
+              {/* Phone mockup frame. Deliberately NO overflow:hidden on this
+                  outer frame — an extra clipping ancestor (overflow:hidden +
+                  border-radius) wrapped around a nested scroller is a known
+                  WebKit trouble spot for position:sticky, and was why the
+                  marquee/header stuck fine on the live store (window scroll)
+                  but scrolled away inside this preview. The rounded clipping
+                  now lives on the scroll container itself, which clips its
+                  own content by definition. */}
+              <div style={{ width: 375, flexShrink: 0, border: '8px solid #1e293b', borderRadius: 36, boxShadow: '0 24px 60px rgba(0,0,0,0.25)' }}>
+                <div style={{ height: 500, overflowY: 'auto', overflowX: 'hidden', position: 'relative', borderRadius: 28, overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
                   <StorefrontView
                     previewMode={true}
                     tenant={previewTenant}
