@@ -290,15 +290,26 @@ export default function StorefrontView({
   // may not render at all if there are no promo messages, in which case this
   // correctly settles to 0 and the header just sticks at top:0 by itself.
   const marqueeRef = useRef(null);
+  const marqueeRoRef = useRef(null);
   const [marqueeHeight, setMarqueeHeight] = useState(0);
-  useEffect(() => {
-    if (!marqueeRef.current) { setMarqueeHeight(0); return; }
-    const el = marqueeRef.current;
+  // Callback ref rather than a run-once useEffect measurement: in the Design
+  // Store preview the marquee mounts LATE (products arrive async, and the
+  // marquee renders nothing until there are promo messages), so an effect
+  // with [] deps captured a null ref and marqueeHeight stayed 0 forever —
+  // which pinned the header at top:0 underneath the marquee at the wrong
+  // offset. A callback ref fires exactly when the node appears/disappears,
+  // whenever in the component's life that happens. (On live this rarely
+  // mattered because Storefront.jsx mounts this component with data already
+  // loaded — preview is where it bit.)
+  const marqueeCallbackRef = useCallback((el) => {
+    marqueeRef.current = el;
+    if (marqueeRoRef.current) { marqueeRoRef.current.disconnect(); marqueeRoRef.current = null; }
+    if (!el) { setMarqueeHeight(0); return; }
     const update = () => setMarqueeHeight(el.offsetHeight);
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
-    return () => ro.disconnect();
+    marqueeRoRef.current = ro;
   }, []);
 
   const [searchOpen, setSearchOpen] = useState(false);
@@ -536,7 +547,7 @@ export default function StorefrontView({
       `}</style>
 
       {/* ── STICKY HEADER ── */}
-      <PromoMarquee ref={marqueeRef} messages={promoMessages} primaryColor={primaryColor} />
+      <PromoMarquee ref={marqueeCallbackRef} messages={promoMessages} primaryColor={primaryColor} />
 
       <StorefrontHeader
         ref={headerRef}
