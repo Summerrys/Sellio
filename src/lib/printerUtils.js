@@ -193,12 +193,15 @@ export function buildOrderChit(order, merchantName, paperSize = 'thermal_80') {
   const wide = paperSize === 'thermal_80' || paperSize === 'a4';
   const width = wide ? 48 : 32;
   const sep = '-'.repeat(width);
+  // orders rows store this as order_type (order.type was never set, so the
+  // DINE IN / TAKEAWAY line silently never printed); keep .type as fallback.
+  const orderType = order.order_type || order.type;
   const orderTypeLabel = {
     dine_in: 'DINE IN',
     takeaway: 'TAKEAWAY',
     delivery: 'DELIVERY',
     pickup: 'PICKUP',
-  }[order.type] || (order.type ? String(order.type).toUpperCase() : '');
+  }[orderType] || (orderType ? String(orderType).toUpperCase() : '');
 
   const lines = [
     { text: merchantName || 'Order Chit', align: 'center' },
