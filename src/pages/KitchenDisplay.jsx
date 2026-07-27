@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { createPageUrl } from '../utils';
 import { NEW_ORDER_TONE_URL, URGENT_ORDER_TONE_URL } from '@/lib/kdsSounds';
 import { loadPrinterConfig, buildOrderChit, sendViaBluetooth, sendViaEpsonEPos } from '@/lib/printerUtils';
+import ChitPreviewSheet from '@/components/orders/ChitPreviewSheet';
 
 function ElapsedTimer({ createdDate }) {
   const [elapsed, setElapsed] = useState(0);
