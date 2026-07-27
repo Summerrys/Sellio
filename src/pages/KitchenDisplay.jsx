@@ -118,12 +118,11 @@ function KDSOrderCard({ order, onBump }) {
       <div className="flex gap-2">
         {canPrintChit && (
           <Button
-            onClick={handlePrintChit}
-            disabled={chitPrinting}
-            className="h-14 w-14 flex-shrink-0 bg-white/20 hover:bg-white/30 text-white"
-            title="Print kitchen chit"
+            onClick={() => setShowChit(true)}
+            className="h-14 px-4 flex-shrink-0 bg-white/20 hover:bg-white/30 text-white text-base font-bold gap-2"
+            title="Print kitchen order chit"
           >
-            {chitPrinting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Printer className="w-5 h-5" />}
+            <Printer className="w-5 h-5" /> Order
           </Button>
         )}
         <Button
@@ -133,6 +132,18 @@ function KDSOrderCard({ order, onBump }) {
           {cfg.btnLabel}
         </Button>
       </div>
+
+      {/* Order Chit Preview — same shared sheet the Orders page uses, so
+          kitchen staff see exactly what will print before it prints. */}
+      {showChit && (
+        <ChitPreviewSheet
+          order={order}
+          merchantName={tenant?.name}
+          printing={chitPrinting}
+          onClose={() => setShowChit(false)}
+          onPrint={handlePrintChit}
+        />
+      )}
     </div>
   );
 }
