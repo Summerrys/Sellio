@@ -265,18 +265,19 @@ export default function KitchenDisplay() {
     }
   }, [tenantId, appUser?.order_alerts]);
 
-  // Ding plays `times` times in a row, with a short gap between each - 2 for a
-  // normal new-order/ready notification, 3 when the repeat-alert interval
-  // fires because an order has been sitting unacknowledged past the
-  // merchant's configured threshold, so the two are audibly distinguishable.
-  const playSound = (type, times = 2) => {
+  // Ring counts per the merchant spec: new order rings ONCE, urgent (an
+  // order sitting unacknowledged past the merchant's configured threshold)
+  // rings TWICE — the two remain audibly distinguishable, and each type
+  // also has its own distinct tone file.
+  const playSound = (type, times) => {
     if (!soundEnabledRef.current) return;
     try {
       const isUrgent = type === 'urgent';
+      const playCount = times ?? (isUrgent ? 2 : 1);
       if (!newOrderAudioRef.current) newOrderAudioRef.current = new Audio(NEW_ORDER_TONE_URL);
       if (!urgentAudioRef.current) urgentAudioRef.current = new Audio(URGENT_ORDER_TONE_URL);
       const el = isUrgent ? urgentAudioRef.current : newOrderAudioRef.current;
-      let playsLeft = times;
+      let playsLeft = playCount;
       el.onended = null;
       const playOnce = () => {
         playsLeft -= 1;
@@ -302,10 +303,7 @@ export default function KitchenDisplay() {
     const secs = alertIntervalRef.current || 60;
     repeatIntervalRef.current = setInterval(() => {
       if (!soundEnabledRef.current) { stopRepeatAlerts(); return; }
-      // 3 dings for the repeat/overdue case (an order sitting past the
-      // merchant's configured threshold), vs 2 for the initial notification -
-      // audibly distinguishes "still waiting" from "just arrived".
-      if (checkFn()) playSound('urgent', 3);
+      if (checkFn()) playSound('urgent');
       else stopRepeatAlerts();
     }, secs * 1000);
   };
