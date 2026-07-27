@@ -115,6 +115,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptPrinting, setReceiptPrinting] = useState(false);
   const [chitPrinting, setChitPrinting] = useState(false);
+  const [showChit, setShowChit] = useState(false);
 
   const handlePrintChit = async (e) => {
     e?.stopPropagation();
@@ -278,14 +279,13 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
             )}
             {canPrintChit && !isFinal && (
               <button
-                onClick={handlePrintChit}
-                disabled={chitPrinting}
-                title="Print kitchen chit"
-                className="h-11 w-11 flex-shrink-0 flex items-center justify-center rounded-lg text-sm font-semibold transition-colors border border-slate-300 text-slate-600"
+                onClick={(e) => { e.stopPropagation(); setShowChit(true); }}
+                title="Print kitchen order chit"
+                className="h-11 px-3 flex-shrink-0 flex items-center justify-center gap-1.5 rounded-lg text-sm font-semibold transition-colors border border-slate-300 text-slate-600"
                 onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
               >
-                {chitPrinting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+                <Printer className="w-4 h-4" /> Order
               </button>
             )}
             {action && canEditOrders && (
