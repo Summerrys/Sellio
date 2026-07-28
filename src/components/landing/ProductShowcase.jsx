@@ -164,6 +164,7 @@ export default function ProductShowcase() {
   const reduceMotion = useReducedMotion();
   const active = PRODUCT_VIEWS.find((view) => view.key === activeKey) || PRODUCT_VIEWS[0];
   const Preview = PREVIEWS[active.key];
+  const ActiveIcon = active.Icon;
 
   return (
     <section id="product" className="sellio-section sellio-product-section" aria-labelledby="sellio-product-heading">
@@ -192,7 +193,7 @@ export default function ProductShowcase() {
 
         <div className="sellio-showcase-shell">
           <div className="sellio-showcase-copy">
-            <span className="sellio-showcase-copy__icon"><active.Icon aria-hidden="true" /></span>
+            <span className="sellio-showcase-copy__icon"><ActiveIcon aria-hidden="true" /></span>
             <h3>{active.title}</h3>
             <p>{active.description}</p>
             <a href="#pricing">Start your free trial <ArrowUpRight aria-hidden="true" /></a>
