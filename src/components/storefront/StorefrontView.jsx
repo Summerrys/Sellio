@@ -658,12 +658,13 @@ export default function StorefrontView({
                on product rows beneath the same y-band. Still hoisted above
                the searchActive branch: the input must survive the
                transition into search-results view without unmounting. */
-            <div style={{ position: 'sticky', top: marqueeHeight + headerHeight + 10, zIndex: 45, height: 0, display: 'flex', justifyContent: 'flex-end' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', paddingRight: 14 }}>
+            <div style={{ position: 'sticky', top: marqueeHeight + headerHeight + 10, zIndex: 45, height: 0, display: 'flex', justifyContent: 'flex-end', pointerEvents: 'none' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', paddingRight: 14, flexShrink: 0, pointerEvents: 'auto' }}>
                 <button
                   onClick={() => setSearchOpen(v => !v)}
                   style={{
-                    width: 34, height: 34, borderRadius: '50%', border: 'none',
+                    width: 34, height: 34, minWidth: 34, minHeight: 34, flex: '0 0 34px',
+                    borderRadius: '50%', border: 'none',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     background: searchOpen ? primaryColor : 'white',
                     boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
@@ -673,7 +674,7 @@ export default function StorefrontView({
                   <Search size={16} color={searchOpen ? 'white' : primaryColor} />
                 </button>
                 {searchOpen && (
-                  <div style={{ marginTop: 8, width: 240, maxWidth: 'calc(100vw - 28px)', padding: 8, borderRadius: 12, background: 'white', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+                  <div style={{ marginTop: 8, width: 240, maxWidth: 'calc(100vw - 28px)', flexShrink: 0, padding: 8, borderRadius: 12, background: 'white', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
                   <div style={{ position: 'relative' }}>
                     <Search size={14} color="#94a3b8" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
                     <input
