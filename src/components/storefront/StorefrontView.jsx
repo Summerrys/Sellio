@@ -62,6 +62,23 @@ function hexToRgba(hex, alpha) {
 }
 
 // ── Sticky header bar ────────────────────────────────────────────────────────
+// Finds the actual scrolling container for Design Store preview mode (the
+// preview canvas div) by walking up from the storefront root. Live mode
+// scrolls the window, so callers pass the result only when previewMode is
+// true. Shared by the floating-search visibility check and the split-view
+// active-category tracker so the two can't drift apart.
+function findPreviewScrollParent(startEl) {
+  let el = startEl;
+  let depth = 0;
+  while (el && depth < 8) {
+    const cs = window.getComputedStyle(el);
+    if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') return el;
+    el = el.parentElement;
+    depth++;
+  }
+  return null;
+}
+
 const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHistoryClick, showBackButton = false, isDesktop = false, searchOpen, setSearchOpen, searchQuery, setSearchQuery, stickyTop = 0 }, ref) {
   const branchName = tenant?.settings?.branch_name;
   const address = tenant?.address || '';
