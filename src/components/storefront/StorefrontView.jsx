@@ -463,44 +463,80 @@ export default function StorefrontView({
     }
   }, [hasFeatured, categoriesWithProducts.length]);
 
-  // Intersection observer for active category tracking
+  // Scroll-position ("scrollspy") active-category tracking.
+  // Replaces the IntersectionObserver approach, which watched whole category
+  // SECTIONS against a detection band that excluded the bottom 60% of the
+  // viewport: a short final section (e.g. "Mains") could never enter that
+  // band before the page hit max scroll — so the sidebar stayed stuck on the
+  // previous category — and a long section could keep itself active well
+  // past its end. This instead highlights the LAST section whose top has
+  // crossed just below the sticky marquee+header stack (i.e. the section
+  // whose content is actually under the reader), with an explicit
+  // bottom-of-scroll fallback that activates the final section — the only
+  // correct answer at max scroll. Works against the window in live mode and
+  // the preview canvas in the Design Store, and leaves scrolling itself
+  // completely native (listener is passive; no scroll hijacking).
   useEffect(() => {
     if (productLayout !== 'split') return;
-    // The page (or, in preview, the preview canvas) is the real scrolling
-    // container again now that Split scrolls as normal in-flow content —
-    // root:null means "the browser viewport" which is correct for live, but
-    // in preview the viewport isn't the actual scrolling frame, so fall back
-    // to the same ancestor-walk used elsewhere for preview. The header still
-    // covers the top portion of that viewport, so rootMargin needs the
-    // headerHeight inset back (unlike when the old design used
-    // splitRightRef as an self-contained root with no header overlap).
-    let root = null;
-    if (previewMode) {
-      let el = rootRef.current?.parentElement;
-      let depth = 0;
-      while (el && depth < 8) {
-        const cs = window.getComputedStyle(el);
-        if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') { root = el; break; }
-        el = el.parentElement;
-        depth++;
+    const container = previewMode ? findPreviewScrollParent(rootRef.current?.parentElement) : null;
+    if (previewMode && !container) return;
+
+    // Section order exactly as rendered in the split product panel.
+    const sectionIds = [
+      ...(hasFeatured ? ['__deals__'] : []),
+      ...categoriesWithProducts.map(c => c.id),
+      ...(uncategorised.length > 0 ? ['other'] : []),
+    ];
+    if (sectionIds.length === 0) return;
+
+    const stack = marqueeHeight + headerHeight;
+    let raf = null;
+
+    const compute = () => {
+      raf = null;
+      // Let a sidebar click's smooth scroll land before tracking resumes.
+      if (Date.now() < clickScrollUntilRef.current) return;
+
+      const atBottom = container
+        ? container.scrollTop + container.clientHeight >= container.scrollHeight - 2
+        : window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+      if (atBottom) {
+        setActiveCategory(sectionIds[sectionIds.length - 1]);
+        return;
       }
-      if (!root) return;
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const intersecting = entries.filter(e => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (intersecting.length > 0) {
-          setActiveCategory(intersecting[0].target.dataset.categoryId);
-        }
-      },
-      { root, threshold: 0.1, rootMargin: `-${marqueeHeight + headerHeight}px 0px -60% 0px` }
-    );
-    Object.values(categoryRefs.current).forEach(ref => { if (ref) observer.observe(ref); });
-    return () => observer.disconnect();
-  }, [productLayout, categories.length, products.length, previewMode, headerHeight, marqueeHeight]);
+
+      const containerTop = container ? container.getBoundingClientRect().top : 0;
+      // "Crossed" = the section's top sits at/above the bottom edge of the
+      // sticky stack, with a small buffer so a heading that click-scrolled
+      // to exactly scroll-margin-top still counts as its own section.
+      const boundary = containerTop + stack + 12;
+      let current = sectionIds[0];
+      for (const id of sectionIds) {
+        const el = categoryRefs.current[id];
+        if (!el) continue;
+        if (el.getBoundingClientRect().top <= boundary) current = id;
+        else break;
+      }
+      setActiveCategory(current);
+    };
+
+    const onScroll = () => { if (raf == null) raf = requestAnimationFrame(compute); };
+    const target = container || window;
+    compute();
+    target.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      if (raf != null) cancelAnimationFrame(raf);
+      target.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [productLayout, previewMode, marqueeHeight, headerHeight, categories.length, products.length, hasFeatured, uncategorised.length]);
 
   const scrollToCategory = (categoryId) => {
+    // Suppress the tracker while the smooth scroll is in flight, so it
+    // doesn't re-highlight every section the animation passes through and
+    // a clicked short section near the bottom keeps its highlight.
+    clickScrollUntilRef.current = Date.now() + 700;
     categoryRefs.current[categoryId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setActiveCategory(categoryId);
   };
