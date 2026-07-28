@@ -1,75 +1,89 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
-  ArrowRight,
-  Building2,
+  ArrowDown,
   Coins,
-  Gift,
   Map,
-  Paintbrush,
+  Palette,
   Sparkles,
   Store,
-  Trophy,
-  Users,
 } from 'lucide-react';
 
 const LAYERS = [
   {
     number: '01',
-    label: 'Marketplace layer',
-    title: 'Discover by sector, neighbourhood and merchant.',
-    description: 'The marketplace can launch with structured F&B, Retail and Services zones. Every new merchant makes its own area richer.',
+    eyebrow: 'Marketplace layer',
+    title: 'Discover the right district.',
+    description: 'Customers enter a coherent sector world rather than a directory grid. F&B starts the network, while Retail and Services already have room to expand.',
+    tags: ['Sector discovery', 'Merchant allocation', 'Connected districts'],
+    image: '/assets/immersive/sector-world.webp',
+    alt: 'A premium dimensional marketplace composed of connected commerce districts',
     Icon: Map,
-    className: 'marketplace',
-    tags: ['Sector search', 'Merchant lots', 'Customer discovery'],
   },
   {
     number: '02',
-    label: 'Storefront layer',
-    title: 'Zoom from the map into a merchant’s own world.',
-    description: 'The camera journey ends at a branded storefront using the merchant’s colours, products, content and seasonal decorations.',
+    eyebrow: 'Storefront layer',
+    title: 'Zoom into a merchant-owned place.',
+    description: 'Selecting a merchant brings its neighbourhood forward, then opens a storefront that retains the merchant’s own brand, products and customer journey.',
+    tags: ['Branded identity', 'Product browsing', 'Direct ordering'],
+    image: '/assets/immersive/storefront-zoom.webp',
+    alt: 'A dimensional close-up of a merchant-owned storefront in Sellio World',
     Icon: Store,
-    className: 'storefront',
-    tags: ['Own identity', 'Products', 'Seasonal décor'],
   },
   {
     number: '03',
-    label: 'Progression layer',
-    title: 'Useful activity unlocks expressive rewards.',
-    description: 'Coins, quests and achievements sit across every sector so marketplace participation and gamification can evolve together.',
-    Icon: Trophy,
-    className: 'progression',
-    tags: ['Sellio Coins', 'Quests', 'Achievements'],
+    eyebrow: 'Progression layer',
+    title: 'Earn ways to make the space yours.',
+    description: 'Sellio Coins and cosmetic rewards can evolve alongside the marketplace—supporting seasonal decoration and merchant expression without turning core commerce into a game.',
+    tags: ['Sellio Coins', 'Seasonal décor', 'Merchant progression'],
+    image: '/assets/immersive/progression.webp',
+    alt: 'Premium merchant progression objects leading to an upgraded seasonal storefront',
+    Icon: Coins,
   },
 ];
 
-function LayerVisual({ layer }) {
-  if (layer.className === 'marketplace') return <div className="sellio-layer-map"><span><Building2 /></span><span><Store /></span><span><Users /></span><i /><i /></div>;
-  if (layer.className === 'storefront') return <div className="sellio-layer-store"><div><i /><i /><i /><i /></div><span><Paintbrush /></span><small>Merchant identity</small></div>;
-  return <div className="sellio-layer-coins"><span><Coins /></span><span><Gift /></span><span><Trophy /></span><i>+25</i></div>;
-}
-
 export default function WorldLayers() {
+  const reduceMotion = useReducedMotion();
+
   return (
-    <section id="vision" className="sellio-section sellio-layers-section" aria-labelledby="sellio-layers-heading">
+    <section id="vision" className="sellio-section sl-imm-layers" aria-labelledby="sellio-layers-heading">
       <div className="sellio-container">
-        <div className="sellio-layers-intro">
-          <div><span className="sellio-eyebrow"><Sparkles aria-hidden="true" /> Built in parallel</span><h2 id="sellio-layers-heading">Marketplace, storefronts and play—one system.</h2></div>
-          <p>These are not three unrelated future products. They are layers of the same Sellio experience and can be developed together in deliberate releases.</p>
+        <div className="sl-imm-heading sl-imm-heading--light">
+          <div>
+            <span className="sellio-eyebrow sellio-eyebrow--dark"><Sparkles /> The marketplace vision</span>
+            <h2 id="sellio-layers-heading">One world.<br />Three meaningful layers.</h2>
+          </div>
+          <p>The experience remains useful at every depth: discover a district, enter a real storefront, then personalise that place through progression.</p>
         </div>
 
-        <div className="sellio-layers-list">
-          {LAYERS.map((layer, index) => {
-            const Icon = layer.Icon;
-            return (
-              <motion.article key={layer.number} className={'sellio-layer-row is-' + layer.className} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .25 }} transition={{ duration: .5, delay: index * .08 }}>
-                <div className="sellio-layer-row__number">{layer.number}</div>
-                <div className="sellio-layer-row__visual"><LayerVisual layer={layer} /></div>
-                <div className="sellio-layer-row__copy"><span><Icon /> {layer.label}</span><h3>{layer.title}</h3><p>{layer.description}</p><div>{layer.tags.map((tag) => <small key={tag}>{tag}</small>)}</div></div>
-                {index < LAYERS.length - 1 && <ArrowRight className="sellio-layer-row__arrow" aria-hidden="true" />}
-              </motion.article>
-            );
-          })}
+        <div className="sl-imm-layer-list">
+          {LAYERS.map(({ number, eyebrow, title, description, tags, image, alt, Icon }, index) => (
+            <React.Fragment key={number}>
+              <article className={`sl-imm-layer ${index % 2 ? 'is-reversed' : ''}`}>
+                <motion.div
+                  className="sl-imm-layer__art"
+                  initial={false}
+                  whileHover={reduceMotion ? undefined : { scale: 1.012 }}
+                  transition={{ duration: .5, ease: [0.2, 0.8, 0.2, 1] }}
+                >
+                  <img src={image} alt={alt} />
+                  <span>{number}</span>
+                </motion.div>
+                <div className="sl-imm-layer__copy">
+                  <span><Icon /> {eyebrow}</span>
+                  <h3>{title}</h3>
+                  <p>{description}</p>
+                  <div>{tags.map((tag) => <small key={tag}>{tag}</small>)}</div>
+                </div>
+              </article>
+              {index < LAYERS.length - 1 && <div className="sl-imm-layer-link" aria-hidden="true"><ArrowDown /></div>}
+            </React.Fragment>
+          ))}
+        </div>
+
+        <div className="sl-imm-vision-note">
+          <Palette />
+          <div><strong>Premium world, restrained game layer.</strong><span>Commerce stays intuitive. Gamification adds identity and progression around it.</span></div>
         </div>
       </div>
     </section>
