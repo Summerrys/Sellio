@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import { success, error, validationError, notFound } from '../../lib/apiResponse.js';
+import { success, error, validationError, notFound } from './apiResponse.ts';
 
 /**
  * POST /api/v1/public/:tenantSlug/orders
