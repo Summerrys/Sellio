@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import { success, error, notFound } from '../../lib/apiResponse.js';
+import { success, error, notFound } from './apiResponse.ts';
 
 /**
  * GET /api/v1/public/:tenantSlug/menu
