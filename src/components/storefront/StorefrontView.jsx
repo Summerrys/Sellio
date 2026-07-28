@@ -769,7 +769,7 @@ export default function StorefrontView({
             >
               {/* Special Deals section */}
               {hasFeatured && (
-                <div ref={el => categoryRefs.current['__deals__'] = el} data-category-id="__deals__">
+                <div ref={el => categoryRefs.current['__deals__'] = el} data-category-id="__deals__" style={{ scrollMarginTop: marqueeHeight + headerHeight + 8 }}>
                   <p style={{ fontSize: 13, fontWeight: 700, padding: '12px 14px 6px', color: '#1e293b', margin: 0, background: 'white', borderBottom: '1px solid #f1f5f9' }}>{t('todaysPicks')} ⭐</p>
                   <div style={{ padding: '4px 10px' }}>
                     {featuredProducts.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={handleAddToCart} onProductClick={handleProductClick} featured={true} contentMap={contentMap} isDesktop={isDesktop} />)}
@@ -784,6 +784,7 @@ export default function StorefrontView({
                     key={cat.id}
                     ref={el => categoryRefs.current[cat.id] = el}
                     data-category-id={cat.id}
+                    style={{ scrollMarginTop: marqueeHeight + headerHeight + 8 }}
                   >
                     <p style={{
                       fontSize: 13, fontWeight: 700, padding: '12px 14px 6px',
@@ -797,7 +798,7 @@ export default function StorefrontView({
                 );
               })}
               {uncategorised.length > 0 && (
-                <div ref={el => categoryRefs.current['other'] = el} data-category-id="other">
+                <div ref={el => categoryRefs.current['other'] = el} data-category-id="other" style={{ scrollMarginTop: marqueeHeight + headerHeight + 8 }}>
                   <p style={{ fontSize: 13, fontWeight: 700, padding: '12px 14px 6px', color: '#1e293b', margin: 0, background: 'white', borderBottom: '1px solid #f1f5f9' }}>{t('other')}</p>
                   <div style={{ padding: '4px 10px' }}>
                     {uncategorised.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={handleAddToCart} onProductClick={handleProductClick} contentMap={contentMap} isDesktop={isDesktop} />)}
