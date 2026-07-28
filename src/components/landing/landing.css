@@ -1,0 +1,467 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&display=swap');
+
+.sellio-landing {
+  --sl-ink: #24123a;
+  --sl-ink-soft: #5c4a6c;
+  --sl-purple: #8a35c7;
+  --sl-pink: #df4297;
+  --sl-orange: #ff8a4c;
+  --sl-coral: #ff6e65;
+  --sl-cream: #fffaf7;
+  --sl-lilac: #f5effb;
+  --sl-line: rgba(68, 31, 91, .12);
+  color: var(--sl-ink);
+  background: var(--sl-cream);
+  font-family: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overflow: clip;
+}
+.sellio-landing *, .sellio-landing *::before, .sellio-landing *::after { box-sizing: border-box; }
+.sellio-landing a { color: inherit; text-decoration: none; }
+.sellio-landing button, .sellio-landing input { font: inherit; }
+.sellio-container { width: min(100% - 48px, 1240px); margin-inline: auto; }
+.sellio-skip-link { position: fixed; z-index: 9999; left: 18px; top: -80px; padding: 12px 18px; border-radius: 12px; background: #fff; box-shadow: 0 12px 32px rgba(33,12,48,.2); }
+.sellio-skip-link:focus { top: 18px; }
+.sellio-landing-header { position: sticky; top: 0; z-index: 90; background: rgba(255,250,247,.86); backdrop-filter: blur(18px); border-bottom: 1px solid rgba(79,34,103,.08); }
+.sellio-landing-header__inner { height: 86px; display: flex; align-items: center; gap: 34px; }
+.sellio-landing-logo img { display: block; width: auto; height: 52px; object-fit: contain; }
+.sellio-landing-nav { display: flex; gap: 28px; margin-left: auto; align-items: center; }
+.sellio-landing-nav a, .sellio-login-link { font-size: 14px; font-weight: 700; color: #4e3d5d; transition: color .2s ease; }
+.sellio-landing-nav a:hover, .sellio-login-link:hover { color: var(--sl-pink); }
+.sellio-landing-header__actions { display: flex; align-items: center; gap: 18px; }
+.sellio-menu-button { display: none; border: 0; background: transparent; color: var(--sl-ink); padding: 8px; }
+.sellio-menu-button svg { width: 25px; height: 25px; }
+.sellio-mobile-nav { display: none; }
+.sellio-button { min-height: 52px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 0 24px; border: 1px solid transparent; border-radius: 16px; font-weight: 800; font-size: 15px; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+.sellio-button:hover { transform: translateY(-2px); }
+.sellio-button svg { width: 18px; height: 18px; }
+.sellio-button--small { min-height: 44px; padding: 0 18px; border-radius: 13px; font-size: 14px; }
+.sellio-button--gradient { color: #fff !important; background: linear-gradient(120deg, var(--sl-purple), var(--sl-pink) 55%, var(--sl-orange)); box-shadow: 0 12px 30px rgba(213,58,146,.22); }
+.sellio-button--outline { background: rgba(255,255,255,.75); border-color: rgba(86,40,107,.2); }
+.sellio-button--light { color: var(--sl-ink) !important; background: #fff; }
+.sellio-button--ghost-light { color: #fff !important; border-color: rgba(255,255,255,.3); }
+.sellio-section { padding: 108px 0; scroll-margin-top: 82px; }
+.sellio-section-heading { max-width: 720px; margin-bottom: 48px; }
+.sellio-section-heading--center { text-align: center; margin-inline: auto; }
+.sellio-section-heading h2 { margin: 16px 0 16px; font: 800 clamp(2.35rem, 4vw, 4.4rem)/1.04 "Manrope", sans-serif; letter-spacing: -.055em; }
+.sellio-section-heading p { margin: 0; color: var(--sl-ink-soft); font-size: 18px; line-height: 1.65; }
+.sellio-eyebrow { display: inline-flex; align-items: center; gap: 8px; color: var(--sl-purple); font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.sellio-eyebrow svg { width: 17px; height: 17px; }
+.sellio-eyebrow--dark { color: #ffc3dd; }
+.sellio-live-dot, .sellio-world-live-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #35c28b; box-shadow: 0 0 0 5px rgba(53,194,139,.14); }
+
+.sellio-hero { position: relative; isolation: isolate; min-height: 790px; display: flex; align-items: center; background: radial-gradient(circle at 78% 38%, #f2dff8 0, transparent 32%), linear-gradient(145deg,#fffaf7 15%,#fff6f0 54%,#f7effc); }
+.sellio-hero__grid { display: grid; grid-template-columns: .92fr 1.08fr; align-items: center; gap: 48px; padding-top: 56px; padding-bottom: 72px; }
+.sellio-hero__copy { position: relative; z-index: 2; max-width: 610px; }
+.sellio-hero__copy h1 { margin: 20px 0 24px; font: 800 clamp(4rem, 6.4vw, 6.6rem)/.93 "Manrope", sans-serif; letter-spacing: -.075em; }
+.sellio-hero__copy h1 span { color: transparent; background: linear-gradient(105deg,var(--sl-purple),var(--sl-pink) 50%,var(--sl-orange)); background-clip: text; -webkit-background-clip: text; }
+.sellio-hero__copy > p { max-width: 570px; margin: 0; color: #5f4c6d; font-size: 20px; line-height: 1.6; }
+.sellio-hero__actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 34px; }
+.sellio-hero__trust { display: flex; flex-wrap: wrap; gap: 14px 22px; margin-top: 26px; color: #665472; font-size: 12px; font-weight: 700; }
+.sellio-hero__trust span { display: flex; align-items: center; gap: 6px; }
+.sellio-hero__trust svg { width: 15px; color: var(--sl-purple); }
+.sellio-hero-blob { position: absolute; z-index: -1; border-radius: 50%; filter: blur(5px); opacity: .55; }
+.sellio-hero-blob--one { width: 340px; height: 340px; right: -90px; top: 60px; background: #fac8df; }
+.sellio-hero-blob--two { width: 240px; height: 240px; left: 32%; bottom: -120px; background: #ffd6bd; }
+.sellio-hero-visual { position: relative; min-height: 600px; border-radius: 42px; background: linear-gradient(155deg,rgba(255,255,255,.75),rgba(255,255,255,.28)); border: 1px solid rgba(255,255,255,.78); box-shadow: inset 0 1px 0 #fff, 0 38px 90px rgba(88,39,109,.14); }
+.sellio-hero-floor { position: absolute; left: 8%; right: 8%; bottom: 35px; height: 170px; border-radius: 50%; background: radial-gradient(ellipse,rgba(118,46,149,.19),rgba(255,255,255,0) 69%); transform: perspective(500px) rotateX(62deg); }
+.sellio-hero-orbit { position: absolute; border: 1px solid rgba(193,62,148,.18); border-radius: 50%; }
+.sellio-hero-orbit--one { inset: 85px 90px; transform: rotate(-12deg); }
+.sellio-hero-orbit--two { inset: 140px 45px; transform: rotate(18deg); border-color: rgba(246,126,74,.16); }
+.sellio-hero-phone { position: absolute; z-index: 3; left: 50%; top: 47%; width: 255px; min-height: 492px; transform: translate(-50%,-50%); padding: 14px; border-radius: 34px; color: #2d183e; background: #fff; border: 6px solid #2c153f; box-shadow: 0 28px 60px rgba(42,18,58,.24); }
+.sellio-hero-phone__top { display: flex; justify-content: space-between; padding: 0 8px 8px; }
+.sellio-hero-phone__top span:first-child { width: 40px; height: 6px; background: #2c153f; border-radius: 8px; }
+.sellio-hero-phone__top span:last-child { width: 7px; height: 7px; background: #e7dced; border-radius: 50%; }
+.sellio-hero-phone__brand { display: flex; justify-content: space-between; align-items: center; padding: 9px 8px 13px; }
+.sellio-hero-phone__brand div { display: flex; flex-direction: column; }
+.sellio-hero-phone__brand small { color: #8a7894; font-size: 9px; }
+.sellio-hero-phone__brand strong { font-size: 16px; }
+.sellio-hero-phone__brand svg { width: 19px; }
+.sellio-hero-phone__banner { display: flex; flex-direction: column; min-height: 112px; padding: 17px; border-radius: 20px; color: #fff; background: linear-gradient(135deg,#8b35c7,#df4297 62%,#ff8850); }
+.sellio-hero-phone__banner span { font-size: 9px; opacity: .82; text-transform: uppercase; letter-spacing: .08em; }
+.sellio-hero-phone__banner strong { margin-top: 6px; font-size: 18px; }
+.sellio-hero-phone__banner small { margin-top: auto; font-size: 10px; }
+.sellio-hero-phone__chips { display: flex; gap: 6px; padding: 13px 0 10px; overflow: hidden; }
+.sellio-hero-phone__chips span { padding: 5px 9px; border-radius: 99px; background: #f7f1f9; font-size: 8px; font-weight: 700; }
+.sellio-hero-phone__chips span:first-child { color: #fff; background: #2d183e; }
+.sellio-hero-phone__products { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sellio-hero-phone__products > div { display: flex; flex-direction: column; gap: 4px; font-size: 9px; }
+.sellio-hero-phone__products i { height: 84px; display: grid; place-items: center; border-radius: 14px; color: #fff; }
+.sellio-hero-phone__products i svg { width: 29px; }
+.sellio-hero-phone__products .is-orange { background: linear-gradient(145deg,#ffc596,#ff8a4c); }
+.sellio-hero-phone__products .is-pink { background: linear-gradient(145deg,#f7b9db,#dc3b94); }
+.sellio-hero-phone__products small { color: #9a899f; }
+.sellio-hero-phone__cart { position: absolute; left: 14px; right: 14px; bottom: 14px; display: flex; justify-content: space-between; padding: 11px 13px; border-radius: 12px; color: #fff; background: #2d183e; font-size: 9px; }
+.sellio-hero-order-card, .sellio-hero-insight-card { position: absolute; z-index: 5; width: 220px; padding: 16px; border-radius: 20px; background: rgba(255,255,255,.94); border: 1px solid rgba(74,34,94,.08); box-shadow: 0 22px 48px rgba(59,25,77,.15); }
+.sellio-hero-order-card { left: -30px; top: 110px; }
+.sellio-hero-insight-card { right: -28px; bottom: 90px; }
+.sellio-mini-card-head { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; }
+.sellio-mini-card-head > span { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; color: #fff; background: var(--sl-pink); }
+.sellio-mini-card-head svg { width: 16px; }
+.sellio-mini-card-head div, .sellio-mini-order-row span { display: flex; flex-direction: column; }
+.sellio-mini-card-head strong, .sellio-mini-order-row strong { font-size: 11px; }
+.sellio-mini-card-head small, .sellio-mini-order-row small { color: #8c7b95; font-size: 8px; }
+.sellio-mini-card-head i { width: 7px; height: 7px; border-radius: 50%; background: #36c78f; }
+.sellio-mini-order-row { display: flex; gap: 9px; align-items: center; margin-top: 13px; padding-top: 12px; border-top: 1px solid #eee6f1; }
+.sellio-mini-order-row > div { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; color: #fff; background: var(--sl-orange); }
+.sellio-mini-order-row svg { width: 17px; }
+.sellio-mini-success { display: flex; gap: 5px; align-items: center; margin-top: 11px; color: #159368; font-size: 9px; font-weight: 700; }
+.sellio-mini-success svg { width: 13px; }
+.sellio-hero-insight-card > div:first-child { display: flex; justify-content: space-between; color: #846f8e; font-size: 10px; }
+.sellio-hero-insight-card > div:first-child svg { width: 16px; color: #28a778; }
+.sellio-hero-insight-card > strong { display: block; margin: 5px 0 1px; font-size: 23px; }
+.sellio-hero-insight-card > small { color: #27a577; font-size: 8px; }
+.sellio-mini-bars { height: 55px; display: flex; align-items: end; gap: 6px; margin-top: 12px; }
+.sellio-mini-bars i { flex: 1; max-height: 52px; border-radius: 5px 5px 2px 2px; background: linear-gradient(#e34999,#9132c6); }
+.sellio-hero-core { position: absolute; z-index: 6; right: 7px; top: 120px; display: flex; flex-direction: column; align-items: center; gap: 7px; }
+.sellio-hero-core__disc { width: 78px; height: 78px; display: grid; place-items: center; border-radius: 25px; background: linear-gradient(145deg,#fff,#faedf8); box-shadow: 0 16px 40px rgba(208,54,145,.25); transform: rotate(8deg); }
+.sellio-hero-core__disc img { width: 62px; height: 62px; object-fit: contain; transform: rotate(-8deg); }
+.sellio-hero-core > span { font-size: 10px; font-weight: 800; color: var(--sl-pink); }
+.sellio-hero-core__glow { position: absolute; inset: -18px; z-index: -1; border-radius: 50%; background: rgba(229,68,158,.22); filter: blur(15px); }
+.sellio-hero-connection { position: absolute; z-index: 1; width: 130px; border-top: 2px dashed rgba(204,57,147,.25); }
+.sellio-hero-connection--one { left: 105px; top: 230px; transform: rotate(15deg); }
+.sellio-hero-connection--two { right: 91px; bottom: 210px; transform: rotate(-16deg); }
+
+.sellio-proof-strip { border-block: 1px solid var(--sl-line); background: #fff; }
+.sellio-proof-strip .sellio-container { min-height: 86px; display: grid; grid-template-columns: repeat(6,1fr); align-items: center; }
+.sellio-proof-strip span { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; color: #675574; font-size: 13px; font-weight: 700; border-right: 1px solid var(--sl-line); }
+.sellio-proof-strip span:last-child { border: 0; }
+.sellio-proof-strip svg { width: 18px; color: var(--sl-pink); }
+
+.sellio-features-section { background: #fff; }
+.sellio-feature-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 18px; }
+.sellio-feature-card { min-height: 230px; padding: 28px; border-radius: 26px; background: #fffaf8; border: 1px solid var(--sl-line); transition: transform .25s ease, box-shadow .25s ease; }
+.sellio-feature-card:hover { transform: translateY(-5px); box-shadow: 0 22px 50px rgba(67,28,87,.1); }
+.sellio-feature-card > span { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 15px; color: var(--sl-purple); background: #f1e4fa; }
+.sellio-feature-card.is-pink > span { color: #ca297d; background: #fde4f1; }
+.sellio-feature-card.is-orange > span { color: #d95d1e; background: #ffeadb; }
+.sellio-feature-card.is-green > span { color: #148b67; background: #ddf6ec; }
+.sellio-feature-card > span svg { width: 23px; }
+.sellio-feature-card h3 { margin: 24px 0 10px; font-size: 18px; }
+.sellio-feature-card p { margin: 0; color: #71607b; line-height: 1.58; font-size: 14px; }
+
+.sellio-product-section { background: linear-gradient(180deg,#fffaf7,#f8f0fb); }
+.sellio-product-tabs { display: flex; gap: 8px; padding: 7px; border-radius: 18px; background: #fff; border: 1px solid var(--sl-line); overflow-x: auto; margin-bottom: 22px; }
+.sellio-product-tabs button { flex: 1 0 auto; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 18px; border: 0; border-radius: 12px; color: #74617f; background: transparent; font-weight: 700; cursor: pointer; }
+.sellio-product-tabs button.is-active { color: #fff; background: var(--sl-ink); box-shadow: 0 8px 20px rgba(45,23,61,.15); }
+.sellio-product-tabs svg { width: 18px; }
+.sellio-showcase-shell { display: grid; grid-template-columns: .7fr 1.3fr; min-height: 620px; border-radius: 34px; overflow: hidden; background: #2c163f; box-shadow: 0 30px 80px rgba(49,21,67,.18); }
+.sellio-showcase-copy { display: flex; flex-direction: column; justify-content: center; padding: 55px; color: #fff; background: radial-gradient(circle at 15% 20%,rgba(224,66,151,.25),transparent 35%); }
+.sellio-showcase-copy__icon { width: 58px; height: 58px; display: grid; place-items: center; border-radius: 18px; color: #fff; background: linear-gradient(135deg,var(--sl-pink),var(--sl-orange)); }
+.sellio-showcase-copy__icon svg { width: 27px; }
+.sellio-showcase-copy h3 { margin: 26px 0 14px; font: 800 clamp(2rem,3vw,3.2rem)/1.06 "Manrope",sans-serif; letter-spacing: -.04em; }
+.sellio-showcase-copy p { margin: 0; color: #d9cadd; font-size: 16px; line-height: 1.7; }
+.sellio-showcase-copy a { display: inline-flex; gap: 8px; align-items: center; margin-top: 25px; color: #ffbddc; font-weight: 800; }
+.sellio-showcase-copy a svg { width: 17px; }
+.sellio-showcase-preview { min-width: 0; display: grid; place-items: center; padding: 42px; background: radial-gradient(circle at 40% 30%,#f7dced,#f6edf8 45%,#eadbf2); }
+.sellio-showcase-preview > div { width: 100%; display: grid; place-items: center; }
+.sellio-demo-phone { position: relative; width: min(100%, 330px); min-height: 530px; padding: 18px; border: 7px solid #2f193f; border-radius: 35px; background: #fff; box-shadow: 0 24px 55px rgba(46,20,62,.22); }
+.sellio-demo-phone__bar { display: flex; justify-content: center; gap: 3px; }
+.sellio-demo-phone__bar span { width: 4px; height: 4px; border-radius: 50%; background: #cdbfd1; }
+.sellio-demo-storefront-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 6px 14px; }
+.sellio-demo-storefront-head div { display: flex; flex-direction: column; }
+.sellio-demo-storefront-head small { color: #94849b; font-size: 10px; }
+.sellio-demo-storefront-head strong { font-size: 21px; }
+.sellio-demo-search { display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 12px; color: #99899f; background: #f7f3f8; font-size: 11px; }
+.sellio-demo-search svg { width: 15px; }
+.sellio-demo-chips { display: flex; gap: 7px; margin: 13px 0; }
+.sellio-demo-chips span { padding: 6px 10px; border-radius: 99px; color: #82718c; background: #f5eff7; font-size: 9px; font-weight: 700; }
+.sellio-demo-chips .is-active { color: #fff; background: var(--sl-ink); }
+.sellio-demo-products { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.sellio-demo-product { min-width: 0; display: flex; flex-direction: column; gap: 6px; font-size: 9px; }
+.sellio-demo-product__image { height: 105px; display: grid; place-items: center; border-radius: 14px; color: #fff; }
+.sellio-demo-product__image svg { width: 29px; }
+.sellio-demo-product__image.is-orange { background: linear-gradient(145deg,#ffc291,#f4773f); }
+.sellio-demo-product__image.is-pink { background: linear-gradient(145deg,#f9b9da,#dd3d96); }
+.sellio-demo-product__image.is-purple { background: linear-gradient(145deg,#cda4e6,#8231b9); }
+.sellio-demo-product > div:last-child { display: flex; justify-content: space-between; align-items: center; }
+.sellio-demo-product button { width: 20px; height: 20px; border: 0; border-radius: 7px; color: #fff; background: var(--sl-pink); }
+.sellio-demo-cart { position: absolute; left: 18px; right: 18px; bottom: 17px; display: flex; justify-content: space-between; padding: 13px; border-radius: 13px; color: #fff; background: var(--sl-ink); font-size: 10px; }
+.sellio-demo-dashboard, .sellio-demo-assistant { width: min(100%, 660px); min-height: 470px; padding: 30px; border-radius: 26px; background: rgba(255,255,255,.94); box-shadow: 0 24px 60px rgba(64,28,83,.16); }
+.sellio-demo-dashboard__head, .sellio-demo-assistant__head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 20px; border-bottom: 1px solid #eee4f1; }
+.sellio-demo-dashboard__head > div { display: flex; flex-direction: column; }
+.sellio-demo-dashboard__head small { color: #8b7894; }
+.sellio-demo-dashboard__head strong { font-size: 24px; }
+.sellio-demo-dashboard__head > span { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 99px; color: #a72a72; background: #fde7f2; font-size: 11px; font-weight: 800; }
+.sellio-demo-dashboard__head svg { width: 15px; }
+.sellio-order-columns { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; padding-top: 22px; }
+.sellio-order-card { padding: 16px; border: 1px solid #eee4f1; border-radius: 16px; }
+.sellio-order-card > div:first-child { display: flex; justify-content: space-between; }
+.sellio-order-card > div:first-child span, .sellio-order-card p { color: #8a7893; font-size: 10px; }
+.sellio-order-status { display: inline-block; padding: 5px 8px; border-radius: 99px; font-size: 9px; font-weight: 800; }
+.sellio-order-status.is-pink { color: #b22475; background: #fde2ef; }
+.sellio-order-status.is-orange { color: #bc511e; background: #ffe6d7; }
+.sellio-order-status.is-green { color: #18845f; background: #dcf4e9; }
+.sellio-order-progress { display: flex; gap: 4px; margin-top: 15px; }
+.sellio-order-progress i { flex: 1; height: 4px; border-radius: 4px; background: #eee5f1; }
+.sellio-order-card:first-child .sellio-order-progress i:first-child,
+.sellio-order-card:nth-child(2) .sellio-order-progress i:not(:last-child),
+.sellio-order-card:last-child .sellio-order-progress i { background: var(--sl-purple); }
+.sellio-demo-bottom-stat { display: flex; align-items: center; gap: 10px; margin-top: 25px; padding: 16px; border-radius: 14px; background: #f7f1f9; }
+.sellio-demo-bottom-stat svg { width: 20px; color: var(--sl-purple); }
+.sellio-demo-bottom-stat span { color: #7a687f; }
+.sellio-demo-bottom-stat strong { margin-left: auto; }
+.sellio-inventory-summary { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; padding: 20px 0; }
+.sellio-inventory-summary div { padding: 14px; border-radius: 14px; background: #faf6fb; }
+.sellio-inventory-summary small, .sellio-insight-total small { display: block; color: #8b7993; }
+.sellio-inventory-summary strong { display: block; margin-top: 5px; font-size: 23px; }
+.sellio-stock-list { display: grid; gap: 17px; }
+.sellio-stock-list > div > div:first-child { display: flex; justify-content: space-between; font-size: 12px; }
+.sellio-stock-track { height: 7px; margin-top: 7px; border-radius: 10px; background: #eee7f1; overflow: hidden; }
+.sellio-stock-track i { display: block; height: 100%; border-radius: inherit; background: var(--sl-purple); }
+.sellio-stock-track i.is-orange { background: var(--sl-orange); }
+.sellio-stock-track i.is-pink { background: var(--sl-pink); }
+.sellio-demo-secondary-button { display: flex; align-items: center; gap: 7px; margin-top: 24px; padding: 10px 14px; border: 0; border-radius: 11px; color: #fff; background: var(--sl-ink); font-weight: 700; }
+.sellio-demo-secondary-button svg { width: 16px; }
+.sellio-insight-total { padding-top: 24px; }
+.sellio-insight-total strong { display: block; margin: 4px 0; font-size: 29px; }
+.sellio-insight-total span { color: #21a174; font-size: 10px; }
+.sellio-chart { height: 150px; display: flex; gap: 8px; align-items: end; padding-top: 20px; }
+.sellio-chart i { flex: 1; max-height: 120px; border-radius: 6px 6px 2px 2px; background: linear-gradient(#dd4398,#8b35c7); }
+.sellio-insight-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+.sellio-insight-cards div { display: grid; grid-template-columns: 30px 1fr; align-items: center; padding: 12px; border-radius: 12px; background: #faf6fb; }
+.sellio-insight-cards svg { grid-row: span 2; width: 18px; color: var(--sl-purple); }
+.sellio-insight-cards span { color: #8b7993; font-size: 9px; }
+.sellio-demo-assistant__head img { width: 48px; height: 48px; object-fit: contain; }
+.sellio-demo-assistant__head div { display: flex; flex-direction: column; margin-right: auto; padding-left: 12px; }
+.sellio-demo-assistant__head span { color: #31a478; font-size: 10px; }
+.sellio-demo-assistant__head > svg { color: var(--sl-pink); }
+.sellio-chat-message { max-width: 86%; margin-top: 18px; padding: 13px 15px; border-radius: 15px; font-size: 12px; line-height: 1.55; }
+.sellio-chat-message.is-user { margin-left: auto; color: #fff; background: var(--sl-ink); border-bottom-right-radius: 4px; }
+.sellio-chat-message.is-assistant { background: #f6eef9; border-bottom-left-radius: 4px; }
+.sellio-chat-message p { margin: 0 0 8px; }
+.sellio-chat-message ul { margin: 0; padding: 0; list-style: none; }
+.sellio-chat-message li { display: flex; gap: 6px; align-items: center; margin-top: 5px; }
+.sellio-chat-message li svg { width: 13px; color: #209972; }
+.sellio-chat-suggestions { display: flex; gap: 7px; margin-top: 17px; }
+.sellio-chat-suggestions span { padding: 7px 10px; border: 1px solid #ddcfe3; border-radius: 99px; font-size: 9px; }
+.sellio-chat-input { display: flex; justify-content: space-between; align-items: center; margin-top: 18px; padding: 13px; border-radius: 12px; color: #9a899f; background: #f8f4f9; font-size: 11px; }
+.sellio-chat-input svg { width: 17px; color: var(--sl-purple); }
+
+.sellio-world-section { background: #fff; }
+.sellio-world-shell { overflow: hidden; border-radius: 36px; color: #fff; background: #27143a; box-shadow: 0 32px 80px rgba(47,20,65,.2); }
+.sellio-world-toolbar { min-height: 72px; display: flex; justify-content: space-between; align-items: center; padding: 0 26px; border-bottom: 1px solid rgba(255,255,255,.09); background: rgba(255,255,255,.035); }
+.sellio-world-toolbar > div { display: flex; align-items: center; gap: 10px; }
+.sellio-world-toolbar strong { font-size: 14px; }
+.sellio-world-toolbar span { color: #cbbbd2; font-size: 11px; }
+.sellio-world-toolbar__future { padding: 9px 13px; border-radius: 99px; color: #ffe39a; background: rgba(255,203,84,.1); }
+.sellio-world-toolbar__future svg { width: 17px; }
+.sellio-world-map { position: relative; padding: 50px; background: radial-gradient(circle at 50% 50%,rgba(151,56,189,.2),transparent 52%),linear-gradient(145deg,#321849,#21102f); }
+.sellio-world-grid { position: relative; z-index: 2; display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
+.sellio-world-tile { position: relative; min-height: 245px; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; border-radius: 23px; color: #fff; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.055); overflow: hidden; transition: transform .25s ease, border-color .25s ease, background .25s ease; }
+.sellio-world-tile.is-live, .sellio-world-tile.is-info { cursor: pointer; }
+.sellio-world-tile.is-live:hover, .sellio-world-tile.is-info:hover { transform: translateY(-5px); border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.085); }
+.sellio-world-tile.is-locked { opacity: .66; }
+.sellio-world-building { width: 112px; height: 110px; margin: 2px auto 16px; filter: drop-shadow(0 18px 18px rgba(0,0,0,.22)); }
+.sellio-world-building__roof { position: relative; z-index: 2; width: 90px; height: 58px; display: grid; place-items: center; margin: 0 auto -15px; border-radius: 22px 22px 9px 9px; color: #fff; background: linear-gradient(145deg,color-mix(in srgb,var(--district-color),#fff 15%),var(--district-color)); transform: perspective(200px) rotateX(55deg) rotateZ(-4deg); }
+.sellio-world-building__roof svg { width: 29px; transform: rotateZ(4deg) scaleY(1.5); }
+.sellio-world-building__body { height: 68px; display: flex; align-items: end; justify-content: center; gap: 7px; padding: 14px; border-radius: 9px 9px 17px 17px; background: linear-gradient(150deg,color-mix(in srgb,var(--district-color),#fff 25%),color-mix(in srgb,var(--district-color),#000 20%)); }
+.sellio-world-building__body span { width: 16px; height: 28px; border-radius: 6px 6px 2px 2px; background: rgba(255,255,255,.68); }
+.sellio-world-building__body span:nth-child(2) { height: 38px; }
+.sellio-world-tile__title-row { display: flex; justify-content: space-between; align-items: center; }
+.sellio-world-tile__title-row h3 { margin: 0; font-size: 18px; }
+.sellio-world-tile__title-row svg { width: 17px; color: #d7c5de; }
+.sellio-world-tile__copy p { margin: 4px 0 10px; color: #c8b6cf; font-size: 12px; }
+.sellio-world-status { display: inline-flex; padding: 6px 9px; border-radius: 99px; color: #bba9c3; background: rgba(255,255,255,.08); font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.sellio-world-status[data-status="live"] { color: #92f0c9; background: rgba(37,194,138,.13); }
+.sellio-world-status[data-status="soon"] { color: #ffd09f; background: rgba(255,138,76,.13); }
+.sellio-world-status[data-status="info"] { color: #d8b1ff; background: rgba(139,53,199,.18); }
+.sellio-world-road { position: absolute; z-index: 1; opacity: .55; }
+.sellio-world-road--horizontal { left: 0; right: 0; top: 50%; height: 18px; border-block: 1px dashed rgba(255,255,255,.16); }
+.sellio-world-road--vertical { top: 0; bottom: 0; left: 50%; width: 18px; border-inline: 1px dashed rgba(255,255,255,.16); }
+.sellio-world-orb { position: absolute; border-radius: 50%; filter: blur(2px); }
+.sellio-world-orb--one { width: 180px; height: 180px; left: -70px; top: -50px; background: rgba(224,66,151,.16); }
+.sellio-world-orb--two { width: 230px; height: 230px; right: -90px; bottom: -80px; background: rgba(255,138,76,.12); }
+.sellio-world-legend { min-height: 68px; display: flex; flex-wrap: wrap; align-items: center; gap: 18px; padding: 14px 26px; border-top: 1px solid rgba(255,255,255,.08); }
+.sellio-world-legend > span { display: flex; align-items: center; gap: 7px; color: #c6b5cd; font-size: 10px; }
+.sellio-world-legend i { width: 8px; height: 8px; border-radius: 50%; background: #807087; }
+.sellio-world-legend i.is-open { background: #31c38b; }
+.sellio-world-legend i.is-next { background: #ff985e; }
+.sellio-world-legend__note { margin-left: auto; }
+.sellio-world-legend__note svg { width: 14px; color: #f2a8d1; }
+
+.sellio-how-section { background: #fff8f3; }
+.sellio-steps { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; padding: 0; margin: 0; list-style: none; counter-reset: steps; }
+.sellio-steps li { position: relative; min-height: 220px; padding: 24px; border-radius: 23px; background: #fff; border: 1px solid var(--sl-line); }
+.sellio-steps li:not(:last-child)::after { content: ""; position: absolute; z-index: 2; right: -15px; top: 47px; width: 15px; border-top: 1px dashed #cdb8d4; }
+.sellio-steps li > span { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 14px; color: #fff; background: linear-gradient(135deg,var(--sl-purple),var(--sl-pink)); font-weight: 800; }
+.sellio-steps h3 { margin: 25px 0 8px; font-size: 17px; }
+.sellio-steps p { margin: 0; color: #75637f; font-size: 13px; line-height: 1.58; }
+
+.sellio-pricing-section { background: #fff; }
+.sellio-billing-toggle { width: max-content; display: flex; gap: 5px; margin: -22px auto 36px; padding: 5px; border-radius: 14px; background: #f2eaf5; }
+.sellio-billing-toggle button { min-height: 40px; padding: 0 16px; border: 0; border-radius: 10px; color: #725f7d; background: transparent; font-weight: 800; cursor: pointer; }
+.sellio-billing-toggle button.is-active { color: #fff; background: var(--sl-ink); }
+.sellio-billing-toggle span { margin-left: 5px; color: var(--sl-pink); font-size: 9px; }
+.sellio-billing-toggle button.is-active span { color: #ffd0e7; }
+.sellio-pricing-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; align-items: stretch; }
+.sellio-pricing-card { position: relative; display: flex; flex-direction: column; padding: 34px; border: 1px solid var(--sl-line); border-radius: 28px; background: #fff; box-shadow: 0 15px 40px rgba(67,29,84,.06); }
+.sellio-pricing-card.is-featured { border: 2px solid var(--plan-accent); transform: translateY(-10px); box-shadow: 0 24px 60px rgba(211,59,144,.14); }
+.sellio-plan-badge { position: absolute; top: 0; left: 50%; transform: translate(-50%,-50%); padding: 7px 13px; border-radius: 99px; color: #fff; background: linear-gradient(110deg,var(--sl-purple),var(--sl-pink)); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; }
+.sellio-pricing-card__top h3 { margin: 0; font-size: 24px; }
+.sellio-pricing-card__top p { min-height: 44px; color: #76647f; font-size: 13px; line-height: 1.55; }
+.sellio-plan-price { display: flex; align-items: baseline; gap: 5px; margin: 19px 0 4px; }
+.sellio-plan-price small { font-weight: 800; }
+.sellio-plan-price strong { font: 800 3.6rem/1 "Manrope",sans-serif; letter-spacing: -.06em; }
+.sellio-plan-price span { color: #85728e; }
+.sellio-plan-saving { min-height: 18px; margin: 0; color: #24966f; font-size: 11px; font-weight: 700; }
+.sellio-pricing-card ul { display: grid; gap: 12px; padding: 23px 0 25px; margin: 0; list-style: none; }
+.sellio-pricing-card li { display: flex; gap: 8px; align-items: flex-start; color: #665470; font-size: 13px; }
+.sellio-pricing-card li svg { flex: 0 0 auto; width: 16px; color: var(--plan-accent); }
+.sellio-button--plan { width: 100%; margin-top: auto; color: #fff !important; background: var(--plan-accent); }
+.sellio-pricing-note { margin: 24px 0 0; text-align: center; color: #897690; font-size: 11px; }
+
+.sellio-roadmap-section { background: linear-gradient(180deg,#fff,#fff8f3); }
+.sellio-roadmap-shell { display: grid; grid-template-columns: .95fr 1.05fr; gap: 52px; padding: 62px; border-radius: 38px; color: #fff; background: radial-gradient(circle at 10% 10%,rgba(225,67,151,.28),transparent 34%),linear-gradient(145deg,#321744,#21112f); overflow: hidden; }
+.sellio-roadmap-copy h2 { margin: 18px 0; font: 800 clamp(2.6rem,4vw,4.5rem)/1 "Manrope",sans-serif; letter-spacing: -.06em; }
+.sellio-roadmap-copy > p { color: #d4c4d9; line-height: 1.7; }
+.sellio-season-card { display: flex; gap: 16px; margin-top: 30px; padding: 18px; border: 1px solid rgba(255,255,255,.1); border-radius: 18px; background: rgba(255,255,255,.06); }
+.sellio-season-card__art { position: relative; flex: 0 0 72px; height: 72px; display: grid; place-items: center; border-radius: 18px; color: #fff; background: linear-gradient(145deg,#db3e96,#ff864c); }
+.sellio-season-card__art svg { width: 29px; }
+.sellio-season-card__art svg:first-child { position: absolute; right: 5px; top: 5px; width: 14px; }
+.sellio-season-card > div:last-child { display: flex; flex-direction: column; justify-content: center; }
+.sellio-season-card span { color: #f5b8d7; font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
+.sellio-season-card strong { margin: 3px 0; }
+.sellio-season-card small { color: #cdbcd3; font-size: 10px; }
+.sellio-roadmap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+.sellio-roadmap-grid article { min-height: 190px; padding: 22px; border: 1px solid rgba(255,255,255,.1); border-radius: 20px; background: rgba(255,255,255,.055); }
+.sellio-roadmap-grid article > span { width: 39px; height: 39px; display: grid; place-items: center; border-radius: 12px; color: #ffd2e5; background: rgba(227,67,151,.16); }
+.sellio-roadmap-grid article svg { width: 19px; }
+.sellio-roadmap-grid h3 { margin: 17px 0 7px; font-size: 15px; }
+.sellio-roadmap-grid p { margin: 0; color: #cbbbd1; font-size: 12px; line-height: 1.55; }
+.sellio-roadmap-grid small { display: inline-block; margin-top: 12px; color: #f4a8cc; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+
+.sellio-faq-section { background: #fff; }
+.sellio-faq-layout { display: grid; grid-template-columns: .75fr 1.25fr; gap: 85px; }
+.sellio-faq-list details { border-top: 1px solid var(--sl-line); }
+.sellio-faq-list details:last-child { border-bottom: 1px solid var(--sl-line); }
+.sellio-faq-list summary { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 24px 0; list-style: none; font-weight: 800; cursor: pointer; }
+.sellio-faq-list summary::-webkit-details-marker { display: none; }
+.sellio-faq-list summary span { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; color: var(--sl-purple); background: #f4ecf8; font-size: 19px; transition: transform .2s; }
+.sellio-faq-list details[open] summary span { transform: rotate(45deg); }
+.sellio-faq-list details p { max-width: 680px; margin: -10px 50px 24px 0; color: #74617e; line-height: 1.65; }
+
+.sellio-landing-footer { color: #fff; background: #21102e; }
+.sellio-footer-cta { min-height: 330px; display: flex; align-items: center; justify-content: space-between; gap: 50px; border-bottom: 1px solid rgba(255,255,255,.1); }
+.sellio-footer-cta h2 { max-width: 700px; margin: 16px 0 12px; font: 800 clamp(2.5rem,5vw,5rem)/1 "Manrope",sans-serif; letter-spacing: -.06em; }
+.sellio-footer-cta p { margin: 0; color: #c9b9cf; font-size: 17px; }
+.sellio-footer-cta > div:last-child { display: flex; gap: 10px; flex: 0 0 auto; }
+.sellio-footer-main { display: grid; grid-template-columns: 1fr 1.3fr; gap: 80px; padding: 65px 0; }
+.sellio-footer-brand img { height: 68px; width: auto; filter: brightness(0) invert(1); }
+.sellio-footer-brand p { max-width: 400px; color: #c7b6cd; line-height: 1.6; }
+.sellio-footer-brand > span { color: #9f8ba8; font-size: 12px; }
+.sellio-footer-brand a { color: #f3b1d1; }
+.sellio-footer-links { display: grid; grid-template-columns: repeat(3,1fr); gap: 30px; }
+.sellio-footer-links div { display: flex; flex-direction: column; gap: 12px; }
+.sellio-footer-links strong { margin-bottom: 5px; color: #fff; }
+.sellio-footer-links a { color: #bfaec6; font-size: 13px; }
+.sellio-footer-links a:hover { color: #f6b4d4; }
+.sellio-footer-bottom { min-height: 64px; display: flex; justify-content: space-between; align-items: center; color: #907f99; border-top: 1px solid rgba(255,255,255,.08); font-size: 11px; }
+
+@media (max-width: 1080px) {
+  .sellio-landing-nav { gap: 17px; }
+  .sellio-landing-header__actions .sellio-login-link { display: none; }
+  .sellio-hero__grid { grid-template-columns: 1fr 1fr; gap: 20px; }
+  .sellio-hero-order-card { left: -10px; }
+  .sellio-hero-insight-card { right: -10px; }
+  .sellio-feature-grid { grid-template-columns: repeat(2,1fr); }
+  .sellio-steps { grid-template-columns: repeat(3,1fr); }
+  .sellio-steps li:not(:last-child)::after { display: none; }
+}
+@media (max-width: 900px) {
+  .sellio-container { width: min(100% - 36px, 720px); }
+  .sellio-landing-header__inner { height: 74px; }
+  .sellio-landing-logo img { height: 44px; }
+  .sellio-landing-nav, .sellio-landing-header__actions > .sellio-button { display: none; }
+  .sellio-landing-header__actions { margin-left: auto; }
+  .sellio-menu-button { display: grid; place-items: center; }
+  .sellio-mobile-nav { position: absolute; left: 18px; right: 18px; top: 68px; display: grid; padding: 14px; border: 1px solid var(--sl-line); border-radius: 19px; background: rgba(255,255,255,.98); box-shadow: 0 20px 60px rgba(46,19,63,.18); }
+  .sellio-mobile-nav > a:not(.sellio-button) { display: flex; justify-content: space-between; align-items: center; padding: 13px 8px; border-bottom: 1px solid #eee6f0; font-weight: 700; }
+  .sellio-mobile-nav svg { width: 16px; }
+  .sellio-mobile-nav .sellio-button { margin-top: 10px; }
+  .sellio-hero { min-height: auto; }
+  .sellio-hero__grid { grid-template-columns: 1fr; padding-top: 76px; }
+  .sellio-hero__copy { max-width: 680px; text-align: center; margin-inline: auto; }
+  .sellio-hero__copy h1 { font-size: clamp(4.4rem,12vw,6.2rem); }
+  .sellio-hero__copy > p { margin-inline: auto; }
+  .sellio-hero__actions, .sellio-hero__trust { justify-content: center; }
+  .sellio-hero-visual { min-height: 600px; margin-top: 24px; }
+  .sellio-hero-order-card { left: 30px; }
+  .sellio-hero-insight-card { right: 28px; }
+  .sellio-proof-strip .sellio-container { grid-template-columns: repeat(3,1fr); padding: 12px 0; }
+  .sellio-proof-strip span:nth-child(3) { border-right: 0; }
+  .sellio-product-tabs button { flex-basis: 150px; }
+  .sellio-showcase-shell { grid-template-columns: 1fr; }
+  .sellio-showcase-copy { padding: 38px; }
+  .sellio-showcase-preview { min-height: 610px; }
+  .sellio-world-map { padding: 30px; }
+  .sellio-world-grid { grid-template-columns: repeat(2,1fr); }
+  .sellio-world-toolbar__future { display: none !important; }
+  .sellio-steps { grid-template-columns: repeat(2,1fr); }
+  .sellio-pricing-grid { grid-template-columns: 1fr; max-width: 620px; margin-inline: auto; }
+  .sellio-pricing-card.is-featured { transform: none; }
+  .sellio-roadmap-shell { grid-template-columns: 1fr; padding: 44px; }
+  .sellio-faq-layout { grid-template-columns: 1fr; gap: 0; }
+  .sellio-footer-cta { flex-direction: column; align-items: flex-start; justify-content: center; padding: 65px 0; }
+  .sellio-footer-main { grid-template-columns: 1fr; gap: 50px; }
+}
+@media (max-width: 600px) {
+  .sellio-container { width: min(100% - 32px, 560px); }
+  .sellio-section { padding: 76px 0; }
+  .sellio-section-heading { margin-bottom: 34px; }
+  .sellio-section-heading h2 { font-size: 2.5rem; }
+  .sellio-section-heading p { font-size: 16px; }
+  .sellio-button { width: 100%; }
+  .sellio-hero__grid { padding-top: 54px; padding-bottom: 48px; }
+  .sellio-hero__copy h1 { font-size: clamp(3.2rem,16vw,4.4rem); margin-top: 16px; }
+  .sellio-hero__copy > p { font-size: 17px; }
+  .sellio-hero__actions { display: grid; width: 100%; }
+  .sellio-hero__trust { display: grid; justify-content: start; width: max-content; max-width: 100%; margin-inline: auto; text-align: left; }
+  .sellio-hero-visual { min-height: 510px; margin-inline: -10px; border-radius: 29px; }
+  .sellio-hero-phone { width: 210px; min-height: 420px; padding: 11px; border-width: 5px; border-radius: 29px; }
+  .sellio-hero-phone__banner { min-height: 94px; padding: 13px; }
+  .sellio-hero-phone__products i { height: 63px; }
+  .sellio-hero-phone__cart { left: 11px; right: 11px; bottom: 11px; }
+  .sellio-hero-order-card, .sellio-hero-insight-card { width: 158px; padding: 11px; }
+  .sellio-hero-order-card { left: -3px; top: 56px; }
+  .sellio-hero-insight-card { right: -3px; bottom: 41px; }
+  .sellio-mini-order-row, .sellio-mini-success { display: none; }
+  .sellio-mini-bars { height: 36px; }
+  .sellio-hero-core { right: -1px; top: 168px; }
+  .sellio-hero-core__disc { width: 56px; height: 56px; border-radius: 18px; }
+  .sellio-hero-core__disc img { width: 45px; height: 45px; }
+  .sellio-hero-connection { display: none; }
+  .sellio-proof-strip .sellio-container { grid-template-columns: repeat(2,1fr); }
+  .sellio-proof-strip span { border-right: 0; border-bottom: 1px solid var(--sl-line); justify-content: flex-start; padding-left: 12px; }
+  .sellio-feature-grid { grid-template-columns: 1fr; }
+  .sellio-feature-card { min-height: 0; }
+  .sellio-showcase-copy { padding: 30px; }
+  .sellio-showcase-preview { min-height: 520px; padding: 20px 10px; }
+  .sellio-demo-phone { width: 285px; transform: scale(.9); }
+  .sellio-demo-dashboard, .sellio-demo-assistant { min-height: 445px; padding: 20px 15px; }
+  .sellio-order-columns { grid-template-columns: 1fr; }
+  .sellio-order-card:nth-child(3) { display: none; }
+  .sellio-inventory-summary { grid-template-columns: 1fr 1fr; }
+  .sellio-inventory-summary div:last-child { display: none; }
+  .sellio-insight-cards { grid-template-columns: 1fr; }
+  .sellio-world-toolbar { padding: 0 18px; }
+  .sellio-world-map { padding: 18px; }
+  .sellio-world-grid { grid-template-columns: 1fr; }
+  .sellio-world-tile { min-height: 210px; }
+  .sellio-world-building { transform: scale(.87); margin-bottom: -2px; }
+  .sellio-world-legend { padding: 15px 18px; }
+  .sellio-world-legend__note { width: 100%; margin-left: 0; }
+  .sellio-steps { grid-template-columns: 1fr; }
+  .sellio-steps li { min-height: 0; display: flex; gap: 18px; }
+  .sellio-steps h3 { margin: 3px 0 7px; }
+  .sellio-billing-toggle { width: 100%; }
+  .sellio-billing-toggle button { flex: 1; padding-inline: 8px; }
+  .sellio-pricing-card { padding: 28px 24px; }
+  .sellio-roadmap-shell { padding: 30px 20px; border-radius: 28px; }
+  .sellio-roadmap-grid { grid-template-columns: 1fr; }
+  .sellio-roadmap-grid article { min-height: 0; }
+  .sellio-footer-cta > div:last-child { width: 100%; flex-direction: column; }
+  .sellio-footer-links { grid-template-columns: 1fr 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sellio-landing *, .sellio-landing *::before, .sellio-landing *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
