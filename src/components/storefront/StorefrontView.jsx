@@ -384,15 +384,7 @@ export default function StorefrontView({
     if (productLayout !== 'split') return;
     let target = window;
     if (previewMode) {
-      let el = rootRef.current?.parentElement;
-      let depth = 0;
-      let found = null;
-      while (el && depth < 8) {
-        const cs = window.getComputedStyle(el);
-        if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') { found = el; break; }
-        el = el.parentElement;
-        depth++;
-      }
+      const found = findPreviewScrollParent(rootRef.current?.parentElement);
       if (!found) return;
       target = found;
     }
