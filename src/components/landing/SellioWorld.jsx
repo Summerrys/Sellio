@@ -11,7 +11,6 @@ import {
   MapPinned,
   Paintbrush,
   Scissors,
-  Search,
   ShoppingBag,
   Sparkles,
   Store,
