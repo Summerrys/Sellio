@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import { unauthorized, forbidden } from './apiResponse.js';
+import { unauthorized, forbidden } from './apiResponse.ts';
 
 /**
  * Authenticate user and get tenant context
