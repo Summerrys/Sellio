@@ -844,8 +844,7 @@ export default function StorefrontView({
             setSearchQuery={setSearchQuery}
             searchActive={searchActive}
             searchedProducts={searchedProducts}
-            showStickyBar={showFloatingSearch}
-            headerHeight={marqueeHeight + headerHeight}
+            stickyTop={marqueeHeight + headerHeight}
           />
         )}
 
@@ -925,7 +924,7 @@ function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onA
 }
 
 // ── Non-split content (grid / list / carousel) ───────────────────────────────
-function NonSplitContent({ products, categories, primaryColor, currency, storefrontConfig, showStockBadge, onAddToCart, onProductClick, contentMap, isDesktop = false, isLandscape = false, searchOpen, setSearchOpen, searchQuery, setSearchQuery, searchActive = false, searchedProducts = [], showStickyBar = false, headerHeight = 84 }) {
+function NonSplitContent({ products, categories, primaryColor, currency, storefrontConfig, showStockBadge, onAddToCart, onProductClick, contentMap, isDesktop = false, isLandscape = false, searchOpen, setSearchOpen, searchQuery, setSearchQuery, searchActive = false, searchedProducts = [], stickyTop = 84 }) {
   const { t } = useLanguage();
   const tr = (text) => contentMap[text] || text;
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -943,10 +942,18 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
 
   return (
     <>
-      <div style={{ position: 'sticky', top: headerHeight, zIndex: 45, background: 'white' }}>
+      {/* Category tabs + search bar. In-flow and full-width within the
+          storefront content, sticking directly beneath the marquee+header
+          stack (stickyTop = measured marquee + header heights, so it works
+          with or without a promo marquee). minWidth:0 on the tabs strip
+          guarantees it shrinks and scrolls horizontally instead of ever
+          widening the bar past the panel; marginLeft:auto keeps the round
+          search button pinned to the right edge even when category tabs are
+          hidden (show_category_tabs off / no categories). */}
+      <div style={{ position: 'sticky', top: stickyTop, zIndex: 45, background: 'white' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px 10px 16px' }}>
           {storefrontConfig?.show_category_tabs !== false && categories.length > 0 && (
-            <div className="sf-no-scrollbar" style={{ display: 'flex', gap: 8, overflowX: 'auto', flex: 1 }}>
+            <div className="sf-no-scrollbar" style={{ display: 'flex', gap: 8, overflowX: 'auto', flex: 1, minWidth: 0 }}>
               {[{ id: null, name: t('all') }, ...categories].map(cat => (
                 <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} style={{
                   flexShrink: 0, padding: '7px 16px', borderRadius: 20, fontSize: 13, cursor: 'pointer', border: 'none',
@@ -959,7 +966,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
           )}
           <button
             onClick={() => setSearchOpen?.(v => !v)}
-            style={{ flexShrink: 0, width: 34, height: 34, borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: searchOpen ? primaryColor : `${primaryColor}1A` }}
+            style={{ flexShrink: 0, marginLeft: 'auto', width: 34, height: 34, borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: searchOpen ? primaryColor : `${primaryColor}1A` }}
           >
             <Search size={16} color={searchOpen ? 'white' : primaryColor} />
           </button>
@@ -973,7 +980,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
                 value={searchQuery}
                 onChange={e => setSearchQuery?.(e.target.value)}
                 placeholder="Search menu..."
-                style={{ width: '100%', padding: '9px 12px 9px 32px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#f8fafc', fontSize: 13, outline: 'none' }}
+                style={{ width: '100%', padding: '9px 12px 9px 32px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#f8fafc', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery?.('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex' }}>
