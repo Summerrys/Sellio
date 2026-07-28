@@ -7,6 +7,7 @@ import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import Splash from './pages/Splash';
+import LandingPage from '@/components/landing/LandingPage';
 import Storefront from './pages/Storefront';
 import { useEffect, Suspense } from 'react';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -84,7 +85,7 @@ function App() {
         <Router>
           <NavigationTracker />
           <Routes>
-            <Route path="/" element={<Splash />} />
+            <Route path="/" element={<LandingPage />} />
             <Route path="/*" element={<AuthenticatedApp />} />
           </Routes>
         </Router>
