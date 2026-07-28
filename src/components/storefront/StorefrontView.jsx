@@ -332,17 +332,10 @@ export default function StorefrontView({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const splitSearchBarRef = useRef(null);
-  const [splitSearchBarHeight, setSplitSearchBarHeight] = useState(0);
-  useEffect(() => {
-    if (!splitSearchBarRef.current) { setSplitSearchBarHeight(0); return; }
-    const el = splitSearchBarRef.current;
-    const update = () => setSplitSearchBarHeight(el.offsetHeight);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [previewMode, searchOpen]);
+  // Set on sidebar-category clicks: suppresses the scroll-position tracker
+  // while the smooth scroll it triggered is still in flight, so the sidebar
+  // doesn't re-highlight every section the animation passes through.
+  const clickScrollUntilRef = useRef(0);
 
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedVariants, setSelectedVariants] = useState({});
