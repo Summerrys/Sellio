@@ -1,65 +1,76 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   BarChart3,
   BellRing,
-  Bot,
-  Boxes,
-  Check,
-  Palette,
+  HeartHandshake,
+  PackageCheck,
   QrCode,
-  ShieldCheck,
   ShoppingBag,
   Sparkles,
   Store,
-  Users,
 } from 'lucide-react';
 
-const CUSTOMER_ITEMS = [
-  { label: 'Branded storefront', Icon: Store },
-  { label: 'QR and table ordering', Icon: QrCode },
-  { label: 'Simple mobile checkout', Icon: ShoppingBag },
-  { label: 'Merchant discovery', Icon: Sparkles, future: true },
+const CUSTOMER_POINTS = [
+  { Icon: Store, title: 'Branded discovery', copy: 'The merchant’s identity stays visible from the first browse.' },
+  { Icon: QrCode, title: 'Simple ordering', copy: 'Links and table QR codes take customers straight to what matters.' },
+  { Icon: ShoppingBag, title: 'Confident checkout', copy: 'A clear path from product choice to completed order.' },
 ];
 
-const MERCHANT_ITEMS = [
-  { label: 'Live orders and kitchen flow', Icon: BellRing },
-  { label: 'Products and inventory', Icon: Boxes },
-  { label: 'Reports and performance', Icon: BarChart3 },
-  { label: 'Staff roles and Sellio AI', Icon: Users },
+const MERCHANT_POINTS = [
+  { Icon: BellRing, title: 'Live order flow', copy: 'New, preparing and ready states stay in one operational view.' },
+  { Icon: PackageCheck, title: 'Connected stock', copy: 'Product and inventory activity remain part of the same story.' },
+  { Icon: BarChart3, title: 'Useful visibility', copy: 'Performance is translated into an understandable daily pulse.' },
 ];
 
-function ExperiencePanel({ title, label, items, type }) {
+function PointList({ title, eyebrow, points }) {
   return (
-    <motion.article className={'sellio-connected-panel is-' + type} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .2 }} transition={{ duration: .5 }}>
-      <span className="sellio-connected-panel__label">{label}</span>
+    <div className="sl-imm-connection-list">
+      <span>{eyebrow}</span>
       <h3>{title}</h3>
-      <div className="sellio-connected-panel__items">
-        {items.map(({ label: itemLabel, Icon, future }) => <div key={itemLabel}><span><Icon /></span><strong>{itemLabel}</strong>{future ? <small>Marketplace layer</small> : <Check />}</div>)}
-      </div>
-      {type === 'customer' ? (
-        <div className="sellio-connected-store-card"><span><Palette /></span><div><small>Storefront theme</small><strong>Uniquely yours</strong></div><i /><i /><i /></div>
-      ) : (
-        <div className="sellio-connected-pulse"><span><Bot /></span><div><small>Sellio AI pulse</small><strong>“Oat milk may run low by Friday.”</strong></div></div>
-      )}
-    </motion.article>
+      {points.map(({ Icon, title: itemTitle, copy }) => (
+        <div key={itemTitle}>
+          <i><Icon /></i>
+          <p><strong>{itemTitle}</strong><small>{copy}</small></p>
+        </div>
+      ))}
+    </div>
   );
 }
 
 export default function ConnectedCommerce() {
+  const reduceMotion = useReducedMotion();
+
   return (
-    <section id="features" className="sellio-section sellio-connected-section" aria-labelledby="sellio-connected-heading">
+    <section className="sellio-section sl-imm-section sl-imm-connected" aria-labelledby="sellio-connected-heading">
       <div className="sellio-container">
-        <div className="sellio-connected-heading">
-          <span className="sellio-eyebrow"><ShieldCheck aria-hidden="true" /> Both sides connected</span>
-          <h2 id="sellio-connected-heading">Beautiful for customers.<br />Practical for the people running it.</h2>
-          <p>Sellio joins the experience customers see with the operations merchants rely on—without making either side feel like an afterthought.</p>
+        <div className="sl-imm-heading sl-imm-heading--center">
+          <div>
+            <span className="sellio-eyebrow"><HeartHandshake /> One system, two experiences</span>
+            <h2 id="sellio-connected-heading">Delight in front.<br />Clarity behind the counter.</h2>
+          </div>
+          <p>Customers should feel the brand. Merchants should feel in control. Sellio connects both without making either side look like software plumbing.</p>
         </div>
 
-        <div className="sellio-connected-layout">
-          <ExperiencePanel title="A storefront customers want to explore." label="Customer experience" items={CUSTOMER_ITEMS} type="customer" />
-          <div className="sellio-connected-core" aria-hidden="true"><span /><img src="https://assets.apptelier.sg/sellio/Logo_AISellio_Assistant.png" alt="" /><strong>Sellio</strong><small>One connected platform</small></div>
-          <ExperiencePanel title="A workspace that keeps the day moving." label="Merchant operations" items={MERCHANT_ITEMS} type="merchant" />
+        <div className="sl-imm-connection-stage">
+          <motion.div
+            className="sl-imm-connection-art"
+            initial={false}
+            whileHover={reduceMotion ? undefined : { scale: 1.012 }}
+            transition={{ duration: .55, ease: [0.2, 0.8, 0.2, 1] }}
+          >
+            <img
+              src="/assets/immersive/connected-commerce.webp"
+              alt="A premium connected commerce environment linking a customer storefront to merchant operations"
+            />
+            <div className="sl-imm-connection-badge sl-imm-connection-badge--customer"><Store /> Customer experience</div>
+            <div className="sl-imm-connection-badge sl-imm-connection-badge--merchant"><BarChart3 /> Merchant operations</div>
+            <div className="sl-imm-connection-core"><Sparkles /><span>Connected by Sellio</span></div>
+          </motion.div>
+          <div className="sl-imm-connection-details">
+            <PointList eyebrow="Customer side" title="Easy to enter. Easy to trust." points={CUSTOMER_POINTS} />
+            <PointList eyebrow="Merchant side" title="Easy to see. Easy to act." points={MERCHANT_POINTS} />
+          </div>
         </div>
       </div>
     </section>
