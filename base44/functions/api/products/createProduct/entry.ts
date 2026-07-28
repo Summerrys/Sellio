@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import { success, error, validationError } from '../../lib/apiResponse.js';
-import { authenticate, requirePermission } from '../../lib/apiAuth.js';
+import { success, error, validationError } from './apiResponse.ts';
+import { authenticate, requirePermission } from './apiAuth.ts';
 
 /**
  * POST /api/v1/products
