@@ -10,7 +10,6 @@ import {
   MapPin,
   Palette,
   ShoppingBag,
-  Sparkles,
   Store,
   Utensils,
 } from 'lucide-react';
