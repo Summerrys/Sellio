@@ -690,7 +690,8 @@ export default function StorefrontView({
                     )}
                   </div>
                 </div>
-              )}
+                )}
+              </div>
             </div>
           )}
 
