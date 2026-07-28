@@ -644,8 +644,22 @@ export default function StorefrontView({
               was destroyed after the first keystroke. Now it persists across
               that transition. */}
           {(showFloatingSearch || searchOpen) && (
-            <div style={{ position: previewMode ? 'absolute' : 'fixed', top: marqueeHeight + headerHeight + 10, right: 14, zIndex: 45 }}>
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            /* Zero-height sticky rail. In-flow inside the content sheet, so
+               the button is anchored to the storefront's own right edge —
+               which is the split product panel's right edge — rather than
+               the browser viewport (position:fixed put it at the far right
+               of a wide desktop window, outside the centered 1280px store
+               column) or the old preview-only position:absolute (which
+               scrolled away with the content inside the phone preview).
+               Sticky pins it just below the marquee+header stack in BOTH
+               live mode (window scroll) and the Design Store preview
+               (canvas scroll), and height:0 with a shrink-wrapped inner
+               column means it takes no layout space and never blocks taps
+               on product rows beneath the same y-band. Still hoisted above
+               the searchActive branch: the input must survive the
+               transition into search-results view without unmounting. */
+            <div style={{ position: 'sticky', top: marqueeHeight + headerHeight + 10, zIndex: 45, height: 0, display: 'flex', justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', paddingRight: 14 }}>
                 <button
                   onClick={() => setSearchOpen(v => !v)}
                   style={{
@@ -658,9 +672,8 @@ export default function StorefrontView({
                 >
                   <Search size={16} color={searchOpen ? 'white' : primaryColor} />
                 </button>
-              </div>
-              {searchOpen && (
-                <div style={{ marginTop: 8, width: 240, padding: 8, borderRadius: 12, background: 'white', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+                {searchOpen && (
+                  <div style={{ marginTop: 8, width: 240, maxWidth: 'calc(100vw - 28px)', padding: 8, borderRadius: 12, background: 'white', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
                   <div style={{ position: 'relative' }}>
                     <Search size={14} color="#94a3b8" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
                     <input
