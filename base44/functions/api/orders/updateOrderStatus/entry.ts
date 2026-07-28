@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import { success, error, notFound, validationError } from '../../lib/apiResponse.js';
-import { authenticate } from '../../lib/apiAuth.js';
+import { success, error, notFound, validationError } from './apiResponse.ts';
+import { authenticate } from './apiAuth.ts';
 
 /**
  * PATCH /api/v1/orders/:id/status
