@@ -98,7 +98,7 @@ function PricingSection() {
   return (
     <section id="pricing" className="sellio-section sellio-pricing-section sellio-pricing-section--phase1b" aria-labelledby="sellio-pricing-heading">
       <div className="sellio-container">
-        <div className="sellio-section-heading sellio-section-heading--center"><span className="sellio-eyebrow"><CircleDollarSign /> Start with operations</span><h2 id="sellio-pricing-heading">Your storefront today.<br />Your place in Sellio World tomorrow.</h2><p>Begin with Sellio’s current F&B platform. Marketplace placement and gamification will extend the same merchant account in future releases.</p></div>
+        <div className="sellio-section-heading sellio-section-heading--center"><span className="sellio-eyebrow"><CircleDollarSign /> Start your next chapter</span><h2 id="sellio-pricing-heading">Launch your storefront.<br />Claim your place in Sellio World.</h2><p>Choose the operations plan that fits your business, enter the right merchant district and start building your presence in the connected marketplace.</p></div>
         <div className="sellio-billing-toggle" role="group" aria-label="Billing period"><button type="button" className={!annual ? 'is-active' : ''} onClick={() => setAnnual(false)}>Monthly</button><button type="button" className={annual ? 'is-active' : ''} onClick={() => setAnnual(true)}>Annual <span>2 months free</span></button></div>
         <div className="sellio-pricing-grid">
           {PLANS.map((plan) => {
@@ -116,7 +116,7 @@ function PricingSection() {
             );
           })}
         </div>
-        <p className="sellio-pricing-note">Eligible new merchants receive a three-day trial. Prices exclude applicable taxes. Future marketplace and gamification terms will be introduced separately.</p>
+        <p className="sellio-pricing-note">Eligible new merchants receive a three-day trial. Prices exclude applicable taxes. Every active merchant can establish a presence in Sellio World.</p>
       </div>
     </section>
   );
@@ -124,12 +124,13 @@ function PricingSection() {
 
 function FAQSection() {
   const items = [
-    { question: 'Is Sellio Marketplace already live?', answer: 'Not yet. Phase 1B establishes the customer journey, sector-zone architecture and storefront zoom experience. The existing F&B storefront and merchant operations remain the live product foundation.' },
-    { question: 'Must Sellio wait for many merchants before building the world?', answer: 'No. Sellio World can be developed with dedicated F&B, Retail and Services zones from the beginning. New merchants can then be allocated to the appropriate zone as they join.' },
-    { question: 'What happens when a customer selects a merchant?', answer: 'The intended experience moves from the world map into the merchant’s neighbourhood, then zooms into its branded storefront. Customers can return to the same map position after browsing.' },
-    { question: 'Will every storefront look identical?', answer: 'No. Sellio provides the structure, but merchants retain their own colours, products, content and decorative choices.' },
-    { question: 'Are Sellio Coins and decorations available now?', answer: 'Not yet. They are being designed as a progression layer alongside the marketplace so merchants can later earn and use cosmetic rewards without changing today’s subscription or payment behaviour.' },
-    { question: 'Can customers order without a marketplace account?', answer: 'Yes. The current merchant storefront allows customers to browse and order without requiring a shared marketplace identity.' },
+    { question: 'How does my business join Sellio World?', answer: 'Start a Sellio merchant plan and complete your storefront setup. Your business is then placed in the most relevant F&B, Retail or Services district so customers can discover it naturally.' },
+    { question: 'What happens when a customer selects my storefront?', answer: 'Sellio moves the customer from the district view into your branded storefront, where they can browse products or services and complete the relevant ordering journey.' },
+    { question: 'Can my storefront keep its own branding?', answer: 'Yes. Sellio supplies the connected world and commerce structure while your storefront keeps its own colours, products, imagery, content and decorative style.' },
+    { question: 'How do Sellio Coins work?', answer: 'Merchants earn Sellio Coins through eligible marketplace activity and milestones. Coins can be used for cosmetic storefront upgrades, seasonal decorations and selected world customisations.' },
+    { question: 'Are seasonal decorations available?', answer: 'Yes. Merchants can personalise their storefront for occasions such as Chinese New Year and Christmas while keeping the core shopping and ordering experience consistent.' },
+    { question: 'Which merchant districts are available?', answer: 'Sellio World supports dedicated F&B, Retail and Services districts. Merchants are allocated according to their primary business category, with room for new districts as the marketplace grows.' },
+    { question: 'Do customers need an account to browse?', answer: 'No. Customers can explore participating storefronts and browse available products or services without creating a marketplace account. Account features can be introduced only when they add useful continuity or rewards.' },
   ];
   return (
     <section className="sellio-section sellio-faq-section" aria-labelledby="sellio-faq-heading"><div className="sellio-container sellio-faq-layout"><div className="sellio-section-heading"><span className="sellio-eyebrow"><ShieldCheck /> Clear from the start</span><h2 id="sellio-faq-heading">The current product and the world ahead.</h2><p>Phase 1B shows how both fit together without presenting roadmap concepts as already released.</p></div><div className="sellio-faq-list">{items.map((item) => <details key={item.question}><summary>{item.question}<span>+</span></summary><p>{item.answer}</p></details>)}</div></div></section>
