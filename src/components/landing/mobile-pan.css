@@ -35,7 +35,7 @@
 }
 
 /* Connected workspace — generated dimensional scene replaces the flat split card. */
-.sellio-landing--phase1b .sl-workspace-section {
+.sellio-landing.sellio-landing--phase1b .sellio-product-section.sl-workspace-section {
   color: var(--sl-ink);
   background:
     radial-gradient(circle at 12% 18%,rgba(160,81,201,.1),transparent 26%),
@@ -43,15 +43,15 @@
     linear-gradient(180deg,#fffdfa 0%,#f5eef9 100%);
 }
 
-.sellio-landing--phase1b .sl-workspace-heading h2 {
+.sellio-landing.sellio-landing--phase1b .sl-workspace-section .sl-workspace-heading h2 {
   color: var(--sl-ink);
 }
 
-.sellio-landing--phase1b .sl-workspace-heading p {
+.sellio-landing.sellio-landing--phase1b .sl-workspace-section .sl-workspace-heading p {
   color: #66506d;
 }
 
-.sellio-landing--phase1b .sl-workspace-heading .sellio-eyebrow {
+.sellio-landing.sellio-landing--phase1b .sl-workspace-section .sl-workspace-heading .sellio-eyebrow {
   color: #9e2f70;
   border-color: rgba(224,68,154,.14);
   background: rgba(224,68,154,.08);
@@ -62,13 +62,13 @@
   z-index: 3;
 }
 
-.sellio-landing--phase1b .sl-workspace-tabs button {
+.sellio-landing.sellio-landing--phase1b .sl-workspace-section .sl-workspace-tabs button {
   color: #684f70;
   border-color: rgba(74,35,85,.1);
   background: rgba(255,255,255,.72);
 }
 
-.sellio-landing--phase1b .sl-workspace-tabs button.is-active {
+.sellio-landing.sellio-landing--phase1b .sl-workspace-section .sl-workspace-tabs button.is-active {
   color: #fff;
   border-color: transparent;
   background: linear-gradient(135deg,var(--sl-purple),var(--sl-pink));
