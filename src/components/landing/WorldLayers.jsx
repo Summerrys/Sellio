@@ -4,6 +4,7 @@ import {
   ArrowDown,
   Coins,
   Map,
+  MoveHorizontal,
   Palette,
   Sparkles,
   Store,
@@ -63,11 +64,16 @@ export default function WorldLayers() {
                 <motion.div
                   className="sl-imm-layer__art"
                   initial={false}
-                  whileHover={reduceMotion ? undefined : { scale: 1.012 }}
+                  whileHover={reduceMotion ? undefined : { scale: 1.006 }}
                   transition={{ duration: .5, ease: [0.2, 0.8, 0.2, 1] }}
                 >
-                  <img src={image} alt={alt} />
+                  <div className="sl-pan-scroll sl-pan-scroll--layer" tabIndex="0" aria-label={`Swipe horizontally to explore ${eyebrow}`}>
+                    <div className="sl-pan-canvas sl-pan-canvas--layer">
+                      <img src={image} alt={alt} />
+                    </div>
+                  </div>
                   <span>{number}</span>
+                  <div className="sl-pan-hint sl-pan-hint--layer"><MoveHorizontal /> Swipe image</div>
                 </motion.div>
                 <div className="sl-imm-layer__copy">
                   <span><Icon /> {eyebrow}</span>
