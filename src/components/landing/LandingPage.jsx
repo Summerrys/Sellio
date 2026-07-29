@@ -8,7 +8,6 @@ import {
   Check,
   ChevronRight,
   CircleDollarSign,
-  Clock3,
   Coffee,
   Menu,
   Package,
