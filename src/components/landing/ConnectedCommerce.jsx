@@ -4,6 +4,7 @@ import {
   BarChart3,
   BellRing,
   HeartHandshake,
+  MoveHorizontal,
   PackageCheck,
   QrCode,
   ShoppingBag,
@@ -53,20 +54,23 @@ export default function ConnectedCommerce() {
         </div>
 
         <div className="sl-imm-connection-stage">
-          <motion.div
-            className="sl-imm-connection-art"
-            initial={false}
-            whileHover={reduceMotion ? undefined : { scale: 1.012 }}
-            transition={{ duration: .55, ease: [0.2, 0.8, 0.2, 1] }}
-          >
-            <img
-              src="/assets/immersive/connected-commerce.webp"
-              alt="A premium connected commerce environment linking a customer storefront to merchant operations"
-            />
-            <div className="sl-imm-connection-badge sl-imm-connection-badge--customer"><Store /> Customer experience</div>
-            <div className="sl-imm-connection-badge sl-imm-connection-badge--merchant"><BarChart3 /> Merchant operations</div>
-            <div className="sl-imm-connection-core"><Sparkles /><span>Connected by Sellio</span></div>
-          </motion.div>
+          <div className="sl-pan-scroll sl-pan-scroll--connection" tabIndex="0" aria-label="Swipe horizontally to compare customer and merchant experiences">
+            <motion.div
+              className="sl-imm-connection-art sl-pan-canvas sl-pan-canvas--connection"
+              initial={false}
+              whileHover={reduceMotion ? undefined : { scale: 1.006 }}
+              transition={{ duration: .55, ease: [0.2, 0.8, 0.2, 1] }}
+            >
+              <img
+                src="/assets/immersive/connected-commerce.webp"
+                alt="A premium connected commerce environment linking a customer storefront to merchant operations"
+              />
+              <div className="sl-imm-connection-badge sl-imm-connection-badge--customer"><Store /> Customer experience</div>
+              <div className="sl-imm-connection-badge sl-imm-connection-badge--merchant"><BarChart3 /> Merchant operations</div>
+              <div className="sl-imm-connection-core"><Sparkles /><span>Connected by Sellio</span></div>
+            </motion.div>
+          </div>
+          <div className="sl-pan-hint"><MoveHorizontal /> Swipe to compare both sides</div>
           <div className="sl-imm-connection-details">
             <PointList eyebrow="Customer side" title="Easy to enter. Easy to trust." points={CUSTOMER_POINTS} />
             <PointList eyebrow="Merchant side" title="Easy to see. Easy to act." points={MERCHANT_POINTS} />
