@@ -22,11 +22,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import CommerceJourney from './CommerceJourney';
-import ConnectedCommerce from './ConnectedCommerce';
-import ProductShowcase from './ProductShowcase';
-import SellioWorld from './SellioWorld';
-import WorldLayers from './WorldLayers';
+import ScrollWorldExperience from './ScrollWorldExperience';
 import { PLANS } from './landingData';
 import './landing.css';
 import './phase1b.css';
@@ -190,16 +186,11 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="sellio-landing sellio-landing--phase1b">
+    <div className="sellio-landing sellio-landing--phase1b sellio-landing--scrollworld">
       <a className="sellio-skip-link" href="#sellio-main">Skip to content</a><LandingHeader />
       <main id="sellio-main">
-        <section className="sellio-hero" aria-labelledby="sellio-hero-heading"><div className="sellio-hero-blob sellio-hero-blob--one" aria-hidden="true" /><div className="sellio-hero-blob sellio-hero-blob--two" aria-hidden="true" /><div className="sellio-container sellio-hero__grid"><div className="sellio-hero__copy"><span className="sellio-eyebrow"><span className="sellio-live-dot" /> Built for Singapore F&B</span><h1 id="sellio-hero-heading">Your business,<br /><span>beautifully online.</span></h1><p>Sell, manage orders and grow your storefront—from one simple platform built for the rhythm of everyday business.</p><div className="sellio-hero__actions"><a href="#pricing" className="sellio-button sellio-button--gradient">Start Your 3-Day Free Trial <ArrowRight /></a><a href={DEMO_STORE_URL} target="_blank" rel="noopener noreferrer" className="sellio-button sellio-button--outline"><Play /> Explore a Demo Store</a></div><div className="sellio-hero__trust"><span><Check /> No charge until trial ends</span><span><Clock3 /> Set up at your own pace</span><span><ShieldCheck /> Merchant data stays private</span></div></div><HeroVisual /></div></section>
+        <ScrollWorldExperience />
         <section className="sellio-proof-strip" aria-label="Sellio capabilities"><div className="sellio-container"><span><Store /> Online storefront</span><span><QrCode /> QR ordering</span><span><Bell /> Live orders</span><span><Package /> Inventory</span><span><BarChart3 /> Reports</span><span><Users /> Staff roles</span></div></section>
-        <CommerceJourney />
-        <ProductShowcase />
-        <ConnectedCommerce />
-        <SellioWorld />
-        <WorldLayers />
         <PricingSection />
         <FAQSection />
       </main>
