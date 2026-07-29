@@ -104,7 +104,13 @@ export default function Tables() {
         .select('*')
         .eq('tenant_id', tenantId)
         .order('zone', { ascending: true, nullsFirst: true })
-        .order('sort_order', { ascending: true });
+        .order('sort_order', { ascending: true })
+        // Tiebreaker: if sort_order ever ties again (e.g. a data import),
+        // this keeps the order stable and creation-based instead of
+        // leaving it to Postgres's undefined behaviour for equal keys -
+        // that undefined behaviour was the actual root cause of tables
+        // visibly reshuffling on this page.
+        .order('created_date', { ascending: true });
       if (error) throw new Error(error.message);
       return data || [];
     },
