@@ -79,6 +79,18 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
 
       const resolvedZone = formData.zone === '__new__' ? newZoneName.trim() || null : formData.zone?.trim() || null;
 
+      // Auto-assign the next sort_order within this zone on create, so new
+      // tables always land at the end of their zone's sequence instead of
+      // defaulting to 0 (which was the root cause of the display-order
+      // bug: every table tying at sort_order 0 leaves Postgres free to
+      // return them in an unstable order that can reshuffle on any
+      // update). Editing an existing table intentionally leaves its
+      // sort_order untouched — changing zones doesn't renumber it.
+      const zoneSiblings = allTables.filter(t => (t.zone || null) === resolvedZone);
+      const nextSortOrder = table?.id
+        ? undefined
+        : zoneSiblings.reduce((max, t) => Math.max(max, t.sort_order || 0), 0) + 1;
+
       const payload = {
         id: tableId,
         tenant_id: tenantId,
@@ -88,6 +100,7 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
         status: formData.status || 'available',
         notes: formData.notes?.trim() || null,
         qr_code_url: qrCodeUrl,
+        ...(nextSortOrder !== undefined ? { sort_order: nextSortOrder } : {}),
       };
 
       console.log(table ? 'Updating table:' : 'Inserting table:', payload);
