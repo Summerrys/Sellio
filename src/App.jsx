@@ -4,7 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import Splash from './pages/Splash';
 import LandingPage from '@/components/landing/LandingPage';
@@ -12,7 +12,7 @@ import Storefront from './pages/Storefront';
 import { useEffect, Suspense } from 'react';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import AppLoader from '@/components/ui-custom/AppLoader';
-import { AppUserProvider } from '@/lib/AppUserContext';
+import { AppUserProvider, useAppUser } from '@/lib/AppUserContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import UserManagement from './pages/UserManagement';
 
@@ -23,6 +23,23 @@ const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
+
+// The bare root URL is where a merchant lands if they type just the
+// domain, or have an old/manual bookmark to it (the PWA install itself is
+// unaffected — its start_url is /Splash, which already runs the real
+// session-recovery check in Auth.jsx before ever reaching Dashboard). That
+// left one real gap: LandingPage is a static marketing page with no
+// session awareness at all, and React Router ranks the exact "/" match
+// above the "/*" wildcard that AuthenticatedApp lives on — so a logged-in
+// merchant hitting bare "/" always saw the marketing page instead of their
+// dashboard, even on a simple refresh. appUser is a synchronous,
+// cookie-backed read (see AppUserContext) — the same signal already used
+// everywhere else in the app — so this check is instant, no loading flash
+// before the redirect.
+const RootRoute = () => {
+  const { appUser } = useAppUser();
+  return appUser ? <Navigate to="/Dashboard" replace /> : <LandingPage />;
+};
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -85,7 +102,7 @@ function App() {
         <Router>
           <NavigationTracker />
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<RootRoute />} />
             <Route path="/*" element={<AuthenticatedApp />} />
           </Routes>
         </Router>
