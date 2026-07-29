@@ -150,24 +150,26 @@ export default function SellioWorld() {
                       alt="A premium close-up of an individual merchant storefront inside Sellio World"
                     />
                     <div className="sl-imm-storefront__shade" aria-hidden="true" />
-                    <div className="sl-imm-storefront__copy">
-                      <span><Store /> Storefront zoom</span>
-                      <h3>Cafetelier</h3>
-                      <p>The world moves from district discovery into a merchant-owned space. Brand colours, products, content and future decorative choices remain specific to the merchant.</p>
-                      <div className="sl-imm-storefront__features">
-                        <span><Check /> Recognisable merchant identity</span>
-                        <span><Check /> Direct path into browsing and ordering</span>
-                        <span><Palette /> Decoration anchors for future seasonal themes</span>
-                      </div>
-                      <div className="sl-imm-storefront__actions">
-                        <a href={DEMO_STORE_URL} target="_blank" rel="noopener noreferrer">Explore demo store <ArrowRight /></a>
-                        <button type="button" onClick={() => setStoreOpen(false)}>Return to world</button>
-                      </div>
-                    </div>
                   </div>
                 </div>
                 <button type="button" className="sl-imm-storefront__back sl-storefront-back-fixed" onClick={() => setStoreOpen(false)}><ArrowLeft /> Back to district</button>
                 <div className="sl-pan-hint"><MoveHorizontal /> Swipe to explore the storefront</div>
+                <div className="sl-storefront-details">
+                  <div>
+                    <span><Store /> Storefront zoom</span>
+                    <h3>Cafetelier</h3>
+                    <p>The world moves from district discovery into a merchant-owned space. Brand colours, products, content and future decorative choices remain specific to the merchant.</p>
+                  </div>
+                  <div className="sl-imm-storefront__features">
+                    <span><Check /> Recognisable merchant identity</span>
+                    <span><Check /> Direct path into browsing and ordering</span>
+                    <span><Palette /> Decoration anchors for future seasonal themes</span>
+                  </div>
+                  <div className="sl-imm-storefront__actions">
+                    <a href={DEMO_STORE_URL} target="_blank" rel="noopener noreferrer">Explore demo store <ArrowRight /></a>
+                    <button type="button" onClick={() => setStoreOpen(false)}>Return to world</button>
+                  </div>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
