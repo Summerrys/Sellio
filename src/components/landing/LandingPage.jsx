@@ -12,7 +12,6 @@ import {
   Coffee,
   Menu,
   Package,
-  Play,
   QrCode,
   ShieldCheck,
   ShoppingBag,
