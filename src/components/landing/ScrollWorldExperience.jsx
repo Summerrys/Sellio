@@ -150,7 +150,7 @@ export default function ScrollWorldExperience() {
 
     let ticking = false;
     const measure = () => {
-      const stickyTop = window.innerWidth <= 760 ? 72 : 86;
+      const stickyTop = window.innerWidth <= 900 ? 74 : 86;
       const start = root.offsetTop - stickyTop;
       const distance = Math.max(1, root.offsetHeight - window.innerHeight + stickyTop);
       const nextProgress = clamp((window.scrollY - start) / distance);
@@ -220,7 +220,7 @@ export default function ScrollWorldExperience() {
   const jumpTo = (index) => {
     const root = rootRef.current;
     if (!root) return;
-    const stickyTop = window.innerWidth <= 760 ? 72 : 86;
+    const stickyTop = window.innerWidth <= 900 ? 74 : 86;
     const distance = root.offsetHeight - window.innerHeight + stickyTop;
     const top = root.offsetTop - stickyTop + distance * ((index + 0.15) / SCENES.length);
     window.scrollTo({ top, behavior: reduceMotion ? 'auto' : 'smooth' });
