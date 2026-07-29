@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -8,6 +8,7 @@ import {
   Coffee,
   Compass,
   MapPin,
+  MoveHorizontal,
   Palette,
   ShoppingBag,
   Store,
@@ -22,6 +23,7 @@ const SECTORS = [
     name: 'F&B District',
     status: 'Active foundation',
     Icon: Utensils,
+    pan: .28,
     summary: 'Restaurants, cafés, bakeries and beverage concepts live around shared discovery routes.',
   },
   {
@@ -29,6 +31,7 @@ const SECTORS = [
     name: 'Retail Avenue',
     status: 'Expansion zone',
     Icon: ShoppingBag,
+    pan: .04,
     summary: 'Boutiques and product-led merchants receive storefront plots along a dedicated retail route.',
   },
   {
@@ -36,6 +39,7 @@ const SECTORS = [
     name: 'Services Garden',
     status: 'Expansion zone',
     Icon: BriefcaseBusiness,
+    pan: .96,
     summary: 'Wellness, studios and professional services occupy a calmer appointment-led neighbourhood.',
   },
 ];
@@ -43,8 +47,22 @@ const SECTORS = [
 export default function SellioWorld() {
   const [activeSector, setActiveSector] = useState('fnb');
   const [storeOpen, setStoreOpen] = useState(false);
+  const worldPanRef = useRef(null);
   const reduceMotion = useReducedMotion();
   const sector = SECTORS.find((item) => item.key === activeSector);
+
+  const selectSector = (key) => {
+    const nextSector = SECTORS.find((item) => item.key === key);
+    setActiveSector(key);
+    setStoreOpen(false);
+    const viewport = worldPanRef.current;
+    if (!viewport || !nextSector) return;
+    const maxScroll = viewport.scrollWidth - viewport.clientWidth;
+    viewport.scrollTo({
+      left: Math.max(0, maxScroll * nextSector.pan),
+      behavior: reduceMotion ? 'auto' : 'smooth',
+    });
+  };
 
   return (
     <section id="world" className="sellio-section sl-imm-world" aria-labelledby="sellio-world-heading">
@@ -67,7 +85,7 @@ export default function SellioWorld() {
                   role="tab"
                   aria-selected={activeSector === key}
                   className={activeSector === key ? 'is-active' : ''}
-                  onClick={() => { setActiveSector(key); setStoreOpen(false); }}
+                  onClick={() => selectSector(key)}
                 >
                   <Icon /><span>{name}</span>
                 </button>
@@ -79,28 +97,37 @@ export default function SellioWorld() {
           <AnimatePresence mode="wait">
             {!storeOpen ? (
               <motion.div
-                key={`world-${activeSector}`}
-                className={`sl-imm-world-map is-${activeSector}`}
-                initial={reduceMotion ? false : { opacity: 0, scale: .985 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={reduceMotion ? undefined : { opacity: 0, scale: 1.01 }}
-                transition={{ duration: .38 }}
+                key="world"
+                className="sl-world-stage"
+                initial={reduceMotion ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={reduceMotion ? undefined : { opacity: 0 }}
+                transition={{ duration: .3 }}
               >
-                <img
-                  src="/assets/immersive/sector-world.webp"
-                  alt="An immersive Sellio marketplace world with connected food and beverage, retail and services districts"
-                />
-                <div className="sl-imm-world-vignette" aria-hidden="true" />
-                <div className="sl-imm-district-label sl-imm-district-label--fnb"><Utensils /><span><strong>F&B District</strong><small>Active foundation</small></span></div>
-                <div className="sl-imm-district-label sl-imm-district-label--retail"><ShoppingBag /><span><strong>Retail Avenue</strong><small>Expansion zone</small></span></div>
-                <div className="sl-imm-district-label sl-imm-district-label--services"><BriefcaseBusiness /><span><strong>Services Garden</strong><small>Expansion zone</small></span></div>
+                <div
+                  ref={worldPanRef}
+                  className="sl-pan-scroll sl-pan-scroll--world"
+                  tabIndex="0"
+                  aria-label="Swipe horizontally across Sellio World and tap a district waypoint"
+                >
+                  <div className={`sl-imm-world-map sl-pan-canvas sl-pan-canvas--world is-${activeSector}`}>
+                    <img
+                      src="/assets/immersive/sector-world.webp"
+                      alt="An immersive Sellio marketplace world with connected food and beverage, retail and services districts"
+                    />
+                    <div className="sl-imm-world-vignette" aria-hidden="true" />
+                    <button type="button" className="sl-imm-district-label sl-imm-district-label--fnb" onClick={() => selectSector('fnb')}><Utensils /><span><strong>F&B District</strong><small>Active foundation</small></span></button>
+                    <button type="button" className="sl-imm-district-label sl-imm-district-label--retail" onClick={() => selectSector('retail')}><ShoppingBag /><span><strong>Retail Avenue</strong><small>Expansion zone</small></span></button>
+                    <button type="button" className="sl-imm-district-label sl-imm-district-label--services" onClick={() => selectSector('services')}><BriefcaseBusiness /><span><strong>Services Garden</strong><small>Expansion zone</small></span></button>
 
-                <button type="button" className="sl-imm-merchant-pin" onClick={() => setStoreOpen(true)}>
-                  <span><Coffee /></span>
-                  <span><small>Featured merchant</small><strong>Cafetelier</strong><em>Enter storefront <ArrowRight /></em></span>
-                </button>
-
-                <div className="sl-imm-world-copy">
+                    <button type="button" className="sl-imm-merchant-pin" onClick={() => setStoreOpen(true)}>
+                      <span><Coffee /></span>
+                      <span><small>Featured merchant</small><strong>Cafetelier</strong><em>Enter storefront <ArrowRight /></em></span>
+                    </button>
+                  </div>
+                </div>
+                <div className="sl-pan-hint"><MoveHorizontal /> Swipe across the world · Tap a district</div>
+                <div className="sl-world-copy-panel">
                   <span>{sector.status}</span>
                   <h3>{sector.name}</h3>
                   <p>{sector.summary}</p>
@@ -110,32 +137,37 @@ export default function SellioWorld() {
             ) : (
               <motion.div
                 key="storefront"
-                className="sl-imm-storefront"
-                initial={reduceMotion ? false : { opacity: 0, scale: 1.025 }}
+                className="sl-world-stage"
+                initial={reduceMotion ? false : { opacity: 0, scale: 1.015 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={reduceMotion ? undefined : { opacity: 0, scale: .985 }}
-                transition={{ duration: .42 }}
+                exit={reduceMotion ? undefined : { opacity: 0, scale: .99 }}
+                transition={{ duration: .36 }}
               >
-                <img
-                  src="/assets/immersive/storefront-zoom.webp"
-                  alt="A premium close-up of an individual merchant storefront inside Sellio World"
-                />
-                <div className="sl-imm-storefront__shade" aria-hidden="true" />
-                <button type="button" className="sl-imm-storefront__back" onClick={() => setStoreOpen(false)}><ArrowLeft /> Back to district</button>
-                <div className="sl-imm-storefront__copy">
-                  <span><Store /> Storefront zoom</span>
-                  <h3>Cafetelier</h3>
-                  <p>The world moves from district discovery into a merchant-owned space. Brand colours, products, content and future decorative choices remain specific to the merchant.</p>
-                  <div className="sl-imm-storefront__features">
-                    <span><Check /> Recognisable merchant identity</span>
-                    <span><Check /> Direct path into browsing and ordering</span>
-                    <span><Palette /> Decoration anchors for future seasonal themes</span>
-                  </div>
-                  <div className="sl-imm-storefront__actions">
-                    <a href={DEMO_STORE_URL} target="_blank" rel="noopener noreferrer">Explore demo store <ArrowRight /></a>
-                    <button type="button" onClick={() => setStoreOpen(false)}>Return to world</button>
+                <div className="sl-pan-scroll sl-pan-scroll--storefront" tabIndex="0" aria-label="Swipe horizontally to explore the merchant storefront">
+                  <div className="sl-imm-storefront sl-pan-canvas sl-pan-canvas--storefront">
+                    <img
+                      src="/assets/immersive/storefront-zoom.webp"
+                      alt="A premium close-up of an individual merchant storefront inside Sellio World"
+                    />
+                    <div className="sl-imm-storefront__shade" aria-hidden="true" />
+                    <div className="sl-imm-storefront__copy">
+                      <span><Store /> Storefront zoom</span>
+                      <h3>Cafetelier</h3>
+                      <p>The world moves from district discovery into a merchant-owned space. Brand colours, products, content and future decorative choices remain specific to the merchant.</p>
+                      <div className="sl-imm-storefront__features">
+                        <span><Check /> Recognisable merchant identity</span>
+                        <span><Check /> Direct path into browsing and ordering</span>
+                        <span><Palette /> Decoration anchors for future seasonal themes</span>
+                      </div>
+                      <div className="sl-imm-storefront__actions">
+                        <a href={DEMO_STORE_URL} target="_blank" rel="noopener noreferrer">Explore demo store <ArrowRight /></a>
+                        <button type="button" onClick={() => setStoreOpen(false)}>Return to world</button>
+                      </div>
+                    </div>
                   </div>
                 </div>
+                <button type="button" className="sl-imm-storefront__back sl-storefront-back-fixed" onClick={() => setStoreOpen(false)}><ArrowLeft /> Back to district</button>
+                <div className="sl-pan-hint"><MoveHorizontal /> Swipe to explore the storefront</div>
               </motion.div>
             )}
           </AnimatePresence>
