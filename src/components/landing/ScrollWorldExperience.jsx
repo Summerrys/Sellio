@@ -3,9 +3,11 @@ import { ArrowRight, Check, Pause, Play, RotateCcw, Sparkles } from 'lucide-reac
 import { useReducedMotion } from 'framer-motion';
 import './scroll-world.css';
 
-const DESKTOP_VIDEO = '/assets/scroll-world/sellio-scroll-world-desktop-480.mp4';
-const MOBILE_VIDEO = '/assets/scroll-world/sellio-scroll-world-mobile-480.mp4';
-const START_AT = 1.6;
+const DESKTOP_VIDEO = '/assets/scroll-world/sellio-world-desktop-1080p.mp4';
+const MOBILE_VIDEO = '/assets/scroll-world/sellio-world-mobile-1080p.mp4';
+const DESKTOP_POSTER = '/assets/scroll-world/sellio-world-desktop-poster.webp';
+const MOBILE_POSTER = '/assets/scroll-world/sellio-world-mobile-poster.webp';
+const START_AT = 0;
 
 const SCENES = [
   {
@@ -32,12 +34,12 @@ const SCENES = [
   },
   {
     id: 'journey',
-    nav: 'Order journey',
-    eyebrow: 'From browse to fulfilment',
-    title: 'Every order, clearly organised.',
-    body: 'Customer ordering, preparation, stock and performance connect as one physical flow—without losing track during a busy service.',
-    tags: ['Live orders', 'Kitchen flow', 'Connected inventory'],
-    poster: '03-journey.jpg',
+    nav: 'Commerce intelligence',
+    eyebrow: 'Sellio intelligence at work',
+    title: 'One signal between storefront and operations.',
+    body: 'Customer activity flows through Sellio’s intelligence layer into the merchant POS, live orders and analytics—keeping decisions connected from both sides.',
+    tags: ['Customer storefront', 'Sellio intelligence', 'POS + analytics'],
+    poster: '03-intelligence-bridge.jpg',
     accent: '#a855f7',
   },
   {
@@ -98,10 +100,11 @@ export default function ScrollWorldExperience() {
 
   const scene = SCENES[active];
   const source = mobile ? MOBILE_VIDEO : DESKTOP_VIDEO;
-  const poster = useMemo(
-    () => '/assets/scroll-world/posters/' + (mobile ? 'mobile/' : 'desktop/') + scene.poster,
+  const scenePoster = useMemo(
+    () => '/assets/scroll-world/' + (mobile ? 'mobile/' : 'desktop/') + scene.poster,
     [mobile, scene.poster],
   );
+  const videoPoster = mobile ? MOBILE_POSTER : DESKTOP_POSTER;
 
   useEffect(() => {
     const query = window.matchMedia('(max-width: 860px), (hover: none) and (pointer: coarse)');
@@ -177,7 +180,12 @@ export default function ScrollWorldExperience() {
 
       <div className="sl-sw-sticky">
         <div className="sl-sw-media" aria-hidden="true">
-          <img key={poster} className="sl-sw-poster" src={poster} alt="" />
+          <img
+            key={reduceMotion ? scenePoster : videoPoster}
+            className="sl-sw-poster"
+            src={reduceMotion ? scenePoster : videoPoster}
+            alt=""
+          />
           {!reduceMotion && (
             <video
               key={source}
@@ -188,7 +196,8 @@ export default function ScrollWorldExperience() {
               autoPlay
               playsInline
               preload="auto"
-              poster={poster}
+              poster={videoPoster}
+              disablePictureInPicture
               onLoadedMetadata={(event) => {
                 event.currentTarget.currentTime = START_AT;
                 setActive(0);
