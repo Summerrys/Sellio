@@ -133,7 +133,7 @@ function FAQSection() {
     { question: 'Do customers need an account to browse?', answer: 'No. Customers can explore participating storefronts and browse available products or services without creating a marketplace account. Account features can be introduced only when they add useful continuity or rewards.' },
   ];
   return (
-    <section className="sellio-section sellio-faq-section" aria-labelledby="sellio-faq-heading"><div className="sellio-container sellio-faq-layout"><div className="sellio-section-heading"><span className="sellio-eyebrow"><ShieldCheck /> Clear from the start</span><h2 id="sellio-faq-heading">The current product and the world ahead.</h2><p>Phase 1B shows how both fit together without presenting roadmap concepts as already released.</p></div><div className="sellio-faq-list">{items.map((item) => <details key={item.question}><summary>{item.question}<span>+</span></summary><p>{item.answer}</p></details>)}</div></div></section>
+    <section className="sellio-section sellio-faq-section" aria-labelledby="sellio-faq-heading"><div className="sellio-container sellio-faq-layout"><div className="sellio-section-heading"><span className="sellio-eyebrow"><ShieldCheck /> Join with confidence</span><h2 id="sellio-faq-heading">Your business in Sellio World.</h2><p>How merchant placement, storefront identity, Sellio Coins and customer discovery work together.</p></div><div className="sellio-faq-list">{items.map((item) => <details key={item.question}><summary>{item.question}<span>+</span></summary><p>{item.answer}</p></details>)}</div></div></section>
   );
 }
 
@@ -141,35 +141,32 @@ function Footer() {
   return (
     <footer className="sellio-landing-footer">
       <div className="sellio-container">
-        <section className="sl-ready-shell" aria-labelledby="sl-ready-heading">
-          <div className="sl-ready-copy">
-            <img className="sl-ready-logo" src={LOGO_URL} alt="Sellio" />
-            <span className="sellio-eyebrow"><Sparkles /> Ready when you are</span>
-            <h2 id="sl-ready-heading">Open your storefront.<br />Take your place in the world.</h2>
-            <p>Start with Sellio’s F&B platform today, then grow into the connected marketplace experience as Sellio World expands.</p>
-            <div className="sl-ready-actions">
-              <a href="#pricing" className="sellio-button sellio-button--gradient">View Plans <ArrowRight /></a>
-              <a href="/Auth" className="sellio-button sellio-button--ready-ghost">Merchant Login</a>
-            </div>
-            <div className="sl-ready-proof">
-              <span><Check /> Three-day free trial</span>
-              <span><Clock3 /> Set up at your pace</span>
-            </div>
+        <section className="sellio-footer-launch" aria-labelledby="sellio-footer-launch-heading">
+          <div className="sellio-footer-launch__copy">
+            <span className="sellio-eyebrow"><Sparkles /> Now onboarding merchants</span>
+            <h2 id="sellio-footer-launch-heading">Build your storefront.<br />Enter Sellio World.</h2>
+            <p>Bring your business online, join the right merchant district and create a storefront customers can discover, remember and return to.</p>
           </div>
-
-          <div className="sl-ready-visual">
-            <div className="sl-pan-scroll sl-pan-scroll--ready" tabIndex="0" aria-label="Swipe horizontally to explore the Sellio storefront scene">
-              <div className="sl-pan-canvas sl-pan-canvas--ready">
-                <img src="/assets/immersive/ready-world.webp" alt="A bright premium merchant storefront connected to the expanding Sellio marketplace world" />
-              </div>
-            </div>
-            <div className="sl-ready-visual__badge"><Store /><span><small>Your next step</small><strong>A storefront built to grow</strong></span></div>
-            <div className="sl-pan-hint sl-pan-hint--ready">Swipe the scene <ArrowRight /></div>
+          <div className="sellio-footer-launch__actions">
+            <a href="#pricing" className="sellio-button sellio-button--gradient">View Plans <ArrowRight /></a>
+            <a href="/Auth" className="sellio-button sellio-button--footer-ghost">Merchant Login</a>
           </div>
         </section>
 
-        <div className="sellio-footer-main"><div className="sellio-footer-brand"><img src={LOGO_URL} alt="Sellio" /><p>Online ordering, business operations and a marketplace world—designed to grow together.</p><span>Sellio, crafted by <a href="https://apptelier.sg" target="_blank" rel="noopener noreferrer">Apptélier</a>.</span></div><div className="sellio-footer-links"><div><strong>Explore</strong><a href="#journey">How it flows</a><a href="#product">Product</a><a href="#world">Sellio World</a></div><div><strong>Merchants</strong><a href="#pricing">Pricing</a><a href="/Auth">Merchant Login</a><a href={DEMO_STORE_URL} target="_blank" rel="noopener noreferrer">Demo Store</a></div><div><strong>Support</strong><a href="https://apptelier.sg" target="_blank" rel="noopener noreferrer">Apptélier Helpdesk</a><a href="mailto:hello@apptelier.sg">Contact</a></div></div></div>
-        <div className="sellio-footer-bottom"><span>© 2026 Sellio by Apptélier.</span><span>Singapore</span></div>
+        <div className="sellio-footer-main">
+          <div className="sellio-footer-brand">
+            <img src={LOGO_URL} alt="Sellio" />
+            <p>Storefronts, merchant operations and a living marketplace world—connected in one platform.</p>
+            <span>Sellio, crafted by <a href="https://apptelier.sg" target="_blank" rel="noopener noreferrer">Apptélier</a>.</span>
+            <div className="sellio-footer-live" aria-label="Sellio World availability"><span><i /> Sellio World live</span><span><i /> Merchant onboarding open</span><span><i /> Sellio Coins active</span></div>
+          </div>
+          <div className="sellio-footer-links">
+            <div><strong>Explore</strong><a href="#journey">Order journey</a><a href="#product">Merchant workspace</a><a href="#world">Sellio World</a><a href="#vision">Coins & progression</a></div>
+            <div><strong>Merchants</strong><a href="#pricing">Plans & pricing</a><a href="/Auth">Merchant Login</a><a href={DEMO_STORE_URL} target="_blank" rel="noopener noreferrer">Explore Demo Store</a></div>
+            <div><strong>Support</strong><a href="https://apptelier.sg" target="_blank" rel="noopener noreferrer">Apptélier Helpdesk</a><a href="mailto:hello@apptelier.sg">Contact Sellio</a></div>
+          </div>
+        </div>
+        <div className="sellio-footer-bottom"><span>© 2026 Sellio by Apptélier.</span><span>Built in Singapore · Ready for the world</span></div>
       </div>
     </footer>
   );
