@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowRight,
   BarChart3,
   BellRing,
   ChefHat,
+  MoveHorizontal,
   PackageCheck,
   QrCode,
   Sparkles,
 } from 'lucide-react';
 import './immersive.css';
+import './mobile-pan.css';
 
 const STEPS = [
   {
@@ -54,13 +56,25 @@ const STEPS = [
   },
 ];
 
+const STEP_POSITIONS = [0.02, 0.26, 0.5, 0.74, 0.98];
+
 export default function CommerceJourney() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const panRef = useRef(null);
   const reduceMotion = useReducedMotion();
   const active = STEPS[activeIndex];
   const ActiveIcon = active.Icon;
 
-  const selectStep = (index) => setActiveIndex(index);
+  const panToStep = (index) => {
+    setActiveIndex(index);
+    const viewport = panRef.current;
+    if (!viewport) return;
+    const maxScroll = viewport.scrollWidth - viewport.clientWidth;
+    viewport.scrollTo({
+      left: Math.max(0, maxScroll * STEP_POSITIONS[index]),
+      behavior: reduceMotion ? 'auto' : 'smooth',
+    });
+  };
 
   return (
     <section id="journey" className="sellio-section sl-imm-section sl-imm-journey" aria-labelledby="sellio-journey-heading">
@@ -74,28 +88,40 @@ export default function CommerceJourney() {
         </div>
 
         <div className="sl-imm-scene sl-imm-scene--journey">
-          <motion.img
-            src="/assets/immersive/commerce-journey.webp"
-            alt="A dimensional commerce journey connecting a mobile storefront, order, preparation, inventory and analytics"
-            initial={false}
-            animate={reduceMotion ? undefined : { scale: [1.015, 1.035, 1.015] }}
-            transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }}
-          />
-          <div className="sl-imm-scene__shade" aria-hidden="true" />
-          <div className="sl-imm-hotspots" aria-label="Commerce journey stages">
-            {STEPS.map((step, index) => (
-              <button
-                key={step.key}
-                type="button"
-                className={index === activeIndex ? 'is-active' : ''}
-                onClick={() => selectStep(index)}
-                aria-pressed={index === activeIndex}
-                aria-label={`${step.number}. ${step.label}`}
-              >
-                <span>{step.number}</span>
-              </button>
-            ))}
+          <div
+            ref={panRef}
+            className="sl-pan-scroll sl-pan-scroll--journey"
+            tabIndex="0"
+            aria-label="Swipe horizontally to explore the five stages of the commerce journey"
+          >
+            <div className="sl-pan-canvas sl-pan-canvas--journey">
+              <motion.img
+                src="/assets/immersive/commerce-journey.webp"
+                alt="A dimensional commerce journey connecting a mobile storefront, order, preparation, inventory and analytics"
+                initial={false}
+                animate={reduceMotion ? undefined : { scale: [1.006, 1.014, 1.006] }}
+                transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut' }}
+              />
+              <div className="sl-imm-scene__shade" aria-hidden="true" />
+              <div className="sl-imm-hotspots" aria-label="Commerce journey waypoints">
+                {STEPS.map((step, index) => (
+                  <button
+                    key={step.key}
+                    type="button"
+                    className={index === activeIndex ? 'is-active' : ''}
+                    onClick={() => panToStep(index)}
+                    aria-pressed={index === activeIndex}
+                    aria-label={`${step.number}. ${step.label}: show this stage`}
+                  >
+                    <span>{step.number}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
+
+          <div className="sl-pan-hint"><MoveHorizontal /> Swipe to explore · Tap a waypoint</div>
+
           <AnimatePresence mode="wait">
             <motion.article
               key={active.key}
@@ -113,8 +139,8 @@ export default function CommerceJourney() {
               </div>
               <button
                 type="button"
-                onClick={() => selectStep((activeIndex + 1) % STEPS.length)}
-                aria-label="Show next commerce stage"
+                onClick={() => panToStep((activeIndex + 1) % STEPS.length)}
+                aria-label="Show and centre the next commerce stage"
               >
                 <ArrowRight />
               </button>
@@ -122,13 +148,13 @@ export default function CommerceJourney() {
           </AnimatePresence>
         </div>
 
-        <div className="sl-imm-step-rail" aria-label="Select a commerce stage">
+        <div className="sl-imm-step-rail" aria-label="Select and centre a commerce stage">
           {STEPS.map((step, index) => (
             <button
               key={step.key}
               type="button"
               className={index === activeIndex ? 'is-active' : ''}
-              onClick={() => selectStep(index)}
+              onClick={() => panToStep(index)}
               aria-pressed={index === activeIndex}
             >
               <span>{step.number}</span>
