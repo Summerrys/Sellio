@@ -302,9 +302,12 @@
 @media (max-width: 900px) {
   .sl-scrollworld { height: 760vh; }
   .sl-sw-sticky {
-    top: 72px;
-    height: calc(100dvh - 72px);
+    top: 74px;
+    height: calc(100dvh - 74px);
     min-height: 520px;
+  }
+  .sl-sw-anchor {
+    scroll-margin-top: 74px;
   }
   .sl-sw-copy-layer {
     width: 100%;
