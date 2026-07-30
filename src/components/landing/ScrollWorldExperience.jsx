@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Check, Pause, Play, RotateCcw, Sparkles } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowRight, Check, ChevronDown, MousePointer2, Sparkles } from 'lucide-react';
 import { useReducedMotion } from 'framer-motion';
 import './scroll-world.css';
 
@@ -8,7 +8,9 @@ const MOBILE_VIDEO = '/assets/scroll-world/sellio-scroll-world-mobile-1080p30.mp
 const DESKTOP_POSTER = '/assets/scroll-world/sellio-scroll-world-desktop-1080p30-poster.webp';
 const MOBILE_POSTER = '/assets/scroll-world/sellio-scroll-world-mobile-1080p30-poster.webp';
 const START_AT = 0;
+const FILM_DURATION = 43.266667;
 const SCENE_CUES = [0, 8.083334, 16.166668, 24.250002, 32.333336, 40.41667];
+const SCROLL_CUES = [0, 0.18, 0.36, 0.54, 0.72, 0.87];
 
 const SCENES = [
   {
@@ -90,13 +92,15 @@ function SceneCta({ cta, secondary = false }) {
 }
 
 export default function ScrollWorldExperience() {
+  const rootRef = useRef(null);
   const videoRef = useRef(null);
+  const targetTimeRef = useRef(START_AT);
+  const currentTimeRef = useRef(START_AT);
+  const activeRef = useRef(0);
   const reduceMotion = useReducedMotion();
   const [active, setActive] = useState(0);
   const [progress, setProgress] = useState(0);
   const [videoReady, setVideoReady] = useState(false);
-  const [hasPainted, setHasPainted] = useState(false);
-  const [playing, setPlaying] = useState(false);
   const [mobile, setMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 860px), (hover: none) and (pointer: coarse)').matches);
 
   const scene = SCENES[active];
@@ -115,120 +119,175 @@ export default function ScrollWorldExperience() {
     return () => query.removeEventListener?.('change', update);
   }, []);
 
-  const syncTimeline = useCallback((video) => {
-    if (!video?.duration) return;
-    const span = Math.max(0.1, video.duration - START_AT);
-    const nextProgress = clamp((video.currentTime - START_AT) / span);
-    let nextActive = 0;
-    for (let index = 1; index < SCENE_CUES.length; index += 1) {
-      if (video.currentTime >= SCENE_CUES[index]) nextActive = index;
-      else break;
-    }
-    setProgress(nextProgress);
-    setActive(nextActive);
-  }, []);
-
-  const playVideo = useCallback(() => {
+  useEffect(() => {
     const video = videoRef.current;
-    if (!video || reduceMotion) return;
-    const promise = video.play();
-    promise?.catch(() => setPlaying(false));
-  }, [reduceMotion]);
+    if (!video || reduceMotion) return undefined;
 
-  const seekTo = useCallback((index) => {
-    const video = videoRef.current;
-    if (!video?.duration || reduceMotion) {
-      setActive(index);
-      return;
-    }
-    video.currentTime = Math.max(START_AT, SCENE_CUES[index]) + 0.04;
-    syncTimeline(video);
-    playVideo();
-  }, [playVideo, reduceMotion, syncTimeline]);
+    const controller = new AbortController();
+    let objectUrl;
+    setVideoReady(false);
+    video.classList.remove('has-painted');
+
+    fetch(source, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error('Unable to load the Sellio World film');
+        return response.blob();
+      })
+      .then((blob) => {
+        objectUrl = URL.createObjectURL(blob);
+        video.src = objectUrl;
+        video.load();
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError') console.warn(error);
+      });
+
+    return () => {
+      controller.abort();
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [reduceMotion, source]);
 
   useEffect(() => {
-    const handleHash = () => {
-      const id = window.location.hash.replace('#', '');
-      const index = SCENES.findIndex((item) => item.id === id);
-      if (index >= 0) seekTo(index);
+    const root = rootRef.current;
+    const video = videoRef.current;
+    if (!root) return undefined;
+
+    let ticking = false;
+    const measure = () => {
+      const start = root.offsetTop;
+      const distance = Math.max(1, root.offsetHeight - window.innerHeight);
+      const nextProgress = clamp((window.scrollY - start) / distance);
+
+      let nextActive = 0;
+      for (let index = 1; index < SCROLL_CUES.length; index += 1) {
+        if (nextProgress >= SCROLL_CUES[index]) nextActive = index;
+        else break;
+      }
+
+      const scrollStart = SCROLL_CUES[nextActive];
+      const scrollEnd = nextActive === SCENES.length - 1 ? 1 : SCROLL_CUES[nextActive + 1];
+      const timeStart = SCENE_CUES[nextActive];
+      const timeEnd = nextActive === SCENES.length - 1 ? FILM_DURATION : SCENE_CUES[nextActive + 1];
+      const localProgress = clamp((nextProgress - scrollStart) / Math.max(0.001, scrollEnd - scrollStart));
+      const timelineTime = timeStart + (timeEnd - timeStart) * localProgress;
+      const availableDuration = video?.duration ? Math.max(0, video.duration - START_AT - 0.04) : FILM_DURATION;
+      targetTimeRef.current = START_AT + (timelineTime / FILM_DURATION) * availableDuration;
+
+      if (nextActive !== activeRef.current) {
+        activeRef.current = nextActive;
+        setActive(nextActive);
+      }
+      setProgress(nextProgress);
+      ticking = false;
     };
-    window.addEventListener('hashchange', handleHash);
-    handleHash();
-    return () => window.removeEventListener('hashchange', handleHash);
-  }, [seekTo]);
 
-  const togglePlayback = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (video.paused) playVideo();
-    else video.pause();
-  };
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(measure);
+      }
+    };
 
-  const restart = () => {
+    measure();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', measure);
+    };
+  }, [videoReady]);
+
+  useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
-    video.currentTime = START_AT;
-    setActive(0);
-    setProgress(0);
-    playVideo();
+    if (!video || reduceMotion) return undefined;
+    let frame;
+
+    const scrub = () => {
+      const target = targetTimeRef.current;
+      currentTimeRef.current += (target - currentTimeRef.current) * (mobile ? 0.28 : 0.2);
+      if (videoReady && !video.seeking && Math.abs(video.currentTime - currentTimeRef.current) > (mobile ? 0.025 : 0.01)) {
+        try {
+          video.currentTime = currentTimeRef.current;
+        } catch {
+          // Keep the exact first-frame poster visible until the browser can seek.
+        }
+      }
+      frame = window.requestAnimationFrame(scrub);
+    };
+
+    frame = window.requestAnimationFrame(scrub);
+    return () => window.cancelAnimationFrame(frame);
+  }, [mobile, reduceMotion, videoReady]);
+
+  useEffect(() => {
+    if (reduceMotion) return undefined;
+    const video = videoRef.current;
+    const prime = () => {
+      if (!video) return;
+      const promise = video.play();
+      promise?.then(() => video.pause()).catch(() => {});
+    };
+    window.addEventListener('pointerdown', prime, { once: true, passive: true });
+    window.addEventListener('touchstart', prime, { once: true, passive: true });
+    return () => {
+      window.removeEventListener('pointerdown', prime);
+      window.removeEventListener('touchstart', prime);
+    };
+  }, [reduceMotion]);
+
+  const jumpTo = (index) => {
+    const root = rootRef.current;
+    if (!root) return;
+    const distance = Math.max(1, root.offsetHeight - window.innerHeight);
+    const top = root.offsetTop + distance * SCROLL_CUES[index];
+    window.scrollTo({ top, behavior: reduceMotion ? 'auto' : 'smooth' });
   };
 
   return (
     <section
       id="world"
-      className={'sl-scrollworld sl-scrollworld--autoplay ' + (reduceMotion ? 'is-reduced' : '')}
-      aria-label="Sellio World cinematic journey"
+      ref={rootRef}
+      className={'sl-scrollworld ' + (reduceMotion ? 'is-reduced' : '')}
+      aria-label="Scroll through Sellio World"
       style={{ '--sl-sw-accent': scene.accent }}
     >
-      {SCENES.slice(1).map((item) => <span key={item.id} id={item.id} className="sl-sw-anchor" aria-hidden="true" />)}
+      {SCENES.map((item, index) => (
+        <span
+          key={item.id}
+          id={item.id === 'world' ? undefined : item.id}
+          className="sl-sw-anchor"
+          style={{ top: SCROLL_CUES[index] * 100 + '%' }}
+          aria-hidden="true"
+        />
+      ))}
 
       <div className="sl-sw-sticky">
         <div className="sl-sw-media" aria-hidden="true">
           <img
-            key={reduceMotion ? scenePoster : videoPoster}
+            key={scenePoster}
             className="sl-sw-poster"
-            src={reduceMotion ? scenePoster : videoPoster}
+            src={scenePoster}
             alt=""
           />
           {!reduceMotion && (
             <video
               key={source}
               ref={videoRef}
-              src={source}
-              className={'sl-sw-video ' + (videoReady ? 'is-ready ' : '') + (hasPainted ? 'has-painted' : '')}
+              className={'sl-sw-video ' + (videoReady ? 'is-ready' : '')}
               muted
-              autoPlay
               playsInline
               preload="auto"
               poster={videoPoster}
               disablePictureInPicture
-              onLoadedMetadata={(event) => {
-                event.currentTarget.currentTime = START_AT;
-                setActive(0);
-                setProgress(0);
-              }}
-              onCanPlay={(event) => {
+              onLoadedMetadata={() => {
+                currentTimeRef.current = targetTimeRef.current;
                 setVideoReady(true);
-                const promise = event.currentTarget.play();
-                promise?.catch(() => setPlaying(false));
               }}
-              onPlaying={() => {
-                setPlaying(true);
-                setHasPainted(true);
-              }}
-              onPause={() => setPlaying(false)}
-              onTimeUpdate={(event) => {
-                const video = event.currentTarget;
-                if (video.duration && video.currentTime >= video.duration - 0.12) {
-                  video.currentTime = START_AT;
-                  setActive(0);
-                  setProgress(0);
-                  playVideo();
-                  return;
-                }
-                syncTimeline(video);
-              }}
-              onEnded={restart}
+              onSeeked={(event) => event.currentTarget.classList.add('has-painted')}
             />
           )}
           <div className="sl-sw-scrim" />
@@ -264,8 +323,8 @@ export default function ScrollWorldExperience() {
               key={item.id}
               type="button"
               className={index === active ? 'is-active' : ''}
-              onClick={() => seekTo(index)}
-              aria-label={'Play ' + item.nav}
+              onClick={() => jumpTo(index)}
+              aria-label={'Go to ' + item.nav}
               aria-current={index === active ? 'step' : undefined}
             >
               <i /><span>{item.nav}</span>
@@ -273,19 +332,11 @@ export default function ScrollWorldExperience() {
           ))}
         </nav>
 
-        {!reduceMotion && (
-          <div className="sl-sw-controls" aria-label="Cinematic playback controls">
-            <button type="button" onClick={togglePlayback} aria-label={playing ? 'Pause Sellio World' : 'Play Sellio World'}>
-              {playing ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
-              <span>{playing ? 'Pause' : 'Play'}</span>
-            </button>
-            <button type="button" onClick={restart} aria-label="Replay Sellio World">
-              <RotateCcw aria-hidden="true" /><span>Replay</span>
-            </button>
-          </div>
-        )}
+        <div className={'sl-sw-hint ' + (progress > 0.04 ? 'is-hidden' : '')}>
+          <MousePointer2 aria-hidden="true" /><span>Scroll to enter Sellio World</span><ChevronDown aria-hidden="true" />
+        </div>
 
-        {!videoReady && !reduceMotion && <div className="sl-sw-loading">Preparing Sellio World…</div>}
+        {!videoReady && !reduceMotion && <div className="sl-sw-loading">Preparing the world…</div>
       </div>
     </section>
   );
