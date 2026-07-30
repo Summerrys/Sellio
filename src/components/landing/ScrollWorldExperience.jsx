@@ -3,11 +3,11 @@ import { ArrowRight, Check, Pause, Play, RotateCcw, Sparkles } from 'lucide-reac
 import { useReducedMotion } from 'framer-motion';
 import './scroll-world.css';
 
-const DESKTOP_VIDEO = '/assets/scroll-world/sellio-scroll-world-desktop-480.mp4';
-const MOBILE_VIDEO = '/assets/scroll-world/sellio-scroll-world-mobile-480.mp4';
-const DESKTOP_POSTER = '/assets/scroll-world/desktop/01-world.jpg';
-const MOBILE_POSTER = '/assets/scroll-world/mobile/01-world.jpg';
-const START_AT = 1.6;
+const DESKTOP_VIDEO = '/assets/scroll-world/sellio-scroll-world-desktop-1080p30.mp4';
+const MOBILE_VIDEO = '/assets/scroll-world/sellio-scroll-world-mobile-1080p30.mp4';
+const DESKTOP_POSTER = '/assets/scroll-world/sellio-scroll-world-desktop-1080p30-poster.webp';
+const MOBILE_POSTER = '/assets/scroll-world/sellio-scroll-world-mobile-1080p30-poster.webp';
+const START_AT = 0;
 const SCENE_CUES = [0, 8.083334, 16.166668, 24.250002, 32.333336, 40.41667];
 
 const SCENES = [
