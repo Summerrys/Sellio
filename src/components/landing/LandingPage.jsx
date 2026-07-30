@@ -39,9 +39,35 @@ const NAV_ITEMS = [
 
 function LandingHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    let frame;
+    const update = () => {
+      const world = document.getElementById('world');
+      const revealAt = world ? world.offsetTop + world.offsetHeight - 2 : Number.POSITIVE_INFINITY;
+      setVisible(window.scrollY >= revealAt);
+    };
+    const requestUpdate = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener('scroll', requestUpdate, { passive: true });
+    window.addEventListener('resize', requestUpdate);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', requestUpdate);
+      window.removeEventListener('resize', requestUpdate);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!visible) setMenuOpen(false);
+  }, [visible]);
 
   return (
-    <header className="sellio-landing-header">
+    <header className={'sellio-landing-header ' + (visible ? 'is-visible' : '')} aria-hidden={!visible}>
       <div className="sellio-container sellio-landing-header__inner">
         <a href="/" className="sellio-landing-logo" aria-label="Sellio home"><img src={LOGO_URL} alt="Sellio" /></a>
         <nav className="sellio-landing-nav" aria-label="Main navigation">{NAV_ITEMS.map((item) => <a key={item.label} href={item.href}>{item.label}</a>)}</nav>
@@ -154,15 +180,19 @@ function Footer() {
 
         <div className="sellio-footer-main">
           <div className="sellio-footer-brand">
-            <img src={LOGO_URL} alt="Sellio" />
-            <p>Storefronts, merchant operations and a living marketplace world—connected in one platform.</p>
-            <span>Sellio, crafted by <a href="https://apptelier.sg" target="_blank" rel="noopener noreferrer">Apptélier</a>.</span>
-            <div className="sellio-footer-live" aria-label="Sellio World availability"><span><i /> Sellio World live</span><span><i /> Merchant onboarding open</span><span><i /> Sellio Coins active</span></div>
+            <div className="sellio-footer-brand__top"><img src={LOGO_URL} alt="Sellio" /><span>Commerce, connected.</span></div>
+            <h3>Your storefront today.<br />Your place in Sellio World.</h3>
+            <p>Bring storefronts, orders, operations and merchant progression together in one bright, connected commerce platform.</p>
+            <a className="sellio-footer-brand__credit" href="https://apptelier.sg" target="_blank" rel="noopener noreferrer">Crafted in Singapore by Apptélier <ArrowUpRight /></a>
+            <div className="sellio-footer-live" aria-label="Sellio World availability"><span><i /> Sellio World live</span><span><i /> Onboarding open</span><span><i /> Sellio Coins active</span></div>
           </div>
-          <div className="sellio-footer-links">
-            <div><strong>Explore</strong><a href="#journey">Order journey</a><a href="#product">Merchant workspace</a><a href="#world">Sellio World</a><a href="#vision">Coins & progression</a></div>
-            <div><strong>Merchants</strong><a href="#pricing">Plans & pricing</a><a href="/Auth">Merchant Login</a><a href={DEMO_STORE_URL} target="_blank" rel="noopener noreferrer">Explore Demo Store</a></div>
-            <div><strong>Support</strong><a href="https://apptelier.sg" target="_blank" rel="noopener noreferrer">Apptélier Helpdesk</a><a href="mailto:hello@apptelier.sg">Contact Sellio</a></div>
+          <div className="sellio-footer-navigation">
+            <span className="sellio-footer-navigation__label">Explore the platform</span>
+            <div className="sellio-footer-links">
+              <div><strong>Explore</strong><a href="#journey">Order journey</a><a href="#product">Merchant workspace</a><a href="#world">Sellio World</a><a href="#vision">Coins & progression</a></div>
+              <div><strong>Merchants</strong><a href="#pricing">Plans & pricing</a><a href="/Auth">Merchant Login</a><a href={DEMO_STORE_URL} target="_blank" rel="noopener noreferrer">Explore Demo Store</a></div>
+              <div><strong>Support</strong><a href="https://apptelier.sg" target="_blank" rel="noopener noreferrer">Apptélier Helpdesk</a><a href="mailto:hello@apptelier.sg">Contact Sellio</a></div>
+            </div>
           </div>
         </div>
         <div className="sellio-footer-bottom"><span>© 2026 Sellio by Apptélier.</span><span>Built in Singapore · Ready for the world</span></div>
