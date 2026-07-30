@@ -3,11 +3,12 @@ import { ArrowRight, Check, Pause, Play, RotateCcw, Sparkles } from 'lucide-reac
 import { useReducedMotion } from 'framer-motion';
 import './scroll-world.css';
 
-const DESKTOP_VIDEO = '/assets/scroll-world/sellio-world-desktop-1080p.mp4';
-const MOBILE_VIDEO = '/assets/scroll-world/sellio-world-mobile-1080p.mp4';
-const DESKTOP_POSTER = '/assets/scroll-world/sellio-world-desktop-poster.webp';
-const MOBILE_POSTER = '/assets/scroll-world/sellio-world-mobile-poster.webp';
-const START_AT = 0;
+const DESKTOP_VIDEO = '/assets/scroll-world/sellio-scroll-world-desktop-480.mp4';
+const MOBILE_VIDEO = '/assets/scroll-world/sellio-scroll-world-mobile-480.mp4';
+const DESKTOP_POSTER = '/assets/scroll-world/desktop/01-world.jpg';
+const MOBILE_POSTER = '/assets/scroll-world/mobile/01-world.jpg';
+const START_AT = 1.6;
+const SCENE_CUES = [0, 8.083334, 16.166668, 24.250002, 32.333336, 40.41667];
 
 const SCENES = [
   {
@@ -34,12 +35,12 @@ const SCENES = [
   },
   {
     id: 'journey',
-    nav: 'Commerce intelligence',
-    eyebrow: 'Sellio intelligence at work',
-    title: 'One signal between storefront and operations.',
-    body: 'Customer activity flows through Sellio’s intelligence layer into the merchant POS, live orders and analytics—keeping decisions connected from both sides.',
-    tags: ['Customer storefront', 'Sellio intelligence', 'POS + analytics'],
-    poster: '03-intelligence-bridge.jpg',
+    nav: 'Order journey',
+    eyebrow: 'From first tap to fulfilment',
+    title: 'Every order follows one clear path.',
+    body: 'Follow the customer journey from storefront discovery through ordering, preparation and merchant insight—all connected inside Sellio.',
+    tags: ['Customer ordering', 'Live fulfilment', 'Merchant insight'],
+    poster: '03-journey.jpg',
     accent: '#a855f7',
   },
   {
@@ -118,7 +119,11 @@ export default function ScrollWorldExperience() {
     if (!video?.duration) return;
     const span = Math.max(0.1, video.duration - START_AT);
     const nextProgress = clamp((video.currentTime - START_AT) / span);
-    const nextActive = Math.min(SCENES.length - 1, Math.floor(nextProgress * SCENES.length));
+    let nextActive = 0;
+    for (let index = 1; index < SCENE_CUES.length; index += 1) {
+      if (video.currentTime >= SCENE_CUES[index]) nextActive = index;
+      else break;
+    }
     setProgress(nextProgress);
     setActive(nextActive);
   }, []);
@@ -136,8 +141,7 @@ export default function ScrollWorldExperience() {
       setActive(index);
       return;
     }
-    const span = Math.max(0.1, video.duration - START_AT);
-    video.currentTime = START_AT + span * (index / SCENES.length) + 0.04;
+    video.currentTime = Math.max(START_AT, SCENE_CUES[index]) + 0.04;
     syncTimeline(video);
     playVideo();
   }, [playVideo, reduceMotion, syncTimeline]);
