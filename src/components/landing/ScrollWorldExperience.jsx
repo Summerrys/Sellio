@@ -336,7 +336,7 @@ export default function ScrollWorldExperience() {
           <MousePointer2 aria-hidden="true" /><span>Scroll to enter Sellio World</span><ChevronDown aria-hidden="true" />
         </div>
 
-        {!videoReady && !reduceMotion && <div className="sl-sw-loading">Preparing the world…</div>
+        {!videoReady && !reduceMotion && <div className="sl-sw-loading">Preparing the world…</div>}
       </div>
     </section>
   );
