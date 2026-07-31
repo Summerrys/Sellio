@@ -207,65 +207,26 @@ export default function ScrollWorldExperience() {
   useEffect(() => {
     const video = videoRef.current;
     if (!video || reduceMotion) return undefined;
-
-    const frameDuration = 1 / 30;
-    const minimumSeekGap = mobile ? 64 : 48;
-    const smoothingTime = mobile ? 105 : 82;
     let animationFrame;
-    let seekTimer;
-    let seekInFlight = false;
-    let lastSeekAt = 0;
-    let previousFrameAt = performance.now();
 
-    const quantiseTime = (time) => {
-      const duration = Number.isFinite(video.duration) ? Math.max(0, video.duration - 0.04) : FILM_DURATION;
-      return clamp(Math.round(time / frameDuration) * frameDuration, 0, duration);
-    };
+    const scrub = () => {
+      const target = targetTimeRef.current;
+      currentTimeRef.current += (target - currentTimeRef.current) * (mobile ? 0.28 : 0.2);
 
-    const requestLatestSeek = () => {
-      if (!videoReady || seekInFlight || video.seeking) return;
-
-      const nextTime = quantiseTime(currentTimeRef.current);
-      if (Math.abs(video.currentTime - nextTime) < frameDuration * 0.72) return;
-
-      const elapsed = performance.now() - lastSeekAt;
-      if (elapsed < minimumSeekGap) {
-        window.clearTimeout(seekTimer);
-        seekTimer = window.setTimeout(requestLatestSeek, minimumSeekGap - elapsed);
-        return;
+      // Let the decoder finish the current frame before requesting the latest one.
+      // This coalesces fast scrolling without imposing an artificial timer or visible stepping.
+      if (videoReady && !video.seeking && Math.abs(video.currentTime - currentTimeRef.current) > (mobile ? 0.025 : 0.01)) {
+        try {
+          video.currentTime = currentTimeRef.current;
+        } catch {
+          // Keep the exact poster visible until the browser can seek.
+        }
       }
-
-      seekInFlight = true;
-      lastSeekAt = performance.now();
-      try {
-        video.currentTime = nextTime;
-      } catch {
-        seekInFlight = false;
-      }
-    };
-
-    const onSeeked = () => {
-      seekInFlight = false;
-      video.classList.add('has-painted');
-      if (Math.abs(targetTimeRef.current - video.currentTime) >= frameDuration) requestLatestSeek();
-    };
-
-    const scrub = (now) => {
-      const elapsed = Math.min(80, now - previousFrameAt);
-      previousFrameAt = now;
-      const smoothing = 1 - Math.exp(-elapsed / smoothingTime);
-      currentTimeRef.current += (targetTimeRef.current - currentTimeRef.current) * smoothing;
-      requestLatestSeek();
       animationFrame = window.requestAnimationFrame(scrub);
     };
 
-    video.addEventListener('seeked', onSeeked);
     animationFrame = window.requestAnimationFrame(scrub);
-    return () => {
-      window.cancelAnimationFrame(animationFrame);
-      window.clearTimeout(seekTimer);
-      video.removeEventListener('seeked', onSeeked);
-    };
+    return () => window.cancelAnimationFrame(animationFrame);
   }, [mobile, reduceMotion, videoReady]);
 
   useEffect(() => {
@@ -332,6 +293,7 @@ export default function ScrollWorldExperience() {
                 currentTimeRef.current = targetTimeRef.current;
                 setVideoReady(true);
               }}
+              onSeeked={(event) => event.currentTarget.classList.add('has-painted')}
             />
           )}
           <div className="sl-sw-scrim" />
