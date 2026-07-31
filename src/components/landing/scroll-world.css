@@ -614,14 +614,14 @@
   }
 }
 
-/* Scroll-scrub world, compact reveal header and premium footer */
+/* Full-screen autoplay world, compact reveal header and premium footer */
 .sl-scrollworld {
-  height: 820vh;
-  min-height: 0;
+  height: 100svh;
+  min-height: 620px;
   max-height: none;
 }
 .sl-sw-sticky {
-  position: sticky;
+  position: relative;
   top: 0;
   height: 100svh;
   min-height: 620px;
@@ -808,8 +808,8 @@
 
 @media (max-width: 900px) {
   .sl-scrollworld {
-    height: 760vh;
-    min-height: 0;
+    height: 100svh;
+    min-height: 600px;
     max-height: none;
   }
   .sl-sw-sticky {
@@ -837,8 +837,8 @@
 }
 @media (max-width: 520px) {
   .sl-scrollworld {
-    height: 720vh;
-    min-height: 0;
+    height: 100svh;
+    min-height: 560px;
   }
   .sl-sw-sticky {
     min-height: 560px;
@@ -893,7 +893,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .sl-scrollworld {
-    height: 600vh;
+    height: 100svh;
   }
   .sl-sw-hint svg:last-child {
     animation: none;
