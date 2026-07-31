@@ -77,7 +77,9 @@
   display: block;
   width: 100%;
   height: 100%;
+  transform: scaleX(0);
   transform-origin: left;
+  will-change: transform;
   background: linear-gradient(90deg, #8b2fc9, #e0449a, #fb923c);
   box-shadow: 0 0 16px rgba(236,72,153,.55);
 }
