@@ -191,6 +191,22 @@ export default function ScrollWorldExperience() {
   }, [reduceMotion, videoReady]);
 
   useEffect(() => {
+    if (!videoReady || reduceMotion) return undefined;
+    const seekFromHash = () => {
+      const sceneId = window.location.hash.slice(1);
+      const index = SCENES.findIndex((item) => item.id === sceneId);
+      const video = videoRef.current;
+      if (index < 0 || !video) return;
+      const availableDuration = Math.max(0.001, video.duration - START_AT - 0.04);
+      video.currentTime = START_AT + (SCENE_CUES[index] / FILM_DURATION) * availableDuration;
+      video.play().then(() => video.classList.add('has-painted')).catch(() => {});
+    };
+    seekFromHash();
+    window.addEventListener('hashchange', seekFromHash);
+    return () => window.removeEventListener('hashchange', seekFromHash);
+  }, [reduceMotion, videoReady]);
+
+  useEffect(() => {
     if (reduceMotion) return undefined;
     const ensurePlaying = () => {
       const video = videoRef.current;
