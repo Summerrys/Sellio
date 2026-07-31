@@ -224,7 +224,7 @@ export default function ScrollWorldExperience() {
       aria-label="Sellio World cinematic experience"
       style={{ '--sl-sw-accent': scene.accent }}
     >
-      {SCENES.map((item, index) => (
+      {SCENES.map((item) => (
         <span
           key={item.id}
           id={item.id === 'world' ? undefined : item.id}
