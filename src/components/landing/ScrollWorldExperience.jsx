@@ -100,6 +100,8 @@ export default function ScrollWorldExperience() {
   const targetTimeRef = useRef(START_AT);
   const currentTimeRef = useRef(START_AT);
   const activeRef = useRef(0);
+  const autoplayRef = useRef(false);
+  const userInterruptedRef = useRef(false);
   const reduceMotion = useReducedMotion();
   const [active, setActive] = useState(0);
   const [videoReady, setVideoReady] = useState(false);
@@ -184,7 +186,7 @@ export default function ScrollWorldExperience() {
         setActive(nextActive);
       }
       if (progressBarRef.current) progressBarRef.current.style.transform = 'scaleX(' + nextProgress + ')';
-      hintRef.current?.classList.toggle('is-hidden', nextProgress > 0.04);
+      hintRef.current?.classList.toggle('is-hidden', nextProgress > 0.08);
       ticking = false;
     };
 
@@ -205,16 +207,108 @@ export default function ScrollWorldExperience() {
   }, [videoReady]);
 
   useEffect(() => {
+    if (reduceMotion) return undefined;
+
+    const scrollKeys = new Set(['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' ']);
+    const interrupt = (event) => {
+      if (event.type === 'keydown' && !scrollKeys.has(event.key)) return;
+      userInterruptedRef.current = true;
+      autoplayRef.current = false;
+      videoRef.current?.pause();
+    };
+
+    window.addEventListener('wheel', interrupt, { passive: true });
+    window.addEventListener('touchstart', interrupt, { passive: true });
+    window.addEventListener('pointerdown', interrupt, { passive: true });
+    window.addEventListener('keydown', interrupt);
+    return () => {
+      window.removeEventListener('wheel', interrupt);
+      window.removeEventListener('touchstart', interrupt);
+      window.removeEventListener('pointerdown', interrupt);
+      window.removeEventListener('keydown', interrupt);
+    };
+  }, [reduceMotion]);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    const video = videoRef.current;
+    if (!root || !video || !videoReady || reduceMotion || userInterruptedRef.current) return undefined;
+    if (window.scrollY > root.offsetTop + 8) return undefined;
+
+    let animationFrame;
+    let cancelled = false;
+
+    const timelineToScroll = (timelineTime) => {
+      let index = 0;
+      for (let cue = 1; cue < SCENE_CUES.length; cue += 1) {
+        if (timelineTime >= SCENE_CUES[cue]) index = cue;
+        else break;
+      }
+      const timeStart = SCENE_CUES[index];
+      const timeEnd = index === SCENES.length - 1 ? FILM_DURATION : SCENE_CUES[index + 1];
+      const scrollStart = SCROLL_CUES[index];
+      const scrollEnd = index === SCENES.length - 1 ? 1 : SCROLL_CUES[index + 1];
+      const local = clamp((timelineTime - timeStart) / Math.max(0.001, timeEnd - timeStart));
+      return scrollStart + (scrollEnd - scrollStart) * local;
+    };
+
+    const advancePage = () => {
+      if (cancelled || !autoplayRef.current) return;
+      const availableDuration = Math.max(0.001, video.duration - START_AT - 0.04);
+      const filmTime = clamp((video.currentTime - START_AT) / availableDuration) * FILM_DURATION;
+      const scrollProgress = timelineToScroll(filmTime);
+      const distance = Math.max(1, root.offsetHeight - window.innerHeight);
+
+      currentTimeRef.current = video.currentTime;
+      window.scrollTo(0, root.offsetTop + distance * scrollProgress);
+
+      if (video.ended || video.currentTime >= video.duration - 0.06) {
+        autoplayRef.current = false;
+        video.pause();
+        window.scrollTo(0, root.offsetTop + distance);
+        return;
+      }
+      animationFrame = window.requestAnimationFrame(advancePage);
+    };
+
+    autoplayRef.current = true;
+    video.currentTime = START_AT;
+    video.play()
+      .then(() => {
+        if (cancelled || userInterruptedRef.current) {
+          autoplayRef.current = false;
+          video.pause();
+          return;
+        }
+        video.classList.add('has-painted');
+        animationFrame = window.requestAnimationFrame(advancePage);
+      })
+      .catch(() => {
+        autoplayRef.current = false;
+      });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, [reduceMotion, videoReady]);
+
+  useEffect(() => {
     const video = videoRef.current;
     if (!video || reduceMotion) return undefined;
     let animationFrame;
 
     const scrub = () => {
+      if (autoplayRef.current) {
+        currentTimeRef.current = video.currentTime;
+        animationFrame = window.requestAnimationFrame(scrub);
+        return;
+      }
+
       const target = targetTimeRef.current;
       currentTimeRef.current += (target - currentTimeRef.current) * (mobile ? 0.28 : 0.2);
 
       // Let the decoder finish the current frame before requesting the latest one.
-      // This coalesces fast scrolling without imposing an artificial timer or visible stepping.
       if (videoReady && !video.seeking && Math.abs(video.currentTime - currentTimeRef.current) > (mobile ? 0.025 : 0.01)) {
         try {
           video.currentTime = currentTimeRef.current;
@@ -248,6 +342,9 @@ export default function ScrollWorldExperience() {
   const jumpTo = (index) => {
     const root = rootRef.current;
     if (!root) return;
+    userInterruptedRef.current = true;
+    autoplayRef.current = false;
+    videoRef.current?.pause();
     const distance = Math.max(1, root.offsetHeight - window.innerHeight);
     const top = root.offsetTop + distance * SCROLL_CUES[index];
     window.scrollTo({ top, behavior: reduceMotion ? 'auto' : 'smooth' });
@@ -339,7 +436,7 @@ export default function ScrollWorldExperience() {
         </nav>
 
         <div ref={hintRef} className="sl-sw-hint">
-          <MousePointer2 aria-hidden="true" /><span>Scroll to enter Sellio World</span><ChevronDown aria-hidden="true" />
+          <MousePointer2 aria-hidden="true" /><span>Scroll anytime to explore at your pace</span><ChevronDown aria-hidden="true" />
         </div>
 
         {!videoReady && !reduceMotion && <div className="sl-sw-loading">Preparing the world…</div>}
