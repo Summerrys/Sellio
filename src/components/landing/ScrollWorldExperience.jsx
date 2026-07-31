@@ -11,7 +11,6 @@ const MOBILE_POSTER = '/assets/scroll-world/sellio-scroll-world-mobile-1080p30-p
 const START_AT = 0;
 const FILM_DURATION = 43.266667;
 const SCENE_CUES = [0, 8.083334, 16.166668, 24.250002, 32.333336, 40.41667];
-const SCROLL_CUES = [0, 0.18, 0.36, 0.54, 0.72, 0.87];
 
 const SCENES = [
   {
@@ -97,11 +96,7 @@ export default function ScrollWorldExperience() {
   const videoRef = useRef(null);
   const progressBarRef = useRef(null);
   const hintRef = useRef(null);
-  const targetTimeRef = useRef(START_AT);
-  const currentTimeRef = useRef(START_AT);
   const activeRef = useRef(0);
-  const autoplayRef = useRef(false);
-  const userInterruptedRef = useRef(false);
   const reduceMotion = useReducedMotion();
   const [active, setActive] = useState(0);
   const [videoReady, setVideoReady] = useState(false);
@@ -156,136 +151,38 @@ export default function ScrollWorldExperience() {
   }, [reduceMotion, source]);
 
   useEffect(() => {
-    const root = rootRef.current;
     const video = videoRef.current;
-    if (!root) return undefined;
-
-    let ticking = false;
-    const measure = () => {
-      const start = root.offsetTop;
-      const distance = Math.max(1, root.offsetHeight - window.innerHeight);
-      const nextProgress = clamp((window.scrollY - start) / distance);
-
-      let nextActive = 0;
-      for (let index = 1; index < SCROLL_CUES.length; index += 1) {
-        if (nextProgress >= SCROLL_CUES[index]) nextActive = index;
-        else break;
-      }
-
-      const scrollStart = SCROLL_CUES[nextActive];
-      const scrollEnd = nextActive === SCENES.length - 1 ? 1 : SCROLL_CUES[nextActive + 1];
-      const timeStart = SCENE_CUES[nextActive];
-      const timeEnd = nextActive === SCENES.length - 1 ? FILM_DURATION : SCENE_CUES[nextActive + 1];
-      const localProgress = clamp((nextProgress - scrollStart) / Math.max(0.001, scrollEnd - scrollStart));
-      const timelineTime = timeStart + (timeEnd - timeStart) * localProgress;
-      const availableDuration = video?.duration ? Math.max(0, video.duration - START_AT - 0.04) : FILM_DURATION;
-      targetTimeRef.current = START_AT + (timelineTime / FILM_DURATION) * availableDuration;
-
-      if (nextActive !== activeRef.current) {
-        activeRef.current = nextActive;
-        setActive(nextActive);
-      }
-      if (progressBarRef.current) progressBarRef.current.style.transform = 'scaleX(' + nextProgress + ')';
-      hintRef.current?.classList.toggle('is-hidden', nextProgress > 0.08);
-      ticking = false;
-    };
-
-    const onScroll = () => {
-      if (!ticking) {
-        ticking = true;
-        window.requestAnimationFrame(measure);
-      }
-    };
-
-    measure();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', measure);
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', measure);
-    };
-  }, [videoReady]);
-
-  useEffect(() => {
-    if (reduceMotion) return undefined;
-
-    const scrollKeys = new Set(['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' ']);
-    const interrupt = (event) => {
-      if (event.type === 'keydown' && !scrollKeys.has(event.key)) return;
-      userInterruptedRef.current = true;
-      autoplayRef.current = false;
-      videoRef.current?.pause();
-    };
-
-    window.addEventListener('wheel', interrupt, { passive: true });
-    window.addEventListener('touchstart', interrupt, { passive: true });
-    window.addEventListener('pointerdown', interrupt, { passive: true });
-    window.addEventListener('keydown', interrupt);
-    return () => {
-      window.removeEventListener('wheel', interrupt);
-      window.removeEventListener('touchstart', interrupt);
-      window.removeEventListener('pointerdown', interrupt);
-      window.removeEventListener('keydown', interrupt);
-    };
-  }, [reduceMotion]);
-
-  useEffect(() => {
-    const root = rootRef.current;
-    const video = videoRef.current;
-    if (!root || !video || !videoReady || reduceMotion || userInterruptedRef.current) return undefined;
-    if (window.scrollY > root.offsetTop + 8) return undefined;
+    if (!video || !videoReady || reduceMotion) return undefined;
 
     let animationFrame;
     let cancelled = false;
 
-    const timelineToScroll = (timelineTime) => {
-      let index = 0;
-      for (let cue = 1; cue < SCENE_CUES.length; cue += 1) {
-        if (timelineTime >= SCENE_CUES[cue]) index = cue;
+    const syncPlayback = () => {
+      if (cancelled) return;
+      const availableDuration = Math.max(0.001, video.duration - START_AT - 0.04);
+      const progress = clamp((video.currentTime - START_AT) / availableDuration);
+      const filmTime = progress * FILM_DURATION;
+
+      let nextActive = 0;
+      for (let index = 1; index < SCENE_CUES.length; index += 1) {
+        if (filmTime >= SCENE_CUES[index]) nextActive = index;
         else break;
       }
-      const timeStart = SCENE_CUES[index];
-      const timeEnd = index === SCENES.length - 1 ? FILM_DURATION : SCENE_CUES[index + 1];
-      const scrollStart = SCROLL_CUES[index];
-      const scrollEnd = index === SCENES.length - 1 ? 1 : SCROLL_CUES[index + 1];
-      const local = clamp((timelineTime - timeStart) / Math.max(0.001, timeEnd - timeStart));
-      return scrollStart + (scrollEnd - scrollStart) * local;
-    };
-
-    const advancePage = () => {
-      if (cancelled || !autoplayRef.current) return;
-      const availableDuration = Math.max(0.001, video.duration - START_AT - 0.04);
-      const filmTime = clamp((video.currentTime - START_AT) / availableDuration) * FILM_DURATION;
-      const scrollProgress = timelineToScroll(filmTime);
-      const distance = Math.max(1, root.offsetHeight - window.innerHeight);
-
-      currentTimeRef.current = video.currentTime;
-      window.scrollTo(0, root.offsetTop + distance * scrollProgress);
-
-      if (video.ended || video.currentTime >= video.duration - 0.06) {
-        autoplayRef.current = false;
-        video.pause();
-        window.scrollTo(0, root.offsetTop + distance);
-        return;
+      if (nextActive !== activeRef.current) {
+        activeRef.current = nextActive;
+        setActive(nextActive);
       }
-      animationFrame = window.requestAnimationFrame(advancePage);
+      if (progressBarRef.current) progressBarRef.current.style.transform = 'scaleX(' + progress + ')';
+      hintRef.current?.classList.toggle('is-hidden', progress > 0.08);
+
+      if (!video.ended) animationFrame = window.requestAnimationFrame(syncPlayback);
     };
 
-    autoplayRef.current = true;
     video.currentTime = START_AT;
     video.play()
-      .then(() => {
-        if (cancelled || userInterruptedRef.current) {
-          autoplayRef.current = false;
-          video.pause();
-          return;
-        }
-        video.classList.add('has-painted');
-        animationFrame = window.requestAnimationFrame(advancePage);
-      })
-      .catch(() => {
-        autoplayRef.current = false;
-      });
+      .then(() => video.classList.add('has-painted'))
+      .catch(() => {});
+    animationFrame = window.requestAnimationFrame(syncPlayback);
 
     return () => {
       cancelled = true;
@@ -294,60 +191,29 @@ export default function ScrollWorldExperience() {
   }, [reduceMotion, videoReady]);
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video || reduceMotion) return undefined;
-    let animationFrame;
-
-    const scrub = () => {
-      if (autoplayRef.current) {
-        currentTimeRef.current = video.currentTime;
-        animationFrame = window.requestAnimationFrame(scrub);
-        return;
-      }
-
-      const target = targetTimeRef.current;
-      currentTimeRef.current += (target - currentTimeRef.current) * (mobile ? 0.28 : 0.2);
-
-      // Let the decoder finish the current frame before requesting the latest one.
-      if (videoReady && !video.seeking && Math.abs(video.currentTime - currentTimeRef.current) > (mobile ? 0.025 : 0.01)) {
-        try {
-          video.currentTime = currentTimeRef.current;
-        } catch {
-          // Keep the exact poster visible until the browser can seek.
-        }
-      }
-      animationFrame = window.requestAnimationFrame(scrub);
-    };
-
-    animationFrame = window.requestAnimationFrame(scrub);
-    return () => window.cancelAnimationFrame(animationFrame);
-  }, [mobile, reduceMotion, videoReady]);
-
-  useEffect(() => {
     if (reduceMotion) return undefined;
-    const video = videoRef.current;
-    const prime = () => {
-      if (!video) return;
-      const promise = video.play();
-      promise?.then(() => video.pause()).catch(() => {});
+    const ensurePlaying = () => {
+      const video = videoRef.current;
+      if (!video || !video.paused || video.ended) return;
+      video.play().then(() => video.classList.add('has-painted')).catch(() => {});
     };
-    window.addEventListener('pointerdown', prime, { once: true, passive: true });
-    window.addEventListener('touchstart', prime, { once: true, passive: true });
+    window.addEventListener('pointerdown', ensurePlaying, { once: true, passive: true });
+    window.addEventListener('touchstart', ensurePlaying, { once: true, passive: true });
     return () => {
-      window.removeEventListener('pointerdown', prime);
-      window.removeEventListener('touchstart', prime);
+      window.removeEventListener('pointerdown', ensurePlaying);
+      window.removeEventListener('touchstart', ensurePlaying);
     };
   }, [reduceMotion]);
 
   const jumpTo = (index) => {
     const root = rootRef.current;
+    const video = videoRef.current;
     if (!root) return;
-    userInterruptedRef.current = true;
-    autoplayRef.current = false;
-    videoRef.current?.pause();
-    const distance = Math.max(1, root.offsetHeight - window.innerHeight);
-    const top = root.offsetTop + distance * SCROLL_CUES[index];
-    window.scrollTo({ top, behavior: reduceMotion ? 'auto' : 'smooth' });
+    root.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    if (!video || !videoReady) return;
+    const availableDuration = Math.max(0.001, video.duration - START_AT - 0.04);
+    video.currentTime = START_AT + (SCENE_CUES[index] / FILM_DURATION) * availableDuration;
+    video.play().then(() => video.classList.add('has-painted')).catch(() => {});
   };
 
   return (
@@ -355,7 +221,7 @@ export default function ScrollWorldExperience() {
       id="world"
       ref={rootRef}
       className={'sl-scrollworld ' + (reduceMotion ? 'is-reduced' : '')}
-      aria-label="Scroll through Sellio World"
+      aria-label="Sellio World cinematic experience"
       style={{ '--sl-sw-accent': scene.accent }}
     >
       {SCENES.map((item, index) => (
@@ -363,7 +229,7 @@ export default function ScrollWorldExperience() {
           key={item.id}
           id={item.id === 'world' ? undefined : item.id}
           className="sl-sw-anchor"
-          style={{ top: SCROLL_CUES[index] * 100 + '%' }}
+          style={{ top: 0 }}
           aria-hidden="true"
         />
       ))}
@@ -386,10 +252,7 @@ export default function ScrollWorldExperience() {
               preload="auto"
               poster={videoPoster}
               disablePictureInPicture
-              onLoadedMetadata={() => {
-                currentTimeRef.current = targetTimeRef.current;
-                setVideoReady(true);
-              }}
+              onLoadedMetadata={() => setVideoReady(true)}
               onSeeked={(event) => event.currentTarget.classList.add('has-painted')}
             />
           )}
@@ -436,7 +299,7 @@ export default function ScrollWorldExperience() {
         </nav>
 
         <div ref={hintRef} className="sl-sw-hint">
-          <MousePointer2 aria-hidden="true" /><span>Scroll anytime to explore at your pace</span><ChevronDown aria-hidden="true" />
+          <MousePointer2 aria-hidden="true" /><span>Scroll down anytime to explore more</span><ChevronDown aria-hidden="true" />
         </div>
 
         {!videoReady && !reduceMotion && <div className="sl-sw-loading">Preparing the world…</div>}
