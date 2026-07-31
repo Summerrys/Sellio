@@ -3,8 +3,9 @@ import { ArrowRight, Check, ChevronDown, MousePointer2, Sparkles } from 'lucide-
 import { useReducedMotion } from 'framer-motion';
 import './scroll-world.css';
 
-const DESKTOP_VIDEO = '/assets/scroll-world/sellio-scroll-world-desktop-1080p30.mp4';
-const MOBILE_VIDEO = '/assets/scroll-world/sellio-scroll-world-mobile-1080p30.mp4';
+// Public Supabase URLs can replace these fallbacks without changing the player.
+const DESKTOP_VIDEO = import.meta.env.VITE_SELLIO_WORLD_DESKTOP_VIDEO || '/assets/scroll-world/sellio-scroll-world-desktop-1080p30.mp4';
+const MOBILE_VIDEO = import.meta.env.VITE_SELLIO_WORLD_MOBILE_VIDEO || '/assets/scroll-world/sellio-scroll-world-mobile-1080p30.mp4';
 const DESKTOP_POSTER = '/assets/scroll-world/sellio-scroll-world-desktop-1080p30-poster.webp';
 const MOBILE_POSTER = '/assets/scroll-world/sellio-scroll-world-mobile-1080p30-poster.webp';
 const START_AT = 0;
@@ -94,12 +95,13 @@ function SceneCta({ cta, secondary = false }) {
 export default function ScrollWorldExperience() {
   const rootRef = useRef(null);
   const videoRef = useRef(null);
+  const progressBarRef = useRef(null);
+  const hintRef = useRef(null);
   const targetTimeRef = useRef(START_AT);
   const currentTimeRef = useRef(START_AT);
   const activeRef = useRef(0);
   const reduceMotion = useReducedMotion();
   const [active, setActive] = useState(0);
-  const [progress, setProgress] = useState(0);
   const [videoReady, setVideoReady] = useState(false);
   const [mobile, setMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 860px), (hover: none) and (pointer: coarse)').matches);
 
@@ -181,7 +183,8 @@ export default function ScrollWorldExperience() {
         activeRef.current = nextActive;
         setActive(nextActive);
       }
-      setProgress(nextProgress);
+      if (progressBarRef.current) progressBarRef.current.style.transform = 'scaleX(' + nextProgress + ')';
+      hintRef.current?.classList.toggle('is-hidden', nextProgress > 0.04);
       ticking = false;
     };
 
@@ -204,23 +207,65 @@ export default function ScrollWorldExperience() {
   useEffect(() => {
     const video = videoRef.current;
     if (!video || reduceMotion) return undefined;
-    let frame;
 
-    const scrub = () => {
-      const target = targetTimeRef.current;
-      currentTimeRef.current += (target - currentTimeRef.current) * (mobile ? 0.28 : 0.2);
-      if (videoReady && !video.seeking && Math.abs(video.currentTime - currentTimeRef.current) > (mobile ? 0.025 : 0.01)) {
-        try {
-          video.currentTime = currentTimeRef.current;
-        } catch {
-          // Keep the exact first-frame poster visible until the browser can seek.
-        }
-      }
-      frame = window.requestAnimationFrame(scrub);
+    const frameDuration = 1 / 30;
+    const minimumSeekGap = mobile ? 64 : 48;
+    const smoothingTime = mobile ? 105 : 82;
+    let animationFrame;
+    let seekTimer;
+    let seekInFlight = false;
+    let lastSeekAt = 0;
+    let previousFrameAt = performance.now();
+
+    const quantiseTime = (time) => {
+      const duration = Number.isFinite(video.duration) ? Math.max(0, video.duration - 0.04) : FILM_DURATION;
+      return clamp(Math.round(time / frameDuration) * frameDuration, 0, duration);
     };
 
-    frame = window.requestAnimationFrame(scrub);
-    return () => window.cancelAnimationFrame(frame);
+    const requestLatestSeek = () => {
+      if (!videoReady || seekInFlight || video.seeking) return;
+
+      const nextTime = quantiseTime(currentTimeRef.current);
+      if (Math.abs(video.currentTime - nextTime) < frameDuration * 0.72) return;
+
+      const elapsed = performance.now() - lastSeekAt;
+      if (elapsed < minimumSeekGap) {
+        window.clearTimeout(seekTimer);
+        seekTimer = window.setTimeout(requestLatestSeek, minimumSeekGap - elapsed);
+        return;
+      }
+
+      seekInFlight = true;
+      lastSeekAt = performance.now();
+      try {
+        video.currentTime = nextTime;
+      } catch {
+        seekInFlight = false;
+      }
+    };
+
+    const onSeeked = () => {
+      seekInFlight = false;
+      video.classList.add('has-painted');
+      if (Math.abs(targetTimeRef.current - video.currentTime) >= frameDuration) requestLatestSeek();
+    };
+
+    const scrub = (now) => {
+      const elapsed = Math.min(80, now - previousFrameAt);
+      previousFrameAt = now;
+      const smoothing = 1 - Math.exp(-elapsed / smoothingTime);
+      currentTimeRef.current += (targetTimeRef.current - currentTimeRef.current) * smoothing;
+      requestLatestSeek();
+      animationFrame = window.requestAnimationFrame(scrub);
+    };
+
+    video.addEventListener('seeked', onSeeked);
+    animationFrame = window.requestAnimationFrame(scrub);
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.clearTimeout(seekTimer);
+      video.removeEventListener('seeked', onSeeked);
+    };
   }, [mobile, reduceMotion, videoReady]);
 
   useEffect(() => {
@@ -287,14 +332,13 @@ export default function ScrollWorldExperience() {
                 currentTimeRef.current = targetTimeRef.current;
                 setVideoReady(true);
               }}
-              onSeeked={(event) => event.currentTarget.classList.add('has-painted')}
             />
           )}
           <div className="sl-sw-scrim" />
           <div className="sl-sw-grain" />
         </div>
 
-        <div className="sl-sw-progress" aria-hidden="true"><i style={{ transform: 'scaleX(' + progress + ')' }} /></div>
+        <div className="sl-sw-progress" aria-hidden="true"><i ref={progressBarRef} /></div>
 
         <div className="sl-sw-copy-layer">
           {SCENES.map((item, index) => {
@@ -332,7 +376,7 @@ export default function ScrollWorldExperience() {
           ))}
         </nav>
 
-        <div className={'sl-sw-hint ' + (progress > 0.04 ? 'is-hidden' : '')}>
+        <div ref={hintRef} className="sl-sw-hint">
           <MousePointer2 aria-hidden="true" /><span>Scroll to enter Sellio World</span><ChevronDown aria-hidden="true" />
         </div>
 
