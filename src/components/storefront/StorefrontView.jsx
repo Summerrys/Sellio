@@ -23,11 +23,20 @@ import { useLanguage, useTranslatedTexts } from '@/lib/LanguageContext';
 export const STOREFRONT_BANNER_MIN_HEIGHT = 120;
 export const STOREFRONT_BANNER_MAX_HEIGHT = 360;
 export const STOREFRONT_BANNER_DEFAULT_HEIGHT = 220;
+export const STOREFRONT_BANNER_MIN_ZOOM = 0.5;
+export const STOREFRONT_BANNER_MAX_ZOOM = 3;
+export const STOREFRONT_BANNER_DEFAULT_ZOOM = 1;
 
 export function getStorefrontBannerHeight(value) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return STOREFRONT_BANNER_DEFAULT_HEIGHT;
   return Math.max(STOREFRONT_BANNER_MIN_HEIGHT, Math.min(STOREFRONT_BANNER_MAX_HEIGHT, Math.round(parsed)));
+}
+
+export function getStorefrontBannerZoom(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return STOREFRONT_BANNER_DEFAULT_ZOOM;
+  return Math.max(STOREFRONT_BANNER_MIN_ZOOM, Math.min(STOREFRONT_BANNER_MAX_ZOOM, parsed));
 }
 
 // ── Currency symbol helper ───────────────────────────────────────────────────
@@ -184,12 +193,12 @@ const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryC
 });
 
 // ── Banner area (below header, behind it effectively) ─────────────────────
-// The canvas height and image fitting rule are shared by Design Store and the
-// public storefront. `contain` is intentional: `cover` re-cropped the image as
-// the viewport aspect ratio changed, so merchants saw a different portion on
-// tablet and desktop from the one they approved in the preview.
-function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY, height }) {
+// The main image always keeps its own proportions. A blurred, low-contrast copy
+// sits behind it so wide screens inherit the image's colours without stretching
+// or changing the merchant-approved foreground composition.
+function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY, height, zoom }) {
   const imagePosition = `${positionX ?? 50}% ${positionY ?? 50}%`;
+  const imageZoom = getStorefrontBannerZoom(zoom);
 
   return (
     <div style={{
@@ -198,23 +207,48 @@ function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY, h
       flexShrink: 0,
       position: 'relative',
       overflow: 'hidden',
+      isolation: 'isolate',
       background: primaryColor,
     }}>
       {bannerBgImage && (
-        <img
-          src={bannerBgImage}
-          alt=""
-          draggable={false}
-          style={{
-            width: '100%',
-            height: '100%',
-            display: 'block',
-            objectFit: 'contain',
-            objectPosition: imagePosition,
-            pointerEvents: 'none',
-            userSelect: 'none',
-          }}
-        />
+        <>
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: -24,
+              zIndex: 0,
+              backgroundImage: `url('${bannerBgImage}')`,
+              backgroundSize: 'cover',
+              backgroundPosition: imagePosition,
+              backgroundRepeat: 'no-repeat',
+              filter: 'blur(22px) saturate(0.8)',
+              opacity: 0.58,
+              transform: 'scale(1.08)',
+              pointerEvents: 'none',
+            }}
+          />
+          <div aria-hidden="true" style={{ position: 'absolute', inset: 0, zIndex: 0, background: hexToRgba(primaryColor, 0.16), pointerEvents: 'none' }} />
+          <img
+            src={bannerBgImage}
+            alt=""
+            draggable={false}
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              width: '100%',
+              height: '100%',
+              display: 'block',
+              objectFit: 'contain',
+              objectPosition: imagePosition,
+              transform: `scale(${imageZoom})`,
+              transformOrigin: imagePosition,
+              willChange: 'transform, object-position',
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          />
+        </>
       )}
     </div>
   );
@@ -307,6 +341,7 @@ export default function StorefrontView({
   const productLayout = storefrontConfig?.product_layout || 'split';
   const bannerBgImage = storefrontConfig?.banner_bg_image_url || null;
   const bannerHeight = getStorefrontBannerHeight(storefrontConfig?.banner_height_px);
+  const bannerZoom = getStorefrontBannerZoom(storefrontConfig?.banner_zoom);
   const showStockBadge = storefrontConfig?.show_stock_badge !== false;
 
   // Split layout state
@@ -641,6 +676,7 @@ export default function StorefrontView({
           positionX={storefrontConfig?.banner_position_x}
           positionY={storefrontConfig?.banner_position_y}
           height={bannerHeight}
+          zoom={bannerZoom}
         />
       </div>
 
