@@ -4,7 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { X, ArrowLeft, ExternalLink, Upload, ChevronDown, ChevronUp, Pencil, ImagePlus } from 'lucide-react';
-import StorefrontView from '@/components/storefront/StorefrontView';
+import StorefrontView, {
+  STOREFRONT_BANNER_DEFAULT_HEIGHT,
+  getStorefrontBannerHeight,
+} from '@/components/storefront/StorefrontView';
 import ImageEditModal from '@/components/onboarding/ImageEditModal';
 import { LanguageProvider } from '@/lib/LanguageContext';
 
@@ -21,8 +24,6 @@ const TABS = [
   { id: 'menu', label: 'Menu' },
 ];
 
-const MIN_BANNER_HEIGHT = 120;
-const MAX_BANNER_HEIGHT = 360;
 const DRAWER_HANDLE_ONLY = 28;
 const DRAWER_TABS_VISIBLE = 80;
 const MIN_DRAWER = DRAWER_HANDLE_ONLY;
@@ -31,7 +32,7 @@ const DEFAULTS = {
   banner_headline: '',
   banner_tagline: '',
   banner_height: 'medium',
-  banner_height_px: 220,
+  banner_height_px: STOREFRONT_BANNER_DEFAULT_HEIGHT,
   banner_bg_color: '#fb923c',
   banner_bg_image_url: '',
   banner_position_x: 50,
@@ -356,10 +357,9 @@ function BannerTabContent({ form, onChange }) {
   );
 }
 
-// Interactive banner overlay — sits on top of the StorefrontView preview at exact banner position
-// HEADER_H = 56px (StorefrontHeader), BANNER_H = 220px (StorefrontBanner, matches clamp min)
+// Interactive banner overlay — sits on top of the StorefrontView preview at exact banner position.
+// Its height comes from the same normalizer used by the public storefront.
 const PREVIEW_HEADER_H = 56;
-const PREVIEW_BANNER_H = 220;
 
 function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
   const fileInputRef = useRef(null);
@@ -464,7 +464,7 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
 
   const hasImage = !!form.banner_bg_image_url;
   const topOffset = PREVIEW_HEADER_H * scaleFactor;
-  const bannerH = PREVIEW_BANNER_H * scaleFactor;
+  const bannerH = getStorefrontBannerHeight(form.banner_height_px) * scaleFactor;
 
   return (
     <>
@@ -948,7 +948,7 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
       if (key === 'banner_position_x' || key === 'banner_position_y') {
         payload[key] = Number.isFinite(Number(val)) ? Math.round(Number(val)) : 50;
       } else if (key === 'banner_height_px') {
-        payload[key] = Number.isFinite(Number(val)) ? Math.round(Number(val)) : 220;
+        payload[key] = getStorefrontBannerHeight(val);
       } else if (key === 'products_per_row') {
         payload[key] = Number.isFinite(Number(val)) ? Number(val) : 2;
       } else {
