@@ -500,6 +500,9 @@ export default function StorefrontView({
   }, [products, categories, storefrontConfig?.featured_section_title]);
   const contentMap = useTranslatedTexts(allContentTexts);
   const tr = (text) => contentMap[text] || text;
+  const featuredSectionTitle = storefrontConfig?.featured_section_title
+    ? tr(storefrontConfig.featured_section_title)
+    : t('todaysPicks');
 
   // Promotional marquee - replaces the old static headline/tagline overlay on
   // the banner, which just repeated the business name already shown right
@@ -816,7 +819,7 @@ export default function StorefrontView({
             }}>
               {hasFeatured && (
                 <CategorySidebarItem
-                  cat={{ id: '__deals__', name: `${t('todaysPicks')} ⭐` }}
+                  cat={{ id: '__deals__', name: `${featuredSectionTitle} ⭐` }}
                   isActive={activeCategory === '__deals__'}
                   primaryColor={primaryColor}
                   onClick={() => scrollToCategory('__deals__')}
@@ -859,7 +862,7 @@ export default function StorefrontView({
               {/* Special Deals section */}
               {hasFeatured && (
                 <div ref={el => categoryRefs.current['__deals__'] = el} data-category-id="__deals__" style={{ scrollMarginTop: marqueeHeight + headerHeight + 8 }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, padding: '12px 14px 6px', color: '#1e293b', margin: 0, background: 'white', borderBottom: '1px solid #f1f5f9' }}>{t('todaysPicks')} ⭐</p>
+                  <p style={{ fontSize: 13, fontWeight: 700, padding: '12px 14px 6px', color: '#1e293b', margin: 0, background: 'white', borderBottom: '1px solid #f1f5f9' }}>{featuredSectionTitle} ⭐</p>
                   <div style={{ padding: '4px 10px' }}>
                     {featuredProducts.map(product => <ProductRowItem key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} onAddToCart={handleAddToCart} onProductClick={handleProductClick} featured={true} contentMap={contentMap} isDesktop={isDesktop} />)}
                   </div>
