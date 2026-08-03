@@ -5,6 +5,7 @@ import StorefrontView from '@/components/storefront/StorefrontView';
 import MenuAssistantWidget from '@/components/storefront/MenuAssistantWidget';
 import { LanguageProvider, useLanguage, prewarmTranslations } from '@/lib/LanguageContext';
 import { isFnBIndustry } from '@/lib/industry';
+import { fetchStorefrontCatalog } from '@/lib/storefrontCatalog';
 import { toast } from 'sonner';
 
 // Pure function (no component state) so it can be reused by the initial
@@ -117,23 +118,22 @@ function StorefrontInner() {
       if (!tenantData) { setNotFound(true); setLoading(false); return; }
       setTenant(tenantData);
       const tenantId = tenantData.id;
-      const [themeRes, storefrontRes, categoriesRes, productsRes] = await Promise.all([
+      const [themeRes, storefrontRes, catalog] = await Promise.all([
         supabase.from('theme_configs').select('*').eq('tenant_id', tenantId).maybeSingle(),
         supabase.from('storefront_configs').select('*').eq('tenant_id', tenantId).maybeSingle(),
-        supabase.from('categories').select('id, name, slug, sort_order').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').order('sort_order'),
-        supabase.from('products').select('id, name, description, price, compare_at_price, image_url, images, category_id, is_featured, is_active, stock_quantity, track_inventory, low_stock_threshold, variants, tags').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').order('id', { ascending: true }),
+        fetchStorefrontCatalog(supabase, tenantId),
       ]);
       setTheme(themeRes.data);
       setStorefrontConfig(storefrontRes.data);
-      setCategories(categoriesRes.data || []);
-      setProducts(productsRes.data || []);
+      setCategories(catalog.categories);
+      setProducts(catalog.products);
 
       // Background pre-warm: translate all product/category content into
       // zh and ms now, regardless of current language, so the toggle feels
       // instant later instead of waiting on a translation round trip.
       const contentToPrewarm = [];
-      (productsRes.data || []).forEach(p => { if (p.name) contentToPrewarm.push(p.name); if (p.description) contentToPrewarm.push(p.description); });
-      (categoriesRes.data || []).forEach(c => { if (c.name) contentToPrewarm.push(c.name); });
+      catalog.products.forEach(p => { if (p.name) contentToPrewarm.push(p.name); if (p.description) contentToPrewarm.push(p.description); });
+      catalog.categories.forEach(c => { if (c.name) contentToPrewarm.push(c.name); });
       if (storefrontRes.data?.featured_section_title) contentToPrewarm.push(storefrontRes.data.featured_section_title);
       prewarmTranslations(contentToPrewarm);
       if (tableId) {
