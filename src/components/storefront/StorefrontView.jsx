@@ -201,7 +201,7 @@ function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY, h
   const imageZoom = getStorefrontBannerZoom(zoom);
 
   return (
-    <div style={{
+    <div data-storefront-banner="true" style={{
       width: '100%',
       height,
       flexShrink: 0,
