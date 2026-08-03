@@ -12,6 +12,7 @@ import StorefrontView, {
 } from '@/components/storefront/StorefrontView';
 import ImageEditModal from '@/components/onboarding/ImageEditModal';
 import { LanguageProvider } from '@/lib/LanguageContext';
+import { fetchStorefrontCatalog } from '@/lib/storefrontCatalog';
 
 const FONTS = [
   { value: 'Inter', label: 'Inter', style: { fontFamily: 'Inter, sans-serif' } },
@@ -1139,38 +1140,89 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
 
   const loadConfig = async () => {
     const supabase = await getSupabase();
-    const draft = sessionStorage.getItem(`storefront_draft_${tenantId}`);
-    if (draft) {
-      try {
-        const parsed = JSON.parse(draft);
-        setForm({ ...DEFAULTS, ...parsed });
-        const [productsRes, categoriesRes, tenantRes] = await Promise.all([
-          supabase.from('products').select('id, name, description, price, compare_at_price, image_url, category_id, is_active, is_featured').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').limit(12),
-          supabase.from('categories').select('id, name').eq('tenant_id', tenantId),
-          supabase.from('tenants').select('name, logo_url, currency, address, settings').eq('id', tenantId).maybeSingle(),
-        ]);
-        setPreviewProducts(productsRes.data || []);
-        setPreviewCategories(categoriesRes.data || []);
-        setPreviewTenant(tenantRes.data);
-        return;
-      } catch {}
+    const draftKey = `storefront_draft_${tenantId}`;
+    let draftForm = null;
+
+    try {
+      const draft = sessionStorage.getItem(draftKey);
+      if (draft) draftForm = JSON.parse(draft);
+    } catch {
+      sessionStorage.removeItem(draftKey);
     }
-    const [configRes, productsRes, categoriesRes, tenantRes] = await Promise.all([
-      supabase.from('storefront_configs').select('*').eq('tenant_id', tenantId).maybeSingle(),
-      supabase.from('products').select('id, name, description, price, compare_at_price, image_url, category_id, is_active, is_featured').eq('tenant_id', tenantId).or('is_active.eq.true,is_active.is.null').limit(12),
-      supabase.from('categories').select('id, name').eq('tenant_id', tenantId),
-      supabase.from('tenants').select('name, logo_url, currency, address, settings').eq('id', tenantId).maybeSingle(),
-    ]);
-    const { data: themeData } = await supabase.from('theme_configs').select('primary_color').eq('tenant_id', tenantId).maybeSingle();
-    const tenantPrimaryColor = themeData?.primary_color || null;
-    setForm(configRes.data
-      ? { ...DEFAULTS, ...configRes.data }
-      : { ...DEFAULTS, ...(tenantPrimaryColor ? { banner_bg_color: tenantPrimaryColor } : {}) }
-    );
-    setPreviewProducts(productsRes.data || []);
-    setPreviewCategories(categoriesRes.data || []);
-    setPreviewTenant(tenantRes.data);
+
+    try {
+      const [configRes, catalog, tenantRes, themeRes] = await Promise.all([
+        supabase.from('storefront_configs').select('*').eq('tenant_id', tenantId).maybeSingle(),
+        fetchStorefrontCatalog(supabase, tenantId),
+        supabase.from('tenants').select('name, logo_url, currency, address, settings').eq('id', tenantId).maybeSingle(),
+        supabase.from('theme_configs').select('primary_color').eq('tenant_id', tenantId).maybeSingle(),
+      ]);
+
+      const tenantPrimaryColor = themeRes.data?.primary_color || null;
+      setForm(draftForm
+        ? { ...DEFAULTS, ...draftForm }
+        : configRes.data
+          ? { ...DEFAULTS, ...configRes.data }
+          : { ...DEFAULTS, ...(tenantPrimaryColor ? { banner_bg_color: tenantPrimaryColor } : {}) }
+      );
+      setPreviewProducts(catalog.products);
+      setPreviewCategories(catalog.categories);
+      setPreviewTenant(tenantRes.data);
+    } catch (error) {
+      toast.error(`Unable to refresh storefront preview: ${error.message || 'Unknown error'}`);
+    }
   };
+
+  // Keep an already-open Design Store canvas aligned with Products. Realtime
+  // handles edits from this or another tab; focus/visibility refreshes provide
+  // a second path after the browser or device has been suspended.
+  useEffect(() => {
+    if (!open || !tenantId) return;
+
+    let cancelled = false;
+    let channel = null;
+    let refreshInFlight = false;
+
+    const refreshCatalog = async () => {
+      if (cancelled || refreshInFlight) return;
+      refreshInFlight = true;
+      try {
+        const supabase = await getSupabase();
+        const catalog = await fetchStorefrontCatalog(supabase, tenantId);
+        if (!cancelled) {
+          setPreviewProducts(catalog.products);
+          setPreviewCategories(catalog.categories);
+        }
+      } catch {
+        // The next Realtime/focus event retries; keep the current preview stable.
+      } finally {
+        refreshInFlight = false;
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') refreshCatalog();
+    };
+
+    window.addEventListener('focus', refreshCatalog);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    getSupabase().then(supabase => {
+      if (cancelled) return;
+      channel = supabase
+        .channel(`storefront_designer_catalog_${tenantId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products', filter: `tenant_id=eq.${tenantId}` }, refreshCatalog)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `tenant_id=eq.${tenantId}` }, refreshCatalog)
+        .subscribe();
+    });
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', refreshCatalog);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (channel) channel.unsubscribe();
+    };
+  }, [open, tenantId]);
 
   const handleClose = () => {
     const draft = sessionStorage.getItem(`storefront_draft_${tenantId}`);
