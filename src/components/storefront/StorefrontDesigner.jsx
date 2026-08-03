@@ -388,6 +388,36 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
   });
   const [gestureActive, setGestureActive] = useState(false);
   const [displayZoom, setDisplayZoom] = useState(getStorefrontBannerZoom(form.banner_zoom));
+  const [bannerMetrics, setBannerMetrics] = useState(null);
+
+  // Measure the real shared banner instead of assuming a fixed header offset.
+  // This keeps the gesture surface aligned when the promo marquee mounts,
+  // header content wraps, or the device changes orientation.
+  useEffect(() => {
+    const host = overlayRef.current?.parentElement;
+    const banner = host?.querySelector('[data-storefront-banner="true"]');
+    if (!host || !banner) return;
+    let frame = null;
+    const update = () => {
+      if (frame) cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        const hostRect = host.getBoundingClientRect();
+        const bannerRect = banner.getBoundingClientRect();
+        setBannerMetrics({ top: bannerRect.top - hostRect.top, height: bannerRect.height });
+      });
+    };
+    const observer = new ResizeObserver(update);
+    observer.observe(host);
+    observer.observe(banner);
+    window.addEventListener('resize', update);
+    update();
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener('resize', update);
+    };
+  }, [form.banner_height_px, form.banner_headline, form.banner_tagline]);
 
   useEffect(() => {
     if (gestureActive) return;
@@ -574,8 +604,8 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
   };
 
   const hasImage = !!form.banner_bg_image_url;
-  const topOffset = PREVIEW_HEADER_H * scaleFactor;
-  const bannerH = getStorefrontBannerHeight(form.banner_height_px) * scaleFactor;
+  const topOffset = bannerMetrics?.top ?? PREVIEW_HEADER_H * scaleFactor;
+  const bannerH = bannerMetrics?.height ?? getStorefrontBannerHeight(form.banner_height_px) * scaleFactor;
 
   return (
     <>
