@@ -3,7 +3,7 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { X, ArrowLeft, ExternalLink, Upload, ChevronDown, ChevronUp, Pencil, ImagePlus, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { X, ArrowLeft, ExternalLink, Upload, Pencil, ImagePlus, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import StorefrontView, {
   STOREFRONT_BANNER_DEFAULT_HEIGHT,
   STOREFRONT_BANNER_DEFAULT_ZOOM,
@@ -104,26 +104,6 @@ function Toggle({ checked, onChange, label, description }) {
           borderRadius: '50%', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s ease',
         }} />
       </button>
-    </div>
-  );
-}
-
-function CollapsibleSection({ title, children, defaultOpen = false }) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div style={{ borderTop: '1px solid #f1f5f9' }}>
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '12px 0', background: 'none', border: 'none', cursor: 'pointer',
-        }}
-      >
-        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#94a3b8', textTransform: 'uppercase' }}>{title}</span>
-        {open ? <ChevronUp size={14} color="#94a3b8" /> : <ChevronDown size={14} color="#94a3b8" />}
-      </button>
-      {open && <div style={{ paddingBottom: 16 }}>{children}</div>}
     </div>
   );
 }
@@ -939,6 +919,7 @@ function DesktopEditorControls({ form, onChange, tenantId }) {
       <div className="flex-1 overflow-y-auto" style={{ padding: '16px 20px', paddingBottom: 24 }}>
         {activeTab === 'banner' && <BannerTabContent form={form} onChange={onChange} />}
         {activeTab === 'menu' && <MenuTabContent form={form} onChange={onChange} />}
+        {activeTab === 'style' && <StyleTabContent form={form} onChange={onChange} />}
       </div>
     </div>
   );
@@ -1103,6 +1084,7 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
           <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 16px' }}>
             {drawerTab === 'banner' && <BannerTabContent form={form} onChange={onChange} />}
             {drawerTab === 'menu' && <MenuTabContent form={form} onChange={onChange} />}
+            {drawerTab === 'style' && <StyleTabContent form={form} onChange={onChange} />}
           </div>
         )}
 
@@ -1217,7 +1199,7 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
     const ALLOWED = [
       'banner_headline', 'banner_tagline', 'banner_bg_color', 'banner_bg_image_url',
       'banner_height', 'banner_height_px', 'banner_position_x', 'banner_position_y', 'banner_zoom',
-      'show_announcement_bar', 'announcement_text', 'product_layout', 'products_per_row',
+      'show_promo_ticker', 'product_layout', 'menu_density',
       'show_featured', 'featured_section_title', 'show_category_tabs',
       'show_product_description', 'show_stock_badge', 'font_family',
     ];
@@ -1231,8 +1213,6 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
         payload[key] = getStorefrontBannerHeight(val);
       } else if (key === 'banner_zoom') {
         payload[key] = getStorefrontBannerZoom(val);
-      } else if (key === 'products_per_row') {
-        payload[key] = Number.isFinite(Number(val)) ? Number(val) : 2;
       } else {
         payload[key] = val ?? null;
       }
