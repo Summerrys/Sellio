@@ -20,10 +20,10 @@ const FONTS = [
   { value: 'monospace', label: 'Mono', style: { fontFamily: 'monospace' } },
 ];
 
-// 2 tabs only
 const TABS = [
   { id: 'banner', label: 'Banner' },
   { id: 'menu', label: 'Menu' },
+  { id: 'style', label: 'Style' },
 ];
 
 const DRAWER_HANDLE_ONLY = 28;
@@ -40,10 +40,9 @@ const DEFAULTS = {
   banner_bg_image_url: '',
   banner_position_x: 50,
   banner_position_y: 50,
-  show_announcement_bar: false,
-  announcement_text: '',
+  show_promo_ticker: true,
   product_layout: 'grid',
-  products_per_row: 2,
+  menu_density: 'comfortable',
   show_featured: true,
   featured_section_title: "Today's Picks",
   show_category_tabs: true,
@@ -338,9 +337,10 @@ function PremiumColorPicker({ value, onChange }) {
   );
 }
 
-// Banner tab content — colour + text only (image upload lives on the banner canvas)
+// Banner tab content — colour + promotional ticker controls only.
 function BannerTabContent({ form, onChange }) {
   const currentColor = form.banner_bg_color || '#6366f1';
+  const tickerEnabled = form.show_promo_ticker !== false;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -348,13 +348,26 @@ function BannerTabContent({ form, onChange }) {
         <SectionLabel>Brand Colour</SectionLabel>
         <PremiumColorPicker value={currentColor} onChange={v => onChange('banner_bg_color', v)} />
       </div>
-      <div>
-        <SectionLabel>Headline</SectionLabel>
-        <Input value={form.banner_headline || ''} onChange={e => onChange('banner_headline', e.target.value)} placeholder="e.g. Order fresh, eat happy" />
-      </div>
-      <div>
-        <SectionLabel>Tagline</SectionLabel>
-        <Input value={form.banner_tagline || ''} onChange={e => onChange('banner_tagline', e.target.value)} placeholder="e.g. Fast delivery · Fresh daily" />
+
+      <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 8 }}>
+        <Toggle
+          checked={tickerEnabled}
+          onChange={v => onChange('show_promo_ticker', v)}
+          label="Show Headline & Tagline"
+          description="Display both messages in the promotional ticker"
+        />
+        {tickerEnabled && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 8 }}>
+            <div>
+              <SectionLabel>Headline</SectionLabel>
+              <Input value={form.banner_headline || ''} onChange={e => onChange('banner_headline', e.target.value)} placeholder="e.g. Order fresh, eat happy" />
+            </div>
+            <div>
+              <SectionLabel>Tagline</SectionLabel>
+              <Input value={form.banner_tagline || ''} onChange={e => onChange('banner_tagline', e.target.value)} placeholder="e.g. Fast delivery · Fresh daily" />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
