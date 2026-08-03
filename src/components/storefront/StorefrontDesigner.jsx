@@ -3,10 +3,12 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { X, ArrowLeft, ExternalLink, Upload, ChevronDown, ChevronUp, Pencil, ImagePlus } from 'lucide-react';
+import { X, ArrowLeft, ExternalLink, Upload, ChevronDown, ChevronUp, Pencil, ImagePlus, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import StorefrontView, {
   STOREFRONT_BANNER_DEFAULT_HEIGHT,
+  STOREFRONT_BANNER_DEFAULT_ZOOM,
   getStorefrontBannerHeight,
+  getStorefrontBannerZoom,
 } from '@/components/storefront/StorefrontView';
 import ImageEditModal from '@/components/onboarding/ImageEditModal';
 import { LanguageProvider } from '@/lib/LanguageContext';
@@ -33,6 +35,7 @@ const DEFAULTS = {
   banner_tagline: '',
   banner_height: 'medium',
   banner_height_px: STOREFRONT_BANNER_DEFAULT_HEIGHT,
+  banner_zoom: STOREFRONT_BANNER_DEFAULT_ZOOM,
   banner_bg_color: '#fb923c',
   banner_bg_image_url: '',
   banner_position_x: 50,
@@ -360,6 +363,9 @@ function BannerTabContent({ form, onChange }) {
 // Interactive banner overlay — sits on top of the StorefrontView preview at exact banner position.
 // Its height comes from the same normalizer used by the public storefront.
 const PREVIEW_HEADER_H = 56;
+const clampBannerPosition = value => Math.max(0, Math.min(100, Number(value) || 0));
+const pointerDistance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const pointerMidpoint = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
 function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
   const fileInputRef = useRef(null);
@@ -367,15 +373,146 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
   const [hovering, setHovering] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
 
-  // Drag-to-reposition state
+  // Unified pointer gesture state. Pointer Events cover mouse, pen and touch;
+  // updates are limited to one React change per animation frame so dragging
+  // stays smooth even on lower-powered phones and tablets.
   const overlayRef = useRef(null);
-  const isDragging = useRef(false);
-  const lastPos = useRef({ x: 0, y: 0 });
-  const livePos = useRef({ x: form.banner_position_x ?? 50, y: form.banner_position_y ?? 50 });
+  const pointersRef = useRef(new Map());
+  const gestureRef = useRef(null);
+  const frameRef = useRef(null);
+  const pendingTransformRef = useRef(null);
+  const liveTransform = useRef({
+    x: form.banner_position_x ?? 50,
+    y: form.banner_position_y ?? 50,
+    zoom: getStorefrontBannerZoom(form.banner_zoom),
+  });
+  const [gestureActive, setGestureActive] = useState(false);
+  const [displayZoom, setDisplayZoom] = useState(getStorefrontBannerZoom(form.banner_zoom));
 
   useEffect(() => {
-    livePos.current = { x: form.banner_position_x ?? 50, y: form.banner_position_y ?? 50 };
-  }, [form.banner_position_x, form.banner_position_y]);
+    if (gestureActive) return;
+    const next = {
+      x: form.banner_position_x ?? 50,
+      y: form.banner_position_y ?? 50,
+      zoom: getStorefrontBannerZoom(form.banner_zoom),
+    };
+    liveTransform.current = next;
+    setDisplayZoom(next.zoom);
+  }, [form.banner_position_x, form.banner_position_y, form.banner_zoom, gestureActive]);
+
+  useEffect(() => () => {
+    if (frameRef.current) cancelAnimationFrame(frameRef.current);
+  }, []);
+
+  const scheduleTransform = (nextTransform) => {
+    const next = {
+      x: clampBannerPosition(nextTransform.x),
+      y: clampBannerPosition(nextTransform.y),
+      zoom: getStorefrontBannerZoom(nextTransform.zoom),
+    };
+    liveTransform.current = next;
+    pendingTransformRef.current = next;
+    setDisplayZoom(next.zoom);
+    if (frameRef.current) return;
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null;
+      const pending = pendingTransformRef.current;
+      if (!pending) return;
+      onChange('banner_position_x', pending.x);
+      onChange('banner_position_y', pending.y);
+      onChange('banner_zoom', pending.zoom);
+    });
+  };
+
+  const beginGesture = () => {
+    const rect = overlayRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const points = [...pointersRef.current.values()];
+    if (points.length >= 2) {
+      const midpoint = pointerMidpoint(points[0], points[1]);
+      const startTransform = {
+        ...liveTransform.current,
+        // Pinch around the point between the merchant's fingers.
+        x: clampBannerPosition((midpoint.x - rect.left) / rect.width * 100),
+        y: clampBannerPosition((midpoint.y - rect.top) / rect.height * 100),
+      };
+      scheduleTransform(startTransform);
+      gestureRef.current = {
+        mode: 'pinch',
+        startDistance: Math.max(1, pointerDistance(points[0], points[1])),
+        startMidpoint: midpoint,
+        startTransform,
+      };
+    } else if (points.length === 1) {
+      gestureRef.current = {
+        mode: 'drag',
+        startPoint: points[0],
+        startTransform: { ...liveTransform.current },
+      };
+    }
+  };
+
+  const handlePointerDown = (e) => {
+    if (!form.banner_bg_image_url || e.target.closest('[data-no-drag]')) return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    setGestureActive(true);
+    beginGesture();
+  };
+
+  const handlePointerMove = (e) => {
+    if (!pointersRef.current.has(e.pointerId)) return;
+    e.preventDefault();
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const rect = overlayRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const points = [...pointersRef.current.values()];
+
+    if (points.length >= 2) {
+      if (gestureRef.current?.mode !== 'pinch') beginGesture();
+      const gesture = gestureRef.current;
+      if (!gesture || gesture.mode !== 'pinch') return;
+      const midpoint = pointerMidpoint(points[0], points[1]);
+      const zoom = getStorefrontBannerZoom(
+        gesture.startTransform.zoom * (pointerDistance(points[0], points[1]) / gesture.startDistance)
+      );
+      scheduleTransform({
+        x: gesture.startTransform.x - ((midpoint.x - gesture.startMidpoint.x) / rect.width * 100),
+        y: gesture.startTransform.y - ((midpoint.y - gesture.startMidpoint.y) / rect.height * 100),
+        zoom,
+      });
+      return;
+    }
+
+    const gesture = gestureRef.current;
+    if (!gesture || gesture.mode !== 'drag' || points.length !== 1) return;
+    const dragScale = Math.max(1, gesture.startTransform.zoom);
+    scheduleTransform({
+      ...gesture.startTransform,
+      x: gesture.startTransform.x - ((points[0].x - gesture.startPoint.x) / rect.width * 100 / dragScale),
+      y: gesture.startTransform.y - ((points[0].y - gesture.startPoint.y) / rect.height * 100 / dragScale),
+    });
+  };
+
+  const handlePointerEnd = (e) => {
+    pointersRef.current.delete(e.pointerId);
+    try { e.currentTarget.releasePointerCapture?.(e.pointerId); } catch {}
+    if (pointersRef.current.size > 0) {
+      beginGesture();
+    } else {
+      gestureRef.current = null;
+      setGestureActive(false);
+    }
+  };
+
+  const adjustZoom = (delta) => {
+    scheduleTransform({ ...liveTransform.current, zoom: liveTransform.current.zoom + delta });
+  };
+
+  const resetTransform = () => {
+    scheduleTransform({ x: 50, y: 50, zoom: STOREFRONT_BANNER_DEFAULT_ZOOM });
+  };
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -389,6 +526,9 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
     if (error) { toast.error('Upload failed: ' + error.message); setUploading(false); return; }
     const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
     onChange('banner_bg_image_url', publicUrl.split('?')[0] + '?t=' + Date.now());
+    onChange('banner_position_x', 50);
+    onChange('banner_position_y', 50);
+    onChange('banner_zoom', STOREFRONT_BANNER_DEFAULT_ZOOM);
     setUploading(false);
     toast.success('Banner image uploaded');
     if (e.target) e.target.value = '';
@@ -405,6 +545,9 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
       await supabase.storage.from('product-images').remove([storagePath]);
     }
     onChange('banner_bg_image_url', '');
+    onChange('banner_position_x', 50);
+    onChange('banner_position_y', 50);
+    onChange('banner_zoom', STOREFRONT_BANNER_DEFAULT_ZOOM);
     toast.success('Banner image removed');
   };
 
@@ -420,46 +563,14 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
       onChange('banner_bg_image_url', publicUrl.split('?')[0] + '?t=' + Date.now());
+      onChange('banner_position_x', 50);
+      onChange('banner_position_y', 50);
+      onChange('banner_zoom', STOREFRONT_BANNER_DEFAULT_ZOOM);
       toast.success('Banner updated');
     } catch (err) {
       toast.error('Save failed: ' + err.message);
     }
     setUploading(false);
-  };
-
-  // Drag-to-reposition (mouse + touch)
-  const handleDragStart = (e) => {
-    if (!form.banner_bg_image_url) return;
-    if (e.target.closest('[data-no-drag]')) return;
-    isDragging.current = true;
-    lastPos.current = { x: e.clientX ?? e.touches?.[0]?.clientX, y: e.clientY ?? e.touches?.[0]?.clientY };
-    e.preventDefault();
-    const onMove = (me) => {
-      if (!isDragging.current) return;
-      const cx = me.clientX ?? me.touches?.[0]?.clientX;
-      const cy = me.clientY ?? me.touches?.[0]?.clientY;
-      const dx = cx - lastPos.current.x;
-      const dy = cy - lastPos.current.y;
-      lastPos.current = { x: cx, y: cy };
-      const rect = overlayRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      // Invert drag: dragging right moves focal point left
-      livePos.current.x = Math.max(0, Math.min(100, livePos.current.x - (dx / rect.width * 100)));
-      livePos.current.y = Math.max(0, Math.min(100, livePos.current.y - (dy / rect.height * 100)));
-      onChange('banner_position_x', livePos.current.x);
-      onChange('banner_position_y', livePos.current.y);
-    };
-    const onUp = () => {
-      isDragging.current = false;
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onUp);
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    window.addEventListener('touchmove', onMove, { passive: false });
-    window.addEventListener('touchend', onUp);
   };
 
   const hasImage = !!form.banner_bg_image_url;
@@ -473,15 +584,17 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
         ref={overlayRef}
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={() => setHovering(false)}
-        onMouseDown={hasImage ? handleDragStart : undefined}
-        onTouchStart={hasImage ? handleDragStart : undefined}
+        onPointerDown={hasImage ? handlePointerDown : undefined}
+        onPointerMove={hasImage ? handlePointerMove : undefined}
+        onPointerUp={hasImage ? handlePointerEnd : undefined}
+        onPointerCancel={hasImage ? handlePointerEnd : undefined}
         style={{
           position: 'absolute',
           top: topOffset,
           left: 0, right: 0,
           height: bannerH,
           zIndex: 10,
-          cursor: hasImage ? 'grab' : 'pointer',
+          cursor: hasImage ? (gestureActive ? 'grabbing' : 'grab') : 'pointer',
           touchAction: 'none',
         }}
         onClick={!hasImage ? () => fileInputRef.current?.click() : undefined}
@@ -525,6 +638,18 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
             >
               <Pencil size={12} color="white" />
             </button>
+            {/* Zoom controls work with a mouse as well as touch pinch. */}
+            <div data-no-drag="true" style={{ position: 'absolute', top: 8, right: 8, display: 'flex', alignItems: 'center', gap: 4, padding: 4, borderRadius: 999, background: 'rgba(0,0,0,0.58)', backdropFilter: 'blur(6px)', zIndex: 20 }}>
+              <button data-no-drag="true" type="button" aria-label="Zoom out" onClick={(e) => { e.stopPropagation(); adjustZoom(-0.1); }} style={{ width: 26, height: 26, border: 'none', borderRadius: '50%', background: 'rgba(255,255,255,0.14)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ZoomOut size={13} />
+              </button>
+              <button data-no-drag="true" type="button" aria-label="Reset banner position and zoom" onClick={(e) => { e.stopPropagation(); resetTransform(); }} style={{ minWidth: 50, height: 26, border: 'none', borderRadius: 999, background: 'transparent', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 10, fontWeight: 700 }}>
+                <RotateCcw size={11} /> {Math.round(displayZoom * 100)}%
+              </button>
+              <button data-no-drag="true" type="button" aria-label="Zoom in" onClick={(e) => { e.stopPropagation(); adjustZoom(0.1); }} style={{ width: 26, height: 26, border: 'none', borderRadius: '50%', background: 'rgba(255,255,255,0.14)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ZoomIn size={13} />
+              </button>
+            </div>
             {/* Replace — shown on hover */}
             {hovering && (
               <button
@@ -538,7 +663,7 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
             )}
             {/* Drag hint */}
             <div style={{ position: 'absolute', bottom: 6, right: 8, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', borderRadius: 6, padding: '3px 8px', color: 'white', fontSize: 10, fontWeight: 500, pointerEvents: 'none' }}>
-              ✥ Drag to reposition
+              ✥ Drag · Pinch to zoom
             </div>
           </>
         )}
@@ -936,7 +1061,7 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
 
     const ALLOWED = [
       'banner_headline', 'banner_tagline', 'banner_bg_color', 'banner_bg_image_url',
-      'banner_height', 'banner_height_px', 'banner_position_x', 'banner_position_y',
+      'banner_height', 'banner_height_px', 'banner_position_x', 'banner_position_y', 'banner_zoom',
       'show_announcement_bar', 'announcement_text', 'product_layout', 'products_per_row',
       'show_featured', 'featured_section_title', 'show_category_tabs',
       'show_product_description', 'show_stock_badge', 'font_family',
@@ -949,6 +1074,8 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
         payload[key] = Number.isFinite(Number(val)) ? Math.round(Number(val)) : 50;
       } else if (key === 'banner_height_px') {
         payload[key] = getStorefrontBannerHeight(val);
+      } else if (key === 'banner_zoom') {
+        payload[key] = getStorefrontBannerZoom(val);
       } else if (key === 'products_per_row') {
         payload[key] = Number.isFinite(Number(val)) ? Number(val) : 2;
       } else {
