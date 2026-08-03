@@ -39,6 +39,12 @@ export function getStorefrontBannerZoom(value) {
   return Math.max(STOREFRONT_BANNER_MIN_ZOOM, Math.min(STOREFRONT_BANNER_MAX_ZOOM, parsed));
 }
 
+function getResponsiveMenuColumns(isDesktop, isLandscape, density = 'comfortable') {
+  if (!isDesktop) return 2;
+  if (density === 'compact') return isLandscape ? 5 : 4;
+  return isLandscape ? 4 : 3;
+}
+
 // ── Currency symbol helper ───────────────────────────────────────────────────
 // Returns display symbol: SGD→"$", MYR→"RM ", USD→"$", GBP→"£", EUR→"€"
 const getCurrencySymbol = (c) => ({ SGD:'$', MYR:'RM ', USD:'$', AUD:'A$', GBP:'£', EUR:'€' }[c] || (c + ' '));
@@ -344,10 +350,13 @@ export default function StorefrontView({
   const primaryColor = storefrontConfig?.banner_bg_color || theme?.primary_color || '#6366f1';
   const currency = tenant?.currency || 'SGD';
   const productLayout = storefrontConfig?.product_layout || 'split';
+  const menuDensity = storefrontConfig?.menu_density === 'compact' ? 'compact' : 'comfortable';
   const bannerBgImage = storefrontConfig?.banner_bg_image_url || null;
   const bannerHeight = getStorefrontBannerHeight(storefrontConfig?.banner_height_px);
   const bannerZoom = getStorefrontBannerZoom(storefrontConfig?.banner_zoom);
+  const showPromoTicker = storefrontConfig?.show_promo_ticker !== false;
   const showStockBadge = storefrontConfig?.show_stock_badge !== false;
+  const showCategoryNavigation = storefrontConfig?.show_category_tabs !== false;
 
   // Split layout state
   const [activeCategory, setActiveCategory] = useState(null);
@@ -468,7 +477,7 @@ export default function StorefrontView({
   }, [productLayout, previewMode]);
 
   const featuredProducts = products.filter(p => p.is_featured === true);
-  const hasFeatured = featuredProducts.length > 0;
+  const hasFeatured = storefrontConfig?.show_featured !== false && featuredProducts.length > 0;
   const categoriesWithProducts = categories.filter(cat => products.some(p => p.category_id === cat.id));
   // Featured products used to be pulled OUT of their category section
   // entirely once marked featured (via a !p.is_featured filter here), so they
@@ -655,7 +664,7 @@ export default function StorefrontView({
       `}</style>
 
       {/* ── STICKY HEADER ── */}
-      <PromoMarquee ref={marqueeCallbackRef} messages={promoMessages} primaryColor={primaryColor} />
+      {showPromoTicker && <PromoMarquee ref={marqueeCallbackRef} messages={promoMessages} primaryColor={primaryColor} />}
 
       <StorefrontHeader
         ref={headerRef}
@@ -684,13 +693,6 @@ export default function StorefrontView({
           zoom={bannerZoom}
         />
       </div>
-
-      {/* ── ANNOUNCEMENT BAR ── */}
-      {storefrontConfig?.show_announcement_bar && storefrontConfig?.announcement_text && (
-        <div style={{ background: `${primaryColor}20`, padding: '10px 16px', textAlign: 'center' }}>
-          <p style={{ color: primaryColor, fontSize: 13, fontWeight: 500, margin: 0 }}>📢 {storefrontConfig.announcement_text}</p>
-        </div>
-      )}
 
       {/* ── WHITE CONTENT SHEET ── */}
       <div style={{
@@ -779,7 +781,7 @@ export default function StorefrontView({
                   <p style={{ color: '#94a3b8', fontSize: 14 }}>No products match "{searchQuery.trim()}"</p>
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isDesktop ? (isLandscape ? 4 : 3) : 2}, 1fr)`, gap: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${getResponsiveMenuColumns(isDesktop, isLandscape, menuDensity)}, 1fr)`, gap: menuDensity === 'compact' ? 8 : 10 }}>
                   {searchedProducts.map(product => (
                     <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={handleAddToCart} onProductClick={handleProductClick} contentMap={contentMap} />
                   ))}
@@ -803,7 +805,7 @@ export default function StorefrontView({
                 exactly matching "locks below the header once the storefront
                 banner is gone"). No bounded height or internal scroll — it
                 just sizes to its own content. */}
-            <div className="sf-no-scrollbar" style={{
+            {showCategoryNavigation && <div className="sf-no-scrollbar" style={{
               width: isDesktop ? 180 : 'clamp(72px, 20vw, 100px)',
               flexShrink: 0,
               position: 'sticky',
@@ -838,7 +840,7 @@ export default function StorefrontView({
                   onClick={() => scrollToCategory('other')}
                 />
               )}
-            </div>
+            </div>}
 
             {/* Right product panel — plain normal-flow content, scrolls with
                 the rest of the page all the way to the footer. minWidth: 0
