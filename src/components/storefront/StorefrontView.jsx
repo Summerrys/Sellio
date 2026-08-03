@@ -208,7 +208,10 @@ function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY, h
       position: 'relative',
       overflow: 'hidden',
       isolation: 'isolate',
-      background: primaryColor,
+      // With an uploaded banner, the backdrop must come from that image —
+      // never from the merchant's brand colour. The neutral value is only a
+      // brief fallback while the image is loading (or if it cannot load).
+      background: bannerBgImage ? '#f8fafc' : primaryColor,
     }}>
       {bannerBgImage && (
         <>
@@ -222,13 +225,15 @@ function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY, h
               backgroundSize: 'cover',
               backgroundPosition: imagePosition,
               backgroundRepeat: 'no-repeat',
-              filter: 'blur(22px) saturate(0.8)',
-              opacity: 0.58,
-              transform: 'scale(1.08)',
+              // Keep this copy fully opaque so the spare side space visibly
+              // inherits the uploaded image's colours. Blurring plus a small
+              // scale hides the cropped edges without stretching the image.
+              filter: 'blur(28px) saturate(1.05)',
+              opacity: 1,
+              transform: 'scale(1.12)',
               pointerEvents: 'none',
             }}
           />
-          <div aria-hidden="true" style={{ position: 'absolute', inset: 0, zIndex: 0, background: hexToRgba(primaryColor, 0.16), pointerEvents: 'none' }} />
           <img
             src={bannerBgImage}
             alt=""
