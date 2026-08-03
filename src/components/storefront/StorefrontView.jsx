@@ -960,11 +960,20 @@ function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onA
   const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
   const name = contentMap[product.name] || product.name;
   const description = contentMap[product.description] || product.description;
-  const thumbSize = isDesktop ? 92 : 72;
+  const isCompact = storefrontConfig?.menu_density === 'compact';
+  const showStockBadge = storefrontConfig?.show_stock_badge !== false;
+  const thumbSize = isDesktop ? (isCompact ? 78 : 92) : (isCompact ? 64 : 72);
   return (
     <div
       onClick={() => onProductClick(product)}
-      style={{ display: 'flex', gap: isDesktop ? 14 : 10, alignItems: 'center', padding: isDesktop ? '14px 0' : '10px 0', borderBottom: '1px solid #f8f9fa', cursor: 'pointer' }}
+      style={{
+        display: 'flex',
+        gap: isDesktop ? (isCompact ? 10 : 14) : (isCompact ? 8 : 10),
+        alignItems: 'center',
+        padding: isDesktop ? (isCompact ? '10px 0' : '14px 0') : (isCompact ? '7px 0' : '10px 0'),
+        borderBottom: '1px solid #f8f9fa',
+        cursor: 'pointer',
+      }}
     >
       <div style={{ position: 'relative', flexShrink: 0 }}>
         {product.image_url
@@ -990,7 +999,7 @@ function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onA
         </div>
       </div>
       {isOutOfStock
-        ? <span style={{ fontSize: 10, color: '#dc2626', fontWeight: 600, flexShrink: 0 }}>{t('soldOut')}</span>
+        ? (showStockBadge ? <span style={{ fontSize: 10, color: '#dc2626', fontWeight: 600, flexShrink: 0 }}>{t('soldOut')}</span> : null)
         : <button onClick={(e) => { e.stopPropagation(); if (product.variants?.length > 0) { onProductClick(product); } else { onAddToCart(product); } }}
             style={{ width: 30, height: 30, borderRadius: '50%', background: primaryColor, border: 'none', color: 'white', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}>+</button>
       }
@@ -1010,10 +1019,9 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
   );
   const productLayout = storefrontConfig?.product_layout || 'grid';
   const isGrid = productLayout === 'grid';
-  // 3 columns on tablet portrait, 4 on landscape, per the merchant's explicit
-  // spec - not the fluid auto-fill used before, which didn't reliably land on
-  // those exact counts.
-  const gridColumns = isDesktop ? (isLandscape ? 4 : 3) : 2;
+  const menuDensity = storefrontConfig?.menu_density === 'compact' ? 'compact' : 'comfortable';
+  const gridGap = menuDensity === 'compact' ? 8 : 10;
+  const gridColumns = getResponsiveMenuColumns(isDesktop, isLandscape, menuDensity);
 
   return (
     <>
@@ -1079,7 +1087,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
                 <p style={{ color: '#94a3b8', fontSize: 14 }}>No products match "{searchQuery.trim()}"</p>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, gap: gridGap }}>
                 {searchedProducts.map(product => <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}
               </div>
             )}
@@ -1092,7 +1100,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
               {storefrontConfig?.featured_section_title ? tr(storefrontConfig.featured_section_title) : t('todaysPicks')} ⭐
             </p>
             {isGrid ? (
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, gap: gridGap }}>
                 {featuredProducts.map(product => <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}
               </div>
             ) : (
@@ -1106,7 +1114,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
               🏷️ {t('specialDeals')}
             </p>
             {isGrid ? (
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, gap: gridGap }}>
                 {specialDealProducts.map(product => <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}
               </div>
             ) : (
@@ -1115,7 +1123,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
           </div>
         )}
         {productLayout === 'grid' && (
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, gap: gridGap }}>
             {filteredProducts.map(product => <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}
           </div>
         )}
@@ -1142,10 +1150,12 @@ function FeaturedCard({ product, currency, primaryColor, storefrontConfig, showS
   const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
   const name = contentMap[product.name] || product.name;
   const description = contentMap[product.description] || product.description;
+  const isCompact = storefrontConfig?.menu_density === 'compact';
+  const imageSize = isCompact ? 94 : 110;
   return (
-    <div onClick={() => onProductClick(product)} style={{ display: 'flex', background: '#f8fafc', borderRadius: 14, overflow: 'hidden', marginBottom: 10, border: '0.5px solid #e5e7eb', cursor: 'pointer' }}>
-      {product.image_url && <img src={product.image_url} style={{ width: 110, height: 110, objectFit: 'cover', flexShrink: 0 }} />}
-      <div style={{ flex: 1, padding: 12, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+    <div onClick={() => onProductClick(product)} style={{ display: 'flex', background: '#f8fafc', borderRadius: isCompact ? 11 : 14, overflow: 'hidden', marginBottom: isCompact ? 7 : 10, border: '0.5px solid #e5e7eb', cursor: 'pointer' }}>
+      {product.image_url && <img src={product.image_url} style={{ width: imageSize, height: imageSize, objectFit: 'cover', flexShrink: 0 }} />}
+      <div style={{ flex: 1, padding: isCompact ? 9 : 12, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
         <div>
           <p style={{ fontWeight: 600, fontSize: 14, margin: '0 0 3px', color: '#0f172a' }}>{name}</p>
           {storefrontConfig?.show_product_description !== false && product.description && (
@@ -1174,8 +1184,9 @@ function GridCard({ product, currency, primaryColor, storefrontConfig, showStock
   const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
   const name = contentMap[product.name] || product.name;
   const description = contentMap[product.description] || product.description;
+  const isCompact = storefrontConfig?.menu_density === 'compact';
   return (
-    <div onClick={() => onProductClick(product)} style={{ background: '#fff', borderRadius: 12, border: '0.5px solid #e5e7eb', overflow: 'hidden', cursor: 'pointer' }}>
+    <div onClick={() => onProductClick(product)} style={{ background: '#fff', borderRadius: isCompact ? 9 : 12, border: '0.5px solid #e5e7eb', overflow: 'hidden', cursor: 'pointer' }}>
       <div style={{ position: 'relative' }}>
         {product.image_url
           ? <img src={product.image_url} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover' }} />
@@ -1187,8 +1198,8 @@ function GridCard({ product, currency, primaryColor, storefrontConfig, showStock
           </div>
         )}
       </div>
-      <div style={{ padding: 10 }}>
-        <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#0f172a' }}>{name}</p>
+      <div style={{ padding: isCompact ? 7 : 10 }}>
+        <p style={{ fontWeight: 600, fontSize: isCompact ? 12 : 13, margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#0f172a' }}>{name}</p>
         {storefrontConfig?.show_product_description !== false && product.description && (
           <p style={{ fontSize: 11, color: '#64748b', margin: '0 0 6px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{description}</p>
         )}
