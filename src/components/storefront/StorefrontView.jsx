@@ -20,6 +20,16 @@ import {
 import LanguageToggle from './LanguageToggle';
 import { useLanguage, useTranslatedTexts } from '@/lib/LanguageContext';
 
+export const STOREFRONT_BANNER_MIN_HEIGHT = 120;
+export const STOREFRONT_BANNER_MAX_HEIGHT = 360;
+export const STOREFRONT_BANNER_DEFAULT_HEIGHT = 220;
+
+export function getStorefrontBannerHeight(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return STOREFRONT_BANNER_DEFAULT_HEIGHT;
+  return Math.max(STOREFRONT_BANNER_MIN_HEIGHT, Math.min(STOREFRONT_BANNER_MAX_HEIGHT, Math.round(parsed)));
+}
+
 // ── Currency symbol helper ───────────────────────────────────────────────────
 // Returns display symbol: SGD→"$", MYR→"RM ", USD→"$", GBP→"£", EUR→"€"
 const getCurrencySymbol = (c) => ({ SGD:'$', MYR:'RM ', USD:'$', AUD:'A$', GBP:'£', EUR:'€' }[c] || (c + ' '));
@@ -174,19 +184,38 @@ const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryC
 });
 
 // ── Banner area (below header, behind it effectively) ─────────────────────
-function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY }) {
+// The canvas height and image fitting rule are shared by Design Store and the
+// public storefront. `contain` is intentional: `cover` re-cropped the image as
+// the viewport aspect ratio changed, so merchants saw a different portion on
+// tablet and desktop from the one they approved in the preview.
+function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY, height }) {
+  const imagePosition = `${positionX ?? 50}% ${positionY ?? 50}%`;
+
   return (
     <div style={{
       width: '100%',
-      height: 'clamp(220px, 25vw, 300px)',
+      height,
       flexShrink: 0,
       position: 'relative',
-      ...(bannerBgImage
-        ? { backgroundImage: `url('${bannerBgImage}')`, backgroundSize: 'cover', backgroundPosition: `${positionX ?? 50}% ${positionY ?? 50}%`, backgroundRepeat: 'no-repeat' }
-        : { background: primaryColor }
-      ),
+      overflow: 'hidden',
+      background: primaryColor,
     }}>
-      {/* No dark overlay — image displays at full brightness */}
+      {bannerBgImage && (
+        <img
+          src={bannerBgImage}
+          alt=""
+          draggable={false}
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'block',
+            objectFit: 'contain',
+            objectPosition: imagePosition,
+            pointerEvents: 'none',
+            userSelect: 'none',
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -277,6 +306,7 @@ export default function StorefrontView({
   const currency = tenant?.currency || 'SGD';
   const productLayout = storefrontConfig?.product_layout || 'split';
   const bannerBgImage = storefrontConfig?.banner_bg_image_url || null;
+  const bannerHeight = getStorefrontBannerHeight(storefrontConfig?.banner_height_px);
   const showStockBadge = storefrontConfig?.show_stock_badge !== false;
 
   // Split layout state
@@ -610,6 +640,7 @@ export default function StorefrontView({
           bannerBgImage={bannerBgImage}
           positionX={storefrontConfig?.banner_position_x}
           positionY={storefrontConfig?.banner_position_y}
+          height={bannerHeight}
         />
       </div>
 
