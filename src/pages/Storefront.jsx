@@ -174,6 +174,67 @@ function StorefrontInner() {
     loadData();
   }, [tenantSlug, tableId]);
 
+  // Keep every open public storefront aligned with Products and with the
+  // Design Store preview. The shared loader guarantees identical fields,
+  // filters and ordering; Realtime plus focus/visibility refresh covers both
+  // live edits and browsers returning from a suspended tab.
+  useEffect(() => {
+    if (!tenant?.id) return;
+
+    let cancelled = false;
+    let channel = null;
+    let refreshInFlight = false;
+
+    const refreshCatalog = async () => {
+      if (cancelled || refreshInFlight) return;
+      refreshInFlight = true;
+      try {
+        const supabase = await getSupabase();
+        const catalog = await fetchStorefrontCatalog(supabase, tenant.id);
+        if (!cancelled) {
+          setProducts(catalog.products);
+          setCategories(catalog.categories);
+          const contentToPrewarm = [];
+          catalog.products.forEach(p => {
+            if (p.name) contentToPrewarm.push(p.name);
+            if (p.description) contentToPrewarm.push(p.description);
+          });
+          catalog.categories.forEach(c => {
+            if (c.name) contentToPrewarm.push(c.name);
+          });
+          prewarmTranslations(contentToPrewarm);
+        }
+      } catch {
+        // Preserve the current catalogue and retry on the next event/focus.
+      } finally {
+        refreshInFlight = false;
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') refreshCatalog();
+    };
+
+    window.addEventListener('focus', refreshCatalog);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    getSupabase().then(supabase => {
+      if (cancelled) return;
+      channel = supabase
+        .channel(`public_storefront_catalog_${tenant.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products', filter: `tenant_id=eq.${tenant.id}` }, refreshCatalog)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `tenant_id=eq.${tenant.id}` }, refreshCatalog)
+        .subscribe();
+    });
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', refreshCatalog);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (channel) channel.unsubscribe();
+    };
+  }, [tenant?.id]);
+
   // Keeps open/closed accurate without needing a page refresh. Two separate
   // triggers, since they cover different gaps: a periodic re-check catches
   // the clock simply crossing today's open/close time (no DB change involved
