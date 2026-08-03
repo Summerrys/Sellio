@@ -726,73 +726,185 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
   );
 }
 
-// Menu tab content with collapsible Announcement + Typography
+const MENU_LAYOUTS = [
+  { value: 'grid', label: 'Grid', description: 'Image-focused cards' },
+  { value: 'list', label: 'List', description: 'More product detail' },
+  { value: 'split', label: 'Split', description: 'Category sidebar' },
+];
+
+function LayoutPreview({ type, active }) {
+  const ink = active ? 'var(--color-primary)' : '#94a3b8';
+  const pale = active ? 'color-mix(in srgb, var(--color-primary) 14%, white)' : '#e2e8f0';
+  const tile = { background: pale, borderRadius: 2 };
+
+  if (type === 'list') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
+        {[0, 1, 2].map(item => (
+          <div key={item} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <div style={{ ...tile, width: 12, height: 12, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ height: 3, borderRadius: 2, background: ink, opacity: 0.75, marginBottom: 3 }} />
+              <div style={{ height: 2, width: '65%', borderRadius: 2, background: '#cbd5e1' }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (type === 'split') {
+    return (
+      <div style={{ display: 'flex', gap: 5, width: '100%', height: '100%' }}>
+        <div style={{ width: 15, borderRadius: 3, background: pale, display: 'flex', flexDirection: 'column', gap: 4, padding: 3 }}>
+          {[0, 1, 2].map(item => <div key={item} style={{ height: 3, borderRadius: 2, background: ink, opacity: item === 0 ? 0.9 : 0.35 }} />)}
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {[0, 1, 2].map(item => (
+            <div key={item} style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+              <div style={{ ...tile, width: 10, height: 10 }} />
+              <div style={{ height: 3, flex: 1, borderRadius: 2, background: item === 0 ? ink : '#cbd5e1', opacity: 0.75 }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4, width: '100%' }}>
+      {[0, 1, 2, 3].map(item => (
+        <div key={item} style={{ ...tile, height: 17, border: `1px solid ${active && item === 0 ? ink : 'transparent'}` }} />
+      ))}
+    </div>
+  );
+}
+
+function LayoutChoiceCard({ option, selected, onSelect }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onSelect}
+      style={{
+        minWidth: 0, padding: 8, borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+        background: selected ? 'color-mix(in srgb, var(--color-primary) 6%, white)' : 'white',
+        border: selected ? '2px solid var(--color-primary)' : '1px solid #e2e8f0',
+        boxShadow: selected ? '0 4px 12px rgba(15, 23, 42, 0.08)' : 'none',
+        transition: 'border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease',
+      }}
+    >
+      <div style={{ height: 52, padding: 7, borderRadius: 8, background: '#f8fafc', display: 'flex', alignItems: 'center', marginBottom: 7 }}>
+        <LayoutPreview type={option.value} active={selected} />
+      </div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: '#334155' }}>{option.label}</div>
+      <div style={{ fontSize: 9, color: '#94a3b8', lineHeight: 1.3, marginTop: 2 }}>{option.description}</div>
+    </button>
+  );
+}
+
 function MenuTabContent({ form, onChange }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-      {/* Product layout */}
       <div style={{ paddingBottom: 20 }}>
-        <SectionLabel>Product layout</SectionLabel>
-        <PillToggle
-          options={[{ value: 'grid', label: 'Grid' }, { value: 'list', label: 'List' }, { value: 'split', label: 'Split' }]}
-          value={form.product_layout}
-          onChange={v => onChange('product_layout', v)}
-        />
-
-      </div>
-
-      {/* Display options */}
-      <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 12, paddingBottom: 8 }}>
-        <SectionLabel>Display options</SectionLabel>
-        <Toggle checked={form.show_featured} onChange={v => onChange('show_featured', v)} label="Featured section" description="Highlight top picks for customers" />
-        {form.show_featured && (
-          <div style={{ paddingBottom: 8 }}>
-            <Input value={form.featured_section_title} onChange={e => onChange('featured_section_title', e.target.value)} placeholder="Section title" className="text-sm" />
-          </div>
-        )}
-        <Toggle checked={form.show_category_tabs} onChange={v => onChange('show_category_tabs', v)} label="Category tabs" description="Let customers filter by category" />
-        <Toggle checked={form.show_product_description} onChange={v => onChange('show_product_description', v)} label="Product descriptions" description="Show description on product cards" />
-        <Toggle checked={form.show_stock_badge} onChange={v => onChange('show_stock_badge', v)} label="Stock badge" description="Show in stock / out of stock indicator" />
-      </div>
-
-      {/* Announcement — collapsible */}
-      <CollapsibleSection title="Announcement">
-        <Toggle
-          checked={form.show_announcement_bar}
-          onChange={v => onChange('show_announcement_bar', v)}
-          label="Show announcement bar"
-          description="Displays a top bar on your storefront"
-        />
-        {form.show_announcement_bar && (
-          <div style={{ marginTop: 12 }}>
-            <SectionLabel>Announcement text</SectionLabel>
-            <Input value={form.announcement_text} onChange={e => onChange('announcement_text', e.target.value)} placeholder="e.g. Free delivery on orders above $30" />
-          </div>
-        )}
-      </CollapsibleSection>
-
-      {/* Typography — collapsible */}
-      <CollapsibleSection title="Typography">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 4 }}>
-          {FONTS.map(font => (
-            <button
-              key={font.value}
-              type="button"
-              onClick={() => onChange('font_family', font.value)}
-              style={{
-                width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: 12,
-                border: form.font_family === font.value ? '2px solid transparent' : '1px solid #f1f5f9',
-                borderLeft: form.font_family === font.value ? '3px solid var(--color-primary)' : '1px solid #f1f5f9',
-                background: form.font_family === font.value ? '#f8fafc' : 'white',
-                cursor: 'pointer', transition: 'all 0.15s ease',
-              }}
-            >
-              <div style={{ ...font.style, fontSize: 18, fontWeight: 600, color: '#0f172a', marginBottom: 2 }}>{font.label}</div>
-              <div style={{ ...font.style, fontSize: 12, color: '#94a3b8' }}>Fresh food, great vibes.</div>
-            </button>
+        <SectionLabel>Menu layout</SectionLabel>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+          {MENU_LAYOUTS.map(option => (
+            <LayoutChoiceCard
+              key={option.value}
+              option={option}
+              selected={form.product_layout === option.value}
+              onSelect={() => onChange('product_layout', option.value)}
+            />
           ))}
         </div>
-      </CollapsibleSection>
+      </div>
+
+      <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 12, paddingBottom: 8 }}>
+        <SectionLabel>Menu navigation</SectionLabel>
+        <Toggle
+          checked={form.show_category_tabs !== false}
+          onChange={v => onChange('show_category_tabs', v)}
+          label="Category navigation"
+          description={form.product_layout === 'split' ? 'Show the category sidebar' : 'Show category filter tabs'}
+        />
+        <div style={{ paddingTop: 10, paddingBottom: 8 }}>
+          <SectionLabel>Product density</SectionLabel>
+          <PillToggle
+            options={[
+              { value: 'comfortable', label: 'Comfortable' },
+              { value: 'compact', label: 'Compact' },
+            ]}
+            value={form.menu_density || 'comfortable'}
+            onChange={v => onChange('menu_density', v)}
+          />
+          <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 7, lineHeight: 1.4 }}>
+            Compact fits more products on tablet and desktop while keeping mobile readable.
+          </p>
+        </div>
+      </div>
+
+      <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 12, paddingBottom: 8 }}>
+        <SectionLabel>Menu sections</SectionLabel>
+        <Toggle
+          checked={form.show_featured !== false}
+          onChange={v => onChange('show_featured', v)}
+          label="Featured section"
+          description="Highlight top picks for customers"
+        />
+        {form.show_featured !== false && (
+          <div style={{ paddingBottom: 8 }}>
+            <SectionLabel>Featured section title</SectionLabel>
+            <Input value={form.featured_section_title || ''} onChange={e => onChange('featured_section_title', e.target.value)} placeholder="e.g. Today's Picks" className="text-sm" />
+          </div>
+        )}
+      </div>
+
+      <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 12, paddingBottom: 8 }}>
+        <SectionLabel>Product cards</SectionLabel>
+        <Toggle
+          checked={form.show_product_description !== false}
+          onChange={v => onChange('show_product_description', v)}
+          label="Product descriptions"
+          description="Show descriptions on product cards"
+        />
+        <Toggle
+          checked={form.show_stock_badge !== false}
+          onChange={v => onChange('show_stock_badge', v)}
+          label="Stock status"
+          description="Show sold-out indicators"
+        />
+      </div>
+    </div>
+  );
+}
+
+function StyleTabContent({ form, onChange }) {
+  return (
+    <div>
+      <SectionLabel>Typography</SectionLabel>
+      <p style={{ fontSize: 12, color: '#64748b', lineHeight: 1.45, margin: '-2px 0 12px' }}>
+        Applied consistently across the preview and public storefront.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {FONTS.map(font => (
+          <button
+            key={font.value}
+            type="button"
+            onClick={() => onChange('font_family', font.value)}
+            style={{
+              width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: 12,
+              border: form.font_family === font.value ? '2px solid transparent' : '1px solid #f1f5f9',
+              borderLeft: form.font_family === font.value ? '3px solid var(--color-primary)' : '1px solid #f1f5f9',
+              background: form.font_family === font.value ? '#f8fafc' : 'white',
+              cursor: 'pointer', transition: 'all 0.15s ease',
+            }}
+          >
+            <div style={{ ...font.style, fontSize: 18, fontWeight: 600, color: '#0f172a', marginBottom: 2 }}>{font.label}</div>
+            <div style={{ ...font.style, fontSize: 12, color: '#94a3b8' }}>Fresh food, great vibes.</div>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
