@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PullToRefresh from '../components/ui-custom/PullToRefresh';
 import { getSupabase } from '@/lib/supabaseClient';
@@ -18,9 +18,8 @@ import TourGuide from '@/components/tour/TourGuide';
 import { getProductsSteps } from '@/components/tour/tourSteps';
 import DummyProductCard from '@/components/tour/DummyProductCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package, ScanLine, Trash2, CheckCircle2, AlertCircle, ImageIcon, Lightbulb, Loader2, X, CheckSquare, Camera } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import { cn } from '@/lib/utils';
+import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package, ScanLine, Trash2, CheckCircle2, AlertCircle, ImageIcon, Lightbulb, Loader2, X, Camera } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
 import { applyCanonicalProductOrder } from '@/lib/storefrontCatalog';
 
@@ -46,7 +45,6 @@ const TEMPLATE_ROWS = [
 ];
 
 function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess, maxProducts, currentProductCount, onLimitExceeded }) {
-  const { tenant } = useTenant();
   const [image, setImage] = React.useState(null);
   const [imagePreview, setImagePreview] = React.useState(null);
   const [scanning, setScanning] = React.useState(false);
