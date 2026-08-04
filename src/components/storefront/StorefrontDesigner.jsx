@@ -1338,8 +1338,8 @@ function DesktopPreviewWorkspace({ form, onChange, tenantId, previewData }) {
       <div
         ref={stageAreaRef}
         style={{
-          flex: 1, minHeight: 0, overflow: 'auto', padding: 16, display: 'flex',
-          alignItems: 'flex-start', justifyContent: 'center', overscrollBehavior: 'contain',
+          flex: 1, minHeight: 0, overflow: 'auto', padding: 16, display: 'block',
+          overscrollBehavior: 'contain',
         }}
       >
         <div style={{
@@ -1347,12 +1347,12 @@ function DesktopPreviewWorkspace({ form, onChange, tenantId, previewData }) {
           width: device.width * previewScale,
           height: frameHeight * previewScale,
           flexShrink: 0,
-          transition: 'width 180ms ease, height 180ms ease',
+          margin: '0 auto',
         }}>
           <div style={{
             position: 'absolute', top: 0, left: 0, width: device.width,
             transform: `scale(${previewScale})`, transformOrigin: 'top left',
-            transition: 'transform 180ms ease', background: 'white',
+            background: 'white',
             border: '1px solid #cbd5e1', borderRadius: 14,
             boxShadow: '0 20px 50px rgba(15,23,42,0.18)',
           }}>
