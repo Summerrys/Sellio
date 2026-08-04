@@ -43,15 +43,16 @@ function loadImage(imageUrl) {
   });
 }
 
-async function sampleBannerEdgeColors(imageUrl) {
+async function sampleBannerEdgeAssets(imageUrl) {
   const image = await loadImage(imageUrl);
   const sourceWidth = image.naturalWidth || image.width;
   const sourceHeight = image.naturalHeight || image.height;
   if (!sourceWidth || !sourceHeight) throw new Error('Banner image has no measurable dimensions.');
 
-  // A small canvas is enough for a stable colour sample and avoids processing
-  // a merchant's full-resolution upload on a phone or tablet.
-  const scale = Math.min(1, 192 / Math.max(sourceWidth, sourceHeight));
+  // Retain enough vertical detail for a crisp edge continuation at the
+  // storefront's largest supported banner height without processing the
+  // merchant's full-resolution upload on every device.
+  const scale = Math.min(1, 1200 / Math.max(sourceWidth, sourceHeight));
   const width = Math.max(1, Math.round(sourceWidth * scale));
   const height = Math.max(1, Math.round(sourceHeight * scale));
   const canvas = document.createElement('canvas');
@@ -59,10 +60,12 @@ async function sampleBannerEdgeColors(imageUrl) {
   canvas.height = height;
 
   const context = canvas.getContext('2d', { willReadFrequently: true });
-  if (!context) throw new Error('Canvas is unavailable for banner colour sampling.');
+  if (!context) throw new Error('Canvas is unavailable for banner edge extraction.');
   context.drawImage(image, 0, 0, width, height);
 
-  const stripWidth = Math.max(1, Math.round(width * 0.08));
+  // Four percent is wide enough to preserve the edge's vertical texture but
+  // narrow enough that stretching it cannot distort central products or text.
+  const stripWidth = Math.max(1, Math.round(width * 0.04));
   const verticalInset = Math.min(
     Math.floor(height / 3),
     Math.max(0, Math.round(height * 0.08))
@@ -72,19 +75,51 @@ async function sampleBannerEdgeColors(imageUrl) {
   const right = sampleStrip(context.getImageData(width - stripWidth, verticalInset, stripWidth, sampleHeight));
 
   if (!left || !right) throw new Error('Banner edge colours could not be sampled.');
-  return { left, right };
+
+  const makeStrip = (sourceX) => {
+    const stripCanvas = document.createElement('canvas');
+    stripCanvas.width = stripWidth;
+    stripCanvas.height = height;
+    const stripContext = stripCanvas.getContext('2d');
+    if (!stripContext) throw new Error('Canvas is unavailable for banner edge extraction.');
+    stripContext.drawImage(
+      canvas,
+      sourceX,
+      0,
+      stripWidth,
+      height,
+      0,
+      0,
+      stripWidth,
+      height
+    );
+    return stripCanvas.toDataURL('image/png');
+  };
+
+  return {
+    left,
+    right,
+    leftStrip: makeStrip(0),
+    rightStrip: makeStrip(width - stripWidth),
+    aspectRatio: sourceWidth / sourceHeight,
+  };
 }
 
-export function extractBannerEdgeColors(imageUrl) {
+export function extractBannerEdgeAssets(imageUrl) {
   if (!imageUrl) return Promise.reject(new Error('A banner image URL is required.'));
 
   const cached = edgeColourCache.get(imageUrl);
   if (cached) return cached;
 
-  const extraction = sampleBannerEdgeColors(imageUrl).catch(error => {
+  const extraction = sampleBannerEdgeAssets(imageUrl).catch(error => {
     edgeColourCache.delete(imageUrl);
     throw error;
   });
   edgeColourCache.set(imageUrl, extraction);
   return extraction;
+}
+
+export async function extractBannerEdgeColors(imageUrl) {
+  const { left, right } = await extractBannerEdgeAssets(imageUrl);
+  return { left, right };
 }
