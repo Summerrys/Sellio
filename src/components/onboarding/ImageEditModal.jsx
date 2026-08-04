@@ -308,11 +308,15 @@ export default function ImageEditModal({
                 setTool(TOOLS.CROP);
                 const canvas = canvasRef.current;
                 if (canvas) {
-                  const side = Math.round(Math.min(canvas.width, canvas.height) * 0.7);
-                  const cx = Math.round(canvas.width / 2);
-                  const cy = Math.round(canvas.height / 2);
-                  setCropStart({ x: cx - side / 2, y: cy - side / 2 });
-                  setCropEnd({ x: cx + side / 2, y: cy + side / 2 });
+                  const maxWidth = canvas.width * 0.84;
+                  const maxHeight = canvas.height * 0.84;
+                  const ratio = cropAspectRatio || 1;
+                  const cropWidth = Math.min(maxWidth, maxHeight * ratio);
+                  const cropHeight = cropWidth / ratio;
+                  const cx = canvas.width / 2;
+                  const cy = canvas.height / 2;
+                  setCropStart({ x: cx - cropWidth / 2, y: cy - cropHeight / 2 });
+                  setCropEnd({ x: cx + cropWidth / 2, y: cy + cropHeight / 2 });
                 }
               },
               active: isCropping,
