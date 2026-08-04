@@ -1001,11 +1001,11 @@ function StyleTabContent({ form, onChange }) {
 }
 
 // Desktop editor panel (left side, ≥1024px)
-function DesktopEditorControls({ form, onChange, tenantId }) {
+function DesktopEditorControls({ form, onChange }) {
   const [activeTab, setActiveTab] = useState('banner');
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Tab bar */}
       <div className="tab-bar" style={{ display: 'flex', gap: 8, padding: '12px 16px', overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
         <style>{`.tab-bar::-webkit-scrollbar { display: none; }`}</style>
@@ -1027,7 +1027,7 @@ function DesktopEditorControls({ form, onChange, tenantId }) {
       </div>
 
       {/* Tab content */}
-      <div className="flex-1 overflow-y-auto" style={{ padding: '16px 20px', paddingBottom: 24 }}>
+      <div className="flex-1 min-h-0 overflow-y-auto" style={{ padding: '16px 20px', paddingBottom: 24 }}>
         {activeTab === 'banner' && <BannerTabContent form={form} onChange={onChange} />}
         {activeTab === 'menu' && <MenuTabContent form={form} onChange={onChange} />}
         {activeTab === 'style' && <StyleTabContent form={form} onChange={onChange} />}
@@ -1649,7 +1649,6 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
               <DesktopEditorControls
                 form={form}
                 onChange={handleChange}
-                tenantId={tenantId}
               />
               {/* Desktop Save */}
               <div className="flex gap-2 p-4 border-t border-slate-100 bg-white flex-shrink-0">
