@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import LanguageToggle from './LanguageToggle';
 import { useLanguage, useTranslatedTexts } from '@/lib/LanguageContext';
+import { extractBannerEdgeColors, isValidBannerEdgeColor } from '@/lib/bannerEdgeColors';
 
 export const STOREFRONT_BANNER_MIN_HEIGHT = 120;
 export const STOREFRONT_BANNER_MAX_HEIGHT = 360;
@@ -199,12 +200,49 @@ const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryC
 });
 
 // ── Banner area (below header, behind it effectively) ─────────────────────
-// The main image always keeps its own proportions. A blurred, low-contrast copy
-// sits behind it so wide screens inherit the image's colours without stretching
-// or changing the merchant-approved foreground composition.
-function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY, height, zoom }) {
+// The merchant-approved image always keeps its proportions. On a wider screen,
+// spare side space is extended with a calm gradient sampled from the image's
+// own left and right edges — never with a stretched or blurred duplicate.
+function StorefrontBanner({
+  primaryColor,
+  bannerBgImage,
+  positionX,
+  positionY,
+  height,
+  zoom,
+  persistedLeftEdgeColor,
+  persistedRightEdgeColor,
+}) {
   const imagePosition = `${positionX ?? 50}% ${positionY ?? 50}%`;
   const imageZoom = getStorefrontBannerZoom(zoom);
+  const [sampledEdgeColors, setSampledEdgeColors] = useState(null);
+
+  const storedLeft = isValidBannerEdgeColor(persistedLeftEdgeColor) ? persistedLeftEdgeColor : null;
+  const storedRight = isValidBannerEdgeColor(persistedRightEdgeColor) ? persistedRightEdgeColor : null;
+
+  useEffect(() => {
+    if (!bannerBgImage || (storedLeft && storedRight)) {
+      setSampledEdgeColors(null);
+      return;
+    }
+
+    let cancelled = false;
+    extractBannerEdgeColors(bannerBgImage)
+      .then(colors => {
+        if (!cancelled) setSampledEdgeColors(colors);
+      })
+      .catch(() => {
+        if (!cancelled) setSampledEdgeColors(null);
+      });
+
+    return () => { cancelled = true; };
+  }, [bannerBgImage, storedLeft, storedRight]);
+
+  const leftEdgeColor = storedLeft || sampledEdgeColors?.left || '#f8fafc';
+  const rightEdgeColor = storedRight || sampledEdgeColors?.right || '#f8fafc';
+  const backdrop = bannerBgImage
+    ? `linear-gradient(90deg, ${leftEdgeColor} 0%, ${leftEdgeColor} 38%, ${rightEdgeColor} 62%, ${rightEdgeColor} 100%)`
+    : primaryColor;
 
   return (
     <div data-storefront-banner="true" style={{
@@ -214,52 +252,29 @@ function StorefrontBanner({ primaryColor, bannerBgImage, positionX, positionY, h
       position: 'relative',
       overflow: 'hidden',
       isolation: 'isolate',
-      // With an uploaded banner, the backdrop must come from that image —
-      // never from the merchant's brand colour. The neutral value is only a
-      // brief fallback while the image is loading (or if it cannot load).
-      background: bannerBgImage ? '#f8fafc' : primaryColor,
+      background: backdrop,
+      transition: 'background 180ms ease',
     }}>
       {bannerBgImage && (
-        <>
-          <div
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              inset: -24,
-              zIndex: 0,
-              backgroundImage: `url('${bannerBgImage}')`,
-              backgroundSize: 'cover',
-              backgroundPosition: imagePosition,
-              backgroundRepeat: 'no-repeat',
-              // Keep this copy fully opaque so the spare side space visibly
-              // inherits the uploaded image's colours. Blurring plus a small
-              // scale hides the cropped edges without stretching the image.
-              filter: 'blur(28px) saturate(1.05)',
-              opacity: 1,
-              transform: 'scale(1.12)',
-              pointerEvents: 'none',
-            }}
-          />
-          <img
-            src={bannerBgImage}
-            alt=""
-            draggable={false}
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              width: '100%',
-              height: '100%',
-              display: 'block',
-              objectFit: 'contain',
-              objectPosition: imagePosition,
-              transform: `scale(${imageZoom})`,
-              transformOrigin: imagePosition,
-              willChange: 'transform, object-position',
-              pointerEvents: 'none',
-              userSelect: 'none',
-            }}
-          />
-        </>
+        <img
+          src={bannerBgImage}
+          alt=""
+          draggable={false}
+          style={{
+            position: 'relative',
+            zIndex: 1,
+            width: '100%',
+            height: '100%',
+            display: 'block',
+            objectFit: 'contain',
+            objectPosition: imagePosition,
+            transform: `scale(${imageZoom})`,
+            transformOrigin: imagePosition,
+            willChange: 'transform, object-position',
+            pointerEvents: 'none',
+            userSelect: 'none',
+          }}
+        />
       )}
     </div>
   );
@@ -694,6 +709,8 @@ export default function StorefrontView({
           positionY={storefrontConfig?.banner_position_y}
           height={bannerHeight}
           zoom={bannerZoom}
+          persistedLeftEdgeColor={storefrontConfig?.banner_edge_left_color}
+          persistedRightEdgeColor={storefrontConfig?.banner_edge_right_color}
         />
       </div>
 
