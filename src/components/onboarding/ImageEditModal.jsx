@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, RotateCw, Crop, Undo2, ImagePlus, Save, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
+import { X, RotateCw, Crop, Undo2, ImagePlus, Save, Trash2 } from 'lucide-react';
 
 const TOOLS = { NONE: 'none', CROP: 'crop' };
 
@@ -24,8 +24,6 @@ export default function ImageEditModal({
   const [cropEnd, setCropEnd] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragMode, setDragMode] = useState(null);
-  const [canvasSize, setCanvasSize] = useState({ w: 300, h: 300 });
-  const [zoom, setZoom] = useState(1);
   const [dragOffset, setDragOffset] = useState(null);
   const [dragDimensions, setDragDimensions] = useState(null);
 
@@ -43,7 +41,6 @@ export default function ImageEditModal({
       const dW = swapped ? h : w, dH = swapped ? w : h;
       const scale = Math.min(maxW / dW, maxH / dH, 1);
       const cw = Math.round(dW * scale), ch = Math.round(dH * scale);
-      setCanvasSize({ w: cw, h: ch });
       const canvas = canvasRef.current;
       if (!canvas) return;
       canvas.width = cw; canvas.height = ch;
@@ -99,7 +96,6 @@ export default function ImageEditModal({
     if (tool !== TOOLS.CROP) return;
     e.preventDefault();
     const pos = getPos(e, canvasRef.current);
-    const canvas = canvasRef.current;
     if (!cropStart || !cropEnd) { setIsDragging(true); setCropStart(pos); setCropEnd(pos); return; }
     
     const x = Math.min(cropStart.x, cropEnd.x), y = Math.min(cropStart.y, cropEnd.y);
