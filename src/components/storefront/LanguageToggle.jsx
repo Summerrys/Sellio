@@ -65,7 +65,7 @@ export default function LanguageToggle({ primaryColor = '#6366f1' }) {
                 padding: '4px 9px',
                 borderRadius: 999,
                 border: 'none',
-                fontSize: 10.5,
+                fontSize: 'calc(10.5px * var(--sf-type-scale, 1))',
                 fontWeight: 700,
                 cursor: 'pointer',
                 transition: 'all 0.15s',
@@ -75,7 +75,7 @@ export default function LanguageToggle({ primaryColor = '#6366f1' }) {
                 whiteSpace: 'nowrap',
               }}
             >
-              <span style={{ fontSize: 11, lineHeight: 1 }}>{FLAG[code]}</span>
+              <span style={{ fontSize: 'calc(11px * var(--sf-type-scale, 1))', lineHeight: 1 }}>{FLAG[code]}</span>
               {SHORT_LABEL[code]}
             </button>
           );
