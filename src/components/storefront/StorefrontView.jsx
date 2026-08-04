@@ -421,6 +421,7 @@ export default function StorefrontView({
   cartCount = 0,
   cartTotal = 0,
   isDesktop: isDesktopProp,
+  isLandscape: isLandscapeProp,
 }) {
   const { t } = useLanguage();
   const tenant = tenantProp;
@@ -521,16 +522,18 @@ export default function StorefrontView({
   // Portrait vs landscape, independent of the isDesktop breakpoint - a merchant
   // asked specifically for 3 Grid columns on tablet portrait and 4 on
   // landscape, so this needs its own check rather than reusing width alone.
-  const [isLandscape, setIsLandscape] = useState(() => typeof window !== 'undefined' && window.innerWidth > window.innerHeight);
+  const [isLandscapeFallback, setIsLandscapeFallback] = useState(() => typeof window !== 'undefined' && window.innerWidth > window.innerHeight);
   useEffect(() => {
-    const check = () => setIsLandscape(window.innerWidth > window.innerHeight);
+    if (isLandscapeProp !== undefined) return;
+    const check = () => setIsLandscapeFallback(window.innerWidth > window.innerHeight);
     window.addEventListener('resize', check);
     window.addEventListener('orientationchange', check);
     return () => {
       window.removeEventListener('resize', check);
       window.removeEventListener('orientationchange', check);
     };
-  }, []);
+  }, [isLandscapeProp]);
+  const isLandscape = isLandscapeProp !== undefined ? isLandscapeProp : isLandscapeFallback;
 
   // Floating search button visibility — simple scroll-position threshold.
   // (Split used to derive this from a JS "is the card pinned" state tied to
