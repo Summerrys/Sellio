@@ -3,7 +3,7 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { X, ArrowLeft, ExternalLink, Upload, Pencil, ImagePlus, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { X, ArrowLeft, ExternalLink, Upload, Pencil, ImagePlus, ZoomIn, ZoomOut, RotateCcw, Monitor, Tablet, Smartphone } from 'lucide-react';
 import StorefrontView, {
   STOREFRONT_BANNER_DEFAULT_HEIGHT,
   STOREFRONT_BANNER_DEFAULT_ZOOM,
@@ -27,6 +27,15 @@ const TABS = [
   { id: 'menu', label: 'Menu' },
   { id: 'style', label: 'Style' },
 ];
+
+const PREVIEW_DEVICES = [
+  { id: 'desktop', label: 'Desktop', width: 1280, height: 800, icon: Monitor },
+  { id: 'tablet', label: 'Tablet', width: 834, height: 1112, icon: Tablet },
+  { id: 'mobile', label: 'Mobile', width: 390, height: 844, icon: Smartphone },
+];
+
+const PREVIEW_BROWSER_BAR_HEIGHT = 36;
+const PREVIEW_FRAME_BORDER = 2;
 
 const DRAWER_HANDLE_ONLY = 28;
 const DRAWER_TABS_VISIBLE = 80;
@@ -458,7 +467,11 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
         frame = null;
         const hostRect = host.getBoundingClientRect();
         const bannerRect = banner.getBoundingClientRect();
-        setBannerMetrics({ top: bannerRect.top - hostRect.top, height: bannerRect.height });
+        const renderedScale = Math.max(0.01, scaleFactor || 1);
+        setBannerMetrics({
+          top: (bannerRect.top - hostRect.top) / renderedScale,
+          height: bannerRect.height / renderedScale,
+        });
       });
     };
     const observer = new ResizeObserver(update);
@@ -471,7 +484,7 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
       observer.disconnect();
       window.removeEventListener('resize', update);
     };
-  }, [form.banner_height_px, form.banner_headline, form.banner_tagline]);
+  }, [form.banner_height_px, form.banner_headline, form.banner_tagline, scaleFactor]);
 
   useEffect(() => {
     if (gestureActive) return;
@@ -1210,6 +1223,201 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
   );
 }
 
+function DesktopPreviewWorkspace({ form, onChange, tenantId, previewData }) {
+  const [deviceId, setDeviceId] = useState('desktop');
+  const [zoomMode, setZoomMode] = useState('fit');
+  const [previewScale, setPreviewScale] = useState(1);
+  const stageAreaRef = useRef(null);
+
+  const device = PREVIEW_DEVICES.find(option => option.id === deviceId) || PREVIEW_DEVICES[0];
+  const frameHeight = device.height + PREVIEW_BROWSER_BAR_HEIGHT + PREVIEW_FRAME_BORDER;
+  const previewIsDesktop = device.width >= 768;
+  const previewIsLandscape = device.width > device.height;
+
+  useEffect(() => {
+    const stageArea = stageAreaRef.current;
+    if (!stageArea) return;
+
+    const updateScale = () => {
+      if (zoomMode === 'actual') {
+        setPreviewScale(1);
+        return;
+      }
+
+      const rect = stageArea.getBoundingClientRect();
+      const horizontalRoom = Math.max(1, rect.width - 40);
+      const verticalRoom = Math.max(1, rect.height - 32);
+      const nextScale = Math.min(
+        1,
+        horizontalRoom / device.width,
+        verticalRoom / frameHeight
+      );
+      setPreviewScale(Math.max(0.35, nextScale));
+    };
+
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(stageArea);
+    window.addEventListener('resize', updateScale);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateScale);
+    };
+  }, [device.width, frameHeight, zoomMode]);
+
+  return (
+    <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', background: '#eef2f7' }}>
+      <div style={{
+        minHeight: 58,
+        padding: '10px 18px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 16,
+        flexWrap: 'wrap',
+        background: 'rgba(255,255,255,0.94)',
+        borderBottom: '1px solid #e2e8f0',
+        flexShrink: 0,
+      }}>
+        <div>
+          <p style={{ margin: 0, color: '#0f172a', fontSize: 13, fontWeight: 700 }}>Live storefront</p>
+          <p style={{ margin: '2px 0 0', color: '#94a3b8', fontSize: 11 }}>Preview uses the exact selected viewport</p>
+        </div>
+
+        <div role="group" aria-label="Preview device" style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 12, background: '#f1f5f9' }}>
+          {PREVIEW_DEVICES.map(option => {
+            const Icon = option.icon;
+            const selected = option.id === device.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => setDeviceId(option.id)}
+                style={{
+                  height: 34, padding: '0 12px', display: 'inline-flex', alignItems: 'center', gap: 6,
+                  border: 'none', borderRadius: 9, background: selected ? 'white' : 'transparent',
+                  color: selected ? '#0f172a' : '#64748b',
+                  boxShadow: selected ? '0 1px 4px rgba(15,23,42,0.12)' : 'none',
+                  fontSize: 12, fontWeight: selected ? 700 : 500, cursor: 'pointer',
+                }}
+              >
+                <Icon size={14} />
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div role="group" aria-label="Preview zoom" style={{ display: 'flex', alignItems: 'center', gap: 4, padding: 4, borderRadius: 10, background: '#f1f5f9' }}>
+          {[
+            { id: 'fit', label: `Fit · ${Math.round(previewScale * 100)}%` },
+            { id: 'actual', label: '100%' },
+          ].map(option => {
+            const selected = option.id === zoomMode;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => setZoomMode(option.id)}
+                style={{
+                  height: 30, padding: '0 10px', border: 'none', borderRadius: 7,
+                  background: selected ? 'white' : 'transparent', color: selected ? '#0f172a' : '#64748b',
+                  boxShadow: selected ? '0 1px 3px rgba(15,23,42,0.1)' : 'none',
+                  fontSize: 11, fontWeight: selected ? 700 : 500, cursor: 'pointer',
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div
+        ref={stageAreaRef}
+        style={{
+          flex: 1, minHeight: 0, overflow: 'auto', padding: 16, display: 'flex',
+          alignItems: 'flex-start', justifyContent: 'center', overscrollBehavior: 'contain',
+        }}
+      >
+        <div style={{
+          position: 'relative',
+          width: device.width * previewScale,
+          height: frameHeight * previewScale,
+          flexShrink: 0,
+          transition: 'width 180ms ease, height 180ms ease',
+        }}>
+          <div style={{
+            position: 'absolute', top: 0, left: 0, width: device.width,
+            transform: `scale(${previewScale})`, transformOrigin: 'top left',
+            transition: 'transform 180ms ease', background: 'white',
+            border: '1px solid #cbd5e1', borderRadius: 14,
+            boxShadow: '0 20px 50px rgba(15,23,42,0.18)',
+          }}>
+            <div style={{
+              height: PREVIEW_BROWSER_BAR_HEIGHT, padding: '0 12px', display: 'flex',
+              alignItems: 'center', justifyContent: 'space-between', gap: 12,
+              background: '#f8fafc', borderBottom: '1px solid #e2e8f0',
+              borderRadius: '13px 13px 0 0', color: '#64748b', fontSize: 11,
+            }}>
+              <div aria-hidden="true" style={{ display: 'flex', gap: 5 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#f87171' }} />
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#fbbf24' }} />
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#34d399' }} />
+              </div>
+              <span style={{
+                maxWidth: '60%', padding: '4px 14px', overflow: 'hidden',
+                textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                border: '1px solid #e2e8f0', borderRadius: 999, background: 'white',
+              }}>
+                sellio.apptelier.sg/store
+              </span>
+              <span style={{ minWidth: 72, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                {device.width} × {device.height}
+              </span>
+            </div>
+
+            <div
+              key={device.id}
+              style={{
+                height: device.height, overflowY: 'auto', overflowX: 'hidden',
+                position: 'relative', borderRadius: '0 0 13px 13px',
+                overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch',
+                background: '#f8fafc',
+              }}
+            >
+              <StorefrontView
+                previewMode={true}
+                tenant={previewData.tenant}
+                storefrontConfig={form}
+                theme={null}
+                products={previewData.products}
+                categories={previewData.categories}
+                cart={[]}
+                cartCount={0}
+                cartTotal={0}
+                setShowCart={() => {}}
+                setShowOrderHistory={() => {}}
+                onAddToCart={() => {}}
+                isDesktop={previewIsDesktop}
+                isLandscape={previewIsLandscape}
+              />
+              <BannerCanvasOverlay
+                form={form}
+                onChange={onChange}
+                tenantId={tenantId}
+                scaleFactor={previewScale}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
   const [form, setForm] = useState({ ...DEFAULTS });
   const [saving, setSaving] = useState(false);
@@ -1452,39 +1660,16 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
               </div>
             </div>
 
-            {/* Right: WYSIWYG Live Preview using the exact same StorefrontView */}
-            <div className="flex flex-1 flex-col items-center overflow-auto" style={{ background: '#f0f2f7', padding: '24px 32px', position: 'relative' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'white', border: '1px solid #e2e8f0', borderRadius: 999, padding: '4px 12px', fontSize: 12, color: '#64748b', fontWeight: 500, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: 16 }}>
-                📱 Live Preview
-              </div>
-              {/* Phone mockup frame. Deliberately NO overflow:hidden on this
-                  outer frame — an extra clipping ancestor (overflow:hidden +
-                  border-radius) wrapped around a nested scroller is a known
-                  WebKit trouble spot for position:sticky, and was why the
-                  marquee/header stuck fine on the live store (window scroll)
-                  but scrolled away inside this preview. The rounded clipping
-                  now lives on the scroll container itself, which clips its
-                  own content by definition. */}
-              <div style={{ width: 375, flexShrink: 0, border: '8px solid #1e293b', borderRadius: 36, boxShadow: '0 24px 60px rgba(0,0,0,0.25)' }}>
-                <div style={{ height: 500, overflowY: 'auto', overflowX: 'hidden', position: 'relative', borderRadius: 28, overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
-                  <StorefrontView
-                    previewMode={true}
-                    tenant={previewTenant}
-                    storefrontConfig={form}
-                    theme={null}
-                    products={previewProducts}
-                    categories={previewCategories}
-                    cart={[]}
-                    cartCount={0}
-                    cartTotal={0}
-                    setShowCart={() => {}}
-                    setShowOrderHistory={() => {}}
-                    onAddToCart={() => {}}
-                  />
-                  <BannerCanvasOverlay form={form} onChange={handleChange} tenantId={tenantId} scaleFactor={1} />
-                </div>
-              </div>
-            </div>
+            <DesktopPreviewWorkspace
+              form={form}
+              onChange={handleChange}
+              tenantId={tenantId}
+              previewData={{
+                tenant: previewTenant,
+                products: previewProducts,
+                categories: previewCategories,
+              }}
+            />
           </div>
         )}
       </div>
