@@ -364,6 +364,22 @@ const clampBannerPosition = value => Math.max(0, Math.min(100, Number(value) || 
 const pointerDistance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const pointerMidpoint = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
+function readImageFileDimensions(file) {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      resolve({ width: image.naturalWidth, height: image.naturalHeight });
+      URL.revokeObjectURL(objectUrl);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Unable to inspect image dimensions.'));
+    };
+    image.src = objectUrl;
+  });
+}
+
 function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
@@ -586,6 +602,21 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!tenantId) { toast.error('Tenant not loaded yet'); return; }
+
+    try {
+      const dimensions = await readImageFileDimensions(file);
+      const aspectRatio = dimensions.width / dimensions.height;
+      const isThreeToOne = Math.abs(aspectRatio - 3) <= 0.15;
+      const isRecommendedResolution = dimensions.width >= 2400 && dimensions.height >= 800;
+      if (!isThreeToOne || !isRecommendedResolution) {
+        toast.warning(
+          `For the most consistent banner, use 2400 × 800 px (3:1). This image is ${dimensions.width} × ${dimensions.height} px and will still be uploaded.`
+        );
+      }
+    } catch {
+      // Dimension guidance must never block a valid image upload.
+    }
+
     setUploading(true);
     const supabase = await getSupabase();
     const ext = file.name.split('.').pop() || 'jpg';
@@ -692,6 +723,11 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
             <span style={{ color: 'white', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
               {uploading ? 'Uploading...' : 'Banner image'}
             </span>
+            {!uploading && (
+              <span style={{ color: 'rgba(255,255,255,0.82)', fontSize: 10, fontWeight: 500, whiteSpace: 'nowrap' }}>
+                Recommended 2400 × 800 px · 3:1
+              </span>
+            )}
           </div>
         )}
 
@@ -739,6 +775,9 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
                 <Upload size={13} /> {uploading ? 'Uploading...' : 'Replace'}
               </button>
             )}
+            <div style={{ position: 'absolute', bottom: 6, left: 8, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', borderRadius: 6, padding: '3px 8px', color: 'white', fontSize: 10, fontWeight: 500, pointerEvents: 'none' }}>
+              2400 × 800 · 3:1 recommended
+            </div>
             {/* Drag hint */}
             <div style={{ position: 'absolute', bottom: 6, right: 8, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', borderRadius: 6, padding: '3px 8px', color: 'white', fontSize: 10, fontWeight: 500, pointerEvents: 'none' }}>
               ✥ Drag · Pinch to zoom
@@ -753,6 +792,10 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
         <ImageEditModal
           src={form.banner_bg_image_url.split('?')[0]}
           themeColor={form.banner_bg_color || '#6366f1'}
+          cropAspectRatio={3}
+          preserveResolution={true}
+          title="Edit Banner"
+          recommendation="Recommended size: 2400 × 800 px (3:1)"
           onSave={handleEditSave}
           onClose={() => setEditModalOpen(false)}
         />
