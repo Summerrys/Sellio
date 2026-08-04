@@ -973,7 +973,6 @@ function MenuTabContent({ form, onChange }) {
 function StyleTabContent({ form, onChange }) {
   const selectedPersonality = getStorefrontTypographyPersonality(form.font_family);
   const selectedScale = getStorefrontTypographyScale(form.typography_scale);
-  const primaryColor = form.banner_bg_color || '#6366f1';
 
   return (
     <div>
@@ -1015,8 +1014,7 @@ function StyleTabContent({ form, onChange }) {
                 )}
               </div>
               <div style={{ fontFamily: personality.stack }}>
-                <div style={{ color: '#0f172a', fontSize: 14, fontWeight: 700, lineHeight: 1.25 }}>招牌咖啡</div>
-                <div style={{ color: '#475569', fontSize: 11, fontWeight: 600, marginTop: 3, lineHeight: 1.25 }}>Signature Coffee</div>
+                <div style={{ color: '#0f172a', fontSize: 14, fontWeight: 700, lineHeight: 1.25 }}>Sample</div>
                 <div style={{ color: '#94a3b8', fontSize: 9, marginTop: 4 }}>{personality.description}</div>
               </div>
             </button>
@@ -1063,17 +1061,10 @@ function StyleTabContent({ form, onChange }) {
             boxShadow: '0 5px 16px rgba(15,23,42,0.05)',
           }}
         >
-          <div style={{ fontSize: 17 * selectedScale, fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>Cafetelier</div>
-          <div style={{ marginTop: 12, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 14 * selectedScale, fontWeight: 700, color: '#1e293b', lineHeight: 1.25 }}>招牌咖啡 Signature Coffee</div>
-              <div style={{ fontSize: 11 * selectedScale, color: '#64748b', lineHeight: 1.45, marginTop: 4 }}>Smooth espresso with fresh milk</div>
-            </div>
-            <div style={{ fontSize: 14 * selectedScale, fontWeight: 800, color: primaryColor, whiteSpace: 'nowrap' }}>$5.50</div>
-          </div>
+          <div style={{ fontSize: 22 * selectedScale, fontWeight: 700, color: '#0f172a', lineHeight: 1.25 }}>Sample</div>
         </div>
         <p style={{ fontSize: 10, color: '#94a3b8', lineHeight: 1.45, margin: '9px 2px 0' }}>
-          English and Chinese use coordinated fallback fonts for a consistent multilingual storefront.
+          The sample updates instantly with your selected font personality and text size.
         </p>
       </div>
     </div>
