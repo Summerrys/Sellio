@@ -13,6 +13,7 @@ import StorefrontView, {
 import ImageEditModal from '@/components/onboarding/ImageEditModal';
 import { LanguageProvider } from '@/lib/LanguageContext';
 import { fetchStorefrontCatalog } from '@/lib/storefrontCatalog';
+import { extractBannerEdgeColors, isValidBannerEdgeColor } from '@/lib/bannerEdgeColors';
 
 const FONTS = [
   { value: 'Inter', label: 'Inter', style: { fontFamily: 'Inter, sans-serif' } },
@@ -39,6 +40,8 @@ const DEFAULTS = {
   banner_zoom: STOREFRONT_BANNER_DEFAULT_ZOOM,
   banner_bg_color: '#fb923c',
   banner_bg_image_url: '',
+  banner_edge_left_color: null,
+  banner_edge_right_color: null,
   banner_position_x: 50,
   banner_position_y: 50,
   show_promo_ticker: true,
@@ -384,6 +387,47 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
   const [displayZoom, setDisplayZoom] = useState(getStorefrontBannerZoom(form.banner_zoom));
   const [bannerMetrics, setBannerMetrics] = useState(null);
 
+  const applyBannerEdgeColors = useCallback(async (imageUrl) => {
+    try {
+      const colors = await extractBannerEdgeColors(imageUrl);
+      onChange('banner_edge_left_color', colors.left);
+      onChange('banner_edge_right_color', colors.right);
+      return colors;
+    } catch {
+      // The storefront renderer keeps a neutral fallback if a remote image
+      // cannot be sampled (for example due to a temporary CORS/network issue).
+      return null;
+    }
+  }, [onChange]);
+
+  // Backfill older banners when their Design Store preview is opened. New
+  // uploads are sampled before their upload flow finishes below.
+  useEffect(() => {
+    if (
+      !form.banner_bg_image_url
+      || (
+        isValidBannerEdgeColor(form.banner_edge_left_color)
+        && isValidBannerEdgeColor(form.banner_edge_right_color)
+      )
+    ) return;
+
+    let cancelled = false;
+    extractBannerEdgeColors(form.banner_bg_image_url)
+      .then(colors => {
+        if (cancelled) return;
+        onChange('banner_edge_left_color', colors.left);
+        onChange('banner_edge_right_color', colors.right);
+      })
+      .catch(() => {});
+
+    return () => { cancelled = true; };
+  }, [
+    form.banner_bg_image_url,
+    form.banner_edge_left_color,
+    form.banner_edge_right_color,
+    onChange,
+  ]);
+
   // Measure the real shared banner instead of assuming a fixed header offset.
   // This keeps the gesture surface aligned when the promo marquee mounts,
   // header content wraps, or the device changes orientation.
@@ -549,10 +593,14 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
     const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type });
     if (error) { toast.error('Upload failed: ' + error.message); setUploading(false); return; }
     const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
-    onChange('banner_bg_image_url', publicUrl.split('?')[0] + '?t=' + Date.now());
+    const nextImageUrl = publicUrl.split('?')[0] + '?t=' + Date.now();
+    onChange('banner_bg_image_url', nextImageUrl);
+    onChange('banner_edge_left_color', null);
+    onChange('banner_edge_right_color', null);
     onChange('banner_position_x', 50);
     onChange('banner_position_y', 50);
     onChange('banner_zoom', STOREFRONT_BANNER_DEFAULT_ZOOM);
+    await applyBannerEdgeColors(nextImageUrl);
     setUploading(false);
     toast.success('Banner image uploaded');
     if (e.target) e.target.value = '';
@@ -569,6 +617,8 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
       await supabase.storage.from('product-images').remove([storagePath]);
     }
     onChange('banner_bg_image_url', '');
+    onChange('banner_edge_left_color', null);
+    onChange('banner_edge_right_color', null);
     onChange('banner_position_x', 50);
     onChange('banner_position_y', 50);
     onChange('banner_zoom', STOREFRONT_BANNER_DEFAULT_ZOOM);
@@ -586,10 +636,14 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
       const { error } = await supabase.storage.from('product-images').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
-      onChange('banner_bg_image_url', publicUrl.split('?')[0] + '?t=' + Date.now());
+      const nextImageUrl = publicUrl.split('?')[0] + '?t=' + Date.now();
+      onChange('banner_bg_image_url', nextImageUrl);
+      onChange('banner_edge_left_color', null);
+      onChange('banner_edge_right_color', null);
       onChange('banner_position_x', 50);
       onChange('banner_position_y', 50);
       onChange('banner_zoom', STOREFRONT_BANNER_DEFAULT_ZOOM);
+      await applyBannerEdgeColors(nextImageUrl);
       toast.success('Banner updated');
     } catch (err) {
       toast.error('Save failed: ' + err.message);
@@ -1250,6 +1304,7 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
 
     const ALLOWED = [
       'banner_headline', 'banner_tagline', 'banner_bg_color', 'banner_bg_image_url',
+      'banner_edge_left_color', 'banner_edge_right_color',
       'banner_height', 'banner_height_px', 'banner_position_x', 'banner_position_y', 'banner_zoom',
       'show_promo_ticker', 'product_layout', 'menu_density',
       'show_featured', 'featured_section_title', 'show_category_tabs',
