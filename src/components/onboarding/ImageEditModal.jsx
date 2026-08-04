@@ -3,7 +3,16 @@ import { X, RotateCw, Crop, Undo2, ImagePlus, Save, Trash2, ZoomIn, ZoomOut } fr
 
 const TOOLS = { NONE: 'none', CROP: 'crop' };
 
-export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
+export default function ImageEditModal({
+  src,
+  themeColor,
+  onSave,
+  onClose,
+  cropAspectRatio = null,
+  preserveResolution = false,
+  title = 'Edit Image',
+  recommendation = '',
+}) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const replaceInputRef = useRef(null);
@@ -111,6 +120,24 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     setIsDragging(true);
   };
 
+  const fitPointToAspectRatio = (anchor, moving) => {
+    if (!cropAspectRatio) return moving;
+    const dx = moving.x - anchor.x;
+    const dy = moving.y - anchor.y;
+    const maxWidth = Math.abs(dx);
+    const maxHeight = Math.abs(dy);
+    let width = Math.min(maxWidth, maxHeight * cropAspectRatio);
+    let height = width / cropAspectRatio;
+    if (height > maxHeight) {
+      height = maxHeight;
+      width = height * cropAspectRatio;
+    }
+    return {
+      x: anchor.x + Math.sign(dx || 1) * width,
+      y: anchor.y + Math.sign(dy || 1) * height,
+    };
+  };
+
   const onMove = (e) => {
     if (!isDragging || tool !== TOOLS.CROP) return;
     e.preventDefault();
@@ -118,14 +145,13 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
     const canvas = canvasRef.current;
     pos = { x: Math.max(0, Math.min(pos.x, canvas.width)), y: Math.max(0, Math.min(pos.y, canvas.height)) };
     
-    if (!dragMode) { 
-      setCropEnd(pos); 
-      return; 
+    if (!dragMode) {
+      setCropEnd(fitPointToAspectRatio(cropStart, pos));
+      return;
     }
     
     const x1 = Math.min(cropStart.x, cropEnd.x), y1 = Math.min(cropStart.y, cropEnd.y);
     const x2 = Math.max(cropStart.x, cropEnd.x), y2 = Math.max(cropStart.y, cropEnd.y);
-    const w = x2 - x1, h = y2 - y1;
     
     if (dragMode === 'move' && dragOffset && dragDimensions) {
       const { w: dw, h: dh } = dragDimensions;
@@ -133,48 +159,82 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
       const ny = Math.max(0, Math.min(pos.y - dragOffset.y, canvas.height - dh));
       setCropStart({ x: nx, y: ny });
       setCropEnd({ x: nx + dw, y: ny + dh });
-    } else if (dragMode === 'corner-tl') {
-      setCropStart(pos);
-    } else if (dragMode === 'corner-tr') {
-      setCropStart({ x: cropStart.x, y: pos.y });
-      setCropEnd({ x: pos.x, y: cropEnd.y });
-    } else if (dragMode === 'corner-bl') {
-      setCropStart({ x: pos.x, y: cropStart.y });
-      setCropEnd({ x: cropEnd.x, y: pos.y });
-    } else if (dragMode === 'corner-br') {
-      setCropEnd(pos);
+    } else {
+      const oppositeCorner = {
+        'corner-tl': { x: x2, y: y2 },
+        'corner-tr': { x: x1, y: y2 },
+        'corner-bl': { x: x2, y: y1 },
+        'corner-br': { x: x1, y: y1 },
+      }[dragMode];
+      if (oppositeCorner) {
+        setCropStart(oppositeCorner);
+        setCropEnd(fitPointToAspectRatio(oppositeCorner, pos));
+      }
     }
   };
 
   const onEnd = () => { setIsDragging(false); setDragMode(null); setDragOffset(null); setDragDimensions(null); };
 
-  const applyCrop = () => {
-    if (!cropStart || !cropEnd) return;
+  const renderCurrentAtNativeResolution = () => {
+    const image = imgRef.current;
+    const sourceWidth = image.naturalWidth || image.width;
+    const sourceHeight = image.naturalHeight || image.height;
+    const swapped = current.rotation % 180 !== 0;
+    const output = document.createElement('canvas');
+    output.width = swapped ? sourceHeight : sourceWidth;
+    output.height = swapped ? sourceWidth : sourceHeight;
+    const context = output.getContext('2d');
+    context.save();
+    context.translate(output.width / 2, output.height / 2);
+    context.rotate((current.rotation * Math.PI) / 180);
+    context.drawImage(image, -sourceWidth / 2, -sourceHeight / 2, sourceWidth, sourceHeight);
+    context.restore();
+    return output;
+  };
+
+  const renderCrop = (useNativeResolution) => {
     const x = Math.min(cropStart.x, cropEnd.x);
     const y = Math.min(cropStart.y, cropEnd.y);
     const w = Math.abs(cropEnd.x - cropStart.x);
     const h = Math.abs(cropEnd.y - cropStart.y);
-    if (w < 5 || h < 5) return;
-    const dest = document.createElement('canvas');
-    dest.width = w; dest.height = h;
-    dest.getContext('2d').drawImage(canvasRef.current, x, y, w, h, 0, 0, w, h);
-    pushHistory({ imageSrc: dest.toDataURL(), rotation: 0 });
+    if (w < 5 || h < 5) return null;
+
+    const source = useNativeResolution ? renderCurrentAtNativeResolution() : canvasRef.current;
+    const scaleX = source.width / canvasRef.current.width;
+    const scaleY = source.height / canvasRef.current.height;
+    const output = document.createElement('canvas');
+    output.width = Math.max(1, Math.round(w * scaleX));
+    output.height = Math.max(1, Math.round(h * scaleY));
+    output.getContext('2d').drawImage(
+      source,
+      x * scaleX,
+      y * scaleY,
+      w * scaleX,
+      h * scaleY,
+      0,
+      0,
+      output.width,
+      output.height
+    );
+    return output;
+  };
+
+  const applyCrop = () => {
+    if (!cropStart || !cropEnd) return;
+    const output = renderCrop(preserveResolution);
+    if (!output) return;
+    pushHistory({ imageSrc: output.toDataURL('image/jpeg', 0.92), rotation: 0 });
   };
 
   const handleSave = () => {
-    const imageData = tool === TOOLS.CROP && cropStart && cropEnd ? 
-      (() => {
-        const x = Math.min(cropStart.x, cropEnd.x);
-        const y = Math.min(cropStart.y, cropEnd.y);
-        const w = Math.abs(cropEnd.x - cropStart.x);
-        const h = Math.abs(cropEnd.y - cropStart.y);
-        const dest = document.createElement('canvas');
-        dest.width = w; dest.height = h;
-        dest.getContext('2d').drawImage(canvasRef.current, x, y, w, h, 0, 0, w, h);
-        return dest.toDataURL('image/jpeg', 0.92);
-      })()
-      : canvasRef.current.toDataURL('image/jpeg', 0.92);
-    onSave(imageData);
+    const isActiveCrop = tool === TOOLS.CROP && cropStart && cropEnd;
+    const output = isActiveCrop
+      ? renderCrop(preserveResolution)
+      : preserveResolution
+        ? renderCurrentAtNativeResolution()
+        : canvasRef.current;
+    if (!output) return;
+    onSave(output.toDataURL('image/jpeg', 0.92));
     onClose();
   };
 
@@ -195,7 +255,10 @@ export default function ImageEditModal({ src, themeColor, onSave, onClose }) {
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-          <h3 className="font-semibold text-slate-900 text-base">Edit Image</h3>
+          <div>
+            <h3 className="font-semibold text-slate-900 text-base">{title}</h3>
+            {recommendation && <p className="text-xs text-slate-400 mt-0.5">{recommendation}</p>}
+          </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200">
             <X className="w-4 h-4" />
           </button>
