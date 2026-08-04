@@ -3,7 +3,7 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { X, ArrowLeft, ExternalLink, Upload, Pencil, ImagePlus, ZoomIn, ZoomOut, RotateCcw, Monitor, Tablet, Smartphone } from 'lucide-react';
+import { X, ArrowLeft, ExternalLink, Upload, Pencil, ImagePlus, ZoomIn, ZoomOut, RotateCcw, Monitor, Tablet, Smartphone, Check } from 'lucide-react';
 import StorefrontView, {
   STOREFRONT_BANNER_DEFAULT_HEIGHT,
   STOREFRONT_BANNER_DEFAULT_ZOOM,
@@ -14,13 +14,12 @@ import ImageEditModal from '@/components/onboarding/ImageEditModal';
 import { LanguageProvider } from '@/lib/LanguageContext';
 import { fetchStorefrontCatalog } from '@/lib/storefrontCatalog';
 import { extractBannerEdgeColors, isValidBannerEdgeColor } from '@/lib/bannerEdgeColors';
-
-const FONTS = [
-  { value: 'Inter', label: 'Inter', style: { fontFamily: 'Inter, sans-serif' } },
-  { value: 'Georgia', label: 'Serif', style: { fontFamily: 'Georgia, serif' } },
-  { value: 'Nunito', label: 'Rounded', style: { fontFamily: 'Nunito, sans-serif' } },
-  { value: 'monospace', label: 'Mono', style: { fontFamily: 'monospace' } },
-];
+import {
+  STOREFRONT_TYPOGRAPHY_PERSONALITIES,
+  STOREFRONT_TYPOGRAPHY_SCALES,
+  getStorefrontTypographyPersonality,
+  getStorefrontTypographyScale,
+} from '@/lib/storefrontTypography';
 
 const TABS = [
   { id: 'banner', label: 'Banner' },
@@ -62,6 +61,7 @@ const DEFAULTS = {
   show_product_description: true,
   show_stock_badge: true,
   font_family: 'Inter',
+  typography_scale: 'balanced',
 };
 
 function SectionLabel({ children }) {
@@ -971,30 +971,110 @@ function MenuTabContent({ form, onChange }) {
 }
 
 function StyleTabContent({ form, onChange }) {
+  const selectedPersonality = getStorefrontTypographyPersonality(form.font_family);
+  const selectedScale = getStorefrontTypographyScale(form.typography_scale);
+  const primaryColor = form.banner_bg_color || '#6366f1';
+
   return (
     <div>
       <SectionLabel>Typography</SectionLabel>
-      <p style={{ fontSize: 12, color: '#64748b', lineHeight: 1.45, margin: '-2px 0 12px' }}>
-        Applied consistently across the preview and public storefront.
+      <p style={{ fontSize: 12, color: '#64748b', lineHeight: 1.45, margin: '-2px 0 14px' }}>
+        Choose a personality, then set a comfortable reading size. Changes appear in the live storefront instantly.
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {FONTS.map(font => (
-          <button
-            key={font.value}
-            type="button"
-            onClick={() => onChange('font_family', font.value)}
-            style={{
-              width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: 12,
-              border: form.font_family === font.value ? '2px solid transparent' : '1px solid #f1f5f9',
-              borderLeft: form.font_family === font.value ? '3px solid var(--color-primary)' : '1px solid #f1f5f9',
-              background: form.font_family === font.value ? '#f8fafc' : 'white',
-              cursor: 'pointer', transition: 'all 0.15s ease',
-            }}
-          >
-            <div style={{ ...font.style, fontSize: 18, fontWeight: 600, color: '#0f172a', marginBottom: 2 }}>{font.label}</div>
-            <div style={{ ...font.style, fontSize: 12, color: '#94a3b8' }}>Fresh food, great vibes.</div>
-          </button>
-        ))}
+
+      <SectionLabel>Font personality</SectionLabel>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+        {STOREFRONT_TYPOGRAPHY_PERSONALITIES.map(personality => {
+          const selected = selectedPersonality.value === personality.value;
+          return (
+            <button
+              key={personality.value}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onChange('font_family', personality.value)}
+              style={{
+                minWidth: 0, minHeight: 132, padding: 11, borderRadius: 14,
+                border: selected ? '2px solid var(--color-primary)' : '1px solid #e2e8f0',
+                background: selected ? 'color-mix(in srgb, var(--color-primary) 6%, white)' : 'white',
+                boxShadow: selected ? '0 5px 14px rgba(15,23,42,0.08)' : 'none',
+                textAlign: 'left', cursor: 'pointer', boxSizing: 'border-box',
+                transition: 'border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6, marginBottom: 8 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 11, lineHeight: 1.25, fontWeight: 700, color: '#1e293b' }}>{personality.label}</div>
+                  <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2 }}>{personality.fontName}</div>
+                </div>
+                {selected ? (
+                  <span style={{ width: 19, height: 19, borderRadius: '50%', background: 'var(--color-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                ) : (
+                  <span style={{ fontFamily: personality.stack, fontSize: 18, fontWeight: 700, color: '#cbd5e1', lineHeight: 1 }}>Aa</span>
+                )}
+              </div>
+              <div style={{ fontFamily: personality.stack }}>
+                <div style={{ color: '#0f172a', fontSize: 14, fontWeight: 700, lineHeight: 1.25 }}>招牌咖啡</div>
+                <div style={{ color: '#475569', fontSize: 11, fontWeight: 600, marginTop: 3, lineHeight: 1.25 }}>Signature Coffee</div>
+                <div style={{ color: '#94a3b8', fontSize: 9, marginTop: 4 }}>{personality.description}</div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 18, paddingTop: 16 }}>
+        <SectionLabel>Text size</SectionLabel>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 7 }}>
+          {STOREFRONT_TYPOGRAPHY_SCALES.map(option => {
+            const selected = (form.typography_scale || 'balanced') === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => onChange('typography_scale', option.value)}
+                style={{
+                  minWidth: 0, padding: '10px 5px 9px', borderRadius: 11,
+                  border: selected ? '2px solid var(--color-primary)' : '1px solid #e2e8f0',
+                  background: selected ? 'color-mix(in srgb, var(--color-primary) 6%, white)' : 'white',
+                  color: selected ? 'var(--color-primary)' : '#475569',
+                  cursor: 'pointer', boxSizing: 'border-box', textAlign: 'center',
+                }}
+              >
+                <div style={{ fontFamily: selectedPersonality.stack, fontSize: 14 * option.multiplier, fontWeight: 700, lineHeight: 1 }}>Aa</div>
+                <div style={{ fontSize: 10, fontWeight: 700, marginTop: 6 }}>{option.label}</div>
+                <div style={{ fontSize: 8, color: '#94a3b8', marginTop: 2, lineHeight: 1.2 }}>{option.description}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 18, paddingTop: 16 }}>
+        <SectionLabel>Readability preview</SectionLabel>
+        <div
+          aria-live="polite"
+          style={{
+            padding: 14, borderRadius: 14, border: '1px solid #e2e8f0',
+            background: 'linear-gradient(145deg, #ffffff, #f8fafc)',
+            fontFamily: selectedPersonality.stack,
+            boxShadow: '0 5px 16px rgba(15,23,42,0.05)',
+          }}
+        >
+          <div style={{ fontSize: 17 * selectedScale, fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>Cafetelier</div>
+          <div style={{ marginTop: 12, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 14 * selectedScale, fontWeight: 700, color: '#1e293b', lineHeight: 1.25 }}>招牌咖啡 Signature Coffee</div>
+              <div style={{ fontSize: 11 * selectedScale, color: '#64748b', lineHeight: 1.45, marginTop: 4 }}>Smooth espresso with fresh milk</div>
+            </div>
+            <div style={{ fontSize: 14 * selectedScale, fontWeight: 800, color: primaryColor, whiteSpace: 'nowrap' }}>$5.50</div>
+          </div>
+        </div>
+        <p style={{ fontSize: 10, color: '#94a3b8', lineHeight: 1.45, margin: '9px 2px 0' }}>
+          English and Chinese use coordinated fallback fonts for a consistent multilingual storefront.
+        </p>
       </div>
     </div>
   );
@@ -1559,7 +1639,7 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
       'banner_height', 'banner_height_px', 'banner_position_x', 'banner_position_y', 'banner_zoom',
       'show_promo_ticker', 'product_layout', 'menu_density',
       'show_featured', 'featured_section_title', 'show_category_tabs',
-      'show_product_description', 'show_stock_badge', 'font_family',
+      'show_product_description', 'show_stock_badge', 'font_family', 'typography_scale',
     ];
 
     const payload = {};
