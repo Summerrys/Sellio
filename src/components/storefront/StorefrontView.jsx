@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import LanguageToggle from './LanguageToggle';
 import { useLanguage, useTranslatedTexts } from '@/lib/LanguageContext';
-import { extractBannerEdgeColors, isValidBannerEdgeColor } from '@/lib/bannerEdgeColors';
+import { extractBannerEdgeAssets, isValidBannerEdgeColor } from '@/lib/bannerEdgeColors';
 
 export const STOREFRONT_BANNER_MIN_HEIGHT = 120;
 export const STOREFRONT_BANNER_MAX_HEIGHT = 360;
@@ -200,9 +200,10 @@ const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryC
 });
 
 // ── Banner area (below header, behind it effectively) ─────────────────────
-// The merchant-approved image always keeps its proportions. On a wider screen,
-// spare side space is extended with a calm gradient sampled from the image's
-// own left and right edges — never with a stretched or blurred duplicate.
+// The merchant-approved image remains completely sharp and proportional. When
+// a wider viewport leaves horizontal space, only a narrow strip from each edge
+// is mirrored and stretched into that decorative space. The actual banner is
+// never stretched, cropped or replaced by a blurred duplicate.
 function StorefrontBanner({
   primaryColor,
   bannerBgImage,
@@ -213,68 +214,134 @@ function StorefrontBanner({
   persistedLeftEdgeColor,
   persistedRightEdgeColor,
 }) {
-  const imagePosition = `${positionX ?? 50}% ${positionY ?? 50}%`;
+  const bannerRef = useRef(null);
+  const [edgeAssets, setEdgeAssets] = useState(null);
+  const [bannerSize, setBannerSize] = useState({ width: 0, height: 0 });
   const imageZoom = getStorefrontBannerZoom(zoom);
-  const [sampledEdgeColors, setSampledEdgeColors] = useState(null);
+  const rawHorizontalPosition = Number(positionX ?? 50);
+  const rawVerticalPosition = Number(positionY ?? 50);
+  const horizontalPosition = Number.isFinite(rawHorizontalPosition)
+    ? Math.max(0, Math.min(100, rawHorizontalPosition))
+    : 50;
+  const verticalPosition = Number.isFinite(rawVerticalPosition)
+    ? Math.max(0, Math.min(100, rawVerticalPosition))
+    : 50;
+  const imagePosition = `${horizontalPosition}% ${verticalPosition}%`;
 
   const storedLeft = isValidBannerEdgeColor(persistedLeftEdgeColor) ? persistedLeftEdgeColor : null;
   const storedRight = isValidBannerEdgeColor(persistedRightEdgeColor) ? persistedRightEdgeColor : null;
 
   useEffect(() => {
-    if (!bannerBgImage || (storedLeft && storedRight)) {
-      setSampledEdgeColors(null);
+    const banner = bannerRef.current;
+    if (!banner) return;
+    const update = () => {
+      setBannerSize({ width: banner.clientWidth, height: banner.clientHeight });
+    };
+    const observer = new ResizeObserver(update);
+    observer.observe(banner);
+    update();
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!bannerBgImage) {
+      setEdgeAssets(null);
       return;
     }
 
     let cancelled = false;
-    extractBannerEdgeColors(bannerBgImage)
-      .then(colors => {
-        if (!cancelled) setSampledEdgeColors(colors);
+    extractBannerEdgeAssets(bannerBgImage)
+      .then(assets => {
+        if (!cancelled) setEdgeAssets(assets);
       })
       .catch(() => {
-        if (!cancelled) setSampledEdgeColors(null);
+        if (!cancelled) setEdgeAssets(null);
       });
 
     return () => { cancelled = true; };
-  }, [bannerBgImage, storedLeft, storedRight]);
+  }, [bannerBgImage]);
 
-  const leftEdgeColor = storedLeft || sampledEdgeColors?.left || '#f8fafc';
-  const rightEdgeColor = storedRight || sampledEdgeColors?.right || '#f8fafc';
-  const backdrop = bannerBgImage
+  const leftEdgeColor = storedLeft || edgeAssets?.left || '#f8fafc';
+  const rightEdgeColor = storedRight || edgeAssets?.right || '#f8fafc';
+  const fallbackBackdrop = bannerBgImage
     ? `linear-gradient(90deg, ${leftEdgeColor} 0%, ${leftEdgeColor} 38%, ${rightEdgeColor} 62%, ${rightEdgeColor} 100%)`
     : primaryColor;
 
+  const aspectRatio = edgeAssets?.aspectRatio || 3;
+  const containedWidth = Math.min(
+    bannerSize.width,
+    bannerSize.height * aspectRatio
+  );
+  const horizontalSpace = Math.max(0, bannerSize.width - containedWidth * imageZoom);
+  const leftGap = horizontalSpace * horizontalPosition / 100;
+  const rightGap = horizontalSpace - leftGap;
+
+  const renderEdgeExtension = (side, width, strip, colour) => {
+    if (!strip || width < 0.5) return null;
+    return (
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          zIndex: 0,
+          top: 0,
+          bottom: 0,
+          [side]: 0,
+          width: width + 1,
+          overflow: 'hidden',
+          background: colour,
+          pointerEvents: 'none',
+        }}
+      >
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: `url("${strip}")`,
+          backgroundSize: '100% 100%',
+          backgroundRepeat: 'no-repeat',
+          transform: `scaleX(-1) scaleY(${imageZoom})`,
+          transformOrigin: `center ${verticalPosition}%`,
+          willChange: 'transform',
+        }} />
+      </div>
+    );
+  };
+
   return (
-    <div data-storefront-banner="true" style={{
+    <div ref={bannerRef} data-storefront-banner="true" style={{
       width: '100%',
       height,
       flexShrink: 0,
       position: 'relative',
       overflow: 'hidden',
       isolation: 'isolate',
-      background: backdrop,
+      background: fallbackBackdrop,
       transition: 'background 180ms ease',
     }}>
       {bannerBgImage && (
-        <img
-          src={bannerBgImage}
-          alt=""
-          draggable={false}
-          style={{
-            position: 'relative',
-            zIndex: 1,
-            width: '100%',
-            height: '100%',
-            display: 'block',
-            objectFit: 'contain',
-            objectPosition: imagePosition,
-            transform: `scale(${imageZoom})`,
-            transformOrigin: imagePosition,
-            willChange: 'transform, object-position',
-            pointerEvents: 'none',
-            userSelect: 'none',
-          }}
-        />
+        <>
+          {renderEdgeExtension('left', leftGap, edgeAssets?.leftStrip, leftEdgeColor)}
+          {renderEdgeExtension('right', rightGap, edgeAssets?.rightStrip, rightEdgeColor)}
+          <img
+            src={bannerBgImage}
+            alt=""
+            draggable={false}
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              width: '100%',
+              height: '100%',
+              display: 'block',
+              objectFit: 'contain',
+              objectPosition: imagePosition,
+              transform: `scale(${imageZoom})`,
+              transformOrigin: imagePosition,
+              willChange: 'transform, object-position',
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          />
+        </>
       )}
     </div>
   );
