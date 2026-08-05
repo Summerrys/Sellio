@@ -43,7 +43,7 @@ export default function ConnectedCommerce() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <section className="sellio-section sl-imm-section sl-imm-connected" aria-labelledby="sellio-connected-heading">
+    <section id="connected" className="sellio-section sl-imm-section sl-imm-connected" aria-labelledby="sellio-connected-heading">
       <div className="sellio-container">
         <div className="sl-imm-heading sl-imm-heading--center">
           <div>
