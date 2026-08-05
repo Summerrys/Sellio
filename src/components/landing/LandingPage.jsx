@@ -21,9 +21,17 @@ import {
   X,
 } from 'lucide-react';
 import ScrollWorldExperience from './ScrollWorldExperience';
+import CommerceJourney from './CommerceJourney';
+import ConnectedCommerce from './ConnectedCommerce';
+import ProductShowcase from './ProductShowcase';
+import SellioWorld from './SellioWorld';
+import WorldLayers from './WorldLayers';
 import { PLANS } from './landingData';
 import './landing.css';
 import './phase1b.css';
+import './immersive.css';
+import './mobile-pan.css';
+import './chapter-guide.css';
 
 const LOGO_URL = 'https://assets.apptelier.sg/sellio/Logo_Sellio.png';
 const ASSISTANT_URL = 'https://assets.apptelier.sg/sellio/Logo_AISellio_Assistant.png';
@@ -44,8 +52,8 @@ function LandingHeader() {
   useEffect(() => {
     let frame;
     const update = () => {
-      const world = document.getElementById('world');
-      const revealAt = world ? world.offsetTop + world.offsetHeight - 2 : Number.POSITIVE_INFINITY;
+      const film = document.getElementById('sellio-film');
+      const revealAt = film ? film.offsetTop + film.offsetHeight - 2 : Number.POSITIVE_INFINITY;
       setVisible(window.scrollY >= revealAt);
     };
     const requestUpdate = () => {
@@ -115,6 +123,42 @@ function HeroVisual() {
       <motion.div className="sellio-hero-core" {...drift(.35, 6)}><div className="sellio-hero-core__glow" /><div className="sellio-hero-core__disc"><img src={ASSISTANT_URL} alt="" /></div><span>Sellio AI</span></motion.div>
       <div className="sellio-hero-connection sellio-hero-connection--one" aria-hidden="true" /><div className="sellio-hero-connection sellio-hero-connection--two" aria-hidden="true" /><div className="sellio-hero-floor" aria-hidden="true" />
     </div>
+  );
+}
+
+const FILM_CHAPTERS = [
+  { number: '01', Icon: ShoppingBag, eyebrow: 'Customer journey', title: 'From discovery to fulfilment', copy: 'See how customers browse, order and receive clear updates while the merchant stays in control.', href: '#journey' },
+  { number: '02', Icon: Users, eyebrow: 'Connected commerce', title: 'Two experiences, one system', copy: 'Explore the dimensional bridge between a branded customer experience and live merchant operations.', href: '#connected' },
+  { number: '03', Icon: BarChart3, eyebrow: 'Merchant workspace', title: 'One connected workspace', copy: 'Move through storefront, orders, inventory, analytics and Sellio AI as a single operating environment.', href: '#product' },
+  { number: '04', Icon: Store, eyebrow: 'Marketplace world', title: 'World to district to storefront', copy: 'Choose a sector, enter its district and zoom into Cafetelier to experience a merchant-owned space.', href: '#world' },
+  { number: '05', Icon: Sparkles, eyebrow: 'Merchant progression', title: 'Grow, earn and personalise', copy: 'Discover Sellio Coins, seasonal décor and the progression layer that makes every storefront feel alive.', href: '#vision' },
+];
+
+function FilmChapterGuide() {
+  return (
+    <section className="sl-film-guide" aria-labelledby="sellio-film-guide-heading">
+      <div className="sellio-container">
+        <div className="sl-film-guide__heading">
+          <span className="sellio-eyebrow"><Sparkles /> The film, explained</span>
+          <div>
+            <h2 id="sellio-film-guide-heading">Step inside every chapter.</h2>
+            <p>The cinematic shows the whole Sellio experience in motion. Explore each stage below to see how the marketplace, storefront and merchant tools work together.</p>
+          </div>
+        </div>
+        <nav className="sl-film-guide__rail" aria-label="Explore the Sellio experience">
+          {FILM_CHAPTERS.map(({ number, Icon, eyebrow, title, copy, href }) => (
+            <a key={number} href={href} className="sl-film-guide__card">
+              <span className="sl-film-guide__number">{number}</span>
+              <i><Icon aria-hidden="true" /></i>
+              <small>{eyebrow}</small>
+              <strong>{title}</strong>
+              <p>{copy}</p>
+              <span className="sl-film-guide__link">Explore chapter <ArrowRight aria-hidden="true" /></span>
+            </a>
+          ))}
+        </nav>
+      </div>
+    </section>
   );
 }
 
@@ -217,6 +261,12 @@ export default function LandingPage() {
       <main id="sellio-main">
         <ScrollWorldExperience />
         <section className="sellio-proof-strip" aria-label="Sellio capabilities"><div className="sellio-container"><span><Store /> Online storefront</span><span><QrCode /> QR ordering</span><span><Bell /> Live orders</span><span><Package /> Inventory</span><span><BarChart3 /> Reports</span><span><Users /> Staff roles</span></div></section>
+        <FilmChapterGuide />
+        <CommerceJourney />
+        <ConnectedCommerce />
+        <ProductShowcase />
+        <SellioWorld />
+        <WorldLayers />
         <PricingSection />
         <FAQSection />
       </main>
