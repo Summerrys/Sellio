@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -48,31 +48,38 @@ export default function SellioWorld() {
   const [activeSector, setActiveSector] = useState('fnb');
   const [storeOpen, setStoreOpen] = useState(false);
   const worldPanRef = useRef(null);
+  const storefrontPanRef = useRef(null);
   const reduceMotion = useReducedMotion();
   const sector = SECTORS.find((item) => item.key === activeSector);
 
   const selectSector = (key) => {
-    const nextSector = SECTORS.find((item) => item.key === key);
     setActiveSector(key);
     setStoreOpen(false);
-    const viewport = worldPanRef.current;
-    if (!viewport || !nextSector) return;
-    const maxScroll = viewport.scrollWidth - viewport.clientWidth;
-    viewport.scrollTo({
-      left: Math.max(0, maxScroll * nextSector.pan),
-      behavior: reduceMotion ? 'auto' : 'smooth',
-    });
   };
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const viewport = storeOpen ? storefrontPanRef.current : worldPanRef.current;
+      if (!viewport) return;
+      const maxScroll = viewport.scrollWidth - viewport.clientWidth;
+      const progress = storeOpen ? .5 : sector.pan;
+      viewport.scrollTo({
+        left: Math.max(0, maxScroll * progress),
+        behavior: reduceMotion ? 'auto' : 'smooth',
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [reduceMotion, sector.pan, storeOpen]);
 
   return (
     <section id="world" className="sellio-section sl-imm-world" aria-labelledby="sellio-world-heading">
       <div className="sellio-container">
         <div className="sl-imm-heading sl-imm-heading--world">
           <div>
-            <span className="sellio-eyebrow sellio-eyebrow--dark"><Compass /> Sellio World</span>
-            <h2 id="sellio-world-heading">A marketplace designed<br />as a place to explore.</h2>
+            <span className="sellio-eyebrow sellio-eyebrow--dark"><Compass /> Film stages 01–02 · Sellio World</span>
+            <h2 id="sellio-world-heading">A world to explore.<br />A storefront to enter.</h2>
           </div>
-          <p>F&B, Retail and Services each have a place in the live marketplace, so every new merchant can be allocated to the right district from the day they join.</p>
+          <p>Choose a sector, move through its district and tap Cafetelier to step inside a merchant-owned storefront—the same opening journey shown in the film.</p>
         </div>
 
         <div className="sl-imm-world-browser">
@@ -143,7 +150,7 @@ export default function SellioWorld() {
                 exit={reduceMotion ? undefined : { opacity: 0, scale: .99 }}
                 transition={{ duration: .36 }}
               >
-                <div className="sl-pan-scroll sl-pan-scroll--storefront" tabIndex="0" aria-label="Swipe horizontally to explore the merchant storefront">
+                <div ref={storefrontPanRef} className="sl-pan-scroll sl-pan-scroll--storefront" tabIndex="0" aria-label="Swipe horizontally to explore the merchant storefront">
                   <div className="sl-imm-storefront sl-pan-canvas sl-pan-canvas--storefront">
                     <img
                       src="/assets/immersive/storefront-zoom.webp"
