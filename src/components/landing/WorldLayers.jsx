@@ -51,7 +51,7 @@ export default function WorldLayers() {
       <div className="sellio-container">
         <div className="sl-imm-heading sl-imm-heading--light">
           <div>
-            <span className="sellio-eyebrow sellio-eyebrow--dark"><Sparkles /> The marketplace vision</span>
+            <span className="sellio-eyebrow sellio-eyebrow--dark"><Sparkles /> Film stage 05 · Progression</span>
             <h2 id="sellio-layers-heading">One world.<br />Three meaningful layers.</h2>
           </div>
           <p>The experience remains useful at every depth: discover a district, enter a real storefront, then personalise that place through progression.</p>
