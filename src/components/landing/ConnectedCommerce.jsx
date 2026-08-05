@@ -47,7 +47,7 @@ export default function ConnectedCommerce() {
       <div className="sellio-container">
         <div className="sl-imm-heading sl-imm-heading--center">
           <div>
-            <span className="sellio-eyebrow"><HeartHandshake /> One system, two experiences</span>
+            <span className="sellio-eyebrow"><HeartHandshake /> Behind stage 03 · Connected commerce</span>
             <h2 id="sellio-connected-heading">Delight in front.<br />Clarity behind the counter.</h2>
           </div>
           <p>Customers should feel the brand. Merchants should feel in control. Sellio connects both without making either side look like software plumbing.</p>
