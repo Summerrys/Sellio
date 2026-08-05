@@ -900,6 +900,128 @@
   .sl-storefront-details h3 { font-size: 2.45rem; }
 }
 
+/* Mobile journey polish: larger labels, clearer touch targets and a compact horizontal flow. */
+.sl-pan-scroll {
+  cursor: grab;
+}
+
+.sl-pan-scroll:active {
+  cursor: grabbing;
+}
+
+@media (max-width: 700px) {
+  .sl-pan-hint {
+    padding: 9px 13px;
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .sl-imm-world-toolbar {
+    padding: 12px;
+  }
+
+  .sl-imm-world-tabs {
+    gap: 8px;
+    overscroll-behavior-inline: contain;
+  }
+
+  .sl-imm-world-tabs button {
+    flex-basis: 154px;
+    min-height: 50px;
+    font-size: 13px;
+  }
+
+  .sl-imm-district-label {
+    min-height: 50px;
+    padding: 10px 13px;
+  }
+
+  .sl-imm-district-label strong {
+    font-size: 13px;
+  }
+
+  .sl-imm-district-label small,
+  .sl-imm-merchant-pin small {
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .sl-imm-merchant-pin {
+    min-height: 64px;
+  }
+
+  .sl-imm-merchant-pin strong {
+    font-size: 15px;
+  }
+
+  .sl-imm-merchant-pin em {
+    font-size: 11px;
+  }
+
+  .sl-world-copy-panel > span,
+  .sl-storefront-details > div:first-child > span,
+  .sl-workspace-card small {
+    font-size: 12px;
+  }
+
+  .sl-world-copy-panel p,
+  .sl-storefront-details p,
+  .sl-workspace-card p,
+  .sl-imm-story-card p,
+  .sl-imm-connection-list p small,
+  .sl-imm-layer__copy p {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .sl-world-copy-panel > div {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .sl-workspace-waypoints button span {
+    font-size: 11px;
+  }
+
+  .sl-imm-story-card > div:nth-child(2) > span {
+    font-size: 12px;
+  }
+
+  .sl-imm-allocation {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sl-imm-allocation::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sl-imm-allocation > span {
+    flex: 0 0 min(72vw, 250px);
+    min-height: 72px;
+    scroll-snap-align: start;
+  }
+
+  .sl-imm-allocation > svg {
+    flex: 0 0 18px;
+    transform: none;
+  }
+
+  .sl-imm-allocation b {
+    font-size: 12px;
+  }
+
+  .sl-imm-allocation i {
+    font-size: 13px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sl-pan-scroll {
     scroll-behavior: auto;
