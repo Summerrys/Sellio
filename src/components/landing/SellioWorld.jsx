@@ -21,7 +21,7 @@ const SECTORS = [
   {
     key: 'fnb',
     name: 'F&B District',
-    status: 'Active foundation',
+    status: 'Live district',
     Icon: Utensils,
     pan: .28,
     summary: 'Restaurants, cafés, bakeries and beverage concepts live around shared discovery routes.',
@@ -29,7 +29,7 @@ const SECTORS = [
   {
     key: 'retail',
     name: 'Retail Avenue',
-    status: 'Expansion zone',
+    status: 'Open for onboarding',
     Icon: ShoppingBag,
     pan: .04,
     summary: 'Boutiques and product-led merchants receive storefront plots along a dedicated retail route.',
@@ -37,7 +37,7 @@ const SECTORS = [
   {
     key: 'services',
     name: 'Services Garden',
-    status: 'Expansion zone',
+    status: 'Open for onboarding',
     Icon: BriefcaseBusiness,
     pan: .96,
     summary: 'Wellness, studios and professional services occupy a calmer appointment-led neighbourhood.',
@@ -72,7 +72,7 @@ export default function SellioWorld() {
             <span className="sellio-eyebrow sellio-eyebrow--dark"><Compass /> Sellio World</span>
             <h2 id="sellio-world-heading">A marketplace designed<br />as a place to explore.</h2>
           </div>
-          <p>F&B begins the world. Retail and Services are already part of its geography, so every new merchant can be allocated to the right district as the marketplace grows.</p>
+          <p>F&B, Retail and Services each have a place in the live marketplace, so every new merchant can be allocated to the right district from the day they join.</p>
         </div>
 
         <div className="sl-imm-world-browser">
@@ -91,7 +91,7 @@ export default function SellioWorld() {
                 </button>
               ))}
             </div>
-            <span className="sl-imm-world-status"><i /> World foundation · Preview</span>
+            <span className="sl-imm-world-status"><i /> Sellio World · Live</span>
           </div>
 
           <AnimatePresence mode="wait">
@@ -116,9 +116,9 @@ export default function SellioWorld() {
                       alt="An immersive Sellio marketplace world with connected food and beverage, retail and services districts"
                     />
                     <div className="sl-imm-world-vignette" aria-hidden="true" />
-                    <button type="button" className="sl-imm-district-label sl-imm-district-label--fnb" onClick={() => selectSector('fnb')}><Utensils /><span><strong>F&B District</strong><small>Active foundation</small></span></button>
-                    <button type="button" className="sl-imm-district-label sl-imm-district-label--retail" onClick={() => selectSector('retail')}><ShoppingBag /><span><strong>Retail Avenue</strong><small>Expansion zone</small></span></button>
-                    <button type="button" className="sl-imm-district-label sl-imm-district-label--services" onClick={() => selectSector('services')}><BriefcaseBusiness /><span><strong>Services Garden</strong><small>Expansion zone</small></span></button>
+                    <button type="button" className="sl-imm-district-label sl-imm-district-label--fnb" onClick={() => selectSector('fnb')}><Utensils /><span><strong>F&B District</strong><small>Live district</small></span></button>
+                    <button type="button" className="sl-imm-district-label sl-imm-district-label--retail" onClick={() => selectSector('retail')}><ShoppingBag /><span><strong>Retail Avenue</strong><small>Open for onboarding</small></span></button>
+                    <button type="button" className="sl-imm-district-label sl-imm-district-label--services" onClick={() => selectSector('services')}><BriefcaseBusiness /><span><strong>Services Garden</strong><small>Open for onboarding</small></span></button>
 
                     <button type="button" className="sl-imm-merchant-pin" onClick={() => setStoreOpen(true)}>
                       <span><Coffee /></span>
