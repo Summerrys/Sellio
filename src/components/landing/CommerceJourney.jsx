@@ -81,7 +81,7 @@ export default function CommerceJourney() {
       <div className="sellio-container">
         <div className="sl-imm-heading">
           <div>
-            <span className="sellio-eyebrow"><Sparkles /> One connected commerce journey</span>
+            <span className="sellio-eyebrow"><Sparkles /> Film stage 03 · Order journey</span>
             <h2 id="sellio-journey-heading">From first tap to<br />a smarter next move.</h2>
           </div>
           <p>Sellio connects the visible customer experience to the operational work behind it. Select a stage to follow the same order through the system.</p>
