@@ -29,7 +29,7 @@ export default function ProductShowcase() {
     <section id="product" className="sellio-section sellio-product-section sl-workspace-section" aria-labelledby="sellio-product-heading">
       <div className="sellio-container">
         <div className="sellio-section-heading sl-workspace-heading">
-          <span className="sellio-eyebrow"><Sparkles aria-hidden="true" /> One connected workspace</span>
+          <span className="sellio-eyebrow"><Sparkles aria-hidden="true" /> Film stage 04 · Merchant workspace</span>
           <h2 id="sellio-product-heading">See every part of Sellio working together.</h2>
           <p>Move from the customer storefront to live operations, inventory, insights and AI—without leaving the same connected workspace.</p>
         </div>
