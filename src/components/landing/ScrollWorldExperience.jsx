@@ -193,7 +193,8 @@ export default function ScrollWorldExperience() {
   useEffect(() => {
     if (!videoReady || reduceMotion) return undefined;
     const seekFromHash = () => {
-      const sceneId = window.location.hash.slice(1);
+      if (!window.location.hash.startsWith('#film-')) return;
+      const sceneId = window.location.hash.replace('#film-', '');
       const index = SCENES.findIndex((item) => item.id === sceneId);
       const video = videoRef.current;
       if (index < 0 || !video) return;
@@ -234,7 +235,7 @@ export default function ScrollWorldExperience() {
 
   return (
     <section
-      id="world"
+      id="sellio-film"
       ref={rootRef}
       className={'sl-scrollworld ' + (reduceMotion ? 'is-reduced' : '')}
       aria-label="Sellio World cinematic experience"
@@ -243,7 +244,7 @@ export default function ScrollWorldExperience() {
       {SCENES.map((item) => (
         <span
           key={item.id}
-          id={item.id === 'world' ? undefined : item.id}
+          id={`film-${item.id}`}
           className="sl-sw-anchor"
           style={{ top: 0 }}
           aria-hidden="true"
