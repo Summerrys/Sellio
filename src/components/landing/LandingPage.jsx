@@ -31,16 +31,15 @@ import './landing.css';
 import './phase1b.css';
 import './immersive.css';
 import './mobile-pan.css';
-import './chapter-guide.css';
 
 const LOGO_URL = 'https://assets.apptelier.sg/sellio/Logo_Sellio.png';
 const ASSISTANT_URL = 'https://assets.apptelier.sg/sellio/Logo_AISellio_Assistant.png';
 const DEMO_STORE_URL = '/store/cafetelier?preview=true';
 
 const NAV_ITEMS = [
+  { label: 'Sellio World', href: '#world' },
   { label: 'How it flows', href: '#journey' },
   { label: 'Product', href: '#product' },
-  { label: 'Sellio World', href: '#world' },
   { label: 'Vision', href: '#vision' },
   { label: 'Pricing', href: '#pricing' },
 ];
@@ -126,48 +125,12 @@ function HeroVisual() {
   );
 }
 
-const FILM_CHAPTERS = [
-  { number: '01', Icon: ShoppingBag, eyebrow: 'Customer journey', title: 'From discovery to fulfilment', copy: 'See how customers browse, order and receive clear updates while the merchant stays in control.', href: '#journey' },
-  { number: '02', Icon: Users, eyebrow: 'Connected commerce', title: 'Two experiences, one system', copy: 'Explore the dimensional bridge between a branded customer experience and live merchant operations.', href: '#connected' },
-  { number: '03', Icon: BarChart3, eyebrow: 'Merchant workspace', title: 'One connected workspace', copy: 'Move through storefront, orders, inventory, analytics and Sellio AI as a single operating environment.', href: '#product' },
-  { number: '04', Icon: Store, eyebrow: 'Marketplace world', title: 'World to district to storefront', copy: 'Choose a sector, enter its district and zoom into Cafetelier to experience a merchant-owned space.', href: '#world' },
-  { number: '05', Icon: Sparkles, eyebrow: 'Merchant progression', title: 'Grow, earn and personalise', copy: 'Discover Sellio Coins, seasonal décor and the progression layer that makes every storefront feel alive.', href: '#vision' },
-];
-
-function FilmChapterGuide() {
-  return (
-    <section className="sl-film-guide" aria-labelledby="sellio-film-guide-heading">
-      <div className="sellio-container">
-        <div className="sl-film-guide__heading">
-          <span className="sellio-eyebrow"><Sparkles /> The film, explained</span>
-          <div>
-            <h2 id="sellio-film-guide-heading">Step inside every chapter.</h2>
-            <p>The cinematic shows the whole Sellio experience in motion. Explore each stage below to see how the marketplace, storefront and merchant tools work together.</p>
-          </div>
-        </div>
-        <nav className="sl-film-guide__rail" aria-label="Explore the Sellio experience">
-          {FILM_CHAPTERS.map(({ number, Icon, eyebrow, title, copy, href }) => (
-            <a key={number} href={href} className="sl-film-guide__card">
-              <span className="sl-film-guide__number">{number}</span>
-              <i><Icon aria-hidden="true" /></i>
-              <small>{eyebrow}</small>
-              <strong>{title}</strong>
-              <p>{copy}</p>
-              <span className="sl-film-guide__link">Explore chapter <ArrowRight aria-hidden="true" /></span>
-            </a>
-          ))}
-        </nav>
-      </div>
-    </section>
-  );
-}
-
 function PricingSection() {
   const [annual, setAnnual] = useState(false);
   return (
     <section id="pricing" className="sellio-section sellio-pricing-section sellio-pricing-section--phase1b" aria-labelledby="sellio-pricing-heading">
       <div className="sellio-container">
-        <div className="sellio-section-heading sellio-section-heading--center"><span className="sellio-eyebrow"><CircleDollarSign /> Start your next chapter</span><h2 id="sellio-pricing-heading">Launch your storefront.<br />Claim your place in Sellio World.</h2><p>Choose the operations plan that fits your business, enter the right merchant district and start building your presence in the connected marketplace.</p></div>
+        <div className="sellio-section-heading sellio-section-heading--center"><span className="sellio-eyebrow"><CircleDollarSign /> Film stage 06 · Ready when you are</span><h2 id="sellio-pricing-heading">Launch your storefront.<br />Claim your place in Sellio World.</h2><p>Choose the operations plan that fits your business, enter the right merchant district and start building your presence in the connected marketplace.</p></div>
         <div className="sellio-billing-toggle" role="group" aria-label="Billing period"><button type="button" className={!annual ? 'is-active' : ''} onClick={() => setAnnual(false)}>Monthly</button><button type="button" className={annual ? 'is-active' : ''} onClick={() => setAnnual(true)}>Annual <span>2 months free</span></button></div>
         <div className="sellio-pricing-grid">
           {PLANS.map((plan) => {
@@ -261,11 +224,10 @@ export default function LandingPage() {
       <main id="sellio-main">
         <ScrollWorldExperience />
         <section className="sellio-proof-strip" aria-label="Sellio capabilities"><div className="sellio-container"><span><Store /> Online storefront</span><span><QrCode /> QR ordering</span><span><Bell /> Live orders</span><span><Package /> Inventory</span><span><BarChart3 /> Reports</span><span><Users /> Staff roles</span></div></section>
-        <FilmChapterGuide />
+        <SellioWorld />
         <CommerceJourney />
         <ConnectedCommerce />
         <ProductShowcase />
-        <SellioWorld />
         <WorldLayers />
         <PricingSection />
         <FAQSection />
