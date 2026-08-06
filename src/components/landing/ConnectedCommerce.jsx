@@ -11,7 +11,7 @@ import {
   Sparkles,
   Store,
 } from 'lucide-react';
-import { SELLIO_IMMERSIVE_ASSETS } from './immersiveAssets';
+import { SELLIO_IMMERSIVE_ASSETS, SELLIO_IMMERSIVE_MOBILE_ASSETS } from './immersiveAssets';
 
 const CUSTOMER_POINTS = [
   { Icon: Store, title: 'Branded discovery', copy: 'The merchant’s identity stays visible from the first browse.' },
@@ -54,10 +54,15 @@ export default function ConnectedCommerce() {
               whileHover={reduceMotion ? undefined : { scale: 1.006 }}
               transition={{ duration: .55, ease: [0.2, 0.8, 0.2, 1] }}
             >
-              <img
-                src={SELLIO_IMMERSIVE_ASSETS.connected}
-                alt="A premium connected commerce environment linking a customer storefront to merchant operations"
-              />
+              <picture className="sl-responsive-art">
+                <source media="(max-width: 600px)" srcSet={SELLIO_IMMERSIVE_MOBILE_ASSETS.connected} />
+                <img
+                  src={SELLIO_IMMERSIVE_ASSETS.connected}
+                  alt="A premium connected commerce environment linking a customer storefront to merchant operations"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </picture>
               <header className="sl-panorama-intro sl-panorama-intro--connected">
                 <span className="sellio-eyebrow"><HeartHandshake /> Connected commerce</span>
                 <h2 id="sellio-connected-heading">Delight in front.<br />Clarity behind the counter.</h2>
