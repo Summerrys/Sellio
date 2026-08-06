@@ -1,0 +1,908 @@
+/* Full-bleed cinematic panoramas
+   High-resolution 2400×800 artwork, image-native waypoints and mobile horizontal navigation. */
+
+.sellio-landing .sl-cinematic-world,
+.sellio-landing .sl-cinematic-section {
+  position: relative;
+  padding: 0;
+  overflow: clip;
+  scroll-margin-top: 72px;
+}
+
+.sellio-landing .sl-cinematic-section > .sellio-container {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+}
+
+.sl-cinematic-world__stage,
+.sl-cinematic-section .sl-imm-scene,
+.sl-cinematic-section .sl-imm-connection-stage,
+.sl-cinematic-section .sl-workspace-shell {
+  width: 100vw;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.sl-cinematic-world__stage {
+  position: relative;
+  background: #edf8ff;
+}
+
+.sl-cinematic-world .sl-world-stage {
+  position: relative;
+  overflow: hidden;
+  background: #dff3ff;
+}
+
+.sl-cinematic-world .sl-pan-scroll--world,
+.sl-cinematic-world .sl-pan-scroll--storefront,
+.sl-cinematic-journey .sl-pan-scroll--journey,
+.sl-cinematic-connected .sl-pan-scroll--connection,
+.sl-cinematic-workspace .sl-pan-scroll--workspace {
+  position: relative;
+  inset: auto;
+  width: 100vw;
+  height: clamp(520px, 33.333vw, 800px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+}
+
+.sl-cinematic-world .sl-pan-scroll::-webkit-scrollbar,
+.sl-cinematic-section .sl-pan-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.sl-cinematic-world .sl-pan-canvas--world,
+.sl-cinematic-world .sl-pan-canvas--storefront,
+.sl-cinematic-journey .sl-pan-canvas--journey,
+.sl-cinematic-connected .sl-pan-canvas--connection,
+.sl-cinematic-workspace .sl-pan-canvas--workspace {
+  position: relative;
+  inset: auto;
+  width: max(100vw, 1560px);
+  min-width: max(100vw, 1560px);
+  height: clamp(520px, 33.333vw, 800px);
+  min-height: 0;
+  overflow: hidden;
+  transform-origin: center;
+}
+
+.sl-cinematic-world .sl-pan-canvas > img,
+.sl-cinematic-section .sl-pan-canvas > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Shared text treatment: information is over the panorama, without an opaque card. */
+.sl-world-intro-overlay,
+.sl-panorama-intro,
+.sl-storefront-intro-overlay {
+  position: absolute;
+  z-index: 7;
+  left: clamp(24px, 4.5vw, 84px);
+  top: clamp(28px, 5vw, 76px);
+  width: min(430px, 31vw);
+  padding: 2px 42px 18px 2px;
+  color: #2b1835;
+  background: linear-gradient(90deg, rgba(255, 253, 248, .86) 0%, rgba(255, 253, 248, .48) 58%, transparent 100%);
+  filter: drop-shadow(0 12px 24px rgba(72, 46, 67, .08));
+  pointer-events: none;
+}
+
+.sl-world-intro-overlay .sellio-eyebrow,
+.sl-panorama-intro .sellio-eyebrow {
+  color: #7f2d7a;
+  border-color: rgba(90, 48, 94, .13);
+  background: rgba(255, 255, 255, .72);
+  box-shadow: 0 8px 20px rgba(71, 44, 77, .08);
+}
+
+.sl-world-intro-overlay h2,
+.sl-panorama-intro h2,
+.sl-storefront-intro-overlay h2 {
+  margin: 16px 0 12px;
+  color: #26152f;
+  font: 800 clamp(2.55rem, 4.4vw, 5rem)/.94 "Manrope", sans-serif;
+  letter-spacing: -.065em;
+  text-wrap: balance;
+}
+
+.sl-world-intro-overlay p,
+.sl-panorama-intro p,
+.sl-storefront-intro-overlay p {
+  max-width: 390px;
+  margin: 0;
+  color: #54445a;
+  font-size: clamp(14px, 1.2vw, 17px);
+  line-height: 1.62;
+}
+
+/* Sellio World map: labels are anchored map markers rather than navigation tabs. */
+.sl-cinematic-world .sl-imm-world-vignette {
+  z-index: 2;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.18), transparent 32%),
+    linear-gradient(180deg, rgba(255,255,255,.04), transparent 60%, rgba(44,38,67,.08));
+}
+
+.sl-map-pin,
+.sl-map-store-pin {
+  position: absolute;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0;
+  border: 0;
+  color: #291b32;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  filter: drop-shadow(0 8px 15px rgba(53, 36, 61, .2));
+  transition: transform .28s ease, filter .28s ease;
+}
+
+.sl-map-pin:hover,
+.sl-map-pin:focus-visible,
+.sl-map-store-pin:hover,
+.sl-map-store-pin:focus-visible {
+  transform: translateY(-5px) scale(1.04);
+  filter: drop-shadow(0 14px 22px rgba(94, 41, 101, .26));
+}
+
+.sl-map-pin > i,
+.sl-map-store-pin > i {
+  position: relative;
+  display: grid;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  place-items: center;
+  border: 2px solid rgba(255,255,255,.9);
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(145deg, #9f4bd6, #df4897 58%, #ff855f);
+  box-shadow: 0 0 0 8px rgba(255,255,255,.32), 0 14px 28px rgba(86,45,100,.22);
+}
+
+.sl-map-pin > i::after,
+.sl-map-store-pin > i::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border: 1px solid rgba(224,72,151,.4);
+  border-radius: inherit;
+  animation: sl-map-pulse 2.8s ease-out infinite;
+}
+
+.sl-map-pin svg,
+.sl-map-store-pin svg {
+  width: 21px;
+  height: 21px;
+}
+
+.sl-map-pin > span,
+.sl-map-store-pin > span {
+  color: #2b1a33;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-shadow:
+    0 1px 0 rgba(255,255,255,.95),
+    0 0 8px rgba(255,255,255,.98),
+    0 0 16px rgba(255,255,255,.86);
+}
+
+.sl-map-pin.is-active > i {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 10px rgba(255,255,255,.45), 0 18px 34px rgba(111,44,111,.28);
+}
+
+.sl-map-pin--retail { left: 38%; top: 40%; }
+.sl-map-pin--fnb { left: 52%; top: 54%; }
+.sl-map-pin--services { left: 65%; top: 31%; }
+
+.sl-map-store-pin {
+  left: 47%;
+  top: 66%;
+}
+
+.sl-map-store-pin > span {
+  display: flex;
+  flex-direction: column;
+}
+
+.sl-map-store-pin small {
+  color: #8d3d7c;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.sl-map-store-pin strong {
+  margin-top: 2px;
+  font-size: 16px;
+}
+
+.sl-map-store-pin > svg {
+  width: 16px;
+  color: #8d3d7c;
+  filter: drop-shadow(0 0 7px #fff);
+}
+
+.sl-map-instruction {
+  position: absolute;
+  z-index: 10;
+  right: clamp(18px, 3vw, 44px);
+  top: clamp(18px, 3vw, 40px);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #4a3651;
+  font-size: 12px;
+  font-weight: 800;
+  text-shadow: 0 1px 8px #fff;
+  pointer-events: none;
+}
+
+.sl-map-instruction svg {
+  width: 17px;
+  color: #a13a88;
+}
+
+.sl-map-detail-overlay {
+  position: absolute;
+  z-index: 14;
+  right: clamp(18px, 3vw, 44px);
+  bottom: clamp(18px, 3vw, 36px);
+  width: min(370px, calc(100vw - 36px));
+  padding: 24px;
+  border: 1px solid rgba(77,48,91,.13);
+  border-radius: 24px;
+  color: #2c1935;
+  background: rgba(255,253,249,.88);
+  backdrop-filter: blur(22px) saturate(125%);
+  box-shadow: 0 24px 65px rgba(57,35,69,.18);
+}
+
+.sl-map-detail-overlay > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #963577;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.sl-map-detail-overlay > span svg {
+  width: 15px;
+}
+
+.sl-map-detail-overlay h3 {
+  margin: 9px 0 8px;
+  font: 800 clamp(1.8rem, 3vw, 2.75rem)/1 "Manrope", sans-serif;
+  letter-spacing: -.05em;
+}
+
+.sl-map-detail-overlay p {
+  margin: 0;
+  color: #635269;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.sl-map-detail-overlay__close {
+  position: absolute;
+  right: 13px;
+  top: 13px;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #614c68;
+  background: rgba(86,52,96,.07);
+  cursor: pointer;
+}
+
+.sl-map-detail-overlay__close svg {
+  width: 17px;
+}
+
+.sl-map-detail-overlay__action {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 14px;
+  color: #fff;
+  background: linear-gradient(135deg, #9f4bd6, #df4897, #ff855f);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.sl-map-detail-overlay__action svg {
+  width: 16px;
+}
+
+/* Storefront zoom is a second full-bleed panorama, not a nested card. */
+.sl-world-stage--storefront .sl-pan-canvas--storefront {
+  width: max(100vw, 1560px);
+  min-width: max(100vw, 1560px);
+}
+
+.sl-world-stage--storefront .sl-imm-storefront__shade {
+  z-index: 2;
+  background: linear-gradient(90deg, rgba(244,251,255,.22), transparent 42%);
+}
+
+.sl-storefront-intro-overlay {
+  top: 27%;
+  width: min(400px, 30vw);
+  background: linear-gradient(90deg, rgba(235,248,255,.76), rgba(235,248,255,.34) 64%, transparent);
+}
+
+.sl-storefront-intro-overlay > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #7d2c72;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.sl-storefront-intro-overlay > span svg {
+  width: 16px;
+}
+
+.sl-storefront-intro-overlay h2 {
+  font-size: clamp(3rem, 5vw, 5.6rem);
+}
+
+.sl-storefront-intro-overlay > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 20px;
+  pointer-events: auto;
+}
+
+.sl-storefront-intro-overlay a,
+.sl-storefront-intro-overlay button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 1px solid rgba(70,42,79,.14);
+  border-radius: 14px;
+  color: #fff;
+  background: linear-gradient(135deg, #a24ed7, #df4897);
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.sl-storefront-intro-overlay button {
+  color: #39243f;
+  background: rgba(255,255,255,.68);
+}
+
+.sl-storefront-intro-overlay svg {
+  width: 15px;
+}
+
+.sl-cinematic-world .sl-storefront-back-fixed {
+  position: absolute;
+  z-index: 15;
+  left: clamp(18px, 3vw, 42px);
+  top: clamp(18px, 3vw, 36px);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 15px;
+  border: 1px solid rgba(70,42,79,.14);
+  border-radius: 999px;
+  color: #3d2843;
+  background: rgba(255,255,255,.84);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 12px 28px rgba(42,35,61,.13);
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.sl-cinematic-world .sl-storefront-back-fixed svg {
+  width: 16px;
+}
+
+.sl-storefront-feature-dock {
+  position: absolute;
+  z-index: 12;
+  right: clamp(18px, 3vw, 42px);
+  bottom: clamp(18px, 3vw, 34px);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  max-width: 680px;
+  pointer-events: none;
+}
+
+.sl-storefront-feature-dock span {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid rgba(65,42,73,.11);
+  border-radius: 999px;
+  color: #3f2d45;
+  background: rgba(255,255,255,.76);
+  backdrop-filter: blur(14px);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.sl-storefront-feature-dock svg {
+  width: 14px;
+  color: #a13c86;
+}
+
+.sl-imm-allocation--fullbleed {
+  position: relative;
+  z-index: 16;
+  width: 100vw;
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(90deg, #fffaf6, #f7f0fc);
+}
+
+/* Order journey */
+.sl-cinematic-journey .sl-imm-scene {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  background: #fbf3e8;
+}
+
+.sl-cinematic-journey .sl-imm-scene__shade {
+  z-index: 2;
+  background: linear-gradient(90deg, rgba(255,252,245,.34), transparent 42%);
+}
+
+.sl-cinematic-journey .sl-panorama-intro {
+  top: clamp(24px, 4vw, 58px);
+}
+
+.sl-cinematic-journey .sl-imm-hotspots {
+  z-index: 9;
+}
+
+.sl-cinematic-journey .sl-imm-hotspots button:nth-child(1) { left: 22%; top: 48%; }
+.sl-cinematic-journey .sl-imm-hotspots button:nth-child(2) { left: 35%; top: 51%; }
+.sl-cinematic-journey .sl-imm-hotspots button:nth-child(3) { left: 49%; top: 48%; }
+.sl-cinematic-journey .sl-imm-hotspots button:nth-child(4) { left: 61%; top: 50%; }
+.sl-cinematic-journey .sl-imm-hotspots button:nth-child(5) { left: 72%; top: 45%; }
+
+.sl-cinematic-journey .sl-imm-story-card {
+  z-index: 12;
+  right: clamp(18px, 3vw, 42px);
+  left: auto;
+  bottom: clamp(18px, 3vw, 34px);
+  width: min(520px, calc(100vw - 36px));
+  max-width: 520px;
+  border-color: rgba(76,49,89,.12);
+  background: rgba(255,253,249,.86);
+  backdrop-filter: blur(20px) saturate(120%);
+  box-shadow: 0 22px 58px rgba(67,42,78,.15);
+}
+
+.sl-cinematic-journey .sl-imm-step-rail {
+  margin: 0;
+  padding: 14px max(18px, calc((100vw - 1160px) / 2));
+  border-top: 1px solid rgba(74,35,85,.08);
+  border-radius: 0;
+  background: #fffaf7;
+}
+
+/* Connected commerce */
+.sl-cinematic-connected .sl-imm-connection-stage {
+  position: relative;
+  background: #fff9f2;
+}
+
+.sl-cinematic-connected .sl-imm-connection-art {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.sl-cinematic-connected .sl-panorama-intro {
+  top: clamp(24px, 4vw, 58px);
+}
+
+.sl-cinematic-connected .sl-imm-connection-badge {
+  top: auto;
+  bottom: 22px;
+}
+
+.sl-cinematic-connected .sl-imm-connection-badge--customer {
+  left: 11%;
+}
+
+.sl-cinematic-connected .sl-imm-connection-badge--merchant {
+  right: 11%;
+}
+
+.sl-cinematic-connected .sl-imm-connection-core {
+  bottom: 22px;
+}
+
+.sl-cinematic-connected .sl-imm-connection-details {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 34px 24px 44px;
+  border: 0;
+  background: #fffaf6;
+}
+
+/* Merchant workspace */
+.sellio-landing.sellio-landing--phase1b .sl-cinematic-workspace {
+  background: #eef8ff;
+}
+
+.sl-cinematic-workspace .sl-workspace-shell {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  background: #e8f7ff;
+}
+
+.sl-cinematic-workspace .sl-workspace-vignette {
+  z-index: 2;
+  background: linear-gradient(90deg, rgba(255,255,255,.24), transparent 42%);
+}
+
+.sl-cinematic-workspace .sl-panorama-intro {
+  top: clamp(24px, 4vw, 58px);
+}
+
+.sl-cinematic-workspace .sl-workspace-waypoints {
+  z-index: 9;
+}
+
+.sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(1) { left: 16%; top: 52%; }
+.sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(2) { left: 35%; top: 48%; }
+.sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(3) { left: 52%; top: 48%; }
+.sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(4) { left: 68%; top: 46%; }
+.sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(5) { right: 14%; top: 42%; }
+
+.sl-cinematic-workspace .sl-workspace-card {
+  z-index: 12;
+  left: auto;
+  right: clamp(18px, 3vw, 42px);
+  bottom: clamp(18px, 3vw, 34px);
+  width: min(650px, calc(100vw - 36px));
+  border-color: rgba(74,35,85,.12);
+  background: rgba(255,253,249,.87);
+  backdrop-filter: blur(20px) saturate(120%);
+  box-shadow: 0 22px 58px rgba(67,42,78,.15);
+}
+
+.sl-cinematic-section .sl-pan-hint {
+  z-index: 15;
+  left: auto;
+  right: 18px;
+  top: 18px;
+  transform: none;
+}
+
+@keyframes sl-map-pulse {
+  0% { opacity: .65; transform: scale(.82); }
+  75%, 100% { opacity: 0; transform: scale(1.35); }
+}
+
+@media (max-width: 900px) {
+  .sl-world-intro-overlay,
+  .sl-panorama-intro,
+  .sl-storefront-intro-overlay {
+    width: min(390px, 58vw);
+  }
+
+  .sl-storefront-feature-dock {
+    max-width: 54vw;
+  }
+}
+
+@media (max-width: 700px) {
+  .sellio-landing .sl-cinematic-world,
+  .sellio-landing .sl-cinematic-section {
+    padding: 0;
+    scroll-margin-top: 64px;
+  }
+
+  .sl-cinematic-world .sl-pan-scroll--world,
+  .sl-cinematic-world .sl-pan-scroll--storefront,
+  .sl-cinematic-journey .sl-pan-scroll--journey,
+  .sl-cinematic-connected .sl-pan-scroll--connection,
+  .sl-cinematic-workspace .sl-pan-scroll--workspace {
+    height: 520px;
+  }
+
+  .sl-cinematic-world .sl-pan-canvas--world,
+  .sl-cinematic-world .sl-pan-canvas--storefront,
+  .sl-cinematic-journey .sl-pan-canvas--journey,
+  .sl-cinematic-connected .sl-pan-canvas--connection,
+  .sl-cinematic-workspace .sl-pan-canvas--workspace {
+    width: 1560px;
+    min-width: 1560px;
+    height: 520px;
+  }
+
+  .sl-world-intro-overlay,
+  .sl-panorama-intro,
+  .sl-storefront-intro-overlay {
+    position: sticky;
+    left: 18px;
+    top: 20px;
+    width: min(330px, calc(100vw - 54px));
+    padding: 0 26px 14px 0;
+    background: linear-gradient(90deg, rgba(255,253,248,.9), rgba(255,253,248,.56) 68%, transparent);
+  }
+
+  .sl-world-intro-overlay h2,
+  .sl-panorama-intro h2,
+  .sl-storefront-intro-overlay h2 {
+    margin: 11px 0 8px;
+    font-size: clamp(2rem, 9.5vw, 2.8rem);
+    line-height: .98;
+  }
+
+  .sl-world-intro-overlay p,
+  .sl-panorama-intro p,
+  .sl-storefront-intro-overlay p {
+    max-width: 290px;
+    font-size: 13px;
+    line-height: 1.48;
+  }
+
+  .sl-world-intro-overlay .sellio-eyebrow,
+  .sl-panorama-intro .sellio-eyebrow {
+    font-size: 10px;
+  }
+
+  .sl-map-instruction {
+    right: 16px;
+    top: auto;
+    bottom: 16px;
+    font-size: 11px;
+  }
+
+  .sl-map-pin > i,
+  .sl-map-store-pin > i {
+    width: 50px;
+    height: 50px;
+    flex-basis: 50px;
+  }
+
+  .sl-map-pin > span,
+  .sl-map-store-pin > span {
+    font-size: 13px;
+  }
+
+  .sl-map-pin--retail { left: 38%; top: 42%; }
+  .sl-map-pin--fnb { left: 52%; top: 57%; }
+  .sl-map-pin--services { left: 65%; top: 34%; }
+  .sl-map-store-pin { left: 47%; top: 70%; }
+
+  .sl-map-detail-overlay {
+    right: 14px;
+    bottom: 14px;
+    width: min(340px, calc(100vw - 28px));
+    padding: 20px;
+    border-radius: 21px;
+  }
+
+  .sl-map-detail-overlay h3 {
+    font-size: 2rem;
+  }
+
+  .sl-world-stage--storefront .sl-pan-canvas--storefront {
+    width: 1560px;
+    min-width: 1560px;
+  }
+
+  .sl-storefront-intro-overlay {
+    top: 22px;
+  }
+
+  .sl-storefront-intro-overlay > div {
+    display: grid;
+    width: min(280px, calc(100vw - 70px));
+  }
+
+  .sl-storefront-intro-overlay a,
+  .sl-storefront-intro-overlay button {
+    width: 100%;
+  }
+
+  .sl-cinematic-world .sl-storefront-back-fixed {
+    left: 14px;
+    top: auto;
+    bottom: 14px;
+  }
+
+  .sl-storefront-feature-dock {
+    display: none;
+  }
+
+  .sl-imm-allocation--fullbleed {
+    display: flex;
+    padding: 16px 18px 20px;
+  }
+
+  .sl-cinematic-journey .sl-imm-scene {
+    display: block;
+    min-height: 520px;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .sl-cinematic-journey .sl-pan-scroll--journey {
+    flex: none;
+  }
+
+  .sl-cinematic-journey .sl-imm-hotspots button:nth-child(1) { left: 22%; top: 50%; }
+  .sl-cinematic-journey .sl-imm-hotspots button:nth-child(2) { left: 35%; top: 53%; }
+  .sl-cinematic-journey .sl-imm-hotspots button:nth-child(3) { left: 49%; top: 50%; }
+  .sl-cinematic-journey .sl-imm-hotspots button:nth-child(4) { left: 61%; top: 52%; }
+  .sl-cinematic-journey .sl-imm-hotspots button:nth-child(5) { left: 72%; top: 47%; }
+
+  .sl-cinematic-journey .sl-imm-story-card {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 16px;
+  }
+
+  .sl-cinematic-journey .sl-imm-story-card h3 {
+    font-size: 1.25rem;
+  }
+
+  .sl-cinematic-journey .sl-imm-story-card p {
+    display: none;
+  }
+
+  .sl-cinematic-journey .sl-imm-step-rail {
+    padding: 12px 18px 16px;
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-art {
+    width: 1560px;
+    min-width: 1560px;
+    height: 520px;
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-badge {
+    bottom: 14px;
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-badge--customer { left: 10%; }
+  .sl-cinematic-connected .sl-imm-connection-badge--merchant { right: 10%; }
+
+  .sl-cinematic-connected .sl-imm-connection-details {
+    padding: 28px 18px 34px;
+  }
+
+  .sl-cinematic-workspace .sl-workspace-shell {
+    display: block;
+    min-height: 520px;
+    border-radius: 0;
+  }
+
+  .sl-cinematic-workspace .sl-pan-scroll--workspace {
+    flex: none;
+  }
+
+  .sl-cinematic-workspace .sl-workspace-waypoints button strong {
+    display: block;
+  }
+
+  .sl-cinematic-workspace .sl-workspace-card {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    grid-template-columns: 42px minmax(0, 1fr);
+    padding: 15px;
+  }
+
+  .sl-cinematic-workspace .sl-workspace-card p {
+    display: none;
+  }
+
+  .sl-cinematic-workspace .sl-workspace-card > a {
+    display: none;
+  }
+
+  .sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(1) { left: 16%; top: 54%; }
+  .sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(2) { left: 35%; top: 50%; }
+  .sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(3) { left: 52%; top: 50%; }
+  .sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(4) { left: 68%; top: 48%; }
+  .sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(5) { right: 14%; top: 44%; }
+
+  .sl-cinematic-section .sl-pan-hint {
+    right: 14px;
+    top: auto;
+    bottom: 14px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 420px) {
+  .sl-world-intro-overlay,
+  .sl-panorama-intro,
+  .sl-storefront-intro-overlay {
+    width: min(300px, calc(100vw - 42px));
+  }
+
+  .sl-world-intro-overlay h2,
+  .sl-panorama-intro h2,
+  .sl-storefront-intro-overlay h2 {
+    font-size: 2rem;
+  }
+
+  .sl-map-detail-overlay p {
+    font-size: 13px;
+  }
+
+  .sl-cinematic-journey .sl-imm-story-card__icon,
+  .sl-cinematic-workspace .sl-workspace-card__icon {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sl-map-pin,
+  .sl-map-store-pin,
+  .sl-map-pin > i::after,
+  .sl-map-store-pin > i::after {
+    animation: none;
+    transition: none;
+  }
+}
