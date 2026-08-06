@@ -131,25 +131,46 @@ export default function ScrollWorldExperience() {
         if (filmTime >= SCENE_CUES[index]) nextActive = index;
         else break;
       }
+
       if (nextActive !== activeRef.current) {
         activeRef.current = nextActive;
         setActive(nextActive);
       }
       if (progressBarRef.current) progressBarRef.current.style.transform = 'scaleX(' + progress + ')';
       hintRef.current?.classList.toggle('is-hidden', progress > 0.08);
-
-      if (!video.ended) animationFrame = window.requestAnimationFrame(syncPlayback);
     };
 
+    const tick = () => {
+      syncPlayback();
+      if (!cancelled && !video.paused && !video.ended) {
+        animationFrame = window.requestAnimationFrame(tick);
+      }
+    };
+
+    const startSync = () => {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(tick);
+    };
+
+    video.addEventListener('play', startSync);
+    video.addEventListener('seeked', syncPlayback);
+    video.addEventListener('timeupdate', syncPlayback);
+    video.addEventListener('ended', syncPlayback);
+
     video.currentTime = START_AT;
+    syncPlayback();
     video.play()
       .then(() => video.classList.add('has-painted'))
       .catch(() => {});
-    animationFrame = window.requestAnimationFrame(syncPlayback);
+    startSync();
 
     return () => {
       cancelled = true;
       window.cancelAnimationFrame(animationFrame);
+      video.removeEventListener('play', startSync);
+      video.removeEventListener('seeked', syncPlayback);
+      video.removeEventListener('timeupdate', syncPlayback);
+      video.removeEventListener('ended', syncPlayback);
     };
   }, [reduceMotion, videoReady]);
 
@@ -161,8 +182,13 @@ export default function ScrollWorldExperience() {
       const index = SCENES.findIndex((item) => item.id === sceneId);
       const video = videoRef.current;
       if (index < 0 || !video) return;
+      activeRef.current = index;
+      setActive(index);
       const availableDuration = Math.max(0.001, video.duration - START_AT - 0.04);
-      video.currentTime = START_AT + (SCENE_CUES[index] / FILM_DURATION) * availableDuration;
+      const progress = SCENE_CUES[index] / FILM_DURATION;
+      if (progressBarRef.current) progressBarRef.current.style.transform = 'scaleX(' + progress + ')';
+      hintRef.current?.classList.toggle('is-hidden', progress > 0.08);
+      video.currentTime = START_AT + progress * availableDuration;
       video.play().then(() => video.classList.add('has-painted')).catch(() => {});
     };
     seekFromHash();
@@ -190,9 +216,14 @@ export default function ScrollWorldExperience() {
     const video = videoRef.current;
     if (!root) return;
     root.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    activeRef.current = index;
+    setActive(index);
+    const progress = SCENE_CUES[index] / FILM_DURATION;
+    if (progressBarRef.current) progressBarRef.current.style.transform = 'scaleX(' + progress + ')';
+    hintRef.current?.classList.toggle('is-hidden', progress > 0.08);
     if (!video || !videoReady) return;
     const availableDuration = Math.max(0.001, video.duration - START_AT - 0.04);
-    video.currentTime = START_AT + (SCENE_CUES[index] / FILM_DURATION) * availableDuration;
+    video.currentTime = START_AT + progress * availableDuration;
     video.play().then(() => video.classList.add('has-painted')).catch(() => {});
   };
 
