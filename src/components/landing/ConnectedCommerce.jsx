@@ -47,7 +47,7 @@ export default function ConnectedCommerce() {
     <section id="connected" className="sellio-section sl-imm-section sl-imm-connected sl-cinematic-section sl-cinematic-connected" aria-labelledby="sellio-connected-heading">
       <div className="sellio-container">
         <div className="sl-imm-connection-stage">
-          <div className="sl-pan-scroll sl-pan-scroll--connection" tabIndex="0" aria-label="Swipe horizontally to compare customer and merchant experiences">
+          <div className="sl-pan-scroll sl-pan-scroll--connection" tabIndex="0" aria-label="Connected customer and merchant experience">
             <motion.div
               className="sl-imm-connection-art sl-pan-canvas sl-pan-canvas--connection"
               initial={false}
