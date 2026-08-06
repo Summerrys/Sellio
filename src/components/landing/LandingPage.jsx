@@ -32,6 +32,7 @@ import './phase1b.css';
 import './immersive.css';
 import './mobile-pan.css';
 import './immersive-fullbleed.css';
+import './mobile-native.css';
 
 const LOGO_URL = 'https://assets.apptelier.sg/sellio/Logo_Sellio.png';
 const ASSISTANT_URL = 'https://assets.apptelier.sg/sellio/Logo_AISellio_Assistant.png';
