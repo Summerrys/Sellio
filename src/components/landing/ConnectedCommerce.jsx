@@ -11,6 +11,7 @@ import {
   Sparkles,
   Store,
 } from 'lucide-react';
+import { SELLIO_IMMERSIVE_ASSETS } from './immersiveAssets';
 
 const CUSTOMER_POINTS = [
   { Icon: Store, title: 'Branded discovery', copy: 'The merchant’s identity stays visible from the first browse.' },
@@ -43,16 +44,8 @@ export default function ConnectedCommerce() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <section id="connected" className="sellio-section sl-imm-section sl-imm-connected" aria-labelledby="sellio-connected-heading">
+    <section id="connected" className="sellio-section sl-imm-section sl-imm-connected sl-cinematic-section sl-cinematic-connected" aria-labelledby="sellio-connected-heading">
       <div className="sellio-container">
-        <div className="sl-imm-heading sl-imm-heading--center">
-          <div>
-            <span className="sellio-eyebrow"><HeartHandshake /> Behind stage 03 · Connected commerce</span>
-            <h2 id="sellio-connected-heading">Delight in front.<br />Clarity behind the counter.</h2>
-          </div>
-          <p>Customers should feel the brand. Merchants should feel in control. Sellio connects both without making either side look like software plumbing.</p>
-        </div>
-
         <div className="sl-imm-connection-stage">
           <div className="sl-pan-scroll sl-pan-scroll--connection" tabIndex="0" aria-label="Swipe horizontally to compare customer and merchant experiences">
             <motion.div
@@ -62,15 +55,20 @@ export default function ConnectedCommerce() {
               transition={{ duration: .55, ease: [0.2, 0.8, 0.2, 1] }}
             >
               <img
-                src="/assets/immersive/connected-commerce.webp"
+                src={SELLIO_IMMERSIVE_ASSETS.connected}
                 alt="A premium connected commerce environment linking a customer storefront to merchant operations"
               />
+              <header className="sl-panorama-intro sl-panorama-intro--connected">
+                <span className="sellio-eyebrow"><HeartHandshake /> Connected commerce</span>
+                <h2 id="sellio-connected-heading">Delight in front.<br />Clarity behind the counter.</h2>
+                <p>Customers feel the brand while merchants stay in control.</p>
+              </header>
               <div className="sl-imm-connection-badge sl-imm-connection-badge--customer"><Store /> Customer experience</div>
               <div className="sl-imm-connection-badge sl-imm-connection-badge--merchant"><BarChart3 /> Merchant operations</div>
               <div className="sl-imm-connection-core"><Sparkles /><span>Connected by Sellio</span></div>
             </motion.div>
           </div>
-          <div className="sl-pan-hint"><MoveHorizontal /> Swipe to compare both sides</div>
+          <div className="sl-pan-hint"><MoveHorizontal /> Drag to compare both sides</div>
           <div className="sl-imm-connection-details">
             <PointList eyebrow="Customer side" title="Easy to enter. Easy to trust." points={CUSTOMER_POINTS} />
             <PointList eyebrow="Merchant side" title="Easy to see. Easy to act." points={MERCHANT_POINTS} />
