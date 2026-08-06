@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowUpRight, MoveHorizontal, Sparkles } from 'lucide-react';
 import { PRODUCT_VIEWS } from './landingData';
-import { SELLIO_IMMERSIVE_ASSETS } from './immersiveAssets';
+import { SELLIO_IMMERSIVE_ASSETS, SELLIO_IMMERSIVE_MOBILE_ASSETS } from './immersiveAssets';
 import './mobile-pan.css';
 
 const VIEW_POSITIONS = [0.02, 0.25, 0.5, 0.75, 0.98];
@@ -39,10 +39,15 @@ export default function ProductShowcase() {
             aria-label="Swipe horizontally to explore the connected Sellio workspace"
           >
             <div className="sl-pan-canvas sl-pan-canvas--workspace">
-              <img
-                src={SELLIO_IMMERSIVE_ASSETS.workspace}
-                alt="A bright dimensional Sellio workspace connecting storefront, orders, inventory, analytics and AI"
-              />
+              <picture className="sl-responsive-art">
+                <source media="(max-width: 600px)" srcSet={SELLIO_IMMERSIVE_MOBILE_ASSETS.workspace} />
+                <img
+                  src={SELLIO_IMMERSIVE_ASSETS.workspace}
+                  alt="A bright dimensional Sellio workspace connecting storefront, orders, inventory, analytics and AI"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </picture>
               <div className="sl-workspace-vignette" aria-hidden="true" />
               <header className="sl-panorama-intro sl-panorama-intro--workspace">
                 <span className="sellio-eyebrow"><Sparkles aria-hidden="true" /> Merchant workspace</span>
