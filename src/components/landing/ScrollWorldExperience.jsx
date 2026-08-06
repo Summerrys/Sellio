@@ -6,8 +6,6 @@ import './scroll-world.css';
 // Public Supabase URLs can replace these fallbacks without changing the player.
 const DESKTOP_VIDEO = import.meta.env.VITE_SELLIO_WORLD_DESKTOP_VIDEO || '/assets/scroll-world/sellio-scroll-world-desktop-1080p30.mp4';
 const MOBILE_VIDEO = import.meta.env.VITE_SELLIO_WORLD_MOBILE_VIDEO || '/assets/scroll-world/sellio-scroll-world-mobile-1080p30.mp4';
-const DESKTOP_POSTER = '/assets/scroll-world/sellio-scroll-world-desktop-1080p30-poster.webp';
-const MOBILE_POSTER = '/assets/scroll-world/sellio-scroll-world-mobile-1080p30-poster.webp';
 const START_AT = 0;
 const FILM_DURATION = 43.266667;
 const SCENE_CUES = [0, 8.083334, 16.166668, 24.250002, 32.333336, 40.41667];
@@ -108,7 +106,6 @@ export default function ScrollWorldExperience() {
     () => '/assets/scroll-world/' + (mobile ? 'mobile/' : 'desktop/') + scene.poster,
     [mobile, scene.poster],
   );
-  const videoPoster = mobile ? MOBILE_POSTER : DESKTOP_POSTER;
   const videoReady = readySource === source;
 
   useEffect(() => {
@@ -241,7 +238,6 @@ export default function ScrollWorldExperience() {
               autoPlay
               playsInline
               preload="auto"
-              poster={videoPoster}
               disablePictureInPicture
               onLoadedMetadata={() => setReadySource(source)}
               onLoadedData={(event) => event.currentTarget.classList.add('has-painted')}
