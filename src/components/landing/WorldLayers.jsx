@@ -5,7 +5,6 @@ import {
   Coins,
   Map,
   MoveHorizontal,
-  Palette,
   Sparkles,
   Store,
 } from 'lucide-react';
@@ -94,10 +93,6 @@ export default function WorldLayers() {
           ))}
         </div>
 
-        <div className="sl-imm-vision-note">
-          <Palette />
-          <div><strong>Premium world, restrained game layer.</strong><span>Commerce stays intuitive. Gamification adds identity and progression around it.</span></div>
-        </div>
       </div>
     </section>
   );
