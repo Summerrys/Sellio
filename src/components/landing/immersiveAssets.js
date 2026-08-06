@@ -1,5 +1,5 @@
 const configuredBase = import.meta.env.VITE_SELLIO_IMMERSIVE_ASSET_BASE_URL;
-export const SELLIO_IMMERSIVE_ASSET_BASE = (configuredBase || '/assets/immersive-hd').replace(/\/$/, '');
+export const SELLIO_IMMERSIVE_ASSET_BASE = (configuredBase || 'https://assets.apptelier.sg/sellio').replace(/\/$/, '');
 
 export const SELLIO_IMMERSIVE_ASSETS = {
   world: `${SELLIO_IMMERSIVE_ASSET_BASE}/01-sector-world.webp`,
