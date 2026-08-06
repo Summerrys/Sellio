@@ -311,8 +311,9 @@
   .sl-imm-layer__art .sl-pan-canvas--layer {
     width: 100%;
     min-width: 100%;
-    height: calc((100vw - 32px) * 1.777778);
-    min-height: calc((100vw - 32px) * 1.777778);
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 9 / 16;
     overflow: hidden;
   }
 
