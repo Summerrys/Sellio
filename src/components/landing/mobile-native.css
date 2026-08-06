@@ -1,0 +1,351 @@
+/* Native portrait scenes for phones.
+   Mobile uses the dedicated 1080×1920 artwork rather than cropping or panning desktop panoramas. */
+
+.sl-responsive-art {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.sl-responsive-art > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+@media (max-width: 600px) {
+  .sl-cinematic-world .sl-pan-scroll--world,
+  .sl-cinematic-world .sl-pan-scroll--storefront,
+  .sl-cinematic-journey .sl-pan-scroll--journey,
+  .sl-cinematic-connected .sl-pan-scroll--connection,
+  .sl-cinematic-workspace .sl-pan-scroll--workspace {
+    width: 100vw;
+    height: 177.7778vw;
+    overflow: hidden;
+    overscroll-behavior: auto;
+    touch-action: auto;
+  }
+
+  .sl-cinematic-world .sl-pan-canvas--world,
+  .sl-cinematic-world .sl-pan-canvas--storefront,
+  .sl-cinematic-journey .sl-pan-canvas--journey,
+  .sl-cinematic-connected .sl-pan-canvas--connection,
+  .sl-cinematic-connected .sl-imm-connection-art,
+  .sl-cinematic-workspace .sl-pan-canvas--workspace {
+    width: 100vw;
+    min-width: 100vw;
+    height: 177.7778vw;
+    min-height: 177.7778vw;
+  }
+
+  .sl-cinematic-world .sl-world-stage,
+  .sl-cinematic-journey .sl-imm-scene,
+  .sl-cinematic-connected .sl-imm-connection-stage,
+  .sl-cinematic-workspace .sl-workspace-shell {
+    overflow: visible;
+  }
+
+  .sl-world-intro-overlay,
+  .sl-panorama-intro,
+  .sl-storefront-intro-overlay {
+    position: absolute;
+    left: 18px;
+    top: 22px;
+    width: min(340px, calc(100vw - 36px));
+    padding: 0 18px 26px 0;
+    background: linear-gradient(180deg, rgba(255, 253, 248, .9) 0%, rgba(255, 253, 248, .62) 62%, transparent 100%);
+    filter: drop-shadow(0 10px 18px rgba(58, 38, 68, .08));
+  }
+
+  .sl-world-intro-overlay h2,
+  .sl-panorama-intro h2,
+  .sl-storefront-intro-overlay h2 {
+    max-width: 310px;
+    margin: 10px 0 8px;
+    font-size: clamp(1.95rem, 9.2vw, 2.65rem);
+    line-height: .98;
+  }
+
+  .sl-world-intro-overlay p,
+  .sl-panorama-intro p,
+  .sl-storefront-intro-overlay p {
+    max-width: 285px;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .sl-map-instruction,
+  .sl-cinematic-section .sl-pan-hint,
+  .sl-imm-layer__art .sl-pan-hint {
+    display: none;
+  }
+
+  .sl-map-pin,
+  .sl-map-store-pin {
+    gap: 7px;
+  }
+
+  .sl-map-pin > i,
+  .sl-map-store-pin > i {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+    box-shadow: 0 0 0 6px rgba(255,255,255,.34), 0 10px 22px rgba(86,45,100,.25);
+  }
+
+  .sl-map-pin > i::after,
+  .sl-map-store-pin > i::after {
+    inset: -8px;
+  }
+
+  .sl-map-pin > span,
+  .sl-map-store-pin > span {
+    max-width: 92px;
+    font-size: 11px;
+  }
+
+  .sl-map-pin--retail {
+    left: 17%;
+    top: 49%;
+  }
+
+  .sl-map-pin--fnb {
+    left: 43%;
+    top: 61%;
+  }
+
+  .sl-map-pin--services {
+    left: 66%;
+    top: 48%;
+    flex-direction: row-reverse;
+    text-align: right;
+  }
+
+  .sl-map-store-pin {
+    left: 35%;
+    top: 69%;
+  }
+
+  .sl-map-store-pin small {
+    font-size: 8px;
+  }
+
+  .sl-map-store-pin strong {
+    font-size: 13px;
+  }
+
+  .sl-map-detail-overlay {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    width: auto;
+    max-height: 38%;
+    overflow: auto;
+    padding: 18px;
+    border-radius: 22px;
+    background: rgba(255, 253, 249, .92);
+  }
+
+  .sl-map-detail-overlay h3 {
+    padding-right: 34px;
+    font-size: 1.75rem;
+  }
+
+  .sl-map-detail-overlay p {
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+
+  .sl-map-detail-overlay__action {
+    min-height: 46px;
+  }
+
+  .sl-storefront-intro-overlay {
+    top: 22px;
+  }
+
+  .sl-storefront-intro-overlay > div {
+    width: min(285px, calc(100vw - 54px));
+  }
+
+  .sl-cinematic-world .sl-storefront-back-fixed {
+    left: 14px;
+    top: auto;
+    bottom: 14px;
+  }
+
+  .sl-imm-allocation--fullbleed {
+    gap: 8px;
+    overflow-x: auto;
+    padding: 15px 18px 18px;
+    scroll-snap-type: x proximity;
+  }
+
+  .sl-imm-allocation--fullbleed > span {
+    min-width: 132px;
+    scroll-snap-align: start;
+  }
+
+  .sl-cinematic-journey .sl-imm-hotspots button:nth-child(1) { left: 38%; top: 76%; }
+  .sl-cinematic-journey .sl-imm-hotspots button:nth-child(2) { left: 57%; top: 66%; }
+  .sl-cinematic-journey .sl-imm-hotspots button:nth-child(3) { left: 39%; top: 54%; }
+  .sl-cinematic-journey .sl-imm-hotspots button:nth-child(4) { left: 57%; top: 41%; }
+  .sl-cinematic-journey .sl-imm-hotspots button:nth-child(5) { left: 42%; top: 28%; }
+
+  .sl-cinematic-journey .sl-imm-story-card {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    width: calc(100% - 28px);
+    max-width: none;
+    margin: -1px 14px 18px;
+    padding: 17px;
+    border-radius: 20px;
+    background: #fffdf9;
+    box-shadow: 0 18px 44px rgba(67,42,78,.12);
+  }
+
+  .sl-cinematic-journey .sl-imm-story-card p {
+    display: block;
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+
+  .sl-cinematic-journey .sl-imm-step-rail {
+    display: flex;
+    overflow-x: auto;
+    gap: 8px;
+    padding: 12px 14px 16px;
+    scroll-snap-type: x proximity;
+  }
+
+  .sl-cinematic-journey .sl-imm-step-rail button {
+    min-width: 86px;
+    scroll-snap-align: start;
+  }
+
+  .sl-cinematic-connected .sl-panorama-intro--connected {
+    top: 22px;
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-badge {
+    max-width: 145px;
+    min-height: 38px;
+    padding: 0 10px;
+    font-size: 10px;
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-badge--customer {
+    left: 7%;
+    right: auto;
+    top: 29%;
+    bottom: auto;
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-badge--merchant {
+    left: auto;
+    right: 7%;
+    top: auto;
+    bottom: 17%;
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-core {
+    left: 50%;
+    right: auto;
+    top: 55%;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-details {
+    padding: 26px 16px 34px;
+  }
+
+  .sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(1) { left: 13%; top: 76%; }
+  .sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(2) { left: 23%; top: 58%; }
+  .sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(3) { left: 43%; top: 49%; }
+  .sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(4) { left: 61%; top: 39%; }
+  .sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(5) { left: 69%; right: auto; top: 26%; }
+
+  .sl-cinematic-workspace .sl-workspace-waypoints button strong {
+    display: none;
+  }
+
+  .sl-cinematic-workspace .sl-workspace-card {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    width: calc(100% - 28px);
+    max-width: none;
+    margin: -1px 14px 18px;
+    padding: 17px;
+    border-radius: 20px;
+    background: #fffdf9;
+    box-shadow: 0 18px 44px rgba(67,42,78,.12);
+  }
+
+  .sl-cinematic-workspace .sl-workspace-card p {
+    display: block;
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+
+  .sl-cinematic-workspace .sl-workspace-card > a {
+    display: inline-flex;
+  }
+
+  .sl-imm-layer__art {
+    min-height: 0;
+  }
+
+  .sl-imm-layer__art .sl-pan-scroll--layer,
+  .sl-imm-layer__art .sl-pan-canvas--layer {
+    width: 100%;
+    min-width: 100%;
+    height: calc((100vw - 32px) * 1.777778);
+    min-height: calc((100vw - 32px) * 1.777778);
+    overflow: hidden;
+  }
+
+  .sl-imm-layer__art .sl-pan-scroll--layer {
+    touch-action: auto;
+  }
+
+  .sl-imm-layer__art .sl-responsive-art {
+    border-radius: inherit;
+  }
+}
+
+@media (max-width: 390px) {
+  .sl-world-intro-overlay,
+  .sl-panorama-intro,
+  .sl-storefront-intro-overlay {
+    width: calc(100vw - 32px);
+    left: 16px;
+  }
+
+  .sl-map-pin > span,
+  .sl-map-store-pin > span {
+    display: none;
+  }
+
+  .sl-map-pin--retail { left: 20%; }
+  .sl-map-pin--fnb { left: 47%; }
+  .sl-map-pin--services { left: 74%; }
+  .sl-map-store-pin { left: 40%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sl-responsive-art {
+    transform: none !important;
+  }
+}
