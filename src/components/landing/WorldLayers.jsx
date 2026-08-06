@@ -9,6 +9,7 @@ import {
   Sparkles,
   Store,
 } from 'lucide-react';
+import { SELLIO_IMMERSIVE_ASSETS } from './immersiveAssets';
 
 const LAYERS = [
   {
@@ -17,7 +18,7 @@ const LAYERS = [
     title: 'Discover the right district.',
     description: 'Customers enter a coherent sector world rather than a directory grid. F&B starts the network, while Retail and Services already have room to expand.',
     tags: ['Sector discovery', 'Merchant allocation', 'Connected districts'],
-    image: '/assets/immersive/sector-world.webp',
+    image: SELLIO_IMMERSIVE_ASSETS.world,
     alt: 'A premium dimensional marketplace composed of connected commerce districts',
     Icon: Map,
   },
@@ -27,7 +28,7 @@ const LAYERS = [
     title: 'Zoom into a merchant-owned place.',
     description: 'Selecting a merchant brings its neighbourhood forward, then opens a storefront that retains the merchant’s own brand, products and customer journey.',
     tags: ['Branded identity', 'Product browsing', 'Direct ordering'],
-    image: '/assets/immersive/storefront-zoom.webp',
+    image: SELLIO_IMMERSIVE_ASSETS.storefront,
     alt: 'A dimensional close-up of a merchant-owned storefront in Sellio World',
     Icon: Store,
   },
@@ -37,7 +38,7 @@ const LAYERS = [
     title: 'Earn ways to make the space yours.',
     description: 'Sellio Coins and cosmetic rewards can evolve alongside the marketplace—supporting seasonal decoration and merchant expression without turning core commerce into a game.',
     tags: ['Sellio Coins', 'Seasonal décor', 'Merchant progression'],
-    image: '/assets/immersive/progression.webp',
+    image: SELLIO_IMMERSIVE_ASSETS.progression,
     alt: 'Premium merchant progression objects leading to an upgraded seasonal storefront',
     Icon: Coins,
   },
@@ -51,7 +52,7 @@ export default function WorldLayers() {
       <div className="sellio-container">
         <div className="sl-imm-heading sl-imm-heading--light">
           <div>
-            <span className="sellio-eyebrow sellio-eyebrow--dark"><Sparkles /> Film stage 05 · Progression</span>
+            <span className="sellio-eyebrow sellio-eyebrow--dark"><Sparkles /> Marketplace progression</span>
             <h2 id="sellio-layers-heading">One world.<br />Three meaningful layers.</h2>
           </div>
           <p>The experience remains useful at every depth: discover a district, enter a real storefront, then personalise that place through progression.</p>
@@ -73,7 +74,7 @@ export default function WorldLayers() {
                     </div>
                   </div>
                   <span>{number}</span>
-                  <div className="sl-pan-hint sl-pan-hint--layer"><MoveHorizontal /> Swipe image</div>
+                  <div className="sl-pan-hint sl-pan-hint--layer"><MoveHorizontal /> Drag image</div>
                 </motion.div>
                 <div className="sl-imm-layer__copy">
                   <span><Icon /> {eyebrow}</span>
