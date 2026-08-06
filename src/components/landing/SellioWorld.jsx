@@ -241,12 +241,6 @@ export default function SellioWorld() {
           )}
         </AnimatePresence>
 
-        <div className="sl-imm-allocation sl-imm-allocation--fullbleed" aria-label="Merchant allocation journey">
-          <span><b>1</b><i>Merchant joins</i></span><ArrowRight />
-          <span><b>2</b><i>Business sector identified</i></span><ArrowRight />
-          <span><b>3</b><i>District location allocated</i></span><ArrowRight />
-          <span><b>4</b><i>Branded storefront opens</i></span>
-        </div>
       </div>
     </section>
   );
