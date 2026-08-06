@@ -46,7 +46,7 @@
   z-index: 2;
   opacity: 0;
   filter: brightness(1.04) saturate(1.04) contrast(1);
-  transition: opacity .38s ease;
+  transition: opacity .22s ease;
 }
 .sl-sw-video.is-ready.has-painted {
   opacity: 1;
@@ -290,20 +290,6 @@
   width: 14px;
   height: 14px;
 }
-.sl-sw-loading {
-  position: absolute;
-  z-index: 12;
-  right: 24px;
-  bottom: 22px;
-  padding: 8px 11px;
-  border-radius: 999px;
-  color: #3b1b49;
-  background: rgba(255,255,255,.8);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .04em;
-  backdrop-filter: blur(12px);
-}
 .sellio-landing--scrollworld .sellio-proof-strip {
   position: relative;
   z-index: 4;
@@ -522,11 +508,6 @@
     top: 16px;
     bottom: auto;
     transform: none;
-  }
-  .sl-sw-loading {
-    right: 18px;
-    bottom: auto;
-    top: 52px;
   }
   .sellio-footer-launch {
     display: grid;
