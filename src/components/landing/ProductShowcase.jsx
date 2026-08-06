@@ -36,7 +36,7 @@ export default function ProductShowcase() {
             className="sl-pan-scroll sl-pan-scroll--workspace"
             role="tabpanel"
             tabIndex="0"
-            aria-label="Swipe horizontally to explore the connected Sellio workspace"
+            aria-label="Interactive connected Sellio workspace"
           >
             <div className="sl-pan-canvas sl-pan-canvas--workspace">
               <picture className="sl-responsive-art">
