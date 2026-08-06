@@ -85,7 +85,7 @@ export default function CommerceJourney() {
             ref={panRef}
             className="sl-pan-scroll sl-pan-scroll--journey"
             tabIndex="0"
-            aria-label="Swipe horizontally to explore the five stages of the commerce journey"
+            aria-label="Interactive commerce journey with five selectable stages"
           >
             <div className="sl-pan-canvas sl-pan-canvas--journey">
               <motion.picture
