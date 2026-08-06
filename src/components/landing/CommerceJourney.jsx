@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import './immersive.css';
 import './mobile-pan.css';
+import { SELLIO_IMMERSIVE_ASSETS } from './immersiveAssets';
 
 const STEPS = [
   {
@@ -77,16 +78,8 @@ export default function CommerceJourney() {
   };
 
   return (
-    <section id="journey" className="sellio-section sl-imm-section sl-imm-journey" aria-labelledby="sellio-journey-heading">
+    <section id="journey" className="sellio-section sl-imm-section sl-imm-journey sl-cinematic-section sl-cinematic-journey" aria-labelledby="sellio-journey-heading">
       <div className="sellio-container">
-        <div className="sl-imm-heading">
-          <div>
-            <span className="sellio-eyebrow"><Sparkles /> Film stage 03 · Order journey</span>
-            <h2 id="sellio-journey-heading">From first tap to<br />a smarter next move.</h2>
-          </div>
-          <p>Sellio connects the visible customer experience to the operational work behind it. Select a stage to follow the same order through the system.</p>
-        </div>
-
         <div className="sl-imm-scene sl-imm-scene--journey">
           <div
             ref={panRef}
@@ -96,13 +89,18 @@ export default function CommerceJourney() {
           >
             <div className="sl-pan-canvas sl-pan-canvas--journey">
               <motion.img
-                src="/assets/immersive/commerce-journey.webp"
+                src={SELLIO_IMMERSIVE_ASSETS.journey}
                 alt="A dimensional commerce journey connecting a mobile storefront, order, preparation, inventory and analytics"
                 initial={false}
                 animate={reduceMotion ? undefined : { scale: [1.006, 1.014, 1.006] }}
                 transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut' }}
               />
               <div className="sl-imm-scene__shade" aria-hidden="true" />
+              <header className="sl-panorama-intro sl-panorama-intro--journey">
+                <span className="sellio-eyebrow"><Sparkles /> Order journey</span>
+                <h2 id="sellio-journey-heading">From first tap to<br />a smarter next move.</h2>
+                <p>Select a waypoint to follow the same order from discovery to insight.</p>
+              </header>
               <div className="sl-imm-hotspots" aria-label="Commerce journey waypoints">
                 {STEPS.map((step, index) => (
                   <button
@@ -120,7 +118,7 @@ export default function CommerceJourney() {
             </div>
           </div>
 
-          <div className="sl-pan-hint"><MoveHorizontal /> Swipe to explore · Tap a waypoint</div>
+          <div className="sl-pan-hint"><MoveHorizontal /> Drag to explore · Tap a waypoint</div>
 
           <AnimatePresence mode="wait">
             <motion.article
