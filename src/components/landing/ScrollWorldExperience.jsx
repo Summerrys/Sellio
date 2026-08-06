@@ -1,11 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Check, ChevronDown, MousePointer2, Sparkles } from 'lucide-react';
 import { useReducedMotion } from 'framer-motion';
 import './scroll-world.css';
+import { SELLIO_WORLD_MEDIA } from './immersiveAssets';
 
-// Public Supabase URLs can replace these fallbacks without changing the player.
-const DESKTOP_VIDEO = import.meta.env.VITE_SELLIO_WORLD_DESKTOP_VIDEO || '/assets/scroll-world/sellio-scroll-world-desktop-1080p30.mp4';
-const MOBILE_VIDEO = import.meta.env.VITE_SELLIO_WORLD_MOBILE_VIDEO || '/assets/scroll-world/sellio-scroll-world-mobile-1080p30.mp4';
+const DESKTOP_VIDEO = import.meta.env.VITE_SELLIO_WORLD_DESKTOP_VIDEO || SELLIO_WORLD_MEDIA.video.desktop;
+const MOBILE_VIDEO = import.meta.env.VITE_SELLIO_WORLD_MOBILE_VIDEO || SELLIO_WORLD_MEDIA.video.mobile;
 const START_AT = 0;
 const FILM_DURATION = 43.266667;
 const SCENE_CUES = [0, 8.083334, 16.166668, 24.250002, 32.333336, 40.41667];
@@ -102,10 +102,7 @@ export default function ScrollWorldExperience() {
 
   const scene = SCENES[active];
   const source = mobile ? MOBILE_VIDEO : DESKTOP_VIDEO;
-  const scenePoster = useMemo(
-    () => '/assets/scroll-world/' + (mobile ? 'mobile/' : 'desktop/') + scene.poster,
-    [mobile, scene.poster],
-  );
+  const scenePoster = mobile ? SELLIO_WORLD_MEDIA.poster.mobile : SELLIO_WORLD_MEDIA.poster.desktop;
   const videoReady = readySource === source;
 
   useEffect(() => {
