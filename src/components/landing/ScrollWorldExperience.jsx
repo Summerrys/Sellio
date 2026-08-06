@@ -99,7 +99,7 @@ export default function ScrollWorldExperience() {
   const activeRef = useRef(0);
   const reduceMotion = useReducedMotion();
   const [active, setActive] = useState(0);
-  const [videoReady, setVideoReady] = useState(false);
+  const [readySource, setReadySource] = useState(null);
   const [mobile, setMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 860px), (hover: none) and (pointer: coarse)').matches);
 
   const scene = SCENES[active];
@@ -109,6 +109,7 @@ export default function ScrollWorldExperience() {
     [mobile, scene.poster],
   );
   const videoPoster = mobile ? MOBILE_POSTER : DESKTOP_POSTER;
+  const videoReady = readySource === source;
 
   useEffect(() => {
     const query = window.matchMedia('(max-width: 860px), (hover: none) and (pointer: coarse)');
@@ -117,11 +118,6 @@ export default function ScrollWorldExperience() {
     query.addEventListener?.('change', update);
     return () => query.removeEventListener?.('change', update);
   }, []);
-
-  useEffect(() => {
-    setVideoReady(false);
-    videoRef.current?.classList.remove('has-painted');
-  }, [source]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -247,7 +243,7 @@ export default function ScrollWorldExperience() {
               preload="auto"
               poster={videoPoster}
               disablePictureInPicture
-              onLoadedMetadata={() => setVideoReady(true)}
+              onLoadedMetadata={() => setReadySource(source)}
               onLoadedData={(event) => event.currentTarget.classList.add('has-painted')}
               onSeeked={(event) => event.currentTarget.classList.add('has-painted')}
             />
