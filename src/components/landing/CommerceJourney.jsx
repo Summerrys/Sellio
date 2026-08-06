@@ -64,6 +64,8 @@ export default function CommerceJourney() {
   const panRef = useRef(null);
   const reduceMotion = useReducedMotion();
   const active = STEPS[activeIndex];
+  const nextIndex = (activeIndex + 1) % STEPS.length;
+  const next = STEPS[nextIndex];
   const ActiveIcon = active.Icon;
 
   const panToStep = (index) => {
@@ -136,37 +138,30 @@ export default function CommerceJourney() {
               exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
               transition={{ duration: .28 }}
             >
-              <div className="sl-imm-story-card__icon"><ActiveIcon /></div>
-              <div>
-                <span>{active.number} · {active.label}</span>
-                <h3>{active.title}</h3>
-                <p>{active.description}</p>
+              <div className="sl-journey-card__meta">
+                <span>Stage {active.number} of 05</span>
+                <strong>{active.label}</strong>
+              </div>
+              <div className="sl-journey-card__body">
+                <div className="sl-imm-story-card__icon"><ActiveIcon /></div>
+                <div>
+                  <h3>{active.title}</h3>
+                  <p>{active.description}</p>
+                </div>
               </div>
               <button
+                className="sl-journey-card__next"
                 type="button"
-                onClick={() => panToStep((activeIndex + 1) % STEPS.length)}
-                aria-label="Show and centre the next commerce stage"
+                onClick={() => panToStep(nextIndex)}
+                aria-label={`Show next commerce stage: ${next.label}`}
               >
+                <span>Next: {next.label}</span>
                 <ArrowRight />
               </button>
             </motion.article>
           </AnimatePresence>
         </div>
 
-        <div className="sl-imm-step-rail" aria-label="Select and centre a commerce stage">
-          {STEPS.map((step, index) => (
-            <button
-              key={step.key}
-              type="button"
-              className={index === activeIndex ? 'is-active' : ''}
-              onClick={() => panToStep(index)}
-              aria-pressed={index === activeIndex}
-            >
-              <span>{step.number}</span>
-              <strong>{step.label}</strong>
-            </button>
-          ))}
-        </div>
       </div>
     </section>
   );
