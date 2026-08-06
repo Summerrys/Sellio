@@ -1,0 +1,360 @@
+/* Phase 1B UX correction pass.
+   Imported last so interaction clarity and phone composition win over legacy layout rules. */
+
+/* All gradient actions use high-contrast white labels. */
+.sellio-landing .sellio-button--gradient,
+.sellio-landing .sl-map-detail-overlay__action,
+.sellio-landing .sl-workspace-card > a,
+.sellio-landing .sl-journey-card__next,
+.sellio-landing .sl-storefront-intro-overlay a {
+  color: #fff !important;
+}
+
+.sellio-landing .sellio-button--gradient svg,
+.sellio-landing .sl-map-detail-overlay__action svg,
+.sellio-landing .sl-workspace-card > a svg,
+.sellio-landing .sl-journey-card__next svg,
+.sellio-landing .sl-storefront-intro-overlay a svg {
+  color: currentColor;
+}
+
+/* The image markers are the Order Journey navigation; the information panel is its explanation. */
+.sl-cinematic-journey .sl-imm-story-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px 18px;
+  align-items: stretch;
+  padding: 18px;
+}
+
+.sl-journey-card__meta {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(74, 35, 85, .1);
+}
+
+.sl-imm-story-card .sl-journey-card__meta span,
+.sl-imm-story-card .sl-journey-card__meta strong {
+  color: #983273;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.sl-journey-card__body {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 15px;
+  align-items: center;
+}
+
+.sl-journey-card__body h3 {
+  margin-top: 0;
+}
+
+.sl-cinematic-journey .sl-imm-story-card > .sl-journey-card__next {
+  width: auto;
+  min-width: 116px;
+  height: auto;
+  min-height: 48px;
+  display: inline-flex;
+  align-self: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #9f4bd6, #df4897 58%, #ff855f);
+  box-shadow: 0 12px 26px rgba(190, 55, 137, .22);
+}
+
+.sl-cinematic-journey .sl-imm-story-card > .sl-journey-card__next span {
+  color: #fff;
+  font-size: 10px;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+
+/* Connected Commerce intro remains readable without hiding the dimensional scene. */
+.sl-cinematic-connected .sl-panorama-intro--connected {
+  width: min(520px, 41vw);
+  padding: 22px 82px 24px 24px;
+  border-radius: 22px;
+  color: #fff;
+  background: linear-gradient(100deg, rgba(43, 23, 53, .94) 0%, rgba(63, 30, 66, .82) 70%, rgba(63, 30, 66, .08) 100%);
+  filter: drop-shadow(0 16px 28px rgba(54, 28, 62, .16));
+  backdrop-filter: blur(10px) saturate(115%);
+}
+
+.sl-cinematic-connected .sl-panorama-intro--connected .sellio-eyebrow {
+  color: #fff;
+  border-color: rgba(255, 255, 255, .2);
+  background: rgba(255, 255, 255, .12);
+  box-shadow: none;
+}
+
+.sl-cinematic-connected .sl-panorama-intro--connected h2,
+.sl-cinematic-connected .sl-panorama-intro--connected p {
+  color: #fff;
+  text-shadow: 0 2px 18px rgba(30, 12, 36, .22);
+}
+
+/* Use each portrait progression illustration at its complete 9:16 composition. */
+@media (max-width: 600px) {
+  .sl-cinematic-world .sl-world-stage--map {
+    overflow: hidden;
+    background: #dff4ff;
+  }
+
+  .sl-cinematic-world .sl-pan-scroll--world,
+  .sl-cinematic-world .sl-pan-canvas--world {
+    height: 132vw;
+    min-height: 132vw;
+  }
+
+  .sl-cinematic-world .sl-pan-canvas--world .sl-responsive-art > img {
+    object-position: center 59%;
+  }
+
+  .sl-cinematic-world .sl-world-intro-overlay {
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: none;
+    padding: 18px 18px 58px;
+    background: linear-gradient(180deg, rgba(247, 253, 255, .96) 0%, rgba(247, 253, 255, .78) 58%, transparent 100%);
+    filter: none;
+  }
+
+  .sl-cinematic-world .sl-world-intro-overlay h2 {
+    max-width: 280px;
+    margin: 8px 0 6px;
+    font-size: clamp(1.75rem, 8.4vw, 2.25rem);
+  }
+
+  .sl-cinematic-world .sl-world-intro-overlay p {
+    max-width: 275px;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .sl-cinematic-world .sl-map-pin,
+  .sl-cinematic-world .sl-map-store-pin {
+    z-index: 11;
+  }
+
+  .sl-cinematic-world .sl-map-pin > span,
+  .sl-cinematic-world .sl-map-store-pin > span {
+    display: flex;
+    padding: 6px 8px;
+    border: 1px solid rgba(255, 255, 255, .66);
+    border-radius: 10px;
+    background: rgba(255, 253, 249, .82);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 20px rgba(55, 37, 65, .12);
+    text-shadow: none;
+  }
+
+  .sl-cinematic-world .sl-map-store-pin > span {
+    flex-direction: column;
+  }
+
+  .sl-cinematic-world .sl-map-pin--retail {
+    left: 13%;
+    top: 39%;
+  }
+
+  .sl-cinematic-world .sl-map-pin--fnb {
+    left: 39%;
+    top: 55%;
+  }
+
+  .sl-cinematic-world .sl-map-pin--services {
+    left: 61%;
+    top: 38%;
+  }
+
+  .sl-cinematic-world .sl-map-store-pin {
+    left: 31%;
+    top: 65%;
+  }
+
+  .sl-cinematic-journey .sl-imm-story-card {
+    grid-template-columns: 1fr;
+    gap: 13px;
+    padding: 16px;
+  }
+
+  .sl-journey-card__meta,
+  .sl-journey-card__body,
+  .sl-cinematic-journey .sl-imm-story-card > .sl-journey-card__next {
+    grid-column: 1;
+  }
+
+  .sl-journey-card__body {
+    grid-template-columns: 46px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .sl-cinematic-journey .sl-imm-story-card__icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 15px;
+  }
+
+  .sl-cinematic-journey .sl-imm-story-card h3 {
+    margin: 1px 0 5px;
+    font-size: 1.18rem;
+  }
+
+  .sl-cinematic-journey .sl-imm-story-card p {
+    font-size: 12px;
+  }
+
+  .sl-cinematic-journey .sl-imm-story-card > .sl-journey-card__next {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .sl-cinematic-connected .sl-panorama-intro--connected {
+    left: 14px;
+    top: 16px;
+    width: calc(100vw - 28px);
+    padding: 16px 18px 44px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(43, 23, 53, .92) 0%, rgba(52, 27, 61, .76) 70%, rgba(52, 27, 61, .06) 100%);
+  }
+
+  .sl-cinematic-connected .sl-panorama-intro--connected h2 {
+    max-width: 285px;
+    font-size: clamp(1.72rem, 8.1vw, 2.15rem);
+  }
+
+  .sl-cinematic-connected .sl-panorama-intro--connected p {
+    font-size: 12px;
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 18px 10px 28px;
+    background: #fffaf6;
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-list {
+    min-width: 0;
+    padding: 14px 9px;
+    border: 1px solid rgba(74, 35, 85, .1);
+    border-radius: 17px;
+    background: rgba(255, 255, 255, .78);
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-list + .sl-imm-connection-list {
+    border-top: 1px solid rgba(74, 35, 85, .1);
+    border-left: 1px solid rgba(74, 35, 85, .1);
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-list > span {
+    font-size: 9px;
+    letter-spacing: .07em;
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-list h3 {
+    min-height: 42px;
+    margin: 6px 0 10px;
+    font-size: clamp(.98rem, 4.45vw, 1.17rem);
+    line-height: 1.08;
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-list > div {
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 6px;
+    padding: 10px 0;
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-list i {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-list i svg {
+    width: 14px;
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-list strong {
+    overflow-wrap: anywhere;
+    font-size: 10.5px;
+    line-height: 1.25;
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-list small {
+    overflow-wrap: anywhere;
+    color: #68516f;
+    font-size: 9.5px;
+    line-height: 1.35;
+  }
+
+  .sl-imm-layer__art {
+    width: 100%;
+    min-height: 0;
+    aspect-ratio: 9 / 16;
+  }
+
+  .sl-imm-layer__art .sl-pan-scroll--layer,
+  .sl-imm-layer__art .sl-pan-canvas--layer {
+    width: 100%;
+    min-width: 100%;
+    height: 100%;
+    min-height: 100%;
+    aspect-ratio: auto;
+  }
+
+  .sl-imm-layer__art .sl-responsive-art > img {
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .sl-imm-layer__art::after {
+    background: linear-gradient(180deg, transparent 82%, rgba(66, 33, 77, .11));
+  }
+}
+
+@media (max-width: 390px) {
+  .sl-cinematic-world .sl-map-pin > span,
+  .sl-cinematic-world .sl-map-store-pin > span {
+    display: flex;
+    max-width: 82px;
+    font-size: 9px;
+  }
+
+  .sl-cinematic-world .sl-map-pin > i,
+  .sl-cinematic-world .sl-map-store-pin > i {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-details {
+    gap: 6px;
+    padding-inline: 8px;
+  }
+
+  .sl-cinematic-connected .sl-imm-connection-list {
+    padding-inline: 7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sl-cinematic-world .sl-map-pin,
+  .sl-cinematic-world .sl-map-store-pin,
+  .sl-cinematic-journey .sl-imm-hotspots button {
+    transition: none;
+  }
+}
