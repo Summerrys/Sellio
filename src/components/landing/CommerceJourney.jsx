@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import './immersive.css';
 import './mobile-pan.css';
-import { SELLIO_IMMERSIVE_ASSETS } from './immersiveAssets';
+import { SELLIO_IMMERSIVE_ASSETS, SELLIO_IMMERSIVE_MOBILE_ASSETS } from './immersiveAssets';
 
 const STEPS = [
   {
@@ -88,13 +88,20 @@ export default function CommerceJourney() {
             aria-label="Swipe horizontally to explore the five stages of the commerce journey"
           >
             <div className="sl-pan-canvas sl-pan-canvas--journey">
-              <motion.img
-                src={SELLIO_IMMERSIVE_ASSETS.journey}
-                alt="A dimensional commerce journey connecting a mobile storefront, order, preparation, inventory and analytics"
+              <motion.picture
+                className="sl-responsive-art"
                 initial={false}
                 animate={reduceMotion ? undefined : { scale: [1.006, 1.014, 1.006] }}
                 transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut' }}
-              />
+              >
+                <source media="(max-width: 600px)" srcSet={SELLIO_IMMERSIVE_MOBILE_ASSETS.journey} />
+                <img
+                  src={SELLIO_IMMERSIVE_ASSETS.journey}
+                  alt="A dimensional commerce journey connecting a mobile storefront, order, preparation, inventory and analytics"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </motion.picture>
               <div className="sl-imm-scene__shade" aria-hidden="true" />
               <header className="sl-panorama-intro sl-panorama-intro--journey">
                 <span className="sellio-eyebrow"><Sparkles /> Order journey</span>
