@@ -15,7 +15,7 @@ import {
   Utensils,
   X,
 } from 'lucide-react';
-import { SELLIO_IMMERSIVE_ASSETS } from './immersiveAssets';
+import { SELLIO_IMMERSIVE_ASSETS, SELLIO_IMMERSIVE_MOBILE_ASSETS } from './immersiveAssets';
 
 const DEMO_STORE_URL = '/store/cafetelier?preview=true';
 
@@ -27,6 +27,7 @@ const SECTORS = [
     Icon: ShoppingBag,
     pan: .22,
     origin: '39% 40%',
+    mobileOrigin: '30% 54%',
     summary: 'Boutiques and product-led merchants receive a recognisable storefront along a dedicated retail route.',
   },
   {
@@ -36,6 +37,7 @@ const SECTORS = [
     Icon: Utensils,
     pan: .48,
     origin: '52% 54%',
+    mobileOrigin: '50% 61%',
     summary: 'Restaurants, cafés, bakeries and beverage concepts live around shared discovery and ordering routes.',
   },
   {
@@ -45,6 +47,7 @@ const SECTORS = [
     Icon: BriefcaseBusiness,
     pan: .78,
     origin: '65% 32%',
+    mobileOrigin: '72% 50%',
     summary: 'Wellness, studios and professional services occupy a calmer appointment-led neighbourhood.',
   },
 ];
@@ -55,6 +58,7 @@ export default function SellioWorld() {
   const worldPanRef = useRef(null);
   const storefrontPanRef = useRef(null);
   const reduceMotion = useReducedMotion();
+  const [mobileScene, setMobileScene] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 600px)').matches);
   const sector = useMemo(
     () => SECTORS.find((item) => item.key === activeSector) || null,
     [activeSector],
@@ -76,18 +80,26 @@ export default function SellioWorld() {
   };
 
   useEffect(() => {
+    const query = window.matchMedia('(max-width: 600px)');
+    const update = () => setMobileScene(query.matches);
+    update();
+    query.addEventListener?.('change', update);
+    return () => query.removeEventListener?.('change', update);
+  }, []);
+
+  useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       const viewport = storeOpen ? storefrontPanRef.current : worldPanRef.current;
       if (!viewport) return;
       const maxScroll = viewport.scrollWidth - viewport.clientWidth;
-      const progress = storeOpen ? .7 : (sector?.pan ?? .25);
+      const progress = mobileScene ? 0 : (storeOpen ? .7 : (sector?.pan ?? .25));
       viewport.scrollTo({
         left: Math.max(0, maxScroll * progress),
         behavior: reduceMotion ? 'auto' : 'smooth',
       });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [reduceMotion, sector?.pan, storeOpen]);
+  }, [mobileScene, reduceMotion, sector?.pan, storeOpen]);
 
   return (
     <section id="world" className="sellio-section sl-imm-world sl-cinematic-world" aria-labelledby="sellio-world-heading">
@@ -110,16 +122,19 @@ export default function SellioWorld() {
               >
                 <motion.div
                   className={`sl-imm-world-map sl-pan-canvas sl-pan-canvas--world ${sector ? 'has-focus' : ''}`}
-                  animate={reduceMotion ? undefined : { scale: sector ? 1.065 : 1 }}
+                  animate={reduceMotion ? undefined : { scale: sector ? (mobileScene ? 1.1 : 1.065) : 1 }}
                   transition={{ duration: .65, ease: [0.2, 0.8, 0.2, 1] }}
-                  style={{ transformOrigin: sector?.origin || '50% 50%' }}
+                  style={{ transformOrigin: sector ? (mobileScene ? sector.mobileOrigin : sector.origin) : '50% 50%' }}
                 >
-                  <img
-                    src={SELLIO_IMMERSIVE_ASSETS.world}
-                    alt="Sellio World, a bright connected marketplace with food and beverage, retail and services destinations"
-                    loading="lazy"
-                    decoding="async"
-                  />
+                  <picture className="sl-responsive-art">
+                    <source media="(max-width: 600px)" srcSet={SELLIO_IMMERSIVE_MOBILE_ASSETS.world} />
+                    <img
+                      src={SELLIO_IMMERSIVE_ASSETS.world}
+                      alt="Sellio World, a bright connected marketplace with food and beverage, retail and services destinations"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </picture>
                   <div className="sl-imm-world-vignette" aria-hidden="true" />
 
                   <header className="sl-world-intro-overlay">
@@ -192,12 +207,15 @@ export default function SellioWorld() {
                 aria-label="Cafetelier storefront panorama. Pan horizontally to explore."
               >
                 <div className="sl-imm-storefront sl-pan-canvas sl-pan-canvas--storefront">
-                  <img
-                    src={SELLIO_IMMERSIVE_ASSETS.storefront}
-                    alt="Cafetelier storefront inside Sellio World"
-                    loading="lazy"
-                    decoding="async"
-                  />
+                  <picture className="sl-responsive-art">
+                    <source media="(max-width: 600px)" srcSet={SELLIO_IMMERSIVE_MOBILE_ASSETS.storefront} />
+                    <img
+                      src={SELLIO_IMMERSIVE_ASSETS.storefront}
+                      alt="Cafetelier storefront inside Sellio World"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </picture>
                   <div className="sl-imm-storefront__shade" aria-hidden="true" />
 
                   <div className="sl-storefront-intro-overlay">
