@@ -119,40 +119,13 @@ export default function ScrollWorldExperience() {
   }, []);
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video || reduceMotion) return undefined;
-
-    const controller = new AbortController();
-    let objectUrl;
     setVideoReady(false);
-    video.classList.remove('has-painted');
-
-    fetch(source, { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error('Unable to load the Sellio World film');
-        return response.blob();
-      })
-      .then((blob) => {
-        objectUrl = URL.createObjectURL(blob);
-        video.src = objectUrl;
-        video.load();
-      })
-      .catch((error) => {
-        if (error.name !== 'AbortError') console.warn(error);
-      });
-
-    return () => {
-      controller.abort();
-      video.pause();
-      video.removeAttribute('src');
-      video.load();
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [reduceMotion, source]);
+    videoRef.current?.classList.remove('has-painted');
+  }, [source]);
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !videoReady || reduceMotion) return undefined;
+    if (!video || !videoReady || reduceMotion || video.readyState < 1) return undefined;
 
     let animationFrame;
     let cancelled = false;
@@ -258,18 +231,24 @@ export default function ScrollWorldExperience() {
             className="sl-sw-poster"
             src={scenePoster}
             alt=""
+            loading="eager"
+            decoding="sync"
+            fetchPriority="high"
           />
           {!reduceMotion && (
             <video
               key={source}
               ref={videoRef}
               className={'sl-sw-video ' + (videoReady ? 'is-ready' : '')}
+              src={source}
               muted
+              autoPlay
               playsInline
               preload="auto"
               poster={videoPoster}
               disablePictureInPicture
               onLoadedMetadata={() => setVideoReady(true)}
+              onLoadedData={(event) => event.currentTarget.classList.add('has-painted')}
               onSeeked={(event) => event.currentTarget.classList.add('has-painted')}
             />
           )}
@@ -319,7 +298,6 @@ export default function ScrollWorldExperience() {
           <MousePointer2 aria-hidden="true" /><span>Scroll down anytime to explore more</span><ChevronDown aria-hidden="true" />
         </div>
 
-        {!videoReady && !reduceMotion && <div className="sl-sw-loading">Preparing the world…</div>}
       </div>
     </section>
   );
