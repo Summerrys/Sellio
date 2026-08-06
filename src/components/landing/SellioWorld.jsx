@@ -122,7 +122,7 @@ export default function SellioWorld() {
               >
                 <motion.div
                   className={`sl-imm-world-map sl-pan-canvas sl-pan-canvas--world ${sector ? 'has-focus' : ''}`}
-                  animate={reduceMotion ? undefined : { scale: sector ? (mobileScene ? 1.1 : 1.065) : 1 }}
+                  animate={reduceMotion ? undefined : { scale: sector ? (mobileScene ? 1.055 : 1.065) : 1 }}
                   transition={{ duration: .65, ease: [0.2, 0.8, 0.2, 1] }}
                   style={{ transformOrigin: sector ? (mobileScene ? sector.mobileOrigin : sector.origin) : '50% 50%' }}
                 >
