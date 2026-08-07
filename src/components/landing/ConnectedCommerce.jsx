@@ -24,9 +24,16 @@ const MERCHANT_POINTS = [
   { Icon: BarChart3, title: 'Useful visibility', copy: 'Performance is translated into an understandable daily pulse.' },
 ];
 
-function PointList({ title, eyebrow, points, tone }) {
+function PointList({ title, eyebrow, points, tone, reduceMotion }) {
+  const entranceX = tone === 'customer' ? -28 : 28;
   return (
-    <article className={`sl-connection-panel sl-connection-panel--${tone}`}>
+    <motion.article
+      className={`sl-connection-panel sl-connection-panel--${tone}`}
+      initial={reduceMotion ? false : { opacity: 0, x: entranceX }}
+      whileInView={reduceMotion ? undefined : { opacity: 1, x: 0 }}
+      viewport={{ once: true, amount: .25 }}
+      transition={{ duration: .62, ease: [0.2, 0.8, 0.2, 1] }}
+    >
       <header>
         <span>{eyebrow}</span>
         <h3>{title}</h3>
@@ -39,7 +46,7 @@ function PointList({ title, eyebrow, points, tone }) {
           </div>
         ))}
       </div>
-    </article>
+    </motion.article>
   );
 }
 
@@ -81,9 +88,9 @@ export default function ConnectedCommerce() {
           </div>
 
           <div className="sl-connection-comparison">
-            <PointList eyebrow="Customer side" title="Easy to enter. Easy to trust." points={CUSTOMER_POINTS} tone="customer" />
+            <PointList eyebrow="Customer side" title="Easy to enter. Easy to trust." points={CUSTOMER_POINTS} tone="customer" reduceMotion={reduceMotion} />
             <div className="sl-connection-bridge" aria-hidden="true"><Sparkles /><span>One connected flow</span></div>
-            <PointList eyebrow="Merchant side" title="Easy to see. Easy to act." points={MERCHANT_POINTS} tone="merchant" />
+            <PointList eyebrow="Merchant side" title="Easy to see. Easy to act." points={MERCHANT_POINTS} tone="merchant" reduceMotion={reduceMotion} />
           </div>
         </div>
       </div>
