@@ -20,11 +20,10 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import ScrollWorldExperience from './ScrollWorldExperience';
+import HeroWorldTransition from './HeroWorldTransition';
 import CommerceJourney from './CommerceJourney';
 import ConnectedCommerce from './ConnectedCommerce';
 import ProductShowcase from './ProductShowcase';
-import SellioWorld from './SellioWorld';
 import WorldLayers from './WorldLayers';
 import { PLANS } from './landingData';
 import './landing.css';
@@ -34,6 +33,7 @@ import './mobile-pan.css';
 import './immersive-fullbleed.css';
 import './mobile-native.css';
 import './ux-corrections.css';
+import './motion-refinement.css';
 
 const LOGO_URL = 'https://assets.apptelier.sg/sellio/Logo_Sellio.png';
 const ASSISTANT_URL = 'https://assets.apptelier.sg/sellio/Logo_AISellio_Assistant.png';
@@ -54,8 +54,11 @@ function LandingHeader() {
   useEffect(() => {
     let frame;
     const update = () => {
+      const sequence = document.getElementById('sellio-entry-sequence');
       const film = document.getElementById('sellio-film');
-      const revealAt = film ? film.offsetTop + film.offsetHeight - 2 : Number.POSITIVE_INFINITY;
+      const revealAt = sequence
+        ? sequence.offsetTop + Math.max(0, sequence.offsetHeight - window.innerHeight) * .58
+        : film ? film.offsetTop + film.offsetHeight - 2 : Number.POSITIVE_INFINITY;
       setVisible(window.scrollY >= revealAt);
     };
     const requestUpdate = () => {
@@ -225,9 +228,8 @@ export default function LandingPage() {
     <div className="sellio-landing sellio-landing--phase1b sellio-landing--scrollworld">
       <a className="sellio-skip-link" href="#sellio-main">Skip to content</a><LandingHeader />
       <main id="sellio-main">
-        <ScrollWorldExperience />
+        <HeroWorldTransition />
         <section className="sellio-proof-strip" aria-label="Sellio capabilities"><div className="sellio-container"><span><Store /> Online storefront</span><span><QrCode /> QR ordering</span><span><Bell /> Live orders</span><span><Package /> Inventory</span><span><BarChart3 /> Reports</span><span><Users /> Staff roles</span></div></section>
-        <SellioWorld />
         <CommerceJourney />
         <ConnectedCommerce />
         <ProductShowcase />
