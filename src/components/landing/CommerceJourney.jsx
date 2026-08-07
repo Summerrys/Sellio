@@ -57,7 +57,7 @@ const STEPS = [
     title: 'The day becomes useful business insight.',
     description: 'Sales, popular products and operational patterns are ready to review without rebuilding the story.',
     Icon: BarChart3,
-    callout: { x: '70%', y: '55%', mobileX: '47%', mobileY: '18%' },
+    callout: { x: '70%', y: '55%', mobileX: '47%', mobileY: '31%' },
   },
 ];
 
