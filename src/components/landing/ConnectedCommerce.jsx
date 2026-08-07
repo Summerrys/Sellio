@@ -4,7 +4,6 @@ import {
   BarChart3,
   BellRing,
   HeartHandshake,
-  MoveHorizontal,
   PackageCheck,
   QrCode,
   ShoppingBag,
@@ -25,18 +24,22 @@ const MERCHANT_POINTS = [
   { Icon: BarChart3, title: 'Useful visibility', copy: 'Performance is translated into an understandable daily pulse.' },
 ];
 
-function PointList({ title, eyebrow, points }) {
+function PointList({ title, eyebrow, points, tone }) {
   return (
-    <div className="sl-imm-connection-list">
-      <span>{eyebrow}</span>
-      <h3>{title}</h3>
-      {points.map(({ Icon, title: itemTitle, copy }) => (
-        <div key={itemTitle}>
-          <i><Icon /></i>
-          <p><strong>{itemTitle}</strong><small>{copy}</small></p>
-        </div>
-      ))}
-    </div>
+    <article className={`sl-connection-panel sl-connection-panel--${tone}`}>
+      <header>
+        <span>{eyebrow}</span>
+        <h3>{title}</h3>
+      </header>
+      <div className="sl-connection-panel__points">
+        {points.map(({ Icon, title: itemTitle, copy }) => (
+          <div key={itemTitle}>
+            <i><Icon aria-hidden="true" /></i>
+            <p><strong>{itemTitle}</strong><small>{copy}</small></p>
+          </div>
+        ))}
+      </div>
+    </article>
   );
 }
 
@@ -46,12 +49,20 @@ export default function ConnectedCommerce() {
   return (
     <section id="connected" className="sellio-section sl-imm-section sl-imm-connected sl-cinematic-section sl-cinematic-connected" aria-labelledby="sellio-connected-heading">
       <div className="sellio-container">
+        <header className="sl-immersive-section-heading sl-immersive-section-heading--connected">
+          <span className="sellio-eyebrow"><HeartHandshake /> Connected commerce</span>
+          <div>
+            <h2 id="sellio-connected-heading">Delight in front.<br />Clarity behind the counter.</h2>
+            <p>Customers feel the brand while merchants stay in control. Both sides stay connected without becoming the same experience.</p>
+          </div>
+        </header>
+
         <div className="sl-imm-connection-stage">
           <div className="sl-pan-scroll sl-pan-scroll--connection" tabIndex="0" aria-label="Connected customer and merchant experience">
             <motion.div
               className="sl-imm-connection-art sl-pan-canvas sl-pan-canvas--connection"
               initial={false}
-              whileHover={reduceMotion ? undefined : { scale: 1.006 }}
+              whileHover={reduceMotion ? undefined : { scale: 1.004 }}
               transition={{ duration: .55, ease: [0.2, 0.8, 0.2, 1] }}
             >
               <picture className="sl-responsive-art">
@@ -63,20 +74,16 @@ export default function ConnectedCommerce() {
                   decoding="async"
                 />
               </picture>
-              <header className="sl-panorama-intro sl-panorama-intro--connected">
-                <span className="sellio-eyebrow"><HeartHandshake /> Connected commerce</span>
-                <h2 id="sellio-connected-heading">Delight in front.<br />Clarity behind the counter.</h2>
-                <p>Customers feel the brand while merchants stay in control.</p>
-              </header>
               <div className="sl-imm-connection-badge sl-imm-connection-badge--customer"><Store /> Customer experience</div>
               <div className="sl-imm-connection-badge sl-imm-connection-badge--merchant"><BarChart3 /> Merchant operations</div>
               <div className="sl-imm-connection-core"><Sparkles /><span>Connected by Sellio</span></div>
             </motion.div>
           </div>
-          <div className="sl-pan-hint"><MoveHorizontal /> Drag to compare both sides</div>
-          <div className="sl-imm-connection-details">
-            <PointList eyebrow="Customer side" title="Easy to enter. Easy to trust." points={CUSTOMER_POINTS} />
-            <PointList eyebrow="Merchant side" title="Easy to see. Easy to act." points={MERCHANT_POINTS} />
+
+          <div className="sl-connection-comparison">
+            <PointList eyebrow="Customer side" title="Easy to enter. Easy to trust." points={CUSTOMER_POINTS} tone="customer" />
+            <div className="sl-connection-bridge" aria-hidden="true"><Sparkles /><span>One connected flow</span></div>
+            <PointList eyebrow="Merchant side" title="Easy to see. Easy to act." points={MERCHANT_POINTS} tone="merchant" />
           </div>
         </div>
       </div>
