@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -8,15 +7,12 @@ import {
   Check,
   ChevronRight,
   CircleDollarSign,
-  Coffee,
   Menu,
   Package,
   QrCode,
   ShieldCheck,
-  ShoppingBag,
   Sparkles,
   Store,
-  TrendingUp,
   Users,
   X,
 } from 'lucide-react';
@@ -36,7 +32,6 @@ import './ux-corrections.css';
 import './motion-refinement.css';
 
 const LOGO_URL = 'https://assets.apptelier.sg/sellio/Logo_Sellio.png';
-const ASSISTANT_URL = 'https://assets.apptelier.sg/sellio/Logo_AISellio_Assistant.png';
 const DEMO_STORE_URL = '/store/cafetelier?preview=true';
 
 const NAV_ITEMS = [
@@ -98,36 +93,6 @@ function LandingHeader() {
         </nav>
       )}
     </header>
-  );
-}
-
-function HeroVisual() {
-  const reduceMotion = useReducedMotion();
-  const drift = (delay = 0, distance = 8) => reduceMotion ? {} : { animate: { y: [0, -distance, 0] }, transition: { duration: 5.8 + delay, repeat: Infinity, ease: 'easeInOut', delay } };
-
-  return (
-    <div className="sellio-hero-visual" aria-label="Illustration of Sellio connecting a storefront, orders and business insights">
-      <div className="sellio-hero-orbit sellio-hero-orbit--one" aria-hidden="true" /><div className="sellio-hero-orbit sellio-hero-orbit--two" aria-hidden="true" />
-      <motion.div className="sellio-hero-order-card" {...drift(.2, 7)}>
-        <div className="sellio-mini-card-head"><span className="is-pink"><Bell /></span><div><strong>New order</strong><small>Just now</small></div><i /></div>
-        <div className="sellio-mini-order-row"><div className="is-orange"><Coffee /></div><span><strong>Signature Latte</strong><small>2 × $6.80</small></span></div>
-        <div className="sellio-mini-success"><Check /> Sent to kitchen</div>
-      </motion.div>
-      <motion.div className="sellio-hero-insight-card" {...drift(.7, 10)}>
-        <div><span>Today’s sales</span><TrendingUp /></div><strong>$1,842.60</strong><small>+18.4% from yesterday</small>
-        <div className="sellio-mini-bars">{[42,58,50,76,64,88,100].map((height,index) => <i key={index} style={{ height }} />)}</div>
-      </motion.div>
-      <motion.div className="sellio-hero-phone" {...drift(0, 5)}>
-        <div className="sellio-hero-phone__top"><span /><span /></div>
-        <div className="sellio-hero-phone__brand"><div><small>Welcome to</small><strong>Cafetelier</strong></div><ShoppingBag /></div>
-        <div className="sellio-hero-phone__banner"><span>Freshly made</span><strong>Brunch favourites</strong><small>Order in a few taps</small></div>
-        <div className="sellio-hero-phone__chips"><span>Popular</span><span>Coffee</span><span>Pastries</span></div>
-        <div className="sellio-hero-phone__products"><div><i className="is-orange"><Coffee /></i><strong>Latte</strong><small>$6.80</small></div><div><i className="is-pink"><Sparkles /></i><strong>Croissant</strong><small>$7.20</small></div></div>
-        <div className="sellio-hero-phone__cart"><span>2 items</span><strong>View order</strong></div>
-      </motion.div>
-      <motion.div className="sellio-hero-core" {...drift(.35, 6)}><div className="sellio-hero-core__glow" /><div className="sellio-hero-core__disc"><img src={ASSISTANT_URL} alt="" /></div><span>Sellio AI</span></motion.div>
-      <div className="sellio-hero-connection sellio-hero-connection--one" aria-hidden="true" /><div className="sellio-hero-connection sellio-hero-connection--two" aria-hidden="true" /><div className="sellio-hero-floor" aria-hidden="true" />
-    </div>
   );
 }
 
