@@ -10,7 +10,7 @@ const CALLOUT_POSITIONS = [
   { x: '23%', y: '58%', mobileX: '28%', mobileY: '64%' },
   { x: '43%', y: '59%', mobileX: '5%', mobileY: '39%' },
   { x: '59%', y: '57%', mobileX: '42%', mobileY: '45%' },
-  { x: '70%', y: '52%', mobileX: '47%', mobileY: '24%' },
+  { x: '70%', y: '52%', mobileX: '47%', mobileY: '30%' },
 ];
 
 export default function ProductShowcase() {
