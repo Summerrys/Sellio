@@ -102,7 +102,7 @@ export default function SellioWorld() {
   }, [mobileScene, reduceMotion, sector?.pan, storeOpen]);
 
   return (
-    <section id="world" className="sellio-section sl-imm-world sl-cinematic-world" aria-labelledby="sellio-world-heading">
+    <section id="world-experience" className="sellio-section sl-imm-world sl-cinematic-world" aria-labelledby="sellio-world-heading">
       <div className="sl-cinematic-world__stage">
         <AnimatePresence mode="wait">
           {!storeOpen ? (
