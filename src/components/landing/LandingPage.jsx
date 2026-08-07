@@ -57,7 +57,7 @@ function LandingHeader() {
       const sequence = document.getElementById('sellio-entry-sequence');
       const film = document.getElementById('sellio-film');
       const revealAt = sequence
-        ? sequence.offsetTop + Math.max(0, sequence.offsetHeight - window.innerHeight) * .58
+        ? sequence.offsetTop + Math.max(0, sequence.offsetHeight - window.innerHeight) * .68
         : film ? film.offsetTop + film.offsetHeight - 2 : Number.POSITIVE_INFINITY;
       setVisible(window.scrollY >= revealAt);
     };
@@ -149,7 +149,7 @@ function PricingSection() {
                 <div className="sellio-plan-price"><small>SGD</small><strong>{amount}</strong><span>/{annual ? 'year' : 'month'}</span></div>
                 {annual && <p className="sellio-plan-saving">Save SGD {plan.monthly * 12 - plan.yearly} annually</p>}
                 <ul>{plan.features.map((feature) => <li key={feature}><Check /> {feature}</li>)}</ul>
-                <a href={href} target="_blank" rel="noopener noreferrer" className="sellio-button sellio-button--plan">Start Free Trial <ArrowUpRight /></a>
+                <a href={href} target="_blank" rel="noopener noreferrer" className="sellio-button sellio-button--plan"><span className="sellio-plan-cta-long">Start Free Trial</span><span className="sellio-plan-cta-short" aria-hidden="true">Start</span><ArrowUpRight /></a>
               </article>
             );
           })}
