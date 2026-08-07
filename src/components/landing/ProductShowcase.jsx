@@ -1,30 +1,25 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { ArrowUpRight, MoveHorizontal, Sparkles } from 'lucide-react';
+import { ArrowUpRight, Sparkles } from 'lucide-react';
 import { PRODUCT_VIEWS } from './landingData';
 import { SELLIO_IMMERSIVE_ASSETS, SELLIO_IMMERSIVE_MOBILE_ASSETS } from './immersiveAssets';
 import './mobile-pan.css';
 
-const VIEW_POSITIONS = [0.02, 0.25, 0.5, 0.75, 0.98];
+const CALLOUT_POSITIONS = [
+  { x: '5%', y: '62%', mobileX: '4%', mobileY: '62%' },
+  { x: '23%', y: '58%', mobileX: '28%', mobileY: '64%' },
+  { x: '43%', y: '59%', mobileX: '5%', mobileY: '39%' },
+  { x: '59%', y: '57%', mobileX: '42%', mobileY: '45%' },
+  { x: '70%', y: '52%', mobileX: '47%', mobileY: '24%' },
+];
 
 export default function ProductShowcase() {
   const [activeKey, setActiveKey] = useState('storefront');
-  const panRef = useRef(null);
   const reduceMotion = useReducedMotion();
   const activeIndex = Math.max(0, PRODUCT_VIEWS.findIndex((view) => view.key === activeKey));
   const active = PRODUCT_VIEWS[activeIndex] || PRODUCT_VIEWS[0];
+  const position = CALLOUT_POSITIONS[activeIndex] || CALLOUT_POSITIONS[0];
   const ActiveIcon = active.Icon;
-
-  const selectView = (key, index) => {
-    setActiveKey(key);
-    const viewport = panRef.current;
-    if (!viewport) return;
-    const maxScroll = viewport.scrollWidth - viewport.clientWidth;
-    viewport.scrollTo({
-      left: Math.max(0, maxScroll * VIEW_POSITIONS[index]),
-      behavior: reduceMotion ? 'auto' : 'smooth',
-    });
-  };
 
   return (
     <section id="product" className="sellio-section sellio-product-section sl-workspace-section sl-cinematic-section sl-cinematic-workspace" aria-labelledby="sellio-product-heading">
@@ -32,7 +27,6 @@ export default function ProductShowcase() {
         <div className="sl-workspace-shell">
           <div
             id="sellio-product-preview"
-            ref={panRef}
             className="sl-pan-scroll sl-pan-scroll--workspace"
             role="tabpanel"
             tabIndex="0"
@@ -49,49 +43,56 @@ export default function ProductShowcase() {
                 />
               </picture>
               <div className="sl-workspace-vignette" aria-hidden="true" />
+
               <header className="sl-panorama-intro sl-panorama-intro--workspace">
                 <span className="sellio-eyebrow"><Sparkles aria-hidden="true" /> Merchant workspace</span>
                 <h2 id="sellio-product-heading">See every part of Sellio working together.</h2>
-                <p>Choose a waypoint to move from storefront to operations, inventory, insights and AI.</p>
+                <p>Select a waypoint to see how storefront, operations, inventory, insights and AI connect.</p>
               </header>
+
               <div className="sl-workspace-waypoints" aria-label="Workspace waypoints">
                 {PRODUCT_VIEWS.map(({ key, label }, index) => (
                   <button
                     key={key}
                     type="button"
                     className={activeKey === key ? 'is-active' : ''}
-                    onClick={() => selectView(key, index)}
+                    onClick={() => setActiveKey(key)}
                     aria-pressed={activeKey === key}
-                    aria-label={`Open and centre ${label}`}
+                    aria-label={`Show ${label}`}
                   >
                     <span>{String(index + 1).padStart(2, '0')}</span>
                     <strong>{label}</strong>
                   </button>
                 ))}
               </div>
+
+              <AnimatePresence mode="wait">
+                <motion.article
+                  key={active.key}
+                  className="sl-waypoint-callout sl-waypoint-callout--workspace"
+                  style={{
+                    '--callout-x': position.x,
+                    '--callout-y': position.y,
+                    '--callout-mobile-x': position.mobileX,
+                    '--callout-mobile-y': position.mobileY,
+                  }}
+                  initial={reduceMotion ? false : { opacity: 0, rotateY: -8, scale: .96 }}
+                  animate={{ opacity: 1, rotateY: 0, scale: 1 }}
+                  exit={reduceMotion ? undefined : { opacity: 0, rotateY: 8, scale: .97 }}
+                  transition={{ duration: reduceMotion ? 0 : .26, ease: [0.2, 0.8, 0.2, 1] }}
+                  aria-live="polite"
+                >
+                  <div className="sl-waypoint-callout__meta">
+                    <span><ActiveIcon aria-hidden="true" /> {String(activeIndex + 1).padStart(2, '0')}</span>
+                    <strong>{active.label}</strong>
+                  </div>
+                  <h3>{active.title}</h3>
+                  <p>{active.description}</p>
+                  <a href="#pricing">Start free trial <ArrowUpRight aria-hidden="true" /></a>
+                </motion.article>
+              </AnimatePresence>
             </div>
           </div>
-
-          <div className="sl-pan-hint sl-pan-hint--workspace"><MoveHorizontal /> Drag to explore · Tap a waypoint</div>
-
-          <AnimatePresence mode="wait">
-            <motion.article
-              key={active.key}
-              className="sl-workspace-card"
-              initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
-              transition={{ duration: reduceMotion ? 0 : .26 }}
-            >
-              <span className="sl-workspace-card__icon"><ActiveIcon aria-hidden="true" /></span>
-              <div>
-                <small>{String(activeIndex + 1).padStart(2, '0')} · {active.label}</small>
-                <h3>{active.title}</h3>
-                <p>{active.description}</p>
-              </div>
-              <a href="#pricing">Start your free trial <ArrowUpRight aria-hidden="true" /></a>
-            </motion.article>
-          </AnimatePresence>
         </div>
       </div>
     </section>
