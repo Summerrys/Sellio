@@ -1,0 +1,965 @@
+/* Phase 1B motion and layout refinement.
+   Jitter-inspired motion language: page-turn reveal, anchored card flips and split comparison. */
+
+/* Hero -> Sellio World: one scroll-linked chapter turn, followed by a full-screen interactive dwell. */
+.sl-page-turn-sequence {
+  position: relative;
+  height: 245svh;
+  min-height: 1500px;
+  background: #dff4ff;
+  perspective: 1800px;
+  isolation: isolate;
+}
+
+.sl-page-turn-stage {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100svh;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  background: #dff4ff;
+}
+
+.sl-page-turn-hero,
+.sl-page-turn-world {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  will-change: transform, opacity, clip-path, filter;
+  backface-visibility: hidden;
+}
+
+.sl-page-turn-hero {
+  z-index: 3;
+  transform-origin: 50% 0%;
+  box-shadow: 0 30px 90px rgba(34, 15, 43, .22);
+}
+
+.sl-page-turn-world {
+  z-index: 1;
+  transform-origin: 50% 50%;
+  background: #dff4ff;
+}
+
+.sl-page-turn-seam {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  right: 0;
+  top: 47%;
+  height: 2px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.96) 32%, rgba(255,221,243,.96) 50%, rgba(255,255,255,.96) 68%, transparent);
+  box-shadow: 0 0 28px rgba(255,255,255,.92), 0 0 56px rgba(224,68,154,.2);
+}
+
+.sl-page-turn-world-anchor {
+  position: absolute;
+  top: 82svh;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  scroll-margin-top: 0;
+}
+
+.sl-page-turn-static-anchor {
+  display: block;
+  width: 1px;
+  height: 1px;
+  scroll-margin-top: 68px;
+}
+
+/* Sellio World occupies the actual device viewport. */
+.sl-page-turn-world .sl-cinematic-world,
+.sl-page-turn-world .sl-cinematic-world__stage,
+.sl-page-turn-world .sl-world-stage,
+.sl-page-turn-world .sl-pan-scroll--world,
+.sl-page-turn-world .sl-pan-scroll--storefront,
+.sl-page-turn-world .sl-pan-canvas--world,
+.sl-page-turn-world .sl-pan-canvas--storefront {
+  width: 100%;
+  min-width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+
+.sl-page-turn-world .sl-cinematic-world {
+  padding: 0;
+}
+
+.sl-page-turn-world .sl-cinematic-world__stage,
+.sl-page-turn-world .sl-world-stage {
+  overflow: hidden;
+}
+
+.sl-page-turn-world .sl-pan-scroll--world,
+.sl-page-turn-world .sl-pan-scroll--storefront {
+  overflow: hidden;
+}
+
+.sl-page-turn-world .sl-responsive-art > img {
+  object-fit: cover;
+}
+
+.sl-page-turn-world .sl-world-intro-overlay {
+  top: clamp(22px, 4.2vw, 60px);
+  left: clamp(22px, 4.2vw, 68px);
+  width: min(430px, 36vw);
+  padding: 0 46px 26px 0;
+  background: linear-gradient(90deg, rgba(249,254,255,.93) 0%, rgba(249,254,255,.68) 68%, transparent 100%);
+}
+
+.sl-page-turn-world .sl-map-detail-overlay {
+  max-height: min(360px, 42vh);
+}
+
+/* Full-screen, stationary Order Journey and Merchant Workspace artwork. */
+.sl-cinematic-journey,
+.sl-cinematic-workspace {
+  padding: 0;
+}
+
+.sl-cinematic-journey > .sellio-container,
+.sl-cinematic-workspace > .sellio-container {
+  width: 100%;
+  max-width: none;
+}
+
+.sl-cinematic-journey .sl-imm-scene,
+.sl-cinematic-workspace .sl-workspace-shell {
+  width: 100%;
+  height: 100svh;
+  min-height: 680px;
+  margin: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.sl-cinematic-journey .sl-pan-scroll--journey,
+.sl-cinematic-journey .sl-pan-canvas--journey,
+.sl-cinematic-workspace .sl-pan-scroll--workspace,
+.sl-cinematic-workspace .sl-pan-canvas--workspace {
+  width: 100%;
+  min-width: 100%;
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+.sl-cinematic-journey .sl-responsive-art,
+.sl-cinematic-journey .sl-responsive-art > img,
+.sl-cinematic-workspace .sl-responsive-art,
+.sl-cinematic-workspace .sl-responsive-art > img {
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+.sl-cinematic-journey .sl-responsive-art > img,
+.sl-cinematic-workspace .sl-responsive-art > img {
+  object-fit: cover;
+  object-position: center;
+}
+
+.sl-cinematic-journey .sl-panorama-intro,
+.sl-cinematic-workspace .sl-panorama-intro {
+  top: clamp(22px, 3.5vw, 52px);
+  left: clamp(22px, 4vw, 66px);
+  width: min(430px, 38vw);
+  padding: 0 46px 26px 0;
+  color: #2b1835;
+  background: linear-gradient(90deg, rgba(255,253,248,.94) 0%, rgba(255,253,248,.69) 70%, transparent 100%);
+  filter: drop-shadow(0 12px 24px rgba(72,46,67,.08));
+}
+
+.sl-cinematic-journey .sl-panorama-intro h2,
+.sl-cinematic-workspace .sl-panorama-intro h2 {
+  color: #281731;
+  text-shadow: none;
+}
+
+.sl-cinematic-journey .sl-panorama-intro p,
+.sl-cinematic-workspace .sl-panorama-intro p {
+  color: #55435c;
+  text-shadow: none;
+}
+
+/* Reusable waypoint-attached information card. */
+.sl-waypoint-callout {
+  position: absolute;
+  z-index: 13;
+  left: var(--callout-x);
+  top: var(--callout-y);
+  width: min(290px, 23vw);
+  padding: 15px;
+  border: 1px solid rgba(76, 43, 86, .14);
+  border-radius: 18px;
+  color: #2d1935;
+  background: rgba(255, 253, 249, .92);
+  box-shadow: 0 18px 46px rgba(59, 34, 67, .17);
+  backdrop-filter: blur(18px) saturate(122%);
+  transform-origin: 18px 18px;
+}
+
+.sl-waypoint-callout::before {
+  content: "";
+  position: absolute;
+  left: -18px;
+  top: 23px;
+  width: 18px;
+  border-top: 1px dashed rgba(157, 50, 117, .56);
+}
+
+.sl-waypoint-callout__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid rgba(76, 43, 86, .1);
+}
+
+.sl-waypoint-callout__meta span,
+.sl-waypoint-callout__meta strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #9b2f73;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.sl-waypoint-callout__meta span svg {
+  width: 13px;
+  height: 13px;
+}
+
+.sl-waypoint-callout h3 {
+  margin: 10px 0 6px;
+  color: #2d1935;
+  font: 800 clamp(1rem, 1.45vw, 1.3rem)/1.1 "Manrope", sans-serif;
+  letter-spacing: -.035em;
+}
+
+.sl-waypoint-callout p {
+  margin: 0;
+  color: #67516f;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.sl-waypoint-callout button,
+.sl-waypoint-callout a {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 11px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 11px;
+  color: #fff !important;
+  background: linear-gradient(135deg, #9f4bd6, #df4897 58%, #ff855f);
+  font-size: 9px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.sl-waypoint-callout button svg,
+.sl-waypoint-callout a svg {
+  width: 13px;
+  height: 13px;
+}
+
+.sl-waypoint-callout--workspace {
+  border-color: rgba(10, 132, 161, .17);
+}
+
+.sl-waypoint-callout--workspace::before {
+  border-color: rgba(10, 132, 161, .5);
+}
+
+.sl-waypoint-callout--workspace .sl-waypoint-callout__meta span,
+.sl-waypoint-callout--workspace .sl-waypoint-callout__meta strong {
+  color: #087e98;
+}
+
+.sl-waypoint-callout--workspace a {
+  background: linear-gradient(135deg, #087f9d, #14b8a6);
+}
+
+/* Connected Commerce: heading outside the art, complete image, two distinct families. */
+.sl-cinematic-connected .sl-immersive-section-heading {
+  display: grid;
+  grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr);
+  gap: clamp(28px, 6vw, 90px);
+  align-items: end;
+  margin-bottom: clamp(28px, 4vw, 48px);
+}
+
+.sl-cinematic-connected .sl-immersive-section-heading > div {
+  max-width: 820px;
+}
+
+.sl-cinematic-connected .sl-immersive-section-heading h2 {
+  margin: 0 0 12px;
+  color: #2e1937;
+  font: 800 clamp(2.8rem, 5vw, 5.6rem)/.96 "Manrope", sans-serif;
+  letter-spacing: -.065em;
+}
+
+.sl-cinematic-connected .sl-immersive-section-heading p {
+  max-width: 720px;
+  margin: 0;
+  color: #66516e;
+  font-size: clamp(15px, 1.25vw, 18px);
+  line-height: 1.65;
+}
+
+.sl-cinematic-connected .sl-imm-connection-stage {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sl-cinematic-connected .sl-pan-scroll--connection,
+.sl-cinematic-connected .sl-pan-canvas--connection,
+.sl-cinematic-connected .sl-imm-connection-art {
+  width: 100%;
+  min-width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: clamp(24px, 3vw, 38px);
+}
+
+.sl-cinematic-connected .sl-imm-connection-art {
+  box-shadow: 0 28px 70px rgba(67,42,78,.13);
+}
+
+.sl-cinematic-connected .sl-imm-connection-art::after {
+  background: linear-gradient(180deg, transparent 72%, rgba(36, 21, 43, .18));
+}
+
+.sl-connection-comparison {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.sl-connection-panel {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(22px, 3vw, 38px);
+  border: 1px solid;
+  border-radius: clamp(22px, 3vw, 32px);
+  box-shadow: 0 18px 45px rgba(60, 35, 69, .08);
+}
+
+.sl-connection-panel--customer {
+  border-color: rgba(14, 165, 233, .2);
+  background: linear-gradient(145deg, #effcff, #e7f6ff);
+}
+
+.sl-connection-panel--merchant {
+  border-color: rgba(224, 68, 154, .2);
+  background: linear-gradient(145deg, #fff3f9, #f9edff);
+}
+
+.sl-connection-panel header > span {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.sl-connection-panel--customer header > span {
+  color: #087e98;
+}
+
+.sl-connection-panel--merchant header > span {
+  color: #a22d78;
+}
+
+.sl-connection-panel h3 {
+  max-width: 520px;
+  margin: 7px 0 20px;
+  color: #2e1937;
+  font: 800 clamp(1.55rem, 2.5vw, 2.65rem)/1.03 "Manrope", sans-serif;
+  letter-spacing: -.05em;
+}
+
+.sl-connection-panel__points {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sl-connection-panel__points > div {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,.74);
+  border-radius: 17px;
+  background: rgba(255,255,255,.66);
+}
+
+.sl-connection-panel__points i {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  margin-bottom: 11px;
+  border-radius: 12px;
+  color: #fff;
+}
+
+.sl-connection-panel--customer i {
+  background: linear-gradient(145deg, #0ea5e9, #14b8a6);
+}
+
+.sl-connection-panel--merchant i {
+  background: linear-gradient(145deg, #a051c9, #e0449a);
+}
+
+.sl-connection-panel__points i svg {
+  width: 17px;
+}
+
+.sl-connection-panel__points p {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+
+.sl-connection-panel__points strong {
+  color: #34203c;
+  font-size: 12px;
+}
+
+.sl-connection-panel__points small {
+  color: #6d5a74;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.sl-connection-bridge {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 50%;
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 13px;
+  border: 3px solid #fffaf7;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(135deg, #0ea5e9, #9f4bd6 50%, #e0449a);
+  box-shadow: 0 12px 28px rgba(90, 46, 107, .18);
+  font-size: 9px;
+  font-weight: 900;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+
+.sl-connection-bridge svg {
+  width: 14px;
+}
+
+/* Marketplace progression always uses the landscape source and card proportion. */
+.sl-imm-layer__art,
+.sl-imm-layer__art .sl-pan-scroll--layer,
+.sl-imm-layer__art .sl-pan-canvas--layer {
+  aspect-ratio: 16 / 9;
+}
+
+.sl-imm-layer__art .sl-pan-scroll--layer,
+.sl-imm-layer__art .sl-pan-canvas--layer {
+  width: 100%;
+  min-width: 100%;
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+}
+
+.sl-imm-layer__art .sl-responsive-art > img {
+  object-fit: cover;
+  object-position: center;
+}
+
+.sl-imm-layer__art--1 .sl-responsive-art > img { object-position: 50% 48%; }
+.sl-imm-layer__art--2 .sl-responsive-art > img { object-position: 50% 52%; }
+.sl-imm-layer__art--3 .sl-responsive-art > img { object-position: 54% 50%; }
+
+/* Three compact pricing columns on phones. */
+.sellio-plan-cta-short {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .sl-page-turn-sequence {
+    height: 230svh;
+    min-height: 1300px;
+  }
+
+  .sl-cinematic-journey .sl-imm-scene,
+  .sl-cinematic-workspace .sl-workspace-shell {
+    min-height: 620px;
+  }
+
+  .sl-waypoint-callout {
+    width: min(250px, 31vw);
+  }
+
+  .sl-cinematic-connected .sl-immersive-section-heading {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .sl-connection-panel__points {
+    grid-template-columns: 1fr;
+  }
+
+  .sl-connection-panel__points > div {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 9px;
+    align-items: start;
+  }
+
+  .sl-connection-panel__points i {
+    width: 34px;
+    height: 34px;
+    margin: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .sl-page-turn-sequence {
+    height: 225svh;
+    min-height: 1180px;
+  }
+
+  .sl-page-turn-world-anchor {
+    top: 76svh;
+  }
+
+  .sl-page-turn-world .sl-world-intro-overlay {
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: max(15px, env(safe-area-inset-top)) 16px 58px;
+    background: linear-gradient(180deg, rgba(247,253,255,.96) 0%, rgba(247,253,255,.74) 62%, transparent 100%);
+  }
+
+  .sl-page-turn-world .sl-world-intro-overlay h2 {
+    max-width: 270px;
+    margin: 8px 0 5px;
+    font-size: clamp(1.7rem, 8.2vw, 2.15rem);
+  }
+
+  .sl-page-turn-world .sl-world-intro-overlay p {
+    max-width: 270px;
+    font-size: 11px;
+  }
+
+  .sl-page-turn-world .sl-pan-canvas--world .sl-responsive-art > img {
+    object-position: center 53%;
+    transform: scale(1.08) translateY(2.5%);
+    transform-origin: center 43%;
+  }
+
+  .sl-page-turn-world .sl-map-detail-overlay {
+    left: 10px;
+    right: 10px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    max-height: 32vh;
+    padding: 15px;
+  }
+
+  .sl-page-turn-world .sl-map-detail-overlay h3 {
+    margin-block: 6px;
+    font-size: 1.5rem;
+  }
+
+  .sl-page-turn-world .sl-map-detail-overlay p {
+    font-size: 11px;
+  }
+
+  .sl-cinematic-journey .sl-imm-scene,
+  .sl-cinematic-workspace .sl-workspace-shell {
+    height: 100svh;
+    min-height: 600px;
+  }
+
+  .sl-cinematic-journey .sl-pan-scroll--journey,
+  .sl-cinematic-journey .sl-pan-canvas--journey,
+  .sl-cinematic-workspace .sl-pan-scroll--workspace,
+  .sl-cinematic-workspace .sl-pan-canvas--workspace {
+    height: 100%;
+    min-height: 100%;
+  }
+
+  .sl-cinematic-journey .sl-panorama-intro,
+  .sl-cinematic-workspace .sl-panorama-intro {
+    left: 14px;
+    top: max(14px, env(safe-area-inset-top));
+    width: calc(100vw - 28px);
+    padding: 0 20px 42px 0;
+    background: linear-gradient(180deg, rgba(255,253,248,.92) 0%, rgba(255,253,248,.64) 67%, transparent 100%);
+  }
+
+  .sl-cinematic-journey .sl-panorama-intro h2,
+  .sl-cinematic-workspace .sl-panorama-intro h2 {
+    max-width: 285px;
+    margin: 8px 0 5px;
+    font-size: clamp(1.65rem, 7.8vw, 2.1rem);
+  }
+
+  .sl-cinematic-journey .sl-panorama-intro p,
+  .sl-cinematic-workspace .sl-panorama-intro p {
+    max-width: 275px;
+    font-size: 11px;
+    line-height: 1.38;
+  }
+
+  .sl-waypoint-callout {
+    left: var(--callout-mobile-x);
+    top: var(--callout-mobile-y);
+    width: min(194px, 50vw);
+    padding: 10px;
+    border-radius: 14px;
+    box-shadow: 0 12px 30px rgba(58, 34, 67, .16);
+  }
+
+  .sl-waypoint-callout::before {
+    left: -12px;
+    top: 18px;
+    width: 12px;
+  }
+
+  .sl-waypoint-callout__meta {
+    padding-bottom: 6px;
+  }
+
+  .sl-waypoint-callout__meta span,
+  .sl-waypoint-callout__meta strong {
+    font-size: 7.5px;
+  }
+
+  .sl-waypoint-callout__meta span svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  .sl-waypoint-callout h3 {
+    margin: 7px 0 4px;
+    font-size: .9rem;
+    line-height: 1.08;
+  }
+
+  .sl-waypoint-callout p {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 9px;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .sl-waypoint-callout button,
+  .sl-waypoint-callout a {
+    min-height: 30px;
+    margin-top: 7px;
+    padding-inline: 8px;
+    border-radius: 9px;
+    font-size: 7.5px;
+  }
+
+  .sl-cinematic-connected .sl-immersive-section-heading {
+    margin-bottom: 22px;
+  }
+
+  .sl-cinematic-connected .sl-immersive-section-heading h2 {
+    font-size: clamp(2.25rem, 11vw, 3.15rem);
+  }
+
+  .sl-cinematic-connected .sl-immersive-section-heading p {
+    font-size: 14px;
+  }
+
+  .sl-cinematic-connected .sl-pan-scroll--connection,
+  .sl-cinematic-connected .sl-pan-canvas--connection,
+  .sl-cinematic-connected .sl-imm-connection-art {
+    aspect-ratio: 9 / 16;
+    border-radius: 22px;
+  }
+
+  .sl-connection-comparison {
+    gap: 7px;
+    margin-top: 14px;
+  }
+
+  .sl-connection-panel {
+    min-width: 0;
+    padding: 12px 7px;
+    border-radius: 16px;
+  }
+
+  .sl-connection-panel h3 {
+    min-height: 38px;
+    margin: 5px 0 10px;
+    font-size: clamp(.9rem, 4.15vw, 1.05rem);
+    line-height: 1.08;
+  }
+
+  .sl-connection-panel header > span {
+    font-size: 7.5px;
+    letter-spacing: .06em;
+  }
+
+  .sl-connection-panel__points {
+    gap: 6px;
+  }
+
+  .sl-connection-panel__points > div {
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 5px;
+    padding: 8px 5px;
+    border-radius: 11px;
+  }
+
+  .sl-connection-panel__points i {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+  }
+
+  .sl-connection-panel__points i svg {
+    width: 12px;
+  }
+
+  .sl-connection-panel__points strong {
+    overflow-wrap: anywhere;
+    font-size: 8.5px;
+    line-height: 1.18;
+  }
+
+  .sl-connection-panel__points small {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 7.5px;
+    line-height: 1.25;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .sl-connection-bridge {
+    top: -7px;
+    min-height: 27px;
+    padding-inline: 8px;
+    border-width: 2px;
+    font-size: 6.5px;
+  }
+
+  .sl-connection-bridge svg {
+    width: 10px;
+  }
+
+  .sl-imm-layer__art,
+  .sl-imm-layer__art .sl-pan-scroll--layer,
+  .sl-imm-layer__art .sl-pan-canvas--layer {
+    width: 100%;
+    min-width: 100%;
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 16 / 9;
+  }
+
+  .sl-imm-layer__art .sl-responsive-art > img {
+    object-fit: cover;
+  }
+
+  .sl-imm-layer__art--1 .sl-responsive-art > img { object-position: 48% 50%; }
+  .sl-imm-layer__art--2 .sl-responsive-art > img { object-position: 52% 50%; }
+  .sl-imm-layer__art--3 .sl-responsive-art > img { object-position: 58% 50%; }
+
+  .sellio-pricing-section .sellio-container {
+    width: calc(100% - 12px);
+  }
+
+  .sellio-pricing-section .sellio-section-heading {
+    padding-inline: 10px;
+  }
+
+  .sellio-pricing-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+    max-width: none;
+    margin-inline: 0;
+  }
+
+  .sellio-pricing-card {
+    min-width: 0;
+    padding: 16px 6px 8px;
+    border-radius: 14px;
+    box-shadow: 0 8px 22px rgba(67,29,84,.06);
+  }
+
+  .sellio-pricing-card.is-featured {
+    border-width: 1.5px;
+    transform: translateY(-4px);
+  }
+
+  .sellio-plan-badge {
+    max-width: calc(100% - 8px);
+    padding: 4px 5px;
+    overflow: hidden;
+    font-size: 6px;
+    letter-spacing: .02em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sellio-pricing-card__top h3 {
+    overflow-wrap: anywhere;
+    font-size: clamp(.85rem, 3.8vw, 1rem);
+  }
+
+  .sellio-pricing-card__top p {
+    display: -webkit-box;
+    min-height: 31px;
+    margin: 5px 0;
+    overflow: hidden;
+    font-size: 7.5px;
+    line-height: 1.28;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .sellio-plan-price {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1px 3px;
+    margin: 9px 0 3px;
+  }
+
+  .sellio-plan-price small {
+    font-size: 6px;
+  }
+
+  .sellio-plan-price strong {
+    font-size: clamp(1.35rem, 6.1vw, 1.75rem);
+  }
+
+  .sellio-plan-price span {
+    grid-column: 1 / -1;
+    font-size: 6.5px;
+  }
+
+  .sellio-plan-saving {
+    display: none;
+  }
+
+  .sellio-pricing-card ul {
+    gap: 5px;
+    padding: 10px 0;
+  }
+
+  .sellio-pricing-card li {
+    gap: 3px;
+    font-size: 7px;
+    line-height: 1.25;
+  }
+
+  .sellio-pricing-card li:nth-child(n + 4) {
+    display: none;
+  }
+
+  .sellio-pricing-card li svg {
+    width: 9px;
+    height: 9px;
+  }
+
+  .sellio-button--plan {
+    min-height: 34px;
+    gap: 3px;
+    padding: 0 4px;
+    border-radius: 9px;
+    font-size: 8px;
+  }
+
+  .sellio-button--plan svg {
+    width: 10px;
+  }
+
+  .sellio-plan-cta-long {
+    display: none;
+  }
+
+  .sellio-plan-cta-short {
+    display: inline;
+  }
+
+  .sellio-pricing-note {
+    padding-inline: 12px;
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 390px) {
+  .sl-waypoint-callout {
+    width: min(176px, 49vw);
+  }
+
+  .sl-waypoint-callout h3 {
+    font-size: .82rem;
+  }
+
+  .sl-connection-panel__points small {
+    -webkit-line-clamp: 1;
+  }
+
+  .sellio-pricing-card {
+    padding-inline: 5px;
+  }
+
+  .sellio-pricing-card__top p {
+    -webkit-line-clamp: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sl-page-turn-sequence {
+    height: auto;
+    min-height: 0;
+  }
+
+  .sl-page-turn-stage {
+    position: static;
+    height: auto;
+  }
+
+  .sl-waypoint-callout,
+  .sl-connection-panel,
+  .sl-imm-layer__art {
+    animation: none;
+    transition: none;
+  }
+}
