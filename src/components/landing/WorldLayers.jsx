@@ -8,7 +8,7 @@ import {
   Sparkles,
   Store,
 } from 'lucide-react';
-import { SELLIO_IMMERSIVE_ASSETS, SELLIO_IMMERSIVE_MOBILE_ASSETS } from './immersiveAssets';
+import { SELLIO_IMMERSIVE_ASSETS } from './immersiveAssets';
 
 const LAYERS = [
   {
@@ -18,7 +18,6 @@ const LAYERS = [
     description: 'Customers enter a coherent sector world rather than a directory grid. F&B starts the network, while Retail and Services already have room to expand.',
     tags: ['Sector discovery', 'Merchant allocation', 'Connected districts'],
     image: SELLIO_IMMERSIVE_ASSETS.world,
-    mobileImage: SELLIO_IMMERSIVE_MOBILE_ASSETS.world,
     alt: 'A premium dimensional marketplace composed of connected commerce districts',
     Icon: Map,
   },
@@ -29,7 +28,6 @@ const LAYERS = [
     description: 'Selecting a merchant brings its neighbourhood forward, then opens a storefront that retains the merchant’s own brand, products and customer journey.',
     tags: ['Branded identity', 'Product browsing', 'Direct ordering'],
     image: SELLIO_IMMERSIVE_ASSETS.storefront,
-    mobileImage: SELLIO_IMMERSIVE_MOBILE_ASSETS.storefront,
     alt: 'A dimensional close-up of a merchant-owned storefront in Sellio World',
     Icon: Store,
   },
@@ -40,7 +38,6 @@ const LAYERS = [
     description: 'Sellio Coins and cosmetic rewards can evolve alongside the marketplace—supporting seasonal decoration and merchant expression without turning core commerce into a game.',
     tags: ['Sellio Coins', 'Seasonal décor', 'Merchant progression'],
     image: SELLIO_IMMERSIVE_ASSETS.progression,
-    mobileImage: SELLIO_IMMERSIVE_MOBILE_ASSETS.progression,
     alt: 'Premium merchant progression objects leading to an upgraded seasonal storefront',
     Icon: Coins,
   },
@@ -61,11 +58,11 @@ export default function WorldLayers() {
         </div>
 
         <div className="sl-imm-layer-list">
-          {LAYERS.map(({ number, eyebrow, title, description, tags, image, mobileImage, alt, Icon }, index) => (
+          {LAYERS.map(({ number, eyebrow, title, description, tags, image, alt, Icon }, index) => (
             <React.Fragment key={number}>
               <article className={`sl-imm-layer ${index % 2 ? 'is-reversed' : ''}`}>
                 <motion.div
-                  className="sl-imm-layer__art"
+                  className={`sl-imm-layer__art sl-imm-layer__art--${index + 1}`}
                   initial={false}
                   whileHover={reduceMotion ? undefined : { scale: 1.006 }}
                   transition={{ duration: .5, ease: [0.2, 0.8, 0.2, 1] }}
@@ -73,7 +70,6 @@ export default function WorldLayers() {
                   <div className="sl-pan-scroll sl-pan-scroll--layer" tabIndex="0" aria-label={`Explore ${eyebrow}`}>
                     <div className="sl-pan-canvas sl-pan-canvas--layer">
                       <picture className="sl-responsive-art">
-                        <source media="(max-width: 600px)" srcSet={mobileImage} />
                         <img src={image} alt={alt} loading="lazy" decoding="async" />
                       </picture>
                     </div>
