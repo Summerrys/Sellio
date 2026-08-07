@@ -21,6 +21,7 @@ export default function HeroWorldTransition() {
   const worldScale = useTransform(scrollYProgress, [0, .08, .55, .68], [.92, .92, .985, 1]);
   const worldY = useTransform(scrollYProgress, [0, .08, .55, .68], ['10%', '10%', '1.5%', '0%']);
   const worldBrightness = useTransform(scrollYProgress, [0, .16, .58], [.82, .86, 1]);
+  const worldFilter = useTransform(worldBrightness, (value) => `brightness(${value})`);
   const worldClip = useTransform(
     scrollYProgress,
     [0, .08, .56, .68],
@@ -60,7 +61,7 @@ export default function HeroWorldTransition() {
             scale: worldScale,
             y: worldY,
             clipPath: worldClip,
-            filter: useTransform(worldBrightness, (value) => `brightness(${value})`),
+            filter: worldFilter,
           }}
         >
           <SellioWorld />
