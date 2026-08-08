@@ -1211,6 +1211,172 @@
   }
 }
 
+/* Final mobile usability pass: preserve the cinematic layout without sacrificing readability. */
+@media (max-width: 600px) {
+  .sellio-pricing-section .sellio-container {
+    width: calc(100% - 24px);
+  }
+
+  .sellio-pricing-grid {
+    display: flex;
+    gap: 12px;
+    max-width: none;
+    margin-inline: -12px;
+    padding: 10px 12px 20px;
+    overflow-x: auto;
+    scroll-padding-inline: 12px;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .sellio-pricing-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sellio-pricing-card,
+  .sellio-pricing-card.is-featured {
+    flex: 0 0 min(82vw, 330px);
+    min-width: min(82vw, 330px);
+    padding: 24px 20px 18px;
+    border-radius: 20px;
+    transform: none;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+  }
+
+  .sellio-plan-badge {
+    max-width: calc(100% - 24px);
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+
+  .sellio-pricing-card__top h3 {
+    font-size: 1.3rem;
+  }
+
+  .sellio-pricing-card__top p {
+    display: block;
+    min-height: 0;
+    margin: 7px 0;
+    overflow: visible;
+    font-size: 12px;
+    line-height: 1.45;
+    -webkit-line-clamp: unset;
+  }
+
+  .sellio-plan-price {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin: 12px 0 4px;
+  }
+
+  .sellio-plan-price small {
+    font-size: 10px;
+  }
+
+  .sellio-plan-price strong {
+    font-size: clamp(2.15rem, 10vw, 2.7rem);
+  }
+
+  .sellio-plan-price span {
+    grid-column: auto;
+    font-size: 11px;
+  }
+
+  .sellio-plan-saving {
+    display: block;
+    font-size: 10.5px;
+  }
+
+  .sellio-pricing-card ul {
+    gap: 8px;
+    padding: 14px 0 16px;
+  }
+
+  .sellio-pricing-card li,
+  .sellio-pricing-card li:nth-child(n + 4) {
+    display: flex;
+    gap: 7px;
+    font-size: 11.5px;
+    line-height: 1.35;
+  }
+
+  .sellio-pricing-card li svg {
+    width: 13px;
+    height: 13px;
+    flex: 0 0 13px;
+  }
+
+  .sellio-button--plan {
+    min-height: 44px;
+    gap: 6px;
+    padding-inline: 14px;
+    border-radius: 12px;
+    font-size: 12px;
+  }
+
+  .sellio-button--plan svg {
+    width: 14px;
+  }
+
+  .sellio-plan-cta-long {
+    display: inline;
+  }
+
+  .sellio-plan-cta-short {
+    display: none;
+  }
+
+  .sellio-pricing-note {
+    padding-inline: 0;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .sl-connection-panel header > span {
+    font-size: 9px;
+  }
+
+  .sl-connection-panel__points strong {
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  .sl-connection-panel__points small {
+    font-size: 9px;
+    line-height: 1.3;
+  }
+
+  .sl-connection-bridge {
+    font-size: 8px;
+  }
+
+  .sl-waypoint-callout-anchor .sl-waypoint-callout__meta span,
+  .sl-waypoint-callout-anchor .sl-waypoint-callout__meta strong {
+    font-size: 8.5px;
+  }
+
+  .sl-waypoint-callout-anchor .sl-waypoint-callout p {
+    font-size: 10px;
+    line-height: 1.4;
+  }
+
+  .sl-waypoint-callout button,
+  .sl-waypoint-callout a {
+    font-size: 9.5px;
+  }
+}
+
+.sellio-landing .sl-imm-hotspots button:focus-visible,
+.sellio-landing .sellio-button:focus-visible,
+.sellio-landing .sellio-billing-toggle button:focus-visible {
+  outline: 3px solid rgba(111, 81, 224, .58);
+  outline-offset: 4px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sl-page-turn-sequence {
     height: auto;
