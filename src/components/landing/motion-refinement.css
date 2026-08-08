@@ -1075,13 +1075,64 @@
   left: auto;
 }
 
-.sl-cinematic-journey .sl-imm-hotspots button.is-active {
-  animation: sl-active-waypoint-pulse 1.65s ease-in-out infinite;
+.sellio-landing .sl-imm-hotspots button.is-active {
+  color: #fff;
+  border-color: rgba(255,255,255,.95);
+  background: linear-gradient(145deg, #8f43d7 0%, #e0449a 58%, #ff855f 100%);
+  text-shadow: 0 1px 5px rgba(55,18,67,.35);
+  animation: sl-active-waypoint-pulse 1.35s ease-in-out infinite;
+}
+
+.sellio-landing .sl-imm-hotspots button.is-active::after {
+  inset: -10px;
+  border: 2px solid rgba(238,75,170,.72);
+  box-shadow: 0 0 15px rgba(224,68,154,.7), 0 0 30px rgba(111,81,224,.38);
+  animation: sl-active-waypoint-ring 1.35s ease-out infinite;
 }
 
 @keyframes sl-active-waypoint-pulse {
-  0%, 100% { box-shadow: 0 0 0 6px rgba(224,68,154,.16), 0 14px 32px rgba(63,32,70,.24); }
-  50% { box-shadow: 0 0 0 13px rgba(224,68,154,.08), 0 18px 38px rgba(63,32,70,.3); }
+  0%, 100% {
+    box-shadow: 0 0 0 5px rgba(255,255,255,.72), 0 0 18px rgba(224,68,154,.78), 0 0 38px rgba(139,74,221,.42), 0 15px 34px rgba(63,32,70,.28);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(255,255,255,.88), 0 0 28px rgba(224,68,154,.98), 0 0 58px rgba(139,74,221,.58), 0 20px 42px rgba(63,32,70,.34);
+    filter: brightness(1.16);
+  }
+}
+
+@keyframes sl-active-waypoint-ring {
+  0% { opacity: .95; transform: scale(.9); }
+  70%, 100% { opacity: 0; transform: scale(1.42); }
+}
+
+/* Connected Commerce uses the same image-attached interaction language. */
+.sl-connection-waypoints {
+  z-index: 15;
+}
+
+.sl-connection-waypoints button {
+  left: var(--point-x) !important;
+  top: var(--point-y) !important;
+  right: auto !important;
+}
+
+.sl-waypoint-callout--connected {
+  border-color: rgba(91,70,184,.2);
+  background: rgba(255,253,249,.94);
+}
+
+.sl-waypoint-callout--connected::before {
+  border-color: rgba(100,81,204,.58);
+}
+
+.sl-waypoint-callout--connected .sl-waypoint-callout__meta span,
+.sl-waypoint-callout--connected .sl-waypoint-callout__meta strong {
+  color: #654fc1;
+}
+
+.sl-connected-callout-anchor .sl-waypoint-callout {
+  width: min(260px, 21vw);
 }
 
 @media (max-width: 600px) {
@@ -1092,6 +1143,15 @@
   .sl-waypoint-callout-anchor {
     left: var(--callout-mobile-x);
     top: var(--callout-mobile-y);
+  }
+
+  .sl-connection-waypoints button {
+    left: var(--point-mobile-x) !important;
+    top: var(--point-mobile-y) !important;
+  }
+
+  .sl-connected-callout-anchor .sl-waypoint-callout {
+    width: min(164px, 41vw);
   }
 
   .sl-waypoint-callout-anchor .sl-waypoint-callout {
@@ -1152,7 +1212,8 @@
   }
 
   .sl-waypoint-callout,
-  .sl-cinematic-journey .sl-imm-hotspots button.is-active,
+  .sellio-landing .sl-imm-hotspots button.is-active,
+  .sellio-landing .sl-imm-hotspots button.is-active::after,
   .sl-connection-panel,
   .sl-imm-layer__art,
   .sl-chapter-transition,
