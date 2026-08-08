@@ -1213,6 +1213,16 @@
   }
 }
 
+/* Footer launch CTA intentionally uses a white pill on the gradient panel. Keep its label/icon dark even though general gradient CTAs use white text. */
+.sellio-landing .sellio-footer-launch__actions .sellio-button--gradient {
+  color: #3a1749 !important;
+  background: #fff;
+}
+
+.sellio-landing .sellio-footer-launch__actions .sellio-button--gradient svg {
+  color: currentColor !important;
+}
+
 /* Final mobile usability pass: preserve the cinematic layout without sacrificing readability. */
 @media (max-width: 600px) {
   .sellio-pricing-section .sellio-container {
