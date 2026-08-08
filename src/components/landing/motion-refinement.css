@@ -1547,6 +1547,10 @@
     filter: none;
   }
 
+  .sl-cinematic-journey .sl-panorama-intro--journey {
+    padding-bottom: 56px;
+  }
+
   .sl-cinematic-journey .sl-panorama-intro--journey h2,
   .sl-cinematic-connected .sl-panorama-intro--connected h2 {
     max-width: 330px;
