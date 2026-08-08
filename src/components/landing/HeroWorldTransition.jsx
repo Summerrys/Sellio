@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion, useScroll, useSpring, useTransform } from 'framer-motion';
+import { BarChart3, Bell, Package, QrCode, Store, Users } from 'lucide-react';
 import ScrollWorldExperience from './ScrollWorldExperience';
 import SellioWorld from './SellioWorld';
 
@@ -38,6 +39,8 @@ export default function HeroWorldTransition() {
     ['inset(14% 6% 6% 6% round 38px)', 'inset(14% 6% 6% 6% round 38px)', 'inset(1.5% .8% .8% .8% round 20px)', 'inset(0% 0% 0% 0% round 0px)'],
   );
   const seamOpacity = useTransform(smoothProgress, [.16, .46, .68], [0, .9, 0]);
+  const proofOpacity = useTransform(smoothProgress, [0, .54, .64, .69], [0, 0, .72, 1]);
+  const proofY = useTransform(smoothProgress, [0, .54, .64, .69], [34, 34, 9, 0]);
 
   useEffect(() => {
     const unsubscribe = scrollYProgress.on('change', (value) => {
@@ -236,6 +239,20 @@ export default function HeroWorldTransition() {
           }}
         >
           <SellioWorld />
+          <motion.div
+            className="sellio-proof-strip sl-world-proof-strip"
+            style={{ opacity: proofOpacity, y: proofY }}
+            aria-label="Sellio capabilities"
+          >
+            <div className="sellio-container">
+              <span><Store /> Online storefront</span>
+              <span><QrCode /> QR ordering</span>
+              <span><Bell /> Live orders</span>
+              <span><Package /> Inventory</span>
+              <span><BarChart3 /> Reports</span>
+              <span><Users /> Staff roles</span>
+            </div>
+          </motion.div>
         </motion.div>
 
         <motion.div
