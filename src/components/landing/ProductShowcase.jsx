@@ -9,8 +9,10 @@ const CALLOUT_POSITIONS = [
   { x: '5%', y: '62%', mobileX: '4%', mobileY: '62%' },
   { x: '23%', y: '58%', mobileX: '28%', mobileY: '64%' },
   { x: '43%', y: '59%', mobileX: '5%', mobileY: '39%' },
-  { x: '59%', y: '57%', mobileX: '42%', mobileY: '45%' },
-  { x: '70%', y: '52%', mobileX: '47%', mobileY: '30%' },
+  // Keep the upper-right workspace markers unobstructed on phones. Stages 04/05
+  // explain from the left side of the artwork rather than covering their waypoint.
+  { x: '59%', y: '57%', mobileX: '6%', mobileY: '47%' },
+  { x: '70%', y: '52%', mobileX: '6%', mobileY: '33%' },
 ];
 
 export default function ProductShowcase() {
