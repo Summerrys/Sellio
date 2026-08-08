@@ -89,14 +89,6 @@ export default function ConnectedCommerce() {
   return (
     <section id="connected" className="sellio-section sl-imm-section sl-imm-connected sl-cinematic-section sl-cinematic-connected" aria-labelledby="sellio-connected-heading">
       <div className="sellio-container">
-        <header className="sl-immersive-section-heading sl-immersive-section-heading--connected">
-          <span className="sellio-eyebrow"><HeartHandshake /> Connected commerce</span>
-          <div>
-            <h2 id="sellio-connected-heading">Delight in front.<br />Clarity behind the counter.</h2>
-            <p>Customers feel the brand while merchants stay in control. Both sides stay connected without becoming the same experience.</p>
-          </div>
-        </header>
-
         <div className="sl-imm-connection-stage">
           <div className="sl-pan-scroll sl-pan-scroll--connection" tabIndex="0" aria-label="Connected customer and merchant experience">
             <motion.div
@@ -114,6 +106,13 @@ export default function ConnectedCommerce() {
                   decoding="async"
                 />
               </picture>
+
+              <header className="sl-panorama-intro sl-panorama-intro--connected">
+                <span className="sellio-eyebrow"><HeartHandshake /> Connected commerce</span>
+                <h2 id="sellio-connected-heading">Delight in front.<br />Clarity behind the counter.</h2>
+                <p>Customers feel the brand while merchants stay in control. Both sides stay connected without becoming the same experience.</p>
+              </header>
+
               <div className="sl-imm-hotspots sl-connection-waypoints" aria-label="Connected commerce stages">
                 {CONNECTED_STAGES.map((stage, index) => (
                   <button
