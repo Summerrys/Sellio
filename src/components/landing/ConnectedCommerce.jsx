@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import React, { useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   BarChart3,
   BellRing,
@@ -22,6 +22,36 @@ const MERCHANT_POINTS = [
   { Icon: BellRing, title: 'Live order flow', copy: 'New, preparing and ready states stay in one operational view.' },
   { Icon: PackageCheck, title: 'Connected stock', copy: 'Product and inventory activity remain part of the same story.' },
   { Icon: BarChart3, title: 'Useful visibility', copy: 'Performance is translated into an understandable daily pulse.' },
+];
+
+const CONNECTED_STAGES = [
+  {
+    key: 'customer',
+    number: '01',
+    label: 'Customer intent',
+    title: 'A customer enters through the merchant’s own brand.',
+    description: 'Discovery, product choice and checkout stay simple while the storefront keeps its identity.',
+    Icon: Store,
+    point: { x: '24%', y: '56%', mobileX: '24%', mobileY: '42%' },
+  },
+  {
+    key: 'sellio',
+    number: '02',
+    label: 'Sellio sync',
+    title: 'Sellio carries the order into one connected flow.',
+    description: 'Order details, product context and operational status move together without manual re-entry.',
+    Icon: Sparkles,
+    point: { x: '50%', y: '49%', mobileX: '50%', mobileY: '57%' },
+  },
+  {
+    key: 'merchant',
+    number: '03',
+    label: 'Merchant action',
+    title: 'The merchant sees what happened and what comes next.',
+    description: 'Teams act on live orders, connected stock and useful performance signals from one side of Sellio.',
+    Icon: BellRing,
+    point: { x: '76%', y: '57%', mobileX: '72%', mobileY: '72%' },
+  },
 ];
 
 function PointList({ title, eyebrow, points, tone, reduceMotion }) {
@@ -52,6 +82,9 @@ function PointList({ title, eyebrow, points, tone, reduceMotion }) {
 
 export default function ConnectedCommerce() {
   const reduceMotion = useReducedMotion();
+  const [activeIndex, setActiveIndex] = useState(0);
+  const activeStage = CONNECTED_STAGES[activeIndex];
+  const ActiveStageIcon = activeStage.Icon;
 
   return (
     <section id="connected" className="sellio-section sl-imm-section sl-imm-connected sl-cinematic-section sl-cinematic-connected" aria-labelledby="sellio-connected-heading">
@@ -81,9 +114,50 @@ export default function ConnectedCommerce() {
                   decoding="async"
                 />
               </picture>
-              <div className="sl-imm-connection-badge sl-imm-connection-badge--customer"><Store /> Customer experience</div>
-              <div className="sl-imm-connection-badge sl-imm-connection-badge--merchant"><BarChart3 /> Merchant operations</div>
-              <div className="sl-imm-connection-core"><Sparkles /><span>Connected by Sellio</span></div>
+              <div className="sl-imm-hotspots sl-connection-waypoints" aria-label="Connected commerce stages">
+                {CONNECTED_STAGES.map((stage, index) => (
+                  <button
+                    key={stage.key}
+                    type="button"
+                    className={index === activeIndex ? 'is-active' : ''}
+                    style={{ '--point-x': stage.point.x, '--point-y': stage.point.y, '--point-mobile-x': stage.point.mobileX, '--point-mobile-y': stage.point.mobileY }}
+                    onClick={() => setActiveIndex(index)}
+                    aria-pressed={index === activeIndex}
+                    aria-label={`${stage.number}. ${stage.label}: show this connection stage`}
+                  >
+                    <span>{stage.number}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div
+                className={`sl-waypoint-callout-anchor sl-connected-callout-anchor ${activeIndex === 1 ? 'is-left' : 'is-right'}`}
+                style={{
+                  '--callout-x': activeStage.point.x,
+                  '--callout-y': activeStage.point.y,
+                  '--callout-mobile-x': activeStage.point.mobileX,
+                  '--callout-mobile-y': activeStage.point.mobileY,
+                }}
+              >
+                <AnimatePresence mode="wait">
+                  <motion.article
+                    key={activeStage.key}
+                    className="sl-waypoint-callout sl-waypoint-callout--connected"
+                    initial={reduceMotion ? false : { opacity: 0, rotateY: activeIndex === 1 ? 8 : -8, scale: .96 }}
+                    animate={{ opacity: 1, rotateY: 0, scale: 1 }}
+                    exit={reduceMotion ? undefined : { opacity: 0, rotateY: activeIndex === 1 ? -8 : 8, scale: .97 }}
+                    transition={{ duration: reduceMotion ? 0 : .3, ease: [0.2, 0.8, 0.2, 1] }}
+                    aria-live="polite"
+                  >
+                    <div className="sl-waypoint-callout__meta">
+                      <span><ActiveStageIcon aria-hidden="true" /> Connection {activeStage.number}</span>
+                      <strong>{activeStage.label}</strong>
+                    </div>
+                    <h3>{activeStage.title}</h3>
+                    <p>{activeStage.description}</p>
+                  </motion.article>
+                </AnimatePresence>
+              </div>
             </motion.div>
           </div>
 
