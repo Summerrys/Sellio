@@ -6,13 +6,12 @@ import { SELLIO_IMMERSIVE_ASSETS, SELLIO_IMMERSIVE_MOBILE_ASSETS } from './immer
 import './mobile-pan.css';
 
 const CALLOUT_POSITIONS = [
-  { x: '5%', y: '62%', mobileX: '4%', mobileY: '62%' },
-  { x: '23%', y: '58%', mobileX: '28%', mobileY: '64%' },
-  { x: '43%', y: '59%', mobileX: '5%', mobileY: '39%' },
-  // Keep the upper-right workspace markers unobstructed on phones. Stages 04/05
-  // explain from the left side of the artwork rather than covering their waypoint.
-  { x: '59%', y: '57%', mobileX: '6%', mobileY: '47%' },
-  { x: '70%', y: '52%', mobileX: '6%', mobileY: '33%' },
+  { x: '5%', y: '62%', mobileX: '48%', mobileY: '63%' },
+  { x: '23%', y: '58%', mobileX: '48%', mobileY: '57%' },
+  { x: '43%', y: '59%', mobileX: '48%', mobileY: '52%' },
+  // Use the open left-side floor for the upper-right stages so their markers stay unobstructed.
+  { x: '59%', y: '57%', mobileX: '4%', mobileY: '54%' },
+  { x: '70%', y: '52%', mobileX: '4%', mobileY: '45%' },
 ];
 
 export default function ProductShowcase() {
