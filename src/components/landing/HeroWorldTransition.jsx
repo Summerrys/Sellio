@@ -37,6 +37,27 @@ export default function HeroWorldTransition() {
   }, [scrollYProgress]);
 
   useEffect(() => {
+    const sequence = sequenceRef.current;
+    if (!sequence) return undefined;
+
+    const measureSettlePoint = () => {
+      const range = Math.max(0, sequence.offsetHeight - window.innerHeight);
+      sequence.style.setProperty('--sl-page-turn-settle-y', `${Math.round(range * .72)}px`);
+    };
+
+    measureSettlePoint();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measureSettlePoint);
+    observer?.observe(sequence);
+    window.addEventListener('resize', measureSettlePoint);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measureSettlePoint);
+      sequence.style.removeProperty('--sl-page-turn-settle-y');
+    };
+  }, []);
+
+  useEffect(() => {
     if (reduceMotion) return undefined;
 
     const coarsePointer = window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 760;
