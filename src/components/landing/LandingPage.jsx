@@ -253,9 +253,10 @@ function LandingHeader() {
       const world = document.getElementById('world-experience');
       const film = document.getElementById('sellio-film');
       const worldTop = world ? window.scrollY + world.getBoundingClientRect().top : null;
+      const headerHeight = headerRef.current?.getBoundingClientRect().height || 68;
       const revealAt = worldTop !== null
-        ? worldTop - 2
-        : film ? window.scrollY + film.getBoundingClientRect().bottom - 2 : Number.POSITIVE_INFINITY;
+        ? worldTop - headerHeight * .8
+        : film ? window.scrollY + film.getBoundingClientRect().bottom - headerHeight * .8 : Number.POSITIVE_INFINITY;
       setVisible(window.scrollY >= revealAt);
     };
     const requestUpdate = () => {
