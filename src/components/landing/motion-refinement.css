@@ -1131,7 +1131,7 @@
   color: #654fc1;
 }
 
-.sl-connected-callout-anchor .sl-waypoint-callout {
+.sl-waypoint-callout-anchor.sl-connected-callout-anchor .sl-waypoint-callout {
   width: min(260px, 21vw);
 }
 
@@ -1150,7 +1150,7 @@
     top: var(--point-mobile-y) !important;
   }
 
-  .sl-connected-callout-anchor .sl-waypoint-callout {
+  .sl-waypoint-callout-anchor.sl-connected-callout-anchor .sl-waypoint-callout {
     width: min(164px, 41vw);
   }
 
@@ -1197,6 +1197,11 @@
 
   .sl-page-turn-world .sl-world-stage--storefront .sl-storefront-intro-overlay {
     top: calc(var(--sellio-header-height, 74px) + max(12px, env(safe-area-inset-top))) !important;
+  }
+
+  .sl-chapter-transition--journey .sl-panorama-intro,
+  .sl-chapter-transition--workspace .sl-panorama-intro {
+    top: calc(var(--sellio-header-height, 74px) + max(12px, env(safe-area-inset-top)));
   }
 }
 
