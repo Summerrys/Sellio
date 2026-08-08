@@ -2,18 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
-  BarChart3,
-  Bell,
   Check,
   ChevronRight,
   CircleDollarSign,
   Menu,
-  Package,
-  QrCode,
   ShieldCheck,
   Sparkles,
-  Store,
-  Users,
   X,
 } from 'lucide-react';
 import HeroWorldTransition from './HeroWorldTransition';
@@ -217,7 +211,7 @@ export default function LandingPage() {
       <a className="sellio-skip-link" href="#sellio-main">Skip to content</a><LandingHeader />
       <main id="sellio-main">
         <HeroWorldTransition />
-        <section className="sellio-proof-strip" aria-label="Sellio capabilities"><div className="sellio-container"><span><Store /> Online storefront</span><span><QrCode /> QR ordering</span><span><Bell /> Live orders</span><span><Package /> Inventory</span><span><BarChart3 /> Reports</span><span><Users /> Staff roles</span></div></section>
+        <section className="sellio-proof-strip sellio-proof-strip--after-world" aria-label="Sellio capabilities"><div className="sellio-container"><span>Online storefront</span><span>QR ordering</span><span>Live orders</span><span>Inventory</span><span>Reports</span><span>Staff roles</span></div></section>
         <ChapterTransition className="sl-chapter-transition--journey" label="Order journey chapter"><CommerceJourney /></ChapterTransition>
         <ChapterTransition className="sl-chapter-transition--connected" label="Connected commerce chapter"><ConnectedCommerce /></ChapterTransition>
         <ChapterTransition className="sl-chapter-transition--workspace" label="Merchant workspace chapter"><ProductShowcase /></ChapterTransition>
