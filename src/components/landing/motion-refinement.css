@@ -1650,7 +1650,127 @@
   }
 }
 
+/* Final interaction consistency pass for the immersive chapters. */
+.sl-cinematic-workspace .sl-panorama-intro--workspace .sellio-eyebrow {
+  color: #7f2d7a !important;
+  border: 1px solid rgba(90,48,94,.14);
+  background: rgba(255,255,255,.84) !important;
+  box-shadow: 0 8px 22px rgba(71,44,77,.1) !important;
+  opacity: 1 !important;
+  text-shadow: none;
+}
+
+.sl-waypoint-callout--workspace {
+  border-color: rgba(224,68,154,.18);
+}
+
+.sl-waypoint-callout--workspace .sl-waypoint-callout__meta span,
+.sl-waypoint-callout--workspace .sl-waypoint-callout__meta strong {
+  color: #9b2f73;
+}
+
+.sl-waypoint-callout--workspace a {
+  color: #fff !important;
+  background: linear-gradient(135deg, #8f43d7 0%, #e0449a 58%, #ff855f 100%);
+  box-shadow: 0 10px 24px rgba(224,68,154,.24);
+}
+
+@media (max-width: 600px) {
+  /* Journey, Connected Commerce and Workspace now use one marker scale/weight. */
+  .sl-cinematic-journey .sl-imm-hotspots button,
+  .sl-cinematic-connected .sl-imm-hotspots button,
+  .sl-cinematic-workspace .sl-workspace-waypoints button {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(92,58,103,.14);
+    border-radius: 50%;
+    color: #34203c;
+    background: rgba(255,253,249,.92);
+    box-shadow: 0 9px 24px rgba(67,32,77,.14);
+    backdrop-filter: blur(14px) saturate(115%);
+    -webkit-backdrop-filter: blur(14px) saturate(115%);
+    font: 800 15px/1 "Manrope", sans-serif;
+  }
+
+  .sl-cinematic-journey .sl-imm-hotspots button > span,
+  .sl-cinematic-connected .sl-imm-hotspots button > span,
+  .sl-cinematic-workspace .sl-workspace-waypoints button > span {
+    width: auto;
+    height: auto;
+    display: block;
+    padding: 0;
+    border-radius: 0;
+    color: inherit;
+    background: transparent;
+    font: inherit;
+  }
+
+  .sl-cinematic-workspace .sl-workspace-waypoints button strong {
+    display: none;
+  }
+
+  .sl-cinematic-workspace .sl-workspace-waypoints button.is-active {
+    color: #fff;
+    border-color: rgba(255,236,249,.78);
+    background: linear-gradient(145deg, #8f43d7 0%, #e0449a 58%, #ff855f 100%);
+    box-shadow: 0 0 0 2px rgba(224,68,154,.14), 0 0 13px rgba(224,68,154,.32), 0 10px 24px rgba(63,32,70,.2);
+    animation: sl-active-waypoint-pulse 1.8s ease-in-out infinite;
+  }
+
+  .sl-cinematic-workspace .sl-workspace-waypoints button.is-active::after {
+    content: "";
+    position: absolute;
+    inset: -7px;
+    border: 1px solid rgba(224,68,154,.44);
+    border-radius: inherit;
+    box-shadow: 0 0 12px rgba(224,68,154,.26), 0 0 20px rgba(111,81,224,.14);
+    animation: sl-active-waypoint-ring 1.8s ease-out infinite;
+    pointer-events: none;
+  }
+
+  /* Connected Commerce callouts deliberately match Order Journey instead of using a larger purple variant. */
+  .sl-waypoint-callout-anchor.sl-connected-callout-anchor .sl-waypoint-callout {
+    width: min(168px, 42vw);
+    border-color: rgba(76,43,86,.14);
+    background: rgba(255,253,249,.94);
+  }
+
+  .sl-waypoint-callout--connected::before {
+    border-color: rgba(157,50,117,.56);
+  }
+
+  .sl-waypoint-callout--connected .sl-waypoint-callout__meta span,
+  .sl-waypoint-callout--connected .sl-waypoint-callout__meta strong {
+    color: #9b2f73;
+  }
+
+  /* The workspace card explains from clear image space; it must never cover the selected waypoint. */
+  .sl-cinematic-workspace .sl-waypoint-callout--workspace {
+    width: min(190px, 48vw);
+    padding: 11px;
+    border-radius: 15px;
+    background: rgba(255,253,249,.94);
+    box-shadow: 0 14px 34px rgba(58,34,67,.16);
+  }
+
+  .sl-cinematic-workspace .sl-waypoint-callout--workspace::before {
+    display: none;
+  }
+
+  .sl-cinematic-workspace .sl-waypoint-callout--workspace a {
+    min-height: 36px;
+    padding-inline: 11px;
+    font-size: 10px;
+  }
+}
+
 .sellio-landing .sl-imm-hotspots button:focus-visible,
+.sellio-landing .sl-workspace-waypoints button:focus-visible,
 .sellio-landing .sellio-button:focus-visible,
 .sellio-landing .sellio-billing-toggle button:focus-visible {
   outline: 3px solid rgba(111, 81, 224, .58);
