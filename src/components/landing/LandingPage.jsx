@@ -43,6 +43,205 @@ const NAV_ITEMS = [
   { label: 'Pricing', href: '#pricing' },
 ];
 
+const SNAP_PAGE_SELECTORS = ['#sellio-film', '#world-experience', '#journey', '#connected', '#product'];
+
+function useImmersiveReleaseSnap() {
+  useEffect(() => {
+    const touchLayout = window.matchMedia('(max-width: 900px), (hover: none) and (pointer: coarse)');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (!touchLayout.matches || reducedMotion.matches) return undefined;
+
+    let points = [];
+    let snapFrame;
+    let settleTimer;
+    let wheelTimer;
+    let snapping = false;
+    let pending = null;
+    let wheelOrigin = null;
+    let wheelDelta = 0;
+    let touchStart = null;
+
+    const absoluteTop = (node) => window.scrollY + node.getBoundingClientRect().top;
+
+    const measure = () => {
+      points = SNAP_PAGE_SELECTORS
+        .map((selector) => document.querySelector(selector))
+        .filter(Boolean)
+        .map((node) => absoluteTop(node));
+    };
+
+    const nearestIndex = (y) => {
+      if (!points.length) return -1;
+      let best = 0;
+      let bestDistance = Math.abs(y - points[0]);
+      for (let index = 1; index < points.length; index += 1) {
+        const distance = Math.abs(y - points[index]);
+        if (distance < bestDistance) {
+          best = index;
+          bestDistance = distance;
+        }
+      }
+      return best;
+    };
+
+    const cancelSnap = () => {
+      if (snapFrame) window.cancelAnimationFrame(snapFrame);
+      snapFrame = undefined;
+      snapping = false;
+    };
+
+    const animateTo = (targetY) => {
+      cancelSnap();
+      const startY = window.scrollY;
+      const distance = targetY - startY;
+      if (Math.abs(distance) < 2) return;
+
+      snapping = true;
+      const startedAt = performance.now();
+      const duration = Math.min(650, Math.max(430, Math.abs(distance) * .52));
+
+      const step = (now) => {
+        const progress = Math.min(1, (now - startedAt) / duration);
+        const eased = progress < .5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        window.scrollTo(0, startY + distance * eased);
+
+        if (progress < 1) {
+          snapFrame = window.requestAnimationFrame(step);
+        } else {
+          snapFrame = undefined;
+          snapping = false;
+        }
+      };
+
+      snapFrame = window.requestAnimationFrame(step);
+    };
+
+    const settle = () => {
+      window.clearTimeout(settleTimer);
+      if (!pending || snapping) return;
+      measure();
+      if (points.length !== SNAP_PAGE_SELECTORS.length) {
+        pending = null;
+        return;
+      }
+
+      const { direction, originIndex, originY } = pending;
+      pending = null;
+      if (originIndex < 0 || Math.abs(originY - points[originIndex]) > window.innerHeight * .92) return;
+
+      let targetIndex = originIndex;
+      if (direction > 0 && originIndex < points.length - 1) {
+        targetIndex = originIndex + 1;
+      } else if (direction < 0 && originIndex > 0) {
+        // Returning from the normal-scrolling content below Merchant Workspace
+        // settles on Workspace first instead of skipping straight to Connected Commerce.
+        if (originIndex === points.length - 1 && originY > points[originIndex] + window.innerHeight * .15) {
+          targetIndex = originIndex;
+        } else {
+          targetIndex = originIndex - 1;
+        }
+      } else {
+        // Downward scrolling from Merchant Workspace intentionally becomes normal page scrolling.
+        return;
+      }
+
+      animateTo(points[targetIndex]);
+    };
+
+    const scheduleSettle = (delay = 115) => {
+      window.clearTimeout(settleTimer);
+      settleTimer = window.setTimeout(settle, delay);
+    };
+
+    const onScroll = () => {
+      if (pending && !snapping) scheduleSettle(115);
+    };
+
+    const onTouchStart = (event) => {
+      if (!event.touches?.length) return;
+      cancelSnap();
+      window.clearTimeout(settleTimer);
+      measure();
+      touchStart = {
+        x: event.touches[0].clientX,
+        y: event.touches[0].clientY,
+        scrollY: window.scrollY,
+        originIndex: nearestIndex(window.scrollY),
+      };
+      pending = null;
+    };
+
+    const onTouchEnd = (event) => {
+      if (!touchStart) return;
+      const touch = event.changedTouches?.[0];
+      const deltaX = touch ? touchStart.x - touch.clientX : 0;
+      const deltaY = touch ? touchStart.y - touch.clientY : window.scrollY - touchStart.scrollY;
+      const scrollDelta = window.scrollY - touchStart.scrollY;
+      const verticalTravel = Math.abs(deltaY) > Math.abs(scrollDelta) ? deltaY : scrollDelta;
+
+      if (Math.abs(verticalTravel) > 12 && Math.abs(verticalTravel) > Math.abs(deltaX) * .8) {
+        pending = {
+          direction: verticalTravel > 0 ? 1 : -1,
+          originIndex: touchStart.originIndex,
+          originY: touchStart.scrollY,
+        };
+        scheduleSettle(125);
+      }
+      touchStart = null;
+    };
+
+    const finishWheelGesture = () => {
+      if (!wheelOrigin || Math.abs(wheelDelta) < 4) {
+        wheelOrigin = null;
+        wheelDelta = 0;
+        return;
+      }
+      pending = {
+        direction: wheelDelta > 0 ? 1 : -1,
+        originIndex: wheelOrigin.originIndex,
+        originY: wheelOrigin.scrollY,
+      };
+      wheelOrigin = null;
+      wheelDelta = 0;
+      scheduleSettle(115);
+    };
+
+    const onWheel = (event) => {
+      cancelSnap();
+      measure();
+      if (!wheelOrigin) {
+        wheelOrigin = { scrollY: window.scrollY, originIndex: nearestIndex(window.scrollY) };
+        wheelDelta = 0;
+      }
+      wheelDelta += event.deltaY;
+      window.clearTimeout(wheelTimer);
+      wheelTimer = window.setTimeout(finishWheelGesture, 95);
+    };
+
+    const onResize = () => measure();
+
+    measure();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+    window.addEventListener('wheel', onWheel, { passive: true });
+    window.addEventListener('resize', onResize);
+
+    return () => {
+      window.clearTimeout(settleTimer);
+      window.clearTimeout(wheelTimer);
+      cancelSnap();
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('resize', onResize);
+    };
+  }, []);
+}
+
 function LandingHeader() {
   const headerRef = useRef(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -51,11 +250,12 @@ function LandingHeader() {
   useEffect(() => {
     let frame;
     const update = () => {
-      const sequence = document.getElementById('sellio-entry-sequence');
+      const world = document.getElementById('world-experience');
       const film = document.getElementById('sellio-film');
-      const revealAt = sequence
-        ? sequence.offsetTop + Math.max(0, sequence.offsetHeight - window.innerHeight) * .68
-        : film ? film.offsetTop + film.offsetHeight - 2 : Number.POSITIVE_INFINITY;
+      const worldTop = world ? window.scrollY + world.getBoundingClientRect().top : null;
+      const revealAt = worldTop !== null
+        ? worldTop - 2
+        : film ? window.scrollY + film.getBoundingClientRect().bottom - 2 : Number.POSITIVE_INFINITY;
       setVisible(window.scrollY >= revealAt);
     };
     const requestUpdate = () => {
