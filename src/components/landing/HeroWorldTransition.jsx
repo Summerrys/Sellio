@@ -51,13 +51,11 @@ export default function HeroWorldTransition() {
 
   useEffect(() => {
     const sequence = sequenceRef.current;
-    const landing = sequence?.closest('.sellio-landing');
     if (!sequence) return undefined;
 
     const measureSettlePoint = () => {
       const range = Math.max(0, sequence.offsetHeight - window.innerHeight);
       sequence.style.setProperty('--sl-page-turn-settle-y', `${Math.round(range * .72)}px`);
-      landing?.style.setProperty('--sl-world-proof-lift', `-${Math.round(range * .28 + 168)}px`);
     };
 
     measureSettlePoint();
@@ -69,7 +67,6 @@ export default function HeroWorldTransition() {
       observer?.disconnect();
       window.removeEventListener('resize', measureSettlePoint);
       sequence.style.removeProperty('--sl-page-turn-settle-y');
-      landing?.style.removeProperty('--sl-world-proof-lift');
     };
   }, []);
 
