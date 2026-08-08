@@ -47,7 +47,7 @@ const STEPS = [
     title: 'Inventory follows the rhythm of service.',
     description: 'Stock activity stays connected to the products being sold, so the operational picture stays current.',
     Icon: PackageCheck,
-    point: { x: '61%', y: '50%', mobileX: '57%', mobileY: '41%' },
+    point: { x: '61%', y: '50%', mobileX: '58%', mobileY: '43%' },
   },
   {
     key: 'learn',
@@ -56,7 +56,7 @@ const STEPS = [
     title: 'The day becomes useful business insight.',
     description: 'Sales, popular products and operational patterns are ready to review without rebuilding the story.',
     Icon: BarChart3,
-    point: { x: '72%', y: '45%', mobileX: '42%', mobileY: '28%' },
+    point: { x: '72%', y: '45%', mobileX: '46%', mobileY: '34%' },
   },
 ];
 
