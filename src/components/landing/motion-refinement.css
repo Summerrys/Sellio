@@ -1409,6 +1409,12 @@
   outline-offset: 4px;
 }
 
+@media (max-width: 600px) and (prefers-reduced-motion: reduce) {
+  .sellio-proof-strip--after-world {
+    display: block;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sl-page-turn-sequence {
     height: auto;
