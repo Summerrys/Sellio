@@ -33,6 +33,7 @@ const CONNECTED_STAGES = [
     description: 'Discovery, product choice and checkout stay simple while the storefront keeps its identity.',
     Icon: Store,
     point: { x: '24%', y: '56%', mobileX: '24%', mobileY: '42%' },
+    callout: { mobileX: '30%', mobileY: '34%' },
   },
   {
     key: 'sellio',
@@ -42,6 +43,7 @@ const CONNECTED_STAGES = [
     description: 'Order details, product context and operational status move together without manual re-entry.',
     Icon: Sparkles,
     point: { x: '50%', y: '49%', mobileX: '55%', mobileY: '57%' },
+    callout: { mobileX: '55%', mobileY: '51%' },
   },
   {
     key: 'merchant',
@@ -51,6 +53,7 @@ const CONNECTED_STAGES = [
     description: 'Teams act on live orders, connected stock and useful performance signals from one side of Sellio.',
     Icon: BellRing,
     point: { x: '76%', y: '57%', mobileX: '72%', mobileY: '72%' },
+    callout: { mobileX: '72%', mobileY: '58%' },
   },
 ];
 
@@ -134,8 +137,8 @@ export default function ConnectedCommerce() {
                 style={{
                   '--callout-x': activeStage.point.x,
                   '--callout-y': activeStage.point.y,
-                  '--callout-mobile-x': activeStage.point.mobileX,
-                  '--callout-mobile-y': activeStage.point.mobileY,
+                  '--callout-mobile-x': activeStage.callout?.mobileX || activeStage.point.mobileX,
+                  '--callout-mobile-y': activeStage.callout?.mobileY || activeStage.point.mobileY,
                 }}
               >
                 <AnimatePresence mode="wait">
