@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -43,6 +43,7 @@ const NAV_ITEMS = [
 ];
 
 function LandingHeader() {
+  const headerRef = useRef(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [visible, setVisible] = useState(false);
 
@@ -74,8 +75,29 @@ function LandingHeader() {
     if (!visible) setMenuOpen(false);
   }, [visible]);
 
+  useEffect(() => {
+    const header = headerRef.current;
+    const landing = header?.closest('.sellio-landing');
+    if (!header || !landing) return undefined;
+
+    const measure = () => {
+      landing.style.setProperty('--sellio-header-height', `${Math.ceil(header.getBoundingClientRect().height)}px`);
+    };
+
+    measure();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(header);
+    window.addEventListener('resize', measure);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+      landing.style.removeProperty('--sellio-header-height');
+    };
+  }, []);
+
   return (
-    <header className={'sellio-landing-header ' + (visible ? 'is-visible' : '')} aria-hidden={!visible}>
+    <header ref={headerRef} className={'sellio-landing-header ' + (visible ? 'is-visible' : '')} aria-hidden={!visible}>
       <div className="sellio-container sellio-landing-header__inner">
         <a href="/" className="sellio-landing-logo" aria-label="Sellio home"><img src={LOGO_URL} alt="Sellio" /></a>
         <nav className="sellio-landing-nav" aria-label="Main navigation">{NAV_ITEMS.map((item) => <a key={item.label} href={item.href}>{item.label}</a>)}</nav>
