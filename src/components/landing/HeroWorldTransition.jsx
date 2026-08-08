@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
+import { motion, useReducedMotion, useScroll, useSpring, useTransform } from 'framer-motion';
 import ScrollWorldExperience from './ScrollWorldExperience';
 import SellioWorld from './SellioWorld';
 
@@ -12,22 +12,29 @@ export default function HeroWorldTransition() {
     offset: ['start start', 'end end'],
   });
 
-  const heroRotateX = useTransform(scrollYProgress, [0, .08, .48, .62], [0, 0, -9, -18]);
-  const heroY = useTransform(scrollYProgress, [0, .08, .55, .68], ['0%', '0%', '-18%', '-44%']);
-  const heroScale = useTransform(scrollYProgress, [0, .08, .55, .68], [1, 1, .975, .92]);
-  const heroOpacity = useTransform(scrollYProgress, [0, .44, .62, .7], [1, 1, .72, 0]);
-  const heroRadius = useTransform(scrollYProgress, [0, .1, .55], ['0px', '0px', '38px']);
+  const smoothProgress = useSpring(scrollYProgress, {
+    stiffness: 105,
+    damping: 28,
+    mass: .22,
+    restDelta: .0008,
+  });
 
-  const worldScale = useTransform(scrollYProgress, [0, .08, .55, .68], [.92, .92, .985, 1]);
-  const worldY = useTransform(scrollYProgress, [0, .08, .55, .68], ['10%', '10%', '1.5%', '0%']);
-  const worldBrightness = useTransform(scrollYProgress, [0, .16, .58], [.82, .86, 1]);
+  const heroRotateX = useTransform(smoothProgress, [0, .1, .5, .68], [0, 0, -7, -14]);
+  const heroY = useTransform(smoothProgress, [0, .1, .58, .72], ['0%', '0%', '-14%', '-39%']);
+  const heroScale = useTransform(smoothProgress, [0, .1, .58, .72], [1, 1, .982, .935]);
+  const heroOpacity = useTransform(smoothProgress, [0, .47, .66, .74], [1, 1, .78, 0]);
+  const heroRadius = useTransform(smoothProgress, [0, .12, .58], ['0px', '0px', '34px']);
+
+  const worldScale = useTransform(smoothProgress, [0, .1, .58, .72], [.945, .945, .99, 1]);
+  const worldY = useTransform(smoothProgress, [0, .1, .58, .72], ['7%', '7%', '1%', '0%']);
+  const worldBrightness = useTransform(smoothProgress, [0, .2, .62], [.94, .96, 1]);
   const worldFilter = useTransform(worldBrightness, (value) => `brightness(${value})`);
   const worldClip = useTransform(
-    scrollYProgress,
-    [0, .08, .56, .68],
-    ['inset(18% 8% 8% 8% round 42px)', 'inset(18% 8% 8% 8% round 42px)', 'inset(2% 1% 1% 1% round 24px)', 'inset(0% 0% 0% 0% round 0px)'],
+    smoothProgress,
+    [0, .1, .58, .72],
+    ['inset(14% 6% 6% 6% round 38px)', 'inset(14% 6% 6% 6% round 38px)', 'inset(1.5% .8% .8% .8% round 20px)', 'inset(0% 0% 0% 0% round 0px)'],
   );
-  const seamOpacity = useTransform(scrollYProgress, [.12, .42, .62], [0, 1, 0]);
+  const seamOpacity = useTransform(smoothProgress, [.16, .46, .68], [0, .9, 0]);
 
   useEffect(() => {
     const unsubscribe = scrollYProgress.on('change', (value) => {
@@ -146,6 +153,26 @@ export default function HeroWorldTransition() {
       cancelSnap();
     };
 
+    const onTouchEnd = () => {
+      const sequence = sequenceRef.current;
+      const journey = document.querySelector('.sl-chapter-transition--journey');
+      if (!sequence || !journey || gestureStartScrollY === null || snapping) return;
+
+      const range = Math.max(0, sequence.offsetHeight - window.innerHeight);
+      const settledWorldY = sequence.offsetTop + range * .69;
+      const journeyY = journey.getBoundingClientRect().top + window.scrollY;
+      const travelled = window.scrollY - gestureStartScrollY;
+      const nearJourneyHandoff = window.scrollY >= settledWorldY - 20
+        && window.scrollY < journeyY
+        && journeyY - window.scrollY <= window.innerHeight * 1.35;
+
+      if (travelled > 22 && nearJourneyHandoff) {
+        window.clearTimeout(scrollTimer);
+        gestureStartScrollY = null;
+        animateTo(journeyY);
+      }
+    };
+
     const onWheel = () => {
       window.clearTimeout(scrollTimer);
       cancelSnap();
@@ -153,6 +180,7 @@ export default function HeroWorldTransition() {
 
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
     window.addEventListener('wheel', onWheel, { passive: true });
 
     return () => {
@@ -160,6 +188,7 @@ export default function HeroWorldTransition() {
       cancelSnap();
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchend', onTouchEnd);
       window.removeEventListener('wheel', onWheel);
     };
   }, [reduceMotion]);
