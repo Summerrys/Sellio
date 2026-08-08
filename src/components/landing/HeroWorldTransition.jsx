@@ -79,6 +79,7 @@ export default function HeroWorldTransition() {
     let lastScrollY = window.scrollY;
     let direction = 1;
     let gestureStartScrollY = null;
+    let gestureStartTouchY = null;
 
     const cancelSnap = () => {
       if (animationFrame) window.cancelAnimationFrame(animationFrame);
@@ -147,13 +148,14 @@ export default function HeroWorldTransition() {
       scrollTimer = window.setTimeout(settlePageTurn, 90);
     };
 
-    const onTouchStart = () => {
+    const onTouchStart = (event) => {
       gestureStartScrollY = window.scrollY;
+      gestureStartTouchY = event.touches?.[0]?.clientY ?? null;
       window.clearTimeout(scrollTimer);
       cancelSnap();
     };
 
-    const onTouchEnd = () => {
+    const onTouchEnd = (event) => {
       const sequence = sequenceRef.current;
       const journey = document.querySelector('.sl-chapter-transition--journey');
       if (!sequence || !journey || gestureStartScrollY === null || snapping) return;
@@ -161,7 +163,10 @@ export default function HeroWorldTransition() {
       const range = Math.max(0, sequence.offsetHeight - window.innerHeight);
       const settledWorldY = sequence.offsetTop + range * .69;
       const journeyY = journey.getBoundingClientRect().top + window.scrollY;
-      const travelled = window.scrollY - gestureStartScrollY;
+      const scrollTravel = window.scrollY - gestureStartScrollY;
+      const touchEndY = event.changedTouches?.[0]?.clientY ?? gestureStartTouchY;
+      const swipeTravel = gestureStartTouchY === null || touchEndY === null ? 0 : gestureStartTouchY - touchEndY;
+      const travelled = Math.max(scrollTravel, swipeTravel);
       const nearJourneyHandoff = window.scrollY >= settledWorldY - 20
         && window.scrollY < journeyY
         && journeyY - window.scrollY <= window.innerHeight * 1.35;
@@ -169,6 +174,7 @@ export default function HeroWorldTransition() {
       if (travelled > 22 && nearJourneyHandoff) {
         window.clearTimeout(scrollTimer);
         gestureStartScrollY = null;
+        gestureStartTouchY = null;
         animateTo(journeyY);
       }
     };
