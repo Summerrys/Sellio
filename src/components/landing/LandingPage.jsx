@@ -403,6 +403,8 @@ function Footer() {
 }
 
 export default function LandingPage() {
+  useImmersiveReleaseSnap();
+
   useEffect(() => {
     const previousTitle = document.title;
     const description = document.querySelector('meta[name="description"]');
@@ -418,9 +420,9 @@ export default function LandingPage() {
       <main id="sellio-main">
         <HeroWorldTransition />
         <section className="sellio-proof-strip sellio-proof-strip--after-world" aria-label="Sellio capabilities"><div className="sellio-container"><span><Store /> Online storefront</span><span><QrCode /> QR ordering</span><span><Bell /> Live orders</span><span><Package /> Inventory</span><span><BarChart3 /> Reports</span><span><Users /> Staff roles</span></div></section>
-        <ChapterTransition className="sl-chapter-transition--journey" label="Order journey chapter"><CommerceJourney /></ChapterTransition>
-        <ChapterTransition className="sl-chapter-transition--connected" label="Connected commerce chapter"><ConnectedCommerce /></ChapterTransition>
-        <ChapterTransition className="sl-chapter-transition--workspace" label="Merchant workspace chapter"><ProductShowcase /></ChapterTransition>
+        <div className="sl-chapter-transition sl-chapter-transition--journey sl-snap-chapter"><CommerceJourney /></div>
+        <div className="sl-chapter-transition sl-chapter-transition--connected sl-snap-chapter"><ConnectedCommerce /></div>
+        <div className="sl-chapter-transition sl-chapter-transition--workspace sl-snap-chapter"><ProductShowcase /></div>
         <ChapterTransition className="sl-chapter-transition--progression" label="Marketplace progression chapter"><WorldLayers /></ChapterTransition>
         <ChapterTransition className="sl-chapter-transition--pricing" label="Pricing chapter"><PricingSection /></ChapterTransition>
         <ChapterTransition className="sl-chapter-transition--faq" label="Frequently asked questions"><FAQSection /></ChapterTransition>
