@@ -162,7 +162,12 @@ export default function HeroWorldTransition() {
 
       const range = Math.max(0, sequence.offsetHeight - window.innerHeight);
       const settledWorldY = sequence.offsetTop + range * .69;
-      const journeyY = journey.getBoundingClientRect().top + window.scrollY;
+      let journeyY = 0;
+      let journeyNode = journey;
+      while (journeyNode) {
+        journeyY += journeyNode.offsetTop || 0;
+        journeyNode = journeyNode.offsetParent;
+      }
       const scrollTravel = window.scrollY - gestureStartScrollY;
       const touchEndY = event.changedTouches?.[0]?.clientY ?? gestureStartTouchY;
       const swipeTravel = gestureStartTouchY === null || touchEndY === null ? 0 : gestureStartTouchY - touchEndY;
