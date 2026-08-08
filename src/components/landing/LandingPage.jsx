@@ -21,6 +21,7 @@ import CommerceJourney from './CommerceJourney';
 import ConnectedCommerce from './ConnectedCommerce';
 import ProductShowcase from './ProductShowcase';
 import WorldLayers from './WorldLayers';
+import ChapterTransition from './ChapterTransition';
 import { PLANS } from './landingData';
 import './landing.css';
 import './phase1b.css';
@@ -217,14 +218,14 @@ export default function LandingPage() {
       <main id="sellio-main">
         <HeroWorldTransition />
         <section className="sellio-proof-strip" aria-label="Sellio capabilities"><div className="sellio-container"><span><Store /> Online storefront</span><span><QrCode /> QR ordering</span><span><Bell /> Live orders</span><span><Package /> Inventory</span><span><BarChart3 /> Reports</span><span><Users /> Staff roles</span></div></section>
-        <CommerceJourney />
-        <ConnectedCommerce />
-        <ProductShowcase />
-        <WorldLayers />
-        <PricingSection />
-        <FAQSection />
+        <ChapterTransition className="sl-chapter-transition--journey" label="Order journey chapter"><CommerceJourney /></ChapterTransition>
+        <ChapterTransition className="sl-chapter-transition--connected" label="Connected commerce chapter"><ConnectedCommerce /></ChapterTransition>
+        <ChapterTransition className="sl-chapter-transition--workspace" label="Merchant workspace chapter"><ProductShowcase /></ChapterTransition>
+        <ChapterTransition className="sl-chapter-transition--progression" label="Marketplace progression chapter"><WorldLayers /></ChapterTransition>
+        <ChapterTransition className="sl-chapter-transition--pricing" label="Pricing chapter"><PricingSection /></ChapterTransition>
+        <ChapterTransition className="sl-chapter-transition--faq" label="Frequently asked questions"><FAQSection /></ChapterTransition>
       </main>
-      <Footer />
+      <ChapterTransition className="sl-chapter-transition--footer" label="Sellio footer"><Footer /></ChapterTransition>
     </div>
   );
 }
