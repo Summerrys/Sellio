@@ -13,10 +13,10 @@ export default function ChapterTransition({ children, className = '', label }) {
   return (
     <motion.div
       className={`sl-chapter-transition ${className}`}
-      initial={{ opacity: 0.45, y: 72, rotateX: 7, scale: 0.975, clipPath: 'inset(8% 1.5% 0% 1.5% round 34px)' }}
+      initial={{ opacity: 0.2, y: 104, rotateX: 11, scale: 0.958, clipPath: 'inset(15% 2.5% 0% 2.5% round 38px)' }}
       whileInView={{ opacity: 1, y: 0, rotateX: 0, scale: 1, clipPath: 'inset(0% 0% 0% 0% round 0px)' }}
-      viewport={{ once: true, amount: 0.08 }}
-      transition={{ duration: 0.76, ease: EASE }}
+      viewport={{ once: true, amount: 0.035 }}
+      transition={{ duration: 0.92, ease: EASE }}
       style={{ transformOrigin: '50% 0%' }}
       aria-label={label}
     >
@@ -25,7 +25,7 @@ export default function ChapterTransition({ children, className = '', label }) {
         initial={{ opacity: 0, scaleX: 0.22 }}
         whileInView={{ opacity: [0, 0.95, 0], scaleX: [0.22, 1, 1] }}
         viewport={{ once: true, amount: 0.08 }}
-        transition={{ duration: 0.82, times: [0, 0.52, 1], ease: EASE }}
+        transition={{ duration: 0.96, times: [0, 0.48, 1], ease: EASE }}
         aria-hidden="true"
       />
       {children}
