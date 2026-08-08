@@ -587,7 +587,7 @@
   .sellio-landing--scrollworld .sellio-proof-strip {
     z-index: 8;
     height: 168px;
-    margin-top: calc(-1 * (var(--sl-world-exit-dwell, 35svh) + 168px));
+    margin-top: var(--sl-world-proof-lift, calc(-35svh - 168px));
     overflow: hidden;
     border: 1px solid rgba(82, 35, 103, .1);
     border-radius: 26px 26px 0 0;
