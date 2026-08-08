@@ -1083,33 +1083,35 @@
 
 .sellio-landing .sl-imm-hotspots button.is-active {
   color: #fff;
-  border-color: rgba(255,255,255,.95);
+  border-color: rgba(255,236,249,.78);
   background: linear-gradient(145deg, #8f43d7 0%, #e0449a 58%, #ff855f 100%);
-  text-shadow: 0 1px 5px rgba(55,18,67,.35);
-  animation: sl-active-waypoint-pulse 1.35s ease-in-out infinite;
+  text-shadow: 0 1px 4px rgba(55,18,67,.3);
+  animation: sl-active-waypoint-pulse 1.8s ease-in-out infinite;
 }
 
 .sellio-landing .sl-imm-hotspots button.is-active::after {
-  inset: -10px;
-  border: 2px solid rgba(238,75,170,.72);
-  box-shadow: 0 0 15px rgba(224,68,154,.7), 0 0 30px rgba(111,81,224,.38);
-  animation: sl-active-waypoint-ring 1.35s ease-out infinite;
+  inset: -7px;
+  border: 1px solid rgba(224,68,154,.44);
+  box-shadow: 0 0 12px rgba(224,68,154,.26), 0 0 20px rgba(111,81,224,.14);
+  animation: sl-active-waypoint-ring 1.8s ease-out infinite;
 }
 
 @keyframes sl-active-waypoint-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 5px rgba(255,255,255,.72), 0 0 18px rgba(224,68,154,.78), 0 0 38px rgba(139,74,221,.42), 0 15px 34px rgba(63,32,70,.28);
+    box-shadow: 0 0 0 2px rgba(224,68,154,.14), 0 0 13px rgba(224,68,154,.32), 0 10px 24px rgba(63,32,70,.2);
     filter: brightness(1);
+    transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 0 8px rgba(255,255,255,.88), 0 0 28px rgba(224,68,154,.98), 0 0 58px rgba(139,74,221,.58), 0 20px 42px rgba(63,32,70,.34);
-    filter: brightness(1.16);
+    box-shadow: 0 0 0 3px rgba(224,68,154,.2), 0 0 20px rgba(224,68,154,.42), 0 12px 28px rgba(63,32,70,.22);
+    filter: brightness(1.06);
+    transform: scale(1.035);
   }
 }
 
 @keyframes sl-active-waypoint-ring {
-  0% { opacity: .95; transform: scale(.9); }
-  70%, 100% { opacity: 0; transform: scale(1.42); }
+  0% { opacity: .62; transform: scale(.94); }
+  72%, 100% { opacity: 0; transform: scale(1.22); }
 }
 
 /* Connected Commerce uses the same image-attached interaction language. */
