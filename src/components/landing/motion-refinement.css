@@ -1447,7 +1447,8 @@
   scroll-margin-top: 0;
 }
 
-/* Connected Commerce now uses the same image-overlay hierarchy as Sellio World. */
+/* Order Journey and Connected Commerce share the same image-overlay hierarchy as Sellio World. */
+.sl-cinematic-journey .sl-panorama-intro--journey,
 .sl-cinematic-connected .sl-panorama-intro--connected {
   position: absolute;
   z-index: 18;
@@ -1462,6 +1463,7 @@
   pointer-events: none;
 }
 
+.sl-cinematic-journey .sl-panorama-intro--journey .sellio-eyebrow,
 .sl-cinematic-connected .sl-panorama-intro--connected .sellio-eyebrow {
   color: #7f2d7a;
   border-color: rgba(90,48,94,.13);
@@ -1469,6 +1471,7 @@
   box-shadow: 0 8px 20px rgba(71,44,77,.08);
 }
 
+.sl-cinematic-journey .sl-panorama-intro--journey h2,
 .sl-cinematic-connected .sl-panorama-intro--connected h2 {
   max-width: 430px;
   margin: 12px 0 9px;
@@ -1478,6 +1481,7 @@
   text-shadow: none;
 }
 
+.sl-cinematic-journey .sl-panorama-intro--journey p,
 .sl-cinematic-connected .sl-panorama-intro--connected p {
   max-width: 390px;
   margin: 0;
@@ -1532,6 +1536,7 @@
     min-height: 560px;
   }
 
+  .sl-cinematic-journey .sl-panorama-intro--journey,
   .sl-cinematic-connected .sl-panorama-intro--connected {
     left: 0;
     top: calc(var(--sellio-header-height, 62px) - 1px);
@@ -1542,6 +1547,7 @@
     filter: none;
   }
 
+  .sl-cinematic-journey .sl-panorama-intro--journey h2,
   .sl-cinematic-connected .sl-panorama-intro--connected h2 {
     max-width: 330px;
     margin: 9px 0 7px;
@@ -1549,6 +1555,7 @@
     line-height: .98;
   }
 
+  .sl-cinematic-journey .sl-panorama-intro--journey p,
   .sl-cinematic-connected .sl-panorama-intro--connected p {
     max-width: 320px;
     font-size: 11.5px;
