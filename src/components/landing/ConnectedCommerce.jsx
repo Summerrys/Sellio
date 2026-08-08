@@ -33,7 +33,7 @@ const CONNECTED_STAGES = [
     description: 'Discovery, product choice and checkout stay simple while the storefront keeps its identity.',
     Icon: Store,
     point: { x: '24%', y: '56%', mobileX: '24%', mobileY: '42%' },
-    callout: { mobileX: '30%', mobileY: '34%' },
+    callout: { mobileX: '30%', mobileY: '37%' },
   },
   {
     key: 'sellio',
