@@ -246,18 +246,23 @@ function LandingHeader() {
   const headerRef = useRef(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [immersive, setImmersive] = useState(false);
 
   useEffect(() => {
     let frame;
     const update = () => {
       const world = document.getElementById('world-experience');
+      const product = document.getElementById('product');
       const film = document.getElementById('sellio-film');
       const worldTop = world ? window.scrollY + world.getBoundingClientRect().top : null;
+      const productBottom = product ? window.scrollY + product.getBoundingClientRect().bottom : null;
       const headerHeight = headerRef.current?.getBoundingClientRect().height || 68;
       const revealAt = worldTop !== null
         ? worldTop - headerHeight * .8
         : film ? window.scrollY + film.getBoundingClientRect().bottom - headerHeight * .8 : Number.POSITIVE_INFINITY;
+      const immersiveEnd = productBottom ?? Number.NEGATIVE_INFINITY;
       setVisible(window.scrollY >= revealAt);
+      setImmersive(window.scrollY >= revealAt && window.scrollY < immersiveEnd - headerHeight * .25);
     };
     const requestUpdate = () => {
       cancelAnimationFrame(frame);
@@ -299,7 +304,7 @@ function LandingHeader() {
   }, []);
 
   return (
-    <header ref={headerRef} className={'sellio-landing-header ' + (visible ? 'is-visible' : '')} aria-hidden={!visible}>
+    <header ref={headerRef} className={'sellio-landing-header ' + (visible ? 'is-visible ' : '') + (immersive ? 'is-immersive' : '')} aria-hidden={!visible}>
       <div className="sellio-container sellio-landing-header__inner">
         <a href="/" className="sellio-landing-logo" aria-label="Sellio home"><img src={LOGO_URL} alt="Sellio" /></a>
         <nav className="sellio-landing-nav" aria-label="Main navigation">{NAV_ITEMS.map((item) => <a key={item.label} href={item.href}>{item.label}</a>)}</nav>
