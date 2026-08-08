@@ -58,7 +58,7 @@
 
 .sl-page-turn-world-anchor {
   position: absolute;
-  top: 104svh;
+  top: var(--sl-page-turn-settle-y, 104svh);
   left: 0;
   width: 1px;
   height: 1px;
@@ -518,9 +518,6 @@
     min-height: 1300px;
   }
 
-  .sl-page-turn-world-anchor {
-    top: 94svh;
-  }
 
   .sl-cinematic-journey .sl-imm-scene,
   .sl-cinematic-workspace .sl-workspace-shell {
@@ -560,9 +557,6 @@
     min-height: 1180px;
   }
 
-  .sl-page-turn-world-anchor {
-    top: 90svh;
-  }
 
   .sl-page-turn-world .sl-world-intro-overlay {
     left: 0;
