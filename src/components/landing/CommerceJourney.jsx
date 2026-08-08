@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
-  ArrowRight,
   BarChart3,
   BellRing,
   ChefHat,
@@ -21,7 +20,7 @@ const STEPS = [
     title: 'A storefront that feels like your own.',
     description: 'Customers enter through your link or table QR and browse a polished, mobile-first storefront.',
     Icon: QrCode,
-    callout: { x: '6%', y: '58%', mobileX: '5%', mobileY: '61%' },
+    point: { x: '22%', y: '48%', mobileX: '38%', mobileY: '76%' },
   },
   {
     key: 'order',
@@ -30,7 +29,7 @@ const STEPS = [
     title: 'Every order arrives in one clear queue.',
     description: 'Products, variants, notes and table details move into operations without manual re-entry.',
     Icon: BellRing,
-    callout: { x: '24%', y: '61%', mobileX: '42%', mobileY: '70%' },
+    point: { x: '35%', y: '51%', mobileX: '57%', mobileY: '66%' },
   },
   {
     key: 'prepare',
@@ -39,7 +38,7 @@ const STEPS = [
     title: 'Service teams see what comes next.',
     description: 'Kitchen and service teams move each order from new to preparing and ready with confidence.',
     Icon: ChefHat,
-    callout: { x: '41%', y: '59%', mobileX: '4%', mobileY: '42%' },
+    point: { x: '49%', y: '48%', mobileX: '39%', mobileY: '54%' },
   },
   {
     key: 'update',
@@ -48,7 +47,7 @@ const STEPS = [
     title: 'Inventory follows the rhythm of service.',
     description: 'Stock activity stays connected to the products being sold, so the operational picture stays current.',
     Icon: PackageCheck,
-    callout: { x: '57%', y: '61%', mobileX: '43%', mobileY: '28%' },
+    point: { x: '61%', y: '50%', mobileX: '57%', mobileY: '41%' },
   },
   {
     key: 'learn',
@@ -57,7 +56,7 @@ const STEPS = [
     title: 'The day becomes useful business insight.',
     description: 'Sales, popular products and operational patterns are ready to review without rebuilding the story.',
     Icon: BarChart3,
-    callout: { x: '70%', y: '55%', mobileX: '47%', mobileY: '31%' },
+    point: { x: '72%', y: '45%', mobileX: '42%', mobileY: '28%' },
   },
 ];
 
@@ -65,8 +64,6 @@ export default function CommerceJourney() {
   const [activeIndex, setActiveIndex] = useState(0);
   const reduceMotion = useReducedMotion();
   const active = STEPS[activeIndex];
-  const nextIndex = (activeIndex + 1) % STEPS.length;
-  const next = STEPS[nextIndex];
   const ActiveIcon = active.Icon;
 
   return (
@@ -111,33 +108,34 @@ export default function CommerceJourney() {
                 ))}
               </div>
 
-              <AnimatePresence mode="wait">
-                <motion.article
-                  key={active.key}
-                  className="sl-waypoint-callout sl-waypoint-callout--journey"
-                  style={{
-                    '--callout-x': active.callout.x,
-                    '--callout-y': active.callout.y,
-                    '--callout-mobile-x': active.callout.mobileX,
-                    '--callout-mobile-y': active.callout.mobileY,
-                  }}
-                  initial={reduceMotion ? false : { opacity: 0, rotateY: -8, scale: .96 }}
-                  animate={{ opacity: 1, rotateY: 0, scale: 1 }}
-                  exit={reduceMotion ? undefined : { opacity: 0, rotateY: 8, scale: .97 }}
-                  transition={{ duration: reduceMotion ? 0 : .28, ease: [0.2, 0.8, 0.2, 1] }}
-                  aria-live="polite"
-                >
-                  <div className="sl-waypoint-callout__meta">
-                    <span><ActiveIcon aria-hidden="true" /> Stage {active.number}</span>
-                    <strong>{active.label}</strong>
-                  </div>
-                  <h3>{active.title}</h3>
-                  <p>{active.description}</p>
-                  <button type="button" onClick={() => setActiveIndex(nextIndex)}>
-                    Next: {next.label} <ArrowRight aria-hidden="true" />
-                  </button>
-                </motion.article>
-              </AnimatePresence>
+              <div
+                className={`sl-waypoint-callout-anchor ${activeIndex % 2 === 0 ? 'is-right' : 'is-left'}`}
+                style={{
+                  '--callout-x': active.point.x,
+                  '--callout-y': active.point.y,
+                  '--callout-mobile-x': active.point.mobileX,
+                  '--callout-mobile-y': active.point.mobileY,
+                }}
+              >
+                <AnimatePresence mode="wait">
+                  <motion.article
+                    key={active.key}
+                    className="sl-waypoint-callout sl-waypoint-callout--journey"
+                    initial={reduceMotion ? false : { opacity: 0, rotateY: activeIndex % 2 === 0 ? -8 : 8, scale: .96 }}
+                    animate={{ opacity: 1, rotateY: 0, scale: 1 }}
+                    exit={reduceMotion ? undefined : { opacity: 0, rotateY: activeIndex % 2 === 0 ? 8 : -8, scale: .97 }}
+                    transition={{ duration: reduceMotion ? 0 : .28, ease: [0.2, 0.8, 0.2, 1] }}
+                    aria-live="polite"
+                  >
+                    <div className="sl-waypoint-callout__meta">
+                      <span><ActiveIcon aria-hidden="true" /> Stage {active.number}</span>
+                      <strong>{active.label}</strong>
+                    </div>
+                    <h3>{active.title}</h3>
+                    <p>{active.description}</p>
+                  </motion.article>
+                </AnimatePresence>
+              </div>
             </div>
           </div>
         </div>
