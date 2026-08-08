@@ -1402,17 +1402,174 @@
   }
 }
 
+/* The opening experience is now five ordinary viewport pages. Scrolling stays native; JS only settles a page after gesture release. */
+.sl-entry-pages {
+  position: relative;
+  height: auto;
+  min-height: 0;
+  background: #dff4ff;
+}
+
+.sl-entry-pages .sl-snap-page {
+  position: relative;
+  width: 100%;
+  height: 100svh;
+  min-height: 620px;
+  overflow: hidden;
+}
+
+.sl-entry-pages .sl-snap-page--hero .sl-scrollworld,
+.sl-entry-pages .sl-snap-page--hero .sl-sw-sticky {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+
+.sl-entry-pages .sl-page-turn-world {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  width: 100%;
+  height: 100svh;
+  min-height: 620px;
+  transform: none !important;
+  clip-path: none !important;
+  filter: none !important;
+  background: #dff4ff;
+}
+
+.sl-snap-world-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  scroll-margin-top: 0;
+}
+
+/* Connected Commerce now uses the same image-overlay hierarchy as Sellio World. */
+.sl-cinematic-connected .sl-panorama-intro--connected {
+  position: absolute;
+  z-index: 18;
+  top: calc(var(--sellio-header-height, 68px) + clamp(18px, 2.2vw, 32px));
+  left: clamp(22px, 4.2vw, 68px);
+  width: min(430px, 36vw);
+  padding: 0 46px 30px 0;
+  color: #2b1835;
+  background: linear-gradient(90deg, rgba(249,254,255,.93) 0%, rgba(249,254,255,.68) 68%, transparent 100%);
+  filter: drop-shadow(0 12px 24px rgba(72,46,67,.08));
+  backdrop-filter: none;
+  pointer-events: none;
+}
+
+.sl-cinematic-connected .sl-panorama-intro--connected .sellio-eyebrow {
+  color: #7f2d7a;
+  border-color: rgba(90,48,94,.13);
+  background: rgba(255,255,255,.72);
+  box-shadow: 0 8px 20px rgba(71,44,77,.08);
+}
+
+.sl-cinematic-connected .sl-panorama-intro--connected h2 {
+  max-width: 430px;
+  margin: 12px 0 9px;
+  color: #26152f;
+  font: 800 clamp(2.45rem, 4.2vw, 4.8rem)/.95 "Manrope", sans-serif;
+  letter-spacing: -.06em;
+  text-shadow: none;
+}
+
+.sl-cinematic-connected .sl-panorama-intro--connected p {
+  max-width: 390px;
+  margin: 0;
+  color: #54445a;
+  font-size: clamp(14px, 1.15vw, 17px);
+  line-height: 1.55;
+  text-shadow: none;
+}
+
+@media (max-width: 900px) {
+  .sl-entry-pages .sl-snap-page,
+  .sl-entry-pages .sl-page-turn-world,
+  .sl-snap-chapter,
+  .sl-snap-chapter > .sellio-section {
+    height: 100svh;
+    min-height: 600px;
+  }
+
+  .sl-snap-chapter {
+    position: relative;
+    overflow: hidden;
+    background: #fffaf6;
+  }
+
+  .sl-snap-chapter > .sellio-section {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .sl-chapter-transition--connected .sl-cinematic-connected > .sellio-container,
+  .sl-chapter-transition--connected .sl-imm-connection-stage,
+  .sl-chapter-transition--connected .sl-pan-scroll--connection,
+  .sl-chapter-transition--connected .sl-pan-canvas--connection,
+  .sl-chapter-transition--connected .sl-imm-connection-art {
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    aspect-ratio: auto;
+    border-radius: 0;
+  }
+
+  .sl-chapter-transition--connected .sl-connection-comparison {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .sl-entry-pages .sl-snap-page,
+  .sl-entry-pages .sl-page-turn-world,
+  .sl-snap-chapter,
+  .sl-snap-chapter > .sellio-section {
+    min-height: 560px;
+  }
+
+  .sl-cinematic-connected .sl-panorama-intro--connected {
+    left: 0;
+    top: calc(var(--sellio-header-height, 62px) - 1px);
+    width: 100%;
+    max-width: none;
+    padding: 8px 18px 72px;
+    background: linear-gradient(180deg, rgba(247,253,255,.96) 0%, rgba(247,253,255,.76) 62%, transparent 100%);
+    filter: none;
+  }
+
+  .sl-cinematic-connected .sl-panorama-intro--connected h2 {
+    max-width: 330px;
+    margin: 9px 0 7px;
+    font-size: clamp(1.8rem, 8.6vw, 2.3rem);
+    line-height: .98;
+  }
+
+  .sl-cinematic-connected .sl-panorama-intro--connected p {
+    max-width: 320px;
+    font-size: 11.5px;
+    line-height: 1.42;
+  }
+
+  .sl-chapter-transition--connected .sl-pan-scroll--connection,
+  .sl-chapter-transition--connected .sl-pan-canvas--connection,
+  .sl-chapter-transition--connected .sl-imm-connection-art {
+    width: 100vw;
+    min-width: 100vw;
+    height: 100svh;
+    min-height: 560px;
+  }
+}
+
 .sellio-landing .sl-imm-hotspots button:focus-visible,
 .sellio-landing .sellio-button:focus-visible,
 .sellio-landing .sellio-billing-toggle button:focus-visible {
   outline: 3px solid rgba(111, 81, 224, .58);
   outline-offset: 4px;
-}
-
-@media (max-width: 600px) and (prefers-reduced-motion: reduce) {
-  .sellio-proof-strip--after-world {
-    display: block;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
