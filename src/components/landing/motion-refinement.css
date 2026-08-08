@@ -58,7 +58,7 @@
 
 .sl-page-turn-world-anchor {
   position: absolute;
-  top: 82svh;
+  top: 104svh;
   left: 0;
   width: 1px;
   height: 1px;
@@ -105,7 +105,7 @@
 }
 
 .sl-page-turn-world .sl-world-intro-overlay {
-  top: clamp(22px, 4.2vw, 60px);
+  top: calc(var(--sellio-header-height, 68px) + clamp(18px, 2.2vw, 32px));
   left: clamp(22px, 4.2vw, 68px);
   width: min(430px, 36vw);
   padding: 0 46px 26px 0;
@@ -518,6 +518,10 @@
     min-height: 1300px;
   }
 
+  .sl-page-turn-world-anchor {
+    top: 94svh;
+  }
+
   .sl-cinematic-journey .sl-imm-scene,
   .sl-cinematic-workspace .sl-workspace-shell {
     min-height: 620px;
@@ -557,12 +561,12 @@
   }
 
   .sl-page-turn-world-anchor {
-    top: 76svh;
+    top: 90svh;
   }
 
   .sl-page-turn-world .sl-world-intro-overlay {
     left: 0;
-    top: 0;
+    top: var(--sellio-header-height, 74px);
     width: 100%;
     padding: max(15px, env(safe-area-inset-top)) 16px 58px;
     background: linear-gradient(180deg, rgba(247,253,255,.96) 0%, rgba(247,253,255,.74) 62%, transparent 100%);
