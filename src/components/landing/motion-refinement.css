@@ -1628,18 +1628,34 @@
       backdrop-filter .24s ease;
   }
 
-  .sellio-landing--scrollworld .sellio-landing-header.is-immersive .sellio-landing-logo img {
-    filter: drop-shadow(0 2px 7px rgba(255,255,255,.95)) drop-shadow(0 5px 14px rgba(43,20,55,.16));
-  }
-
+  .sellio-landing--scrollworld .sellio-landing-header.is-immersive .sellio-landing-logo,
   .sellio-landing--scrollworld .sellio-landing-header.is-immersive .sellio-menu-button {
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+    display: grid;
+    place-items: center;
     color: #281731;
     border: 1px solid rgba(255,255,255,.72);
-    border-radius: 14px;
+    border-radius: 16px;
     background: rgba(255,255,255,.74);
     box-shadow: 0 6px 18px rgba(43,20,55,.12);
     backdrop-filter: blur(10px) saturate(120%);
     -webkit-backdrop-filter: blur(10px) saturate(120%);
+  }
+
+  .sellio-landing--scrollworld .sellio-landing-header.is-immersive .sellio-landing-logo {
+    padding: 5px;
+  }
+
+  .sellio-landing--scrollworld .sellio-landing-header.is-immersive .sellio-landing-logo img {
+    width: 36px;
+    height: 36px;
+    filter: drop-shadow(0 2px 7px rgba(255,255,255,.95)) drop-shadow(0 5px 14px rgba(43,20,55,.16));
+  }
+
+  .sellio-landing--scrollworld .sellio-landing-header.is-immersive .sellio-menu-button {
+    padding: 0;
   }
 
   .sellio-landing--scrollworld .sellio-landing-header.is-immersive .sellio-mobile-nav {
@@ -1735,9 +1751,33 @@
 
   /* Connected Commerce callouts deliberately match Order Journey instead of using a larger purple variant. */
   .sl-waypoint-callout-anchor.sl-connected-callout-anchor .sl-waypoint-callout {
-    width: min(168px, 42vw);
+    width: min(210px, 54vw);
+    padding: 11px;
     border-color: rgba(76,43,86,.14);
-    background: rgba(255,253,249,.94);
+    border-radius: 15px;
+    background: rgba(255,253,249,.95);
+    box-shadow: 0 14px 34px rgba(58,34,67,.16);
+  }
+
+  .sl-waypoint-callout--connected .sl-waypoint-callout__meta {
+    gap: 8px;
+  }
+
+  .sl-waypoint-callout--connected .sl-waypoint-callout__meta span,
+  .sl-waypoint-callout--connected .sl-waypoint-callout__meta strong {
+    font-size: 7.5px;
+    line-height: 1.15;
+  }
+
+  .sl-waypoint-callout--connected h3 {
+    font-size: .86rem;
+    line-height: 1.08;
+  }
+
+  .sl-waypoint-callout--connected p {
+    font-size: 9.5px;
+    line-height: 1.35;
+    -webkit-line-clamp: 3;
   }
 
   .sl-waypoint-callout--connected::before {
@@ -1751,11 +1791,22 @@
 
   /* The workspace card explains from clear image space; it must never cover the selected waypoint. */
   .sl-cinematic-workspace .sl-waypoint-callout--workspace {
-    width: min(190px, 48vw);
+    width: min(210px, 50vw);
     padding: 11px;
     border-radius: 15px;
-    background: rgba(255,253,249,.94);
+    background: rgba(255,253,249,.95);
     box-shadow: 0 14px 34px rgba(58,34,67,.16);
+  }
+
+  .sl-cinematic-workspace .sl-waypoint-callout--workspace h3 {
+    font-size: .88rem;
+    line-height: 1.08;
+  }
+
+  .sl-cinematic-workspace .sl-waypoint-callout--workspace p {
+    font-size: 9.5px;
+    line-height: 1.35;
+    -webkit-line-clamp: 3;
   }
 
   .sl-cinematic-workspace .sl-waypoint-callout--workspace::before {
