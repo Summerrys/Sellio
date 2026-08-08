@@ -981,6 +981,165 @@
   }
 }
 
+/* Chapter-to-chapter reveal: a short, trigger-based page turn that always settles. */
+.sl-chapter-transition {
+  position: relative;
+  z-index: 1;
+  perspective: 1600px;
+  isolation: isolate;
+  background: #fffaf6;
+  will-change: transform, opacity, clip-path;
+}
+
+.sl-chapter-transition__seam {
+  position: absolute;
+  z-index: 30;
+  top: 0;
+  left: 4%;
+  width: 92%;
+  height: 2px;
+  pointer-events: none;
+  transform-origin: center;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.98) 26%, rgba(225,68,154,.68) 50%, rgba(255,255,255,.98) 74%, transparent);
+  box-shadow: 0 0 24px rgba(255,255,255,.98), 0 0 42px rgba(224,68,154,.2);
+}
+
+/* Make all Sellio World destinations explicit and reachable on desktop. */
+@media (min-width: 601px) {
+  .sl-page-turn-world .sl-map-pin,
+  .sl-page-turn-world .sl-map-store-pin {
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    z-index: 24 !important;
+  }
+
+  .sl-page-turn-world .sl-map-pin > span,
+  .sl-page-turn-world .sl-map-store-pin > span {
+    display: flex;
+    padding: 8px 11px;
+    border: 1px solid rgba(255,255,255,.78);
+    border-radius: 12px;
+    background: rgba(255,253,249,.86);
+    box-shadow: 0 10px 24px rgba(55,37,65,.13);
+    backdrop-filter: blur(12px) saturate(120%);
+    text-shadow: none;
+  }
+
+  .sl-page-turn-world .sl-map-pin--retail { left: 35%; top: 43%; }
+  .sl-page-turn-world .sl-map-pin--fnb { left: 52%; top: 56%; }
+  .sl-page-turn-world .sl-map-pin--services { left: 67%; top: 36%; }
+  .sl-page-turn-world .sl-map-store-pin { left: 47%; top: 68%; }
+}
+
+/* Storefront controls clear the returning sticky header at every breakpoint. */
+.sl-page-turn-world .sl-world-stage--storefront .sl-storefront-intro-overlay {
+  top: calc(var(--sellio-header-height, 68px) + clamp(14px, 2vw, 28px)) !important;
+}
+
+.sl-page-turn-world .sl-world-stage--storefront .sl-storefront-back-fixed {
+  z-index: 28;
+}
+
+/* Journey cards attach directly to the active number and alternate sides. */
+.sl-waypoint-callout-anchor {
+  position: absolute;
+  z-index: 14;
+  left: var(--callout-x);
+  top: var(--callout-y);
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.sl-waypoint-callout-anchor .sl-waypoint-callout {
+  position: absolute;
+  top: -42px;
+  left: auto;
+  width: min(238px, 19vw);
+  padding: 12px;
+  pointer-events: auto;
+}
+
+.sl-waypoint-callout-anchor.is-right .sl-waypoint-callout {
+  left: 50px;
+}
+
+.sl-waypoint-callout-anchor.is-left .sl-waypoint-callout {
+  right: 50px;
+}
+
+.sl-waypoint-callout-anchor.is-left .sl-waypoint-callout::before {
+  right: -18px;
+  left: auto;
+}
+
+.sl-cinematic-journey .sl-imm-hotspots button.is-active {
+  animation: sl-active-waypoint-pulse 1.65s ease-in-out infinite;
+}
+
+@keyframes sl-active-waypoint-pulse {
+  0%, 100% { box-shadow: 0 0 0 6px rgba(224,68,154,.16), 0 14px 32px rgba(63,32,70,.24); }
+  50% { box-shadow: 0 0 0 13px rgba(224,68,154,.08), 0 18px 38px rgba(63,32,70,.3); }
+}
+
+@media (max-width: 600px) {
+  .sl-chapter-transition {
+    perspective: 1100px;
+  }
+
+  .sl-waypoint-callout-anchor {
+    left: var(--callout-mobile-x);
+    top: var(--callout-mobile-y);
+  }
+
+  .sl-waypoint-callout-anchor .sl-waypoint-callout {
+    top: -36px;
+    width: min(168px, 42vw);
+    padding: 9px;
+    border-radius: 13px;
+  }
+
+  .sl-waypoint-callout-anchor.is-right .sl-waypoint-callout {
+    left: 43px;
+  }
+
+  .sl-waypoint-callout-anchor.is-left .sl-waypoint-callout {
+    right: 43px;
+  }
+
+  .sl-waypoint-callout-anchor .sl-waypoint-callout::before {
+    width: 11px;
+  }
+
+  .sl-waypoint-callout-anchor.is-right .sl-waypoint-callout::before {
+    left: -11px;
+  }
+
+  .sl-waypoint-callout-anchor.is-left .sl-waypoint-callout::before {
+    right: -11px;
+    left: auto;
+  }
+
+  .sl-waypoint-callout-anchor .sl-waypoint-callout__meta span,
+  .sl-waypoint-callout-anchor .sl-waypoint-callout__meta strong {
+    font-size: 7px;
+  }
+
+  .sl-waypoint-callout-anchor .sl-waypoint-callout h3 {
+    font-size: .82rem;
+  }
+
+  .sl-waypoint-callout-anchor .sl-waypoint-callout p {
+    font-size: 8.5px;
+  }
+
+  .sl-page-turn-world .sl-world-stage--storefront .sl-storefront-intro-overlay {
+    top: calc(var(--sellio-header-height, 74px) + max(12px, env(safe-area-inset-top))) !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sl-page-turn-sequence {
     height: auto;
@@ -993,8 +1152,11 @@
   }
 
   .sl-waypoint-callout,
+  .sl-cinematic-journey .sl-imm-hotspots button.is-active,
   .sl-connection-panel,
-  .sl-imm-layer__art {
+  .sl-imm-layer__art,
+  .sl-chapter-transition,
+  .sl-chapter-transition__seam {
     animation: none;
     transition: none;
   }
