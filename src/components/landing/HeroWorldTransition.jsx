@@ -22,7 +22,10 @@ export default function HeroWorldTransition() {
   const heroRotateX = useTransform(smoothProgress, [0, .1, .5, .68], [0, 0, -7, -14]);
   const heroY = useTransform(smoothProgress, [0, .1, .58, .72], ['0%', '0%', '-14%', '-39%']);
   const heroScale = useTransform(smoothProgress, [0, .1, .58, .72], [1, 1, .982, .935]);
-  const heroOpacity = useTransform(smoothProgress, [0, .47, .66, .74], [1, 1, .78, 0]);
+  // Finish fading the film before the world/header handoff. The mobile page-turn
+  // settles around .72 and the header begins returning around .68; keeping the
+  // old .74 fade endpoint left a visible film ghost over the settled world.
+  const heroOpacity = useTransform(smoothProgress, [0, .44, .57, .665], [1, 1, .64, 0]);
   const heroRadius = useTransform(smoothProgress, [0, .12, .58], ['0px', '0px', '34px']);
 
   const worldScale = useTransform(smoothProgress, [0, .1, .58, .72], [.945, .945, .99, 1]);
