@@ -36,6 +36,110 @@ export default function HeroWorldTransition() {
     return unsubscribe;
   }, [scrollYProgress]);
 
+  useEffect(() => {
+    if (reduceMotion) return undefined;
+
+    const coarsePointer = window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 760;
+    if (!coarsePointer) return undefined;
+
+    let scrollTimer;
+    let animationFrame;
+    let snapping = false;
+    let lastScrollY = window.scrollY;
+    let direction = 1;
+    let gestureStartScrollY = null;
+
+    const cancelSnap = () => {
+      if (animationFrame) window.cancelAnimationFrame(animationFrame);
+      animationFrame = undefined;
+      snapping = false;
+    };
+
+    const animateTo = (targetY) => {
+      cancelSnap();
+      const startY = window.scrollY;
+      const distance = targetY - startY;
+      if (Math.abs(distance) < 2) return;
+
+      snapping = true;
+      const startedAt = performance.now();
+      const duration = Math.min(520, Math.max(320, Math.abs(distance) * .45));
+
+      const step = (now) => {
+        const progress = Math.min(1, (now - startedAt) / duration);
+        const eased = 1 - Math.pow(1 - progress, 4);
+        window.scrollTo(0, startY + distance * eased);
+
+        if (progress < 1) {
+          animationFrame = window.requestAnimationFrame(step);
+        } else {
+          animationFrame = undefined;
+          snapping = false;
+          lastScrollY = window.scrollY;
+        }
+      };
+
+      animationFrame = window.requestAnimationFrame(step);
+    };
+
+    const settlePageTurn = () => {
+      if (snapping || !sequenceRef.current) return;
+
+      const sequence = sequenceRef.current;
+      const range = sequence.offsetHeight - window.innerHeight;
+      if (range <= 0) return;
+
+      const progress = (window.scrollY - sequence.offsetTop) / range;
+      if (progress <= .025 || progress >= .69) {
+        gestureStartScrollY = null;
+        return;
+      }
+
+      const gestureDirection = gestureStartScrollY === null
+        ? direction
+        : (window.scrollY >= gestureStartScrollY ? 1 : -1);
+      gestureStartScrollY = null;
+
+      const targetProgress = gestureDirection < 0 ? 0 : .72;
+      animateTo(sequence.offsetTop + range * targetProgress);
+    };
+
+    const onScroll = () => {
+      if (!snapping) {
+        const currentY = window.scrollY;
+        const delta = currentY - lastScrollY;
+        if (Math.abs(delta) > 1) direction = delta > 0 ? 1 : -1;
+        lastScrollY = currentY;
+      }
+
+      window.clearTimeout(scrollTimer);
+      scrollTimer = window.setTimeout(settlePageTurn, 90);
+    };
+
+    const onTouchStart = () => {
+      gestureStartScrollY = window.scrollY;
+      window.clearTimeout(scrollTimer);
+      cancelSnap();
+    };
+
+    const onWheel = () => {
+      window.clearTimeout(scrollTimer);
+      cancelSnap();
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('wheel', onWheel, { passive: true });
+
+    return () => {
+      window.clearTimeout(scrollTimer);
+      cancelSnap();
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('wheel', onWheel);
+    };
+  }, [reduceMotion]);
+
   if (reduceMotion) {
     return (
       <>
