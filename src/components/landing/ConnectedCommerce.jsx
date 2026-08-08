@@ -41,7 +41,7 @@ const CONNECTED_STAGES = [
     title: 'Sellio carries the order into one connected flow.',
     description: 'Order details, product context and operational status move together without manual re-entry.',
     Icon: Sparkles,
-    point: { x: '50%', y: '49%', mobileX: '50%', mobileY: '57%' },
+    point: { x: '50%', y: '49%', mobileX: '55%', mobileY: '57%' },
   },
   {
     key: 'merchant',
@@ -131,7 +131,7 @@ export default function ConnectedCommerce() {
               </div>
 
               <div
-                className={`sl-waypoint-callout-anchor sl-connected-callout-anchor ${activeIndex === 1 ? 'is-left' : 'is-right'}`}
+                className={`sl-waypoint-callout-anchor sl-connected-callout-anchor ${activeIndex === 0 ? 'is-right' : 'is-left'}`}
                 style={{
                   '--callout-x': activeStage.point.x,
                   '--callout-y': activeStage.point.y,
@@ -143,9 +143,9 @@ export default function ConnectedCommerce() {
                   <motion.article
                     key={activeStage.key}
                     className="sl-waypoint-callout sl-waypoint-callout--connected"
-                    initial={reduceMotion ? false : { opacity: 0, rotateY: activeIndex === 1 ? 8 : -8, scale: .96 }}
+                    initial={reduceMotion ? false : { opacity: 0, rotateY: activeIndex === 0 ? -8 : 8, scale: .96 }}
                     animate={{ opacity: 1, rotateY: 0, scale: 1 }}
-                    exit={reduceMotion ? undefined : { opacity: 0, rotateY: activeIndex === 1 ? -8 : 8, scale: .97 }}
+                    exit={reduceMotion ? undefined : { opacity: 0, rotateY: activeIndex === 0 ? 8 : -8, scale: .97 }}
                     transition={{ duration: reduceMotion ? 0 : .3, ease: [0.2, 0.8, 0.2, 1] }}
                     aria-live="polite"
                   >
