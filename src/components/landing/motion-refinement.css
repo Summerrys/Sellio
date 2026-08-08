@@ -1042,6 +1042,12 @@
   z-index: 28;
 }
 
+/* Full-screen chapter headings stay below the returning sticky header. */
+.sl-chapter-transition--journey .sl-panorama-intro,
+.sl-chapter-transition--workspace .sl-panorama-intro {
+  top: calc(var(--sellio-header-height, 68px) + clamp(14px, 2vw, 26px));
+}
+
 /* Journey cards attach directly to the active number and alternate sides. */
 .sl-waypoint-callout-anchor {
   position: absolute;
