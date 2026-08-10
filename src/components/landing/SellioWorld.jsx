@@ -8,6 +8,7 @@ import {
   Coffee,
   Compass,
   MapPin,
+  HandPointer,
   MousePointer2,
   Palette,
   ShoppingBag,
@@ -65,6 +66,10 @@ export default function SellioWorld() {
   );
 
   const selectSector = (key) => {
+    if (key === 'fnb') {
+      enterStorefront();
+      return;
+    }
     setActiveSector(key);
     setStoreOpen(false);
   };
@@ -147,21 +152,19 @@ export default function SellioWorld() {
                     <button
                       key={key}
                       type="button"
-                      className={`sl-map-pin sl-map-pin--${key} ${activeSector === key ? 'is-active' : ''}`}
+                      className={`sl-map-pin sl-map-pin--${key} ${key === 'fnb' ? 'sl-map-pin--featured' : ''} ${activeSector === key ? 'is-active' : ''}`}
                       onClick={() => selectSector(key)}
-                      aria-label={`Explore ${name}`}
+                      aria-label={key === 'fnb' ? 'Enter Cafetelier, the featured storefront in F&B District' : `Explore ${name}`}
                       aria-pressed={activeSector === key}
                     >
                       <i><Icon aria-hidden="true" /></i>
-                      <span>{name}</span>
+                      {key === 'fnb' ? (
+                        <span><strong>F&amp;B District</strong><small>Featured · Cafetelier</small></span>
+                      ) : (
+                        <span>{name}</span>
+                      )}
                     </button>
                   ))}
-
-                  <button type="button" className="sl-map-store-pin" onClick={enterStorefront} aria-label="Enter Cafetelier storefront">
-                    <i><Coffee aria-hidden="true" /></i>
-                    <span><small>Featured storefront</small><strong>Cafetelier</strong></span>
-                    <ArrowRight aria-hidden="true" />
-                  </button>
                 </motion.div>
               </div>
 
@@ -182,11 +185,6 @@ export default function SellioWorld() {
                     <span><MapPin /> {sector.status}</span>
                     <h3>{sector.name}</h3>
                     <p>{sector.summary}</p>
-                    {sector.key === 'fnb' && (
-                      <button type="button" className="sl-map-detail-overlay__action" onClick={enterStorefront}>
-                        Enter Cafetelier <ArrowRight />
-                      </button>
-                    )}
                   </motion.aside>
                 )}
               </AnimatePresence>
@@ -218,13 +216,18 @@ export default function SellioWorld() {
                   </picture>
                   <div className="sl-imm-storefront__shade" aria-hidden="true" />
 
-                  <div className="sl-storefront-intro-overlay">
-                    <span><Store /> Merchant storefront</span>
-                    <h2>Cafetelier</h2>
-                    <p>A merchant-owned place with its own identity, products and customer journey.</p>
-                    <div>
-                      <a href={DEMO_STORE_URL} target="_blank" rel="noopener noreferrer">Explore demo store <ArrowRight /></a>
-                      <button type="button" onClick={returnToWorld}>Return to world</button>
+                  <div className="sl-storefront-door-cue" aria-label="Cafetelier entrance">
+                    <button
+                      type="button"
+                      className="sl-storefront-door-cue__trigger"
+                      aria-label="Enter Cafetelier counter experience"
+                      title="Counter scene will be connected after the final counter artwork is approved"
+                    >
+                      <HandPointer aria-hidden="true" />
+                    </button>
+                    <div className="sl-storefront-door-cue__card">
+                      <strong>Step inside Cafetelier</strong>
+                      <span>Meet Sellio AI at the counter.</span>
                     </div>
                   </div>
                 </div>
