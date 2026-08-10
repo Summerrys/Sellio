@@ -6,8 +6,8 @@ import {
   Check,
   Compass,
   MapPin,
-  HandPointer,
   MousePointer2,
+  MousePointerClick,
   Palette,
   ShoppingBag,
   Utensils,
@@ -218,7 +218,7 @@ export default function SellioWorld() {
                       aria-label="Enter Cafetelier counter experience"
                       title="Counter scene will be connected after the final counter artwork is approved"
                     >
-                      <HandPointer aria-hidden="true" />
+                      <MousePointerClick aria-hidden="true" />
                     </button>
                     <div className="sl-storefront-door-cue__card">
                       <strong>Step inside Cafetelier</strong>
