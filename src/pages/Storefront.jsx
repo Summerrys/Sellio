@@ -470,7 +470,7 @@ function StorefrontInner() {
         `}</style>
         <div style={{ textAlign: 'center' }}>
           <img
-            src="https://assets.apptelier.sg/sellio/Logo_Sellio.png"
+            src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png"
             alt="Sellio"
             className="sellio-logo-pulse"
             style={{ width: 80, objectFit: 'contain', marginBottom: 20, display: 'block', marginLeft: 'auto', marginRight: 'auto' }}

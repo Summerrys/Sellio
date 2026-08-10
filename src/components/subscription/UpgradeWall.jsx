@@ -139,7 +139,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
     <div className="min-h-screen bg-slate-50 flex flex-col items-center px-4 py-12">
       {/* Logo */}
       <img
-        src="https://assets.apptelier.sg/sellio/Logo_Sellio.png"
+        src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png"
         alt="Sellio"
         className="h-10 w-auto object-contain mb-10"
       />

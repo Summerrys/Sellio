@@ -10,13 +10,13 @@
   "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "https://assets.apptelier.sg/sellio/Logo_Sellio.png",
+      "src": "https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://assets.apptelier.sg/sellio/Logo_Sellio.png",
+      "src": "https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"

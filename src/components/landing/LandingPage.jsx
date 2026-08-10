@@ -32,7 +32,7 @@ import './mobile-native.css';
 import './ux-corrections.css';
 import './motion-refinement.css';
 
-const LOGO_URL = 'https://assets.apptelier.sg/sellio/Logo_Sellio.png';
+const LOGO_URL = 'https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png';
 const DEMO_STORE_URL = '/store/cafetelier?preview=true';
 
 const NAV_ITEMS = [

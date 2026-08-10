@@ -70,7 +70,7 @@ export default function AppLoader({ visible = true }) {
     >
       {/* Logo */}
       <img
-        src="https://assets.apptelier.sg/sellio/Logo_Sellio.png"
+        src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png"
         alt="Sellio"
         className="sellio-logo-pulse"
         style={{ width: 80, objectFit: 'contain', marginBottom: 24 }}
