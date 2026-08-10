@@ -569,7 +569,7 @@
 
   .sl-page-turn-world .sl-world-intro-overlay {
     left: 0;
-    top: calc(var(--sellio-header-height, 62px) - 1px);
+    top: 0;
     width: 100%;
     padding: 4px 16px 58px;
     background: linear-gradient(180deg, rgba(247,253,255,.96) 0%, rgba(247,253,255,.74) 62%, transparent 100%);
@@ -1224,12 +1224,12 @@
   }
 
   .sl-page-turn-world .sl-world-stage--storefront .sl-storefront-intro-overlay {
-    top: calc(var(--sellio-header-height, 74px) + max(12px, env(safe-area-inset-top))) !important;
+    top: 0 !important;
   }
 
   .sl-chapter-transition--journey .sl-panorama-intro,
   .sl-chapter-transition--workspace .sl-panorama-intro {
-    top: calc(var(--sellio-header-height, 74px) + max(12px, env(safe-area-inset-top)));
+    top: 0;
   }
 }
 
@@ -1549,7 +1549,7 @@
   .sl-cinematic-journey .sl-panorama-intro--journey,
   .sl-cinematic-connected .sl-panorama-intro--connected {
     left: 0;
-    top: calc(var(--sellio-header-height, 62px) - 1px);
+    top: 0;
     width: 100%;
     max-width: none;
     padding: 8px 18px 72px;
@@ -1563,7 +1563,7 @@
 
   .sl-cinematic-workspace .sl-panorama-intro--workspace {
     left: 0;
-    top: calc(var(--sellio-header-height, 62px) - 1px);
+    top: 0;
     width: 100%;
     max-width: none;
     padding: 8px 18px 64px;
