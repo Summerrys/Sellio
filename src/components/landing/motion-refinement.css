@@ -1869,6 +1869,14 @@
   }
 }
 
+/* Full-bleed immersive chapters meet the viewport cleanly without a rounded top edge. */
+.sl-page-turn-world .sl-world-intro-overlay,
+.sl-cinematic-journey .sl-panorama-intro--journey,
+.sl-cinematic-connected .sl-panorama-intro--connected,
+.sl-cinematic-workspace .sl-panorama-intro--workspace {
+  border-radius: 0 !important;
+}
+
 /* Sellio World refinement: F&B and its featured Cafetelier storefront are one destination. */
 .sl-page-turn-world .sl-map-pin--featured > span {
   display: flex;
