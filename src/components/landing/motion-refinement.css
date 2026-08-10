@@ -1609,61 +1609,110 @@
   }
 }
 
-/* On immersive full-page chapters the fixed header floats transparently over the artwork. */
-@media (max-width: 900px) {
-  .sellio-landing--scrollworld .sellio-landing-header.is-visible.is-immersive {
-    background: transparent !important;
-    border-bottom-color: transparent !important;
-    box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
+/* Immersive chapters deliberately remove the persistent header chrome. When the
+   user scrolls upward, only a bare menu icon is revealed over the artwork. */
+.sellio-landing--scrollworld .sellio-landing-header.is-immersive.is-overlay-only {
+  height: 0 !important;
+  min-height: 0 !important;
+  background: transparent !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  pointer-events: none;
+}
 
-  .sellio-landing--scrollworld .sellio-landing-header {
-    transition:
-      opacity .26s ease,
-      transform .34s cubic-bezier(.2,.8,.2,1),
-      background-color .24s ease,
-      border-color .24s ease,
-      backdrop-filter .24s ease;
-  }
+.sellio-landing--scrollworld .sellio-landing-header__overlay {
+  position: absolute;
+  inset: 0 0 auto 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: max(12px, env(safe-area-inset-top)) 18px 0;
+  pointer-events: none;
+}
 
-  .sellio-landing--scrollworld .sellio-landing-header.is-immersive .sellio-landing-logo,
-  .sellio-landing--scrollworld .sellio-landing-header.is-immersive .sellio-menu-button {
-    width: 52px;
-    height: 52px;
-    min-width: 52px;
-    display: grid;
-    place-items: center;
-    color: #281731;
-    border: 1px solid rgba(255,255,255,.72);
-    border-radius: 16px;
-    background: rgba(255,255,255,.74);
-    box-shadow: 0 6px 18px rgba(43,20,55,.12);
-    backdrop-filter: blur(10px) saturate(120%);
-    -webkit-backdrop-filter: blur(10px) saturate(120%);
-  }
+.sellio-landing--scrollworld .sellio-menu-button--overlay {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  display: grid !important;
+  place-items: center;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: #281731;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  pointer-events: auto;
+}
 
-  .sellio-landing--scrollworld .sellio-landing-header.is-immersive .sellio-landing-logo {
-    padding: 5px;
-  }
+.sellio-landing--scrollworld .sellio-menu-button--overlay svg {
+  width: 30px;
+  height: 30px;
+  stroke-width: 2.3;
+  filter: drop-shadow(0 1px 2px rgba(255,255,255,.95)) drop-shadow(0 2px 5px rgba(40,23,49,.2));
+}
 
-  .sellio-landing--scrollworld .sellio-landing-header.is-immersive .sellio-landing-logo img {
-    width: 36px;
-    height: 36px;
-    filter: drop-shadow(0 2px 7px rgba(255,255,255,.95)) drop-shadow(0 5px 14px rgba(43,20,55,.16));
-  }
+.sellio-landing--scrollworld .sellio-landing-header.is-immersive.is-overlay-only.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  pointer-events: none;
+}
 
-  .sellio-landing--scrollworld .sellio-landing-header.is-immersive .sellio-menu-button {
-    padding: 0;
-  }
+.sellio-landing--scrollworld .sellio-landing-header.is-immersive.is-overlay-only.is-visible .sellio-menu-button--overlay,
+.sellio-landing--scrollworld .sellio-landing-header.is-immersive.is-overlay-only.is-visible .sellio-mobile-nav--immersive {
+  pointer-events: auto;
+}
 
-  .sellio-landing--scrollworld .sellio-landing-header.is-immersive .sellio-mobile-nav {
-    background: rgba(255,250,247,.96);
-    box-shadow: 0 18px 38px rgba(43,20,55,.12);
-    backdrop-filter: blur(18px) saturate(120%);
-    -webkit-backdrop-filter: blur(18px) saturate(120%);
-  }
+.sellio-landing--scrollworld .sellio-mobile-nav--immersive {
+  position: absolute;
+  z-index: 110;
+  top: max(64px, calc(env(safe-area-inset-top) + 56px));
+  right: 18px;
+  left: auto;
+  width: min(360px, calc(100vw - 36px));
+  display: grid;
+  padding: 16px;
+  border: 1px solid rgba(82,35,103,.1);
+  border-radius: 22px;
+  background: rgba(255,250,247,.97);
+  box-shadow: 0 20px 55px rgba(43,20,55,.16);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+}
+
+.sellio-landing--scrollworld .sellio-mobile-nav--immersive > a:not(.sellio-button) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 8px;
+  border-bottom: 1px solid rgba(82,35,103,.08);
+  font-weight: 700;
+}
+
+.sellio-landing--scrollworld .sellio-mobile-nav--immersive .sellio-mobile-nav__brand {
+  justify-content: flex-start !important;
+  gap: 11px;
+  padding: 4px 6px 14px !important;
+  color: #35183f;
+  font-weight: 900 !important;
+}
+
+.sellio-landing--scrollworld .sellio-mobile-nav--immersive .sellio-mobile-nav__brand img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+.sellio-landing--scrollworld .sellio-mobile-nav--immersive .sellio-mobile-nav__brand span {
+  font: 800 17px/1 "Manrope", sans-serif;
+}
+
+.sellio-landing--scrollworld .sellio-mobile-nav--immersive .sellio-button {
+  margin-top: 12px;
 }
 
 /* Final interaction consistency pass for the immersive chapters. */
