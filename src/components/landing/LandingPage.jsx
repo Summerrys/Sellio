@@ -245,25 +245,44 @@ function useImmersiveReleaseSnap() {
 
 function LandingHeader() {
   const headerRef = useRef(null);
+  const lastScrollYRef = useRef(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [visible, setVisible] = useState(false);
   const [immersive, setImmersive] = useState(false);
 
   useEffect(() => {
     let frame;
+    lastScrollYRef.current = window.scrollY;
+
     const update = () => {
       const world = document.getElementById('world-experience');
       const product = document.getElementById('product');
       const film = document.getElementById('sellio-film');
-      const worldTop = world ? window.scrollY + world.getBoundingClientRect().top : null;
-      const productBottom = product ? window.scrollY + product.getBoundingClientRect().bottom : null;
-      const headerHeight = headerRef.current?.getBoundingClientRect().height || 68;
-      const revealAt = worldTop !== null
-        ? worldTop - headerHeight * .8
-        : film ? window.scrollY + film.getBoundingClientRect().bottom - headerHeight * .8 : Number.POSITIVE_INFINITY;
+      const currentY = window.scrollY;
+      const previousY = lastScrollYRef.current;
+      const delta = currentY - previousY;
+      lastScrollYRef.current = currentY;
+
+      const worldTop = world ? currentY + world.getBoundingClientRect().top : null;
+      const productBottom = product ? currentY + product.getBoundingClientRect().bottom : null;
+      const filmBottom = film ? currentY + film.getBoundingClientRect().bottom : null;
+      const immersiveStart = worldTop ?? filmBottom ?? Number.POSITIVE_INFINITY;
       const immersiveEnd = productBottom ?? Number.NEGATIVE_INFINITY;
-      setVisible(window.scrollY >= revealAt);
-      setImmersive(window.scrollY >= revealAt && window.scrollY < immersiveEnd - headerHeight * .25);
+      const insideImmersive = currentY >= immersiveStart - 2 && currentY < immersiveEnd - 2;
+      const afterImmersive = currentY >= immersiveEnd - 2;
+
+      setImmersive(insideImmersive);
+
+      if (insideImmersive) {
+        // The immersive pages have no persistent header. Reveal only the bare
+        // menu icon when the user intentionally scrolls back upward.
+        if (delta < -2) setVisible(true);
+        else if (delta > 2) setVisible(false);
+      } else {
+        // Hero remains header-free. Marketplace Progression onward uses the
+        // normal header again.
+        setVisible(afterImmersive);
+      }
     };
     const requestUpdate = () => {
       cancelAnimationFrame(frame);
@@ -305,18 +324,43 @@ function LandingHeader() {
   }, []);
 
   return (
-    <header ref={headerRef} className={'sellio-landing-header ' + (visible ? 'is-visible ' : '') + (immersive ? 'is-immersive' : '')} aria-hidden={!visible}>
-      <div className="sellio-container sellio-landing-header__inner">
-        <a href="/" className="sellio-landing-logo" aria-label="Sellio home"><img src={LOGO_URL} alt="Sellio" /></a>
-        <nav className="sellio-landing-nav" aria-label="Main navigation">{NAV_ITEMS.map((item) => <a key={item.label} href={item.href}>{item.label}</a>)}</nav>
-        <div className="sellio-landing-header__actions">
-          <a href="/Auth" className="sellio-login-link">Merchant Login</a>
-          <a href="#pricing" className="sellio-button sellio-button--small sellio-button--gradient">Start Free Trial <ArrowRight /></a>
-          <button type="button" className="sellio-menu-button" onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-expanded={menuOpen} aria-controls="sellio-mobile-nav">{menuOpen ? <X /> : <Menu />}</button>
+    <header
+      ref={headerRef}
+      className={'sellio-landing-header ' + (visible ? 'is-visible ' : '') + (immersive ? 'is-immersive is-overlay-only' : '')}
+      aria-hidden={!visible && !menuOpen}
+    >
+      {immersive ? (
+        <div className="sellio-landing-header__overlay">
+          <button
+            type="button"
+            className="sellio-menu-button sellio-menu-button--overlay"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={menuOpen}
+            aria-controls="sellio-mobile-nav"
+          >
+            {menuOpen ? <X /> : <Menu />}
+          </button>
         </div>
-      </div>
+      ) : (
+        <div className="sellio-container sellio-landing-header__inner">
+          <a href="/" className="sellio-landing-logo" aria-label="Sellio home"><img src={LOGO_URL} alt="Sellio" /></a>
+          <nav className="sellio-landing-nav" aria-label="Main navigation">{NAV_ITEMS.map((item) => <a key={item.label} href={item.href}>{item.label}</a>)}</nav>
+          <div className="sellio-landing-header__actions">
+            <a href="/Auth" className="sellio-login-link">Merchant Login</a>
+            <a href="#pricing" className="sellio-button sellio-button--small sellio-button--gradient">Start Free Trial <ArrowRight /></a>
+            <button type="button" className="sellio-menu-button" onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-expanded={menuOpen} aria-controls="sellio-mobile-nav">{menuOpen ? <X /> : <Menu />}</button>
+          </div>
+        </div>
+      )}
       {menuOpen && (
-        <nav id="sellio-mobile-nav" className="sellio-mobile-nav" aria-label="Mobile navigation">
+        <nav id="sellio-mobile-nav" className={'sellio-mobile-nav ' + (immersive ? 'sellio-mobile-nav--immersive' : '')} aria-label="Mobile navigation">
+          {immersive && (
+            <a href="/" className="sellio-mobile-nav__brand" onClick={() => setMenuOpen(false)}>
+              <img src={LOGO_URL} alt="Sellio" />
+              <span>Sellio</span>
+            </a>
+          )}
           {NAV_ITEMS.map((item) => <a key={item.label} href={item.href} onClick={() => setMenuOpen(false)}>{item.label}<ChevronRight /></a>)}
           <a href="/Auth" onClick={() => setMenuOpen(false)}>Merchant Login<ChevronRight /></a>
           <a href="#pricing" className="sellio-button sellio-button--gradient" onClick={() => setMenuOpen(false)}>Start Free Trial</a>
