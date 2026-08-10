@@ -43,7 +43,7 @@ const NAV_ITEMS = [
   { label: 'Pricing', href: '#pricing' },
 ];
 
-const SNAP_PAGE_SELECTORS = ['#sellio-film', '#world-experience', '#journey', '#connected', '#product'];
+const SNAP_PAGE_SELECTORS = ['#sellio-film', '#world-experience', '#journey', '#connected', '#product', '#vision'];
 
 function useImmersiveReleaseSnap() {
   useEffect(() => {
@@ -135,15 +135,16 @@ function useImmersiveReleaseSnap() {
       if (direction > 0 && originIndex < points.length - 1) {
         targetIndex = originIndex + 1;
       } else if (direction < 0 && originIndex > 0) {
-        // Returning from the normal-scrolling content below Merchant Workspace
-        // settles on Workspace first instead of skipping straight to Connected Commerce.
+        // Returning from normal-scrolling content below Marketplace Progression
+        // settles on Progression first instead of skipping back to Merchant Workspace.
         if (originIndex === points.length - 1 && originY > points[originIndex] + window.innerHeight * .15) {
           targetIndex = originIndex;
         } else {
           targetIndex = originIndex - 1;
         }
       } else {
-        // Downward scrolling from Merchant Workspace intentionally becomes normal page scrolling.
+        // Marketplace Progression is the final assisted destination. From here
+        // downward, the rest of the landing page uses ordinary native scrolling.
         return;
       }
 
@@ -429,7 +430,7 @@ export default function LandingPage() {
         <div className="sl-chapter-transition sl-chapter-transition--journey sl-snap-chapter"><CommerceJourney /></div>
         <div className="sl-chapter-transition sl-chapter-transition--connected sl-snap-chapter"><ConnectedCommerce /></div>
         <div className="sl-chapter-transition sl-chapter-transition--workspace sl-snap-chapter"><ProductShowcase /></div>
-        <ChapterTransition className="sl-chapter-transition--progression" label="Marketplace progression chapter"><WorldLayers /></ChapterTransition>
+        <div className="sl-chapter-transition sl-chapter-transition--progression sl-release-snap-final"><WorldLayers /></div>
         <ChapterTransition className="sl-chapter-transition--pricing" label="Pricing chapter"><PricingSection /></ChapterTransition>
         <ChapterTransition className="sl-chapter-transition--faq" label="Frequently asked questions"><FAQSection /></ChapterTransition>
       </main>
