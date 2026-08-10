@@ -2,23 +2,18 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeft,
-  ArrowRight,
   BriefcaseBusiness,
   Check,
-  Coffee,
   Compass,
   MapPin,
   HandPointer,
   MousePointer2,
   Palette,
   ShoppingBag,
-  Store,
   Utensils,
   X,
 } from 'lucide-react';
 import { SELLIO_IMMERSIVE_ASSETS, SELLIO_IMMERSIVE_MOBILE_ASSETS } from './immersiveAssets';
-
-const DEMO_STORE_URL = '/store/cafetelier?preview=true';
 
 const SECTORS = [
   {
