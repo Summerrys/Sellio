@@ -9,13 +9,13 @@ const posterRoot = `${SELLIO_ASSET_ROOT}/images/posters`;
 const videoRoot = `${SELLIO_ASSET_ROOT}/video/masters`;
 
 export const SELLIO_IMMERSIVE_ASSETS = {
-  world: `${desktopImageRoot}/01-sellio-world.webp`,
-  storefront: `${desktopImageRoot}/02-merchant-storefront.webp`,
-  journey: `${desktopImageRoot}/03-commerce-journey.webp`,
-  workspace: `${desktopImageRoot}/04-connected-workspace.webp`,
+  world: `${desktopImageRoot}/01-sellio-world.jpg`,
+  storefront: `${desktopImageRoot}/02-merchant-storefront.jpg`,
+  journey: `${desktopImageRoot}/03-commerce-journey.jpg`,
+  workspace: `${desktopImageRoot}/04-connected-workspace.jpg`,
   connected: `${desktopImageRoot}/05-connected-commerce.webp`,
-  progression: `${desktopImageRoot}/06-coins-progression.webp`,
-  ready: `${desktopImageRoot}/07-ready-world.webp`,
+  progression: `${desktopImageRoot}/06-coins-progression.jpg`,
+  ready: `${desktopImageRoot}/07-ready-world.jpg`,
 };
 
 export const SELLIO_IMMERSIVE_MOBILE_ASSETS = {
