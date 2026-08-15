@@ -1877,6 +1877,94 @@
   border-radius: 0 !important;
 }
 
+/* Sellio World desktop stability: 16:9 artwork stays fixed while only overlays animate. */
+@media (min-width: 901px) {
+  .sl-page-turn-world .sl-pan-scroll--world,
+  .sl-page-turn-world .sl-pan-canvas--world {
+    width: 100%;
+    min-width: 100%;
+    height: 100%;
+    min-height: 100%;
+    overflow: hidden;
+  }
+
+  .sl-page-turn-world .sl-pan-canvas--world,
+  .sl-page-turn-world .sl-pan-canvas--world.has-focus,
+  .sl-page-turn-world .sl-pan-canvas--world .sl-responsive-art,
+  .sl-page-turn-world .sl-pan-canvas--world .sl-responsive-art > img {
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .sl-page-turn-world .sl-world-intro-overlay {
+    transform: none !important;
+    will-change: auto;
+  }
+
+  .sl-map-detail-anchor {
+    position: absolute;
+    z-index: 20;
+    left: var(--detail-x);
+    top: var(--detail-y);
+    width: min(330px, 28vw);
+    pointer-events: none;
+  }
+
+  .sl-map-detail-anchor--retail {
+    transform: translateX(-2%);
+  }
+
+  .sl-map-detail-anchor--services {
+    transform: translateX(-10%);
+  }
+
+  .sl-map-detail-anchor .sl-map-detail-overlay {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    max-height: min(310px, 38vh);
+    padding: 18px 19px;
+    border-radius: 20px;
+    pointer-events: auto;
+  }
+
+  .sl-map-detail-anchor .sl-map-detail-overlay h3 {
+    padding-right: 28px;
+    font-size: clamp(1.45rem, 2.2vw, 2rem);
+  }
+
+  .sl-map-detail-anchor .sl-map-detail-overlay p {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+}
+
+@media (max-width: 900px) {
+  .sl-map-detail-anchor {
+    position: absolute;
+    z-index: 30;
+    left: 10px;
+    right: 10px;
+    top: auto;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    width: auto;
+    transform: none;
+    pointer-events: none;
+  }
+
+  .sl-map-detail-anchor .sl-map-detail-overlay {
+    position: relative;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    width: 100%;
+    max-height: 32vh;
+    pointer-events: auto;
+  }
+}
+
 /* Sellio World refinement: F&B and its featured Cafetelier storefront are one destination. */
 .sl-page-turn-world .sl-map-pin--featured > span {
   display: flex;
