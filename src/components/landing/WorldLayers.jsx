@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowDown,
   Coins,
@@ -44,8 +43,6 @@ const LAYERS = [
 ];
 
 export default function WorldLayers() {
-  const reduceMotion = useReducedMotion();
-
   return (
     <section id="vision" className="sellio-section sl-imm-layers" aria-labelledby="sellio-layers-heading">
       <div className="sellio-container">
@@ -61,10 +58,7 @@ export default function WorldLayers() {
           {LAYERS.map(({ number, eyebrow, title, description, tags, image, alt, Icon }, index) => (
             <React.Fragment key={number}>
               <article className={`sl-imm-layer ${index % 2 ? 'is-reversed' : ''}`}>
-                <motion.div
-                  className={`sl-imm-layer__art sl-imm-layer__art--${index + 1}`}
-                  initial={false}
-                >
+                <div className={`sl-imm-layer__art sl-imm-layer__art--${index + 1}`}>
                   <div className="sl-pan-scroll sl-pan-scroll--layer" tabIndex="0" aria-label={`Explore ${eyebrow}`}>
                     <div className="sl-pan-canvas sl-pan-canvas--layer">
                       <picture className="sl-responsive-art">
@@ -74,7 +68,7 @@ export default function WorldLayers() {
                   </div>
                   <span>{number}</span>
                   <div className="sl-pan-hint sl-pan-hint--layer"><MoveHorizontal /> Drag image</div>
-                </motion.div>
+                </div>
                 <div className="sl-imm-layer__copy">
                   <span><Icon /> {eyebrow}</span>
                   <h3>{title}</h3>
