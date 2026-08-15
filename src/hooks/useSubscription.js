@@ -23,6 +23,7 @@ export function useSubscription() {
       return data;
     },
     enabled: !!tenantId,
+    refetchInterval: 60 * 1000,
   });
 
   const plan = subscription?.tier || 'starter';
