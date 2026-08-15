@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
-import { ChevronRight, X, Loader2, Eye, EyeOff, Lock } from 'lucide-react';
+import { ChevronRight, X, Loader2, Eye, EyeOff, Lock, CreditCard, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
+import { openBillingPortal, formatBillingAmount } from '@/lib/billing';
 
 function SectionHeader({ title }) {
   return (
@@ -30,7 +31,7 @@ function SectionCard({ children, className = '' }) {
 }
 
 export default function AccountProfileModal({ open, onClose, user, subscription: propSubscription, onOpenPricing, clearAppUser }) {
-  const { tenantId } = useTenant();
+  const { tenantId, isOwner } = useTenant();
   const { subscription, tier } = useSubscription();
   const activeSub = subscription || propSubscription;
 
@@ -52,6 +53,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
   const [confirmToggle, setConfirmToggle] = useState(null); // 'email' | 'orders' | null
 
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [isOpeningBilling, setIsOpeningBilling] = useState(false);
 
   // Detect if user is email/password (not OAuth)
   const isEmailUser = !user?.app_metadata?.provider || user?.app_metadata?.provider === 'email';
@@ -98,6 +100,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
       case 'trial':    return { label: 'Trial',    color: 'bg-amber-100 text-amber-700' };
       case 'active':   return { label: 'Active',   color: 'bg-green-100 text-green-700' };
       case 'past_due': return { label: 'Past Due', color: 'bg-red-100 text-red-700' };
+      case 'suspended':return { label: 'Suspended',color: 'bg-red-100 text-red-700' };
       case 'cancelled':return { label: 'Cancelled',color: 'bg-slate-100 text-slate-500' };
       default:         return { label: activeSub?.status || 'Unknown', color: 'bg-slate-100 text-slate-500' };
     }
@@ -116,7 +119,11 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
     return null;
   })();
 
-  const showUpgrade = ['trial', 'active', 'past_due'].includes(activeSub?.status) && tier !== 'pro';
+  const showUpgrade = ['trial', 'active'].includes(activeSub?.status) && tier !== 'pro';
+  const invoiceAmount = formatBillingAmount(
+    activeSub?.invoice_amount_due_minor,
+    activeSub?.invoice_currency || activeSub?.currency,
+  );
 
   // Legacy planBadge for header badge
   const planBadge = `${tierLabel} · ${statusConfig.label}`;
@@ -206,6 +213,16 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
   const handleDeleteAccount = () => {
     setShowDeleteAlert(false);
     toast.info('Please contact support to delete your account.');
+  };
+
+  const handleManageBilling = async () => {
+    setIsOpeningBilling(true);
+    try {
+      await openBillingPortal(tenantId);
+    } catch (error) {
+      toast.error(error.message || 'Could not open billing');
+      setIsOpeningBilling(false);
+    }
   };
 
   return (
@@ -362,17 +379,54 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
                 {statusConfig.label}
               </span>
             </div>
-            {showUpgrade ? (
-              <Button
-                className="w-full h-11 text-white font-semibold"
-                style={{ background: 'linear-gradient(135deg, #f97316, #ec4899, #8b5cf6)' }}
-                onClick={() => { onClose(); onOpenPricing?.(); }}
-              >
-                Upgrade Plan
-              </Button>
-            ) : (
-              <button className="text-xs text-slate-400 underline underline-offset-2">Manage Billing</button>
+            {activeSub?.status === 'past_due' && (
+              <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2.5">
+                <p className="text-xs font-semibold text-red-800">
+                  {invoiceAmount ? `${invoiceAmount} is outstanding` : 'An invoice is outstanding'}
+                </p>
+                <p className="text-[11px] text-red-600 mt-0.5">
+                  Update the payment method or pay the Stripe invoice to restore active status.
+                </p>
+              </div>
             )}
+
+            {isOwner ? (
+              <div className="space-y-2">
+                {activeSub?.status === 'past_due' && activeSub?.invoice_hosted_url && (
+                  <a
+                    href={activeSub.invoice_hosted_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full h-11 rounded-lg bg-slate-900 text-white text-sm font-semibold flex items-center justify-center gap-2"
+                  >
+                    Pay outstanding invoice
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                )}
+                {showUpgrade && (
+                  <Button
+                    className="w-full h-11 text-white font-semibold"
+                    style={{ background: 'linear-gradient(135deg, #f97316, #ec4899, #8b5cf6)' }}
+                    onClick={() => { onClose(); onOpenPricing?.(); }}
+                  >
+                    Upgrade Plan
+                  </Button>
+                )}
+                {activeSub?.stripe_customer_id && (
+                  <Button
+                    variant="outline"
+                    className="w-full h-11 gap-2"
+                    onClick={handleManageBilling}
+                    disabled={isOpeningBilling}
+                  >
+                    {isOpeningBilling ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                    Manage Billing
+                  </Button>
+                )}
+              </div>
+            ) : activeSub?.status === 'past_due' ? (
+              <p className="text-xs text-amber-700">Please ask the store owner to resolve billing.</p>
+            ) : null}
           </SectionCard>
 
           {/* Preferences */}
