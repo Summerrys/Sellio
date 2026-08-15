@@ -64,8 +64,6 @@ export default function WorldLayers() {
                 <motion.div
                   className={`sl-imm-layer__art sl-imm-layer__art--${index + 1}`}
                   initial={false}
-                  whileHover={reduceMotion ? undefined : { scale: 1.006 }}
-                  transition={{ duration: .5, ease: [0.2, 0.8, 0.2, 1] }}
                 >
                   <div className="sl-pan-scroll sl-pan-scroll--layer" tabIndex="0" aria-label={`Explore ${eyebrow}`}>
                     <div className="sl-pan-canvas sl-pan-canvas--layer">
