@@ -97,8 +97,6 @@ export default function ConnectedCommerce() {
             <motion.div
               className="sl-imm-connection-art sl-pan-canvas sl-pan-canvas--connection"
               initial={false}
-              whileHover={reduceMotion ? undefined : { scale: 1.004 }}
-              transition={{ duration: .55, ease: [0.2, 0.8, 0.2, 1] }}
             >
               <picture className="sl-responsive-art">
                 <source media="(max-width: 600px)" srcSet={SELLIO_IMMERSIVE_MOBILE_ASSETS.connected} />
