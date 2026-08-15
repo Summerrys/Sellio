@@ -41,6 +41,9 @@ import { useAppUser } from '@/lib/AppUserContext';
 import { isFnBIndustry } from '@/lib/industry';
 import { cn } from '@/lib/utils';
 import UpgradeWall from './components/subscription/UpgradeWall';
+import BillingRecoveryWall from './components/subscription/BillingRecoveryWall';
+import BillingStatusBanner from './components/subscription/BillingStatusBanner';
+import { reconcileBilling } from '@/lib/billing';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import TrialReminderModal from './components/subscription/TrialReminderModal';
 import AccountProfileModal from './components/profile/AccountProfileModal';
@@ -301,14 +304,53 @@ function AppLayout({ children, currentPageName }) {
 
   useEffect(() => {
     if (!tenantId) return;
-    getSupabase().then(supabase =>
-      supabase.from('subscriptions').select('*').eq('tenant_id', tenantId).order('created_date', { ascending: false }).limit(1).maybeSingle()
-        .then(({ data }) => setSubscription(data))
-    );
+    let cancelled = false;
+
+    const refreshSubscription = async () => {
+      try {
+        const supabase = await getSupabase();
+        const { data, error } = await supabase
+          .from('subscriptions')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .order('created_date', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (error) throw error;
+        if (!cancelled) setSubscription(data);
+      } catch (error) {
+        console.warn('Subscription refresh failed:', error.message);
+      }
+    };
+
+    refreshSubscription();
+    const timer = window.setInterval(refreshSubscription, 30 * 1000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
   }, [tenantId]);
 
   useEffect(() => {
-    if (!subscription || subscription.status !== 'trial') return;
+    if (!tenantId || !isOwner) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('billing') !== 'return') return;
+
+    reconcileBilling(tenantId)
+      .then((result) => {
+        if (result?.subscription) setSubscription(result.subscription);
+        toast.success('Billing status refreshed');
+      })
+      .catch((error) => toast.error(error.message || 'Could not refresh billing status'))
+      .finally(() => {
+        params.delete('billing');
+        const query = params.toString();
+        window.history.replaceState({}, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+      });
+  }, [tenantId, isOwner]);
+
+  useEffect(() => {
+    if (!isOwner || !subscription || subscription.status !== 'trial') return;
     if (sessionStorage.getItem('trial_modal_dismissed')) return;
     const trialEnd = subscription.current_period_end;
     if (!trialEnd) return;
@@ -319,7 +361,7 @@ function AppLayout({ children, currentPageName }) {
     // Always check Stripe when under 24hrs to see if subscription will auto-renew
     getSupabase().then(async supabase => {
       try {
-        const { data, error } = await supabase.functions.invoke('checkSubscriptionStatus', {
+        const { data, error } = await supabase.functions.invoke('reconcile-billing', {
           body: { tenantId },
         });
         if (error) throw error;
@@ -338,11 +380,17 @@ function AppLayout({ children, currentPageName }) {
         setShowTrialModal(true);
       }
     });
-  }, [subscription, user, tenantId]);
+  }, [subscription, user, tenantId, isOwner]);
 
+  const gracePeriodEndsAt = subscription?.grace_period_ends_at
+    ? new Date(subscription.grace_period_ends_at)
+    : null;
+  const hasActiveGrace = subscription?.status === 'past_due' &&
+    gracePeriodEndsAt && gracePeriodEndsAt > new Date();
   const isLocked = subscription && (
     subscription.status === 'cancelled' ||
-    subscription.status === 'past_due' ||
+    subscription.status === 'suspended' ||
+    (subscription.status === 'past_due' && !hasActiveGrace) ||
     (subscription.status === 'trial' && new Date(subscription.current_period_end) < new Date())
   );
 
@@ -377,12 +425,14 @@ function AppLayout({ children, currentPageName }) {
     return <>{children}</>;
   }
 
-  if (isLocked) {
-    return <UpgradeWall currentTier={subscription?.tier ?? null} />;
-  }
-
   if (isLoading) {
     return <AppLoader />;
+  }
+
+  if (isLocked) {
+    return ['past_due', 'suspended'].includes(subscription?.status)
+      ? <BillingRecoveryWall subscription={subscription} tenantId={tenantId} isOwner={isOwner} />
+      : <UpgradeWall currentTier={null} />;
   }
 
   return (
@@ -461,6 +511,13 @@ function AppLayout({ children, currentPageName }) {
         )}
         style={{ paddingBottom: currentPageName !== 'Onboarding' ? 'calc(env(safe-area-inset-bottom, 0px) + 72px)' : undefined }}
       >
+        {currentPageName !== 'Onboarding' && (
+          <BillingStatusBanner
+            subscription={subscription}
+            tenantId={tenantId}
+            isOwner={isOwner}
+          />
+        )}
 
         <div className="p-2 sm:p-6 lg:p-8 max-w-[1280px] mx-auto overflow-x-hidden">
           {children}
