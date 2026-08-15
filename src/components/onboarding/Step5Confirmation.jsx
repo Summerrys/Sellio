@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { useAppUser, cookieUtils } from '@/lib/AppUserContext';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
+import { getSupabase } from '@/lib/supabaseClient';
 
 export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   const { appUser, updateAppUser } = useAppUser();
@@ -77,11 +78,17 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
       const ownerEmail = storedUser?.email || formData.adminEmail;
       if (!ownerEmail) throw new Error('No owner email found. Please log in.');
 
+      const supabase = await getSupabase();
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData?.session?.access_token) {
+        throw new Error('Your session has expired. Please sign in again.');
+      }
+
       const res = await fetch('https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1/complete-onboarding', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6a3R1dGVlZGJ0bmF4ZmR5bHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NzY2NzIsImV4cCI6MjA5MDU1MjY3Mn0.zZL0Tyizzj3U8JTggYYKZ8BFrhDOKAzwISGNPJDAFzg',
+          'Authorization': `Bearer ${sessionData.session.access_token}`,
         },
         body: JSON.stringify({
           user_id: storedUser.id,
