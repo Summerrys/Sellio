@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -21,9 +21,8 @@ const SECTORS = [
     name: 'Retail Avenue',
     status: 'Open for onboarding',
     Icon: ShoppingBag,
-    pan: .22,
-    origin: '39% 40%',
-    mobileOrigin: '30% 54%',
+    detailX: '38%',
+    detailY: '49%',
     summary: 'Boutiques and product-led merchants receive a recognisable storefront along a dedicated retail route.',
   },
   {
@@ -31,9 +30,6 @@ const SECTORS = [
     name: 'F&B District',
     status: 'Live district',
     Icon: Utensils,
-    pan: .48,
-    origin: '52% 54%',
-    mobileOrigin: '50% 61%',
     summary: 'Restaurants, cafés, bakeries and beverage concepts live around shared discovery and ordering routes.',
   },
   {
@@ -41,9 +37,8 @@ const SECTORS = [
     name: 'Services Garden',
     status: 'Open for onboarding',
     Icon: BriefcaseBusiness,
-    pan: .78,
-    origin: '65% 32%',
-    mobileOrigin: '72% 50%',
+    detailX: '62%',
+    detailY: '40%',
     summary: 'Wellness, studios and professional services occupy a calmer appointment-led neighbourhood.',
   },
 ];
@@ -51,10 +46,7 @@ const SECTORS = [
 export default function SellioWorld() {
   const [activeSector, setActiveSector] = useState(null);
   const [storeOpen, setStoreOpen] = useState(false);
-  const worldPanRef = useRef(null);
-  const storefrontPanRef = useRef(null);
   const reduceMotion = useReducedMotion();
-  const [mobileScene, setMobileScene] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 600px)').matches);
   const sector = useMemo(
     () => SECTORS.find((item) => item.key === activeSector) || null,
     [activeSector],
@@ -79,28 +71,6 @@ export default function SellioWorld() {
     setActiveSector(null);
   };
 
-  useEffect(() => {
-    const query = window.matchMedia('(max-width: 600px)');
-    const update = () => setMobileScene(query.matches);
-    update();
-    query.addEventListener?.('change', update);
-    return () => query.removeEventListener?.('change', update);
-  }, []);
-
-  useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      const viewport = storeOpen ? storefrontPanRef.current : worldPanRef.current;
-      if (!viewport) return;
-      const maxScroll = viewport.scrollWidth - viewport.clientWidth;
-      const progress = mobileScene ? 0 : (storeOpen ? .7 : (sector?.pan ?? .25));
-      viewport.scrollTo({
-        left: Math.max(0, maxScroll * progress),
-        behavior: reduceMotion ? 'auto' : 'smooth',
-      });
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [mobileScene, reduceMotion, sector?.pan, storeOpen]);
-
   return (
     <section id="world-experience" className="sellio-section sl-imm-world sl-cinematic-world" aria-labelledby="sellio-world-heading">
       <div className="sl-cinematic-world__stage">
@@ -115,16 +85,12 @@ export default function SellioWorld() {
               transition={{ duration: .35 }}
             >
               <div
-                ref={worldPanRef}
                 className="sl-pan-scroll sl-pan-scroll--world"
                 tabIndex="0"
-                aria-label="Interactive Sellio World map. Pan horizontally and select a destination."
+                aria-label="Interactive Sellio World map. Select a destination."
               >
-                <motion.div
+                <div
                   className={`sl-imm-world-map sl-pan-canvas sl-pan-canvas--world ${sector ? 'has-focus' : ''}`}
-                  animate={reduceMotion ? undefined : { scale: sector ? (mobileScene ? 1.055 : 1.065) : 1 }}
-                  transition={{ duration: .65, ease: [0.2, 0.8, 0.2, 1] }}
-                  style={{ transformOrigin: sector ? (mobileScene ? sector.mobileOrigin : sector.origin) : '50% 50%' }}
                 >
                   <picture className="sl-responsive-art">
                     <source media="(max-width: 600px)" srcSet={SELLIO_IMMERSIVE_MOBILE_ASSETS.world} />
@@ -160,27 +126,32 @@ export default function SellioWorld() {
                       )}
                     </button>
                   ))}
-                </motion.div>
+                </div>
               </div>
 
               <div className="sl-map-instruction"><MousePointer2 aria-hidden="true" /> Tap a destination</div>
 
               <AnimatePresence>
                 {sector && (
-                  <motion.aside
+                  <div
                     key={sector.key}
-                    className="sl-map-detail-overlay"
-                    initial={reduceMotion ? false : { opacity: 0, y: 18 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={reduceMotion ? undefined : { opacity: 0, y: 12 }}
-                    transition={{ duration: .3 }}
-                    aria-live="polite"
+                    className={`sl-map-detail-anchor sl-map-detail-anchor--${sector.key}`}
+                    style={{ '--detail-x': sector.detailX, '--detail-y': sector.detailY }}
                   >
-                    <button type="button" className="sl-map-detail-overlay__close" onClick={() => setActiveSector(null)} aria-label="Close district details"><X /></button>
-                    <span><MapPin /> {sector.status}</span>
-                    <h3>{sector.name}</h3>
-                    <p>{sector.summary}</p>
-                  </motion.aside>
+                    <motion.aside
+                      className="sl-map-detail-overlay"
+                      initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={reduceMotion ? undefined : { opacity: 0, y: 8 }}
+                      transition={{ duration: .24 }}
+                      aria-live="polite"
+                    >
+                      <button type="button" className="sl-map-detail-overlay__close" onClick={() => setActiveSector(null)} aria-label="Close district details"><X /></button>
+                      <span><MapPin /> {sector.status}</span>
+                      <h3>{sector.name}</h3>
+                      <p>{sector.summary}</p>
+                    </motion.aside>
+                  </div>
                 )}
               </AnimatePresence>
             </motion.div>
@@ -194,10 +165,9 @@ export default function SellioWorld() {
               transition={{ duration: .55, ease: [0.2, 0.8, 0.2, 1] }}
             >
               <div
-                ref={storefrontPanRef}
                 className="sl-pan-scroll sl-pan-scroll--storefront"
                 tabIndex="0"
-                aria-label="Cafetelier storefront panorama. Pan horizontally to explore."
+                aria-label="Cafetelier storefront scene."
               >
                 <div className="sl-imm-storefront sl-pan-canvas sl-pan-canvas--storefront">
                   <picture className="sl-responsive-art">
