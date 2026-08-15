@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { ChevronRight, X, Loader2, Eye, EyeOff, Lock, CreditCard, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
