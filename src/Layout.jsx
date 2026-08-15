@@ -18,14 +18,12 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  Building2,
   BarChart3,
   LogOut,
   X,
   QrCode,
   ArrowLeft,
   Plus,
-  AlertCircle,
   Clock,
   Copy,
   Check,
@@ -36,7 +34,6 @@ import PricingModal from './components/subscription/PricingModal';
 import ProductFormDialog from './components/products/ProductFormDialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { base44 } from '@/api/base44Client';
 import { useAppUser } from '@/lib/AppUserContext';
 import { isFnBIndustry } from '@/lib/industry';
 import { cn } from '@/lib/utils';
