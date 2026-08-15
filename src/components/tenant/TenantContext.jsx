@@ -403,6 +403,7 @@ export function TenantProvider({ children }) {
       return data;
     },
     enabled: !!currentTenantId,
+    refetchInterval: 60 * 1000,
   });
 
   const { data: tenantDirectData } = useQuery({
