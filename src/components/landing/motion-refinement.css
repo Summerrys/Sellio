@@ -1897,7 +1897,11 @@
     animation: none !important;
   }
 
-  .sl-page-turn-world .sl-world-intro-overlay {
+  .sl-page-turn-world .sl-world-intro-overlay,
+  .sl-cinematic-journey .sl-panorama-intro--journey,
+  .sl-cinematic-connected .sl-panorama-intro--connected,
+  .sl-cinematic-workspace .sl-panorama-intro--workspace {
+    top: clamp(24px, 3vw, 44px) !important;
     transform: none !important;
     will-change: auto;
   }
