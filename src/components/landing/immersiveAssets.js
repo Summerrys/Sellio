@@ -1,7 +1,9 @@
 const configuredRoot = import.meta.env.VITE_SELLIO_ASSET_ROOT;
 export const SELLIO_ASSET_ROOT = (configuredRoot || 'https://assets.apptelier.sg/sellio/landing').replace(/\/$/, '');
 
-const desktopImageRoot = `${SELLIO_ASSET_ROOT}/images/desktop`;
+// Desktop uses the original 16:9 immersive artwork restored from the earlier Sellio build.
+// Mobile remains on the dedicated portrait assets hosted under the Sellio asset root.
+const desktopImageRoot = '/assets/immersive-16x9';
 const mobileImageRoot = `${SELLIO_ASSET_ROOT}/images/mobile`;
 const posterRoot = `${SELLIO_ASSET_ROOT}/images/posters`;
 const videoRoot = `${SELLIO_ASSET_ROOT}/video/masters`;
