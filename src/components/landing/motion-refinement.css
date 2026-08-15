@@ -1916,11 +1916,11 @@
   }
 
   .sl-map-detail-anchor--retail {
-    transform: translateX(-2%);
+    transform: translateX(-8%);
   }
 
   .sl-map-detail-anchor--services {
-    transform: translateX(-10%);
+    transform: translateX(2%);
   }
 
   .sl-map-detail-anchor .sl-map-detail-overlay {
