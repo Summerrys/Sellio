@@ -27,7 +27,8 @@ import {
   Clock,
   Copy,
   Check,
-  Store
+  Store,
+  Coins
 } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import PricingModal from './components/subscription/PricingModal';
@@ -75,6 +76,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
     ...(isFnBIndustry(tenant?.industry) ? [{ label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view' }] : []),
     { label: 'User Management', icon: Users, page: 'UserManagement', permission: 'staff.view' },
     { label: 'Reports', icon: BarChart3, page: 'Reports', permission: 'reports.view' },
+    { label: 'Coin Store', icon: Coins, page: 'CoinShop', permission: null },
     { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view' },
   ];
 
