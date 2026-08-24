@@ -51,6 +51,7 @@ import { lazy } from 'react';
 
 const Auth = lazy(() => import('./pages/Auth'));
 const Categories = lazy(() => import('./pages/Categories'));
+const CoinShop = lazy(() => import('./pages/CoinShop'));
 const CustomerMenu = lazy(() => import('./pages/CustomerMenu'));
 const CustomerOrder = lazy(() => import('./pages/CustomerOrder'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -71,6 +72,7 @@ import __Layout from './Layout.jsx';
 export const PAGES = {
     "Auth": Auth,
     "Categories": Categories,
+    "CoinShop": CoinShop,
     "CustomerMenu": CustomerMenu,
     "CustomerOrder": CustomerOrder,
     "Dashboard": Dashboard,
