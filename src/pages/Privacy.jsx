@@ -144,7 +144,7 @@ const sections = [
     title: 'Your rights and choices',
     content: (
       <>
-        <p>Subject to the PDPA and other applicable law, you may ask to access or correct personal data we hold about you, withdraw consent, object to certain optional processing, request account closure or deletion, or ask how your information has been used or disclosed.</p>
+        <p>Subject to the PDPA and its exceptions, you may ask to access personal data we hold about you, learn how it has been used or disclosed, correct an error or omission, or withdraw consent for future collection, use or disclosure. You may also ask us to close your account, delete information that is no longer needed, or stop optional processing.</p>
         <p>Some requests may be limited where we must retain information, protect another person's rights, preserve security or transaction records, or comply with law. Withdrawing consent may affect our ability to continue providing features that depend on that information.</p>
         <p>To make a request, email <a href="mailto:hello@apptelier.sg">hello@apptelier.sg</a> with enough detail for us to identify you and understand the request. We may take reasonable steps to verify your identity. If the information is controlled by a merchant, we may direct the request to that merchant or assist it in responding.</p>
       </>
