@@ -1,0 +1,46 @@
+.sellio-cookie-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(36, 18, 58, .32);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  animation: sellio-cookie-fade .2s ease-out;
+}
+.sellio-cookie-card {
+  position: fixed; z-index: 10001; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain;
+  box-sizing: border-box; padding: 28px 30px 22px; text-align: center;
+  border: 1px solid rgba(138, 53, 199, .14); border-radius: 30px;
+  color: #24123a; background: radial-gradient(ellipse at 90% 0%, #fce8f2, transparent 48%), linear-gradient(155deg, #fff, #fffaf7);
+  box-shadow: 0 30px 100px rgba(36,18,58,.24), inset 0 1px 0 #fff;
+  font-family: "DM Sans", system-ui, sans-serif;
+  animation: sellio-cookie-enter .24s ease-out;
+}
+.sellio-cookie-card *, .sellio-cookie-card *::before, .sellio-cookie-card *::after { box-sizing: border-box; }
+.sellio-cookie-brand { display: flex; justify-content: center; align-items: center; gap: 8px; color: #7a528f; font-size: 10px; font-weight: 800; letter-spacing: .16em; }
+.sellio-cookie-brand__dot { width: 7px; height: 7px; border-radius: 50%; background: linear-gradient(120deg,#8a35c7,#df4297,#ff8a4c); }
+.sellio-cookie-illustration { position: relative; display: grid; place-items: center; width: 88px; height: 88px; margin: 20px auto 17px; border-radius: 28px; background: linear-gradient(140deg,#f2e8fc,#fce6ed 68%,#fff0dc); border: 1px solid rgba(138,53,199,.08); transform: rotate(-7deg); }
+.sellio-cookie-illustration svg { width: 49px; height: 49px; fill: #8a35c7; transform: rotate(7deg); }
+.sellio-cookie-spark { position: absolute; border-radius: 50%; }
+.sellio-cookie-spark--one { width: 10px; height: 10px; right: -8px; top: 10px; background: #ff8a4c; }
+.sellio-cookie-spark--two { width: 6px; height: 6px; left: -9px; bottom: 12px; background: #df4297; }
+.sellio-cookie-title { margin: 0; font: 800 32px/1.13 "Manrope",system-ui,sans-serif; letter-spacing: -.045em; outline: none; }
+.sellio-cookie-description { margin: 15px 0 14px; color: #5c4a6c; font-size: 14px; line-height: 1.65; }
+.sellio-cookie-essential { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 7px 11px; border-radius: 99px; background: #f5effb; color: #684580; font-size: 11px; font-weight: 700; }
+.sellio-cookie-essential svg { width: 14px; height: 14px; }
+.sellio-cookie-current { margin: 13px 0 0; color: #654279; font-size: 12px; line-height: 1.5; }
+.sellio-cookie-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 23px; }
+.sellio-cookie-button { min-height: 48px; padding: 12px 16px; border-radius: 15px; border: 1px solid transparent; font: 800 14px "DM Sans",system-ui,sans-serif; cursor: pointer; transition: transform .2s ease, box-shadow .2s ease; }
+.sellio-cookie-button--allow { color: #fff; background: linear-gradient(115deg,#7830b4,#b62d82 68%,#bc4c34); box-shadow: 0 8px 18px rgba(180,45,130,.18); }
+.sellio-cookie-button--decline { color: #4e315e; background: #f5effb; border-color: #e2d5ec; }
+.sellio-cookie-button:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(88,39,109,.16); }
+.sellio-cookie-button:focus-visible, .sellio-cookie-details summary:focus-visible, .sellio-cookie-settings:focus-visible { outline: 3px solid #8a35c7; outline-offset: 4px; }
+.sellio-cookie-note { margin: 14px 0 0; color: #75627e; font-size: 11px; line-height: 1.55; }
+.sellio-cookie-details { margin-top: 15px; padding-top: 13px; border-top: 1px solid rgba(68,31,91,.09); color: #695573; font-size: 12px; line-height: 1.6; }
+.sellio-cookie-details summary { width: fit-content; margin-inline: auto; cursor: pointer; color: #70448a; font-weight: 700; }
+.sellio-cookie-details p { margin: 11px 0 0; text-align: left; }
+.sellio-landing .sellio-cookie-settings { appearance: none; padding: 0; min-height: 32px; background: none; border: 0; color: inherit; font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+@keyframes sellio-cookie-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sellio-cookie-enter { from { opacity: 0; transform: translate(-50%,-48%) scale(.97); } to { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
+@media (max-width: 480px) { .sellio-cookie-card { padding: 24px 22px 20px; border-radius: 26px; } .sellio-cookie-title { font-size: 29px; } }
+@media (prefers-reduced-motion: reduce) { .sellio-cookie-overlay, .sellio-cookie-card { animation: none; } .sellio-cookie-button { transition: none; } .sellio-cookie-button:hover { transform: none; } }
