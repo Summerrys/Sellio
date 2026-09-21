@@ -16,6 +16,7 @@ function validConsent(value) {
 
 export function getCookieConsent() {
   if (typeof document === 'undefined') return null;
+  if (validConsent(sessionFallback)) return sessionFallback;
   try {
     const value = document.cookie.split('; ').find((item) => item.startsWith(CONSENT_COOKIE + '='));
     if (value) {
