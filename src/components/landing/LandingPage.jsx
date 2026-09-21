@@ -17,6 +17,8 @@ import {
   X,
 } from 'lucide-react';
 import HeroWorldTransition from './HeroWorldTransition';
+import CookieConsent from './CookieConsent';
+import { getCookieConsent } from '@/lib/cookieConsent';
 import CommerceJourney from './CommerceJourney';
 import ConnectedCommerce from './ConnectedCommerce';
 import ProductShowcase from './ProductShowcase';
@@ -161,6 +163,7 @@ function useImmersiveReleaseSnap() {
     };
 
     const onTouchStart = (event) => {
+      if (event.target instanceof Element && event.target.closest('.sellio-cookie-card, .sellio-cookie-overlay')) return;
       if (!event.touches?.length) return;
       cancelSnap();
       window.clearTimeout(settleTimer);
@@ -210,6 +213,7 @@ function useImmersiveReleaseSnap() {
     };
 
     const onWheel = (event) => {
+      if (event.target instanceof Element && event.target.closest('.sellio-cookie-card, .sellio-cookie-overlay')) return;
       cancelSnap();
       measure();
       if (!wheelOrigin) {
@@ -414,7 +418,7 @@ function FAQSection() {
   );
 }
 
-function Footer() {
+function Footer({ onCookieSettings }) {
   return (
     <footer className="sellio-landing-footer">
       <div className="sellio-container">
@@ -447,7 +451,7 @@ function Footer() {
             </div>
           </div>
         </div>
-        <div className="sellio-footer-bottom"><span>© 2026 Sellio by Apptélier.</span><span>Built in Singapore · Ready for the world</span></div>
+        <div className="sellio-footer-bottom"><span>© 2026 Sellio by Apptélier.</span><button type="button" className="sellio-cookie-settings" onClick={onCookieSettings}>Cookie settings</button><span>Built in Singapore · Ready for the world</span></div>
       </div>
     </footer>
   );
@@ -455,6 +459,8 @@ function Footer() {
 
 export default function LandingPage() {
   useImmersiveReleaseSnap();
+  const [cookieOpen, setCookieOpen] = useState(() => !getCookieConsent());
+  const cookieReturnFocus = useRef(null);
 
   useEffect(() => {
     const previousTitle = document.title;
@@ -468,7 +474,7 @@ export default function LandingPage() {
   return (
     <div className="sellio-landing sellio-landing--phase1b sellio-landing--scrollworld">
       <a className="sellio-skip-link" href="#sellio-main">Skip to content</a><LandingHeader />
-      <main id="sellio-main">
+      <main id="sellio-main" tabIndex={-1}>
         <HeroWorldTransition />
         <section className="sellio-proof-strip sellio-proof-strip--after-world" aria-label="Sellio capabilities"><div className="sellio-container"><span><Store /> Online storefront</span><span><QrCode /> QR ordering</span><span><Bell /> Live orders</span><span><Package /> Inventory</span><span><BarChart3 /> Reports</span><span><Users /> Staff roles</span></div></section>
         <div className="sl-chapter-transition sl-chapter-transition--journey sl-snap-chapter"><CommerceJourney /></div>
@@ -478,7 +484,8 @@ export default function LandingPage() {
         <ChapterTransition className="sl-chapter-transition--pricing" label="Pricing chapter"><PricingSection /></ChapterTransition>
         <ChapterTransition className="sl-chapter-transition--faq" label="Frequently asked questions"><FAQSection /></ChapterTransition>
       </main>
-      <ChapterTransition className="sl-chapter-transition--footer" label="Sellio footer"><Footer /></ChapterTransition>
+      <ChapterTransition className="sl-chapter-transition--footer" label="Sellio footer"><Footer onCookieSettings={(event) => { cookieReturnFocus.current = event.currentTarget; setCookieOpen(true); }} /></ChapterTransition>
+      <CookieConsent open={cookieOpen} onOpenChange={setCookieOpen} returnFocusRef={cookieReturnFocus} />
     </div>
   );
 }
