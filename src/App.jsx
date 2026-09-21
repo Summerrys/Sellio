@@ -8,6 +8,8 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import PageNotFound from './lib/PageNotFound';
 import Splash from './pages/Splash';
 import LandingPage from '@/components/landing/LandingPage';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
 import Storefront from './pages/Storefront';
 import { useEffect, Suspense } from 'react';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -103,6 +105,8 @@ function App() {
           <NavigationTracker />
           <Routes>
             <Route path="/" element={<RootRoute />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
             <Route path="/*" element={<AuthenticatedApp />} />
           </Routes>
         </Router>
