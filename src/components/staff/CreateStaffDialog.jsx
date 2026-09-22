@@ -63,13 +63,19 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
       const fullPhone = `${form.countryCode}${form.phone.trim()}`;
       const selectedRole = roles.find((r) => r.id === form.roleId);
 
+      const supabase = await getSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Your session has expired. Please sign in again.');
+      }
+
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/createStaffUser`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${session.access_token}`,
             'apikey': SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({
@@ -90,7 +96,6 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
       // Persist local phone number (no country code) on the tenant_users row
       const localPhone = form.phone.trim();
       const generatedEmail = `${form.countryCode.replace('+', '')}${localPhone}@sellio.app`;
-      const supabase = await getSupabase();
       await supabase
         .from('tenant_users')
         .update({ user_phone: localPhone })
