@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -61,8 +61,6 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
     setError('');
     try {
       const fullPhone = `${form.countryCode}${form.phone.trim()}`;
-      const selectedRole = roles.find((r) => r.id === form.roleId);
-
       const supabase = await getSupabase();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
@@ -85,7 +83,6 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
             userPhone: form.phone.trim(),
             password: form.password,
             roleId: form.roleId,
-            roleName: selectedRole?.name || '',
           }),
         }
       );
