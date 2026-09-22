@@ -82,6 +82,7 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
             tenantId,
             fullName: form.fullName.trim(),
             phone: fullPhone,
+            userPhone: form.phone.trim(),
             password: form.password,
             roleId: form.roleId,
             roleName: selectedRole?.name || '',
@@ -93,18 +94,8 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
       console.log('→ createStaffUser response:', response.status, data);
       if (!response.ok) throw new Error(data.error || 'Failed to create staff');
 
-      // Persist local phone number (no country code) on the tenant_users row
-      const localPhone = form.phone.trim();
-      const generatedEmail = `${form.countryCode.replace('+', '')}${localPhone}@sellio.app`;
-      await supabase
-        .from('tenant_users')
-        .update({ user_phone: localPhone })
-        .eq('tenant_id', tenantId)
-        .eq('user_email', generatedEmail);
-
-      // Confirm owner session is still intact — no auth calls made on client
-      const { data: { session: ownerSession } } = await supabase.auth.getSession();
-      console.log('Staff created, owner session preserved:', ownerSession?.user?.email);
+      // The privileged function creates Auth, app_users and tenant_users together.
+      // The caller's own session remains untouched.
       toast.success('Staff account created successfully');
       setForm({ fullName: '', countryCode: '+65', phone: '', password: '', confirmPassword: '', roleId: '' });
       onSuccess?.();
@@ -173,9 +164,11 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
                 <SelectValue placeholder="Select a role" />
               </SelectTrigger>
               <SelectContent>
-                {roles.map((role) => (
-                  <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-                ))}
+                {roles
+                  .filter((role) => String(role.slug || role.name).toLowerCase() !== 'owner')
+                  .map((role) => (
+                    <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
