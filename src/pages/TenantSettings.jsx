@@ -270,8 +270,30 @@ function TenantSettingsContent() {
   });
 
   const deleteRoleMutation = useMutation({
-    mutationFn: (id) => db.entities.Role.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settingsRoles'] }),
+    mutationFn: async (id) => {
+      const supabase = await getSupabase();
+      const { count, error: countError } = await supabase
+        .from('tenant_users')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .eq('role_id', id);
+      if (countError) throw countError;
+      if ((count || 0) > 0) {
+        throw new Error(`Reassign ${count} staff account${count === 1 ? '' : 's'} before deleting this role.`);
+      }
+
+      const { error } = await supabase
+        .from('roles')
+        .delete()
+        .eq('id', id)
+        .eq('tenant_id', tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settingsRoles'] });
+      toast.success('Role deleted');
+    },
+    onError: (error) => toast.error(error.message || 'Could not delete role'),
   });
 
   const openRoleForm = (role) => {
