@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,7 +47,7 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
   const [resetError, setResetError] = React.useState('');
   const [resettingPassword, setResettingPassword] = React.useState(false);
 
-  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
+  const { handleSubmit, formState: { errors }, setValue, watch } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
       role_id: staff?.role_id || '',
