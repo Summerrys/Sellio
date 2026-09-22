@@ -489,9 +489,10 @@ export function TenantProvider({ children }) {
       setUserPermissions(Object.keys(PERMISSIONS));
     } else if (role?.[0]?.permissions) {
       setUserPermissions(role[0].permissions);
-    } else if (user?.tenant_id) {
-      // Fallback: user has a tenant (e.g. just completed onboarding) — grant full permissions
-      setUserPermissions(Object.keys(PERMISSIONS));
+    } else {
+      // Membership without an assigned role must never imply full access.
+      // Owners already receive the explicit is_owner override above.
+      setUserPermissions([]);
     }
   }, [role, tenantUser, devRoleOverride, user, currentTenantId]);
 
