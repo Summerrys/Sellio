@@ -332,9 +332,10 @@ Deno.serve(async (req) => {
         'cashier': {
           tenant_id: newTenantId, name: 'Cashier', slug: 'cashier', is_system: false,
           description: 'Process orders and payments',
+          // Keep this in sync with ROLE_TEMPLATES.cashier in TenantContext.
           permissions: [
             'products.view','categories.view',
-            'orders.view','orders.create','orders.edit',
+            'orders.view','orders.create','orders.edit','orders.print_chit',
             'tables.view',
             'payments.view',
           ],
