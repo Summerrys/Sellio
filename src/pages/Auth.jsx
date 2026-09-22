@@ -14,13 +14,6 @@ const COUNTRY_CODES = [
   { code: '+60', flag: '🇲🇾', name: 'MY', placeholder: '112345678', validate: (p) => /^1\d{8,9}$/.test(p), hint: '9–10 digits, starting with 1' },
 ];
 
-const hashPassword = async (password) => {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-};
-
 const getBaseUrl = () => {
   const host = window.location.hostname;
   if (host === 'localhost' || host.includes('base44.app') || host.includes('base44.com')) {
@@ -485,11 +478,8 @@ export default function Auth() {
       const supabase = await getSupabase();
       const { error } = await supabase.auth.updateUser({ password: forgotNewPassword });
       if (error) throw error;
-      const newHash = await hashPassword(forgotNewPassword);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.email) {
-        await supabase.from('app_users').update({ password_hash: newHash }).eq('email', session.user.email);
-      }
+      // Supabase Auth is the only password authority. Never duplicate password
+      // material in the public application profile.
       await supabase.auth.signOut();
 
       toast.success('Password updated successfully!');
@@ -548,7 +538,7 @@ export default function Auth() {
       if (isLogin) {
         const { data: rows, error: lookupError } = await supabase
           .from('app_users')
-          .select('id, email, full_name, role, onboarding_completed, tenant_id, password_hash, phone')
+          .select('id, email, full_name, role, onboarding_completed, tenant_id, phone')
           .eq('phone', fullPhone)
           .limit(1);
 
@@ -556,11 +546,7 @@ export default function Auth() {
         const appUserRow = rows?.[0];
         if (!appUserRow) throw new Error('No account found for this phone number. Please sign up first.');
 
-        const passwordHash = await hashPassword(formData.password);
-        if (appUserRow.password_hash && passwordHash !== appUserRow.password_hash) {
-          throw new Error('Invalid phone number or password');
-        }
-
+        // Supabase Auth validates the password. app_users is profile data only.
         const { error } = await supabase.auth.signInWithPassword({ email: appUserRow.email, password: formData.password });
         if (error) throw error;
 
@@ -605,12 +591,10 @@ export default function Auth() {
         const { error: signUpError } = await supabase.auth.signUp({ email: authEmail, password: formData.password });
         if (signUpError) throw signUpError;
 
-        const passwordHash = await hashPassword(formData.password);
         const { error: insertError } = await supabase.from('app_users').insert({
           email: authEmail,
           full_name: formData.full_name,
           phone: fullPhone,
-          password_hash: passwordHash,
           auth_provider: 'phone',
           onboarding_completed: false,
           is_active: true,
