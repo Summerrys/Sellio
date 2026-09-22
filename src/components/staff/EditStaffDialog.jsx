@@ -28,7 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Loader2, Trash2 } from 'lucide-react';
+import { KeyRound, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const schema = z.object({
@@ -42,6 +42,11 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
   const hasEditPerm = hasPermission('staff.edit');
   const hasDeletePerm = hasPermission('staff.delete');
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
+  const [showResetDialog, setShowResetDialog] = React.useState(false);
+  const [newPassword, setNewPassword] = React.useState('');
+  const [confirmPassword, setConfirmPassword] = React.useState('');
+  const [resetError, setResetError] = React.useState('');
+  const [resettingPassword, setResettingPassword] = React.useState(false);
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
     resolver: zodResolver(schema),
@@ -93,6 +98,56 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
 
   const onSubmit = (data) => {
     updateMutation.mutate(data);
+  };
+
+  const closeResetDialog = () => {
+    setShowResetDialog(false);
+    setNewPassword('');
+    setConfirmPassword('');
+    setResetError('');
+  };
+
+  const handleResetPassword = async () => {
+    setResetError('');
+    if (newPassword.length < 8) {
+      setResetError('Password must be at least 8 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setResetError('Passwords do not match.');
+      return;
+    }
+
+    setResettingPassword(true);
+    try {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase.functions.invoke('resetStaffPassword', {
+        body: {
+          tenantId,
+          staffId: staff.id,
+          newPassword,
+        },
+      });
+
+      if (error) {
+        let message = error.message || 'Failed to reset password';
+        try {
+          const responseBody = await error.context?.json?.();
+          if (responseBody?.error) message = responseBody.error;
+        } catch {
+          // Keep the function client's error message.
+        }
+        throw new Error(message);
+      }
+      if (data?.error) throw new Error(data.error);
+
+      toast.success('Staff password reset successfully');
+      closeResetDialog();
+    } catch (error) {
+      setResetError(error.message || 'Failed to reset password');
+    } finally {
+      setResettingPassword(false);
+    }
   };
 
   if (!staff) return null;
@@ -214,6 +269,17 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
                   Cancel
                 </Button>
               </div>
+              {canEdit && hasEditPerm && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowResetDialog(true)}
+                  className="w-full"
+                >
+                  <KeyRound className="w-4 h-4 mr-2" />
+                  Reset Password
+                </Button>
+              )}
               {canEdit && hasDeletePerm && (
                 <Button
                   type="button"
@@ -227,6 +293,74 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
               )}
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showResetDialog} onOpenChange={(nextOpen) => {
+        if (nextOpen) setShowResetDialog(true);
+        else closeResetDialog();
+      }}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>Reset Staff Password</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-500">
+              Set a new password for {staff.user_name || staff.user_email}. Share it with the staff member securely.
+            </p>
+            <div className="space-y-1.5">
+              <Label>New Password</Label>
+              <Input
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(event) => {
+                  setNewPassword(event.target.value);
+                  setResetError('');
+                }}
+                placeholder="Minimum 8 characters"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Confirm New Password</Label>
+              <Input
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(event) => {
+                  setConfirmPassword(event.target.value);
+                  setResetError('');
+                }}
+                placeholder="Re-enter the new password"
+              />
+            </div>
+            {resetError && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                {resetError}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={closeResetDialog} disabled={resettingPassword}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleResetPassword}
+              disabled={resettingPassword}
+              className="text-white"
+              style={{ background: 'var(--color-primary-gradient)' }}
+            >
+              {resettingPassword ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Resetting...
+                </>
+              ) : (
+                'Reset Password'
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
