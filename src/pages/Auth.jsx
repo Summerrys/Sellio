@@ -228,13 +228,9 @@ export default function Auth() {
         const isBypass = BYPASS_EMAILS.includes((user.email || '').toLowerCase());
 
         if (isNewAuthUser && !tokenInUrl && !isBypass) {
-          const unauthorizedEmail = user.email;
+          // Reject the session. Do not expose a public admin deletion endpoint merely
+          // to clean up an unapproved OAuth identity.
           await supabase.auth.signOut();
-          await fetch('https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1/deleteUnauthorizedUser', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: unauthorizedEmail }),
-          });
           setGoogleLoading(false);
           window.history.replaceState(null, '', window.location.pathname);
           setGoogleGateError('true');
@@ -252,11 +248,6 @@ export default function Auth() {
           const inviteEmailForCheck = invite?.email?.toLowerCase();
           if (inviteEmailForCheck && user.email?.toLowerCase() !== inviteEmailForCheck) {
             await supabase.auth.signOut();
-            await fetch('https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1/deleteUnauthorizedUser', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: user.email }),
-            });
             setGoogleLoading(false);
             window.history.replaceState(null, '', `${window.location.pathname}?token=${tokenInUrl}`);
             setGoogleSignupError(`Please sign up with the email address used during payment (${invite.email})`);
@@ -425,40 +416,10 @@ export default function Auth() {
   };
 
   const handleForgotCollectEmail = async () => {
-    const email = forgotStaffEmail.trim();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      toast.error('Please enter a valid email address.');
-      return;
-    }
-    // FIX: this used to await the full round trip — the updateStaffEmailForReset edge
-    // function (several sequential Admin API calls, ~6s observed) plus a second
-    // resetPasswordForEmail call — before showing anything, so the button just sat on
-    // "Sending..." the whole time. Show the confirmation screen right away instead and
-    // do the actual work in the background; if it turns out the email's already taken
-    // (the one real failure case here), quietly roll back to this screen with a toast
-    // explaining why, rather than blocking everyone's happy path on that lookup.
-    setForgotStep(4);
-    (async () => {
-      try {
-        const supabase = await getSupabase();
-        const res = await fetch('https://gzktuteedbtnaxfdylyu.supabase.co/functions/v1/updateStaffEmailForReset', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: forgotFullPhone, newEmail: email }),
-        });
-        const result = await res.json();
-        if (!res.ok || result.error) throw new Error(result.error || 'Failed to update email');
-
-        // Fire-and-forget — same as the other branch, nothing in the UI depends on this
-        // call's own completion.
-        supabase.auth.resetPasswordForEmail(result.email, {
-          redirectTo: `${getBaseUrl()}/Auth?type=recovery`,
-        }).catch(err => console.warn('resetPasswordForEmail warning:', err.message));
-      } catch (err) {
-        toast.error(err.message || 'Something went wrong. Please try again.');
-        setForgotStep(2); // roll back so they can fix the email and retry
-      }
-    })();
+    // Placeholder-email accounts cannot safely prove ownership with only a phone
+    // number and a newly supplied email. Keep the account locked instead of exposing
+    // an account-takeover path; an owner-assisted reset flow will replace this.
+    toast.error('This staff account needs an owner-assisted password reset. Please contact your Sellio account owner.');
   };
 
   const handleForgotSetPassword = async () => {
