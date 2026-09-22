@@ -355,8 +355,27 @@ function RolesContent({ onUpgrade }) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => db.entities.Role.delete(id),
+    mutationFn: async (id) => {
+      const supabase = await getSupabase();
+      const { count, error: countError } = await supabase
+        .from('tenant_users')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .eq('role_id', id);
+      if (countError) throw countError;
+      if ((count || 0) > 0) {
+        throw new Error(`Reassign ${count} staff account${count === 1 ? '' : 's'} before deleting this role.`);
+      }
+
+      const { error } = await supabase
+        .from('roles')
+        .delete()
+        .eq('id', id)
+        .eq('tenant_id', tenantId);
+      if (error) throw error;
+    },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['allRoles'] }); toast.success('Role deleted'); },
+    onError: (error) => toast.error(error.message || 'Could not delete role'),
   });
 
   const duplicateMutation = useMutation({
@@ -438,7 +457,7 @@ function RolesContent({ onUpgrade }) {
     { name: 'Owner',          slug: 'owner',           is_system: true,  permissions: ['dashboard.ai_assistant','dashboard.design_store','orders.view','orders.create','orders.edit','orders.cancel','products.view','products.create','products.edit','products.delete','categories.view','categories.create','categories.edit','categories.delete','inventory.view','inventory.adjust','tables.view','tables.create','tables.edit','tables.delete','staff.view','staff.create','staff.edit','staff.delete','roles.view','roles.create','roles.edit','roles.delete','reports.view','reports.export','settings.view','settings.edit','theme.edit','payments.view','payments.edit'] },
     { name: 'Manager',        slug: 'manager',         is_system: false, permissions: ['staff.view','staff.edit','products.view','products.create','products.edit','categories.view','categories.create','categories.edit','inventory.view','inventory.adjust','orders.view','orders.create','orders.edit','tables.view','tables.edit','payments.view','reports.view'] },
     { name: 'Staff',          slug: 'staff',           is_system: false, permissions: ['products.view','orders.view','orders.create','tables.view'] },
-    { name: 'Cashier',        slug: 'cashier',         is_system: false, permissions: ['products.view','categories.view','orders.view','orders.create','orders.edit','tables.view','payments.view'] },
+    { name: 'Cashier',        slug: 'cashier',         is_system: false, permissions: [...ROLE_TEMPLATES.cashier.permissions] },
     ...(isFnB
       ? [{ name: 'Kitchen Staff',   slug: 'kitchen_staff',   is_system: false, permissions: ['products.view','orders.view','orders.edit','inventory.view'] }]
       : [{ name: 'Inventory Staff', slug: 'inventory_staff', is_system: false, permissions: ['products.view','inventory.view','inventory.adjust','categories.view'] }]
@@ -566,7 +585,17 @@ function RolesContent({ onUpgrade }) {
                       </RequirePermission>
                       {!role.is_system && (
                         <RequirePermission permission="roles.delete" silent>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this role?')) deleteMutation.mutate(role.id); }}>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-red-500"
+                            disabled={userCount > 0 || deleteMutation.isPending}
+                            title={userCount > 0 ? `Reassign ${userCount} staff account${userCount === 1 ? '' : 's'} before deleting` : 'Delete role'}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm('Delete this unassigned role?')) deleteMutation.mutate(role.id);
+                            }}
+                          >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </RequirePermission>
