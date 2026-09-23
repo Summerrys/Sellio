@@ -101,7 +101,7 @@ const BADGE_COLORS = {
 
 const BUTTON_STYLES = {
   starter: { background: '#3b82f6' },
-  growth: { background: 'linear-gradient(90deg,#fb923c,#e0449a,#8b2fc9)' },
+  growth: { background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' },
   pro: { background: '#1e293b' },
 };
 
@@ -178,7 +178,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
           onClick={() => setBilling('monthly')}
           className="text-sm font-medium px-5 py-1.5 rounded-full transition-all"
           style={billing === 'monthly'
-            ? { background: 'linear-gradient(90deg,#fb923c,#e0449a,#8b2fc9)', color: '#fff' }
+            ? { background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)', color: '#fff' }
             : { color: '#64748b' }}
         >
           Monthly
@@ -187,7 +187,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
           onClick={() => setBilling('annual')}
           className="flex items-center gap-2 text-sm font-medium px-5 py-1.5 rounded-full transition-all"
           style={billing === 'annual'
-            ? { background: 'linear-gradient(90deg,#fb923c,#e0449a,#8b2fc9)', color: '#fff' }
+            ? { background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)', color: '#fff' }
             : { color: '#64748b' }}
         >
           Annual
@@ -221,7 +221,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
               {isGrowth && !isCurrent && (
                 <div
                   className="absolute -top-px left-0 right-0 h-1 rounded-t-2xl"
-                  style={{ background: 'linear-gradient(90deg,#fb923c,#e0449a,#8b2fc9)' }}
+                  style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
                 />
               )}
               {isCurrent && (
