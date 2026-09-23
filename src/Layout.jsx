@@ -40,6 +40,7 @@ import { isFnBIndustry } from '@/lib/industry';
 import { cn } from '@/lib/utils';
 import UpgradeWall from './components/subscription/UpgradeWall';
 import BillingRecoveryWall from './components/subscription/BillingRecoveryWall';
+import SubscriptionEndedNotice from './components/subscription/SubscriptionEndedNotice';
 import BillingStatusBanner from './components/subscription/BillingStatusBanner';
 import { reconcileBilling } from '@/lib/billing';
 import AppLoader from '@/components/ui-custom/AppLoader';
@@ -69,6 +70,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
   // Tenant menu with permission requirements
   const allTenantItems = [
     { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard', permission: null },
+    { label: 'Counter', icon: Store, page: 'Counter', permission: 'orders.create' },
     { label: 'Products', icon: ShoppingBag, page: 'Products', permission: 'products.view' },
     { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view' },
     { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view' },
@@ -429,9 +431,13 @@ function AppLayout({ children, currentPageName }) {
   }
 
   if (isLocked) {
-    return ['past_due', 'suspended'].includes(subscription?.status)
-      ? <BillingRecoveryWall subscription={subscription} tenantId={tenantId} isOwner={isOwner} />
-      : <UpgradeWall currentTier={null} />;
+    if (['past_due', 'suspended'].includes(subscription?.status)) {
+      return <BillingRecoveryWall subscription={subscription} tenantId={tenantId} isOwner={isOwner} />;
+    }
+    // Only the owner can renew; staff get a plain "ask your owner" notice.
+    return isOwner
+      ? <UpgradeWall currentTier={null} />
+      : <SubscriptionEndedNotice subscription={subscription} storeName={tenant?.name} />;
   }
 
   return (
