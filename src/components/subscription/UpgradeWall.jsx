@@ -101,7 +101,7 @@ const BADGE_COLORS = {
 
 const BUTTON_STYLES = {
   starter: { background: '#3b82f6' },
-  growth: { background: 'var(--color-primary-gradient, linear-gradient(90deg,#6366f1,#8b5cf6))' },
+  growth: { background: 'linear-gradient(90deg,#fb923c,#e0449a,#8b2fc9)' },
   pro: { background: '#1e293b' },
 };
 
@@ -151,7 +151,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
 
       {/* Heading */}
       <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 text-center mb-3">
-        Your trial has ended
+        {subscription?.status === 'cancelled' ? 'Your subscription has ended' : 'Your trial has ended'}
       </h1>
       <p className="text-slate-500 text-center max-w-md mb-8 text-sm leading-relaxed">
         Choose a plan to continue using Sellio. Your data is safe and will be restored immediately after upgrade.
@@ -163,7 +163,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
           onClick={() => setBilling('monthly')}
           className="text-sm font-medium px-5 py-1.5 rounded-full transition-all"
           style={billing === 'monthly'
-            ? { background: 'var(--color-primary-gradient, linear-gradient(90deg,#6366f1,#8b5cf6))', color: '#fff' }
+            ? { background: 'linear-gradient(90deg,#fb923c,#e0449a,#8b2fc9)', color: '#fff' }
             : { color: '#64748b' }}
         >
           Monthly
@@ -172,7 +172,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
           onClick={() => setBilling('annual')}
           className="flex items-center gap-2 text-sm font-medium px-5 py-1.5 rounded-full transition-all"
           style={billing === 'annual'
-            ? { background: 'var(--color-primary-gradient, linear-gradient(90deg,#6366f1,#8b5cf6))', color: '#fff' }
+            ? { background: 'linear-gradient(90deg,#fb923c,#e0449a,#8b2fc9)', color: '#fff' }
             : { color: '#64748b' }}
         >
           Annual
@@ -206,7 +206,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
               {isGrowth && !isCurrent && (
                 <div
                   className="absolute -top-px left-0 right-0 h-1 rounded-t-2xl"
-                  style={{ background: 'var(--color-primary-gradient, linear-gradient(90deg,#6366f1,#8b5cf6))' }}
+                  style={{ background: 'linear-gradient(90deg,#fb923c,#e0449a,#8b2fc9)' }}
                 />
               )}
               {isCurrent && (
