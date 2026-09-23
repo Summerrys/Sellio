@@ -290,7 +290,7 @@ export const ROADMAP = [
 ];
 
 export const HOW_IT_WORKS = [
-  { number: '01', title: 'Create your account', description: 'Choose a plan and begin your three-day trial.' },
+  { number: '01', title: 'Create your account', description: 'Choose a plan and begin your seven-day trial.' },
   { number: '02', title: 'Set up your business', description: 'Add your brand, hours, products and team.' },
   { number: '03', title: 'Design your storefront', description: 'Apply your colours and organise the customer experience.' },
   { number: '04', title: 'Share and receive orders', description: 'Use your storefront link or table QR codes.' },
