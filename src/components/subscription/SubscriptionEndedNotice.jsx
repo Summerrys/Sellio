@@ -23,7 +23,7 @@ export default function SubscriptionEndedNotice({ subscription, storeName }) {
         <img
           src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png"
           alt="Sellio"
-          className="h-10 w-auto object-contain mx-auto mb-8"
+          className="h-16 sm:h-20 w-auto object-contain mx-auto mb-10"
         />
         <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center mx-auto mb-5">
           <Lock className="w-7 h-7 text-slate-600" />
