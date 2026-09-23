@@ -397,7 +397,7 @@ function PricingSection() {
             );
           })}
         </div>
-        <p className="sellio-pricing-note">Eligible new merchants receive a three-day trial. Prices exclude applicable taxes. Every active merchant can establish a presence in Sellio World.</p>
+        <p className="sellio-pricing-note">Eligible new merchants receive a seven-day trial. Prices exclude applicable taxes. Every active merchant can establish a presence in Sellio World.</p>
       </div>
     </section>
   );
