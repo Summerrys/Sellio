@@ -93,16 +93,20 @@ const NO_TRIAL_LINKS = {
   },
 };
 
+// Sellio platform screen: one palette for every tenant, matching the
+// "View Plans" button on the sign-up page (never the tenant's theme).
+const SELLIO_ORANGE = 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)';
+
 const BADGE_COLORS = {
-  blue: 'bg-blue-100 text-blue-700',
-  purple: 'bg-purple-100 text-purple-700',
-  gold: 'bg-amber-100 text-amber-700',
+  blue: 'bg-orange-100 text-orange-700',
+  purple: 'bg-orange-100 text-orange-700',
+  gold: 'bg-orange-100 text-orange-700',
 };
 
 const BUTTON_STYLES = {
-  starter: { background: '#3b82f6' },
-  growth: { background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' },
-  pro: { background: '#1e293b' },
+  starter: { background: SELLIO_ORANGE },
+  growth: { background: SELLIO_ORANGE },
+  pro: { background: SELLIO_ORANGE },
 };
 
 const PLAN_RANK = { starter: 0, growth: 1, pro: 2 };
@@ -160,8 +164,8 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
       />
 
       {/* Lock Icon */}
-      <div className="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center mb-6">
-        <Lock className="w-9 h-9 text-red-500" />
+      <div className="w-20 h-20 rounded-full bg-orange-50 flex items-center justify-center mb-6">
+        <Lock className="w-9 h-9 text-orange-500" />
       </div>
 
       {/* Heading */}
@@ -213,7 +217,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
                 isCurrent
                   ? 'shadow-xl ring-2 ring-offset-2 ring-green-400'
                   : isGrowth
-                  ? 'shadow-xl ring-2 ring-offset-2'
+                  ? 'shadow-xl ring-2 ring-offset-2 ring-orange-400'
                   : 'shadow-sm border border-slate-200'
               }`}
               style={{ minHeight: 480, scrollSnapAlign: 'start' }}
@@ -318,7 +322,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
   }
   window.location.href = '/Auth';
 }}
-          className="font-semibold text-indigo-600 hover:text-indigo-700 underline underline-offset-2 bg-transparent border-none cursor-pointer p-0"
+          className="font-semibold text-orange-600 hover:text-orange-700 underline underline-offset-2 bg-transparent border-none cursor-pointer p-0"
         >
           Sign in
         </button>
