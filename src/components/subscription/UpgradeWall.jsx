@@ -111,21 +111,36 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
   const [billing, setBilling] = useState('monthly');
   const { tenantId, subscription, user, tenant } = useTenant();
 
-  const currentTier = currentTierProp ?? subscription?.tier ?? null;
-  console.log('UpgradeWall currentTier:', currentTier);
+  // This wall shows for a LOCKED account (cancelled, suspended, or trial
+  // expired). A locked account has no current plan to protect, so every plan
+  // must be selectable; the tier it had is kept only to label "Resubscribe".
+  // (Previously `null ?? subscription.tier` fell through to the old tier, which
+  // greyed that plan out as "Current Plan" and blocked resubscribing.)
+  const subStatus = subscription?.status;
+  const trialExpired = subStatus === 'trial' && subscription?.current_period_end
+    && new Date(subscription.current_period_end) < new Date();
+  const isLockedAccount = ['cancelled', 'suspended', 'past_due'].includes(subStatus) || !!trialExpired;
+  const previousTier = subscription?.tier ?? null;
+  const currentTier = isLockedAccount ? null : (currentTierProp ?? previousTier);
 
   const getLink = (plan) => {
-    const linkSet = tenant?.has_used_trial ? NO_TRIAL_LINKS[plan.key] : plan.links;
+    // A returning (locked) merchant never gets a second free trial.
+    const linkSet = (isLockedAccount || tenant?.has_used_trial) ? NO_TRIAL_LINKS[plan.key] : plan.links;
     const base = billing === 'annual' ? linkSet.yearly : linkSet.monthly;
-    if (currentTier === null) return base;
+    // Always tie checkout to this store when we know it. stripe-webhook uses
+    // client_reference_id to attach the new subscription to the EXISTING tenant
+    // and unlock it; without it the payment is treated as a brand-new signup
+    // and the store stays locked even though the card was charged.
+    if (!tenantId) return base;
     const params = new URLSearchParams();
-    if (tenantId) params.set('client_reference_id', tenantId);
+    params.set('client_reference_id', tenantId);
     if (user?.email) params.set('prefilled_email', user.email);
     params.set('upgraded', '1');
     return `${base}?${params.toString()}`;
   };
 
   const getButtonLabel = (plan) => {
+    if (isLockedAccount) return plan.key === previousTier ? 'Resubscribe →' : 'Choose plan →';
     if (currentTier === null) return 'Get Started →';
     if (plan.key === currentTier) return 'Current Plan';
     const planRank = PLAN_RANK[plan.key] ?? 0;
