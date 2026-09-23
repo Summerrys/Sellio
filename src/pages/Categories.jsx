@@ -14,7 +14,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Grid3X3, Plus, Pencil, Trash2, LayoutGrid, List, Loader2 } from 'lucide-react';
+import { Grid3X3, Plus, Pencil, Trash2, LayoutGrid, List, Loader2, GripVertical } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 export default function Categories() {
   return (
@@ -33,15 +34,57 @@ function CategoriesContent() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: '', description: '', is_active: true, sort_order: 0 });
-  const [viewMode, setViewMode] = useState(localStorage.getItem('categories_view_mode') || 'grid');
+  const [viewMode, setViewMode] = useState(localStorage.getItem('categories_view_mode') || 'list');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const handleViewToggle = (mode) => { setViewMode(mode); localStorage.setItem('categories_view_mode', mode); };
 
+  // Direct Supabase read (sort_order included); same shape + order as the
+  // Products page, which shares this query cache key.
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', tenantId],
-    queryFn: () => db.entities.Category.filter({ tenant_id: tenantId }),
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
     enabled: !!tenantId,
   });
+  const sortedCategories = [...categories].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+  // Drag-to-reorder: renumber 1..n in the new order, update the cache right
+  // away, then save only the rows whose position actually changed.
+  const handleDragEnd = async (result) => {
+    if (!result.destination || !canEdit) return;
+    const from = result.source.index;
+    const to = result.destination.index;
+    if (from === to) return;
+    const next = [...sortedCategories];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    const renumbered = next.map((c, i) => ({ ...c, sort_order: i + 1 }));
+    const before = new Map(categories.map(c => [c.id, c.sort_order]));
+    const changed = renumbered.filter(c => before.get(c.id) !== c.sort_order);
+    queryClient.setQueryData(['categories', tenantId], renumbered);
+    try {
+      const supabase = await getSupabase();
+      const results = await Promise.all(changed.map(c =>
+        supabase.from('categories').update({ sort_order: c.sort_order }).eq('id', c.id).eq('tenant_id', tenantId)
+      ));
+      const failed = results.find(r => r.error);
+      if (failed) throw failed.error;
+      toast.success('Category order saved');
+    } catch (e) {
+      toast.error('Could not save the new order. Please try again.');
+    } finally {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    }
+  };
 
   const { data: products = [] } = useQuery({
     queryKey: ['products', tenantId],
@@ -56,7 +99,9 @@ function CategoriesContent() {
         const { error } = await supabase.from('categories').update(data).eq('id', editing.id).eq('tenant_id', tenantId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('categories').insert({ ...data, tenant_id: tenantId, slug: data.name.toLowerCase().replace(/\s+/g, '-') });
+        // New categories go to the end of the menu, not the top.
+        const nextOrder = categories.reduce((m, c) => Math.max(m, c.sort_order || 0), 0) + 1;
+        const { error } = await supabase.from('categories').insert({ ...data, sort_order: nextOrder, tenant_id: tenantId, slug: data.name.toLowerCase().replace(/\s+/g, '-') });
         if (error) throw error;
       }
     },
@@ -117,8 +162,12 @@ function CategoriesContent() {
       {categories.length === 0 ? (
         <Card className="border-0 shadow-sm"><EmptyState icon={Grid3X3} title="No categories" description="Create categories to organize your products." actionLabel={canCreate ? 'Add Category' : undefined} onAction={canCreate ? () => open(null) : undefined} /></Card>
       ) : viewMode === 'grid' ? (
+        <>
+        {canEdit && sortedCategories.length > 1 && (
+          <p className="text-xs text-slate-400 mb-2">Switch to list view to drag categories into the order your menu shows.</p>
+        )}
         <div className="grid grid-cols-2 gap-4">
-          {categories.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)).map(cat => {
+          {sortedCategories.map(cat => {
             const count = products.filter(p => p.category_id === cat.id).length;
             return (
               <Card key={cat.id} onClick={() => handleCardClick(cat)} className={`border-0 shadow-sm p-4 hover:shadow-md hover:border-slate-300 transition-all active:scale-[0.99] ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}>
@@ -151,14 +200,32 @@ function CategoriesContent() {
             );
           })}
         </div>
+        </>
       ) : (
-        <div className="space-y-2">
-          {categories.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)).map(cat => {
+        <DragDropContext onDragEnd={handleDragEnd}>
+        {canEdit && sortedCategories.length > 1 && (
+          <p className="text-xs text-slate-400 mb-2">Drag the handle to set the order staff and customers see on the menu.</p>
+        )}
+        <Droppable droppableId="categories-list">
+        {(dropProvided) => (
+        <div className="space-y-2" ref={dropProvided.innerRef} {...dropProvided.droppableProps}>
+          {sortedCategories.map((cat, index) => {
             const count = products.filter(p => p.category_id === cat.id).length;
             return (
-              <Card key={cat.id} onClick={() => handleCardClick(cat)} className={`border-0 shadow-sm px-4 py-3 hover:shadow-md hover:border-slate-300 transition-all active:scale-[0.99] ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}>
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0">
+              <Draggable key={cat.id} draggableId={String(cat.id)} index={index} isDragDisabled={!canEdit}>
+              {(dragProvided, snapshot) => (
+              <div ref={dragProvided.innerRef} {...dragProvided.draggableProps}>
+              <Card onClick={() => handleCardClick(cat)} className={`border-0 px-4 py-3 transition-shadow ${snapshot.isDragging ? 'shadow-lg ring-2 ring-slate-200' : 'shadow-sm hover:shadow-md'} ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    {...dragProvided.dragHandleProps}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`Drag to reorder ${cat.name}`}
+                    className={canEdit ? 'w-8 h-8 -ml-2 rounded-lg flex items-center justify-center text-slate-300 hover:text-slate-500 hover:bg-slate-50 cursor-grab active:cursor-grabbing flex-shrink-0' : 'hidden'}
+                  >
+                    <GripVertical className="w-4 h-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
                     <h3 className="text-sm font-semibold text-slate-800 leading-tight">{cat.name}</h3>
                     <p className="text-xs text-slate-400">{count} product{count !== 1 ? 's' : ''}{!cat.is_active ? ' · Inactive' : ''}</p>
                   </div>
@@ -181,9 +248,16 @@ function CategoriesContent() {
                   )}
                 </div>
               </Card>
+              </div>
+              )}
+              </Draggable>
             );
           })}
+          {dropProvided.placeholder}
         </div>
+        )}
+        </Droppable>
+        </DragDropContext>
       )}
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
@@ -192,7 +266,6 @@ function CategoriesContent() {
           <div className="space-y-4 py-2">
             <div><Label>Name</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
             <div><Label>Description</Label><Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} /></div>
-            <div><Label>Sort Order</Label><Input type="number" value={form.sort_order} onChange={e => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })} /></div>
             <div className="flex items-center gap-2"><Switch checked={form.is_active} onCheckedChange={v => setForm({ ...form, is_active: v })} /><Label>Active</Label></div>
           </div>
           <DialogFooter className="flex flex-row items-center gap-3 pt-2">
