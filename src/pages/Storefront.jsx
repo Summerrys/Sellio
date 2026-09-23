@@ -366,66 +366,38 @@ function StorefrontInner() {
     const savedCartTotal = cartTotal;
     const savedCart = [...cart];
 
-    // Get sequential order number from Supabase RPC
-    let orderNumber = `ORD-${Date.now().toString().slice(-6)}`;
+    // Server-side pricing: the place_order DB function looks up every price,
+    // assigns the order number, saves the order + order_items, updates the
+    // table session and customer stats in one transaction. The browser only
+    // sends WHAT was ordered, never prices.
+    let order = null;
+    let error = null;
     try {
-      const { data: rpcResult } = await supabase.rpc('get_next_order_number', { p_tenant_id: tenant.id });
-      if (rpcResult) orderNumber = rpcResult;
+      const { data, error: rpcError } = await supabase.rpc('place_order', {
+        p_tenant_id: tenant.id,
+        p_items: savedCart.map(item => ({
+          key: item.key,
+          product_id: item.product_id,
+          quantity: item.quantity,
+          options: item.variant ? String(item.variant).split(', ') : [],
+          notes: item.notes || null,
+        })),
+        p_type: isDineIn ? 'dine_in' : 'takeaway',
+        p_table_id: tableId || null,
+        p_notes: checkoutForm.notes || null,
+        p_customer_id: customerId || null,
+      });
+      order = data;
+      error = rpcError;
     } catch (e) {
-      console.warn('RPC get_next_order_number failed, using fallback:', e.message);
+      error = e;
     }
-
-    const { data: order, error } = await supabase.from('orders').insert({
-      tenant_id: tenant.id, order_number: orderNumber, status: 'pending',
-      type: isDineIn ? 'dine_in' : 'takeaway',
-      table_id: tableId || null, table_name: table?.name || null,
-      customer_name: null, customer_phone: null,
-      notes: checkoutForm.notes || null, items: savedCart,
-      subtotal: savedCartTotal, total_amount: savedCartTotal,
-      payment_status: 'unpaid', payment_method: 'pending',
-      customer_id: customerId || null,
-    }).select().single();
 
     if (!error && order) {
-      await supabase.from('order_items').insert(savedCart.map(item => ({
-        tenant_id: tenant.id, order_id: order.id, product_id: item.product_id,
-        product_name: item.name, variant_name: item.variant || null,
-        quantity: item.quantity, unit_price: item.price, total_price: item.price * item.quantity,
-      })));
-
-      // Update table session: append order ID and increment total
-      if (tableId) {
-        const { data: session } = await supabase.from('table_sessions')
-          .select('id, order_ids, total_amount')
-          .eq('table_id', tableId).eq('tenant_id', tenant.id).eq('status', 'active')
-          .maybeSingle();
-        if (session) {
-          const existingIds = Array.isArray(session.order_ids) ? session.order_ids : [];
-          await supabase.from('table_sessions').update({
-            order_ids: [...existingIds, order.id],
-            table_name: table?.name || null,
-            total_amount: (parseFloat(session.total_amount) || 0) + savedCartTotal,
-            updated_date: new Date().toISOString(),
-          }).eq('id', session.id);
-        }
-      }
-
-      // Update customer stats
-    if (customerId && order) {
-      getSupabase().then(async supabase => {
-        try {
-          const { data: cust } = await supabase.from('customers').select('total_orders, total_spent, first_order_at').eq('id', customerId).single();
-          await supabase.from('customers').update({
-            total_orders: (cust?.total_orders || 0) + 1,
-            total_spent: (parseFloat(cust?.total_spent) || 0) + savedCartTotal,
-            last_order_at: new Date().toISOString(),
-            first_order_at: cust?.first_order_at || new Date().toISOString(),
-            updated_date: new Date().toISOString(),
-          }).eq('id', customerId);
-        } catch (e) { console.warn('Customer stats update error:', e.message); }
-      });
-    }
-    setLastCart(savedCart); setLastCartTotal(savedCartTotal);
+      const orderNumber = order.order_number;
+      const serverTotal = parseFloat(order.total_amount);
+      setLastCart(Array.isArray(order.items) ? order.items : savedCart);
+      setLastCartTotal(Number.isFinite(serverTotal) ? serverTotal : savedCartTotal);
       setPlacedOrderNumber(orderNumber); setCart([]);
       try { localStorage.removeItem(CART_KEY); } catch {}
       // Track this order in session
@@ -445,6 +417,10 @@ function StorefrontInner() {
         setShowLimitReachedModal(true);
       } else if (isLimitReached) {
         toast.error("This store has reached its monthly order limit. Please contact your Manager to upgrade the plan.");
+      } else if (['P0002', '22023'].includes(error?.code) && error?.message) {
+        // place_order validation messages are customer-safe, e.g.
+        // "An item in your cart is no longer available"
+        toast.error(error.message);
       } else {
         toast.error("Something went wrong placing your order. Please try again.");
       }
