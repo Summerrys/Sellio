@@ -20,7 +20,7 @@ const SCENES = [
     tags: ['F&B district', 'Retail district', 'Services district'],
     poster: '01-world.jpg',
     accent: '#e0449a',
-    primary: { label: 'Start your 3-day free trial', href: '#pricing' },
+    primary: { label: 'Start your 7-day free trial', href: '#pricing' },
     secondary: { label: 'Explore Cafetelier', href: '/store/cafetelier?preview=true', external: true },
   },
   {
@@ -69,7 +69,7 @@ const SCENES = [
     eyebrow: 'Ready when you are',
     title: 'Open your storefront. Take your place in the world.',
     body: 'Launch your Sellio storefront, join the right merchant district and start growing in the connected marketplace from day one.',
-    tags: ['Three-day free trial', 'Set up at your pace', 'Sellio World access'],
+    tags: ['Seven-day free trial', 'Set up at your pace', 'Sellio World access'],
     poster: '06-ready.jpg',
     accent: '#ec4899',
     primary: { label: 'View plans', href: '#pricing' },
