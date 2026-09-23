@@ -379,11 +379,13 @@ export default function Products() {
     queryKey: ['categories', tenantId],
     queryFn: async () => {
       const supabase = await getSupabase();
+      // Same shape + order as the Categories page (shared query cache key).
       const { data } = await supabase
         .from('categories')
-        .select('id, name')
+        .select('*')
         .eq('tenant_id', tenantId)
-        .order('name');
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true });
       return data || [];
     },
     enabled: !!tenantId,
@@ -732,19 +734,40 @@ export default function Products() {
               </div>
             )}
           </>
-        ) : (
-          <ProductGrid
-            products={filteredProducts}
-            onEdit={handleEdit}
-            currency={tenant?.currency || 'SGD'}
-            viewMode={viewMode}
-            selectionMode={selectionMode}
-            selectedIds={selectedIds}
-            onLongPress={handleLongPress}
-            onToggleSelect={handleToggleSelect}
-            tourTagFirstCard={productsTour.eligible}
-          />
-        )}
+        ) : (() => {
+          // Group by category in menu order (same order staff and customers see),
+          // unless the user is filtering or searching, which stays a flat list.
+          const gridProps = {
+            onEdit: handleEdit,
+            currency: tenant?.currency || 'SGD',
+            viewMode,
+            selectionMode,
+            selectedIds,
+            onLongPress: handleLongPress,
+            onToggleSelect: handleToggleSelect,
+          };
+          if (categoryFilter !== 'all' || searchQuery) {
+            return <ProductGrid products={filteredProducts} {...gridProps} tourTagFirstCard={productsTour.eligible} />;
+          }
+          const knownIds = new Set(categories.map(c => c.id));
+          const groups = [
+            ...categories.map(c => ({ key: c.id, name: c.name, items: filteredProducts.filter(p => p.category_id === c.id) })),
+            { key: 'uncategorized', name: 'Uncategorized', items: filteredProducts.filter(p => !p.category_id || !knownIds.has(p.category_id)) },
+          ].filter(g => g.items.length > 0);
+          return (
+            <div className="space-y-6">
+              {groups.map((g, i) => (
+                <section key={g.key}>
+                  <div className="flex items-baseline gap-2 mb-3">
+                    <h2 className="text-sm font-semibold text-slate-700">{g.name}</h2>
+                    <span className="text-xs text-slate-400">{g.items.length}</span>
+                  </div>
+                  <ProductGrid products={g.items} {...gridProps} tourTagFirstCard={productsTour.eligible && i === 0} />
+                </section>
+              ))}
+            </div>
+          );
+        })()}
 
         {productsTour.eligible && (
           <TourGuide
