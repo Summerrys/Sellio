@@ -61,7 +61,7 @@ export default function AuthPricingModal({ onClose }) {
         </button>
 
         <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', textAlign: 'center', marginBottom: 4 }}>Choose a plan to get started</h2>
-        <p style={{ fontSize: 13, color: '#64748b', textAlign: 'center', marginBottom: 20 }}>Start your 3-day free trial. No charge until trial ends.</p>
+        <p style={{ fontSize: 13, color: '#64748b', textAlign: 'center', marginBottom: 20 }}>Start your 7-day free trial. No charge until trial ends.</p>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24 }}>
           <span onClick={() => setAnnual(false)} style={{ fontSize: 13, fontWeight: 500, color: !annual ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}>Monthly</span>
