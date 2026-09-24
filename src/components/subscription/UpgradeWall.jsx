@@ -93,33 +93,22 @@ const NO_TRIAL_LINKS = {
   },
 };
 
-// Sellio platform screen: one palette for every tenant, matching the
-// "View Plans" button on the sign-up page (never the tenant's theme).
-const SELLIO_ORANGE = 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)';
 
-const BADGE_COLORS = {
-  blue: 'bg-orange-100 text-orange-700',
-  purple: 'bg-orange-100 text-orange-700',
-  gold: 'bg-orange-100 text-orange-700',
-};
-
-const BUTTON_STYLES = {
-  starter: { background: SELLIO_ORANGE },
-  growth: { background: SELLIO_ORANGE },
-  pro: { background: SELLIO_ORANGE },
-};
-
+// Sellio platform screen: same palette for every tenant, never the tenant theme.
+// Matches the sign-up "View Plans" pricing card; the plan the merchant had is
+// highlighted with the Sellio pink-purple gradient, other plans use the
+// sign-up orange.
+const SELLIO_PINK_PURPLE = 'linear-gradient(90deg, #e0449a, #8b2fc9)';
+const SIGNUP_ORANGE = 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)';
 const PLAN_RANK = { starter: 0, growth: 1, pro: 2 };
 
 export default function UpgradeWall({ currentTier: currentTierProp = null }) {
-  const [billing, setBilling] = useState('monthly');
+  const [annual, setAnnual] = useState(false);
   const { tenantId, subscription, user, tenant } = useTenant();
 
-  // This wall shows for a LOCKED account (cancelled, suspended, or trial
-  // expired). A locked account has no current plan to protect, so every plan
-  // must be selectable; the tier it had is kept only to label "Resubscribe".
-  // (Previously `null ?? subscription.tier` fell through to the old tier, which
-  // greyed that plan out as "Current Plan" and blocked resubscribing.)
+  // Locked = cancelled, suspended, past due, or an expired trial. A locked
+  // account has no current plan to protect: every plan is selectable, and the
+  // plan it had is only used to highlight "Resubscribe".
   const subStatus = subscription?.status;
   const trialExpired = subStatus === 'trial' && subscription?.current_period_end
     && new Date(subscription.current_period_end) < new Date();
@@ -130,11 +119,9 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
   const getLink = (plan) => {
     // A returning (locked) merchant never gets a second free trial.
     const linkSet = (isLockedAccount || tenant?.has_used_trial) ? NO_TRIAL_LINKS[plan.key] : plan.links;
-    const base = billing === 'annual' ? linkSet.yearly : linkSet.monthly;
-    // Always tie checkout to this store when we know it. stripe-webhook uses
-    // client_reference_id to attach the new subscription to the EXISTING tenant
-    // and unlock it; without it the payment is treated as a brand-new signup
-    // and the store stays locked even though the card was charged.
+    const base = annual ? linkSet.yearly : linkSet.monthly;
+    // Always tie checkout to this store: stripe-webhook uses client_reference_id
+    // to attach the new subscription to the EXISTING tenant and unlock it.
     if (!tenantId) return base;
     const params = new URLSearchParams();
     params.set('client_reference_id', tenantId);
@@ -143,188 +130,134 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
     return `${base}?${params.toString()}`;
   };
 
+  const isFocus = (plan) => isLockedAccount && plan.key === previousTier;
+
   const getButtonLabel = (plan) => {
-    if (isLockedAccount) return plan.key === previousTier ? 'Resubscribe →' : 'Choose plan →';
+    if (isLockedAccount) return isFocus(plan) ? 'Resubscribe →' : 'Choose plan →';
     if (currentTier === null) return 'Get Started →';
     if (plan.key === currentTier) return 'Current Plan';
-    const planRank = PLAN_RANK[plan.key] ?? 0;
-    const currentRank = PLAN_RANK[currentTier] ?? 0;
-    return planRank > currentRank ? 'Upgrade →' : 'Downgrade →';
+    return (PLAN_RANK[plan.key] ?? 0) > (PLAN_RANK[currentTier] ?? 0) ? 'Upgrade →' : 'Downgrade →';
   };
 
   const isCurrentPlan = (plan) => currentTier !== null && plan.key === currentTier;
 
+  const heading = subStatus === 'cancelled' ? 'Your subscription has ended' : 'Your trial has ended';
+  const previousPlanName = PLANS.find(p => p.key === previousTier)?.name;
+
+  const handleSignOut = async () => {
+    try {
+      const supabase = await getSupabase();
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn('Sign out error:', e);
+    }
+    window.location.href = '/Auth';
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center px-4 py-12">
-      {/* Logo */}
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center px-4 py-10">
       <img
         src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png"
         alt="Sellio"
-        className="h-10 w-auto object-contain mb-10"
+        className="h-12 sm:h-14 w-auto object-contain mb-8"
       />
 
-      {/* Lock Icon */}
-      <div className="w-20 h-20 rounded-full bg-orange-50 flex items-center justify-center mb-6">
-        <Lock className="w-9 h-9 text-orange-500" />
-      </div>
+      <div style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 820, padding: '32px 24px 28px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+        <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+          <Lock className="w-6 h-6 text-red-500" />
+        </div>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', textAlign: 'center', marginBottom: 4 }}>{heading}</h1>
+        <p style={{ fontSize: 13, color: '#64748b', textAlign: 'center', marginBottom: 20, maxWidth: 460, marginLeft: 'auto', marginRight: 'auto' }}>
+          {previousPlanName
+            ? `Resubscribe to ${previousPlanName} or choose another plan to continue. Your data is safe and returns as soon as you subscribe.`
+            : 'Choose a plan to continue using Sellio. Your data is safe and returns as soon as you subscribe.'}
+        </p>
 
-      {/* Heading */}
-      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 text-center mb-3">
-        {subscription?.status === 'cancelled' ? 'Your subscription has ended' : 'Your trial has ended'}
-      </h1>
-      <p className="text-slate-500 text-center max-w-md mb-8 text-sm leading-relaxed">
-        Choose a plan to continue using Sellio. Your data is safe and will be restored immediately after upgrade.
-      </p>
+        {/* Monthly / Annual switch — same as the sign-up pricing card */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24 }}>
+          <span onClick={() => setAnnual(false)} style={{ fontSize: 13, fontWeight: 500, color: !annual ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}>Monthly</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={annual}
+            aria-label="Bill annually"
+            onClick={() => setAnnual(v => !v)}
+            style={{ position: 'relative', width: 44, height: 24, borderRadius: 12, background: annual ? '#16a34a' : '#cbd5e1', border: 'none', cursor: 'pointer', flexShrink: 0, transition: 'background 0.2s' }}
+          >
+            <span style={{ position: 'absolute', top: 2, width: 20, height: 20, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s', left: annual ? 22 : 2 }} />
+          </button>
+          <span onClick={() => setAnnual(true)} style={{ fontSize: 13, fontWeight: 500, color: annual ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}>Annual</span>
+          {annual && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#dcfce7', color: '#15803d' }}>2 months free</span>}
+        </div>
 
-      {/* Pill Toggle */}
-      <div className="flex items-center justify-center gap-2 mb-6">
-        <button
-          onClick={() => setBilling('monthly')}
-          className="text-sm font-medium px-5 py-1.5 rounded-full transition-all"
-          style={billing === 'monthly'
-            ? { background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)', color: '#fff' }
-            : { color: '#64748b' }}
-        >
-          Monthly
-        </button>
-        <button
-          onClick={() => setBilling('annual')}
-          className="flex items-center gap-2 text-sm font-medium px-5 py-1.5 rounded-full transition-all"
-          style={billing === 'annual'
-            ? { background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)', color: '#fff' }
-            : { color: '#64748b' }}
-        >
-          Annual
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">2 months free</span>
-        </button>
-      </div>
-
-      {/* Pricing Cards — horizontal scroll on mobile */}
-      <div
-        className="w-full max-w-5xl flex md:grid md:grid-cols-3 gap-4 overflow-x-auto pb-4 md:overflow-x-visible px-4 md:px-0"
-        style={{ scrollSnapType: 'x mandatory', scrollPadding: '0 16px' }}
-      >
-        {PLANS.map((plan) => {
-          const isGrowth = plan.key === 'growth';
-          const isCurrent = isCurrentPlan(plan);
-          const price = billing === 'annual' ? plan.yearly : plan.monthly;
-          const saving = plan.monthly * 12 - plan.yearly;
-
-          return (
-            <div
-              key={plan.key}
-              className={`relative bg-white rounded-2xl flex flex-col flex-shrink-0 w-[82vw] mx-1 md:mx-0 md:w-auto overflow-hidden ${
-                isCurrent
-                  ? 'shadow-xl ring-2 ring-offset-2 ring-green-400'
-                  : isGrowth
-                  ? 'shadow-xl ring-2 ring-offset-2 ring-orange-400'
-                  : 'shadow-sm border border-slate-200'
-              }`}
-              style={{ minHeight: 480, scrollSnapAlign: 'start' }}
-            >
-              {isGrowth && !isCurrent && (
-                <div
-                  className="absolute -top-px left-0 right-0 h-1 rounded-t-2xl"
-                  style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
-                />
-              )}
-              {isCurrent && (
-                <div className="absolute -top-px left-0 right-0 h-1 rounded-t-2xl bg-green-400" />
-              )}
-
-              <div className="p-6 flex flex-col h-full" style={{ minHeight: 480 }}>
-                {/* Header */}
-                <div className="flex items-center justify-between mb-1">
-                  <h2 className="text-base font-bold text-slate-900">{plan.name}</h2>
-                  <div className="flex items-center gap-1.5">
-                    {isCurrent && (
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                        Current Plan
-                      </span>
-                    )}
-                    {plan.badge && !isCurrent && (
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${BADGE_COLORS[plan.color]}`}>
-                        {plan.badge}
-                      </span>
-                    )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 16 }}>
+          {PLANS.map((plan) => {
+            const focus = isFocus(plan);
+            const current = isCurrentPlan(plan);
+            const price = annual ? plan.yearly : plan.monthly;
+            const saving = plan.monthly * 12 - plan.yearly;
+            return (
+              <div
+                key={plan.key}
+                style={{
+                  position: 'relative', borderRadius: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                  // Focus card: pink-purple gradient border. Others: no border.
+                  border: focus ? '2px solid transparent' : 'none',
+                  background: focus ? `linear-gradient(#fff, #fff) padding-box, ${SELLIO_PINK_PURPLE} border-box` : '#fff',
+                  boxShadow: focus ? '0 6px 24px rgba(224,68,154,0.18)' : '0 1px 4px rgba(0,0,0,0.08)',
+                }}
+              >
+                <div style={{ padding: '20px 20px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{plan.name}</span>
+                    {focus && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#fce7f3', color: '#be185d', whiteSpace: 'nowrap' }}>Your previous plan</span>}
+                    {current && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#dcfce7', color: '#15803d', whiteSpace: 'nowrap' }}>Current plan</span>}
                   </div>
-                </div>
-
-                {/* Price */}
-                <div className="mt-3 mb-1">
-                  <span className="text-3xl font-extrabold text-slate-900">SGD {price}</span>
-                  <span className="text-sm text-slate-400 ml-1">/{billing === 'annual' ? 'year' : 'month'}</span>
-                </div>
-                {billing === 'annual' && (
-                  <p className="text-xs text-green-600 font-medium mb-2">Save SGD {saving}</p>
-                )}
-
-                {/* Description */}
-                <p className="text-xs text-slate-500 mb-5">{plan.description}</p>
-
-                {/* Features */}
-                <ul className="space-y-2 flex-1 mb-6">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-xs text-slate-600">
-                      <Check className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-
-                {/* CTA always at bottom */}
-                {isCurrent ? (
-                  <div
-                    className="w-full font-semibold text-sm mt-auto flex items-center justify-center gap-1.5 select-none"
-                    style={{
-                      height: 44,
-                      borderRadius: 10,
-                      background: '#e2e8f0',
-                      color: '#94a3b8',
-                      opacity: 0.7,
-                      pointerEvents: 'none',
-                    }}
-                  >
-                    <Check className="w-4 h-4" />
-                    Current Plan
+                  <div style={{ margin: '10px 0 2px' }}>
+                    <span style={{ fontSize: 26, fontWeight: 800, color: '#0f172a' }}>SGD {price}</span>
+                    <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 4 }}>/{annual ? 'year' : 'month'}</span>
                   </div>
-                ) : (
-                  <button
-                    onClick={() => window.open(getLink(plan), '_blank')}
-                    className="w-full font-semibold text-sm mt-auto"
-                    style={{
-                      ...BUTTON_STYLES[plan.key],
-                      color: '#fff',
-                      height: 44,
-                      borderRadius: 10,
-                      border: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {getButtonLabel(plan)}
-                  </button>
-                )}
+                  {annual && <p style={{ fontSize: 11, color: '#16a34a', fontWeight: 500, marginBottom: 4 }}>Save SGD {saving}</p>}
+                  <p style={{ fontSize: 11, color: '#64748b', marginBottom: 12 }}>{plan.description}</p>
+                  <ul style={{ flex: 1, marginBottom: 16, listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {plan.features.map((f) => (
+                      <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 11, color: '#475569' }}>
+                        <Check style={{ width: 13, height: 13, color: '#22c55e', marginTop: 1, flexShrink: 0 }} />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  {current ? (
+                    <div style={{ width: '100%', padding: '10px 0', borderRadius: 12, fontSize: 13, fontWeight: 600, textAlign: 'center', background: '#e2e8f0', color: '#94a3b8' }}>
+                      Current Plan
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => window.open(getLink(plan), '_blank')}
+                      style={{
+                        width: '100%', padding: '10px 0', borderRadius: 12, fontSize: 13, fontWeight: 600, color: '#fff', border: 'none', cursor: 'pointer',
+                        background: focus ? SELLIO_PINK_PURPLE : SIGNUP_ORANGE,
+                      }}
+                    >
+                      {getButtonLabel(plan)}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       <p className="mt-8 text-sm text-slate-500">
-        Already have an account?{' '}
+        Wrong account?{' '}
         <button
-          onClick={async () => {
-  try {
-    const supabase = await getSupabase();
-    await supabase.auth.signOut();
-  } catch (e) {
-    console.warn('Sign out error:', e);
-  }
-  window.location.href = '/Auth';
-}}
-          className="font-semibold text-orange-600 hover:text-orange-700 underline underline-offset-2 bg-transparent border-none cursor-pointer p-0"
+          type="button"
+          onClick={handleSignOut}
+          className="font-semibold text-slate-700 hover:text-slate-900 underline underline-offset-2 bg-transparent border-none cursor-pointer p-0"
         >
-          Sign in
+          Sign out
         </button>
       </p>
     </div>
