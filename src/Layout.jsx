@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { TenantProvider, useTenant } from './components/tenant/TenantContext';
@@ -28,7 +28,8 @@ import {
   Copy,
   Check,
   Store,
-  Coins
+  Coins,
+  Menu
 } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import PricingModal from './components/subscription/PricingModal';
@@ -52,7 +53,7 @@ import { canShowInstallPrompt, isStandalone } from '@/lib/pwaInstall';
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth'];
 
-function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription, onOpenProfile }) {
+function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription, onOpenProfile, onToggleCollapse }) {
   const [linkCopied, setLinkCopied] = useState(false);
   const storefrontUrl = tenant?.slug ? `https://sellio.apptelier.sg/store/${tenant.slug}` : null;
   const copyStorefrontLink = () => {
@@ -76,7 +77,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
     { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view' },
     { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view' },
     ...(isFnBIndustry(tenant?.industry) ? [{ label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view' }] : []),
-    { label: 'User Management', icon: Users, page: 'UserManagement', permission: 'staff.view' },
+    { label: 'User Management', icon: Users, page: 'UserManagement', permission: ['staff.view', 'roles.view'] },
     { label: 'Reports', icon: BarChart3, page: 'Reports', permission: 'reports.view' },
     { label: 'Coin Store', icon: Coins, page: 'CoinShop', permission: null },
     { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view' },
@@ -84,7 +85,9 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
 
   // Filter tenant items based on permissions
   const tenantItems = allTenantItems.filter(item => 
-    item.permission === null || hasPermission?.(item.permission)
+    item.permission === null || (Array.isArray(item.permission)
+      ? item.permission.some(p => hasPermission?.(p))
+      : hasPermission?.(item.permission))
   );
 
   const navItems = [...superAdminItems, ...tenantItems];
@@ -93,8 +96,19 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className={cn("flex items-center h-16 px-4 border-b border-slate-100", collapsed && "justify-center")}>
-        <div className="flex items-center gap-2.5">
-          {tenant?.logo_url ? (
+        <div className="flex items-center gap-2.5 min-w-0">
+          {onToggleCollapse && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              aria-label={collapsed ? 'Expand menu' : 'Collapse menu'}
+              title={collapsed ? 'Expand menu' : 'Collapse menu'}
+              className="w-9 h-9 flex-shrink-0 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          )}
+          {onToggleCollapse && collapsed ? null : tenant?.logo_url ? (
             <img src={tenant.logo_url} alt={tenant.name} className={collapsed ? 'h-7 w-7 object-contain rounded' : 'h-8 object-contain'} />
           ) : (
             <>
@@ -253,6 +267,25 @@ function AppLayout({ children, currentPageName }) {
 
   const { appUser: customUser, clearAppUser } = useAppUser();
   const { user, tenant, isSuperAdmin, isLoading, hasPermission, isOwner } = useTenant();
+  const queryClient = useQueryClient();
+  // Keep a signed-in staff member's permissions current: re-read their role and
+  // membership every minute and whenever they return to the app, so an owner's
+  // role change applies without the staff member signing out.
+  useEffect(() => {
+    const refresh = () => {
+      queryClient.invalidateQueries({ queryKey: ['userRole'] });
+      queryClient.invalidateQueries({ queryKey: ['tenantUser'] });
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    const id = setInterval(refresh, 60 * 1000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [queryClient]);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   // Derived straight from the persisted tour progress rather than an ephemeral
   // signal — so it's correct on a fresh page load too, not just while the
@@ -457,13 +490,7 @@ function AppLayout({ children, currentPageName }) {
           collapsed ? "w-[72px]" : "w-[260px]"
         )}
       >
-        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => {}} subscription={subscription} onOpenProfile={() => setShowProfileModal(true)} />
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 transition-colors"
-        >
-          {collapsed ? <ChevronRight className="w-3 h-3 text-slate-600" /> : <ChevronLeft className="w-3 h-3 text-slate-600" />}
-        </button>
+        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => {}} subscription={subscription} onOpenProfile={() => setShowProfileModal(true)} onToggleCollapse={() => setCollapsed(!collapsed)} />
       </aside>
       )}
 
@@ -477,11 +504,13 @@ function AppLayout({ children, currentPageName }) {
               <ArrowLeft className="w-5 h-5" />
             </Button>
           ) : tenant?.logo_url ? (
-            <button onClick={() => setMobileOpen(true)} data-tour="avatar-menu-btn" className="active:opacity-70 transition-opacity">
+            <button onClick={() => setMobileOpen(true)} data-tour="avatar-menu-btn" aria-label="Open menu" className="flex items-center gap-2 h-11 active:opacity-70 transition-opacity">
+              <Menu className="w-6 h-6 text-slate-700 flex-shrink-0" />
               <img src={tenant.logo_url} alt={tenant.name} className="h-8 w-auto object-contain rounded" />
             </button>
           ) : (
-            <button onClick={() => setMobileOpen(true)} data-tour="avatar-menu-btn" className="active:opacity-70 transition-opacity">
+            <button onClick={() => setMobileOpen(true)} data-tour="avatar-menu-btn" aria-label="Open menu" className="flex items-center gap-2 h-11 active:opacity-70 transition-opacity">
+              <Menu className="w-6 h-6 text-slate-700 flex-shrink-0" />
               <img src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png" alt="Sellio" className="h-10 w-auto object-contain" />
             </button>
           )}

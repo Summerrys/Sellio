@@ -39,7 +39,9 @@ export default function TenantSettings() {
 
 function PaymentQRTab({ tenant, tenantId }) {
   const { hasPermission } = useTenant();
-  const canEditSettings = hasPermission('settings.edit');
+  // Payment QR changes follow the "Modify Payments" permission; everyone who
+  // can open Settings can still see the QR (view-only).
+  const canEditPayments = hasPermission('payments.edit');
   const queryClient = useQueryClient();
   const paymentQRInputRef = useRef(null);
 
@@ -59,7 +61,7 @@ function PaymentQRTab({ tenant, tenantId }) {
   }, [tenant]);
 
   const handlePaymentQRUpload = async (e) => {
-    if (!canEditSettings) return; // defense-in-depth; upload controls are hidden without this permission
+    if (!canEditPayments) return; // defense-in-depth; upload controls are hidden without this permission
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
@@ -77,7 +79,7 @@ function PaymentQRTab({ tenant, tenantId }) {
   };
 
   const handleRemovePaymentQR = async () => {
-    if (!canEditSettings) return;
+    if (!canEditPayments) return;
     const supabase = await getSupabase();
     await supabase.from('tenants').update({ payment_qr_url: null }).eq('id', tenantId);
     setPaymentQRPreview(null);
@@ -85,7 +87,7 @@ function PaymentQRTab({ tenant, tenantId }) {
   };
 
   const handleSavePaymentQR = async () => {
-    if (!canEditSettings) return;
+    if (!canEditPayments) return;
     setIsSavingQR(true);
     try {
       const supabase = await getSupabase();
@@ -145,7 +147,7 @@ function PaymentQRTab({ tenant, tenantId }) {
                 )}
 
                 {/* X — top right */}
-                {canEditSettings && (
+                {canEditPayments && (
                   <button
                     type="button"
                     onClick={handleRemovePaymentQR}
@@ -156,7 +158,7 @@ function PaymentQRTab({ tenant, tenantId }) {
                 )}
 
                 {/* Replace — center overlay */}
-                {canEditSettings && (
+                {canEditPayments && (
                   <button
                     type="button"
                     onClick={() => paymentQRInputRef.current?.click()}
@@ -173,13 +175,13 @@ function PaymentQRTab({ tenant, tenantId }) {
             </div>
           ) : (
             <div
-              onClick={() => canEditSettings && paymentQRInputRef.current?.click()}
-              className={`border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center transition-colors bg-slate-50 ${canEditSettings ? 'cursor-pointer hover:border-slate-400' : 'cursor-default'}`}
+              onClick={() => canEditPayments && paymentQRInputRef.current?.click()}
+              className={`border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center transition-colors bg-slate-50 ${canEditPayments ? 'cursor-pointer hover:border-slate-400' : 'cursor-default'}`}
               style={{ width: 200, height: 200 }}
             >
               {isUploadingQR ? (
                 <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
-              ) : canEditSettings ? (
+              ) : canEditPayments ? (
                 <>
                   <QrCode className="w-10 h-10 text-slate-300 mb-2" />
                   <p className="text-xs font-medium text-slate-500">Click to upload</p>
@@ -202,7 +204,7 @@ function PaymentQRTab({ tenant, tenantId }) {
                 value={paymentQRLabel}
                 onChange={e => setPaymentQRLabel(e.target.value)}
                 placeholder="e.g. Scan to pay via PayNow"
-                disabled={!canEditSettings}
+                disabled={!canEditPayments}
               />
             </div>
             <div>
@@ -212,12 +214,12 @@ function PaymentQRTab({ tenant, tenantId }) {
                 value={paymentReference}
                 onChange={e => setPaymentReference(e.target.value)}
                 placeholder="e.g. UEN 12345678A"
-                disabled={!canEditSettings}
+                disabled={!canEditPayments}
               />
             </div>
           </div>
 
-          {canEditSettings ? (
+          {canEditPayments ? (
             <Button
               onClick={handleSavePaymentQR}
               disabled={isSavingQR}
@@ -241,6 +243,8 @@ function TenantSettingsContent() {
   const queryClient = useQueryClient();
 
   const [settingsTab, setSettingsTab] = useState('business');
+  const { hasPermission: canAccess } = useTenant();
+  const canSeeUsersTab = canAccess('staff.view') || canAccess('roles.view');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -371,6 +375,7 @@ function TenantSettingsContent() {
           >
             <Palette className="w-4 h-4" /> Theme
           </button>
+          {canSeeUsersTab && (
           <button
             data-tour="settings-users-tab"
             onClick={() => setSettingsTab('users')}
@@ -379,6 +384,7 @@ function TenantSettingsContent() {
           >
             <Users className="w-4 h-4" /> Users
           </button>
+          )}
         </div>
 
         {settingsTab === 'business' && (
@@ -396,7 +402,7 @@ function TenantSettingsContent() {
             <ThemeSelector variant="full" />
           </div>
         )}
-        {settingsTab === 'users' && (
+        {settingsTab === 'users' && canSeeUsersTab && (
           <UserManagement embedded={true} onUpgrade={() => setShowPricingModal(true)} />
         )}
       </div>

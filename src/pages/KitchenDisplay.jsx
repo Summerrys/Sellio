@@ -9,6 +9,7 @@ import { createPageUrl } from '../utils';
 import { NEW_ORDER_TONE_URL, URGENT_ORDER_TONE_URL } from '@/lib/kdsSounds';
 import { loadPrinterConfig, buildOrderChit, sendViaBluetooth, sendViaEpsonEPos } from '@/lib/printerUtils';
 import ChitPreviewSheet from '@/components/orders/ChitPreviewSheet';
+import RequirePermission from '../components/auth/RequirePermission';
 
 function ElapsedTimer({ createdDate }) {
   const [elapsed, setElapsed] = useState(0);
@@ -218,7 +219,16 @@ function KDSMediumCard({ order, onExpand }) {
   );
 }
 
+// The kitchen screen shows live orders, so it follows "Manage Orders".
 export default function KitchenDisplay() {
+  return (
+    <RequirePermission permission="orders.view">
+      <KitchenDisplayScreen />
+    </RequirePermission>
+  );
+}
+
+function KitchenDisplayScreen() {
   const { tenantId, tenant } = useTenant();
   const { appUser } = useAppUser();
   const [orders, setOrders] = useState([]);

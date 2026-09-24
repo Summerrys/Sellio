@@ -47,7 +47,7 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
   const [resetError, setResetError] = React.useState('');
   const [resettingPassword, setResettingPassword] = React.useState(false);
 
-  const { handleSubmit, formState: { errors }, setValue, watch } = useForm({
+  const { handleSubmit, formState: { errors }, setValue, watch, reset } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
       role_id: staff?.role_id || '',
@@ -60,6 +60,20 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
     queryFn: () => db.entities.Role.filter({ tenant_id: tenantId }),
     enabled: !!tenantId && open,
   });
+
+  // defaultValues are read only once, when the page first loads and nobody is
+  // selected yet, so load the chosen staff member's saved role and status each
+  // time the dialog opens.
+  React.useEffect(() => {
+    if (open && staff) reset({ role_id: staff.role_id || '', status: staff.status || 'active' });
+  }, [open, staff?.id, staff?.role_id, staff?.status, reset]);
+
+  // Older records may carry only a role name; match it to the role once roles load.
+  React.useEffect(() => {
+    if (!open || !staff || staff.role_id || !roles.length || !staff.role_name) return;
+    const match = roles.find(r => r.name?.toLowerCase() === staff.role_name.toLowerCase());
+    if (match) setValue('role_id', match.id);
+  }, [open, staff, roles, setValue]);
 
   const updateMutation = useMutation({
     mutationFn: async (data) => {
@@ -74,6 +88,7 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff', tenantId] });
+      queryClient.invalidateQueries({ queryKey: ['roleUsers', tenantId] });
       toast.success('Staff updated successfully');
       onOpenChange(false);
     },

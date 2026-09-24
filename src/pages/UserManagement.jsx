@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import db from '@/lib/db';
 import { getSupabase } from '@/lib/supabaseClient';
@@ -53,14 +53,31 @@ const GROUP_VISUALS = {
 // PERMISSION_GROUP_META), just rendered as a static list instead of toggles.
 // Shared between the desktop sidebar preview and the mobile preview modal so
 // they can never visually drift apart from each other.
+// A group's main switch is "on" only when its gate permission (the one its
+// page actually checks, viewKeys[0]) is present. Anything else in that group
+// without the gate is dropped on save, so a role can never hold access that
+// the editor shows as switched off, or appear to grant access a page refuses.
+function normalisePermissions(perms) {
+  const list = [...new Set(perms || [])];
+  const drop = new Set();
+  Object.values(PERMISSION_GROUP_META).forEach(meta => {
+    if (!meta.masterLabel) return;
+    if (!list.includes(meta.viewKeys[0])) {
+      meta.viewKeys.forEach(k => drop.add(k));
+      meta.subPermissions.forEach(sp => drop.add(sp.key));
+    }
+  });
+  return list.filter(p => !drop.has(p));
+}
+
 function RolePermissionSummary({ role }) {
   const rolePerms = role?.permissions || [];
   const groups = Object.entries(PERMISSION_GROUP_META).map(([groupKey, meta]) => {
     const visual = GROUP_VISUALS[groupKey];
     const hasMaster = !!meta.masterLabel;
-    const grantedView = meta.viewKeys.some(k => rolePerms.includes(k));
-    const grantedSubs = meta.subPermissions.filter(sp => rolePerms.includes(sp.key));
-    const granted = hasMaster ? (grantedView || grantedSubs.length > 0) : grantedSubs.length > 0;
+    const grantedView = hasMaster ? rolePerms.includes(meta.viewKeys[0]) : true;
+    const grantedSubs = grantedView ? meta.subPermissions.filter(sp => rolePerms.includes(sp.key)) : [];
+    const granted = hasMaster ? grantedView : grantedSubs.length > 0;
     return { groupKey, meta, visual, grantedSubs, granted };
   }).filter(g => g.granted);
 
@@ -105,11 +122,21 @@ function RolePermissionSummary({ role }) {
 }
 
 export default function UserManagement({ embedded = false, onUpgrade }) {
-  const [activeTab, setActiveTab] = useState('staff');
+  const { hasPermission } = useTenant();
+  const canStaff = hasPermission('staff.view');
+  const canRoles = hasPermission('roles.view');
+  const [activeTab, setActiveTab] = useState(canStaff || !canRoles ? 'staff' : 'roles');
+  // Permissions can arrive after the first render; keep the open tab on one
+  // this person is allowed to use.
+  useEffect(() => {
+    if (activeTab === 'staff' && !canStaff && canRoles) setActiveTab('roles');
+    if (activeTab === 'roles' && !canRoles && canStaff) setActiveTab('staff');
+  }, [activeTab, canStaff, canRoles]);
 
   return (
     <div className="space-y-6">
       {!embedded && <PageHeader title="User Management" description="Manage your staff and roles" />}
+      {canStaff && canRoles && (
       <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
         <button
           onClick={() => setActiveTab('staff')}
@@ -132,6 +159,7 @@ export default function UserManagement({ embedded = false, onUpgrade }) {
           Roles
         </button>
       </div>
+      )}
       {activeTab === 'staff' && <StaffContent onUpgrade={onUpgrade} />}
       {activeTab === 'roles' && <RolesContent onUpgrade={onUpgrade} />}
     </div>
@@ -344,14 +372,20 @@ function RolesContent({ onUpgrade }) {
     mutationFn: async (data) => {
       const supabase = await getSupabase();
       if (editing) {
-        const { error } = await supabase.from('roles').update({ name: data.name, slug: data.name.toLowerCase().replace(/\s+/g, '-'), permissions: data.permissions, description: data.description }).eq('id', editing.id).eq('tenant_id', tenantId);
+        const { error } = await supabase.from('roles').update({ name: data.name, slug: data.name.toLowerCase().replace(/\s+/g, '-'), permissions: normalisePermissions(data.permissions), description: data.description }).eq('id', editing.id).eq('tenant_id', tenantId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('roles').insert({ ...data, tenant_id: tenantId, slug: data.name.toLowerCase().replace(/\s+/g, '-') });
+        const { error } = await supabase.from('roles').insert({ ...data, permissions: normalisePermissions(data.permissions), tenant_id: tenantId, slug: data.name.toLowerCase().replace(/\s+/g, '-') });
         if (error) throw error;
       }
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['allRoles'] }); close(); toast.success(editing ? 'Role updated' : 'Role created'); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allRoles'] });
+      queryClient.invalidateQueries({ queryKey: ['userRole'] });
+      close();
+      toast.success(editing ? 'Role updated' : 'Role created');
+    },
+    onError: (error) => toast.error(error?.message || 'Could not save role. Please try again.'),
   });
 
   const deleteMutation = useMutation({
@@ -379,8 +413,9 @@ function RolesContent({ onUpgrade }) {
   });
 
   const duplicateMutation = useMutation({
-    mutationFn: (role) => db.entities.Role.create({ tenant_id: tenantId, name: `${role.name} (Copy)`, slug: `${role.slug}-copy-${Date.now()}`, description: role.description, permissions: role.permissions || [], is_system: false }),
+    mutationFn: (role) => db.entities.Role.create({ tenant_id: tenantId, name: `${role.name} (Copy)`, slug: `${role.slug}-copy-${Date.now()}`, description: role.description, permissions: normalisePermissions(role.permissions), is_system: false }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['allRoles'] }); toast.success('Role duplicated'); },
+    onError: (error) => toast.error(error?.message || 'Could not duplicate role'),
   });
 
   const open = (role) => {
@@ -417,8 +452,8 @@ function RolesContent({ onUpgrade }) {
   // the whole group, and turning it on always includes view.
   const isGroupMasterOn = (groupKey) => {
     const meta = PERMISSION_GROUP_META[groupKey];
-    return meta.viewKeys.some(k => form.permissions.includes(k))
-      || meta.subPermissions.some(sp => form.permissions.includes(sp.key));
+    // On only when the permission the page itself checks is present.
+    return form.permissions.includes(meta.viewKeys[0]);
   };
 
   const toggleGroupMaster = (groupKey) => {
@@ -675,7 +710,7 @@ function RolesContent({ onUpgrade }) {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <Label className="text-sm font-semibold text-slate-800">Permissions</Label>
-                  <span className="text-xs font-medium text-slate-400">{form.permissions.length} selected</span>
+                  <span className="text-xs font-medium text-slate-400">{normalisePermissions(form.permissions).length} selected</span>
                 </div>
                 <div className="space-y-2 max-h-[26rem] overflow-y-auto pr-1 -mr-1">
                   {Object.entries(PERMISSION_GROUP_META).map(([groupKey, meta]) => {
