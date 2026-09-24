@@ -1111,7 +1111,7 @@ export default function Auth() {
 
             {!checkingToken && (
               <p className="mt-5 text-center text-[11px] leading-relaxed text-slate-400">
-                By continuing, you agree and acknowledge to Sellio's{' '}
+                By continuing, you agree to Sellio's{' '}
                 <br></br>
                 <a href="/terms" className="font-semibold text-orange-500 hover:text-orange-600 underline underline-offset-2">Terms and Conditions</a>
                 {' '}and {' '}
