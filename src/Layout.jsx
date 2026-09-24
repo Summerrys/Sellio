@@ -16,8 +16,6 @@ import {
   Package,
   Users,
   Settings,
-  ChevronLeft,
-  ChevronRight,
   BarChart3,
   LogOut,
   X,
