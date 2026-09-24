@@ -675,7 +675,11 @@ export default function Layout({ children, currentPageName }) {
         const devRoleOverride = localStorage.getItem('dev_role_override');
         const isDevSuperAdmin = devRoleOverride === 'superadmin';
         const isRealSuperAdmin = !devRoleOverride && tenantContext.user?.role === 'admin';
-        const themeScope = (isRealSuperAdmin || isDevSuperAdmin) ? 'superadmin' : tenantContext.tenantId;
+        // Theme belongs to the STORE. Owners have role 'admin', so the old
+        // "superadmin" scope made every owner save into one shared row that
+        // their staff (and other stores) never read. 'superadmin' is only
+        // used when there is no store context at all.
+        const themeScope = tenantContext.tenantId || ((isRealSuperAdmin || isDevSuperAdmin) ? 'superadmin' : null);
 
         return (
           <ThemeProvider tenantId={themeScope}>
