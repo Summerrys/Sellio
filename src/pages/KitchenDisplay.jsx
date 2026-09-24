@@ -73,7 +73,7 @@ function KDSOrderCard({ order, onBump }) {
 
   return (
     <div
-      className={`rounded-2xl border-4 p-5 flex flex-col gap-4 ${cfg.bg} text-white`}
+      className={`min-w-0 rounded-2xl border-4 p-5 flex flex-col gap-4 ${cfg.bg} text-white`}
       style={isCritical ? { animation: 'kdsBorderPulse 1.4s ease-in-out infinite' } : undefined}
     >
       <div className="flex items-start justify-between">
@@ -96,7 +96,7 @@ function KDSOrderCard({ order, onBump }) {
       <div className="space-y-2 flex-1">
         {(order.items || []).map((item, idx) => (
           <div key={idx} className="bg-white/15 rounded-xl p-3 text-center">
-            <p className="text-xl font-bold">{item.quantity}× {item.name}</p>
+            <p className="text-xl font-bold break-words">{item.quantity}× {item.name}</p>
             {item.variant && <p className="text-base opacity-80 mt-0.5">{item.variant}</p>}
             {item.notes && (
               <div className="mt-2 bg-yellow-300 text-slate-900 rounded-lg p-2 flex items-center justify-center gap-2">
@@ -115,7 +115,8 @@ function KDSOrderCard({ order, onBump }) {
         </div>
       )}
 
-      <div className="flex gap-2">
+      {/* Buttons wrap and shrink to stay inside narrow desktop columns. */}
+      <div className="flex flex-wrap gap-2 min-w-0">
         {canPrintChit && (
           <Button
             onClick={() => setShowChit(true)}
@@ -127,7 +128,7 @@ function KDSOrderCard({ order, onBump }) {
         )}
         <Button
           onClick={() => onBump(order.id, order.status)}
-          className="flex-1 h-14 text-xl font-bold bg-white text-slate-900 hover:bg-slate-100"
+          className="flex-1 min-w-[8rem] h-auto min-h-14 py-3 px-3 text-lg xl:text-base 2xl:text-xl leading-tight whitespace-normal break-words font-bold bg-white text-slate-900 hover:bg-slate-100"
         >
           {cfg.btnLabel}
         </Button>
