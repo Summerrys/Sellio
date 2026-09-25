@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import db from '@/lib/db';
 import { getSupabase } from '@/lib/supabaseClient';
-import { useTenant, ALL_PERMISSIONS, PERMISSION_GROUPS, PERMISSION_GROUP_META, ROLE_TEMPLATES, INDUSTRY_ROLES } from '../components/tenant/TenantContext';
+import { useTenant, PERMISSION_GROUP_META, ROLE_TEMPLATES, INDUSTRY_ROLES } from '../components/tenant/TenantContext';
 import { isFnBIndustry, normalizeIndustry } from '@/lib/industry';
 import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
@@ -22,7 +22,7 @@ import StaffImportDialog from '../components/staff/StaffImportDialog';
 import StaffTable from '../components/staff/StaffTable';
 import StaffCards from '../components/staff/StaffCards';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Shield, Plus, Pencil, Trash2, Copy, Users, CheckCircle2, UserPlus, Search, LayoutGrid, List, Download, Upload, FileDown, FileSpreadsheet, X, Info, ClipboardList, ShoppingBag, Grid3X3, Package, QrCode, BarChart3, Settings2, CreditCard, Check, LayoutDashboard } from 'lucide-react';
+import { Shield, Plus, Pencil, Trash2, Copy, Users, UserPlus, Search, LayoutGrid, List, Download, Upload, FileDown, FileSpreadsheet, X, Info, ClipboardList, ShoppingBag, Grid3X3, Package, QrCode, BarChart3, Settings2, Check, LayoutDashboard } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -68,6 +68,16 @@ function normalisePermissions(perms) {
     }
   });
   return list.filter(p => !drop.has(p));
+}
+
+// Role templates live in TenantContext; these extras keep them in line with
+// the defaults new stores get: chit printing wherever orders are visible, and
+// Settings view-only for Manager and Cashier.
+const TEMPLATE_EXTRAS = { manager: ['settings.view'], cashier: ['settings.view'] };
+function templatePermissions(key) {
+  const base = [...(ROLE_TEMPLATES[key]?.permissions || []), ...(TEMPLATE_EXTRAS[key] || [])];
+  if (base.includes('orders.view') && !base.includes('orders.print_chit')) base.push('orders.print_chit');
+  return normalisePermissions(base);
 }
 
 function RolePermissionSummary({ role }) {
@@ -470,7 +480,7 @@ function RolesContent({ onUpgrade }) {
 
   const applyTemplate = (templateKey) => {
     const template = ROLE_TEMPLATES[templateKey];
-    if (template) setForm({ name: form.name || template.name, description: form.description || template.description, permissions: template.permissions });
+    if (template) setForm({ name: form.name || template.name, description: form.description || template.description, permissions: templatePermissions(templateKey) });
   };
 
   const getUserCount = (roleId) => tenantUsers.filter(u => u.role_id === roleId).length;
@@ -489,12 +499,12 @@ function RolesContent({ onUpgrade }) {
 
   // Full default role definitions (capitalised names, matching completeOnboarding)
   const ALL_DEFAULT_ROLES = [
-    { name: 'Owner',          slug: 'owner',           is_system: true,  permissions: ['dashboard.ai_assistant','dashboard.design_store','orders.view','orders.create','orders.edit','orders.cancel','products.view','products.create','products.edit','products.delete','categories.view','categories.create','categories.edit','categories.delete','inventory.view','inventory.adjust','tables.view','tables.create','tables.edit','tables.delete','staff.view','staff.create','staff.edit','staff.delete','roles.view','roles.create','roles.edit','roles.delete','reports.view','reports.export','settings.view','settings.edit','theme.edit','payments.view','payments.edit'] },
-    { name: 'Manager',        slug: 'manager',         is_system: false, permissions: ['staff.view','staff.edit','products.view','products.create','products.edit','categories.view','categories.create','categories.edit','inventory.view','inventory.adjust','orders.view','orders.create','orders.edit','tables.view','tables.edit','payments.view','reports.view'] },
-    { name: 'Staff',          slug: 'staff',           is_system: false, permissions: ['products.view','orders.view','orders.create','tables.view'] },
-    { name: 'Cashier',        slug: 'cashier',         is_system: false, permissions: [...ROLE_TEMPLATES.cashier.permissions] },
+    { name: 'Owner',          slug: 'owner',           is_system: true,  permissions: ['dashboard.ai_assistant','dashboard.design_store','orders.view','orders.create','orders.edit','orders.cancel','products.view','products.create','products.edit','products.delete','categories.view','categories.create','categories.edit','categories.delete','inventory.view','inventory.adjust','tables.view','tables.create','tables.edit','tables.delete','staff.view','staff.create','staff.edit','staff.delete','roles.view','roles.create','roles.edit','roles.delete','reports.view','reports.export','settings.view','settings.edit','theme.edit','payments.view','payments.edit','orders.print_chit'] },
+    { name: 'Manager',        slug: 'manager',         is_system: false, permissions: ['staff.view','staff.edit','products.view','products.create','products.edit','categories.view','categories.create','categories.edit','inventory.view','inventory.adjust','orders.view','orders.create','orders.edit','orders.print_chit','tables.view','tables.edit','payments.view','settings.view','reports.view'] },
+    { name: 'Staff',          slug: 'staff',           is_system: false, permissions: ['products.view','orders.view','orders.create','orders.print_chit','tables.view'] },
+    { name: 'Cashier',        slug: 'cashier',         is_system: false, permissions: [...ROLE_TEMPLATES.cashier.permissions, 'settings.view'] },
     ...(isFnB
-      ? [{ name: 'Kitchen Staff',   slug: 'kitchen_staff',   is_system: false, permissions: ['products.view','orders.view','orders.edit','inventory.view'] }]
+      ? [{ name: 'Kitchen Staff',   slug: 'kitchen_staff',   is_system: false, permissions: ['products.view','orders.view','orders.edit','orders.print_chit','inventory.view'] }]
       : [{ name: 'Inventory Staff', slug: 'inventory_staff', is_system: false, permissions: ['products.view','inventory.view','inventory.adjust','categories.view'] }]
     ),
   ];
