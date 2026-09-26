@@ -6,6 +6,7 @@ import MenuAssistantWidget from '@/components/storefront/MenuAssistantWidget';
 import { LanguageProvider, useLanguage, prewarmTranslations } from '@/lib/LanguageContext';
 import { isFnBIndustry } from '@/lib/industry';
 import { fetchStorefrontCatalog } from '@/lib/storefrontCatalog';
+import { useBackToClose } from '@/lib/useBackToClose';
 import { toast } from 'sonner';
 
 // Pure function (no component state) so it can be reused by the initial
@@ -85,6 +86,13 @@ function StorefrontInner() {
   const [placedOrderNumber, setPlacedOrderNumber] = useState('');
   const [copied, setCopied] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
+  // Phone/browser Back closes these screens instead of leaving the menu
+  // (customers arrive straight from their camera's QR scanner).
+  useBackToClose(showCart, () => setShowCart(false));
+  useBackToClose(showCheckout, () => setShowCheckout(false));
+  useBackToClose(showOrderHistory, () => setShowOrderHistory(false));
+  useBackToClose(orderSuccess, () => { setOrderSuccess(false); setLastCart([]); setLastCartTotal(0); });
+  useBackToClose(showLimitReachedModal, () => setShowLimitReachedModal(false));
   const [businessHours, setBusinessHours] = useState([]);
   const [isStoreOpen, setIsStoreOpen] = useState(true);
   const [todayHours, setTodayHours] = useState(null);
