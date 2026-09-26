@@ -112,9 +112,8 @@ function StorefrontInner() {
     async function loadData() {
       const supabase = await getSupabase();
       const { data: tenantData } = await supabase
-        .from('tenants')
-        .select('id, name, slug, logo_url, industry, currency, country, phone, address, payment_qr_url, payment_qr_label, payment_reference, settings')
-        .eq('slug', tenantSlug).single();
+        .rpc('get_storefront_tenant', { p_slug: tenantSlug })
+        .maybeSingle();
       if (!tenantData) { setNotFound(true); setLoading(false); return; }
       setTenant(tenantData);
       const tenantId = tenantData.id;
@@ -137,17 +136,12 @@ function StorefrontInner() {
       if (storefrontRes.data?.featured_section_title) contentToPrewarm.push(storefrontRes.data.featured_section_title);
       prewarmTranslations(contentToPrewarm);
       if (tableId) {
-        const { data: tableData } = await supabase.from('tables').select('id, name, zone, capacity').eq('id', tableId).eq('tenant_id', tenantId).single();
+        // Validates the table, marks it occupied and opens a session if none is
+        // active — all server-side (the browser no longer writes these tables).
+        const { data: tableData } = await supabase
+          .rpc('open_table_session', { p_tenant_id: tenantId, p_table_id: tableId })
+          .maybeSingle();
         setTable(tableData);
-        if (tableData) {
-          // Mark table as occupied
-          await supabase.from('tables').update({ status: 'occupied', updated_date: new Date().toISOString() }).eq('id', tableId).eq('tenant_id', tenantId);
-          // Create table session if none active
-          const { data: existingSession } = await supabase.from('table_sessions').select('id').eq('table_id', tableId).eq('tenant_id', tenantId).eq('status', 'active').maybeSingle();
-          if (!existingSession) {
-            await supabase.from('table_sessions').insert({ table_id: tableId, tenant_id: tenantId, status: 'active', started_at: new Date().toISOString(), total_amount: 0 });
-          }
-        }
       }
       // Fetch business hours for all visitors — skip enforcement only for merchant preview
       // Staff-assisted orders (Take Order from the Dashboard, identified by
@@ -329,22 +323,11 @@ function StorefrontInner() {
     if (!deviceId) return;
     getSupabase().then(async supabase => {
       try {
-        const { data: existing } = await supabase
-          .from('customers')
-          .select('id')
-          .eq('tenant_id', tenant.id)
-          .eq('device_id', deviceId)
-          .maybeSingle();
-        if (existing) {
-          setCustomerId(existing.id);
-        } else {
-          const { data: newCustomer } = await supabase
-            .from('customers')
-            .insert({ tenant_id: tenant.id, device_id: deviceId })
-            .select('id')
-            .single();
-          if (newCustomer) setCustomerId(newCustomer.id);
-        }
+        const { data: id } = await supabase.rpc('get_or_create_customer', {
+          p_tenant_id: tenant.id,
+          p_device_id: deviceId,
+        });
+        if (id) setCustomerId(id);
       } catch (e) {
         console.warn('Customer tracking error:', e.message);
       }
@@ -356,7 +339,7 @@ function StorefrontInner() {
     const supabase = await getSupabase();
     const currentSessionOrders = (() => { try { const s = localStorage.getItem(SESSION_ORDERS_KEY); return s ? JSON.parse(s) : []; } catch { return []; } })();
     if (!currentSessionOrders.length) { setOrderHistory([]); return; }
-    const { data } = await supabase.from('orders').select('*').in('id', currentSessionOrders).order('created_date', { ascending: false });
+    const { data } = await supabase.rpc('get_storefront_orders', { p_tenant_id: tenant.id, p_order_ids: currentSessionOrders });
     setOrderHistory(data || []);
   };
 
