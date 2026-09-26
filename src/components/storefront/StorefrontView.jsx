@@ -11,6 +11,7 @@
  *   All state is managed internally via useParams + Supabase fetches
  */
 import { useState, useEffect, useRef, useCallback, useMemo, forwardRef } from 'react';
+import { useBackToClose } from '@/lib/useBackToClose';
 import {
   Coffee, UtensilsCrossed, IceCream, Salad, Sandwich,
   Drumstick, Tag, Gift, LayoutGrid, ShoppingCart, Clock,
@@ -507,6 +508,9 @@ export default function StorefrontView({
   const [selectedVariants, setSelectedVariants] = useState({});
   const [itemNotes, setItemNotes] = useState('');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const closeProductModal = () => { setSelectedProduct(null); setSelectedVariants({}); setItemNotes(''); setActiveImageIndex(0); onProductModalChange?.(false); };
+  // Phone/browser Back closes the product details instead of leaving the menu.
+  useBackToClose(!!selectedProduct, closeProductModal);
 
   // Screen-size-based (not staff-mode-based, per merchant's explicit direction) -
   // a customer browsing on their own tablet benefits from this too, not just
@@ -1041,7 +1045,7 @@ export default function StorefrontView({
           activeImageIndex={activeImageIndex}
           setActiveImageIndex={setActiveImageIndex}
           onAddToCart={handleAddToCart}
-          onClose={() => { setSelectedProduct(null); setSelectedVariants({}); setItemNotes(''); setActiveImageIndex(0); onProductModalChange?.(false); }}
+          onClose={closeProductModal}
           contentMap={contentMap}
         />
       )}
@@ -1323,6 +1327,7 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
   const allImages = [product.image_url, ...(product.images || [])].filter(Boolean);
   const activeImage = allImages[activeImageIndex];
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  useBackToClose(lightboxOpen, () => setLightboxOpen(false));
   const touchStartX = useRef(null);
 
   const handleTouchStart = (e) => {
