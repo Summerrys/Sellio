@@ -143,9 +143,7 @@ export default function Auth() {
         try {
           const supabase = await getSupabase();
           const { data, error: fetchError } = await supabase
-            .from('merchant_invites')
-            .select('email, phone, full_name, currency, expires_at, status')
-            .eq('token', urlToken)
+            .rpc('get_invite_by_token', { p_token: urlToken })
             .maybeSingle();
 
           console.log(`[invite lookup attempt ${attempts}]`, { data, fetchError });
@@ -239,12 +237,10 @@ export default function Auth() {
 
         // Token-gated Google signup: verify the Google email matches the invite email
         if (isNewAuthUser && tokenInUrl && !isBypass) {
-          const { data: invite } = await supabase
-            .from('merchant_invites')
-            .select('email')
-            .eq('token', tokenInUrl)
-            .eq('status', 'pending')
-            .single();
+          const { data: inviteRow } = await supabase
+            .rpc('get_invite_by_token', { p_token: tokenInUrl })
+            .maybeSingle();
+          const invite = inviteRow?.status === 'pending' ? inviteRow : null;
           const inviteEmailForCheck = invite?.email?.toLowerCase();
           if (inviteEmailForCheck && user.email?.toLowerCase() !== inviteEmailForCheck) {
             await supabase.auth.signOut();
@@ -281,9 +277,7 @@ export default function Auth() {
           // Sync phone from merchant_invites if available
           if (tokenInUrl) {
             const { data: inviteData } = await supabase
-              .from('merchant_invites')
-              .select('phone')
-              .eq('token', tokenInUrl)
+              .rpc('get_invite_by_token', { p_token: tokenInUrl })
               .maybeSingle();
 
             if (inviteData?.phone) {
@@ -367,13 +361,10 @@ export default function Auth() {
       const fullPhone = forgotCountry.code + cleanPhone;
       setForgotFullPhone(fullPhone);
 
-      const { data: rows } = await supabase
-        .from('app_users')
-        .select('id, email, tenant_id')
-        .eq('phone', fullPhone)
-        .limit(1);
+      const { data: appUserRow } = await supabase
+        .rpc('lookup_account_by_phone', { p_phone: fullPhone })
+        .maybeSingle();
 
-      const appUserRow = rows?.[0];
       if (!appUserRow) {
         toast.error('No account found for this phone number.');
         setForgotLoading(false);
@@ -381,15 +372,9 @@ export default function Auth() {
       }
 
       setForgotUserEmail(appUserRow.email || '');
-      setForgotUserTenantId(appUserRow.tenant_id || '');
 
-      if (appUserRow.tenant_id) {
-        const { data: subRows } = await supabase
-          .from('subscriptions')
-          .select('tier')
-          .eq('tenant_id', appUserRow.tenant_id)
-          .limit(1);
-        setForgotPlan(subRows?.[0]?.tier || 'starter');
+      if (appUserRow.plan) {
+        setForgotPlan(appUserRow.plan);
       }
 
       const isRealEmail = appUserRow.email && !appUserRow.email.endsWith('@sellio.app');
@@ -497,19 +482,26 @@ export default function Auth() {
       const fullPhone = selectedCountry.code + cleanPhone;
 
       if (isLogin) {
-        const { data: rows, error: lookupError } = await supabase
-          .from('app_users')
-          .select('id, email, full_name, role, onboarding_completed, tenant_id, phone')
-          .eq('phone', fullPhone)
-          .limit(1);
+        const { data: account, error: lookupError } = await supabase
+          .rpc('lookup_account_by_phone', { p_phone: fullPhone })
+          .maybeSingle();
 
         if (lookupError) throw lookupError;
-        const appUserRow = rows?.[0];
-        if (!appUserRow) throw new Error('No account found for this phone number. Please sign up first.');
+        if (!account?.email) throw new Error('No account found for this phone number. Please sign up first.');
 
         // Supabase Auth validates the password. app_users is profile data only.
-        const { error } = await supabase.auth.signInWithPassword({ email: appUserRow.email, password: formData.password });
+        const { error } = await supabase.auth.signInWithPassword({ email: account.email, password: formData.password });
         if (error) throw error;
+
+        // Signed in: the user can now read their own profile row.
+        const { data: rows, error: profileError } = await supabase
+          .from('app_users')
+          .select('id, email, full_name, role, onboarding_completed, tenant_id, phone')
+          .eq('email', account.email)
+          .limit(1);
+        if (profileError) throw profileError;
+        const appUserRow = rows?.[0];
+        if (!appUserRow) throw new Error('Account profile not found. Please contact support.');
 
         // If tenant_id is missing from app_users, look it up from tenant_users
         let tenantId = appUserRow.tenant_id;
