@@ -69,6 +69,9 @@ function StorefrontInner() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  // Set when the store can't take orders (subscription ended or suspended):
+  // the page shows a "Store unavailable" screen instead of the menu.
+  const [unavailableStore, setUnavailableStore] = useState(null);
 
   const CART_KEY = `sf_cart_${tenantSlug}`;
   const [cart, setCart] = useState(() => {
@@ -123,6 +126,9 @@ function StorefrontInner() {
         .rpc('get_storefront_tenant', { p_slug: tenantSlug })
         .maybeSingle();
       if (!tenantData) { setNotFound(true); setLoading(false); return; }
+      // Only an explicit false closes the page; a response without the
+      // field (older database) keeps the menu open.
+      if (tenantData.is_available === false) { setUnavailableStore(tenantData); setLoading(false); return; }
       setTenant(tenantData);
       const tenantId = tenantData.id;
       const [themeRes, storefrontRes, catalog] = await Promise.all([
@@ -396,6 +402,12 @@ function StorefrontInner() {
       setSessionOrderIds(updatedSessionOrders);
       try { localStorage.setItem(SESSION_ORDERS_KEY, JSON.stringify(updatedSessionOrders)); } catch {}
       setShowCheckout(false); setIsSubmitting(false); setOrderSuccess(true);
+    } else if (error?.message?.startsWith('Store unavailable')) {
+      // The store stopped taking orders while this customer was browsing.
+      setIsSubmitting(false);
+      setShowCheckout(false);
+      setShowCart(false);
+      setUnavailableStore(tenant);
     } else {
       const isLimitReached = error?.message?.includes('Order limit reached');
       // Different audiences need different messages here: a real customer scanning
@@ -459,6 +471,24 @@ function StorefrontInner() {
         <p style={{ fontSize: 48, margin: 0 }}>🔍</p>
         <p style={{ fontWeight: 700, fontSize: 20, margin: 0 }}>Store not found</p>
         <p style={{ color: '#94a3b8', fontSize: 14 }}>The store you're looking for doesn't exist.</p>
+      </div>
+    );
+  }
+
+  if (unavailableStore) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontFamily: 'Inter, sans-serif', flexDirection: 'column', gap: 12, padding: '0 24px', textAlign: 'center', boxSizing: 'border-box' }}>
+        {unavailableStore.logo_url
+          ? <img src={unavailableStore.logo_url} alt={unavailableStore.name || ''} style={{ height: 56, maxWidth: 160, objectFit: 'contain' }} />
+          : <p style={{ fontSize: 48, margin: 0 }}>🔒</p>}
+        {unavailableStore.name?.trim() ? (
+          <p style={{ color: '#94a3b8', fontSize: 13, margin: 0 }}>{unavailableStore.name.trim()}</p>
+        ) : null}
+        <p style={{ fontWeight: 700, fontSize: 20, margin: 0, color: '#0f172a' }}>{t('storeUnavailable')}</p>
+        <p style={{ color: '#64748b', fontSize: 14, margin: 0, maxWidth: 320, lineHeight: 1.5 }}>{t('storeUnavailableDesc')}</p>
+        {isDineIn ? (
+          <p style={{ color: '#64748b', fontSize: 14, margin: 0, maxWidth: 320, lineHeight: 1.5 }}>{t('storeUnavailableAskStaff')}</p>
+        ) : null}
       </div>
     );
   }
