@@ -3,10 +3,12 @@ import { Sparkles, X, Send, ShoppingCart } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 
 import { useLanguage } from '@/lib/LanguageContext';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 export default function MenuAssistantWidget({ products, tenant, onProductSelect, onAddToCart, storefront, externalOpen, onExternalClose, isStoreOpen = true, isPreview = false }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
+  useBackToClose(open, () => setOpen(false));
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
