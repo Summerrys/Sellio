@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send } from 'lucide-react';
 import { useTenant } from '@/components/tenant/TenantContext';
+import { getSupabase } from '@/lib/supabaseClient';
 
 const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
 
@@ -74,9 +75,14 @@ export default function MerchantAssistantWidget({ externalOpen, onExternalClose 
     const updatedHistory = [...conversationHistory, userMsg];
 
     try {
+      const supabase = await getSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(`${SUPABASE_URL}/functions/v1/merchantAssistant`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({ messages: updatedHistory, tenantId }),
       });
       const data = await res.json();
