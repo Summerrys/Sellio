@@ -296,11 +296,108 @@ function StorefrontInner() {
   }, [tenant?.id, isPreview]);
 
   useEffect(() => {
-    if (!tenant) return;
+    if (!tenant) return undefined;
+
     const primaryColor = storefrontConfig?.banner_bg_color || theme?.primary_color || '#6366f1';
     document.documentElement.style.setProperty('--sf-primary', primaryColor);
-    document.title = `${tenant.name} — Order Online`;
-  }, [storefrontConfig, theme, tenant]);
+
+    const canonicalUrl = `https://sellio.apptelier.sg/store/${encodeURIComponent(tenantSlug)}`;
+    const title = `${tenant.name} | Sellio Storefront`;
+    const description = `${tenant.name} on Sellio. Browse this merchant's storefront and available products or services.`;
+    const imageUrl = tenant.logo_url || null;
+    const shouldIndex = !isPreview && !isStaffMode;
+
+    const previousTitle = document.title;
+    document.title = title;
+
+    const metaChanges = [];
+    const setMeta = (selector, attribute, value) => {
+      let node = document.querySelector(selector);
+      const created = !node;
+      if (!node) {
+        node = document.createElement('meta');
+        const name = selector.match(/meta\[name="([^"]+)"\]/)?.[1];
+        const property = selector.match(/meta\[property="([^"]+)"\]/)?.[1];
+        if (name) node.setAttribute('name', name);
+        if (property) node.setAttribute('property', property);
+        document.head.appendChild(node);
+      }
+      metaChanges.push({ node, attribute, previous: node.getAttribute(attribute), created });
+      node.setAttribute(attribute, value);
+    };
+
+    setMeta('meta[name="description"]', 'content', description);
+    setMeta('meta[name="robots"]', 'content', shouldIndex
+      ? 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
+      : 'noindex, nofollow');
+    setMeta('meta[property="og:type"]', 'content', 'website');
+    setMeta('meta[property="og:title"]', 'content', title);
+    setMeta('meta[property="og:description"]', 'content', description);
+    setMeta('meta[property="og:url"]', 'content', canonicalUrl);
+    setMeta('meta[name="twitter:title"]', 'content', title);
+    setMeta('meta[name="twitter:description"]', 'content', description);
+    if (imageUrl) {
+      setMeta('meta[property="og:image"]', 'content', imageUrl);
+      setMeta('meta[name="twitter:image"]', 'content', imageUrl);
+    }
+
+    let canonical = document.querySelector('link[rel="canonical"]');
+    const createdCanonical = !canonical;
+    const previousCanonical = canonical?.getAttribute('href');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute('href', canonicalUrl);
+
+    const schema = document.createElement('script');
+    schema.type = 'application/ld+json';
+    schema.dataset.sellioStorefrontSchema = tenantSlug;
+    schema.text = JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: title,
+      description,
+      url: canonicalUrl,
+      isPartOf: {
+        '@type': 'WebSite',
+        name: 'Sellio',
+        url: 'https://sellio.apptelier.sg/',
+      },
+      about: {
+        '@type': 'Organization',
+        name: tenant.name,
+        url: canonicalUrl,
+        ...(tenant.logo_url ? { logo: tenant.logo_url } : {}),
+        ...(tenant.address ? { address: tenant.address } : {}),
+      },
+      inLanguage: 'en',
+    });
+    document.head.appendChild(schema);
+
+    return () => {
+      document.title = previousTitle;
+      metaChanges.forEach(({ node, attribute, previous, created }) => {
+        if (created) node.remove();
+        else if (previous !== null) node.setAttribute(attribute, previous);
+        else node.removeAttribute(attribute);
+      });
+      if (createdCanonical) canonical.remove();
+      else if (previousCanonical) canonical.setAttribute('href', previousCanonical);
+      schema.remove();
+    };
+  }, [isPreview, isStaffMode, storefrontConfig, tenant, tenantSlug, theme]);
+
+  useEffect(() => {
+    if (!notFound && !unavailableStore) return undefined;
+    const robots = document.querySelector('meta[name="robots"]');
+    const previous = robots?.getAttribute('content');
+    if (robots) robots.setAttribute('content', 'noindex, nofollow');
+    return () => {
+      if (robots && previous) robots.setAttribute('content', previous);
+    };
+  }, [notFound, unavailableStore]);
 
   useEffect(() => {
     try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch {}
