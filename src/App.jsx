@@ -35,9 +35,10 @@ function RouteIndexingGuard() {
   useEffect(() => {
     const path = location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
     const params = new URLSearchParams(location.search);
-    const isPreviewStore = /^\/store\/[^/]+$/.test(path) && params.get('preview') === 'true';
+    const isStorefront = /^\/store\/[^/]+$/.test(path);
+    const isPrivateStoreVariant = isStorefront && (params.get('preview') === 'true' || params.get('staff') === 'true');
     const isPublicPage = path === '/' || path === '/privacy' || path === '/terms';
-    const isPublicStorefront = /^\/store\/[^/]+$/.test(path) && !isPreviewStore;
+    const isPublicStorefront = isStorefront && !isPrivateStoreVariant;
     const content = isPublicPage || isPublicStorefront ? PUBLIC_INDEX_ROBOTS : PRIVATE_ROBOTS;
 
     let robots = document.querySelector('meta[name="robots"]');
