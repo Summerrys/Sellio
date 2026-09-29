@@ -4,7 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import Splash from './pages/Splash';
 import LandingPage from '@/components/landing/LandingPage';
@@ -25,6 +25,32 @@ const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
+
+const PUBLIC_INDEX_ROBOTS = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
+const PRIVATE_ROBOTS = 'noindex, nofollow';
+
+function RouteIndexingGuard() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const path = location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
+    const params = new URLSearchParams(location.search);
+    const isPreviewStore = /^\/store\/[^/]+$/.test(path) && params.get('preview') === 'true';
+    const isPublicPage = path === '/' || path === '/privacy' || path === '/terms';
+    const isPublicStorefront = /^\/store\/[^/]+$/.test(path) && !isPreviewStore;
+    const content = isPublicPage || isPublicStorefront ? PUBLIC_INDEX_ROBOTS : PRIVATE_ROBOTS;
+
+    let robots = document.querySelector('meta[name="robots"]');
+    if (!robots) {
+      robots = document.createElement('meta');
+      robots.setAttribute('name', 'robots');
+      document.head.appendChild(robots);
+    }
+    robots.setAttribute('content', content);
+  }, [location.pathname, location.search]);
+
+  return null;
+}
 
 // The bare root URL is where a merchant lands if they type just the
 // domain, or have an old/manual bookmark to it (the PWA install itself is
@@ -102,6 +128,7 @@ function App() {
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <Router>
+          <RouteIndexingGuard />
           <NavigationTracker />
           <Routes>
             <Route path="/" element={<RootRoute />} />
