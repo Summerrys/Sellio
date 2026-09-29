@@ -351,7 +351,7 @@ function LandingHeader() {
           <a href="/" className="sellio-landing-logo" aria-label="Sellio home"><img src={LOGO_URL} alt="Sellio" /></a>
           <nav className="sellio-landing-nav" aria-label="Main navigation">{NAV_ITEMS.map((item) => <a key={item.label} href={item.href}>{item.label}</a>)}</nav>
           <div className="sellio-landing-header__actions">
-            <a href="/Auth" className="sellio-login-link">Merchant Login</a>
+            <a href="/auth" className="sellio-login-link">Merchant Login</a>
             <a href="#pricing" className="sellio-button sellio-button--small sellio-button--gradient">Start Free Trial <ArrowRight /></a>
             <button type="button" className="sellio-menu-button" onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-expanded={menuOpen} aria-controls="sellio-mobile-nav">{menuOpen ? <X /> : <Menu />}</button>
           </div>
@@ -366,7 +366,7 @@ function LandingHeader() {
             </a>
           )}
           {NAV_ITEMS.map((item) => <a key={item.label} href={item.href} onClick={() => setMenuOpen(false)}>{item.label}<ChevronRight /></a>)}
-          <a href="/Auth" onClick={() => setMenuOpen(false)}>Merchant Login<ChevronRight /></a>
+          <a href="/auth" onClick={() => setMenuOpen(false)}>Merchant Login<ChevronRight /></a>
           <a href="#pricing" className="sellio-button sellio-button--gradient" onClick={() => setMenuOpen(false)}>Start Free Trial</a>
         </nav>
       )}
@@ -430,7 +430,7 @@ function Footer({ onCookieSettings }) {
           </div>
           <div className="sellio-footer-launch__actions">
             <a href="#pricing" className="sellio-button sellio-button--gradient">View Plans <ArrowRight /></a>
-            <a href="/Auth" className="sellio-button sellio-button--footer-ghost">Merchant Login</a>
+            <a href="/auth" className="sellio-button sellio-button--footer-ghost">Merchant Login</a>
           </div>
         </section>
 
@@ -446,7 +446,7 @@ function Footer({ onCookieSettings }) {
             <span className="sellio-footer-navigation__label">Explore the platform</span>
             <div className="sellio-footer-links">
               <div><strong>Explore</strong><a href="#journey">Order journey</a><a href="#product">Merchant workspace</a><a href="#world">Sellio World</a><a href="#vision">Coins & progression</a></div>
-              <div><strong>Merchants</strong><a href="#pricing">Plans & pricing</a><a href="/Auth">Merchant Login</a><a href={DEMO_STORE_URL} target="_blank" rel="noopener noreferrer">Explore Demo Store</a></div>
+              <div><strong>Merchants</strong><a href="#pricing">Plans & pricing</a><a href="/auth">Merchant Login</a><a href={DEMO_STORE_URL} target="_blank" rel="noopener noreferrer">Explore Demo Store</a></div>
               <div><strong>Support</strong><a href="/privacy">Privacy Policy</a><a href="/terms">Terms &amp; Conditions</a><a href="https://apptelier.sg" target="_blank" rel="noopener noreferrer">Apptélier Helpdesk</a><a href="mailto:hello@apptelier.sg">Contact Sellio</a></div>
             </div>
           </div>
