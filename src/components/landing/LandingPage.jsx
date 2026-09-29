@@ -45,6 +45,16 @@ const NAV_ITEMS = [
   { label: 'Pricing', href: '#pricing' },
 ];
 
+const FAQ_ITEMS = [
+  { question: 'How does my business join Sellio World?', answer: 'Start a Sellio merchant plan and complete your storefront setup. Your business is then placed in the most relevant F&B, Retail or Services district so customers can discover it naturally.' },
+  { question: 'What happens when a customer selects my storefront?', answer: 'Sellio moves the customer from the district view into your branded storefront, where they can browse products or services and complete the relevant ordering journey.' },
+  { question: 'Can my storefront keep its own branding?', answer: 'Yes. Sellio supplies the connected world and commerce structure while your storefront keeps its own colours, products, imagery, content and decorative style.' },
+  { question: 'How do Sellio Coins work?', answer: 'Merchants earn Sellio Coins through eligible marketplace activity and milestones. Coins can be used for cosmetic storefront upgrades, seasonal decorations and selected world customisations.' },
+  { question: 'Are seasonal decorations available?', answer: 'Yes. Merchants can personalise their storefront for occasions such as Chinese New Year and Christmas while keeping the core shopping and ordering experience consistent.' },
+  { question: 'Which merchant districts are available?', answer: 'Sellio World supports dedicated F&B, Retail and Services districts. Merchants are allocated according to their primary business category, with room for new districts as the marketplace grows.' },
+  { question: 'Do customers need an account to browse?', answer: 'No. Customers can explore participating storefronts and browse available products or services without creating a marketplace account. Account features can be introduced only when they add useful continuity or rewards.' },
+];
+
 const SNAP_PAGE_SELECTORS = ['#sellio-film', '#world-experience', '#journey', '#connected', '#product', '#vision'];
 
 function useImmersiveReleaseSnap() {
@@ -404,17 +414,8 @@ function PricingSection() {
 }
 
 function FAQSection() {
-  const items = [
-    { question: 'How does my business join Sellio World?', answer: 'Start a Sellio merchant plan and complete your storefront setup. Your business is then placed in the most relevant F&B, Retail or Services district so customers can discover it naturally.' },
-    { question: 'What happens when a customer selects my storefront?', answer: 'Sellio moves the customer from the district view into your branded storefront, where they can browse products or services and complete the relevant ordering journey.' },
-    { question: 'Can my storefront keep its own branding?', answer: 'Yes. Sellio supplies the connected world and commerce structure while your storefront keeps its own colours, products, imagery, content and decorative style.' },
-    { question: 'How do Sellio Coins work?', answer: 'Merchants earn Sellio Coins through eligible marketplace activity and milestones. Coins can be used for cosmetic storefront upgrades, seasonal decorations and selected world customisations.' },
-    { question: 'Are seasonal decorations available?', answer: 'Yes. Merchants can personalise their storefront for occasions such as Chinese New Year and Christmas while keeping the core shopping and ordering experience consistent.' },
-    { question: 'Which merchant districts are available?', answer: 'Sellio World supports dedicated F&B, Retail and Services districts. Merchants are allocated according to their primary business category, with room for new districts as the marketplace grows.' },
-    { question: 'Do customers need an account to browse?', answer: 'No. Customers can explore participating storefronts and browse available products or services without creating a marketplace account. Account features can be introduced only when they add useful continuity or rewards.' },
-  ];
   return (
-    <section className="sellio-section sellio-faq-section" aria-labelledby="sellio-faq-heading"><div className="sellio-container sellio-faq-layout"><div className="sellio-section-heading"><span className="sellio-eyebrow"><ShieldCheck /> Join with confidence</span><h2 id="sellio-faq-heading">Your business in Sellio World.</h2><p>How merchant placement, storefront identity, Sellio Coins and customer discovery work together.</p></div><div className="sellio-faq-list">{items.map((item) => <details key={item.question}><summary>{item.question}<span>+</span></summary><p>{item.answer}</p></details>)}</div></div></section>
+    <section className="sellio-section sellio-faq-section" aria-labelledby="sellio-faq-heading"><div className="sellio-container sellio-faq-layout"><div className="sellio-section-heading"><span className="sellio-eyebrow"><ShieldCheck /> Join with confidence</span><h2 id="sellio-faq-heading">Your business in Sellio World.</h2><p>How merchant placement, storefront identity, Sellio Coins and customer discovery work together.</p></div><div className="sellio-faq-list">{FAQ_ITEMS.map((item) => <details key={item.question}><summary>{item.question}<span>+</span></summary><p>{item.answer}</p></details>)}</div></div></section>
   );
 }
 
