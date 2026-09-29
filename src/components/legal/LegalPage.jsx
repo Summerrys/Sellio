@@ -24,15 +24,34 @@ function useLegalMetadata({ title, description, path, dateModified }) {
     }
 
     const ogTitle = document.querySelector('meta[property="og:title"]');
+    const ogDescription = document.querySelector('meta[property="og:description"]');
     const ogUrl = document.querySelector('meta[property="og:url"]');
+    const twitterTitle = document.querySelector('meta[name="twitter:title"]');
+    const twitterDescription = document.querySelector('meta[name="twitter:description"]');
     const previousOgTitle = ogTitle?.getAttribute('content');
+    const previousOgDescription = ogDescription?.getAttribute('content');
     const previousOgUrl = ogUrl?.getAttribute('content');
+    const previousTwitterTitle = twitterTitle?.getAttribute('content');
+    const previousTwitterDescription = twitterDescription?.getAttribute('content');
+
+    let robots = document.querySelector('meta[name="robots"]');
+    const createdRobots = !robots;
+    const previousRobots = robots?.getAttribute('content');
+    if (!robots) {
+      robots = document.createElement('meta');
+      robots.setAttribute('name', 'robots');
+      document.head.appendChild(robots);
+    }
 
     document.title = title + ' | Sellio';
     descriptionNode?.setAttribute('content', description);
     canonical.setAttribute('href', canonicalUrl);
+    robots.setAttribute('content', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
     ogTitle?.setAttribute('content', title + ' | Sellio');
+    ogDescription?.setAttribute('content', description);
     ogUrl?.setAttribute('content', canonicalUrl);
+    twitterTitle?.setAttribute('content', title + ' | Sellio');
+    twitterDescription?.setAttribute('content', description);
 
     const schema = document.createElement('script');
     schema.type = 'application/ld+json';
@@ -49,9 +68,10 @@ function useLegalMetadata({ title, description, path, dateModified }) {
         name: 'Sellio',
         url: SITE_URL,
       },
+      inLanguage: 'en-SG',
       publisher: {
         '@type': 'Organization',
-        name: 'Apptélier',
+        name: 'Apptelier',
         url: 'https://apptelier.sg',
       },
     });
@@ -62,8 +82,13 @@ function useLegalMetadata({ title, description, path, dateModified }) {
       if (descriptionNode && previousDescription) descriptionNode.setAttribute('content', previousDescription);
       if (createdCanonical) canonical.remove();
       else if (previousCanonical) canonical.setAttribute('href', previousCanonical);
+      if (createdRobots) robots.remove();
+      else if (previousRobots) robots.setAttribute('content', previousRobots);
       if (ogTitle && previousOgTitle) ogTitle.setAttribute('content', previousOgTitle);
+      if (ogDescription && previousOgDescription) ogDescription.setAttribute('content', previousOgDescription);
       if (ogUrl && previousOgUrl) ogUrl.setAttribute('content', previousOgUrl);
+      if (twitterTitle && previousTwitterTitle) twitterTitle.setAttribute('content', previousTwitterTitle);
+      if (twitterDescription && previousTwitterDescription) twitterDescription.setAttribute('content', previousTwitterDescription);
       schema.remove();
     };
   }, [dateModified, description, path, title]);
@@ -100,7 +125,7 @@ export default function LegalPage({
           </a>
           <nav className="sellio-legal-header__actions" aria-label="Policy navigation">
             <a href="/" className="sellio-legal-back"><ArrowLeft aria-hidden="true" /> Back to Sellio</a>
-            <a href="/Auth" className="sellio-legal-login">Merchant Login <ArrowRight aria-hidden="true" /></a>
+            <a href="/auth" className="sellio-legal-login">Merchant Login <ArrowRight aria-hidden="true" /></a>
           </nav>
         </div>
       </header>
