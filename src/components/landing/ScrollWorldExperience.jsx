@@ -73,7 +73,7 @@ const SCENES = [
     poster: '06-ready.jpg',
     accent: '#ec4899',
     primary: { label: 'View plans', href: '#pricing' },
-    secondary: { label: 'Merchant login', href: '/Auth' },
+    secondary: { label: 'Merchant login', href: '/auth' },
   },
 ];
 
