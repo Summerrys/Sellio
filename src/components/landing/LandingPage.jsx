@@ -34,8 +34,11 @@ import './mobile-native.css';
 import './ux-corrections.css';
 import './motion-refinement.css';
 
+const SITE_URL = 'https://sellio.apptelier.sg/';
 const LOGO_URL = 'https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png';
 const DEMO_STORE_URL = '/store/cafetelier?preview=true';
+const LANDING_TITLE = 'Sellio — Storefronts, Operations & Marketplace for Modern Commerce';
+const LANDING_DESCRIPTION = 'Sellio connects branded storefronts, F&B ordering and merchant operations with an evolving sector-based marketplace world.';
 
 const NAV_ITEMS = [
   { label: 'Sellio World', href: '#world' },
@@ -465,11 +468,113 @@ export default function LandingPage() {
 
   useEffect(() => {
     const previousTitle = document.title;
-    const description = document.querySelector('meta[name="description"]');
-    const previousDescription = description?.getAttribute('content');
-    document.title = 'Sellio — Storefronts, Operations & Marketplace for Modern Commerce';
-    description?.setAttribute('content', 'Sellio connects branded storefronts, F&B ordering and merchant operations with an evolving sector-based marketplace world.');
-    return () => { document.title = previousTitle; if (description && previousDescription) description.setAttribute('content', previousDescription); };
+    const selectors = [
+      ['meta[name="description"]', 'content', LANDING_DESCRIPTION],
+      ['meta[name="robots"]', 'content', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'],
+      ['meta[property="og:title"]', 'content', LANDING_TITLE],
+      ['meta[property="og:description"]', 'content', LANDING_DESCRIPTION],
+      ['meta[property="og:url"]', 'content', SITE_URL],
+      ['meta[name="twitter:title"]', 'content', LANDING_TITLE],
+      ['meta[name="twitter:description"]', 'content', LANDING_DESCRIPTION],
+      ['meta[name="twitter:url"]', 'content', SITE_URL],
+    ];
+
+    const restored = [];
+    const ensureMeta = (selector, attribute, value) => {
+      let node = document.querySelector(selector);
+      const created = !node;
+      if (!node) {
+        node = document.createElement('meta');
+        const nameMatch = selector.match(/meta\[name="([^"]+)"\]/);
+        const propertyMatch = selector.match(/meta\[property="([^"]+)"\]/);
+        if (nameMatch) node.setAttribute('name', nameMatch[1]);
+        if (propertyMatch) node.setAttribute('property', propertyMatch[1]);
+        document.head.appendChild(node);
+      }
+      restored.push({ node, attribute, previous: node.getAttribute(attribute), created });
+      node.setAttribute(attribute, value);
+    };
+
+    selectors.forEach(([selector, attribute, value]) => ensureMeta(selector, attribute, value));
+
+    let canonical = document.querySelector('link[rel="canonical"]');
+    const createdCanonical = !canonical;
+    const previousCanonical = canonical?.getAttribute('href');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute('href', SITE_URL);
+    document.title = LANDING_TITLE;
+
+    const schemas = [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: 'Sellio',
+        url: SITE_URL,
+        description: LANDING_DESCRIPTION,
+        inLanguage: 'en-SG',
+        publisher: {
+          '@type': 'Organization',
+          name: 'Apptelier',
+          url: 'https://apptelier.sg/',
+        },
+      },
+      {
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        name: 'Sellio',
+        url: SITE_URL,
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Web',
+        description: LANDING_DESCRIPTION,
+        offers: PLANS.map((plan) => ({
+          '@type': 'Offer',
+          name: plan.name,
+          price: String(plan.monthly),
+          priceCurrency: 'SGD',
+          url: plan.links.monthly,
+        })),
+        creator: {
+          '@type': 'Organization',
+          name: 'Apptelier',
+          url: 'https://apptelier.sg/',
+        },
+      },
+      {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: FAQ_ITEMS.map((item) => ({
+          '@type': 'Question',
+          name: item.question,
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: item.answer,
+          },
+        })),
+      },
+    ].map((schema, index) => {
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.dataset.sellioLandingSchema = String(index);
+      script.text = JSON.stringify(schema);
+      document.head.appendChild(script);
+      return script;
+    });
+
+    return () => {
+      document.title = previousTitle;
+      restored.forEach(({ node, attribute, previous, created }) => {
+        if (created) node.remove();
+        else if (previous !== null) node.setAttribute(attribute, previous);
+        else node.removeAttribute(attribute);
+      });
+      if (createdCanonical) canonical.remove();
+      else if (previousCanonical) canonical.setAttribute('href', previousCanonical);
+      schemas.forEach((script) => script.remove());
+    };
   }, []);
 
   return (
