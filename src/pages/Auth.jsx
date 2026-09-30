@@ -6,6 +6,7 @@ import { createPageUrl } from '../utils';
 import { useAppUser } from '@/lib/AppUserContext';
 import AuthPricingModal from '@/components/auth/AuthPricingModal';
 import AppLoader from '@/components/ui-custom/AppLoader';
+import { accountDeletionDestination } from '@/components/profile/AccountDeletionForm';
 
 const BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
 
@@ -101,7 +102,7 @@ export default function Auth() {
             console.log('[Auth] session recovery for', session.user.email, '→ activeMember:', isActiveMember);
             if (isActiveMember) {
               setAppUser(appUserRow);
-              window.location.href = '/Dashboard';
+              window.location.href = accountDeletionDestination('/Dashboard');
               return;
             }
           }
@@ -325,7 +326,7 @@ export default function Auth() {
             .eq('status', 'pending');
         }
 
-        window.location.href = appUser.onboarding_completed ? '/Dashboard' : '/Onboarding';
+        window.location.href = accountDeletionDestination(appUser.onboarding_completed ? '/Dashboard' : '/Onboarding');
       } catch (err) {
         toast.error(err.message || 'Google Sign-In failed');
         setGoogleLoading(false);
@@ -519,7 +520,7 @@ export default function Auth() {
         setAppUser(userForCookie);
         showSuccess('Welcome back!');
         setTimeout(() => {
-          window.location.href = createPageUrl(appUserRow.onboarding_completed ? 'Dashboard' : 'Onboarding');
+          window.location.href = accountDeletionDestination(createPageUrl(appUserRow.onboarding_completed ? 'Dashboard' : 'Onboarding'));
         }, 500);
 
       } else {
