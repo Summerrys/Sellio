@@ -60,6 +60,12 @@ begin
  begin perform public.place_order_once(tenant,jsonb_build_array(jsonb_build_object('product_id',product,'quantity',3)),checkout_key);
  exception when invalid_parameter_value then blocked:=true; end;
  assert blocked, 'A retry key must not accept a changed cart';
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',owner,'email',owner_email,'role','authenticated')::text,true);
+ blocked:=false;
+ begin perform public.place_order_once(tenant,jsonb_build_array(jsonb_build_object('product_id',product,'quantity',2,'options','[]'::jsonb)),checkout_key);
+ exception when insufficient_privilege then blocked:=true; end;
+ assert blocked, 'Identity changes during retry must not create another order';
+ assert (select count(*)=1 from public.orders where tenant_id=tenant), 'Changed checkout identity must not duplicate an order';
 
  request:=public.account_deletion_prepare(owner);
  assert request->>'status'='needs_owner_action', 'Store owner must not be deleted';
