@@ -364,7 +364,10 @@ function CounterScreen() {
   const qrLabel = tenant?.currency === 'MYR' ? 'QR · DuitNow / TNG' : 'QR · PayNow';
 
   return (
-    <div className="ctr-root" aria-busy={sending}>
+    <div className="ctr-root" aria-busy={sending}
+      onClickCapture={event => { if (sendingRef.current) { event.preventDefault(); event.stopPropagation(); } }}
+      onChangeCapture={event => { if (sendingRef.current) { event.preventDefault(); event.stopPropagation(); } }}
+      onKeyDownCapture={event => { if (sendingRef.current) { event.preventDefault(); event.stopPropagation(); } }}>
       <style>{CSS}</style>
       {sending && <div role="status" className="fixed inset-0 z-[80] flex items-center justify-center bg-black/30"><div className="rounded-xl bg-background text-foreground px-5 py-4 shadow-xl">Sending order…</div></div>}
 
