@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { getSupabase } from '@/lib/supabaseClient';
+import { submitCheckout } from '@/lib/mobileCheckout';
 import StorefrontView from '@/components/storefront/StorefrontView';
 import MenuAssistantWidget from '@/components/storefront/MenuAssistantWidget';
 import { LanguageProvider, useLanguage, prewarmTranslations } from '@/lib/LanguageContext';
@@ -454,7 +455,10 @@ function StorefrontInner() {
     setOrderHistory(data || []);
   };
 
+  const checkoutGuard = useRef(false);
   const handleSubmitOrder = async () => {
+    if (checkoutGuard.current || isSubmitting || !cart.length) return;
+    checkoutGuard.current = true;
     setIsSubmitting(true);
     const supabase = await getSupabase();
     const savedCartTotal = cartTotal;
@@ -467,7 +471,7 @@ function StorefrontInner() {
     let order = null;
     let error = null;
     try {
-      const { data, error: rpcError } = await supabase.rpc('place_order', {
+      order = await submitCheckout(supabase, {
         p_tenant_id: tenant.id,
         p_items: savedCart.map(item => ({
           key: item.key,
@@ -480,13 +484,12 @@ function StorefrontInner() {
         p_table_id: tableId || null,
         p_notes: checkoutForm.notes || null,
         p_customer_id: customerId || null,
-      });
-      order = data;
-      error = rpcError;
+      }, `storefront:${tenant.id}:${tableId || 'takeaway'}`);
     } catch (e) {
       error = e;
     }
 
+    checkoutGuard.current = false;
     if (!error && order) {
       const orderNumber = order.order_number;
       const serverTotal = parseFloat(order.total_amount);
