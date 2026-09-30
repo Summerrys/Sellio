@@ -37,7 +37,7 @@ function InventoryContent() {
 
   const queryClient = useQueryClient();
   const handleRefresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['inventoryMerged', tenantId] });
+    return queryClient.invalidateQueries({ queryKey: ['inventoryMerged', tenantId] }, { throwOnError: true });
   }, [queryClient, tenantId]);
 
   const [activeTab, setActiveTab] = useState('inventory');
