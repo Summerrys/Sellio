@@ -17,14 +17,14 @@ export async function submitCheckout(supabase, parameters, scope) {
     const previous = sessionStorage.getItem(storageKey);
     attempt = previous ? JSON.parse(previous) : null;
     if (attempt && attempt.signature !== signature) {
-      throw new Error('An earlier submission is unconfirmed. Check Orders before changing and resubmitting this cart.');
+      throw Object.assign(new Error('An earlier submission is unconfirmed. Retry the same cart to recover its result before starting another order.'), { checkoutUnconfirmed: true });
     }
     if (!attempt) {
       attempt = { id: crypto.randomUUID(), signature };
       sessionStorage.setItem(storageKey, JSON.stringify(attempt));
     }
   } catch (error) {
-    throw new Error(error?.message || 'App storage is required to safely submit this order.');
+    throw Object.assign(new Error(error?.message || 'App storage is required to safely submit this order.'), { checkoutUnconfirmed: !!error?.checkoutUnconfirmed });
   }
   const record = { requestId: attempt.id, tenantId: parameters.p_tenant_id, count: parameters.p_items.reduce((sum, item) => sum + item.quantity, 0), state: 'sending' };
   publish([...pending.filter(item => item.requestId !== attempt.id), record]);
@@ -41,6 +41,7 @@ export async function submitCheckout(supabase, parameters, scope) {
       publish(pending.filter(item => item.requestId !== attempt.id));
     } else {
       publish(pending.map(item => item.requestId === attempt.id ? { ...item, state: 'unconfirmed' } : item));
+      throw Object.assign(new Error('Order submission is unconfirmed. Retry this same cart to recover the result. Your cart has been kept.'), { checkoutUnconfirmed: true, cause: error });
     }
     throw error;
   }
