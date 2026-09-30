@@ -19,7 +19,7 @@ create policy live_auth_identity on public.app_users as restrictive for all to a
  using(app.auth_identity_exists()) with check(app.auth_identity_exists());
 
 create or replace function public.account_deletion_prepare(p_auth_user_id uuid)
-returns jsonb language plpgsql security definer set search_path='' as $$
+returns jsonb language plpgsql security definer set search_path='' as $
 declare
  v_email text; v_owned jsonb; v_storage bigint; v_status text;
  v_request app.account_deletion_requests%rowtype; v_snapshot jsonb; v_active boolean;
@@ -33,7 +33,7 @@ begin
  from public.tenants t where lower(t.owner_email)=v_email or exists(
    select 1 from public.tenant_users tu where tu.tenant_id=t.id and lower(tu.user_email)=v_email and coalesce(tu.is_owner,false)
  );
- select count(*) into v_storage from storage.objects where owner_id=p_auth_user_id::text;
+ select count(*) into v_storage from storage.objects where owner_id=p_auth_user_id::text or owner=p_auth_user_id;
  v_status := case
    when exists(select 1 from public.super_admins where lower(email)=v_email and coalesce(is_active,true)) then 'needs_admin_action'
    when jsonb_array_length(v_owned)>0 then 'needs_owner_action'
@@ -52,7 +52,7 @@ begin
    update public.app_users set is_active=false,updated_date=now() where lower(email)=v_email;
  end if;
  return jsonb_build_object('requestId',v_request.id,'status',v_status,'blockers',v_request.blockers);
-end $$;
+end $;
 revoke all on function public.account_deletion_prepare(uuid) from public,anon,authenticated;
 grant execute on function public.account_deletion_prepare(uuid) to service_role;
 
@@ -77,7 +77,7 @@ revoke all on function public.account_deletion_finish(uuid,uuid) from public,ano
 grant execute on function public.account_deletion_finish(uuid,uuid) to service_role;
 
 create or replace function public.account_deletion_restore(p_auth_user_id uuid,p_request_id uuid)
-returns void language plpgsql security definer set search_path='' as $$
+returns void language plpgsql security definer set search_path='' as $
 declare v_request app.account_deletion_requests%rowtype;
 begin
  select * into v_request from app.account_deletion_requests where id=p_request_id and auth_user_id=p_auth_user_id for update;
@@ -85,10 +85,28 @@ begin
  if not exists(select 1 from auth.users where id=p_auth_user_id) then return; end if;
  update public.tenant_users tu set status=snap.status,updated_date=now()
  from jsonb_to_recordset(v_request.membership_snapshot) as snap(id text,status text)
- where tu.id=snap.id and lower(tu.user_email)=v_request.email and tu.status='suspended';
+ where tu.id=snap.id and lower(tu.user_email)=v_request.email and tu.status='suspended' and tu.updated_date=v_request.updated_at;
  update public.app_users set is_active=coalesce(v_request.profile_was_active,true),updated_date=now()
- where lower(email)=v_request.email and is_active=false;
+ where lower(email)=v_request.email and is_active=false and updated_date=v_request.updated_at;
  update app.account_deletion_requests set status='failed',updated_at=now() where id=v_request.id;
-end $$;
+end $;
 revoke all on function public.account_deletion_restore(uuid,uuid) from public,anon,authenticated;
 grant execute on function public.account_deletion_restore(uuid,uuid) to service_role;
+
+-- Finalize personal data in the same transaction that removes Auth.
+-- An error rolls Auth deletion back, allowing the edge function to restore access.
+create or replace function app.finish_account_deletion_on_auth_delete()
+returns trigger language plpgsql security definer set search_path='' as $$
+declare v_request_id uuid;
+begin
+ select id into v_request_id from app.account_deletion_requests
+ where auth_user_id=old.id and status='processing';
+ if v_request_id is not null then
+   perform public.account_deletion_finish(old.id,v_request_id);
+ end if;
+ return old;
+end $$;
+revoke all on function app.finish_account_deletion_on_auth_delete() from public,anon,authenticated;
+create trigger sellio_account_deletion_finalize
+after delete on auth.users for each row
+execute function app.finish_account_deletion_on_auth_delete();
