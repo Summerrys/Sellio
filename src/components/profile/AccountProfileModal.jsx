@@ -470,7 +470,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
             <AlertDialogTitle>Delete your Sellio account?</AlertDialogTitle>
             <AlertDialogDescription>Confirm the account below before proceeding.</AlertDialogDescription>
           </AlertDialogHeader>
-          <AccountDeletionForm expectedEmail={user?.email} onBusyChange={setDeletingAccount} />
+          <AccountDeletionForm expectedEmail={user?.email} onBusyChange={setDeletingAccount} onCompleted={() => window.location.assign('/delete-account')} />
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deletingAccount}>Close</AlertDialogCancel>
           </AlertDialogFooter>
