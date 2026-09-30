@@ -5,7 +5,7 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useBackToClose } from '@/lib/useBackToClose';
 
-export default function MenuAssistantWidget({ products, tenant, onProductSelect, onAddToCart, storefront, externalOpen, onExternalClose, isStoreOpen = true, isPreview = false }) {
+export default function MenuAssistantWidget({ products, tenant, onProductSelect, onAddToCart, storefront, externalOpen, onExternalClose, isStoreOpen = true, isPreview = false, cart }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   useBackToClose(open, () => setOpen(false));
@@ -85,6 +85,8 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
           products: products,
           tenant: tenant,
           isStoreOpen: isPreview ? true : isStoreOpen,
+          // menuAssistant v23 uses this to see what's already in the cart.
+          ...(Array.isArray(cart) ? { cart: cart.map(i => ({ productId: i.product_id, quantity: i.quantity, variant: i.variant || null })) } : {}),
         }
       });
 

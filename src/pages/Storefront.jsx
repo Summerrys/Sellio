@@ -1042,6 +1042,7 @@ function StorefrontInner() {
           storefront={storefrontConfig}
           onProductSelect={() => {}}
           onAddToCart={addToCart}
+          cart={cart}
           isStoreOpen={isStoreOpen}
           isPreview={isPreview}
         />
