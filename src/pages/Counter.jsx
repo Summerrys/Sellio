@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Loader2, ShoppingBag } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
+import { submitCheckout } from '@/lib/mobileCheckout';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import { fetchStorefrontCatalog } from '@/lib/storefrontCatalog';
@@ -95,6 +96,7 @@ function CounterScreen() {
     try { return localStorage.getItem('counter_name_mode') || 'cjk'; } catch { return 'cjk'; }
   });
   const uidRef = useRef(1);
+  const sendingRef = useRef(false);
 
   const byId = useMemo(() => Object.fromEntries(products.map(p => [p.id, p])), [products]);
   const groupsById = useMemo(() => Object.fromEntries(products.map(p => [p.id, getOptionGroups(p)])), [products]);
@@ -274,11 +276,12 @@ function CounterScreen() {
   };
 
   const send = async () => {
-    if (!lines.length || sending || !target) return;
+    if (!lines.length || sendingRef.current || sending || !target) return;
+    sendingRef.current = true;
     setSending(true);
     try {
       const supabase = await getSupabase();
-      const { data, error } = await supabase.rpc('place_order', {
+      const data = await submitCheckout(supabase, {
         p_tenant_id: tenantId,
         p_items: lines.map(l => ({
           product_id: l.pid,
@@ -290,8 +293,7 @@ function CounterScreen() {
         p_table_id: target.tableId || null,
         p_notes: null,
         p_customer_id: null,
-      });
-      if (error) throw error;
+      }, `counter:${tenantId}:${target.key}`);
       toast.success(`${data.order_number} sent to kitchen · ${money(data.total_amount)}`);
       setTickets(prev => ({ ...prev, [target.key]: [] }));
       backToTables();
@@ -303,6 +305,7 @@ function CounterScreen() {
       else if (['P0002', '22023'].includes(e?.code) && msg) toast.error(msg);
       else toast.error('Could not send the order. Check your connection and try again.');
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };
