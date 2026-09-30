@@ -6,6 +6,8 @@ import { isFnBIndustry } from '@/lib/industry';
 import { useAppUser } from '@/lib/AppUserContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PullToRefresh from '../components/ui-custom/PullToRefresh';
+import { useSyncExternalStore } from 'react';
+import { getPendingCheckouts, subscribePendingCheckouts } from '@/lib/mobileCheckout';
 import TableCallAlerts from '../components/orders/TableCallAlerts';
 import { Button } from '@/components/ui/button';
 import { NEW_ORDER_TONE_URL, URGENT_ORDER_TONE_URL } from '@/lib/kdsSounds';
@@ -621,7 +623,7 @@ export default function Orders() {
     }
   };
 
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (throwOnError = false) => {
     if (!tenantId) return;
     const supabase = await getSupabase();
     const { data, error } = await supabase
@@ -632,6 +634,7 @@ export default function Orders() {
       .order('created_date', { ascending: false });
     if (!error) setOrders(data || []);
     setIsLoading(false);
+    if (error && throwOnError === true) throw error;
   }, [tenantId]);
 
   useEffect(() => {
@@ -723,11 +726,12 @@ export default function Orders() {
 
   const handleMarkPaid = async (order) => {
     const supabase = await getSupabase();
-    await supabase.from('orders').update({
+    const { error: paymentError } = await supabase.from('orders').update({
       payment_status: 'paid',
       status: 'completed',
       updated_date: new Date().toISOString(),
-    }).eq('id', order.id);
+    }).eq('id', order.id).eq('tenant_id', tenantId);
+    if (paymentError) { toast.error('Could not mark this order as paid'); return; }
 
     if (order.table_id) {
       await supabase.from('tables').update({
@@ -750,7 +754,8 @@ export default function Orders() {
     toast.success('Marked as paid ✓');
   };
 
-  const handleRefresh = useCallback(() => fetchOrders(), [fetchOrders]);
+  const pendingCheckouts = useSyncExternalStore(subscribePendingCheckouts, getPendingCheckouts, getPendingCheckouts).filter(item => item.tenantId === tenantId);
+  const handleRefresh = useCallback(() => fetchOrders(true), [fetchOrders]);
 
   const tabOrders = activeTab === 'all' ? orders : orders.filter(o => o.status === activeTab);
   const filteredOrders = searchQuery.trim()
@@ -804,6 +809,11 @@ export default function Orders() {
     <RequirePermission permission="orders.view">
       <PullToRefresh onRefresh={handleRefresh}>
         <div className="space-y-4">
+          {pendingCheckouts.length > 0 && (
+            <div role="status" aria-live="polite" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              {pendingCheckouts.map(item => <p key={item.requestId}>{item.count} item(s): {item.state === 'sending' ? 'Sending order…' : 'Submission unconfirmed. Check the order list, then retry the same cart.'}</p>)}
+            </div>
+          )}
           {/* Header */}
           <div className="flex items-start justify-between gap-3">
             <div>
