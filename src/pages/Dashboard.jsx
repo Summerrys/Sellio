@@ -241,7 +241,7 @@ export default function Dashboard() {
 
   const todayLabel = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
   const handleRefresh = useCallback(() => Promise.all(
-    ['todayOrders', 'dashboardProducts', 'dashboardInventoryItems', 'dashboardStaff', 'recentOrders', 'revenueChart']
+    ['todayOrders', 'dashboardProducts', 'dashboardInventoryItems', 'dashboardStaff', 'recentOrders', 'revenueOrders']
       .map(key => queryClient.invalidateQueries({ queryKey: [key, tenantId] }, { throwOnError: true }))
   ), [queryClient, tenantId]);
 
