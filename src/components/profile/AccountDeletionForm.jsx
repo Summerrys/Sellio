@@ -21,7 +21,15 @@ export function accountDeletionDestination(fallback) {
   return '/delete-account';
 }
 
-export default function AccountDeletionForm({ expectedEmail, onBusyChange }) {
+function readCompletedDeletion() {
+  try {
+    if (window.location.pathname !== '/delete-account') return null;
+    const receipt = JSON.parse(sessionStorage.getItem('sellio_completed_deletion') || 'null');
+    return receipt?.status === 'completed' && receipt?.requestId ? receipt : null;
+  } catch { return null; }
+}
+
+export default function AccountDeletionForm({ expectedEmail, onBusyChange, onCompleted }) {
   const queryClient = useQueryClient();
   const [identity, setIdentity] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -29,10 +37,15 @@ export default function AccountDeletionForm({ expectedEmail, onBusyChange }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [needsSignIn, setNeedsSignIn] = useState(false);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState(readCompletedDeletion);
   const lock = useRef(false);
 
   useEffect(() => {
+    if (result?.status === 'completed') {
+      sessionStorage.removeItem('sellio_completed_deletion');
+      setLoading(false);
+      return;
+    }
     let mounted = true;
     getSupabase().then(client => client.auth.getUser()).then(({ data, error: authError }) => {
       if (!mounted) return;
@@ -86,6 +99,7 @@ export default function AccountDeletionForm({ expectedEmail, onBusyChange }) {
       if (!data?.requestId || !data?.status) throw new Error('Deletion has not been confirmed. Please retry.');
       setResult(data);
       if (data.status === 'completed') {
+        try { sessionStorage.setItem('sellio_completed_deletion', JSON.stringify(data)); } catch { /* Confirmation remains in this view. */ }
         cookieUtils.clear();
         localStorage.removeItem('app_user');
         localStorage.removeItem('app_session');
@@ -94,6 +108,7 @@ export default function AccountDeletionForm({ expectedEmail, onBusyChange }) {
         // Keep the confirmation visible until the user leaves this public page.
         setIdentity(null);
         setNeedsSignIn(false);
+        onCompleted?.(data);
       }
     } catch (err) {
       setError(err.message || 'Deletion could not be completed. Please try again.');
