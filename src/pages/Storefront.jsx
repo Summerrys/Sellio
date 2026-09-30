@@ -848,6 +848,7 @@ function StorefrontInner() {
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 4 }}>Notes (optional)</label>
               <textarea
+                disabled={isSubmitting}
                 value={checkoutForm.notes}
                 onChange={e => setCheckoutForm(p => ({ ...p, notes: e.target.value }))}
                 placeholder="Any special requests?"
