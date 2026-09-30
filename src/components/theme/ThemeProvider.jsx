@@ -9,6 +9,29 @@ export function ThemeProvider({ children, tenantId }) {
   const queryClient = useQueryClient();
   const [previewTheme, setPreviewTheme] = useState(null);
 
+
+  // System appearance is independent of the store's saved brand palette.
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const root = document.documentElement;
+    const previousDark = root.classList.contains('dark');
+    const previousScheme = root.style.colorScheme;
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const syncAppearance = () => {
+      root.classList.toggle('dark', media.matches);
+      root.style.colorScheme = media.matches ? 'dark' : 'light';
+    };
+    syncAppearance();
+    if (media.addEventListener) media.addEventListener('change', syncAppearance);
+    else media.addListener?.(syncAppearance);
+    return () => {
+      if (media.removeEventListener) media.removeEventListener('change', syncAppearance);
+      else media.removeListener?.(syncAppearance);
+      root.classList.toggle('dark', previousDark);
+      root.style.colorScheme = previousScheme;
+    };
+  }, []);
+
   // Fetch theme config directly from Supabase
   const { data: themeConfig } = useQuery({
     queryKey: ['themeConfig', tenantId],
