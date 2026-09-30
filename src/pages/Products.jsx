@@ -76,9 +76,14 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess, m
       const reader = new FileReader();
       const base64 = await new Promise((res, rej) => { reader.onload = e => res(e.target.result.split(',')[1]); reader.onerror = rej; reader.readAsDataURL(image); });
       const mediaType = image.type || 'image/jpeg';
+      // scanMenu v15 checks who is scanning: send the signed-in session token.
+      const { data: { session } } = await (await getSupabase()).auth.getSession();
       const res = await fetch(`${SUPABASE_URL}/functions/v1/scanMenu`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({ imageBase64: base64, mediaType, tenantId }),
       });
       const data = await res.json();
