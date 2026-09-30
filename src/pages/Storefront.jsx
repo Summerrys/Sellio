@@ -90,6 +90,8 @@ function StorefrontInner() {
   const [placedOrderNumber, setPlacedOrderNumber] = useState('');
   const [copied, setCopied] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
+  // Set when the menu assistant asks to show an item's product screen.
+  const [assistantProductRequest, setAssistantProductRequest] = useState(null);
   // Phone/browser Back closes these screens instead of leaving the menu
   // (customers arrive straight from their camera's QR scanner).
   useBackToClose(showCart, () => setShowCart(false));
@@ -680,6 +682,7 @@ function StorefrontInner() {
           categories={categories}
           showBackButton={!isDineIn || isStaffMode}
           onProductModalChange={setShowProductModal}
+          openProductRequest={assistantProductRequest}
           cart={cart}
           setCart={setCart}
           showCart={showCart}
@@ -1041,12 +1044,15 @@ function StorefrontInner() {
         </div>
       )}
 
-      {products.length > 0 && !showCart && !showCheckout && !showOrderHistory && !showProductModal && (isPreview || isStoreOpen) && (
+      {/* The assistant stays mounted (keeping the conversation) while the cart,
+          checkout, order history or an item's product screen is open; it just hides. */}
+      {products.length > 0 && (isPreview || isStoreOpen) && (
         <MenuAssistantWidget
           products={products}
           tenant={tenant}
           storefront={storefrontConfig}
-          onProductSelect={() => {}}
+          hidden={showCart || showCheckout || showOrderHistory || showProductModal}
+          onProductSelect={(product) => { setAssistantProductRequest({ product }); setShowProductModal(true); }}
           onAddToCart={addToCart}
           cart={cart}
           isStoreOpen={isStoreOpen}

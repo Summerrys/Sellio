@@ -5,7 +5,7 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useBackToClose } from '@/lib/useBackToClose';
 
-export default function MenuAssistantWidget({ products, tenant, onProductSelect, onAddToCart, storefront, externalOpen, onExternalClose, isStoreOpen = true, isPreview = false, cart }) {
+export default function MenuAssistantWidget({ products, tenant, onProductSelect, onAddToCart, storefront, externalOpen, onExternalClose, isStoreOpen = true, isPreview = false, cart, hidden = false }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   useBackToClose(open, () => setOpen(false));
@@ -38,6 +38,13 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
     }
   }, [externalOpen]);
 
+  // While the storefront shows the cart, checkout, order history or an item's
+  // product screen, the chat is hidden but stays mounted (the conversation is
+  // kept); its panel closes so Back and the screen underneath work as before.
+  useEffect(() => {
+    if (hidden) setOpen(false);
+  }, [hidden]);
+
   const renderMarkdown = (text) => {
     if (!text) return null;
     const parts = text.split(/(\*\*.*?\*\*)/g);
@@ -58,9 +65,14 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
       const product = allProducts.find(p => p.id === action.productId);
       if (!product) continue;
       const qty = Math.max(1, Math.floor(action.quantity || 1));
-      for (let i = 0; i < qty; i++) { onAddToCart(product, null); }
+      // menuAssistant v26 returns the chosen option (e.g. size) as `variant`,
+      // built exactly like the item's product screen builds it.
+      const variant = action.variant && typeof action.variant.label === 'string' && action.variant.label
+        ? { label: action.variant.label, price_modifier: Number(action.variant.price_modifier) || 0 }
+        : null;
+      for (let i = 0; i < qty; i++) { onAddToCart(product, variant); }
       addedCount += qty;
-      addedNames.push(`${qty}x ${product.name}`);
+      addedNames.push(`${qty}x ${product.name}${variant ? ` (${variant.label})` : ''}`);
     }
     return { addedCount, addedNames };
   };
@@ -87,6 +99,8 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
           isStoreOpen: isPreview ? true : isStoreOpen,
           // menuAssistant v23 uses this to see what's already in the cart.
           ...(Array.isArray(cart) ? { cart: cart.map(i => ({ productId: i.product_id, quantity: i.quantity, variant: i.variant || null })) } : {}),
+          // menuAssistant v26 offers items' options (sizes, add-ons) only to a chat that can add them.
+          optionsSupported: true,
         }
       });
 
@@ -101,12 +115,10 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
 
       const { text: aiText, recommendedProductIds, cartActions } = data;
 
-      if (cartActions && cartActions.length > 0) {
-        const result = executeCartActions(cartActions, products);
-        if (result.addedCount > 0) {
-          setCartFeedback(result);
-          setTimeout(() => setCartFeedback(null), 4000);
-        }
+      const result = executeCartActions(cartActions, products);
+      if (result.addedCount > 0) {
+        setCartFeedback(result);
+        setTimeout(() => setCartFeedback(null), 4000);
       }
       const recommendedProducts = (recommendedProductIds || [])
         .map((id) => products.find((p) => p.id === id))
@@ -116,7 +128,7 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
         role: 'assistant',
         content: aiText,
         products: recommendedProducts,
-        hasCartAction: cartActions && cartActions.length > 0,
+        hasCartAction: result.addedCount > 0,
       }]);
 
       // Add AI response to conversation history AFTER receiving response
@@ -141,6 +153,8 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
   const buttonBackground = primaryColor.startsWith('#') || primaryColor.startsWith('rgb')
     ? primaryColor
     : 'linear-gradient(135deg, #f97316, #ec4899, #8b5cf6)';
+
+  if (hidden) return null;
 
   return (
     <>
@@ -285,7 +299,7 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
                   lineHeight: 1.5,
                   wordWrap: 'break-word'
                 }}>
-                  <p style={{ margin: 0 }}>{msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content}</p>
+                  <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content}</p>
                   {msg.hasCartAction && (
                     <div style={{
                       marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -378,6 +392,13 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  // Items with options (sizes, add-ons) open their product screen
+                                  // to choose, the same as the menu's own add buttons.
+                                  if (product.variants?.length > 0) {
+                                    onProductSelect(product);
+                                    setOpen(false);
+                                    return;
+                                  }
                                   onAddToCart(product, null);
                                   setCartFeedback({ addedCount: 1, addedNames: [`1x ${product.name}`] });
                                   setTimeout(() => setCartFeedback(null), 4000);

@@ -409,6 +409,7 @@ export default function StorefrontView({
   previewMode = false,
   showBackButton = false,
   onProductModalChange,
+  openProductRequest,
   tenant: tenantProp,
   storefrontConfig: storefrontConfigProp,
   theme: themeProp,
@@ -511,6 +512,18 @@ export default function StorefrontView({
   const closeProductModal = () => { setSelectedProduct(null); setSelectedVariants({}); setItemNotes(''); setActiveImageIndex(0); onProductModalChange?.(false); };
   // Phone/browser Back closes the product details instead of leaving the menu.
   useBackToClose(!!selectedProduct, closeProductModal);
+  // The menu assistant can ask to show an item's product screen: Storefront.jsx
+  // sets openProductRequest to a new { product } object (and marks the screen
+  // open) in the same tap. Applied while rendering, so the chat closing and the
+  // product screen opening land in one update (one Back-button history entry).
+  const [handledProductRequest, setHandledProductRequest] = useState(null);
+  if (openProductRequest && openProductRequest !== handledProductRequest) {
+    setHandledProductRequest(openProductRequest);
+    if (!previewMode && openProductRequest.product) {
+      setSelectedProduct(openProductRequest.product);
+      setActiveImageIndex(0);
+    }
+  }
 
   // Screen-size-based (not staff-mode-based, per merchant's explicit direction) -
   // a customer browsing on their own tablet benefits from this too, not just
