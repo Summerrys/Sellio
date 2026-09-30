@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
+import AccountDeletionForm from './AccountDeletionForm';
 import { useTenant } from '@/components/tenant/TenantContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Input } from '@/components/ui/input';
@@ -52,6 +53,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
   const [confirmToggle, setConfirmToggle] = useState(null); // 'email' | 'orders' | null
 
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [isOpeningBilling, setIsOpeningBilling] = useState(false);
 
   // Detect if user is email/password (not OAuth)
@@ -207,11 +209,6 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
   const handleSignOut = () => {
     clearAppUser?.();
     window.location.href = createPageUrl('Auth');
-  };
-
-  const handleDeleteAccount = () => {
-    setShowDeleteAlert(false);
-    toast.info('Please contact support to delete your account.');
   };
 
   const handleManageBilling = async () => {
@@ -467,19 +464,15 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
         </div>
       </div>
 
-      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
-        <AlertDialogContent>
+      <AlertDialog open={showDeleteAlert} onOpenChange={value => { if (!deletingAccount) setShowDeleteAlert(value); }}>
+        <AlertDialogContent className="max-h-[90dvh] overflow-y-auto">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Account?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete your account? This action cannot be undone.
-            </AlertDialogDescription>
+            <AlertDialogTitle>Delete your Sellio account?</AlertDialogTitle>
+            <AlertDialogDescription>Confirm the account below before proceeding.</AlertDialogDescription>
           </AlertDialogHeader>
+          <AccountDeletionForm expectedEmail={user?.email} onBusyChange={setDeletingAccount} />
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={handleDeleteAccount}>
-              Continue
-            </AlertDialogAction>
+            <AlertDialogCancel disabled={deletingAccount}>Close</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
