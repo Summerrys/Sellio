@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import React, { useState, useEffect, useRef } from 'react';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { getSupabase } from '@/lib/supabaseClient';
 import { BellRing, X } from 'lucide-react';
 
 export default function StockAdjustmentPanel({ open, onOpenChange, product, tenantId, onSuccess, onClose, initialThreshold }) {
   const queryClient = useQueryClient();
 
-  const currentStock = product?.current_stock ?? product?.inventory?.[0]?.current_stock ?? product?.stock_quantity ?? 0;
+  const observedStock = product?.current_stock ?? product?.inventory?.[0]?.current_stock ?? product?.stock_quantity ?? 0;
+  const [currentStock, setCurrentStock] = useState(observedStock);
 
   const [newStock, setNewStock] = useState(currentStock ?? 0);
   const [notes, setNotes] = useState('');
@@ -14,77 +16,94 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
   const [threshold, setThreshold] = useState(initialThreshold ?? product?.low_stock_threshold ?? product?.inventory?.[0]?.low_stock_threshold ?? 5);
 
   useEffect(() => {
-    setNewStock(currentStock ?? 0);
+    setCurrentStock(observedStock);
+    setNewStock(observedStock);
     setNotes('');
     setIsSubmitting(false);
     setThreshold(initialThreshold ?? product?.low_stock_threshold ?? product?.inventory?.[0]?.low_stock_threshold ?? 5);
-  }, [currentStock, open, initialThreshold]);
+  }, [product?.id, open, initialThreshold]);
 
   const handleClose = () => {
+    if (submittingRef.current) return;
     onOpenChange(false);
     onClose?.();
   };
 
+  const submittingRef = useRef(false);
+  const mutationKey = ['adjustInventory', tenantId, product?.id];
+  const inventoryKeys = ['products', 'inventoryMerged', 'dashboardInventoryItems'];
+  const adjustment = useMutation({
+    mutationKey,
+    mutationFn: async variables => {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase.rpc('adjust_inventory', variables);
+      if (error) throw error;
+      return data;
+    },
+    onMutate: async variables => {
+      const keys = inventoryKeys.map(key => [key, variables.p_tenant_id]);
+      await Promise.all(keys.map(queryKey => queryClient.cancelQueries({ queryKey })));
+      const previousItems = keys.map(queryKey => {
+        const rows = queryClient.getQueryData(queryKey);
+        return { queryKey, item: Array.isArray(rows) ? rows.find(row => (row.product_id || row.id) === variables.p_product_id) : undefined };
+      });
+      keys.forEach(queryKey => queryClient.setQueryData(queryKey, rows => Array.isArray(rows) ? rows.map(row =>
+        (row.product_id || row.id) === variables.p_product_id
+          ? { ...row, current_stock: variables.p_stock, stock_quantity: variables.p_stock, low_stock_threshold: variables.p_threshold, _pendingAdjustmentId: variables.p_request_id }
+          : row
+      ) : rows));
+      return { previousItems };
+    },
+    onError: (error, variables, context) => {
+      context?.previousItems.forEach(({ queryKey, item }) => {
+        if (!item) return;
+        queryClient.setQueryData(queryKey, rows => Array.isArray(rows) ? rows.map(row =>
+          row._pendingAdjustmentId === variables.p_request_id ? item : row
+        ) : rows);
+      });
+      toast.error(error.message || 'Failed to save stock. Your change has not been confirmed.');
+    },
+    onSuccess: (saved, variables) => {
+      inventoryKeys.forEach(key => queryClient.setQueryData([key, variables.p_tenant_id], rows => Array.isArray(rows) ? rows.map(row => {
+        if ((row.product_id || row.id) !== variables.p_product_id || row._pendingAdjustmentId !== variables.p_request_id) return row;
+        const { _pendingAdjustmentId, ...clean } = row;
+        return { ...clean, current_stock: saved.current_stock, stock_quantity: saved.stock_quantity, low_stock_threshold: saved.low_stock_threshold };
+      }) : rows));
+      toast.success('Stock saved');
+      onSuccess?.();
+      onOpenChange(false);
+      onClose?.();
+    },
+    onSettled: (_data, _error, variables) => Promise.all(
+      [...inventoryKeys, 'inventoryLogs', 'stockHistory'].map(key =>
+        queryClient.invalidateQueries({ queryKey: [key, variables.p_tenant_id] })
+      )
+    ),
+  });
+
   const handleSubmit = async () => {
-    if (newStock === currentStock && threshold === (initialThreshold ?? 5)) return;
+    if (submittingRef.current || queryClient.isMutating({ mutationKey }) || noChange) return;
+    if (!Number.isSafeInteger(newStock) || newStock < 0 || !Number.isSafeInteger(threshold) || threshold < 0) {
+      toast.error('Enter whole, non-negative stock and threshold values.');
+      return;
+    }
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
-      const supabase = await getSupabase();
-      const productId = product?.id;
-
-      const { data: existing } = await supabase
-        .from('inventory_items')
-        .select('id')
-        .eq('product_id', productId)
-        .eq('tenant_id', tenantId)
-        .maybeSingle();
-
-      if (existing) {
-        const { error } = await supabase
-          .from('inventory_items')
-          .update({
-            current_stock: newStock,
-            low_stock_threshold: threshold,
-            last_restock_date: new Date().toISOString(),
-            updated_date: new Date().toISOString(),
-          })
-          .eq('id', existing.id)
-          .eq('tenant_id', tenantId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('inventory_items')
-          .insert({ tenant_id: tenantId, product_id: productId, current_stock: newStock, low_stock_threshold: threshold, unit: 'pcs', last_restock_date: new Date().toISOString() });
-        if (error) throw error;
-      }
-
-      await supabase.from('products').update({ stock_quantity: newStock, low_stock_threshold: threshold, updated_date: new Date().toISOString() }).eq('id', productId).eq('tenant_id', tenantId);
-
-      try {
-        await supabase.from('stock_history').insert({
-          tenant_id: tenantId,
-          product_id: productId,
-          product_name: product?.name || null,
-          old_stock: currentStock,
-          new_stock: newStock,
-          change_amount: newStock - currentStock,
-          notes: notes?.trim() || null,
-          changed_by: (await supabase.auth.getUser())?.data?.user?.email || null,
-        });
-      } catch (historyErr) {
-        console.warn('stock_history insert failed (non-fatal):', historyErr.message);
-      }
-
-      queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
-      queryClient.invalidateQueries({ queryKey: ['inventoryLogs', tenantId] });
-      queryClient.invalidateQueries({ queryKey: ['stockHistory', tenantId] });
-
-      onSuccess?.();
-      handleClose();
-    } catch (error) {
-      console.error('Stock adjustment error:', error);
-      alert(`Failed: ${error.message}`);
+      await adjustment.mutateAsync({
+        p_tenant_id: tenantId,
+        p_product_id: product.id,
+        p_stock: newStock,
+        p_threshold: threshold,
+        p_expected_stock: currentStock,
+        p_expected_threshold: initialThreshold ?? product?.low_stock_threshold ?? product?.inventory?.[0]?.low_stock_threshold ?? 5,
+        p_request_id: crypto.randomUUID(),
+        p_notes: notes?.trim() || null,
+      });
+    } catch {
+      // The mutation restores only this pending item and reports the failure.
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
