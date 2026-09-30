@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, ChevronDown, ChevronUp, AlertCircle, Send, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -150,15 +151,15 @@ export default function DeliveryOrderTab() {
           <div>
             <label className="text-xs text-slate-500 mb-1.5 block">Supplier</label>
             {suppliers.length > 0 ? (
-              <select
-                value={form.supplier_id}
-                onChange={e => setForm(f => ({ ...f, supplier_id: e.target.value, supplier_name: '' }))}
-                className="w-full h-10 border border-slate-200 rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2"
-                style={{ '--tw-ring-color': 'rgb(var(--color-primary))' }}
-              >
-                <option value="">Select supplier</option>
-                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+              <Select value={form.supplier_id || '__clear__'} onValueChange={value => setForm(f => ({ ...f, supplier_id: value === '__clear__' ? '' : value, supplier_name: '' }))}>
+                <SelectTrigger aria-label="Supplier" className="h-10 bg-background">
+                  <SelectValue placeholder="Select supplier" />
+                </SelectTrigger>
+                <SelectContent className="z-[60] max-h-[min(20rem,var(--radix-select-content-available-height))]">
+                  <SelectItem value="__clear__">Select supplier</SelectItem>
+                  {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             ) : (
               <Input value={form.supplier_name} onChange={e => setForm(f => ({ ...f, supplier_name: e.target.value }))} placeholder="Supplier name" className="h-10" />
             )}
@@ -216,14 +217,15 @@ export default function DeliveryOrderTab() {
                   return (
                     <tr key={idx} className="hover:bg-slate-50">
                       <td className="px-2 py-2">
-                        <select
-                          value={item.product_id}
-                          onChange={e => setItem(idx, 'product_id', e.target.value)}
-                          className="w-full border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-xs focus:outline-none"
-                        >
-                          <option value="">Select product...</option>
-                          {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
+                        <Select value={item.product_id || '__clear__'} onValueChange={value => setItem(idx, 'product_id', value === '__clear__' ? '' : value)}>
+                          <SelectTrigger aria-label={`Product for delivery line ${idx + 1}`} className="h-10 min-w-[140px] bg-background text-xs">
+                            <SelectValue placeholder="Select product..." />
+                          </SelectTrigger>
+                          <SelectContent className="z-[60] max-h-[min(20rem,var(--radix-select-content-available-height))]">
+                            <SelectItem value="__clear__">Select product...</SelectItem>
+                            {products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
                       </td>
                       <td className="px-2 py-2">
                         <input value={item.unit} onChange={e => setItem(idx, 'unit', e.target.value)} placeholder="kg" className="w-full text-center border border-slate-200 rounded-lg px-1 py-1.5 text-xs focus:outline-none" />
