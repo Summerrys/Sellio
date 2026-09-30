@@ -7,7 +7,7 @@ export const subscribePendingCheckouts = listener => {
   return () => pendingListeners.delete(listener);
 };
 const publish = rows => { pending = rows; pendingListeners.forEach(listener => listener()); };
-const knownRejection = error => ['22023', 'P0002', '42501', 'P0001', '40001', '23505'].includes(error?.code);
+const knownRejection = error => error?.hint !== 'checkout_actor_changed' && ['22023', 'P0002', '42501', 'P0001', '40001', '23505'].includes(error?.code);
 
 export async function submitCheckout(supabase, parameters, scope) {
   const storageKey = `sellio_checkout_attempt:${scope}`;
