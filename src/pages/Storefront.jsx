@@ -412,6 +412,7 @@ function StorefrontInner() {
   const isFnB = isFnBIndustry(tenant?.industry);
 
   const addToCart = (product, variant = null, notes = null) => {
+    if (checkoutGuard.current) return;
     // Notes now factor into the merge key too — otherwise adding the same
     // product+variant twice with two different special requests would silently
     // merge into one line and lose one of the notes (or overwrite it), the same
@@ -425,6 +426,7 @@ function StorefrontInner() {
   };
 
   const updateQuantity = (key, qty) => {
+    if (checkoutGuard.current) return;
     if (qty <= 0) setCart(prev => prev.filter(i => i.key !== key));
     else setCart(prev => prev.map(i => i.key === key ? { ...i, quantity: qty } : i));
   };
@@ -460,7 +462,6 @@ function StorefrontInner() {
     if (checkoutGuard.current || isSubmitting || !cart.length) return;
     checkoutGuard.current = true;
     setIsSubmitting(true);
-    const supabase = await getSupabase();
     const savedCartTotal = cartTotal;
     const savedCart = [...cart];
 
@@ -471,6 +472,7 @@ function StorefrontInner() {
     let order = null;
     let error = null;
     try {
+      const supabase = await getSupabase();
       order = await submitCheckout(supabase, {
         p_tenant_id: tenant.id,
         p_items: savedCart.map(item => ({
@@ -525,7 +527,7 @@ function StorefrontInner() {
         // "An item in your cart is no longer available"
         toast.error(error.message);
       } else {
-        toast.error("Something went wrong placing your order. Please try again.");
+        toast.error(error?.checkoutUnconfirmed ? error.message : "Something went wrong placing your order. Please try again.");
       }
       setIsSubmitting(false);
     }
@@ -809,11 +811,11 @@ function StorefrontInner() {
       {/* ── CHECKOUT ── */}
       {showCheckout && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100 }}>
-          <div onClick={() => setShowCheckout(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
+          <div onClick={() => { if (!isSubmitting) setShowCheckout(false); }} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '20px 20px 0 0', padding: '20px 16px', maxHeight: '85vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontWeight: 700, fontSize: 17, margin: 0 }}>Confirm order</p>
-              <button onClick={() => setShowCheckout(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22 }}>✕</button>
+              <button onClick={() => { if (!isSubmitting) setShowCheckout(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22 }}>✕</button>
             </div>
             {isDineIn && table && (
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `${primaryColor}12`, borderRadius: 20, padding: '6px 12px 6px 8px', border: `1px solid ${primaryColor}25`, marginBottom: 14 }}>
