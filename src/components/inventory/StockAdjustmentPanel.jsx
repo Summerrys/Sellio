@@ -9,6 +9,8 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
 
   const observedStock = product?.current_stock ?? product?.inventory?.[0]?.current_stock ?? product?.stock_quantity ?? 0;
   const [currentStock, setCurrentStock] = useState(observedStock);
+  const observedThreshold = initialThreshold ?? product?.low_stock_threshold ?? product?.inventory?.[0]?.low_stock_threshold ?? 5;
+  const [baselineThreshold, setBaselineThreshold] = useState(observedThreshold);
 
   const [newStock, setNewStock] = useState(currentStock ?? 0);
   const [notes, setNotes] = useState('');
@@ -17,11 +19,12 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
 
   useEffect(() => {
     setCurrentStock(observedStock);
+    setBaselineThreshold(observedThreshold);
     setNewStock(observedStock);
     setNotes('');
     setIsSubmitting(false);
     setThreshold(initialThreshold ?? product?.low_stock_threshold ?? product?.inventory?.[0]?.low_stock_threshold ?? 5);
-  }, [product?.id, open, initialThreshold]);
+  }, [product?.id, open]);
 
   const handleClose = () => {
     if (submittingRef.current) return;
@@ -96,7 +99,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
         p_stock: newStock,
         p_threshold: threshold,
         p_expected_stock: currentStock,
-        p_expected_threshold: initialThreshold ?? product?.low_stock_threshold ?? product?.inventory?.[0]?.low_stock_threshold ?? 5,
+        p_expected_threshold: baselineThreshold,
         p_request_id: crypto.randomUUID(),
         p_notes: notes?.trim() || null,
       });
@@ -111,7 +114,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
   if (!open || !product) return null;
 
   const stockColor = newStock === 0 ? '#dc2626' : newStock < threshold ? '#f59e0b' : '#16a34a';
-  const noChange = newStock === currentStock && threshold === (initialThreshold ?? 5);
+  const noChange = newStock === currentStock && threshold === baselineThreshold;
   const stockIncreased = newStock > currentStock;
   const stockDecreased = newStock < currentStock;
 
