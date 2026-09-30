@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
+import PullToRefresh from '@/components/ui-custom/PullToRefresh';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -239,8 +240,13 @@ export default function Dashboard() {
   };
 
   const todayLabel = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  const handleRefresh = useCallback(() => Promise.all(
+    ['todayOrders', 'dashboardProducts', 'dashboardInventoryItems', 'dashboardStaff', 'recentOrders', 'revenueChart']
+      .map(key => queryClient.invalidateQueries({ queryKey: [key, tenantId] }, { throwOnError: true }))
+  ), [queryClient, tenantId]);
 
   return (
+    <PullToRefresh onRefresh={handleRefresh}>
     <div className="space-y-6 pb-8">
       {/* Header */}
       <div className="flex items-start justify-between">
@@ -446,5 +452,6 @@ export default function Dashboard() {
         <RevenueChart tenantId={tenantId} />
       </RequirePermission>
     </div>
+    </PullToRefresh>
   );
 }
