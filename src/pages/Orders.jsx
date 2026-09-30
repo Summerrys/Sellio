@@ -175,6 +175,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
   return (
     <>
       <div
+        data-sellio-order-card
         {...(tourTag ? { 'data-tour': 'order-card' } : {})}
         onClick={() => { if (canEditOrders && !isFinal) setShowEditOrder(true); }}
         className={`rounded-xl border border-slate-200 overflow-hidden shadow-sm ${canEditOrders && !isFinal ? 'cursor-pointer active:opacity-90 transition-opacity' : ''}`}
@@ -354,7 +355,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
               >✕</button>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px' }}>
-              <div style={{ background: 'white', borderRadius: 12, padding: '24px 20px', fontFamily: '"Courier New", Courier, monospace', fontSize: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', maxWidth: 360, margin: '0 auto' }}>
+              <div style={{ background: 'white', color: '#0f172a', borderRadius: 12, padding: '24px 20px', fontFamily: '"Courier New", Courier, monospace', fontSize: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', maxWidth: 360, margin: '0 auto' }}>
                 <p style={{ textAlign: 'center', fontWeight: 700, fontSize: 15, margin: '0 0 2px', letterSpacing: '0.02em' }}>{merchantName || 'Receipt'}</p>
                 <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '0 0 12px' }}>
                   {new Date(order.created_date || Date.now()).toLocaleString('en-SG', { dateStyle: 'medium', timeStyle: 'short' })}
