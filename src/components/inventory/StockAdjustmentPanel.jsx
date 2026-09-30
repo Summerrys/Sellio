@@ -178,7 +178,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
           </div>
 
           {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col items-center gap-6">
+          <fieldset disabled={isSubmitting} aria-label="Stock adjustment" aria-busy={isSubmitting} className="flex-1 min-w-0 min-h-0 border-0 overflow-y-auto px-6 py-6 flex flex-col items-center gap-6">
 
             {/* Main counter */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
@@ -307,7 +307,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
               </div>
             </div>
 
-          </div>
+          </fieldset>
 
           {/* Fixed footer save button */}
           <div className="px-6 pb-6 pt-3 border-t border-slate-100 flex-shrink-0" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }}>
