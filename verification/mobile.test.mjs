@@ -214,3 +214,5 @@ try {
   dom.window.close();
   await rm(temporary, { recursive: true, force: true });
 }
+// Sonner keeps notification timers alive after these isolated assertions.
+process.exit(0);
