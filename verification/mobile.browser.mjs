@@ -87,7 +87,11 @@ try {
     assert.ok(bounds.x>=0 && bounds.x+bounds.width<=viewport.width+1,'Dropdown fits viewport horizontally');
     assert.ok(bounds.y>=0 && bounds.y+bounds.height<=viewport.height+1,'Dropdown fits viewport vertically');
     await page.keyboard.press('Escape');
-    await product.focus();await page.keyboard.press('ArrowDown');await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');
+    await product.focus();await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(()=>document.activeElement?.getAttribute('role')==='option');
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(()=>document.activeElement?.textContent?.includes('Test product'));
+    await page.keyboard.press('Enter');
     assert.match(await product.textContent(),/Test product/);
     await page.emulateMedia({colorScheme:'dark'});
     await page.waitForFunction(()=>document.documentElement.classList.contains('dark'));
