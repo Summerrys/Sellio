@@ -20,7 +20,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 globalThis.requestAnimationFrame = dom.window.requestAnimationFrame.bind(dom.window);
 globalThis.cancelAnimationFrame = dom.window.cancelAnimationFrame.bind(dom.window);
 const React = await import('react');
-const { act } = await import('react-dom/test-utils');
+const act = React.act || (await import('react-dom/test-utils')).act;
 const { createRoot } = await import('react-dom/client');
 const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
 const temporary = await mkdtemp(path.join(app, '.mobile-verification-'));
@@ -111,6 +111,7 @@ try {
   assert.equal(isRefreshAtTop(target, root), false);
   document.documentElement.scrollTop = 0;
   passed('nested scroll container and scrolled parent do not trigger refresh');
+  root.appendChild(target); nested.remove();
   await view.render({ onRefresh: async () => { throw new Error('Test refresh rejection'); }, children: React.createElement('p', null, 'Feed') });
   await act(async () => { click(view.container.querySelector('button')); await next(); });
   assert.equal(view.container.firstElementChild.getAttribute('aria-busy'), 'false');
