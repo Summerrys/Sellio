@@ -9,7 +9,6 @@ import PullToRefresh from '../components/ui-custom/PullToRefresh';
 import { useSyncExternalStore } from 'react';
 import { getPendingCheckouts, subscribePendingCheckouts } from '@/lib/mobileCheckout';
 import TableCallAlerts from '../components/orders/TableCallAlerts';
-import { Button } from '@/components/ui/button';
 import { NEW_ORDER_TONE_URL, URGENT_ORDER_TONE_URL } from '@/lib/kdsSounds';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
