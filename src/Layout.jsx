@@ -472,7 +472,7 @@ function AppLayout({ children, currentPageName }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div data-sellio-workspace className="min-h-screen bg-slate-50 flex">
       <style>{`
         :root {
           --sidebar-width: ${collapsed ? '72px' : '260px'};
