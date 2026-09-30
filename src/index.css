@@ -107,6 +107,7 @@
 .dark [data-sellio-workspace] .bg-slate-50,
 .dark [data-sellio-workspace] .bg-slate-100 { background-color: hsl(var(--muted)); }
 .dark [data-sellio-workspace] .bg-white { background-color: hsl(var(--card)); }
+.dark [data-sellio-workspace] [data-sellio-order-card] { background-color: hsl(var(--card)) !important; }
 .dark [data-sellio-workspace] :is(.text-slate-900,.text-slate-800,.text-slate-700) { color: hsl(var(--foreground)); }
 .dark [data-sellio-workspace] :is(.text-slate-600,.text-slate-500,.text-slate-400) { color: hsl(var(--muted-foreground)); }
 .dark [data-sellio-workspace] :is(.border-slate-100,.border-slate-200) { border-color: hsl(var(--border)); }
