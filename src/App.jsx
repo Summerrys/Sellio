@@ -10,6 +10,7 @@ import Splash from './pages/Splash';
 import LandingPage from '@/components/landing/LandingPage';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
+import AccountDeletion from './pages/AccountDeletion';
 import Storefront from './pages/Storefront';
 import { useEffect, Suspense } from 'react';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -135,6 +136,7 @@ function App() {
             <Route path="/" element={<RootRoute />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
+            <Route path="/delete-account" element={<AccountDeletion />} />
             <Route path="/*" element={<AuthenticatedApp />} />
           </Routes>
         </Router>
