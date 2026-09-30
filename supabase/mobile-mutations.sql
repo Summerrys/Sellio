@@ -74,7 +74,7 @@ begin
  select * into v_inventory from public.inventory_items where tenant_id=p_tenant_id and product_id=p_product_id for update;
  v_stock := coalesce(v_inventory.current_stock,0);
  v_threshold := coalesce(v_inventory.low_stock_threshold,5);
- if p_expected_stock is distinct from v_stock or p_expected_threshold is distinct from v_threshold then
+ if p_expected_stock is distinct from v_stock or (v_inventory.id is not null and p_expected_threshold is distinct from v_threshold) then
    raise exception 'Stock changed on another device. Refresh and review the new quantity before saving.' using errcode='40001';
  end if;
  if v_inventory.id is null then
