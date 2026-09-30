@@ -4,6 +4,7 @@ create table app.checkout_requests (
   request_hash text not null, response jsonb not null, created_at timestamptz not null default now(),
   primary key (tenant_id, request_id, actor_id)
 );
+create unique index checkout_requests_tenant_request_unique on app.checkout_requests(tenant_id,request_id);
 alter table app.checkout_requests enable row level security;
 revoke all on app.checkout_requests from public, anon, authenticated;
 
@@ -11,7 +12,7 @@ create or replace function public.place_order_once(
  p_tenant_id text, p_items jsonb, p_request_id uuid,
  p_type text default 'takeaway', p_table_id text default null,
  p_notes text default null, p_customer_id text default null
-) returns jsonb language plpgsql security definer set search_path = '' as $$
+) returns jsonb language plpgsql security definer set search_path = '' as $
 declare
  v_actor text := coalesce(auth.uid()::text, 'guest');
  v_hash text := md5(jsonb_build_object('items',p_items,'type',p_type,'table',p_table_id,'notes',p_notes,'customer',p_customer_id)::text);
@@ -19,16 +20,17 @@ declare
  v_response jsonb;
 begin
  if p_request_id is null then raise exception 'Checkout request key required' using errcode='22023'; end if;
- perform pg_advisory_xact_lock(hashtextextended('checkout:' || p_tenant_id || ':' || v_actor || ':' || p_request_id::text,0));
- select * into v_previous from app.checkout_requests where tenant_id=p_tenant_id and request_id=p_request_id and actor_id=v_actor;
+ perform pg_advisory_xact_lock(hashtextextended('checkout:' || p_tenant_id || ':' || p_request_id::text,0));
+ select * into v_previous from app.checkout_requests where tenant_id=p_tenant_id and request_id=p_request_id;
  if found then
+   if v_previous.actor_id<>v_actor then raise exception 'Return to the original signed-in account to retry this checkout' using errcode='42501',hint='checkout_actor_changed'; end if;
    if v_previous.request_hash <> v_hash then raise exception 'This checkout key belongs to a different cart' using errcode='22023'; end if;
    return v_previous.response;
  end if;
  v_response := public.place_order(p_tenant_id,p_items,p_type,p_table_id,p_notes,p_customer_id);
  insert into app.checkout_requests(tenant_id,request_id,actor_id,request_hash,response) values(p_tenant_id,p_request_id,v_actor,v_hash,v_response);
  return v_response;
-end $$;
+end $;
 revoke all on function public.place_order_once(text,jsonb,uuid,text,text,text,text) from public;
 grant execute on function public.place_order_once(text,jsonb,uuid,text,text,text,text) to anon,authenticated;
 
