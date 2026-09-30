@@ -303,7 +303,7 @@ function CounterScreen() {
       const msg = e?.message || '';
       if (msg.includes('Order limit reached')) toast.error('This store has reached its monthly order limit. Ask the owner to upgrade the plan.');
       else if (['P0002', '22023'].includes(e?.code) && msg) toast.error(msg);
-      else toast.error('Could not send the order. Check your connection and try again.');
+      else toast.error(e?.checkoutUnconfirmed ? e.message : 'Could not send the order. Check your connection and try again.');
     } finally {
       sendingRef.current = false;
       setSending(false);
@@ -364,8 +364,9 @@ function CounterScreen() {
   const qrLabel = tenant?.currency === 'MYR' ? 'QR · DuitNow / TNG' : 'QR · PayNow';
 
   return (
-    <div className="ctr-root">
+    <div className="ctr-root" aria-busy={sending}>
       <style>{CSS}</style>
+      {sending && <div role="status" className="fixed inset-0 z-[80] flex items-center justify-center bg-black/30"><div className="rounded-xl bg-background text-foreground px-5 py-4 shadow-xl">Sending order…</div></div>}
 
       <header className="ctr-top">
         {view === 'tables'
