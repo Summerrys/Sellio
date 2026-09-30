@@ -488,8 +488,8 @@ export default function Products() {
 
   const handleRefresh = useCallback(() =>
     Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['products', tenantId] }),
-      queryClient.invalidateQueries({ queryKey: ['categories', tenantId] }),
+      queryClient.invalidateQueries({ queryKey: ['products', tenantId] }, { throwOnError: true }),
+      queryClient.invalidateQueries({ queryKey: ['categories', tenantId] }, { throwOnError: true }),
     ]), [queryClient, tenantId]);
 
   const handleLongPress = (productId) => {
