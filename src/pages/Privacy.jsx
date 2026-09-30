@@ -146,7 +146,8 @@ const sections = [
       <>
         <p>Subject to the PDPA and its exceptions, you may ask to access personal data we hold about you, learn how it has been used or disclosed, correct an error or omission, or withdraw consent for future collection, use or disclosure. You may also ask us to close your account, delete information that is no longer needed, or stop optional processing.</p>
         <p>Some requests may be limited where we must retain information, protect another person's rights, preserve security or transaction records, or comply with law. Withdrawing consent may affect our ability to continue providing features that depend on that information.</p>
-        <p>To make a request, email <a href="mailto:hello@apptelier.sg">hello@apptelier.sg</a> with enough detail for us to identify you and understand the request. We may take reasonable steps to verify your identity. If the information is controlled by a merchant, we may direct the request to that merchant or assist it in responding.</p>
+        <p>You can <a href="/delete-account">request deletion of your Sellio account here</a> or use Delete Account in your account profile. Accounts that own a store or uploaded files require ownership to be resolved first so shared business data is protected.</p>
+        <p>To make another privacy request, email <a href="mailto:hello@apptelier.sg">hello@apptelier.sg</a> with enough detail for us to identify you and understand the request. We may take reasonable steps to verify your identity. If the information is controlled by a merchant, we may direct the request to that merchant or assist it in responding.</p>
       </>
     ),
   },
