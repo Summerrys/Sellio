@@ -334,7 +334,6 @@ function PremiumColorPicker({ value, onChange }) {
           </button>
         ))}
       </div>
-      <p style={{ fontSize: 11, color: '#94a3b8', marginTop: -4 }}>Tap the swatch to open the colour picker, or pick a preset</p>
     </div>
   );
 }
@@ -356,7 +355,6 @@ function BannerTabContent({ form, onChange }) {
           checked={tickerEnabled}
           onChange={v => onChange('show_promo_ticker', v)}
           label="Show Headline & Tagline"
-          description="Display both messages in the promotional ticker"
         />
         {tickerEnabled && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 8 }}>
@@ -853,10 +851,10 @@ function DesignerSelectionBadge({ selected }) {
         <span style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3,
           padding: '3px 6px', borderRadius: 999, background: DESIGNER_SELECTION_COLOR, color: '#ffffff',
-          fontSize: 11, fontWeight: 700, lineHeight: '16px', whiteSpace: 'nowrap',
+          fontSize: 11, fontWeight: 700, lineHeight: '16px', maxWidth: '100%', boxSizing: 'border-box', flexWrap: 'wrap',
         }}>
           <Check size={12} strokeWidth={3} />
-          Selected
+          <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>Selected</span>
         </span>
       )}
     </span>
