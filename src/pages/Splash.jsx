@@ -1,19 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function Splash() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
     const t1 = setTimeout(() => setVisible(true), 100);
-    const t2 = setTimeout(() => {
-      setLeaving(true);
-      setTimeout(() => navigate('/Auth'), 600);
-    }, 2000);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, []);
+    const t2 = setTimeout(() => setLeaving(true), 2000);
+    const t3 = setTimeout(() => {
+      navigate({ pathname: '/Auth', search: location.search, hash: location.hash }, { replace: true });
+    }, 2600);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [navigate, location.search, location.hash]);
 
   return (
     <div
