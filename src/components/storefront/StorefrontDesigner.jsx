@@ -2,6 +2,16 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { X, ArrowLeft, ExternalLink, Upload, Pencil, ImagePlus, ZoomIn, ZoomOut, RotateCcw, Monitor, Tablet, Smartphone, Check } from 'lucide-react';
 import StorefrontView, {
@@ -1493,6 +1503,7 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
   const [form, setForm] = useState({ ...DEFAULTS });
   const [saving, setSaving] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [previewProducts, setPreviewProducts] = useState([]);
   const [previewCategories, setPreviewCategories] = useState([]);
   const [previewTenant, setPreviewTenant] = useState(null);
@@ -1506,6 +1517,7 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
   }, []);
 
   useEffect(() => {
+    setLeaveDialogOpen(false);
     if (open) {
       setTimeout(() => setVisible(true), 10);
       loadConfig();
@@ -1600,15 +1612,24 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
     };
   }, [open, tenantId]);
 
+  const closeDesigner = () => {
+    setVisible(false);
+    setTimeout(onClose, 300);
+  };
+
   const handleClose = () => {
     const draft = sessionStorage.getItem(`storefront_draft_${tenantId}`);
     if (draft) {
-      const leave = window.confirm('You have unsaved changes. Leave without saving?');
-      if (!leave) return;
-      sessionStorage.removeItem(`storefront_draft_${tenantId}`);
+      setLeaveDialogOpen(true);
+      return;
     }
-    setVisible(false);
-    setTimeout(onClose, 300);
+    closeDesigner();
+  };
+
+  const handleDiscardAndClose = () => {
+    sessionStorage.removeItem(`storefront_draft_${tenantId}`);
+    setLeaveDialogOpen(false);
+    closeDesigner();
   };
 
   const handleChange = useCallback((key, value) => {
@@ -1670,6 +1691,28 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 200 }} className="flex">
+      <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
+        <AlertDialogContent
+          overlayClassName="z-[210] bg-black/50"
+          className="z-[211] w-[calc(100%-2rem)] max-w-sm rounded-2xl border-slate-200 bg-white p-6 text-slate-900"
+        >
+          <AlertDialogHeader className="text-left">
+            <AlertDialogTitle>Unsaved changes</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-600">
+              Your store design has unsaved changes. Keep editing to save them, or discard them and leave.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-3 sm:space-x-0">
+            <AlertDialogCancel className="mt-0 rounded-xl">Keep editing</AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-xl bg-purple-600 text-white hover:bg-purple-700"
+              onClick={handleDiscardAndClose}
+            >
+              Discard &amp; leave
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
