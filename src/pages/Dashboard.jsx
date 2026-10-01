@@ -8,6 +8,7 @@ import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import RecentOrders from '../components/dashboard/RecentOrders';
 import RevenueChart from '../components/dashboard/RevenueChart';
+import OrderUsageMeter from '../components/dashboard/OrderUsageMeter';
 import {
   DollarSign, ShoppingCart, Package, Users,
   ClipboardList, ShoppingBag, Grid3X3, QrCode,
@@ -123,6 +124,7 @@ export default function Dashboard() {
       toast.success('Your plan has been upgraded successfully.');
       window.history.replaceState(null, '', window.location.pathname);
       queryClient.invalidateQueries({ queryKey: ['subscription'] });
+      queryClient.invalidateQueries({ queryKey: ['entitlements'] });
     }
   }, []);
 
@@ -401,6 +403,11 @@ export default function Dashboard() {
           />
         </RequirePermission>
       </div>
+
+      {/* Orders this month against the plan's monthly cap (plans with a cap only) */}
+      <RequirePermission permission="orders.view" silent>
+        <OrderUsageMeter />
+      </RequirePermission>
 
       {/* Take Orders — staff-assisted order entry, only shown when the account can
           actually create orders. Reuses the public storefront for the actual cart/

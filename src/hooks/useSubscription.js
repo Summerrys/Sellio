@@ -1,10 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTenant } from '@/components/tenant/TenantContext';
 import { getSupabase } from '@/lib/supabaseClient';
+import { useEntitlements } from '@/hooks/useEntitlements';
+import { planInfo } from '@/lib/entitlements';
 
 /**
- * Returns { tier, isStarter, isGrowth, isPro, staffCap, roleCap }
- * tier: 'starter' | 'growth' | 'pro'
+ * Returns { subscription, tier, isStarter, isGrowth, isPro, staffCap, roleCap,
+ *           plan, entitlementsLoaded, entitlements, usage, can, maxProducts, orderUsage }
+ * tier: 'starter' | 'growth' | 'pro' (from the subscription row, as before)
+ *
+ * Caps and plan features come from the store's entitlements (plan defaults +
+ * per-store overrides; see lib/entitlements.js). Until they load, if they can't be
+ * read, or for a lapsed store, the subscription row is used exactly as before
+ * (max_users/max_roles, with the tier as the last fallback; Pro = unlimited).
  */
 export function useSubscription() {
   const { tenantId } = useTenant();
@@ -26,27 +34,14 @@ export function useSubscription() {
     refetchInterval: 60 * 1000,
   });
 
-  const plan = subscription?.tier || 'starter';
-
-  // Normalise to base tier
-  const tier = plan.includes('pro') ? 'pro' : plan.includes('growth') ? 'growth' : 'starter';
-
-  // FIX: previously these were hardcoded purely from the tier name, completely
-  // ignoring subscription.max_users/max_roles — the actual columns completeOnboarding
-  // and stripe-webhook write. That meant this hook could silently drift out of sync
-  // with the real plan limits (e.g. if a plan's cap ever changes) despite the DB
-  // being the source of truth everywhere else. Pro stores these as null (unlimited),
-  // so the tier-based fallback still applies correctly in that case.
-  const staffCap = subscription?.max_users ?? (tier === 'pro' ? Infinity : tier === 'growth' ? 5 : 3);
-  const roleCap  = subscription?.max_roles ?? (tier === 'pro' ? Infinity : tier === 'growth' ? 5 : 3);
+  const { data: entitlements } = useEntitlements();
+  const info = planInfo(subscription, entitlements);
 
   return {
     subscription,
-    tier,
-    isStarter: tier === 'starter',
-    isGrowth:  tier === 'growth',
-    isPro:     tier === 'pro',
-    staffCap,
-    roleCap,
+    ...info,
+    isStarter: info.tier === 'starter',
+    isGrowth:  info.tier === 'growth',
+    isPro:     info.tier === 'pro',
   };
 }

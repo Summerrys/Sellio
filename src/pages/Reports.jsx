@@ -48,9 +48,13 @@ function UpgradePanel({ icon: Icon, title, description, onUpgrade }) {
 
 export default function Reports() {
   const { tenantId, tenant, hasPermission } = useTenant();
-  const { tier, isStarter } = useSubscription();
+  const { tier, can } = useSubscription();
+  // Plan features come from the store's entitlements. isStarter here means "this
+  // plan has no advanced reports" (Starter today): it locks the Inventory and
+  // Customers tabs and the richer sales charts.
+  const isStarter = !can('can_use_advanced_reports');
   const hasExportPermission = hasPermission('reports.export');
-  const canExport = hasExportPermission && !isStarter;
+  const canExport = hasExportPermission && can('can_export_reports');
   const [dateRange, setDateRange] = useState({
     from: subDays(new Date(), 30),
     to: new Date(),

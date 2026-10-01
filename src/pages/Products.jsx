@@ -22,6 +22,7 @@ import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown
 import { useNavigate } from 'react-router-dom';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
 import { applyCanonicalProductOrder } from '@/lib/storefrontCatalog';
+import { useSubscription } from '@/hooks/useSubscription';
 
 const CSV_HEADERS = ['Name', 'SKU', 'Description', 'Category', 'Price', 'Cost Price', 'Compare At Price', 'Stock Quantity', 'Low Stock Threshold', 'Track Inventory', 'Active', 'Featured', 'Tags', 'Variants', 'Image URL', 'Additional Images'];
 
@@ -425,8 +426,10 @@ export default function Products() {
     setShowDialog(true);
   };
 
-  // null max_products = unlimited (Pro plan)
-  const maxProducts = subscription?.max_products ?? null;
+  // null max_products = unlimited (Pro plan). From the store's entitlements once
+  // they load (plan defaults + per-store overrides), else the subscription row.
+  const { maxProducts: entitlementMaxProducts } = useSubscription();
+  const maxProducts = entitlementMaxProducts !== undefined ? entitlementMaxProducts : (subscription?.max_products ?? null);
   const atProductLimit = maxProducts != null && products.length >= maxProducts;
 
   const handleAdd = () => {

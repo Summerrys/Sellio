@@ -47,6 +47,7 @@ import TrialReminderModal from './components/subscription/TrialReminderModal';
 import AccountProfileModal from './components/profile/AccountProfileModal';
 import InstallPWAModal from './components/onboarding/InstallPWAModal';
 import { canShowInstallPrompt, isStandalone } from '@/lib/pwaInstall';
+import { useSubscription } from '@/hooks/useSubscription';
 
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth'];
@@ -336,7 +337,9 @@ function AppLayout({ children, currentPageName }) {
     enabled: !!tenantId,
     staleTime: 60 * 1000,
   });
-  const maxProducts = subscription?.max_products ?? null;
+  // From the store's entitlements once they load, else the subscription row.
+  const { maxProducts: entitlementMaxProducts } = useSubscription();
+  const maxProducts = entitlementMaxProducts !== undefined ? entitlementMaxProducts : (subscription?.max_products ?? null);
   const atProductLimit = maxProducts != null && productCount >= maxProducts;
 
   useEffect(() => {

@@ -106,6 +106,18 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                    : 'starter';
         setPlanTier(tier);
         setPlanMaxProducts(ONBOARDING_PLAN_LIMITS[tier] ?? 10);
+        // The plan's product limit from the entitlements table (readable by anyone),
+        // so this warning uses the same number the database enforces. The map
+        // above stays as the fallback. null = unlimited (Pro).
+        const { data: limitRow, error: limitError } = await supabase
+          .from('plan_entitlements')
+          .select('value')
+          .eq('plan_key', tier)
+          .eq('entitlement', 'max_products')
+          .maybeSingle();
+        if (!cancelled && !limitError && limitRow) {
+          setPlanMaxProducts(limitRow.value == null ? null : Number(limitRow.value));
+        }
       } catch (e) {
         console.warn('Could not resolve plan for product-limit check (non-fatal):', e.message);
       }
