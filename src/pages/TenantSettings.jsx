@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
 import { base44 } from '@/api/base44Client';
@@ -23,6 +23,8 @@ import { toast } from 'sonner';
 import BusinessProfileTab from '../components/settings/BusinessProfileTab';
 import UserManagement from './UserManagement';
 import PricingModal from '../components/subscription/PricingModal';
+import PullToRefresh from '../components/ui-custom/PullToRefresh';
+import useSettingsDraft from '@/hooks/useSettingsDraft';
 
 export default function TenantSettings() {
   return (
@@ -32,7 +34,7 @@ export default function TenantSettings() {
   );
 }
 
-function PaymentQRTab({ tenant, tenantId }) {
+function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
   const { hasPermission } = useTenant();
   // Payment QR changes follow the "Modify Payments" permission; everyone who
   // can open Settings can still see the QR (view-only).
@@ -41,19 +43,19 @@ function PaymentQRTab({ tenant, tenantId }) {
   const paymentQRInputRef = useRef(null);
 
   const [paymentQRPreview, setPaymentQRPreview] = useState(null);
-  const [paymentQRLabel, setPaymentQRLabel] = useState('');
-  const [paymentReference, setPaymentReference] = useState('');
+  const [paymentDraft, setPaymentDraft, applyRemotePayment, markPaymentSaved] = useSettingsDraft(tenantId, { label: '', reference: '' });
+  const { label: paymentQRLabel, reference: paymentReference } = paymentDraft;
+  const setPaymentQRLabel = label => setPaymentDraft(prev => ({ ...prev, label }));
+  const setPaymentReference = reference => setPaymentDraft(prev => ({ ...prev, reference }));
   const [isUploadingQR, setIsUploadingQR] = useState(false);
   const [isSavingQR, setIsSavingQR] = useState(false);
   const [qrHovered, setQrHovered] = useState(false);
 
   useEffect(() => {
     if (!tenant) return;
-    const settings = tenant.settings || {};
     setPaymentQRPreview(tenant.payment_qr_url || null);
-    setPaymentQRLabel(tenant.payment_qr_label || '');
-    setPaymentReference(tenant.payment_reference || '');
-  }, [tenant]);
+    applyRemotePayment({ label: tenant.payment_qr_label || '', reference: tenant.payment_reference || '' });
+  }, [tenant, applyRemotePayment, refreshVersion]);
 
   const handlePaymentQRUpload = async (e) => {
     if (!canEditPayments) return; // defense-in-depth; upload controls are hidden without this permission
@@ -91,6 +93,7 @@ function PaymentQRTab({ tenant, tenantId }) {
         payment_reference: paymentReference,
       }).eq('id', tenantId);
       if (error) throw error;
+      markPaymentSaved(paymentDraft);
       queryClient.invalidateQueries({ queryKey: ['currentTenant'] });
       toast.success('Payment settings saved');
     } catch (err) {
@@ -244,8 +247,25 @@ function TenantSettingsContent() {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const handleRefresh = useCallback(async () => {
+    if (!tenantId) return;
+    const supabase = await getSupabase();
+    await Promise.all([
+      supabase.from('tenants').select('*').eq('id', tenantId).limit(1).then(({ data, error }) => {
+        if (error) throw error;
+        if (!data?.length) throw new Error('Could not load your business settings.');
+        queryClient.setQueryData(['currentTenant', tenantId], data);
+      }),
+      ...['businessHours', 'staff', 'roles', 'allRoles', 'roleUsers'].map(key =>
+        queryClient.invalidateQueries({ queryKey: [key, tenantId] }, { throwOnError: true })),
+    ]);
+    setRefreshVersion(version => version + 1);
+  }, [queryClient, tenantId]);
+
   return (
     <PermissionGate permission="settings.view">
+      <PullToRefresh onRefresh={handleRefresh} disabled={isDeleting || showDeleteConfirm || showPricingModal}>
       <PageHeader title="Settings" description="Configure your business and manage roles" />
 
       {settingsTour.isOwner && (
@@ -305,12 +325,12 @@ function TenantSettingsContent() {
 
         {settingsTab === 'business' && (
           <div className="max-w-2xl mx-auto">
-            <BusinessProfileTab tenant={tenant} tenantId={tenantId} />
+            <BusinessProfileTab tenant={tenant} tenantId={tenantId} refreshVersion={refreshVersion} />
           </div>
         )}
         {settingsTab === 'payment_qr' && (
           <div className="max-w-2xl mx-auto">
-            <PaymentQRTab tenant={tenant} tenantId={tenantId} />
+            <PaymentQRTab tenant={tenant} tenantId={tenantId} refreshVersion={refreshVersion} />
           </div>
         )}
         {settingsTab === 'theme' && (
@@ -392,6 +412,7 @@ function TenantSettingsContent() {
       </Dialog>
 
       <PricingModal open={showPricingModal} onOpenChange={setShowPricingModal} tenantId={tenantId} currentTier={subscription?.tier ?? null} />
+      </PullToRefresh>
     </PermissionGate>
   );
 }
