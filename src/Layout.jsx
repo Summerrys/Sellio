@@ -51,7 +51,7 @@ import { canShowInstallPrompt, isStandalone } from '@/lib/pwaInstall';
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth'];
 
-function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription, onOpenProfile, onToggleCollapse }) {
+function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription, onOpenProfile, onToggleCollapse, onClose }) {
   const [linkCopied, setLinkCopied] = useState(false);
   const storefrontUrl = tenant?.slug ? `https://sellio.apptelier.sg/store/${tenant.slug}` : null;
   const copyStorefrontLink = () => {
@@ -93,7 +93,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className={cn("flex items-center h-16 px-4 border-b border-slate-100", collapsed && "justify-center")}>
+      <div className={cn("flex items-center h-16 px-4 border-b border-slate-100", collapsed && "justify-center", onClose && "h-[56px] shrink-0 justify-between")}>
         <div className="flex items-center gap-2.5 min-w-0">
           {onToggleCollapse && (
             <button
@@ -119,6 +119,11 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
             </>
           )}
         </div>
+        {onClose && (
+          <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0" aria-label="Close menu" onClick={onClose}>
+            <X className="w-4 h-4" />
+          </Button>
+        )}
       </div>
 
       {/* Storefront link + business name/plan badge, merged into one card.
@@ -531,15 +536,13 @@ function AppLayout({ children, currentPageName }) {
 
       {/* Mobile Sidebar Overlay */}
       {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-40">
+        <div
+          className="lg:hidden fixed left-0 right-0 bottom-0 z-40"
+          style={{ top: 'env(safe-area-inset-top, 0px)' }}
+        >
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
           <aside className="absolute left-0 top-0 h-full w-[280px] bg-white shadow-xl">
-            <div className="absolute top-4 right-4">
-              <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setMobileOpen(false)}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => setMobileOpen(false)} subscription={subscription} onOpenProfile={() => { setMobileOpen(false); setShowProfileModal(true); }} />
+            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => setMobileOpen(false)} onClose={() => setMobileOpen(false)} subscription={subscription} onOpenProfile={() => { setMobileOpen(false); setShowProfileModal(true); }} />
           </aside>
         </div>
       )}
