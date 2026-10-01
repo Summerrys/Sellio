@@ -55,7 +55,7 @@ function RouteIndexingGuard() {
 }
 
 // Base44's native wrapper opens the root URL and exposes these bridges.
-// Native launches go through Auth's Supabase session recovery; ordinary
+// Native launches show Splash, then Auth's Supabase session recovery; ordinary
 // browser visits keep the public landing page. Only the root route changes,
 // so storefront, password recovery and other deep links keep their routes.
 const hasNativeBridge = () => typeof window !== 'undefined' && (
@@ -83,7 +83,7 @@ const RootRoute = () => {
   }, [isNativeApp]);
 
   if (isNativeApp) {
-    return <Navigate to={{ pathname: '/Auth', search: location.search, hash: location.hash }} replace />;
+    return <Navigate to={{ pathname: '/Splash', search: location.search, hash: location.hash }} replace />;
   }
 
   return appUser ? <Navigate to="/Dashboard" replace /> : <LandingPage />;
