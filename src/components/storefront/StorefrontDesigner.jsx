@@ -46,8 +46,7 @@ const PREVIEW_DEVICES = [
 const PREVIEW_BROWSER_BAR_HEIGHT = 36;
 const PREVIEW_FRAME_BORDER = 2;
 
-const DRAWER_HANDLE_ONLY = 28;
-const DRAWER_TABS_VISIBLE = 80;
+const DRAWER_HANDLE_ONLY = 48;
 const MIN_DRAWER = DRAWER_HANDLE_ONLY;
 
 const DEFAULTS = {
@@ -1120,76 +1119,128 @@ function DesktopEditorControls({ form, onChange }) {
 // Mobile full-canvas layout with floating drawer
 function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave, saving }) {
   const [drawerTab, setDrawerTab] = useState('banner');
-  const [drawerExpanded, setDrawerExpanded] = useState(false);
   const [drawerHeight, setDrawerHeight] = useState(DRAWER_HANDLE_ONLY);
   const [jumpAnimating, setJumpAnimating] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setJumpAnimating(false), 2000);
-    return () => clearTimeout(timer);
-  }, []);
-  const isDraggingDrawer = useRef(false);
+  const [isDraggingDrawer, setIsDraggingDrawer] = useState(false);
+  const drawerRef = useRef(null);
   const drawerHeightRef = useRef(DRAWER_HANDLE_ONLY);
-  const dragDidMove = useRef(false);
+  const gestureRef = useRef(null);
+  const dragFrameRef = useRef(null);
+  const suppressClickRef = useRef(false);
+
+  useEffect(() => () => {
+    if (dragFrameRef.current !== null) cancelAnimationFrame(dragFrameRef.current);
+  }, []);
 
   const primaryColor = form.banner_bg_color || '#fb923c';
-  const MAX_DRAWER = Math.round(window.innerHeight * 0.50);
+  const MAX_DRAWER = Math.max(MIN_DRAWER, Math.round(window.innerHeight * 0.50));
+  const drawerExpanded = drawerHeight > DRAWER_HANDLE_ONLY;
+  const drawerTransition = 'height 280ms cubic-bezier(0.22, 1, 0.36, 1)';
+
+  const cancelDragFrame = () => {
+    if (dragFrameRef.current !== null) {
+      cancelAnimationFrame(dragFrameRef.current);
+      dragFrameRef.current = null;
+    }
+  };
 
   const snapDrawer = (targetH) => {
-    drawerHeightRef.current = targetH;
-    setDrawerHeight(targetH);
-    setDrawerExpanded(targetH >= MAX_DRAWER);
+    cancelDragFrame();
+    const nextHeight = Math.max(MIN_DRAWER, Math.min(MAX_DRAWER, targetH));
+    drawerHeightRef.current = nextHeight;
+    setIsDraggingDrawer(false);
+    setDrawerHeight(nextHeight);
   };
 
   const startDrawerDrag = (e) => {
-    e.preventDefault();
-    isDraggingDrawer.current = true;
-    dragDidMove.current = false;
-    const startY = e.touches?.[0]?.clientY ?? e.clientY;
-    const startH = drawerHeightRef.current;
-    let currentH = startH;
-
-    const onMove = (me) => {
-      dragDidMove.current = true;
-      const y = me.touches?.[0]?.clientY ?? me.clientY;
-      const delta = startY - y;
-      currentH = Math.max(MIN_DRAWER, Math.min(MAX_DRAWER, startH + delta));
-      drawerHeightRef.current = currentH;
-      setDrawerHeight(currentH);
+    if (!e.isPrimary || e.button !== 0 || gestureRef.current) return;
+    setJumpAnimating(false);
+    suppressClickRef.current = false;
+    const startHeight = drawerRef.current?.getBoundingClientRect().height ?? drawerHeightRef.current;
+    gestureRef.current = {
+      pointerId: e.pointerId,
+      startY: e.clientY,
+      startHeight,
+      currentHeight: startHeight,
+      lastY: e.clientY,
+      lastTime: e.timeStamp,
+      velocity: 0,
+      moved: false,
     };
-    const onEnd = () => {
-      isDraggingDrawer.current = false;
-      if (!dragDidMove.current) {
-        // Pure tap — toggle between closed and half-open
-        const next = drawerHeightRef.current >= MAX_DRAWER - 10 ? DRAWER_HANDLE_ONLY : MAX_DRAWER;
-        snapDrawer(next);
-      } else {
-        let snapped;
-        if (currentH < DRAWER_HANDLE_ONLY + 30) snapped = DRAWER_HANDLE_ONLY;
-        else snapped = MAX_DRAWER;
-        snapDrawer(snapped);
-      }
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onEnd);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchmove', onMove, { passive: false });
-    window.addEventListener('touchend', onEnd);
+    e.currentTarget.setPointerCapture(e.pointerId);
   };
 
-  const canvasHeight = `calc(100vh - 52px - ${drawerHeight}px)`;
+  const moveDrawerDrag = (e) => {
+    const gesture = gestureRef.current;
+    if (!gesture || gesture.pointerId !== e.pointerId) return;
+    const delta = gesture.startY - e.clientY;
+    // Ignore finger jitter so a tap still reliably toggles the drawer.
+    if (!gesture.moved && Math.abs(delta) < 6) return;
+    if (!gesture.moved) {
+      gesture.moved = true;
+      setIsDraggingDrawer(true);
+    }
+    const elapsed = e.timeStamp - gesture.lastTime;
+    if (elapsed > 0) gesture.velocity = (gesture.lastY - e.clientY) / elapsed;
+    gesture.lastY = e.clientY;
+    gesture.lastTime = e.timeStamp;
+    gesture.currentHeight = Math.max(MIN_DRAWER, Math.min(MAX_DRAWER, gesture.startHeight + delta));
+    drawerHeightRef.current = gesture.currentHeight;
+    // At most one height update per display frame while following the finger.
+    if (dragFrameRef.current === null) {
+      dragFrameRef.current = requestAnimationFrame(() => {
+        dragFrameRef.current = null;
+        if (gestureRef.current === gesture) setDrawerHeight(gesture.currentHeight);
+      });
+    }
+  };
+
+  const endDrawerDrag = (e) => {
+    const gesture = gestureRef.current;
+    if (!gesture || gesture.pointerId !== e.pointerId) return;
+    gestureRef.current = null;
+    if (!gesture.moved) return; // The button click below handles taps.
+    suppressClickRef.current = true;
+    const velocity = e.timeStamp - gesture.lastTime < 100 ? gesture.velocity : 0;
+    const midpoint = (MIN_DRAWER + MAX_DRAWER) / 2;
+    const shouldOpen = Math.abs(velocity) > 0.35
+      ? velocity > 0
+      : gesture.currentHeight >= midpoint;
+    snapDrawer(shouldOpen ? MAX_DRAWER : DRAWER_HANDLE_ONLY);
+  };
+
+  const cancelDrawerDrag = (e) => {
+    const gesture = gestureRef.current;
+    if (!gesture || gesture.pointerId !== e.pointerId) return;
+    gestureRef.current = null;
+    suppressClickRef.current = false;
+    const midpoint = (MIN_DRAWER + MAX_DRAWER) / 2;
+    snapDrawer(gesture.startHeight >= midpoint ? MAX_DRAWER : DRAWER_HANDLE_ONLY);
+  };
+
+  const toggleDrawer = () => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    setJumpAnimating(false);
+    snapDrawer(drawerHeightRef.current >= MAX_DRAWER - 1 ? DRAWER_HANDLE_ONLY : MAX_DRAWER);
+  };
+
+  const canvasHeight = `calc(100% - ${drawerHeight}px)`;
 
   return (
     <>
-      {/* Canvas area — uses exact same StorefrontView as live store */}
-      {/* overscroll-behavior:contain: the canvas is an inner scroller, so on
-          iPad its rubber-band momentum would otherwise chain into (and
-          visibly drag) the page around it — the same class of bounce fixed
-          on html/body for the live store in index.css. */}
-      <div onClick={() => { if (drawerHeight >= MAX_DRAWER) snapDrawer(DRAWER_HANDLE_ONLY); }} style={{ height: canvasHeight, overflow: 'auto', background: '#f0f2f7', position: 'relative', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
+      {/* Canvas and drawer move together; inner scrolling stays contained. */}
+      <div
+        className="sellio-designer-canvas"
+        onClick={() => { if (drawerExpanded) snapDrawer(DRAWER_HANDLE_ONLY); }}
+        style={{
+          height: canvasHeight, overflow: 'auto', background: '#f0f2f7', position: 'relative',
+          overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch',
+          transition: isDraggingDrawer ? 'none' : drawerTransition,
+        }}
+      >
         <div style={{ position: 'relative' }}>
           <StorefrontView
             previewMode={true}
@@ -1209,40 +1260,68 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
         </div>
       </div>
 
-      {/* Floating bottom drawer */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0,
-        height: drawerHeight,
-        background: 'white',
-        borderRadius: '20px 20px 0 0',
-        boxShadow: '0 -4px 24px rgba(0,0,0,0.12)',
-        transition: isDraggingDrawer.current ? 'none' : 'height 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
-        animation: jumpAnimating ? 'drawerJump 0.6s ease-in-out 3' : 'none',
-        zIndex: 100,
-        display: 'flex', flexDirection: 'column',
-        overflow: 'hidden',
-      }}>
+      <div
+        ref={drawerRef}
+        className="sellio-designer-drawer"
+        style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0,
+          height: drawerHeight,
+          background: 'white',
+          borderRadius: '20px 20px 0 0',
+          boxShadow: '0 -4px 24px rgba(0,0,0,0.12)',
+          transition: isDraggingDrawer ? 'none' : drawerTransition,
+          zIndex: 100,
+          display: 'flex', flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
         <style>{`
-          @keyframes drawerJump {
-            0%, 100% { transform: translateY(0); }
-            30% { transform: translateY(-14px); }
-            50% { transform: translateY(0); }
-            70% { transform: translateY(-7px); }
+          @keyframes sellioDrawerHint {
+            0%, 75%, 100% { transform: translateY(0); }
+            20% { transform: translateY(-8px); }
+            40% { transform: translateY(0); }
+            55% { transform: translateY(-4px); }
+          }
+          .sellio-designer-drawer-hint {
+            animation: sellioDrawerHint 1.8s ease-in-out infinite;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .sellio-designer-drawer-hint { animation: none; }
+            .sellio-designer-drawer, .sellio-designer-canvas { transition: none !important; }
           }
         `}</style>
-        {/* Drag handle */}
-        <div
-          onMouseDown={startDrawerDrag}
-          onTouchStart={startDrawerDrag}
+        {/* The line stays small; the full-width touch target is 48px tall. */}
+        <button
+          type="button"
+          aria-label={drawerExpanded ? 'Close design controls' : 'Open design controls'}
+          aria-expanded={drawerExpanded}
+          aria-controls="sellio-mobile-design-controls"
+          onPointerDown={startDrawerDrag}
+          onPointerMove={moveDrawerDrag}
+          onPointerUp={endDrawerDrag}
+          onPointerCancel={cancelDrawerDrag}
+          onLostPointerCapture={cancelDrawerDrag}
+          onClick={toggleDrawer}
           style={{
-            padding: '10px 0 6px', cursor: 'pointer', flexShrink: 0, touchAction: 'none', userSelect: 'none',
+            height: DRAWER_HANDLE_ONLY, width: '100%', padding: 0, border: 'none',
+            background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: isDraggingDrawer ? 'grabbing' : 'grab', flexShrink: 0,
+            touchAction: 'none', userSelect: 'none',
           }}
         >
-          <div style={{ width: 48, height: 5, borderRadius: 3, background: primaryColor, margin: '0 auto', opacity: 0.85 }} />
-        </div>
+          <span
+            className={jumpAnimating ? 'sellio-designer-drawer-hint' : undefined}
+            style={{ display: 'block', width: 48, height: 5, borderRadius: 3, background: primaryColor, opacity: 0.85 }}
+          />
+        </button>
 
-        {/* Tab bar */}
-        {drawerHeight >= DRAWER_TABS_VISIBLE - 10 && (
+        {/* Keep content mounted so opening and closing do not flash or reset fields. */}
+        <div
+          id="sellio-mobile-design-controls"
+          aria-hidden={!drawerExpanded}
+          inert={drawerExpanded ? undefined : ''}
+          style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+        >
           <div style={{ display: 'flex', gap: 6, padding: '4px 16px 0', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0 }}>
             {TABS.map(tab => (
               <button
@@ -1250,10 +1329,7 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
                 type="button"
                 onClick={() => {
                   setDrawerTab(tab.id);
-                  const newH = MAX_DRAWER;
-                  drawerHeightRef.current = newH;
-                  setDrawerHeight(newH);
-                  setDrawerExpanded(true);
+                  snapDrawer(MAX_DRAWER);
                 }}
                 style={{
                   flexShrink: 0, whiteSpace: 'nowrap',
@@ -1269,19 +1345,13 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
               </button>
             ))}
           </div>
-        )}
 
-        {/* Tab content */}
-        {drawerExpanded && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 16px' }}>
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 20px 16px' }}>
             {drawerTab === 'banner' && <BannerTabContent form={form} onChange={onChange} />}
             {drawerTab === 'menu' && <MenuTabContent form={form} onChange={onChange} />}
             {drawerTab === 'style' && <StyleTabContent form={form} onChange={onChange} />}
           </div>
-        )}
 
-        {/* Save button */}
-        {drawerExpanded && (
           <div style={{ padding: '8px 16px', paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))', borderTop: '1px solid #f1f5f9', flexShrink: 0, background: 'white' }}>
             <button
               type="button"
@@ -1297,9 +1367,8 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
-        )}
+        </div>
       </div>
-
     </>
   );
 }
