@@ -1767,9 +1767,10 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-3 sm:space-x-0">
-            <AlertDialogCancel className="mt-0 rounded-xl">Keep editing</AlertDialogCancel>
+            <AlertDialogCancel className="sellio-designer-dialog-button mt-0 rounded-xl focus-visible:ring-0">Keep editing</AlertDialogCancel>
             <AlertDialogAction
-              className="rounded-xl bg-purple-600 text-white hover:bg-purple-700"
+              className="sellio-designer-dialog-button rounded-xl text-white hover:brightness-95 focus-visible:ring-0"
+              style={{ background: DESIGNER_SELECTION_FILL }}
               onClick={handleDiscardAndClose}
             >
               Discard &amp; leave
@@ -1780,7 +1781,8 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .sellio-designer-choice:focus-visible {
+        .sellio-designer-choice:focus-visible,
+        .sellio-designer-dialog-button:focus-visible {
           outline: 2px solid rgb(var(--color-primary, 124 58 237));
           outline-offset: 3px;
         }
