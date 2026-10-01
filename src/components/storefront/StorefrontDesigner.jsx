@@ -832,9 +832,40 @@ const MENU_LAYOUTS = [
   { value: 'split', label: 'Split', description: 'Category sidebar' },
 ];
 
+// Designer selections use a fixed editor accent so merchant theme colours
+// cannot hide the selected state.
+const DESIGNER_SELECTION_COLOR = '#7c3aed';
+
+function getDesignerChoiceStyle(selected) {
+  return {
+    border: `2px solid ${selected ? DESIGNER_SELECTION_COLOR : '#e2e8f0'}`,
+    background: selected ? '#f5f3ff' : '#ffffff',
+    boxShadow: selected ? '0 3px 10px rgba(124,58,237,0.10)' : 'none',
+    boxSizing: 'border-box',
+    transition: 'border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease',
+  };
+}
+
+function DesignerSelectionBadge({ selected }) {
+  return (
+    <span aria-hidden="true" style={{ display: 'flex', justifyContent: 'center', minHeight: 22, marginTop: 8 }}>
+      {selected && (
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+          padding: '3px 6px', borderRadius: 999, background: DESIGNER_SELECTION_COLOR, color: '#ffffff',
+          fontSize: 11, fontWeight: 700, lineHeight: '16px', whiteSpace: 'nowrap',
+        }}>
+          <Check size={12} strokeWidth={3} />
+          Selected
+        </span>
+      )}
+    </span>
+  );
+}
+
 function LayoutPreview({ type, active }) {
-  const ink = active ? 'var(--color-primary)' : '#94a3b8';
-  const pale = active ? 'color-mix(in srgb, var(--color-primary) 14%, white)' : '#e2e8f0';
+  const ink = active ? DESIGNER_SELECTION_COLOR : '#94a3b8';
+  const pale = active ? '#ddd6fe' : '#e2e8f0';
   const tile = { background: pale, borderRadius: 2 };
 
   if (type === 'list') {
@@ -884,21 +915,19 @@ function LayoutChoiceCard({ option, selected, onSelect }) {
   return (
     <button
       type="button"
+      aria-label={option.label}
       aria-pressed={selected}
       onClick={onSelect}
       style={{
-        minWidth: 0, padding: 8, borderRadius: 12, cursor: 'pointer', textAlign: 'left',
-        background: selected ? 'color-mix(in srgb, var(--color-primary) 6%, white)' : 'white',
-        border: selected ? '2px solid var(--color-primary)' : '1px solid #e2e8f0',
-        boxShadow: selected ? '0 4px 12px rgba(15, 23, 42, 0.08)' : 'none',
-        transition: 'border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease',
+        ...getDesignerChoiceStyle(selected),
+        minWidth: 0, padding: 9, borderRadius: 12, cursor: 'pointer', textAlign: 'center',
       }}
     >
-      <div style={{ height: 52, padding: 7, borderRadius: 8, background: '#f8fafc', display: 'flex', alignItems: 'center', marginBottom: 7 }}>
+      <div style={{ height: 52, padding: 7, borderRadius: 8, background: selected ? '#ede9fe' : '#f8fafc', display: 'flex', alignItems: 'center', marginBottom: 8 }}>
         <LayoutPreview type={option.value} active={selected} />
       </div>
-      <div style={{ fontSize: 12, fontWeight: 700, color: '#334155' }}>{option.label}</div>
-      <div style={{ fontSize: 9, color: '#94a3b8', lineHeight: 1.3, marginTop: 2 }}>{option.description}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: '#334155', lineHeight: 1.3 }}>{option.label}</div>
+      <DesignerSelectionBadge selected={selected} />
     </button>
   );
 }
@@ -906,27 +935,25 @@ function LayoutChoiceCard({ option, selected, onSelect }) {
 function MenuTabContent({ form, onChange }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-      <div style={{ paddingBottom: 20 }}>
-        <SectionLabel>Menu layout</SectionLabel>
+      <div style={{ paddingBottom: 16 }}>
+        <SectionLabel>Layout</SectionLabel>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
           {MENU_LAYOUTS.map(option => (
             <LayoutChoiceCard
               key={option.value}
               option={option}
-              selected={form.product_layout === option.value}
+              selected={(form.product_layout || 'grid') === option.value}
               onSelect={() => onChange('product_layout', option.value)}
             />
           ))}
         </div>
       </div>
 
-      <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 12, paddingBottom: 8 }}>
-        <SectionLabel>Menu navigation</SectionLabel>
+      <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 8, paddingBottom: 8 }}>
         <Toggle
           checked={form.show_category_tabs !== false}
           onChange={v => onChange('show_category_tabs', v)}
           label="Category navigation"
-          description={form.product_layout === 'split' ? 'Show the category sidebar' : 'Show category filter tabs'}
         />
         <div style={{ paddingTop: 10, paddingBottom: 8 }}>
           <SectionLabel>Product density</SectionLabel>
@@ -938,23 +965,18 @@ function MenuTabContent({ form, onChange }) {
             value={form.menu_density || 'comfortable'}
             onChange={v => onChange('menu_density', v)}
           />
-          <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 7, lineHeight: 1.4 }}>
-            Compact fits more products on tablet and desktop while keeping mobile readable.
-          </p>
         </div>
       </div>
 
-      <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 12, paddingBottom: 8 }}>
-        <SectionLabel>Menu sections</SectionLabel>
+      <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 8, paddingBottom: 8 }}>
         <Toggle
           checked={form.show_featured !== false}
           onChange={v => onChange('show_featured', v)}
           label="Featured section"
-          description="Highlight top picks for customers"
         />
         {form.show_featured !== false && (
           <div style={{ paddingBottom: 8 }}>
-            <SectionLabel>Featured section title</SectionLabel>
+            <SectionLabel>Title</SectionLabel>
             <Input value={form.featured_section_title || ''} onChange={e => onChange('featured_section_title', e.target.value)} placeholder="e.g. Today's Picks" className="text-sm" />
           </div>
         )}
@@ -965,14 +987,12 @@ function MenuTabContent({ form, onChange }) {
         <Toggle
           checked={form.show_product_description !== false}
           onChange={v => onChange('show_product_description', v)}
-          label="Product descriptions"
-          description="Show descriptions on product cards"
+          label="Descriptions"
         />
         <Toggle
           checked={form.show_stock_badge !== false}
           onChange={v => onChange('show_stock_badge', v)}
           label="Stock status"
-          description="Show sold-out indicators"
         />
       </div>
     </div>
@@ -985,12 +1005,7 @@ function StyleTabContent({ form, onChange }) {
 
   return (
     <div>
-      <SectionLabel>Typography</SectionLabel>
-      <p style={{ fontSize: 12, color: '#64748b', lineHeight: 1.45, margin: '-2px 0 14px' }}>
-        Choose a personality, then set a comfortable reading size. Changes appear in the live storefront instantly.
-      </p>
-
-      <SectionLabel>Font personality</SectionLabel>
+      <SectionLabel>Font</SectionLabel>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
         {STOREFRONT_TYPOGRAPHY_PERSONALITIES.map(personality => {
           const selected = selectedPersonality.value === personality.value;
@@ -998,40 +1013,24 @@ function StyleTabContent({ form, onChange }) {
             <button
               key={personality.value}
               type="button"
+              aria-label={personality.fontName}
               aria-pressed={selected}
               onClick={() => onChange('font_family', personality.value)}
               style={{
-                minWidth: 0, minHeight: 132, padding: 11, borderRadius: 14,
-                border: selected ? '2px solid var(--color-primary)' : '1px solid #e2e8f0',
-                background: selected ? 'color-mix(in srgb, var(--color-primary) 6%, white)' : 'white',
-                boxShadow: selected ? '0 5px 14px rgba(15,23,42,0.08)' : 'none',
-                textAlign: 'left', cursor: 'pointer', boxSizing: 'border-box',
-                transition: 'border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease',
+                ...getDesignerChoiceStyle(selected),
+                minWidth: 0, minHeight: 110, padding: 12, borderRadius: 14,
+                textAlign: 'left', cursor: 'pointer',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6, marginBottom: 8 }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 11, lineHeight: 1.25, fontWeight: 700, color: '#1e293b' }}>{personality.label}</div>
-                  <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2 }}>{personality.fontName}</div>
-                </div>
-                {selected ? (
-                  <span style={{ width: 19, height: 19, borderRadius: '50%', background: 'var(--color-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Check size={12} strokeWidth={3} />
-                  </span>
-                ) : (
-                  <span style={{ fontFamily: personality.stack, fontSize: 18, fontWeight: 700, color: '#cbd5e1', lineHeight: 1 }}>Aa</span>
-                )}
-              </div>
-              <div style={{ fontFamily: personality.stack }}>
-                <div style={{ color: '#0f172a', fontSize: 14, fontWeight: 700, lineHeight: 1.25 }}>Sample</div>
-                <div style={{ color: '#94a3b8', fontSize: 9, marginTop: 4 }}>{personality.description}</div>
-              </div>
+              <div style={{ fontSize: 14, lineHeight: 1.3, fontWeight: 700, color: '#1e293b' }}>{personality.fontName}</div>
+              <div style={{ fontFamily: personality.stack, color: '#0f172a', fontSize: 22, fontWeight: 700, lineHeight: 1.25, marginTop: 8 }}>Sample</div>
+              <DesignerSelectionBadge selected={selected} />
             </button>
           );
         })}
       </div>
 
-      <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 18, paddingTop: 16 }}>
+      <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 16, paddingTop: 14 }}>
         <SectionLabel>Text size</SectionLabel>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 7 }}>
           {STOREFRONT_TYPOGRAPHY_SCALES.map(option => {
@@ -1040,27 +1039,26 @@ function StyleTabContent({ form, onChange }) {
               <button
                 key={option.value}
                 type="button"
+                aria-label={option.label}
                 aria-pressed={selected}
                 onClick={() => onChange('typography_scale', option.value)}
                 style={{
-                  minWidth: 0, padding: '10px 5px 9px', borderRadius: 11,
-                  border: selected ? '2px solid var(--color-primary)' : '1px solid #e2e8f0',
-                  background: selected ? 'color-mix(in srgb, var(--color-primary) 6%, white)' : 'white',
-                  color: selected ? 'var(--color-primary)' : '#475569',
-                  cursor: 'pointer', boxSizing: 'border-box', textAlign: 'center',
+                  ...getDesignerChoiceStyle(selected),
+                  minWidth: 0, padding: '10px 5px', borderRadius: 11,
+                  color: '#334155', cursor: 'pointer', textAlign: 'center',
                 }}
               >
-                <div style={{ fontFamily: selectedPersonality.stack, fontSize: 14 * option.multiplier, fontWeight: 700, lineHeight: 1 }}>Aa</div>
-                <div style={{ fontSize: 10, fontWeight: 700, marginTop: 6 }}>{option.label}</div>
-                <div style={{ fontSize: 8, color: '#94a3b8', marginTop: 2, lineHeight: 1.2 }}>{option.description}</div>
+                <div style={{ fontFamily: selectedPersonality.stack, fontSize: 20 * option.multiplier, fontWeight: 700, lineHeight: 1.2 }}>Aa</div>
+                <div style={{ fontSize: 12, fontWeight: 700, marginTop: 7, lineHeight: 1.3 }}>{option.label}</div>
+                <DesignerSelectionBadge selected={selected} />
               </button>
             );
           })}
         </div>
       </div>
 
-      <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 18, paddingTop: 16 }}>
-        <SectionLabel>Readability preview</SectionLabel>
+      <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 16, paddingTop: 14 }}>
+        <SectionLabel>Preview</SectionLabel>
         <div
           aria-live="polite"
           style={{
@@ -1072,9 +1070,6 @@ function StyleTabContent({ form, onChange }) {
         >
           <div style={{ fontSize: 22 * selectedScale, fontWeight: 700, color: '#0f172a', lineHeight: 1.25 }}>Sample</div>
         </div>
-        <p style={{ fontSize: 10, color: '#94a3b8', lineHeight: 1.45, margin: '9px 2px 0' }}>
-          The sample updates instantly with your selected font personality and text size.
-        </p>
       </div>
     </div>
   );
