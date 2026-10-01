@@ -830,15 +830,15 @@ const MENU_LAYOUTS = [
   { value: 'split', label: 'Split', description: 'Category sidebar' },
 ];
 
-// Designer selections use a fixed editor accent so merchant theme colours
-// cannot hide the selected state.
-const DESIGNER_SELECTION_COLOR = '#7c3aed';
+// Theme variables store RGB channels; wrap them in rgb() for CSS colours.
+const DESIGNER_SELECTION_COLOR = 'rgb(var(--color-primary, 124 58 237))';
+const DESIGNER_SELECTION_FILL = 'var(--color-primary-gradient, rgb(var(--color-primary, 124 58 237)))';
 
 function getDesignerChoiceStyle(selected) {
   return {
     border: `2px solid ${selected ? DESIGNER_SELECTION_COLOR : '#e2e8f0'}`,
-    background: selected ? '#f5f3ff' : '#ffffff',
-    boxShadow: selected ? '0 3px 10px rgba(124,58,237,0.10)' : 'none',
+    background: selected ? 'rgb(var(--color-primary, 124 58 237) / 0.08)' : '#ffffff',
+    boxShadow: selected ? '0 3px 10px rgb(var(--color-primary, 124 58 237) / 0.10)' : 'none',
     boxSizing: 'border-box',
     transition: 'border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease',
   };
@@ -850,7 +850,7 @@ function DesignerSelectionBadge({ selected }) {
       {selected && (
         <span style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3,
-          padding: '3px 6px', borderRadius: 999, background: DESIGNER_SELECTION_COLOR, color: '#ffffff',
+          padding: '3px 6px', borderRadius: 999, background: DESIGNER_SELECTION_FILL, color: '#ffffff',
           fontSize: 11, fontWeight: 700, lineHeight: '16px', maxWidth: '100%', boxSizing: 'border-box', flexWrap: 'wrap',
         }}>
           <Check size={12} strokeWidth={3} />
@@ -863,7 +863,7 @@ function DesignerSelectionBadge({ selected }) {
 
 function LayoutPreview({ type, active }) {
   const ink = active ? DESIGNER_SELECTION_COLOR : '#94a3b8';
-  const pale = active ? '#ddd6fe' : '#e2e8f0';
+  const pale = active ? 'rgb(var(--color-primary, 124 58 237) / 0.20)' : '#e2e8f0';
   const tile = { background: pale, borderRadius: 2 };
 
   if (type === 'list') {
@@ -913,6 +913,7 @@ function LayoutChoiceCard({ option, selected, onSelect }) {
   return (
     <button
       type="button"
+      className="sellio-designer-choice"
       aria-label={option.label}
       aria-pressed={selected}
       onClick={onSelect}
@@ -921,7 +922,7 @@ function LayoutChoiceCard({ option, selected, onSelect }) {
         minWidth: 0, padding: 9, borderRadius: 12, cursor: 'pointer', textAlign: 'center',
       }}
     >
-      <div style={{ height: 52, padding: 7, borderRadius: 8, background: selected ? '#ede9fe' : '#f8fafc', display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+      <div style={{ height: 52, padding: 7, borderRadius: 8, background: selected ? 'rgb(var(--color-primary, 124 58 237) / 0.10)' : '#f8fafc', display: 'flex', alignItems: 'center', marginBottom: 8 }}>
         <LayoutPreview type={option.value} active={selected} />
       </div>
       <div style={{ fontSize: 14, fontWeight: 700, color: '#334155', lineHeight: 1.3 }}>{option.label}</div>
@@ -1011,6 +1012,7 @@ function StyleTabContent({ form, onChange }) {
             <button
               key={personality.value}
               type="button"
+              className="sellio-designer-choice"
               aria-label={personality.fontName}
               aria-pressed={selected}
               onClick={() => onChange('font_family', personality.value)}
@@ -1037,6 +1039,7 @@ function StyleTabContent({ form, onChange }) {
               <button
                 key={option.value}
                 type="button"
+                className="sellio-designer-choice"
                 aria-label={option.label}
                 aria-pressed={selected}
                 onClick={() => onChange('typography_scale', option.value)}
@@ -1777,6 +1780,10 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .sellio-designer-choice:focus-visible {
+          outline: 2px solid rgb(var(--color-primary, 124 58 237));
+          outline-offset: 3px;
+        }
       `}</style>
 
       <div style={{
