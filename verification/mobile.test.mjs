@@ -104,13 +104,13 @@ try {
   await act(async () => {
     touch('touchstart');
     assert.equal(activeMoveListeners.size, 1);
-    assert.equal(touch('touchmove', 0, 6).defaultPrevented, true);
+    assert.equal(touch('touchmove', 0, 12).defaultPrevented, true);
     for (const callback of frames.values()) callback(); frames.clear();
   });
   assert.ok(Number(indicator.style.opacity) > 0, 'Feedback should be visible from the first small drag');
   assert.doesNotMatch(indicator.style.transform, /translate3d\(0, -/, 'Feedback must appear below the header');
   await act(async () => {
-    for (const distance of [12, 20, 30, 42]) assert.equal(touch('touchmove', 0, distance).defaultPrevented, true);
+    for (const distance of [18, 24, 32, 42]) assert.equal(touch('touchmove', 0, distance).defaultPrevented, true);
     assert.equal(frames.size, 1, 'Touch bursts should share one visual frame');
     for (const callback of frames.values()) callback(); frames.clear();
   });
@@ -163,7 +163,7 @@ try {
   const action = document.createElement('button'); action.innerHTML = '<span>Open detail</span>'; root.appendChild(action);
   const actionLabel = action.firstElementChild; let actionClicks = 0;
   action.addEventListener('click', () => { actionClicks++; });
-  await act(async () => { touch('touchstart', 0, 0, actionLabel); touch('touchend', 0, 0, actionLabel); action.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 })); });
+  await act(async () => { touch('touchstart', 0, 0, actionLabel); touch('touchmove', 0, 5, actionLabel); touch('touchend', 0, 0, actionLabel); action.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 })); });
   assert.equal(actionClicks, 1, 'A normal tap should still activate its button');
   await act(async () => { touch('touchstart', 0, 0, actionLabel); touch('touchmove', 0, 60, actionLabel); touch('touchend', 0, 0, actionLabel); action.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 })); });
   assert.equal(refreshCalls, 2, 'Pulls beginning on buttons should also refresh');
