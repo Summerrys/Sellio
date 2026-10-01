@@ -73,8 +73,14 @@ try {
   passed('definite checkout rejection clears the pending attempt');
 
   const { default: PullToRefresh, isRefreshAtTop, getRefreshScrollTarget } = await loadComponent('src/components/ui-custom/PullToRefresh.jsx');
-  let refreshCalls = 0; let finishRefresh;
-  const view = mount(PullToRefresh, { onRefresh: () => { refreshCalls++; return new Promise(resolve => { finishRefresh = resolve; }); }, children: React.createElement('p', { id: 'feed-text' }, 'Feed') });
+  let refreshCalls = 0; let finishRefresh; let refreshCommits = 0;
+  const frames = new Map(); let frameId = 0;
+  const originalFrame = globalThis.requestAnimationFrame;
+  const originalCancelFrame = globalThis.cancelAnimationFrame;
+  globalThis.requestAnimationFrame = callback => { frames.set(++frameId, callback); return frameId; };
+  globalThis.cancelAnimationFrame = id => frames.delete(id);
+  const ProfiledPull = props => React.createElement(React.Profiler, { id: 'refresh', onRender: () => { refreshCommits++; } }, React.createElement(PullToRefresh, props));
+  const view = mount(ProfiledPull, { onRefresh: () => { refreshCalls++; return new Promise(resolve => { finishRefresh = resolve; }); }, children: React.createElement('p', { id: 'feed-text' }, 'Feed') });
   await view.render();
   const root = view.container.firstElementChild; const target = view.container.querySelector('p');
   Object.defineProperty(document, 'scrollingElement', { value: document.documentElement, configurable: true });
@@ -82,11 +88,28 @@ try {
   assert.equal(isRefreshAtTop(target, root), false);
   document.documentElement.scrollTop = 0;
   assert.equal(isRefreshAtTop(target, root), true);
-  function touch(type, x = 0, y = 0, targetElement = target, count = 1) {
-    const event = new Event(type, { bubbles: true, cancelable: true });
+  function touch(type, x = 0, y = 0, targetElement = target, count = 1, cancelable = true) {
+    const event = new Event(type, { bubbles: true, cancelable });
     Object.defineProperty(event, 'touches', { value: Array.from({ length: count }, () => ({ clientX: x, clientY: y })) });
     targetElement.dispatchEvent(event);
+    return event;
   }
+  const initialCommits = refreshCommits;
+  await act(async () => {
+    touch('touchstart');
+    for (const distance of [20, 35, 50, 65, 80]) assert.equal(touch('touchmove', 0, distance).defaultPrevented, true);
+    assert.equal(frames.size, 1, 'Touch bursts should share one visual frame');
+    for (const callback of frames.values()) callback(); frames.clear();
+  });
+  assert.equal(refreshCommits, initialCommits, 'Dragging should not rerender the page');
+  const indicator = root.querySelector('.sellio-pull-refresh-indicator');
+  const dragPosition = indicator.style.transform;
+  assert.equal(indicator.style.transition, 'none', 'Tracking must not chase the finger with a transition');
+  await act(async () => touch('touchend'));
+  assert.equal(refreshCalls, 0, 'A short pull should settle without loading');
+  assert.notEqual(indicator.style.transform, dragPosition);
+  assert.match(indicator.style.transition, /transform/, 'Release should animate back');
+  passed('drag frames are coalesced without React commits; short pulls animate back');
   await act(async () => { touch('touchstart'); touch('touchmove', 0, 180); touch('touchcancel'); touch('touchend'); });
   assert.equal(refreshCalls, 0);
   await act(async () => { touch('touchstart'); touch('touchmove', 200, 30); touch('touchend'); });
@@ -97,11 +120,17 @@ try {
   document.documentElement.scrollTop = 0;
   await act(async () => { touch('touchstart'); touch('touchmove', 0, 180); touch('touchend'); });
   assert.equal(refreshCalls, 1);
+  assert.equal(frames.size, 0, 'A release before the visual frame must cancel that stale frame');
   await act(async () => { touch('touchstart'); touch('touchmove', 0, 180); touch('touchend'); click(root.querySelector('button')); });
   assert.equal(refreshCalls, 1);
   await act(async () => { finishRefresh(); await next(); });
   assert.equal(root.getAttribute('aria-busy'), 'false');
   passed('pull cancellation, horizontal gestures, page scroll and duplicate refresh lock');
+  await act(async () => { touch('touchstart'); touch('touchmove', 0, 180, target, 2); touch('touchend'); });
+  await act(async () => { touch('touchstart'); touch('touchmove', 0, 180, target, 1, false); touch('touchend'); });
+  await act(async () => { touch('touchstart', 0, 0, root.querySelector('button')); touch('touchmove', 0, 180, root.querySelector('button')); touch('touchend', 0, 0, root.querySelector('button')); });
+  assert.equal(refreshCalls, 1, 'Multi-touch, native scrolling and interactive controls must not refresh');
+  passed('multi-touch, uncancelable scroll and controls do not trigger refresh');
   const nested = document.createElement('div'); nested.style.overflowY = 'auto'; root.appendChild(nested); nested.appendChild(target);
   Object.defineProperty(nested, 'scrollHeight', { value: 300 }); Object.defineProperty(nested, 'clientHeight', { value: 100 });
   assert.equal(getRefreshScrollTarget(target, root), nested);
@@ -110,12 +139,27 @@ try {
   nested.scrollTop = 0; document.documentElement.scrollTop = 30;
   assert.equal(isRefreshAtTop(target, root), false);
   document.documentElement.scrollTop = 0;
+  await act(async () => { touch('touchstart'); nested.scrollTop = 20; touch('touchmove', 0, 180); touch('touchend'); });
+  assert.equal(refreshCalls, 1, 'A nested scroller moving after touchstart must cancel the pull');
+  nested.scrollTop = 0;
   passed('nested scroll container and scrolled parent do not trigger refresh');
   root.appendChild(target); nested.remove();
+  await view.render({ disabled: true, onRefresh: () => { refreshCalls++; }, children: React.createElement('p', { id: 'feed-text' }, 'Feed') });
+  await act(async () => { touch('touchstart'); touch('touchmove', 0, 180); touch('touchend'); click(root.querySelector('button')); });
+  assert.equal(refreshCalls, 1, 'Disabled refresh must ignore both touch and keyboard control');
+  passed('disabled refresh ignores gestures and the accessible button');
   await view.render({ onRefresh: async () => { throw new Error('Test refresh rejection'); }, children: React.createElement('p', null, 'Feed') });
   await act(async () => { click(view.container.querySelector('button')); await next(); });
   assert.equal(view.container.firstElementChild.getAttribute('aria-busy'), 'false');
   passed('failed refresh releases the spinner');
+  const finalTarget = view.container.querySelector('p');
+  await act(async () => { touch('touchstart', 0, 0, finalTarget); touch('touchmove', 0, 80, finalTarget); });
+  assert.equal(frames.size, 1);
+  await act(async () => view.root.unmount());
+  assert.equal(frames.size, 0, 'Unmount must cancel pending drag frames');
+  globalThis.requestAnimationFrame = originalFrame;
+  globalThis.cancelAnimationFrame = originalCancelFrame;
+  passed('unmount cancels pending visual work');
 
   let mode = false; let listener; let removed;
   window.matchMedia = () => ({ get matches() { return mode; }, addEventListener: (_event, callback) => { listener = callback; }, removeEventListener: (_event, callback) => { removed = callback; } });
