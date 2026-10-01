@@ -11,7 +11,8 @@ import { Building2, MapPin, Camera, X, Save, Percent, Loader2, Pencil, Hash, Rec
 import PrinterSettings from '@/components/settings/PrinterSettings';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import useSettingsDraft from '@/hooks/useSettingsDraft';
 import ImageEditModal from '@/components/onboarding/ImageEditModal';
 import { INDUSTRY_OPTIONS, normalizeIndustry } from '@/lib/industry';
 import { cn } from '@/lib/utils';
@@ -33,6 +34,15 @@ const COUNTRY_CONFIG = {
   Malaysia:  { currency: 'MYR', phonePlaceholder: '+60 12 345 6789' },
 };
 const CURRENCY_TO_COUNTRY = { SGD: 'Singapore', MYR: 'Malaysia' };
+const DEFAULT_BUSINESS_HOURS = [
+    { day: 'monday',    label: 'Mon', enabled: true,  open: '09:00', close: '22:00' },
+    { day: 'tuesday',   label: 'Tue', enabled: true,  open: '09:00', close: '22:00' },
+    { day: 'wednesday', label: 'Wed', enabled: true,  open: '09:00', close: '22:00' },
+    { day: 'thursday',  label: 'Thu', enabled: true,  open: '09:00', close: '22:00' },
+    { day: 'friday',    label: 'Fri', enabled: true,  open: '09:00', close: '22:00' },
+    { day: 'saturday',  label: 'Sat', enabled: false, open: '09:00', close: '22:00' },
+    { day: 'sunday',    label: 'Sun', enabled: false, open: '09:00', close: '22:00' },
+  ];
 
 function Section({ icon: Icon, title, children }) {
   return (
@@ -66,7 +76,7 @@ function GatedFields({ canEdit, onBlocked, children, className }) {
   );
 }
 
-export default function BusinessProfileTab({ tenant, tenantId }) {
+export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 0 }) {
   const { hasPermission } = useTenant();
   const canEditSettings = hasPermission('settings.edit');
   const queryClient = useQueryClient();
@@ -77,17 +87,9 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
   const [taxOpen, setTaxOpen] = useState(false);
   const [orderSettingsOpen, setOrderSettingsOpen] = useState(false);
   const [businessHoursOpen, setBusinessHoursOpen] = useState(false);
-  const [businessHours, setBusinessHours] = useState([
-    { day: 'monday',    label: 'Mon', enabled: true,  open: '09:00', close: '22:00' },
-    { day: 'tuesday',   label: 'Tue', enabled: true,  open: '09:00', close: '22:00' },
-    { day: 'wednesday', label: 'Wed', enabled: true,  open: '09:00', close: '22:00' },
-    { day: 'thursday',  label: 'Thu', enabled: true,  open: '09:00', close: '22:00' },
-    { day: 'friday',    label: 'Fri', enabled: true,  open: '09:00', close: '22:00' },
-    { day: 'saturday',  label: 'Sat', enabled: false, open: '09:00', close: '22:00' },
-    { day: 'sunday',    label: 'Sun', enabled: false, open: '09:00', close: '22:00' },
-  ]);
+  const [businessHours, setBusinessHours, applyRemoteHours, markHoursSaved] = useSettingsDraft(tenantId, DEFAULT_BUSINESS_HOURS);
   const [isSavingHours, setIsSavingHours] = useState(false);
-  const [form, setForm] = useState({
+  const [form, setForm, applyRemoteForm, markFormSaved] = useSettingsDraft(tenantId, {
     name: '',
     branch_name: '',
     industry: '',
@@ -112,13 +114,20 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [showLogoEditor, setShowLogoEditor] = useState(false);
+  const logoFileRef = useRef(logoFile);
+  logoFileRef.current = logoFile;
+  const logoScopeRef = useRef(tenantId);
 
   useEffect(() => {
     if (!tenant) return;
+    if (logoScopeRef.current !== tenantId) {
+      logoScopeRef.current = tenantId;
+      setLogoFile(null);
+    } else if (logoFileRef.current) return;
     const settings = tenant.settings || {};
     const storedCurrency = tenant.currency || 'SGD';
     const country = CURRENCY_TO_COUNTRY[storedCurrency] || tenant.country || 'Singapore';
-    setForm({
+    const nextForm = {
       name: tenant.name || '',
       branch_name: settings.branch_name || '',
       industry: normalizeIndustry(tenant.industry),
@@ -136,25 +145,28 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
       receipt_show_tax: tenant.receipt_show_tax !== false,
       receipt_show_order_number: tenant.receipt_show_order_number !== false,
       receipt_footer: tenant.receipt_footer || '',
-    });
-    setLogoPreview(tenant.logo_url || null);
-  }, [tenant]);
+    };
+    if (applyRemoteForm(nextForm)) setLogoPreview(tenant.logo_url || null);
+  }, [tenant, tenantId, applyRemoteForm, refreshVersion]);
+
+  const { data: savedBusinessHours } = useQuery({
+    queryKey: ['businessHours', tenantId],
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase.from('business_hours').select('day_of_week, open_time, close_time, is_closed').eq('tenant_id', tenantId);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!tenantId,
+  });
 
   useEffect(() => {
-    if (!tenantId) return;
-    const fetchHours = async () => {
-      const supabase = await getSupabase();
-      const { data } = await supabase.from('business_hours').select('day_of_week, open_time, close_time, is_closed').eq('tenant_id', tenantId);
-      if (data?.length) {
-        setBusinessHours(prev => prev.map(row => {
-          const found = data.find(d => d.day_of_week === row.day);
-          if (!found) return row;
-          return { ...row, enabled: !found.is_closed, open: found.open_time || '09:00', close: found.close_time || '22:00' };
-        }));
-      }
-    };
-    fetchHours();
-  }, [tenantId]);
+    if (!savedBusinessHours) return;
+    applyRemoteHours(DEFAULT_BUSINESS_HOURS.map(row => {
+      const found = savedBusinessHours.find(day => day.day_of_week === row.day);
+      return found ? { ...row, enabled: !found.is_closed, open: found.open_time || '09:00', close: found.close_time || '22:00' } : row;
+    }));
+  }, [savedBusinessHours, applyRemoteHours, refreshVersion]);
 
   const handleCountryChange = (country) => {
     const cfg = COUNTRY_CONFIG[country];
@@ -244,6 +256,12 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
         },
       }).eq('id', tenantId);
       if (error) throw error;
+      markFormSaved({ ...form, logo_url: logoUrl });
+      setForm(prev => prev.logo_url === form.logo_url ? { ...prev, logo_url: logoUrl } : prev);
+      if (logoFileRef.current === logoFile) {
+        setLogoFile(null);
+        setLogoPreview(logoUrl || null);
+      }
       queryClient.invalidateQueries({ queryKey: ['currentTenant'] });
       toast.success('Business settings saved');
     } catch (err) {
@@ -268,6 +286,8 @@ export default function BusinessProfileTab({ tenant, tenantId }) {
       await supabase.from('business_hours').delete().eq('tenant_id', tenantId);
       const { error } = await supabase.from('business_hours').insert(rows);
       if (error) throw error;
+      markHoursSaved(businessHours);
+      queryClient.invalidateQueries({ queryKey: ['businessHours', tenantId] });
       toast.success('Business hours saved');
     } catch (err) {
       toast.error(err.message || 'Failed to save hours');
