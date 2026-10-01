@@ -453,6 +453,16 @@ function AppLayout({ children, currentPageName }) {
 
   const displayUser = customUser || user;
 
+  // Avoid adding a second bottom inset inside Base44's Android wrapper.
+  // The wrapper owns the native system navigation area; browser/PWA and iOS
+  // viewports continue using their CSS safe-area padding.
+  const isNativeAndroid = typeof window !== 'undefined' &&
+    /Android/i.test(window.navigator.userAgent) && (
+      typeof window.ReactNativeWebView?.postMessage === 'function' ||
+      typeof window.__hybrid_bridge?.sendMessage === 'function'
+    );
+  const bottomSafeAreaInset = isNativeAndroid ? '0px' : 'env(safe-area-inset-bottom, 0px)';
+
   if (publicPages.includes(currentPageName)) {
     return <>{children}</>;
   }
@@ -541,7 +551,7 @@ function AppLayout({ children, currentPageName }) {
           (currentPageName === 'Onboarding' || window.location.pathname.startsWith('/store/') || window.location.pathname.startsWith('/order/')) ? "pt-0" : "pt-[calc(56px+env(safe-area-inset-top,0px))] lg:pt-0",
           currentPageName !== 'Onboarding' && (collapsed ? "lg:ml-[72px]" : "lg:ml-[260px]")
         )}
-        style={{ paddingBottom: currentPageName !== 'Onboarding' ? 'calc(env(safe-area-inset-bottom, 0px) + 72px)' : undefined }}
+        style={{ paddingBottom: currentPageName !== 'Onboarding' ? `calc(${bottomSafeAreaInset} + 72px)` : undefined }}
       >
         {currentPageName !== 'Onboarding' && (
           <BillingStatusBanner
@@ -561,7 +571,7 @@ function AppLayout({ children, currentPageName }) {
         <nav
           data-tour="bottom-nav"
           className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-30 flex items-stretch"
-          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          style={{ paddingBottom: bottomSafeAreaInset }}
         >
           {/* Left: Dashboard, Products */}
           {[
