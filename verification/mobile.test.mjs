@@ -13,7 +13,7 @@ const app = process.cwd();
 const require = createRequire(path.join(process.argv[2] || app, 'package.json'));
 const { JSDOM } = require('jsdom');
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://sellio.example.invalid', pretendToBeVisual: true });
-for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLInputElement', 'Node', 'Event', 'MouseEvent', 'MutationObserver', 'sessionStorage', 'localStorage', 'getComputedStyle', 'navigator']) {
+for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLInputElement', 'HTMLSelectElement', 'DocumentFragment', 'CustomEvent', 'Node', 'Event', 'MouseEvent', 'MutationObserver', 'sessionStorage', 'localStorage', 'getComputedStyle', 'navigator']) {
   Object.defineProperty(globalThis, key, { value: dom.window[key], configurable: true, writable: true });
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -230,7 +230,7 @@ try {
       builder.onResolve({ filter: /^@tanstack\/react-query$/, namespace: 'settings-fixture' }, args => ({ path: args.path, external: true }));
       builder.onLoad({ filter: /.*/, namespace: 'settings-fixture' }, ({ path: name }) => {
         const contents = {
-          tenant: "import { useQuery } from '@tanstack/react-query'; export function useTenant() { const { data } = useQuery({ queryKey: ['currentTenant', 'settings-fixture'], initialData: [globalThis.__settingsFixtureTenant], enabled: false }); return { tenantId: 'settings-fixture', tenant: data[0], subscription: null, hasPermission: () => true }; }",
+          tenant: "import { useQuery } from '@tanstack/react-query'; export function useTenant() { const { data } = useQuery({ queryKey: ['currentTenant', 'settings-fixture'], initialData: [globalThis.__settingsFixtureTenant], queryFn: async () => [globalThis.__settingsFixtureTenant], enabled: false }); return { tenantId: 'settings-fixture', tenant: data[0], subscription: null, hasPermission: () => true }; }",
           gate: 'export default function Gate({ children }) { return children; }',
           tour: 'export const useProductTour = () => ({ isOwner: false, eligible: false });',
           empty: 'export default function Empty() { return null; }',
