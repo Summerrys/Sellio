@@ -104,6 +104,8 @@ export default function PullToRefresh({ onRefresh, children, disabled = false })
     mountedRef.current = true;
     const root = containerRef.current;
     const start = event => {
+      // A new finger contact is a new tap, not the previous drag's click.
+      clickBlockRef.current = null;
       if (refreshingRef.current) return;
       reset();
       const target = event.target instanceof Element ? event.target : event.target?.parentElement;
