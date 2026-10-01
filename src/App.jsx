@@ -12,7 +12,7 @@ import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import AccountDeletion from './pages/AccountDeletion';
 import Storefront from './pages/Storefront';
-import { useEffect, Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import { AppUserProvider, useAppUser } from '@/lib/AppUserContext';
@@ -54,20 +54,38 @@ function RouteIndexingGuard() {
   return null;
 }
 
-// The bare root URL is where a merchant lands if they type just the
-// domain, or have an old/manual bookmark to it (the PWA install itself is
-// unaffected — its start_url is /Splash, which already runs the real
-// session-recovery check in Auth.jsx before ever reaching Dashboard). That
-// left one real gap: LandingPage is a static marketing page with no
-// session awareness at all, and React Router ranks the exact "/" match
-// above the "/*" wildcard that AuthenticatedApp lives on — so a logged-in
-// merchant hitting bare "/" always saw the marketing page instead of their
-// dashboard, even on a simple refresh. appUser is a synchronous,
-// cookie-backed read (see AppUserContext) — the same signal already used
-// everywhere else in the app — so this check is instant, no loading flash
-// before the redirect.
+// Base44's native wrapper opens the root URL and exposes these bridges.
+// Native launches go through Auth's Supabase session recovery; ordinary
+// browser visits keep the public landing page. Only the root route changes,
+// so storefront, password recovery and other deep links keep their routes.
+const hasNativeBridge = () => typeof window !== 'undefined' && (
+  typeof window.ReactNativeWebView?.postMessage === 'function' ||
+  typeof window.__hybrid_bridge?.sendMessage === 'function'
+);
+
 const RootRoute = () => {
   const { appUser } = useAppUser();
+  const location = useLocation();
+  const [isNativeApp, setIsNativeApp] = useState(hasNativeBridge);
+
+  useEffect(() => {
+    if (isNativeApp) return;
+
+    // Also handle wrappers that inject their bridge after React mounts.
+    const timer = window.setInterval(() => {
+      if (hasNativeBridge()) setIsNativeApp(true);
+    }, 100);
+    const timeout = window.setTimeout(() => window.clearInterval(timer), 5000);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(timeout);
+    };
+  }, [isNativeApp]);
+
+  if (isNativeApp) {
+    return <Navigate to={{ pathname: '/Auth', search: location.search, hash: location.hash }} replace />;
+  }
+
   return appUser ? <Navigate to="/Dashboard" replace /> : <LandingPage />;
 };
 
