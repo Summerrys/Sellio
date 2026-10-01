@@ -151,7 +151,13 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
       }]);
 
       // Add AI response to conversation history AFTER receiving response
-      setConversationHistory(prev => [...prev.slice(-9), newMessage, { role: 'assistant', content: aiText }]);
+      // menuAssistant v28: keep this reply's own action tags with it, so the assistant
+      // sees its earlier replies as it wrote them (not shown, never applied again).
+      setConversationHistory(prev => [...prev.slice(-9), newMessage, {
+        role: 'assistant',
+        content: aiText,
+        ...(typeof data.historyTags === 'string' && data.historyTags ? { tags: data.historyTags } : {}),
+      }]);
     } catch (error) {
       setMessages(prev => [...prev, {
         role: 'assistant',
