@@ -14,6 +14,15 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
   const [loading, setLoading] = useState(false);
   const [conversationHistory, setConversationHistory] = useState([]);
   const [cartFeedback, setCartFeedback] = useState(null);
+  // One timer for the cart toast: a new toast restarts it, so a toast that comes
+  // within 4 seconds of the last one isn't hidden early by the old timer.
+  const cartFeedbackTimer = useRef(null);
+  const showCartFeedback = (feedback) => {
+    clearTimeout(cartFeedbackTimer.current);
+    setCartFeedback(feedback);
+    cartFeedbackTimer.current = setTimeout(() => setCartFeedback(null), 4000);
+  };
+  useEffect(() => () => clearTimeout(cartFeedbackTimer.current), []);
   const messagesEndRef = useRef(null);
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const currency = tenant?.currency || '$';
@@ -135,8 +144,7 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
         const parts = [];
         if (result.addedCount > 0) parts.push(`Added ${result.addedNames.join(', ')} to cart!`);
         if (changedNames.length > 0) parts.push(`Cart updated: ${changedNames.join(', ')}`);
-        setCartFeedback({ ...result, text: parts.join(' ') });
-        setTimeout(() => setCartFeedback(null), 4000);
+        showCartFeedback({ ...result, text: parts.join(' ') });
       }
       const recommendedProducts = (recommendedProductIds || [])
         .map((id) => products.find((p) => p.id === id))
@@ -442,8 +450,7 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
                                     return;
                                   }
                                   onAddToCart(product, null);
-                                  setCartFeedback({ addedCount: 1, addedNames: [`1x ${product.name}`] });
-                                  setTimeout(() => setCartFeedback(null), 4000);
+                                  showCartFeedback({ addedCount: 1, addedNames: [`1x ${product.name}`] });
                                 }}
                                 style={{
                                   width: 28, height: 28, borderRadius: '50%', background: primaryColor,
