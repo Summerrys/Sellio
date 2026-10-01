@@ -94,19 +94,32 @@ try {
     targetElement.dispatchEvent(event);
     return event;
   }
+  const activeMoveListeners = new Set();
+  const addListener = root.addEventListener.bind(root);
+  const removeListener = root.removeEventListener.bind(root);
+  root.addEventListener = (type, listener, options) => { if (type === 'touchmove') activeMoveListeners.add(listener); addListener(type, listener, options); };
+  root.removeEventListener = (type, listener, options) => { if (type === 'touchmove') activeMoveListeners.delete(listener); removeListener(type, listener, options); };
+  const indicator = root.querySelector('.sellio-pull-refresh-indicator');
   const initialCommits = refreshCommits;
   await act(async () => {
     touch('touchstart');
-    for (const distance of [20, 35, 50, 65, 80]) assert.equal(touch('touchmove', 0, distance).defaultPrevented, true);
+    assert.equal(activeMoveListeners.size, 1);
+    assert.equal(touch('touchmove', 0, 6).defaultPrevented, true);
+    for (const callback of frames.values()) callback(); frames.clear();
+  });
+  assert.ok(Number(indicator.style.opacity) > 0, 'Feedback should be visible from the first small drag');
+  assert.doesNotMatch(indicator.style.transform, /translate3d\(0, -/, 'Feedback must appear below the header');
+  await act(async () => {
+    for (const distance of [12, 20, 30, 42]) assert.equal(touch('touchmove', 0, distance).defaultPrevented, true);
     assert.equal(frames.size, 1, 'Touch bursts should share one visual frame');
     for (const callback of frames.values()) callback(); frames.clear();
   });
   assert.equal(refreshCommits, initialCommits, 'Dragging should not rerender the page');
-  const indicator = root.querySelector('.sellio-pull-refresh-indicator');
   const dragPosition = indicator.style.transform;
   assert.equal(indicator.style.transition, 'none', 'Tracking must not chase the finger with a transition');
   await act(async () => touch('touchend'));
   assert.equal(refreshCalls, 0, 'A short pull should settle without loading');
+  assert.equal(activeMoveListeners.size, 0, 'Normal scrolling must not retain a blocking listener');
   assert.notEqual(indicator.style.transform, dragPosition);
   assert.match(indicator.style.transition, /transform/, 'Release should animate back');
   passed('drag frames are coalesced without React commits; short pulls animate back');
@@ -118,8 +131,8 @@ try {
   await act(async () => { touch('touchstart'); touch('touchmove', 0, 180); touch('touchend'); });
   assert.equal(refreshCalls, 0);
   document.documentElement.scrollTop = 0;
-  await act(async () => { touch('touchstart'); touch('touchmove', 0, 180); touch('touchend'); });
-  assert.equal(refreshCalls, 1);
+  await act(async () => { touch('touchstart'); touch('touchmove', 0, 60); touch('touchend'); });
+  assert.equal(refreshCalls, 1, 'An ordinary short deliberate pull should refresh');
   assert.equal(frames.size, 0, 'A release before the visual frame must cancel that stale frame');
   await act(async () => { touch('touchstart'); touch('touchmove', 0, 180); touch('touchend'); click(root.querySelector('button')); });
   assert.equal(refreshCalls, 1);
@@ -128,9 +141,12 @@ try {
   passed('pull cancellation, horizontal gestures, page scroll and duplicate refresh lock');
   await act(async () => { touch('touchstart'); touch('touchmove', 0, 180, target, 2); touch('touchend'); });
   await act(async () => { touch('touchstart'); touch('touchmove', 0, 180, target, 1, false); touch('touchend'); });
-  await act(async () => { touch('touchstart', 0, 0, root.querySelector('button')); touch('touchmove', 0, 180, root.querySelector('button')); touch('touchend', 0, 0, root.querySelector('button')); });
-  assert.equal(refreshCalls, 1, 'Multi-touch, native scrolling and interactive controls must not refresh');
-  passed('multi-touch, uncancelable scroll and controls do not trigger refresh');
+  const editable = document.createElement('input'); root.appendChild(editable);
+  await act(async () => { touch('touchstart', 0, 0, editable); assert.equal(touch('touchmove', 0, 180, editable).defaultPrevented, false); touch('touchend', 0, 0, editable); });
+  editable.remove();
+  assert.equal(refreshCalls, 1, 'Multi-touch, native scrolling and input editing must not refresh');
+  assert.equal(activeMoveListeners.size, 0);
+  passed('multi-touch, uncancelable scroll and inputs do not trigger refresh');
   const nested = document.createElement('div'); nested.style.overflowY = 'auto'; root.appendChild(nested); nested.appendChild(target);
   Object.defineProperty(nested, 'scrollHeight', { value: 300 }); Object.defineProperty(nested, 'clientHeight', { value: 100 });
   assert.equal(getRefreshScrollTarget(target, root), nested);
@@ -144,9 +160,21 @@ try {
   nested.scrollTop = 0;
   passed('nested scroll container and scrolled parent do not trigger refresh');
   root.appendChild(target); nested.remove();
+  const action = document.createElement('button'); action.innerHTML = '<span>Open detail</span>'; root.appendChild(action);
+  const actionLabel = action.firstElementChild; let actionClicks = 0;
+  action.addEventListener('click', () => { actionClicks++; });
+  await act(async () => { touch('touchstart', 0, 0, actionLabel); touch('touchend', 0, 0, actionLabel); action.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 })); });
+  assert.equal(actionClicks, 1, 'A normal tap should still activate its button');
+  await act(async () => { touch('touchstart', 0, 0, actionLabel); touch('touchmove', 0, 60, actionLabel); touch('touchend', 0, 0, actionLabel); action.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 })); });
+  assert.equal(refreshCalls, 2, 'Pulls beginning on buttons should also refresh');
+  assert.equal(actionClicks, 1, 'A drag must not also activate the underlying button');
+  await act(async () => { click(action); finishRefresh(); await next(); });
+  assert.equal(actionClicks, 2, 'Keyboard activation remains available');
+  action.remove();
+  passed('button taps work; button drags refresh without accidental navigation');
   await view.render({ disabled: true, onRefresh: () => { refreshCalls++; }, children: React.createElement('p', { id: 'feed-text' }, 'Feed') });
   await act(async () => { touch('touchstart'); touch('touchmove', 0, 180); touch('touchend'); click(root.querySelector('button')); });
-  assert.equal(refreshCalls, 1, 'Disabled refresh must ignore both touch and keyboard control');
+  assert.equal(refreshCalls, 2, 'Disabled refresh must ignore both touch and keyboard control');
   passed('disabled refresh ignores gestures and the accessible button');
   await view.render({ onRefresh: async () => { throw new Error('Test refresh rejection'); }, children: React.createElement('p', null, 'Feed') });
   await act(async () => { click(view.container.querySelector('button')); await next(); });
@@ -157,9 +185,36 @@ try {
   assert.equal(frames.size, 1);
   await act(async () => view.root.unmount());
   assert.equal(frames.size, 0, 'Unmount must cancel pending drag frames');
+  assert.equal(activeMoveListeners.size, 0, 'Unmount must detach blocking gesture listeners');
   globalThis.requestAnimationFrame = originalFrame;
   globalThis.cancelAnimationFrame = originalCancelFrame;
   passed('unmount cancels pending visual work');
+
+  const { default: useSettingsDraft } = await loadComponent('src/hooks/useSettingsDraft.js');
+  let draft;
+  function DraftFixture({ tenantId }) {
+    draft = useSettingsDraft(tenantId, { name: '', count: 1 });
+    return React.createElement('p', null, draft[0].name);
+  }
+  const settingsDraft = mount(DraftFixture, { tenantId: 'store-a' });
+  await settingsDraft.render();
+  await act(async () => draft[2]({ name: 'Saved', count: 1 }));
+  await act(async () => draft[1](prev => ({ ...prev, count: '1' })));
+  await act(async () => assert.equal(draft[2]({ name: 'Updated remotely', count: 1 }), true));
+  assert.equal(draft[0].name, 'Updated remotely');
+  await act(async () => draft[1](prev => ({ ...prev, name: 'Unsaved local edit' })));
+  await act(async () => assert.equal(draft[2]({ name: 'Remote response', count: 1 }), false));
+  assert.equal(draft[0].name, 'Unsaved local edit');
+  const submitted = draft[0];
+  await act(async () => draft[1](prev => ({ ...prev, name: 'Typed while saving' })));
+  await act(async () => { draft[3](submitted); assert.equal(draft[2](submitted), false); });
+  assert.equal(draft[0].name, 'Typed while saving');
+  await act(async () => { draft[3](draft[0]); assert.equal(draft[2]({ name: 'Fresh after save', count: 1 }), true); });
+  assert.equal(draft[0].name, 'Fresh after save');
+  await settingsDraft.render({ tenantId: 'store-b' });
+  await act(async () => draft[2]({ name: 'Other business', count: 2 }));
+  assert.equal(draft[0].name, 'Other business');
+  passed('Settings refresh updates clean fields, preserves edits during refresh/save and isolates tenant drafts');
 
   let mode = false; let listener; let removed;
   window.matchMedia = () => ({ get matches() { return mode; }, addEventListener: (_event, callback) => { listener = callback; }, removeEventListener: (_event, callback) => { removed = callback; } });
