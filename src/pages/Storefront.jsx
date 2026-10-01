@@ -1055,6 +1055,8 @@ function StorefrontInner() {
           onProductSelect={(product) => { setAssistantProductRequest({ product }); setShowProductModal(true); }}
           onAddToCart={addToCart}
           cart={cart}
+          onUpdateCartQuantity={updateQuantity}
+          onOpenCart={() => setShowCart(true)}
           isStoreOpen={isStoreOpen}
           isPreview={isPreview}
         />

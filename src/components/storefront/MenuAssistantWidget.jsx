@@ -5,7 +5,7 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useBackToClose } from '@/lib/useBackToClose';
 
-export default function MenuAssistantWidget({ products, tenant, onProductSelect, onAddToCart, storefront, externalOpen, onExternalClose, isStoreOpen = true, isPreview = false, cart, hidden = false }) {
+export default function MenuAssistantWidget({ products, tenant, onProductSelect, onAddToCart, storefront, externalOpen, onExternalClose, isStoreOpen = true, isPreview = false, cart, hidden = false, onUpdateCartQuantity, onOpenCart }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   useBackToClose(open, () => setOpen(false));
@@ -98,7 +98,9 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
           tenant: tenant,
           isStoreOpen: isPreview ? true : isStoreOpen,
           // menuAssistant v23 uses this to see what's already in the cart.
-          ...(Array.isArray(cart) ? { cart: cart.map(i => ({ productId: i.product_id, quantity: i.quantity, variant: i.variant || null })) } : {}),
+          ...(Array.isArray(cart) ? { cart: cart.map(i => ({ productId: i.product_id, quantity: i.quantity, variant: i.variant || null, key: i.key })) } : {}),
+          // menuAssistant v27 lets the chat change cart lines (quantity, remove) when it can apply them.
+          ...(onUpdateCartQuantity ? { cartEditsSupported: true } : {}),
           // menuAssistant v26 offers items' options (sizes, add-ons) only to a chat that can add them.
           optionsSupported: true,
         }
@@ -113,11 +115,27 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
         return;
       }
 
-      const { text: aiText, recommendedProductIds, cartActions } = data;
+      const { text: aiText, recommendedProductIds, cartActions, cartUpdates } = data;
 
       const result = executeCartActions(cartActions, products);
-      if (result.addedCount > 0) {
-        setCartFeedback(result);
+      // menuAssistant v27: changes to lines already in the cart (new quantity; 0 removes),
+      // applied with the cart screen's own quantity change.
+      const changedNames = [];
+      if (Array.isArray(cartUpdates) && onUpdateCartQuantity && (isPreview || isStoreOpen)) {
+        for (const u of cartUpdates) {
+          const line = (cart || []).find(i => i.key === u?.key);
+          const qty = Math.floor(Number(u?.quantity));
+          if (!line || !Number.isFinite(qty) || qty < 0) continue;
+          onUpdateCartQuantity(line.key, qty);
+          const label = `${line.name}${line.variant ? ` (${line.variant})` : ''}`;
+          changedNames.push(qty === 0 ? `removed ${label}` : `${label} × ${qty}`);
+        }
+      }
+      if (result.addedCount > 0 || changedNames.length > 0) {
+        const parts = [];
+        if (result.addedCount > 0) parts.push(`Added ${result.addedNames.join(', ')} to cart!`);
+        if (changedNames.length > 0) parts.push(`Cart updated: ${changedNames.join(', ')}`);
+        setCartFeedback({ ...result, text: parts.join(' ') });
         setTimeout(() => setCartFeedback(null), 4000);
       }
       const recommendedProducts = (recommendedProductIds || [])
@@ -128,7 +146,8 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
         role: 'assistant',
         content: aiText,
         products: recommendedProducts,
-        hasCartAction: result.addedCount > 0,
+        hasCartAction: result.addedCount > 0 || changedNames.length > 0,
+        cartBadge: result.addedCount > 0 ? 'Added to cart' : 'Cart updated',
       }]);
 
       // Add AI response to conversation history AFTER receiving response
@@ -153,6 +172,8 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
   const buttonBackground = primaryColor.startsWith('#') || primaryColor.startsWith('rgb')
     ? primaryColor
     : 'linear-gradient(135deg, #f97316, #ec4899, #8b5cf6)';
+
+  const cartCount = (cart || []).reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
 
   if (hidden) return null;
 
@@ -217,7 +238,7 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
         }}>
           <style>{`@keyframes slideUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }`}</style>
           <ShoppingCart size={16} color="white" />
-          Added {cartFeedback.addedNames.join(', ')} to cart!
+          {cartFeedback.text || `Added ${cartFeedback.addedNames.join(', ')} to cart!`}
         </div>
       )}
 
@@ -259,6 +280,21 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
                 {(!isPreview && !isStoreOpen) ? '🔒 Store is currently closed' : 'Ask me or just tell me what you want'}
               </p>
             </div>
+            {onOpenCart && cartCount > 0 && (
+              <button
+                onClick={() => onOpenCart()}
+                aria-label={t('cart')}
+                title={t('cart')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
+                  padding: '6px 9px', borderRadius: 16, border: `1px solid ${primaryColor}`,
+                  background: 'white', color: primaryColor, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                <ShoppingCart size={16} color={primaryColor} />
+                {cartCount}
+              </button>
+            )}
             <button
               onClick={() => setOpen(false)}
               style={{
@@ -307,7 +343,7 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
                       padding: '4px 10px', borderRadius: 20,
                     }}>
                       <ShoppingCart size={12} />
-                      Added to cart
+                      {msg.cartBadge || 'Added to cart'}
                     </div>
                   )}
                   {msg.products && msg.products.length > 0 && (
