@@ -216,6 +216,67 @@ try {
   assert.equal(draft[0].name, 'Other business');
   passed('Settings refresh updates clean fields, preserves edits during refresh/save and isolates tenant drafts');
 
+  const settingsMocks = {
+    name: 'settings-ui-fixture',
+    setup(builder) {
+      const patterns = [
+        [/TenantContext$/, 'tenant'],
+        [/(RequirePermission|PermissionGate)$/, 'gate'],
+        [/useProductTour$/, 'tour'],
+        [/(ThemeSelector|TourGuide|PricingModal|PrinterSettings|UserManagement)$/, 'empty'],
+        [/base44Client$/, 'base44'],
+      ];
+      for (const [filter, name] of patterns) builder.onResolve({ filter }, () => ({ path: name, namespace: 'settings-fixture' }));
+      builder.onLoad({ filter: /.*/, namespace: 'settings-fixture' }, ({ path: name }) => {
+        const contents = {
+          tenant: "import { useQuery } from '@tanstack/react-query'; export function useTenant() { const { data } = useQuery({ queryKey: ['currentTenant', 'settings-fixture'], initialData: [globalThis.__settingsFixtureTenant], enabled: false }); return { tenantId: 'settings-fixture', tenant: data[0], subscription: null, hasPermission: () => true }; }",
+          gate: 'export default function Gate({ children }) { return children; }',
+          tour: 'export const useProductTour = () => ({ isOwner: false, eligible: false });',
+          empty: 'export default function Empty() { return null; }',
+          base44: 'export const base44 = { functions: { invoke: () => { throw new Error("Unexpected write"); } } };',
+        }[name];
+        return { contents, loader: 'js' };
+      });
+    },
+  };
+  let tenantReads = 0;
+  globalThis.__settingsFixtureTenant = { id: 'settings-fixture', name: 'Before refresh', currency: 'SGD', industry: 'retail', settings: {} };
+  globalThis.__sellioTestClient = {
+    from(table) {
+      const result = {
+        select() { return this; }, eq() { return this; }, limit() { return this; },
+        then(resolve, reject) {
+          if (table === 'tenants') tenantReads++;
+          return Promise.resolve({ data: table === 'tenants' ? [globalThis.__settingsFixtureTenant] : [], error: null }).then(resolve, reject);
+        },
+      };
+      return result;
+    },
+  };
+  const { default: TenantSettings } = await loadComponent('src/pages/TenantSettings.jsx', [mock, settingsMocks]);
+  const settingsClient = queryClient();
+  const settingsView = mount(TenantSettings, {}, settingsClient);
+  await settingsView.render();
+  await act(async () => { await next(); await next(); });
+  const refreshSettings = () => click([...settingsView.container.querySelectorAll('button')].find(button => button.textContent.trim() === 'Refresh view'));
+  const businessName = () => [...settingsView.container.querySelectorAll('input')].find(input => input.value.includes('refresh') || input.value === 'Local draft');
+  assert.equal(businessName().value, 'Before refresh');
+  globalThis.__settingsFixtureTenant = { ...globalThis.__settingsFixtureTenant, name: 'After refresh' };
+  await act(async () => { refreshSettings(); await next(); await next(); });
+  assert.equal(tenantReads, 1);
+  assert.equal(businessName().value, 'After refresh');
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(businessName(), 'Local draft');
+    businessName().dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  globalThis.__settingsFixtureTenant = { ...globalThis.__settingsFixtureTenant, name: 'Remote refresh' };
+  await act(async () => { refreshSettings(); await next(); await next(); });
+  assert.equal(tenantReads, 2);
+  assert.equal(businessName().value, 'Local draft');
+  assert.equal(settingsClient.getQueryData(['currentTenant', 'settings-fixture'])[0].name, 'Remote refresh');
+  assert.equal(settingsView.container.querySelector('.sellio-pull-refresh').getAttribute('aria-busy'), 'false');
+  passed('Settings page refresh reads tenant data, updates clean controls and keeps a typed business-name draft');
+
   let mode = false; let listener; let removed;
   window.matchMedia = () => ({ get matches() { return mode; }, addEventListener: (_event, callback) => { listener = callback; }, removeEventListener: (_event, callback) => { removed = callback; } });
   const { ThemeProvider } = await loadComponent('src/components/theme/ThemeProvider.jsx');
