@@ -116,6 +116,8 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
   const [showLogoEditor, setShowLogoEditor] = useState(false);
   const logoFileRef = useRef(logoFile);
   logoFileRef.current = logoFile;
+  const logoUrlRef = useRef(form.logo_url);
+  logoUrlRef.current = form.logo_url;
   const logoScopeRef = useRef(tenantId);
 
   useEffect(() => {
@@ -258,7 +260,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
       if (error) throw error;
       markFormSaved({ ...form, logo_url: logoUrl });
       setForm(prev => prev.logo_url === form.logo_url ? { ...prev, logo_url: logoUrl } : prev);
-      if (logoFileRef.current === logoFile) {
+      if (logoFileRef.current === logoFile && logoUrlRef.current === form.logo_url) {
         setLogoFile(null);
         setLogoPreview(logoUrl || null);
       }
