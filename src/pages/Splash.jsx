@@ -37,8 +37,11 @@ export default function Splash() {
 
       {/* Content */}
       <div
-        className="flex flex-col items-center text-center px-8 z-10"
+        className="flex flex-col items-center text-center z-10"
         style={{
+          width: '100%',
+          padding: '0 32px',
+          boxSizing: 'border-box',
           transition: 'opacity 0.8s ease, transform 0.8s ease',
           opacity: visible ? 1 : 0,
           transform: visible ? 'translateY(0)' : 'translateY(24px)',
@@ -48,22 +51,18 @@ export default function Splash() {
         <img
           src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png"
           alt="Sellio"
-          className="object-contain mb-10"
-          style={{ height: 200 }}
+          className="object-contain"
+          style={{ height: 200, maxWidth: '100%', marginBottom: 40, flexShrink: 0 }}
         />
 
-        {/* Tagline */}
-        <div className="mb-12">
-          <p className="text-3xl font-light text-slate-700 tracking-wide leading-snug mb-1">
-            Your business,
-          </p>
-          <p
-            className="text-3xl font-semibold tracking-wide leading-snug bg-clip-text text-transparent"
-            style={{ backgroundImage: 'linear-gradient(90deg, #fb923c, #e0449a, #8b2fc9)' }}
-          >
-            beautifully online.
-          </p>
-        </div>
+        {/* Branding uses outlined lettering: Android text zoom must not reflow it.
+            Keep font scaling enabled for Auth and every other interactive page. */}
+        <img
+          src="/branding/sellio-splash-tagline.svg"
+          alt="Your business, beautifully online."
+          className="block"
+          style={{ width: 256.98, maxWidth: '100%', height: 'auto', aspectRatio: '256.98 / 86.5', marginBottom: 48, flexShrink: 0 }}
+        />
 
         {/* Branded bouncing dots */}
         <style>{`
@@ -72,7 +71,7 @@ export default function Splash() {
           .splash-dot-2{animation:sellio-bounce 1.2s ease-in-out infinite 200ms;background:#e0449a}
           .splash-dot-3{animation:sellio-bounce 1.2s ease-in-out infinite 400ms;background:#8b2fc9}
         `}</style>
-        <div className="flex gap-2">
+        <div className="flex" style={{ gap: 8 }}>
           <span className="splash-dot-1" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
           <span className="splash-dot-2" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
           <span className="splash-dot-3" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
