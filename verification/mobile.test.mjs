@@ -227,6 +227,7 @@ try {
         [/base44Client$/, 'base44'],
       ];
       for (const [filter, name] of patterns) builder.onResolve({ filter }, () => ({ path: name, namespace: 'settings-fixture' }));
+      builder.onResolve({ filter: /^@tanstack\/react-query$/, namespace: 'settings-fixture' }, args => ({ path: args.path, external: true }));
       builder.onLoad({ filter: /.*/, namespace: 'settings-fixture' }, ({ path: name }) => {
         const contents = {
           tenant: "import { useQuery } from '@tanstack/react-query'; export function useTenant() { const { data } = useQuery({ queryKey: ['currentTenant', 'settings-fixture'], initialData: [globalThis.__settingsFixtureTenant], enabled: false }); return { tenantId: 'settings-fixture', tenant: data[0], subscription: null, hasPermission: () => true }; }",
