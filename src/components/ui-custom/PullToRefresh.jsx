@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 
 const PULL_THRESHOLD = 52;
 const REFRESH_HOLD = 32;
-const DRAG_SLOP = 4;
+const DRAG_SLOP = 8;
 const BLOCKED = 'input, textarea, select, [contenteditable="true"], [role="combobox"], [role="listbox"], [role="slider"], [role="dialog"], [data-pull-refresh-block], .fixed';
 
 function getRefreshScrollTargets(target, root, doc) {
