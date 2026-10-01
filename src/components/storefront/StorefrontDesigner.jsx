@@ -1262,7 +1262,7 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
 
       <div
         ref={drawerRef}
-        className="sellio-designer-drawer"
+        className={`sellio-designer-drawer${jumpAnimating && !drawerExpanded ? ' sellio-designer-drawer-hint' : ''}`}
         style={{
           position: 'fixed', bottom: 0, left: 0, right: 0,
           height: drawerHeight,
@@ -1278,9 +1278,9 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
         <style>{`
           @keyframes sellioDrawerHint {
             0%, 75%, 100% { transform: translateY(0); }
-            20% { transform: translateY(-8px); }
+            20% { transform: translateY(-14px); }
             40% { transform: translateY(0); }
-            55% { transform: translateY(-4px); }
+            55% { transform: translateY(-7px); }
           }
           .sellio-designer-drawer-hint {
             animation: sellioDrawerHint 1.8s ease-in-out infinite;
@@ -1310,7 +1310,6 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
           }}
         >
           <span
-            className={jumpAnimating ? 'sellio-designer-drawer-hint' : undefined}
             style={{ display: 'block', width: 48, height: 5, borderRadius: 3, background: primaryColor, opacity: 0.85 }}
           />
         </button>
