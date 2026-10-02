@@ -308,7 +308,7 @@ function CounterScreen() {
     let handled = false;
     if (ticketOpen && dx > 0) { setTicketOpen(false); handled = true; }
     else if (!ticketOpen && view === 'order' && dx > 0) { backToTables(); handled = true; }
-    else if (!ticketOpen && view === 'order' && dx < 0 && count > 0) { setTicketOpen(true); handled = true; }
+    else if (!ticketOpen && view === 'order' && dx < 0 && count > 0 && window.innerWidth < 880) { setTicketOpen(true); handled = true; }
     else if (view === 'tables' && dx < 0 && target) { setView('order'); handled = true; }
     if (handled) suppressClickUntil.current = Date.now() + 400;
   };
