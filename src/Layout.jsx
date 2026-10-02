@@ -508,6 +508,19 @@ function AppLayout({ children, currentPageName }) {
       </aside>
       )}
 
+      {/* Desktop workspace controls share the mobile notification provider. */}
+      {currentPageName !== 'Onboarding' && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (
+        <header
+          aria-label="Desktop workspace controls"
+          className="hidden lg:flex fixed right-0 top-0 h-16 items-center justify-end border-b border-slate-100 bg-white z-30 transition-[left] duration-300"
+          style={{ left: collapsed ? '72px' : '260px' }}
+        >
+          <div className="flex w-full max-w-[1280px] items-center justify-end px-8 mx-auto">
+            {displayUser && <NotificationBell />}
+          </div>
+        </header>
+      )}
+
       {/* Mobile Header — hidden on public storefront routes */}
       {currentPageName !== 'Onboarding' && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-100 z-30 flex items-center px-4 justify-between"
@@ -552,7 +565,7 @@ function AppLayout({ children, currentPageName }) {
       <main
         className={cn(
           "flex-1 transition-all duration-300 min-h-screen overflow-x-hidden",
-          (currentPageName === 'Onboarding' || window.location.pathname.startsWith('/store/') || window.location.pathname.startsWith('/order/')) ? "pt-0" : "pt-[calc(56px+env(safe-area-inset-top,0px))] lg:pt-0",
+          (currentPageName === 'Onboarding' || window.location.pathname.startsWith('/store/') || window.location.pathname.startsWith('/order/')) ? "pt-0" : "pt-[calc(56px+env(safe-area-inset-top,0px))] lg:pt-16",
           currentPageName !== 'Onboarding' && (collapsed ? "lg:ml-[72px]" : "lg:ml-[260px]")
         )}
         style={{ paddingBottom: currentPageName !== 'Onboarding' ? `calc(${bottomSafeAreaInset} + 72px)` : undefined }}
