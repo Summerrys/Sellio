@@ -13,7 +13,7 @@ const app = process.cwd();
 const require = createRequire(path.join(process.argv[2] || app, 'package.json'));
 const { JSDOM } = require('jsdom');
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://sellio.example.invalid', pretendToBeVisual: true });
-for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLInputElement', 'HTMLSelectElement', 'DocumentFragment', 'CustomEvent', 'Node', 'Event', 'MouseEvent', 'MutationObserver', 'sessionStorage', 'localStorage', 'getComputedStyle', 'navigator']) {
+for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLInputElement', 'HTMLSelectElement', 'DocumentFragment', 'CustomEvent', 'Node', 'Event', 'MouseEvent', 'MutationObserver', 'sessionStorage', 'localStorage', 'getComputedStyle', 'navigator', 'NodeFilter', 'HTMLButtonElement']) {
   Object.defineProperty(globalThis, key, { value: dom.window[key], configurable: true, writable: true });
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -557,7 +557,7 @@ try {
       builder.onResolve({ filter: /^@tanstack\/react-query$/, namespace: 'settings-fixture' }, args => ({ path: args.path, external: true }));
       builder.onLoad({ filter: /.*/, namespace: 'settings-fixture' }, ({ path: name }) => {
         const contents = {
-          tenant: "import { useQuery } from '@tanstack/react-query'; export function useTenant() { const { data } = useQuery({ queryKey: ['currentTenant', 'settings-fixture'], initialData: [globalThis.__settingsFixtureTenant], queryFn: async () => [globalThis.__settingsFixtureTenant], enabled: false }); return { tenantId: 'settings-fixture', tenant: data[0], subscription: null, hasPermission: () => true }; }",
+          tenant: "import { useQuery } from '@tanstack/react-query'; export function useTenant() { const { data } = useQuery({ queryKey: ['currentTenant', 'settings-fixture'], initialData: [globalThis.__settingsFixtureTenant], queryFn: async () => (await globalThis.__sellioTestClient.from('tenants').select('*').eq('id', 'settings-fixture').limit(1)).data }); return { tenantId: 'settings-fixture', tenant: data[0], subscription: null, hasPermission: () => true }; }",
           gate: 'export default function Gate({ children }) { return children; }',
           tour: 'export const useProductTour = () => ({ isOwner: false, eligible: false });',
           empty: 'export default function Empty() { return null; }',
@@ -581,7 +581,16 @@ try {
       return result;
     },
   };
-  const { default: TenantSettings } = await loadComponent('src/pages/TenantSettings.jsx', [mock, settingsMocks]);
+  const settingsBundle = path.join(temporary, 'settings-with-app-refresh.mjs');
+  await build({
+    stdin: {
+      contents: "import React from 'react'; import Settings from './src/pages/TenantSettings.jsx'; import AppRefreshProvider from './src/components/ui-custom/AppRefreshProvider.jsx'; export default function Fixture(){return React.createElement(AppRefreshProvider,null,React.createElement(Settings));}",
+      resolveDir: app, sourcefile: 'settings-refresh-fixture.jsx', loader: 'jsx',
+    },
+    outfile: settingsBundle, bundle: true, packages: 'external', format: 'esm', platform: 'node',
+    alias: { '@': path.join(app, 'src') }, plugins: [mock, settingsMocks], logLevel: 'silent',
+  });
+  const { default: TenantSettings } = await import(pathToFileURL(settingsBundle).href);
   const settingsClient = queryClient();
   const settingsView = mount(TenantSettings, {}, settingsClient);
   await settingsView.render();
@@ -589,9 +598,10 @@ try {
   const refreshSettings = () => click([...settingsView.container.querySelectorAll('button')].find(button => button.textContent.trim() === 'Refresh view'));
   const businessName = () => [...settingsView.container.querySelectorAll('input')].find(input => input.value.includes('refresh') || input.value === 'Local draft');
   assert.equal(businessName().value, 'Before refresh');
+  const initialTenantReads = tenantReads;
   globalThis.__settingsFixtureTenant = { ...globalThis.__settingsFixtureTenant, name: 'After refresh' };
   await act(async () => { refreshSettings(); await next(); await next(); });
-  assert.equal(tenantReads, 1);
+  assert.equal(tenantReads, initialTenantReads + 1);
   assert.equal(businessName().value, 'After refresh');
   await act(async () => {
     Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(businessName(), 'Local draft');
@@ -599,7 +609,7 @@ try {
   });
   globalThis.__settingsFixtureTenant = { ...globalThis.__settingsFixtureTenant, name: 'Remote refresh' };
   await act(async () => { refreshSettings(); await next(); await next(); });
-  assert.equal(tenantReads, 2);
+  assert.equal(tenantReads, initialTenantReads + 2);
   assert.equal(businessName().value, 'Local draft');
   assert.equal(settingsClient.getQueryData(['currentTenant', 'settings-fixture'])[0].name, 'Remote refresh');
   assert.equal(settingsView.container.querySelector('.sellio-pull-refresh').getAttribute('aria-busy'), 'false');
