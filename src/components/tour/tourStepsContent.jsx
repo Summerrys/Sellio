@@ -14,7 +14,7 @@ function BrandWord({ children }) {
 // merchant. Each function takes light context (plan tier, whether real data
 // exists) since a couple of steps adapt or disappear based on that.
 
-export function getDashboardSteps({ hasTakeOrders, hasAiAssistant, hasDesignStore }) {
+export function getDashboardSteps({ hasTakeOrders, hasAiAssistant, hasDesignStore, isDesktop = false }) {
   const steps = [
     {
       target: 'body',
@@ -23,8 +23,10 @@ export function getDashboardSteps({ hasTakeOrders, hasAiAssistant, hasDesignStor
       content: "Let's take a 60-second look around before you start selling.",
     },
     {
-      target: '[data-tour="avatar-menu-btn"]',
-      content: 'Tap your logo anytime to open the full menu - every page, your storefront link, and account settings all live there.',
+      target: isDesktop ? '[data-tour="desktop-nav"]' : '[data-tour="avatar-menu-btn"]',
+      content: isDesktop
+        ? 'Use the sidebar for your workspace pages, storefront link, and account settings.'
+        : 'Tap your logo anytime to open the full menu — your pages, storefront link, and account settings all live there.',
     },
   ];
   if (hasAiAssistant) {
@@ -45,8 +47,11 @@ export function getDashboardSteps({ hasTakeOrders, hasAiAssistant, hasDesignStor
   });
   if (hasTakeOrders) {
     steps.push({
-      target: '[data-tour="take-orders-btn"]',
-      content: "Taking an order for a walk-in or phone customer? Tap here — pick Dine-in or Takeaway, then order just like your customers would.",
+      target: isDesktop ? '[data-tour="take-orders-btn"]' : '[data-tour="counter-shortcut"]',
+      placement: isDesktop ? 'bottom' : 'top',
+      content: isDesktop
+        ? 'Take Orders opens the Counter. Choose a table or Takeaway, add items, then send the order.'
+        : 'Tap Counter in the center of the bottom navigation to take an order. Choose a table or Takeaway, add items, then send.',
     });
   }
   steps.push(
@@ -55,17 +60,12 @@ export function getDashboardSteps({ hasTakeOrders, hasAiAssistant, hasDesignStor
       content: "One-tap shortcuts to the pages you'll use most.",
     },
     {
-      target: '[data-tour="sell-fab"]',
-      placement: 'top',
-      content: "This is your fastest way to add a new product, from anywhere in the app.",
-    },
-    {
-      target: '[data-tour="bottom-nav"]',
-      placement: 'top',
+      target: isDesktop ? '[data-tour="desktop-nav"]' : '[data-tour="bottom-nav"]',
+      placement: isDesktop ? 'right' : 'top',
       spotlightClicks: true,
       content: (
         <>
-          Let's walk through <strong>Products</strong>, <strong>Orders</strong>, and <strong>Settings</strong> next — tap any of them below whenever you're ready, we'll go deeper the moment you open each one.
+          Open <strong>Products</strong> and use <strong>Add</strong> to create an item. Next, explore <strong>Orders</strong> and <strong>Settings</strong> {isDesktop ? 'in the sidebar' : 'in the bottom navigation'}.
         </>
       ),
     },
@@ -73,7 +73,7 @@ export function getDashboardSteps({ hasTakeOrders, hasAiAssistant, hasDesignStor
       target: 'body',
       placement: 'center',
       title: "That's the Dashboard!",
-      content: 'Tap Products below whenever you\u2019re ready to continue.',
+      content: isDesktop ? 'Open Products in the sidebar to continue.' : 'Tap Products in the bottom navigation to continue.',
     },
   );
   return steps;
