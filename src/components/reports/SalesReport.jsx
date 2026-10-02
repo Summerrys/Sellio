@@ -5,7 +5,9 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import { TrendingUp, DollarSign, ShoppingCart } from 'lucide-react';
-import { format } from 'date-fns';
+import {
+  periodOf, summarize, isSale, dailySeries, chartSeries, productStats, categoryStats, paymentStats, fmtMoney,
+} from '@/lib/reportData';
 
 // Compact stat card built for a 3-across mobile grid — icon badge instead of a
 // bare floating icon, tighter type scale so three of these comfortably fit a
@@ -24,212 +26,189 @@ function StatCard({ label, value, icon: Icon, iconBg, iconColor }) {
   );
 }
 
-export default function SalesReport({ orders, products = [], categories = [], currency, themeColors, isStarter = true }) {
-  // FIX: order line items only ever carry {name, price, quantity, product_id, variant}
-  // — there's no item.total (needs price*quantity) and no item.category_id either.
-  // Category lives on the *product*, so resolving it means item.product_id -> product
-  // -> product.category_id -> category name, not reading it off the item directly.
-  // Reading the old, nonexistent field names silently produced NaN/undefined
-  // throughout this whole report.
-  const categoryNameById = categories.reduce((acc, c) => { acc[c.id] = c.name; return acc; }, {});
-  const productById = products.reduce((acc, p) => { acc[p.id] = p; return acc; }, {});
+// orders: every order in the selected period (all statuses). Sales count paid
+// orders that are not cancelled (lib/reportData.js, shared with the exports);
+// unpaid and cancelled orders are listed under the cards instead.
+export default function SalesReport({ orders, products = [], categories = [], currency, themeColors, isStarter = true, dateRange }) {
+  const period = periodOf(dateRange);
+  const sales = orders.filter(isSale);
+  const summary = summarize(orders);
 
-  // Revenue over time
-  const revenueByDate = orders.reduce((acc, order) => {
-    const date = format(new Date(order.created_date), 'MMM dd');
-    acc[date] = (acc[date] || 0) + (order.total_amount || 0);
-    return acc;
-  }, {});
+  // Revenue over time: every day of the period, oldest first (by week or month
+  // for long ranges), so days without sales show as zero.
+  const revenueData = chartSeries(dailySeries(sales, period.start, period.end))
+    .map((d) => ({ date: d.label, revenue: d.sales }));
 
-  const revenueData = Object.entries(revenueByDate).map(([date, revenue]) => ({
-    date,
-    revenue: parseFloat(revenue.toFixed(2)),
-  }));
+  // Revenue by category: category lives on the product (item.product_id ->
+  // product.category_id); lines whose product is gone count as "Uncategorized".
+  const categoryData = categoryStats(productStats(sales, products, categories))
+    .map((c) => ({ category: c.category, revenue: c.sales }));
 
-  // Revenue by category — category isn't on the item, so we can only attribute it
-  // when the order actually stored a product's category_id; anything else (or a
-  // product whose category was later deleted) falls into "Uncategorized".
-  const revenueByCategory = orders.reduce((acc, order) => {
-    order.items?.forEach(item => {
-      const product = productById[item.product_id];
-      const category = (product?.category_id && categoryNameById[product.category_id]) || 'Uncategorized';
-      const lineTotal = (item.price || 0) * (item.quantity || 0);
-      acc[category] = (acc[category] || 0) + lineTotal;
-    });
-    return acc;
-  }, {});
-
-  const categoryData = Object.entries(revenueByCategory)
-    .map(([category, revenue]) => ({
-      category,
-      revenue: parseFloat(revenue.toFixed(2)),
-    }))
-    .sort((a, b) => b.revenue - a.revenue);
-
-  // Payment method breakdown
-  const paymentMethods = orders.reduce((acc, order) => {
-    const method = order.payment_method || 'pending';
-    acc[method] = (acc[method] || 0) + 1;
-    return acc;
-  }, {});
-
-  const paymentData = Object.entries(paymentMethods).map(([method, count]) => ({
-    method: method.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-    count,
-  }));
-
-  // Key metrics
-  const totalRevenue = orders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
-  const totalOrders = orders.length;
-  const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+  const paymentData = paymentStats(sales).map((p) => ({ method: p.label, count: p.orders }));
 
   const COLORS = [themeColors.primary, themeColors.accent, '#64748b', '#f59e0b', '#10b981'];
+
+  const notCounted = [];
+  if (summary.openCount > 0) notCounted.push(`${summary.openCount} unpaid (${fmtMoney(summary.openTotal, currency)})`);
+  if (summary.cancelledCount > 0) notCounted.push(`${summary.cancelledCount} cancelled (${fmtMoney(summary.cancelledTotal, currency)})`);
 
   return (
     <div className="space-y-4 sm:space-y-5">
       {/* Key Metrics — always 3 across, even on mobile */}
       <div className="grid grid-cols-3 gap-1.5 sm:gap-4">
         <StatCard
-          label="Total Revenue"
-          value={`${currency} ${totalRevenue.toFixed(2)}`}
+          label="Sales"
+          value={`${currency} ${summary.salesTotal.toFixed(2)}`}
           icon={DollarSign}
           iconBg="bg-emerald-50"
           iconColor="text-emerald-600"
         />
         <StatCard
-          label="Total Orders"
-          value={totalOrders}
+          label="Paid Orders"
+          value={summary.salesCount}
           icon={ShoppingCart}
           iconBg="bg-blue-50"
           iconColor="text-blue-600"
         />
         <StatCard
           label="Avg Order"
-          value={`${currency} ${avgOrderValue.toFixed(2)}`}
+          value={`${currency} ${summary.avgOrder.toFixed(2)}`}
           icon={TrendingUp}
           iconBg="bg-purple-50"
           iconColor="text-purple-600"
         />
       </div>
+      <p className="text-[10px] sm:text-xs text-slate-400 -mt-2 sm:-mt-3" data-testid="sales-rule-note">
+        Sales count paid orders that are not cancelled.
+        {notCounted.length > 0 && <> Not counted: {notCounted.join(' · ')}.</>}
+      </p>
 
-      {/* Revenue Over Time — plain line for Starter, gradient-filled area for
-          Growth and above. Same data, just a richer render at higher tiers. */}
-      <Card className="border-slate-100 shadow-sm">
-        <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-          <CardTitle className="text-sm sm:text-base">Revenue Over Time</CardTitle>
-        </CardHeader>
-        <CardContent className="px-1 sm:px-6 pb-3 sm:pb-6">
-          <ResponsiveContainer width="100%" height={220}>
-            {isStarter ? (
-              <LineChart data={revenueData} margin={{ left: -20, right: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={36} />
-                <Tooltip formatter={(value) => [`${currency} ${value}`, 'Revenue']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke={themeColors.primary}
-                  strokeWidth={2.5}
-                  dot={{ r: 3, fill: themeColors.primary }}
-                  activeDot={{ r: 5 }}
-                  name="Revenue"
-                />
-              </LineChart>
-            ) : (
-              <AreaChart data={revenueData} margin={{ left: -20, right: 8 }}>
-                <defs>
-                  <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={themeColors.primary} stopOpacity={0.35} />
-                    <stop offset="100%" stopColor={themeColors.primary} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={36} />
-                <Tooltip formatter={(value) => [`${currency} ${value}`, 'Revenue']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke={themeColors.primary}
-                  strokeWidth={2.5}
-                  fill="url(#revenueFill)"
-                  dot={{ r: 3, fill: themeColors.primary }}
-                  activeDot={{ r: 5 }}
-                  name="Revenue"
-                />
-              </AreaChart>
-            )}
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-        {/* Revenue by Category */}
-        <Card className="border-slate-100 shadow-sm">
-          <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-            <CardTitle className="text-sm sm:text-base">Revenue by Category</CardTitle>
-          </CardHeader>
-          <CardContent className="px-1 sm:px-6 pb-3 sm:pb-6">
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={categoryData} layout="vertical" margin={{ left: -10, right: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis dataKey="category" type="category" width={80} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <Tooltip formatter={(value) => [`${currency} ${value}`, 'Revenue']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
-                <Bar dataKey="revenue" fill={themeColors.primary} radius={[0, 6, 6, 0]} barSize={16} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Payment Methods — flat solid slices for Starter, soft radial shading
-            plus a donut cut-out for Growth and above. */}
-        <Card className="border-slate-100 shadow-sm">
-          <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-            <CardTitle className="text-sm sm:text-base">Payment Methods</CardTitle>
-          </CardHeader>
-          <CardContent className="px-1 sm:px-6 pb-3 sm:pb-6">
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                {!isStarter && (
-                  <defs>
-                    {paymentData.map((_, index) => (
-                      <radialGradient key={index} id={`pieGrad${index}`} cx="35%" cy="35%" r="70%">
-                        <stop offset="0%" stopColor={COLORS[index % COLORS.length]} stopOpacity={1} />
-                        <stop offset="100%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.75} />
-                      </radialGradient>
-                    ))}
-                  </defs>
-                )}
-                <Pie
-                  data={paymentData}
-                  dataKey="count"
-                  nameKey="method"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={isStarter ? 0 : 45}
-                  outerRadius={75}
-                  paddingAngle={isStarter ? 0 : 2}
-                  label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                  labelLine={false}
-                >
-                  {paymentData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={isStarter ? COLORS[index % COLORS.length] : `url(#pieGrad${index})`}
-                      stroke="white"
-                      strokeWidth={2}
+      {sales.length === 0 ? (
+        <div className="text-center py-10 text-slate-400 text-sm">
+          No paid orders in this period
+        </div>
+      ) : (
+        <>
+          {/* Revenue Over Time — plain line for Starter, gradient-filled area for
+              Growth and above. Same data, just a richer render at higher tiers. */}
+          <Card className="border-slate-100 shadow-sm">
+            <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+              <CardTitle className="text-sm sm:text-base">Sales Over Time</CardTitle>
+            </CardHeader>
+            <CardContent className="px-1 sm:px-6 pb-3 sm:pb-6">
+              <ResponsiveContainer width="100%" height={220}>
+                {isStarter ? (
+                  <LineChart data={revenueData} margin={{ left: -20, right: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={36} />
+                    <Tooltip formatter={(value) => [`${currency} ${value}`, 'Sales']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
+                    <Line
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke={themeColors.primary}
+                      strokeWidth={2.5}
+                      dot={{ r: 3, fill: themeColors.primary }}
+                      activeDot={{ r: 5 }}
+                      name="Sales"
                     />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+                  </LineChart>
+                ) : (
+                  <AreaChart data={revenueData} margin={{ left: -20, right: 8 }}>
+                    <defs>
+                      <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={themeColors.primary} stopOpacity={0.35} />
+                        <stop offset="100%" stopColor={themeColors.primary} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={36} />
+                    <Tooltip formatter={(value) => [`${currency} ${value}`, 'Sales']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke={themeColors.primary}
+                      strokeWidth={2.5}
+                      fill="url(#revenueFill)"
+                      dot={{ r: 3, fill: themeColors.primary }}
+                      activeDot={{ r: 5 }}
+                      name="Sales"
+                    />
+                  </AreaChart>
+                )}
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+            {/* Revenue by Category */}
+            <Card className="border-slate-100 shadow-sm">
+              <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-sm sm:text-base">Item Sales by Category</CardTitle>
+              </CardHeader>
+              <CardContent className="px-1 sm:px-6 pb-3 sm:pb-6">
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={categoryData} layout="vertical" margin={{ left: -10, right: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <YAxis dataKey="category" type="category" width={80} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                    <Tooltip formatter={(value) => [`${currency} ${value}`, 'Item sales']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
+                    <Bar dataKey="revenue" fill={themeColors.primary} radius={[0, 6, 6, 0]} barSize={16} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Payment Methods — flat solid slices for Starter, soft radial shading
+                plus a donut cut-out for Growth and above. */}
+            <Card className="border-slate-100 shadow-sm">
+              <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-sm sm:text-base">Payment Methods</CardTitle>
+              </CardHeader>
+              <CardContent className="px-1 sm:px-6 pb-3 sm:pb-6">
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    {!isStarter && (
+                      <defs>
+                        {paymentData.map((_, index) => (
+                          <radialGradient key={index} id={`pieGrad${index}`} cx="35%" cy="35%" r="70%">
+                            <stop offset="0%" stopColor={COLORS[index % COLORS.length]} stopOpacity={1} />
+                            <stop offset="100%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.75} />
+                          </radialGradient>
+                        ))}
+                      </defs>
+                    )}
+                    <Pie
+                      data={paymentData}
+                      dataKey="count"
+                      nameKey="method"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={isStarter ? 0 : 45}
+                      outerRadius={75}
+                      paddingAngle={isStarter ? 0 : 2}
+                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                    >
+                      {paymentData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={isStarter ? COLORS[index % COLORS.length] : `url(#pieGrad${index})`}
+                          stroke="white"
+                          strokeWidth={2}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -15,10 +15,40 @@ import CustomerInsights from '../components/reports/CustomerInsights';
 import ExportButton from '../components/reports/ExportButton';
 import PricingModal from '../components/subscription/PricingModal';
 import { BarChart3, Lock, Package, Users, Sparkles } from 'lucide-react';
-import { subDays, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { subDays } from 'date-fns';
 import { toast } from 'sonner';
+import { periodOf, inPeriod, dayKey, buildReport } from '@/lib/reportData';
 
 const TIER_LABELS = { starter: 'Basic', growth: 'Advanced', pro: 'Custom' };
+
+// Orders are loaded for the selected period and for the period before it (for
+// the "vs previous period" comparisons in the exports), 1,000 rows per request.
+const ORDER_PAGE_SIZE = 1000;
+const MAX_ORDER_PAGES = 20; // up to 20,000 orders per period
+
+async function fetchOrdersBetween(tenantId, from, to) {
+  const supabase = await getSupabase();
+  const seen = new Set();
+  const orders = [];
+  for (let page = 0; page < MAX_ORDER_PAGES; page += 1) {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('is_deleted', false)
+      .gte('created_date', from.toISOString())
+      .lte('created_date', to.toISOString())
+      .order('created_date', { ascending: true })
+      .order('id', { ascending: true })
+      .range(page * ORDER_PAGE_SIZE, page * ORDER_PAGE_SIZE + ORDER_PAGE_SIZE - 1);
+    if (error) throw error;
+    for (const o of data || []) {
+      if (!seen.has(o.id)) { seen.add(o.id); orders.push(o); }
+    }
+    if (!data || data.length < ORDER_PAGE_SIZE) return { orders, capped: false };
+  }
+  return { orders, capped: true };
+}
 
 // Small reusable "this needs a higher plan" panel — used for locked tabs, where a
 // deliberate "here's what you're missing" moment makes sense (unlike the export
@@ -56,27 +86,31 @@ export default function Reports() {
   const hasExportPermission = hasPermission('reports.export');
   const canExport = hasExportPermission && can('can_export_reports');
   const [dateRange, setDateRange] = useState({
-    from: subDays(new Date(), 30),
+    from: subDays(new Date(), 29),
     to: new Date(),
   });
   const [showPricing, setShowPricing] = useState(false);
 
-  const { data: allOrders = [], isLoading: ordersLoading } = useQuery({
-    queryKey: ['reportsOrders', tenantId],
-    queryFn: async () => {
-      const supabase = await getSupabase();
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .eq('is_deleted', false)
-        .order('created_date', { ascending: false })
-        .limit(1000);
-      if (error) throw error;
-      return data || [];
-    },
+  // The selected days (whole local days) and the same number of days before them.
+  const period = periodOf(dateRange);
+  const loadOrders = async () => {
+    const current = await fetchOrdersBetween(tenantId, period.start, period.end);
+    const previous = await fetchOrdersBetween(tenantId, period.prevStart, period.prevEnd);
+    return { orders: [...previous.orders, ...current.orders], capped: current.capped || previous.capped };
+  };
+
+  const {
+    data: orderData,
+    isLoading: ordersLoading,
+    isFetching: ordersFetching,
+    isPlaceholderData: ordersStale,
+  } = useQuery({
+    queryKey: ['reportsOrders', tenantId, dayKey(period.prevStart), dayKey(period.end)],
+    queryFn: loadOrders,
     enabled: !!tenantId,
+    placeholderData: (previous) => previous,
   });
+  const allOrders = orderData?.orders || [];
 
   const { data: products = [] } = useQuery({
     queryKey: ['reportsProducts', tenantId],
@@ -146,21 +180,12 @@ export default function Reports() {
     enabled: !!tenantId,
   });
 
-  // Filter orders by date range
-  const orders = allOrders.filter(order => {
-    if (!dateRange?.from || !dateRange?.to) return true;
-    const orderDate = new Date(order.created_date);
-    // FIX: 'Today'/'Yesterday' presets (and a single-day custom pick) set from/to
-    // to the exact same millisecond, not a full day span — normalizing to day
-    // boundaries here, once, covers every source of a range (presets, custom
-    // calendar picks) rather than needing each one to remember to do it right.
-    return isWithinInterval(orderDate, { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) });
-  });
+  // Orders in the selected period. 'Today'/'Yesterday' presets (and a single-day
+  // custom pick) set from/to to the same moment, so the period is normalized to
+  // whole local days once (periodOf), covering every source of a range.
+  const orders = allOrders.filter((order) => inPeriod(order, period.start, period.end));
 
-  const filteredStockHistory = stockHistory.filter(h => {
-    if (!dateRange?.from || !dateRange?.to) return true;
-    return isWithinInterval(new Date(h.created_date), { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) });
-  });
+  const filteredStockHistory = stockHistory.filter((h) => inPeriod(h, period.start, period.end));
 
   const { data: themeConfig } = useQuery({
     queryKey: ['reportsThemeConfig', tenantId],
@@ -191,8 +216,21 @@ export default function Reports() {
   `;
 
   const handleBlockedExport = () => {
-    toast.error("You don't have access to export reports on the Starter plan.");
+    toast.error("Exporting reports isn't included in your plan.");
   };
+
+  // The exports use the same rules and data as the screen (lib/reportData.js).
+  const getReport = () => buildReport({
+    orders: allOrders,
+    products,
+    categories,
+    inventoryItems,
+    customers: isStarter ? null : customers,
+    range: dateRange,
+    currency: tenant?.currency || 'SGD',
+    storeName: tenant?.name || '',
+    includeAdvanced: !isStarter,
+  });
 
   if (ordersLoading) {
     return (
@@ -223,14 +261,18 @@ export default function Reports() {
 
         {/* Date Range + Export row */}
         <div className="flex items-center gap-2 flex-wrap">
-          <DateRangePicker dateRange={dateRange} onChange={setDateRange} />
-          <span className="text-xs text-slate-400 flex-shrink-0">{orders.length} order{orders.length === 1 ? '' : 's'}</span>
+          {/* A cleared calendar selection keeps the previous range (avoids an empty range). */}
+          <DateRangePicker dateRange={dateRange} onChange={(range) => { if (range?.from) setDateRange(range); }} />
+          <span className="text-xs text-slate-400 flex-shrink-0">
+            {ordersStale ? 'Loading…' : `${orders.length} order${orders.length === 1 ? '' : 's'}`}
+          </span>
           <div className="ml-auto">
             {canExport ? (
               <ExportButton
-                data={orders}
-                filename="sales_report"
-                type="sales"
+                getReport={getReport}
+                disabled={ordersFetching || ordersStale}
+                accent={themeColors.primary}
+                logoUrl={tenant?.logo_url || null}
               />
             ) : hasExportPermission ? (
               // Has the role-level permission, just not the plan tier for it — a small
@@ -242,6 +284,11 @@ export default function Reports() {
             ) : null}
           </div>
         </div>
+        {orderData?.capped && (
+          <p className="text-xs text-amber-600" data-testid="orders-capped">
+            This range has more than 20,000 orders, so only the first 20,000 are included (the comparison period is limited the same way). Choose a shorter range for complete figures.
+          </p>
+        )}
 
         <Tabs defaultValue="sales" className="space-y-4 sm:space-y-6">
           {/* Horizontally scrollable on mobile instead of wrapping — 5 tabs (2 with
@@ -275,6 +322,7 @@ export default function Reports() {
                 currency={tenant?.currency || 'SGD'}
                 themeColors={themeColors}
                 isStarter={isStarter}
+                dateRange={dateRange}
               />
             )}
           </TabsContent>
@@ -326,7 +374,7 @@ export default function Reports() {
             ) : (
               <CustomerInsights
                 customers={customers}
-                dateRange={{ from: startOfDay(dateRange.from), to: endOfDay(dateRange.to) }}
+                dateRange={{ from: period.start, to: period.end }}
                 currency={tenant?.currency || 'SGD'}
                 themeColors={themeColors}
               />

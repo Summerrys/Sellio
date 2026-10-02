@@ -11,8 +11,9 @@ export default function DateRangePicker({ dateRange, onChange }) {
   const presets = [
     { value: 'today', label: 'Today', getValue: () => ({ from: new Date(), to: new Date() }) },
     { value: 'yesterday', label: 'Yesterday', getValue: () => ({ from: subDays(new Date(), 1), to: subDays(new Date(), 1) }) },
-    { value: '7d', label: 'Last 7 Days', getValue: () => ({ from: subDays(new Date(), 7), to: new Date() }) },
-    { value: '30d', label: 'Last 30 Days', getValue: () => ({ from: subDays(new Date(), 30), to: new Date() }) },
+    // "Last 7 Days" = today and the 6 days before it (7 days), likewise 30.
+    { value: '7d', label: 'Last 7 Days', getValue: () => ({ from: subDays(new Date(), 6), to: new Date() }) },
+    { value: '30d', label: 'Last 30 Days', getValue: () => ({ from: subDays(new Date(), 29), to: new Date() }) },
     { value: 'week', label: 'This Week', getValue: () => ({ from: startOfWeek(new Date()), to: new Date() }) },
     { value: 'month', label: 'This Month', getValue: () => ({ from: startOfMonth(new Date()), to: new Date() }) },
     { value: 'year', label: 'This Year', getValue: () => ({ from: startOfYear(new Date()), to: new Date() }) },

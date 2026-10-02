@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, Package } from 'lucide-react';
+import { isSale, productStats, notSold } from '@/lib/reportData';
 
 function StatCard({ label, value, sublabel, icon: Icon, iconBg, iconColor }) {
   return (
@@ -18,57 +19,28 @@ function StatCard({ label, value, sublabel, icon: Icon, iconBg, iconColor }) {
   );
 }
 
+// orders: every order in the selected period. Only paid, not cancelled orders
+// count (lib/reportData.js, shared with the exports). Item sales are line price ×
+// quantity (before order discounts), all options of a product together.
 export default function ProductPerformance({ orders, products, categories = [], currency, themeColors }) {
-  // FIX: this whole report was reading item.product_name and item.total on order
-  // line items \u2014 neither field exists (real fields are item.name, item.price,
-  // item.quantity). That meant every product name showed as "undefined" and every
-  // revenue figure accumulated as NaN, which is what looked like the tab "not
-  // loading properly" (numbers/names rendering as garbage rather than an outright
-  // crash, since NaN.toFixed(2) doesn't throw).
-  const productMetrics = {};
-
-  orders.forEach(order => {
-    order.items?.forEach(item => {
-      if (!item.product_id) return;
-      if (!productMetrics[item.product_id]) {
-        productMetrics[item.product_id] = {
-          product_id: item.product_id,
-          product_name: item.name || 'Unknown product',
-          quantity_sold: 0,
-          revenue: 0,
-          orders_count: 0,
-        };
-      }
-      productMetrics[item.product_id].quantity_sold += (item.quantity || 0);
-      productMetrics[item.product_id].revenue += (item.price || 0) * (item.quantity || 0);
-      productMetrics[item.product_id].orders_count += 1;
-    });
-  });
-
-  const productArray = Object.values(productMetrics);
+  const productArray = productStats(orders.filter(isSale), products, categories);
+  const short = (name) => (name.length > 18 ? `${name.substring(0, 18)}...` : name);
 
   // Best sellers by revenue
-  const bestSellersByRevenue = [...productArray]
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 10)
-    .map(p => ({
-      name: p.product_name.length > 18 ? p.product_name.substring(0, 18) + '...' : p.product_name,
-      revenue: parseFloat(p.revenue.toFixed(2)),
-    }));
+  const bestSellersByRevenue = productArray.slice(0, 10).map((p) => ({ name: short(p.name), revenue: p.sales }));
 
   // Best sellers by quantity
   const bestSellersByQty = [...productArray]
-    .sort((a, b) => b.quantity_sold - a.quantity_sold)
+    .sort((a, b) => b.qty - a.qty || b.sales - a.sales)
     .slice(0, 10);
 
-  // Worst performers
+  // Worst performers (of the items that sold)
   const worstPerformers = [...productArray]
-    .sort((a, b) => a.revenue - b.revenue)
+    .sort((a, b) => a.sales - b.sales || a.qty - b.qty)
     .slice(0, 5);
 
-  // Products never ordered
-  const orderedProductIds = new Set(Object.keys(productMetrics));
-  const neverOrdered = (products || []).filter(p => !orderedProductIds.has(p.id));
+  // Items on sale (switched on) with no sales in this period
+  const neverOrdered = notSold(products || [], productArray, categories);
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -83,14 +55,14 @@ export default function ProductPerformance({ orders, products, categories = [], 
         />
         <StatCard
           label="Top Revenue"
-          value={`${currency} ${(bestSellersByRevenue[0]?.revenue || 0).toFixed(2)}`}
-          sublabel={bestSellersByRevenue[0]?.name}
+          value={`${currency} ${(productArray[0]?.sales || 0).toFixed(2)}`}
+          sublabel={productArray[0] ? short(productArray[0].name) : undefined}
           icon={TrendingUp}
           iconBg="bg-emerald-50"
           iconColor="text-emerald-600"
         />
         <StatCard
-          label="Dead Stock"
+          label="Not Sold"
           value={neverOrdered.length}
           icon={TrendingDown}
           iconBg="bg-red-50"
@@ -131,17 +103,17 @@ export default function ProductPerformance({ orders, products, categories = [], 
               <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                 <div className="space-y-1">
                   {bestSellersByQty.map((product, idx) => (
-                    <div key={product.product_id} className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0">
+                    <div key={product.key} className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <span className="text-base sm:text-lg font-bold text-slate-200 w-5 flex-shrink-0">{idx + 1}</span>
                         <div className="min-w-0">
-                          <p className="font-medium text-slate-800 text-xs sm:text-sm truncate">{product.product_name}</p>
-                          <p className="text-[10px] sm:text-xs text-slate-400">{product.orders_count} orders</p>
+                          <p className="font-medium text-slate-800 text-xs sm:text-sm truncate">{product.name}</p>
+                          <p className="text-[10px] sm:text-xs text-slate-400">{product.orders} {product.orders === 1 ? 'order' : 'orders'}</p>
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0 ml-2">
                         <p className="text-xs sm:text-sm font-bold" style={{ color: themeColors.primary }}>
-                          {product.quantity_sold}
+                          {product.qty}
                         </p>
                         <p className="text-[9px] sm:text-[10px] text-slate-400">units</p>
                       </div>
@@ -159,13 +131,13 @@ export default function ProductPerformance({ orders, products, categories = [], 
               <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                 <div className="space-y-1">
                   {worstPerformers.map((product) => (
-                    <div key={product.product_id} className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0">
+                    <div key={product.key} className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0">
                       <div className="min-w-0">
-                        <p className="font-medium text-slate-800 text-xs sm:text-sm truncate">{product.product_name}</p>
-                        <p className="text-[10px] sm:text-xs text-slate-400">{product.quantity_sold} units sold</p>
+                        <p className="font-medium text-slate-800 text-xs sm:text-sm truncate">{product.name}</p>
+                        <p className="text-[10px] sm:text-xs text-slate-400">{product.qty} units sold</p>
                       </div>
                       <p className="text-xs sm:text-sm font-medium text-slate-500 flex-shrink-0 ml-2">
-                        {currency} {product.revenue.toFixed(2)}
+                        {currency} {product.sales.toFixed(2)}
                       </p>
                     </div>
                   ))}
@@ -176,18 +148,18 @@ export default function ProductPerformance({ orders, products, categories = [], 
         </>
       )}
 
-      {/* Never Ordered */}
+      {/* On sale, not sold in this period */}
       {neverOrdered.length > 0 && (
         <Card className="border-slate-100 shadow-sm">
           <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-            <CardTitle className="text-sm sm:text-base text-red-600">Products Never Ordered ({neverOrdered.length})</CardTitle>
+            <CardTitle className="text-sm sm:text-base text-red-600">On Sale, Not Sold in This Period ({neverOrdered.length})</CardTitle>
           </CardHeader>
           <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
               {neverOrdered.slice(0, 12).map((product) => (
-                <div key={product.id} className="p-2.5 sm:p-3 bg-red-50/60 rounded-xl border border-red-100">
+                <div key={product.product_id} className="p-2.5 sm:p-3 bg-red-50/60 rounded-xl border border-red-100">
                   <p className="font-medium text-slate-800 text-xs sm:text-sm truncate">{product.name}</p>
-                  <p className="text-[10px] sm:text-xs text-slate-500">{currency} {(product.price || 0).toFixed(2)}</p>
+                  <p className="text-[10px] sm:text-xs text-slate-500">{currency} {product.price.toFixed(2)}</p>
                 </div>
               ))}
               {neverOrdered.length > 12 && (

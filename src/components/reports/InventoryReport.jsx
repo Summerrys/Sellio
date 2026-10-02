@@ -1,8 +1,9 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { AlertTriangle, RefreshCw, TrendingDown } from 'lucide-react';
+import { AlertTriangle, PackageX, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
+import { inventoryStatus } from '@/lib/reportData';
 
 function StatCard({ label, value, icon: Icon, iconBg, iconColor }) {
   return (
@@ -20,16 +21,13 @@ function StatCard({ label, value, icon: Icon, iconBg, iconColor }) {
 
 // stockHistory: rows from stock_history within the selected date range (these DO
 // carry product_name directly, captured at adjustment time).
-// inventoryItems: current stock levels (not date-filtered — a live snapshot). This
-// table does NOT store product_name, only product_id, so it needs products passed
-// in to resolve a readable name — same class of gap as the order-items bug earlier.
+// inventoryItems: current stock levels (not date-filtered — a live snapshot).
+// Stock alerts only cover items with "Track Inventory" switched on; items left on
+// "Unlimited" keep a stored count of 0 that means nothing, so they are skipped
+// (same rule as the Dashboard: 0 = out of stock, below the item's level = low).
 export default function InventoryReport({ stockHistory, inventoryItems, products = [], themeColors }) {
-  const productNameById = products.reduce((acc, p) => { acc[p.id] = p.name; return acc; }, {});
-  const lowStockItems = (inventoryItems || [])
-    .filter(i => i.current_stock <= (i.low_stock_threshold ?? 0))
-    .map(i => ({ ...i, product_name: productNameById[i.product_id] || 'Unknown product' }));
-
-  const netChange = stockHistory.reduce((sum, h) => sum + (h.change_amount || 0), 0);
+  const stock = inventoryStatus(products, inventoryItems);
+  const alerts = [...stock.out, ...stock.low];
 
   // Adjustments over time
   const adjustmentsByDate = stockHistory.reduce((acc, h) => {
@@ -37,7 +35,7 @@ export default function InventoryReport({ stockHistory, inventoryItems, products
     acc[date] = (acc[date] || 0) + 1;
     return acc;
   }, {});
-  const adjustmentData = Object.entries(adjustmentsByDate).map(([date, count]) => ({ date, count }));
+  const adjustmentData = Object.entries(adjustmentsByDate).map(([date, count]) => ({ date, count })).reverse();
 
   // Most-adjusted products
   const productActivity = stockHistory.reduce((acc, h) => {
@@ -54,11 +52,18 @@ export default function InventoryReport({ stockHistory, inventoryItems, products
     <div className="space-y-4 sm:space-y-5">
       <div className="grid grid-cols-3 gap-1.5 sm:gap-4">
         <StatCard
-          label="Low Stock"
-          value={lowStockItems.length}
-          icon={AlertTriangle}
+          label="Out of Stock"
+          value={stock.out.length}
+          icon={PackageX}
           iconBg="bg-red-50"
           iconColor="text-red-500"
+        />
+        <StatCard
+          label="Low Stock"
+          value={stock.low.length}
+          icon={AlertTriangle}
+          iconBg="bg-amber-50"
+          iconColor="text-amber-600"
         />
         <StatCard
           label="Adjustments"
@@ -67,29 +72,45 @@ export default function InventoryReport({ stockHistory, inventoryItems, products
           iconBg="bg-blue-50"
           iconColor="text-blue-600"
         />
-        <StatCard
-          label="Net Change"
-          value={`${netChange > 0 ? '+' : ''}${netChange}`}
-          icon={TrendingDown}
-          iconBg="bg-emerald-50"
-          iconColor="text-emerald-600"
-        />
       </div>
 
-      {lowStockItems.length > 0 && (
+      {stock.trackedCount === 0 ? (
+        <div className="p-3 sm:p-4 rounded-xl border border-slate-100 bg-slate-50 text-xs sm:text-sm text-slate-500" data-testid="stock-none-tracked">
+          No items track stock yet, so there are no stock alerts. To get them, switch on Track Inventory for an item on the Products page.
+        </div>
+      ) : alerts.length === 0 ? (
+        <div className="p-3 sm:p-4 rounded-xl border border-emerald-100 bg-emerald-50/60 text-xs sm:text-sm text-emerald-700" data-testid="stock-all-ok">
+          {stock.trackedCount === 1
+            ? 'The 1 item that tracks stock is above its low-stock level.'
+            : `All ${stock.trackedCount} items that track stock are above their low-stock level.`}
+        </div>
+      ) : (
         <Card className="border-slate-100 shadow-sm">
           <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-            <CardTitle className="text-sm sm:text-base text-red-600">Low Stock Items ({lowStockItems.length})</CardTitle>
+            <CardTitle className="text-sm sm:text-base text-red-600">Needs Restocking ({alerts.length})</CardTitle>
           </CardHeader>
           <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
-              {lowStockItems.slice(0, 12).map((item) => (
-                <div key={item.id} className="p-2.5 sm:p-3 bg-red-50/60 rounded-xl border border-red-100">
-                  <p className="font-medium text-slate-800 text-xs sm:text-sm truncate">{item.product_name}</p>
-                  <p className="text-[10px] sm:text-xs text-red-500">{item.current_stock} left · threshold {item.low_stock_threshold}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5" data-testid="stock-alerts">
+              {alerts.slice(0, 12).map((item) => (
+                <div
+                  key={item.product_id}
+                  className={`p-2.5 sm:p-3 rounded-xl border ${item.status === 'out' ? 'bg-red-50/60 border-red-100' : 'bg-amber-50/60 border-amber-100'}`}
+                >
+                  <p className="font-medium text-slate-800 text-xs sm:text-sm truncate">{item.name}</p>
+                  <p className={`text-[10px] sm:text-xs ${item.status === 'out' ? 'text-red-500' : 'text-amber-600'}`}>
+                    {item.status === 'out' ? 'Out of stock' : `${item.stock} left`} · level {item.threshold}
+                  </p>
                 </div>
               ))}
+              {alerts.length > 12 && (
+                <div className="p-2.5 sm:p-3 bg-slate-50 rounded-xl flex items-center justify-center">
+                  <p className="text-slate-500 text-xs sm:text-sm">+{alerts.length - 12} more</p>
+                </div>
+              )}
             </div>
+            <p className="text-[10px] sm:text-xs text-slate-400 mt-2">
+              Only items with Track Inventory switched on are checked ({stock.trackedCount}).
+            </p>
           </CardContent>
         </Card>
       )}
