@@ -1,6 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import PullToRefresh from '../components/ui-custom/PullToRefresh';
 import { useTenant } from '../components/tenant/TenantContext';
 import { toast } from 'sonner';
 import RequirePermission from '../components/auth/RequirePermission';
@@ -35,10 +34,6 @@ function InventoryContent() {
   };
 
   const queryClient = useQueryClient();
-  const handleRefresh = useCallback(() => {
-    return queryClient.invalidateQueries({ queryKey: ['inventoryMerged', tenantId] }, { throwOnError: true });
-  }, [queryClient, tenantId]);
-
   const [activeTab, setActiveTab] = useState('inventory');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -129,7 +124,6 @@ function InventoryContent() {
   };
 
   return (
-    <PullToRefresh onRefresh={handleRefresh}>
       <div className="space-y-4">
 
         {/* Header */}
@@ -383,6 +377,5 @@ function InventoryContent() {
           }}
         />
       </div>
-    </PullToRefresh>
   );
 }
