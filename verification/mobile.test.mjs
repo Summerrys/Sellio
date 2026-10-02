@@ -48,6 +48,92 @@ function mount(Component, props = {}, client = queryClient()) {
   return { container, root, client, render: async values => act(async () => root.render(React.createElement(QueryClientProvider, { client }, React.createElement(Component, values || props)))) };
 }
 try {
+  // Picker activation belongs to the real file input, never an asynchronous
+  // or synthetic click relay. These fixtures exercise only web behaviour.
+  const { default: PhotoPickerControl } = await loadComponent('src/components/ui-custom/PhotoPickerControl.jsx');
+  const selectedPhotos = [];
+  const picker = mount(PhotoPickerControl, { label: 'Choose photo', onFile: file => selectedPhotos.push(file), children: 'Upload Photo' });
+  await picker.render();
+  const photoInput = () => picker.container.querySelector('input[type="file"]');
+  const selectPhoto = async (input, file) => act(async () => {
+    Object.defineProperty(input, 'files', { configurable: true, value: file ? [file] : [] });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await next();
+  });
+  const fixturePhoto = new window.File(['photo-fixture'], 'menu.jpg', { type: 'image/jpeg' });
+  await selectPhoto(photoInput(), null);
+  assert.equal(selectedPhotos.length, 0, 'Cancelling must not change the current image');
+  await selectPhoto(photoInput(), fixturePhoto);
+  await selectPhoto(photoInput(), fixturePhoto);
+  assert.deepEqual(selectedPhotos, [fixturePhoto, fixturePhoto], 'The same photo can be selected again');
+  assert.equal(photoInput().value, '');
+  assert.equal(photoInput().style.display, '', 'The picker must remain a rendered input');
+  assert.equal(photoInput().style.width, '100%', 'The input covers the full visible control');
+  assert.equal(photoInput().getAttribute('aria-label'), 'Choose photo');
+  assert.ok(photoInput().closest('[data-pull-refresh-block]'), 'Photo taps must not become refresh gestures');
+  await picker.render({ label: 'Take photo', capture: 'environment', disabled: true, onFile: file => selectedPhotos.push(file), children: 'Take Photo' });
+  assert.equal(photoInput().disabled, true);
+  assert.equal(photoInput().getAttribute('capture'), 'environment');
+  passed('Photo picker cancellation, same-file retry, camera mode and accessible direct-input activation');
+
+  // Verify both Add-product entry points route selected files to their intended
+  // handlers and recover after a read or upload failure.
+  const Reader = globalThis.FileReader;
+  const originalFetch = globalThis.fetch;
+  const uploadCalls = []; const analysisCalls = []; const appliedPhotos = [];
+  let readFails = false; let uploadFails = false;
+  globalThis.FileReader = class {
+    readAsDataURL() {
+      queueMicrotask(() => {
+        if (readFails) this.onerror?.();
+        else { this.result = 'data:image/jpeg;base64,cGhvdG8='; this.onload?.({ target: this }); }
+      });
+    }
+  };
+  globalThis.__sellioTestClient = {
+    storage: { from: bucket => ({
+      upload: async (storagePath, file) => { uploadCalls.push({ bucket, storagePath, file }); return { error: uploadFails ? { message: 'Upload unavailable' } : null }; },
+      getPublicUrl: storagePath => ({ data: { publicUrl: 'https://images.example.invalid/' + storagePath } }),
+    }) },
+  };
+  globalThis.fetch = async (url, options) => {
+    analysisCalls.push({ url, body: JSON.parse(options.body) });
+    return { ok: true, json: async () => ({ confidence: 0.9, name: 'Test drink', description: 'Fixture', price: 4, category: 'Drinks' }) };
+  };
+  const { default: AIProductAssistant } = await loadComponent('src/components/products/AIProductAssistant.jsx');
+  const assistantProps = { tenantId: 'photo-fixture', currency: 'SGD', categories: [], onApply: () => {}, onImageChange: value => appliedPhotos.push(value) };
+  const plain = mount(AIProductAssistant, assistantProps);
+  await plain.render();
+  const plainInput = plain.container.querySelector('input[aria-label="Upload product photo"]');
+  assert.ok(plainInput);
+  await selectPhoto(plainInput, null);
+  assert.equal(uploadCalls.length, 0);
+  await selectPhoto(plainInput, fixturePhoto);
+  assert.equal(uploadCalls.length, 1);
+  assert.equal(uploadCalls[0].file, fixturePhoto);
+  assert.match(uploadCalls[0].storagePath, /^photo-fixture\/products\//);
+  assert.equal(appliedPhotos.length, 1);
+  assert.equal(analysisCalls.length, 0, 'Plain upload must not start AI analysis');
+  const ai = mount(AIProductAssistant, assistantProps);
+  await ai.render();
+  await selectPhoto(ai.container.querySelector('input[aria-label="Choose photo for AI analysis"]'), fixturePhoto);
+  assert.equal(analysisCalls.length, 1);
+  assert.equal(analysisCalls[0].body.imageBase64, 'data:image/jpeg;base64,cGhvdG8=');
+  assert.match(ai.container.textContent, /AI suggestions ready/);
+  const unreadable = mount(AIProductAssistant, assistantProps);
+  await unreadable.render(); readFails = true;
+  await selectPhoto(unreadable.container.querySelector('input[aria-label="Choose photo for AI analysis"]'), fixturePhoto);
+  assert.match(unreadable.container.textContent, /Could not read this photo/);
+  assert.equal(analysisCalls.length, 1, 'Unreadable photos must not reach AI');
+  assert.equal(uploadCalls.length, 2, 'Unreadable photos must not upload');
+  readFails = false; uploadFails = true;
+  const retry = mount(AIProductAssistant, assistantProps);
+  await retry.render();
+  await selectPhoto(retry.container.querySelector('input[aria-label="Upload product photo"]'), fixturePhoto);
+  assert.ok(retry.container.querySelector('input[aria-label="Upload product photo"]'), 'Failed upload returns to a usable picker');
+  globalThis.FileReader = Reader; globalThis.fetch = originalFetch;
+  passed('Product AI and plain-photo selection stay separate; cancellation and read/upload failures recover');
+
   const { completeAuthNavigation } = await import(pathToFileURL(path.join(app, 'src/lib/authNavigation.js')).href);
   const browserHistory = (userAgent, bridge = {}) => {
     const entries = ['/Auth']; let index = 0;
