@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
+import { featureOn, planAllowsPermission } from '@/lib/planFeatures';
 
 const TenantContext = createContext(null);
 
@@ -420,6 +421,28 @@ export function TenantProvider({ children }) {
     enabled: !!currentTenantId,
   });
 
+  // The store's plan features (same query and cache as hooks/useEntitlements).
+  // Until they load, a personal shop's extra features stay off and a business
+  // store's stay on, as before (lib/planFeatures.js).
+  const { data: entitlementsData } = useQuery({
+    queryKey: ['entitlements', currentTenantId],
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase.rpc('get_tenant_entitlements', { p_tenant_id: currentTenantId });
+      if (error) {
+        console.warn('Entitlements unavailable, using the subscription instead:', error.message);
+        return null;
+      }
+      return data && typeof data === 'object' && data.entitlements ? data : null;
+    },
+    enabled: !!currentTenantId,
+    refetchInterval: 60 * 1000,
+    retry: false,
+  });
+  const sellerType = tenant?.[0]?.seller_type;
+  const planAllows = (permission) => planAllowsPermission(permission, entitlementsData, sellerType);
+  const canUseFeature = (key) => featureOn(key, entitlementsData, sellerType);
+
   useEffect(() => {
     // When simulating a role, never treat the user as superadmin
     if (devRoleOverride) {
@@ -504,6 +527,9 @@ export function TenantProvider({ children }) {
   const PERMISSION_ALIASES = {};
 
   const hasPermission = (permission) => {
+    // The store's plan comes first: a feature the plan doesn't include is off for
+    // everyone, owners included (a free personal shop has no counter, staff, …).
+    if (!planAllows(permission)) return false;
     const checkInList = (perms) => {
       if (!perms) return false;
       if (perms.includes('*')) return true;
@@ -550,6 +576,10 @@ export function TenantProvider({ children }) {
     permissions: userPermissions,
     hasPermission,
     hasAnyPermission,
+    planAllows,
+    canUseFeature,
+    // Signed in, but no active store membership (known once memberships load).
+    noStore: !!user?.email && Array.isArray(tenantUser) && tenantUser.length === 0,
     switchTenant,
     isLoading: tenantUserLoading || tenantLoading,
     subscription: subscriptionData?.[0] || null,

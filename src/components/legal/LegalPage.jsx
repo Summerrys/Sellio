@@ -196,7 +196,7 @@ export default function LegalPage({
             >
               <Cookie aria-hidden="true" /> Cookie settings
             </button>
-            <a href="mailto:hello@apptelier.sg">Contact</a>
+            <a href="mailto:sellio@apptelier.sg">Contact</a>
           </nav>
         </div>
         <div className="sellio-legal-container sellio-legal-footer__bottom">

@@ -78,8 +78,10 @@ function GatedFields({ canEdit, onBlocked, children, className }) {
 }
 
 export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 0 }) {
-  const { hasPermission } = useTenant();
+  const { hasPermission, canUseFeature } = useTenant();
   const canEditSettings = hasPermission('settings.edit');
+  // Receipts, printers and kitchen auto-print aren't on a free personal shop's plan.
+  const canPrint = !canUseFeature || canUseFeature('can_print');
   const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
 
@@ -527,6 +529,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
       </Card>
 
       {/* Receipt Settings */}
+      {canPrint && (
       <Card className="border border-slate-100 shadow-sm overflow-hidden">
         <button
           type="button"
@@ -599,6 +602,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
           </div>
         )}
       </Card>
+      )}
 
       {/* Order Settings */}
       <Card className="border border-slate-100 shadow-sm overflow-hidden">

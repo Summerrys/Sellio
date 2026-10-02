@@ -46,7 +46,11 @@ export function planInfo(subscription, ent) {
       : (LEGACY_FEATURES[key] ? LEGACY_FEATURES[key](tier) : true)),
     // Product limit: null = unlimited; undefined = not loaded (callers keep their own value).
     maxProducts: limitOf('max_products'),
-    orderUsage: orderUsage(subscription, limitOf('max_orders_per_month')),
+    // A personal shop has no subscription row: its monthly count comes with the
+    // entitlements (database: app.personal_order_usage).
+    orderUsage: orderUsage(active && ent.plan === 'personal'
+      ? { orders_this_period: ent.usage?.orders_this_period ?? 0, orders_period_reset_at: ent.usage?.orders_period_reset_at ?? null }
+      : subscription, limitOf('max_orders_per_month')),
   };
 }
 

@@ -9,6 +9,9 @@ import Step3MenuSetup from '../components/onboarding/Step3MenuSetup';
 import Step4TablesQR from '../components/onboarding/Step4TablesQR';
 import Step5Confirmation from '../components/onboarding/Step5Confirmation';
 import OnboardingProgress from '../components/onboarding/OnboardingProgress';
+import AppLoader from '@/components/ui-custom/AppLoader';
+import { getSupabase } from '@/lib/supabaseClient';
+import { decideOnboardingAccess } from '@/lib/accountFlow';
 
 const STORAGE_KEY = 'apptelier_onboarding_state';
 
@@ -16,6 +19,31 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState([]);
+  // Business setup is for an account with a paid plan waiting. A store already →
+  // Dashboard; neither → the account page. (complete-onboarding checks again.)
+  const [access, setAccess] = useState('checking');
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let result = 'allowed';
+      try {
+        const supabase = await getSupabase();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
+          result = 'signin';
+        } else {
+          const { data, error } = await supabase.rpc('my_account_status');
+          result = decideOnboardingAccess(data, error);
+        }
+      } catch {
+        result = 'allowed';
+      }
+      if (cancelled) return;
+      if (result === 'allowed') setAccess('allowed');
+      else window.location.replace({ signin: '/Auth', dashboard: '/Dashboard', account: '/Account' }[result]);
+    })();
+    return () => { cancelled = true; };
+  }, []);
   // Generate pendingTenantId once and persist — must survive page reloads so temp storage paths stay consistent
   const getOrCreatePendingTenantId = () => {
     const existing = localStorage.getItem('pending_tenant_id');
@@ -117,6 +145,8 @@ export default function Onboarding() {
     localStorage.removeItem('pending_tenant_id');
     navigate(createPageUrl('Dashboard'));
   };
+
+  if (access !== 'allowed') return <AppLoader visible={true} />;
 
   const CurrentStepComponent = steps[currentStep - 1].component;
 

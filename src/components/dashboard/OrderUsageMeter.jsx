@@ -9,11 +9,12 @@ import { useSubscription } from '@/hooks/useSubscription';
 // Growth). The database pauses new orders at the cap, so the merchant sees it
 // coming. Shows nothing on plans without a cap (Pro) or until the plan has loaded.
 export default function OrderUsageMeter() {
-  const { orderUsage } = useSubscription();
-  return <OrderUsageBar usage={orderUsage} />;
+  const { orderUsage, plan } = useSubscription();
+  // No Upgrade link on a personal shop yet (moving to a business plan is step 3).
+  return <OrderUsageBar usage={orderUsage} canUpgrade={plan !== 'personal'} />;
 }
 
-export function OrderUsageBar({ usage }) {
+export function OrderUsageBar({ usage, canUpgrade = true }) {
   if (!usage) return null;
   const { used, limit, resetsAt } = usage;
   const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 100;
@@ -49,7 +50,7 @@ export function OrderUsageBar({ usage }) {
                 : 'Limit reached: new orders are paused')
               : resetsAt ? `Resets ${format(resetsAt, 'd MMM')}` : null}
           </span>
-          {(full || near) && (
+          {(full || near) && canUpgrade && (
             <Link to={createPageUrl('TenantSettings')} className="font-medium text-slate-600 underline underline-offset-2 whitespace-nowrap">
               Upgrade
             </Link>

@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import db from '@/lib/db';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../tenant/TenantContext';
+import { itemWords } from '@/lib/planFeatures';
 import { generateThemeVariables } from '../theme/themeUtils';
 
 const toSlug = (str) => (str || 'product').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -454,7 +455,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100 flex-shrink-0">
           <div>
             <h2 className="text-base font-semibold text-slate-900">
-              {product?.id ? 'Edit Product' : 'New Product'}
+              {product?.id ? `Edit ${itemWords(tenant?.seller_type).Product}` : `New ${itemWords(tenant?.seller_type).Product}`}
             </h2>
             {product?.id && formData.price > 0 && (
               <p className="text-sm mt-0.5">

@@ -41,7 +41,7 @@ const sections = [
       <>
         <p>You must provide accurate, current and complete account information and keep it updated. You are responsible for safeguarding your password, Google sign-in, device and session, and for activity carried out through your account unless caused by our breach.</p>
         <p>Do not share one login among multiple people. Merchant owners should invite staff individually, assign only the permissions needed for their work, review access regularly and remove access promptly when a role changes or employment ends.</p>
-        <p>You must notify <a href="mailto:hello@apptelier.sg">hello@apptelier.sg</a> without undue delay if you suspect unauthorised access. We may require identity or authority checks before changing ownership, billing or sensitive account settings.</p>
+        <p>You must notify <a href="mailto:sellio@apptelier.sg">sellio@apptelier.sg</a> without undue delay if you suspect unauthorised access. We may require identity or authority checks before changing ownership, billing or sensitive account settings.</p>
       </>
     ),
   },
@@ -276,7 +276,7 @@ const sections = [
     content: (
       <>
         <p>Questions, notices and complaints about these terms may be sent to:</p>
-        <p><strong>Apptélier — Sellio</strong><br />Singapore<br /><a href="mailto:hello@apptelier.sg">hello@apptelier.sg</a></p>
+        <p><strong>Apptélier — Sellio</strong><br />Singapore<br /><a href="mailto:sellio@apptelier.sg">sellio@apptelier.sg</a></p>
       </>
     ),
   },

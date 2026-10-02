@@ -296,7 +296,7 @@ export default function Reports() {
           <div className="overflow-x-auto no-scrollbar -mx-1 px-1">
             <TabsList className="inline-flex w-max">
               <TabsTrigger value="sales" className="whitespace-nowrap">Sales</TabsTrigger>
-              <TabsTrigger value="products" className="whitespace-nowrap">Products</TabsTrigger>
+              <TabsTrigger value="products" className="whitespace-nowrap">{tenant?.seller_type === 'individual' ? 'Listings' : 'Products'}</TabsTrigger>
               <TabsTrigger value="inventory" className="gap-1.5 whitespace-nowrap">
                 {isStarter && <Lock className="w-3 h-3" />} Inventory
               </TabsTrigger>

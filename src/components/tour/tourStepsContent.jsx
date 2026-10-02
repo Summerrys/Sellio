@@ -14,7 +14,8 @@ function BrandWord({ children }) {
 // merchant. Each function takes light context (plan tier, whether real data
 // exists) since a couple of steps adapt or disappear based on that.
 
-export function getDashboardSteps({ hasTakeOrders, hasAiAssistant, hasDesignStore, isDesktop = false }) {
+export function getDashboardSteps({ hasTakeOrders, hasAiAssistant, hasDesignStore, isDesktop = false, listings = false }) {
+  const itemsPage = listings ? 'Listings' : 'Products';
   const steps = [
     {
       target: 'body',
@@ -65,7 +66,7 @@ export function getDashboardSteps({ hasTakeOrders, hasAiAssistant, hasDesignStor
       spotlightClicks: true,
       content: (
         <>
-          Open <strong>Products</strong> and use <strong>Add</strong> to create an item. Next, explore <strong>Orders</strong> and <strong>Settings</strong> {isDesktop ? 'in the sidebar' : 'in the bottom navigation'}.
+          Open <strong>{itemsPage}</strong> and use <strong>Add</strong> to create an item. Next, explore <strong>Orders</strong> and <strong>Settings</strong> {isDesktop ? 'in the sidebar' : 'in the bottom navigation'}.
         </>
       ),
     },
@@ -73,13 +74,14 @@ export function getDashboardSteps({ hasTakeOrders, hasAiAssistant, hasDesignStor
       target: 'body',
       placement: 'center',
       title: "That's the Dashboard!",
-      content: isDesktop ? 'Open Products in the sidebar to continue.' : 'Tap Products in the bottom navigation to continue.',
+      content: isDesktop ? `Open ${itemsPage} in the sidebar to continue.` : `Tap ${itemsPage} in the bottom navigation to continue.`,
     },
   );
   return steps;
 }
 
-export function getProductsSteps({ tier }) {
+export function getProductsSteps({ tier, listings = false }) {
+  const item = listings ? 'listing' : 'product';
   const steps = [
     {
       target: '[data-tour="products-header"]',
@@ -89,17 +91,18 @@ export function getProductsSteps({ tier }) {
       target: '[data-tour="add-product-btn"]',
       content: "Add items one at a time here.",
     },
-    {
+    // Menu scan isn't on a free personal shop's plan.
+    ...(listings ? [] : [{
       target: '[data-tour="scan-menu-btn"]',
       content: "Got a printed menu? Snap a photo and our AI builds your product list for you.",
+    }]),
+    {
+      target: '[data-tour="product-card"]',
+      content: `Tap any ${item} to edit its name, price, photo, or stock.`,
     },
     {
       target: '[data-tour="product-card"]',
-      content: "Tap any product to edit its name, price, photo, or stock.",
-    },
-    {
-      target: '[data-tour="product-card"]',
-      content: "Press and hold a product to select several and delete them together.",
+      content: `Press and hold a ${item} to select several and delete them together.`,
     },
   ];
   if (tier === 'starter') {

@@ -142,7 +142,7 @@ export default function AccountDeletionForm({ expectedEmail, onBusyChange, onCom
           {result.status === 'needs_asset_action' && <p>Files owned by your account must first be transferred or removed without affecting your store.</p>}
           {result.status === 'needs_admin_action' && <p>Platform administrator access must be reassigned before deletion.</p>}
           {!!result.blockers?.stores?.length && <p>Stores: {result.blockers.stores.map(store => store.name).join(', ')}</p>}
-          <p>Contact <a className="underline" href="mailto:hello@apptelier.sg">hello@apptelier.sg</a> with this request number to resolve the ownership or file requirement, then retry here.</p>
+          <p>Contact <a className="underline" href="mailto:sellio@apptelier.sg">sellio@apptelier.sg</a> with this request number to resolve the ownership or file requirement, then retry here.</p>
         </div>
       )}
       {needsSignIn ? (

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Check } from 'lucide-react';
+import TenantContext from '@/components/tenant/TenantContext';
 
 const PLANS = [
   {
@@ -83,6 +84,9 @@ const PLAN_RANK = { starter: 0, growth: 1, pro: 2 };
 
 export default function PricingModal({ open, onOpenChange, tenantId, currentTier = null, hasUsedTrial = false }) {
   const [billing, setBilling] = useState('monthly');
+  // A free personal shop can't move to a business plan here yet (scorecard step 3):
+  // a payment from here would not change its plan.
+  const isPersonalShop = useContext(TenantContext)?.tenant?.seller_type === 'individual';
 
   const getLink = (plan) => {
     const linkSet = hasUsedTrial ? NO_TRIAL_LINKS[plan.key] : plan.links;
@@ -101,6 +105,23 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
   };
 
   const isCurrentPlan = (plan) => currentTier !== null && plan.key === currentTier;
+
+  if (isPersonalShop) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-center">Business plans</DialogTitle>
+          </DialogHeader>
+          <div data-testid="personal-upgrade-soon" className="space-y-3 text-sm text-slate-600">
+            <p>Your personal shop is on the free plan: up to 10 listings and 100 orders a month.</p>
+            <p>Moving a personal shop to a business plan (the counter, staff logins, inventory, tables &amp; QR, more listings and orders) is coming soon.</p>
+            <p>Need it sooner? Email <a href="mailto:sellio@apptelier.sg" className="font-semibold text-slate-800 underline">sellio@apptelier.sg</a>.</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

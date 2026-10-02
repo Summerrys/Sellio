@@ -28,10 +28,14 @@ export default function RequirePermission({
   silent = false,
   children 
 }) {
-  const { hasPermission, hasAnyPermission, isSuperAdmin, isOwner } = useTenant();
+  const { hasPermission, hasAnyPermission, isSuperAdmin, isOwner, planAllows } = useTenant();
 
-  // Super admins and owners have all permissions
-  if (isSuperAdmin || isOwner) {
+  // Super admins and owners have every permission their store's plan includes
+  // (a free personal shop has no counter, staff or inventory, even for its owner).
+  const planIncludes = !planAllows
+    || (permission ? planAllows(permission)
+      : Array.isArray(permissions) ? permissions.some((p) => planAllows(p)) : true);
+  if ((isSuperAdmin || isOwner) && planIncludes) {
     return children;
   }
 

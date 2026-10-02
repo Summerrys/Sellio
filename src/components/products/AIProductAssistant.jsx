@@ -7,6 +7,11 @@ import ImageEditModal from '../onboarding/ImageEditModal';
 import { getSupabase } from '@/lib/supabaseClient';
 import { deleteImageFromStorage } from '@/lib/imageStorage';
 import PhotoPickerControl from '../ui-custom/PhotoPickerControl';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { allowanceLine, allowanceSpent, lastSuggestion, functionErrorMessage } from '@/lib/aiAllowance';
+
+// An error whose message is meant for the person (from our own functions).
+const friendlyError = (message) => Object.assign(new Error(message), { friendly: true });
 
 // Expose cleanup for parent to call
 export const cleanupDeletedImages = async (componentRef) => {
@@ -18,7 +23,10 @@ export const cleanupDeletedImages = async (componentRef) => {
   }
 };
 
-function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
+function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, onSearched }) {
+  // Free personal shops: 3 photo searches a month ("More options" counts too).
+  const searchesSpent = allowanceSpent(allowance, 'photo_search');
+  const searchLine = allowanceLine(allowance, 'photo_search');
   const [query, setQuery] = React.useState('');
   const [searching, setSearching] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
@@ -40,9 +48,9 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
     try {
       const supabase = await (await import('@/lib/supabaseClient')).getSupabase();
       const { data, error } = await supabase.functions.invoke('findProductImage', {
-        body: { query: q, page: targetPage },
+        body: { query: q, page: targetPage, tenantId },
       });
-      if (error) throw new Error(error.message);
+      if (error) throw friendlyError(await functionErrorMessage(error, 'Search failed. Please try again.'));
       if (data?.photos?.length > 0) {
         setPhotos(data.photos);
         setCurrentIndex(0);
@@ -53,9 +61,10 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
       }
     } catch (e) {
       console.error('StockImageSearch error:', e.message);
-      onError('Search failed. Please try again.');
+      onError(e.friendly ? e.message : 'Search failed. Please try again.');
     } finally {
       setSearching(false);
+      onSearched?.();
     }
   };
 
@@ -73,9 +82,9 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
       try {
         const supabase = await (await import('@/lib/supabaseClient')).getSupabase();
         const { data, error } = await supabase.functions.invoke('findProductImage', {
-          body: { query: lastQuery, page: nextPage },
+          body: { query: lastQuery, page: nextPage, tenantId },
         });
-        if (error) throw new Error(error.message);
+        if (error) throw friendlyError(await functionErrorMessage(error, 'Search failed. Please try again.'));
         if (data?.photos?.length > 0) {
           setPhotos(data.photos);
           setCurrentIndex(0);
@@ -85,9 +94,10 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
         }
       } catch (e) {
         console.error('Regenerate error:', e.message);
-        onError('Search failed. Please try again.');
+        onError(e.friendly ? e.message : 'Search failed. Please try again.');
       } finally {
         setSearching(false);
+        onSearched?.();
       }
     })();
   };
@@ -170,13 +180,13 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
         <button
           type="button"
           onClick={() => doSearch()}
-          disabled={searching || !query.trim()}
+          disabled={searching || !query.trim() || searchesSpent}
           aria-label="Search"
           style={{
             width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-            background: searching || !query.trim() ? '#e2e8f0' : themeColor,
+            background: searching || !query.trim() || searchesSpent ? '#e2e8f0' : themeColor,
             border: 'none',
-            cursor: searching || !query.trim() ? 'not-allowed' : 'pointer',
+            cursor: searching || !query.trim() || searchesSpent ? 'not-allowed' : 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
@@ -186,6 +196,9 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
           }
         </button>
       </div>
+      {searchLine && (
+        <p data-testid="photo-search-allowance" style={{ fontSize: 11.5, margin: 0, fontWeight: 500, color: searchesSpent ? '#d97706' : '#64748b' }}>{searchLine}</p>
+      )}
 
       {/* Result preview with navigation — stacked vertically so nothing crops on narrow screens */}
       {currentPhoto && (
@@ -217,8 +230,8 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId }) {
           <p style={{ fontSize: 11, color: '#94a3b8', margin: 0, fontWeight: 500, textAlign: 'center' }}>{currentIndex + 1} / {photos.length} · Set {page}/6</p>
 
           {/* Regenerate — fetch next set of 5 (cycles 1-6, then loops) */}
-          <button type="button" onClick={handleRegenerate} disabled={searching || uploading} aria-label="Regenerate more options"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '7px', borderRadius: 8, background: 'white', border: '1px dashed #cbd5e1', cursor: searching || uploading ? 'not-allowed' : 'pointer', fontSize: 11.5, fontWeight: 600, color: '#64748b' }}>
+          <button type="button" onClick={handleRegenerate} disabled={searching || uploading || searchesSpent} aria-label="Regenerate more options"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '7px', borderRadius: 8, background: 'white', border: '1px dashed #cbd5e1', cursor: searching || uploading || searchesSpent ? 'not-allowed' : 'pointer', fontSize: 11.5, fontWeight: 600, color: '#64748b', opacity: searchesSpent ? 0.5 : 1 }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
             More options
           </button>
@@ -258,6 +271,25 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
    const addImageInputRef = useRef(null); // Add additional images
    const deletedImagesRef = useRef([]); // Track images to delete on save
    const uploadedPaths = useRef([]); // Track uploaded storage paths for cancel cleanup
+
+  // This store's monthly AI allowance (free personal shops: 3 analyses and 3 photo
+  // searches a month) and the person's last AI suggestion. Business plans: no limit.
+  const queryClient = useQueryClient();
+  const { data: allowance } = useQuery({
+    queryKey: ['aiAllowance', tenantId],
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase.rpc('my_ai_allowance', { p_tenant_id: tenantId });
+      if (error) return null; // not readable: no limits shown, the server still checks
+      return data;
+    },
+    enabled: !!tenantId,
+    staleTime: 30 * 1000,
+  });
+  const refreshAllowance = () => queryClient.invalidateQueries({ queryKey: ['aiAllowance', tenantId] });
+  const analysesSpent = allowanceSpent(allowance, 'ai_analysis');
+  const analysisLine = allowanceLine(allowance, 'ai_analysis');
+  const lastAi = lastSuggestion(allowance);
 
   // Track previous value to detect real changes from parent (new product opened)
   const prevImageUrlRef = useRef(currentImageUrl);
@@ -335,20 +367,17 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
       setPreview(base64); // temp preview while uploading
       setStep('analyzing');
 
-      const [publicUrl, res] = await Promise.all([
+      const supabase = await getSupabase();
+      const [publicUrl, analysis] = await Promise.all([
         uploadToStorage(file),
-        fetch('https://selliosg.base44.app/api/functions/analyzeProductImage', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64: base64 }),
-        }),
+        supabase.functions.invoke('analyzeProductImage', { body: { tenantId, imageBase64: base64 } }),
       ]);
 
       // Replace temp base64 preview with real URL
       setPreview(publicUrl);
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`);
+      if (analysis.error) throw new Error(await functionErrorMessage(analysis.error, 'AI analysis failed'));
+      const data = analysis.data || {};
       if (!data.confidence || data.confidence < 0.3) {
         throw new Error("Couldn't identify a product in this image. Try a clearer photo.");
       }
@@ -364,6 +393,34 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
       setStep('done');
     } catch (err) {
       setErrorMsg(err.message || 'AI analysis failed');
+      setStep('error');
+    } finally {
+      refreshAllowance();
+    }
+  };
+
+  // Show the last AI suggestion again (kept after the monthly analyses are spent).
+  // Its photo is copied into this store's product photos, like any new photo.
+  const applyLastSuggestion = async () => {
+    if (!lastAi) return;
+    setStep('uploading');
+    setErrorMsg('');
+    try {
+      let imageUrl = '';
+      if (lastAi.imagePath) {
+        const supabase = await getSupabase();
+        const { data: pub } = supabase.storage.from('product-images').getPublicUrl(lastAi.imagePath);
+        const res = await fetch(pub.publicUrl);
+        if (!res.ok) throw new Error('The photo of your last suggestion is no longer available.');
+        const blob = await res.blob();
+        const ext = (lastAi.imagePath.split('.').pop() || 'jpg').toLowerCase();
+        imageUrl = await uploadToStorage(new File([blob], `ai-suggestion.${ext}`, { type: blob.type || 'image/jpeg' }));
+      }
+      setPreview(imageUrl || null);
+      setResult({ ...lastAi, _imageUrl: imageUrl });
+      setStep('done');
+    } catch (err) {
+      setErrorMsg(err.message || 'Could not load your last suggestion');
       setStep('error');
     }
   };
@@ -593,7 +650,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                 <p className="text-xs text-slate-500 mt-0.5">Upload a photo — AI generates name, price & category</p>
               </div>
               <div className="flex gap-2 w-full">
-                <PhotoPickerControl label="Choose photo for AI analysis" inputRef={fileInputRef} onFile={handleFileSelect} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-white text-sm font-medium rounded-lg cursor-pointer" style={{ background: themeColor }}>
+                <PhotoPickerControl label="Choose photo for AI analysis" inputRef={fileInputRef} onFile={handleFileSelect} disabled={analysesSpent} className={cn('flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-white text-sm font-medium rounded-lg', analysesSpent ? 'cursor-not-allowed' : 'cursor-pointer')} style={{ background: analysesSpent ? '#cbd5e1' : themeColor }}>
                   <Upload className="w-4 h-4 flex-shrink-0" />
                   <span>AI Analyse</span>
                 </PhotoPickerControl>
@@ -608,11 +665,28 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                 </PhotoPickerControl>
               </div>
               <p className="text-xs text-slate-400">PNG, JPG up to 5MB</p>
+              {analysisLine && (
+                <p data-testid="ai-analysis-allowance" className={cn('text-xs font-medium', analysesSpent ? 'text-amber-600' : 'text-slate-500')}>{analysisLine}</p>
+              )}
+              {lastAi && (
+                <button
+                  type="button"
+                  data-testid="ai-last-suggestion"
+                  onClick={applyLastSuggestion}
+                  className="w-full flex items-center gap-2 text-left text-xs rounded-lg border border-slate-200 bg-white px-3 py-2 hover:bg-slate-50"
+                >
+                  <Sparkles className="w-3.5 h-3.5 flex-shrink-0 text-[rgb(var(--color-primary))]" />
+                  <span className="flex-1 min-w-0 truncate">Last AI suggestion: <strong>{lastAi.name}</strong></span>
+                  <span className="font-semibold text-[rgb(var(--color-primary))]">Use</span>
+                </button>
+              )}
             </div>
             <div className="mt-2 pt-2">
               <p className="text-xs text-slate-400 text-center mb-2">Or find a stock image with AI ✨</p>
               <StockImageSearch
                 tenantId={tenantId}
+                allowance={allowance}
+                onSearched={refreshAllowance}
                 onResult={(imageUrl) => {
                   onImageChange?.(imageUrl);
                   setPreview(imageUrl);

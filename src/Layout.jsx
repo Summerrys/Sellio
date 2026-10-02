@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppRefreshHandler } from '@/lib/AppRefreshContext';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { TenantProvider, useTenant } from './components/tenant/TenantContext';
 import { toast } from 'sonner';
@@ -48,9 +48,11 @@ import TrialReminderModal from './components/subscription/TrialReminderModal';
 import AccountProfileModal from './components/profile/AccountProfileModal';
 import InstallPWAModal from './components/onboarding/InstallPWAModal';
 import { canShowInstallPrompt, isStandalone } from '@/lib/pwaInstall';
+import PlanFeatureNotice from './components/subscription/PlanFeatureNotice';
+import { PAGE_FEATURES, itemWords } from '@/lib/planFeatures';
 
 
-const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth'];
+const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth', 'Join', 'Account'];
 
 function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription, onOpenProfile, onToggleCollapse, onClose }) {
   const [linkCopied, setLinkCopied] = useState(false);
@@ -70,7 +72,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
   // Tenant menu with permission requirements
   const allTenantItems = [
     { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard', permission: null },
-    { label: 'Products', icon: ShoppingBag, page: 'Products', permission: 'products.view' },
+    { label: itemWords(tenant?.seller_type).Products, icon: ShoppingBag, page: 'Products', permission: 'products.view' },
     { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view' },
     { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view' },
     { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view' },
@@ -267,7 +269,7 @@ function AppLayout({ children, currentPageName }) {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
 
   const { appUser: customUser, clearAppUser } = useAppUser();
-  const { user, tenant, isSuperAdmin, isLoading, hasPermission, isOwner } = useTenant();
+  const { user, tenant, isSuperAdmin, isLoading, hasPermission, isOwner, noStore, canUseFeature } = useTenant();
   const queryClient = useQueryClient();
   // Keep a signed-in staff member's permissions current: re-read their role and
   // membership every minute and whenever they return to the app, so an owner's
@@ -460,6 +462,16 @@ function AppLayout({ children, currentPageName }) {
     return <AppLoader />;
   }
 
+  // Signed in without an active store (a new account, or a staff login whose
+  // access ended): the account page shows what they can do next.
+  if (noStore && currentPageName !== 'Onboarding') {
+    return <Navigate to="/Account" replace />;
+  }
+
+  // A page the store's plan doesn't include (opened by link or address bar).
+  const planPageFeature = PAGE_FEATURES[currentPageName];
+  const pageOutsidePlan = !!planPageFeature && !canUseFeature(planPageFeature);
+
   if (isLocked) {
     if (['past_due', 'suspended'].includes(subscription?.status)) {
       return <BillingRecoveryWall subscription={subscription} tenantId={tenantId} isOwner={isOwner} />;
@@ -575,7 +587,9 @@ function AppLayout({ children, currentPageName }) {
         )}
 
         <div className="p-2 sm:p-6 lg:p-8 max-w-[1280px] mx-auto overflow-x-hidden">
-          {children}
+          {pageOutsidePlan
+            ? <PlanFeatureNotice feature={planPageFeature} personal={tenant?.seller_type === 'individual'} />
+            : children}
         </div>
       </main>
 
@@ -589,7 +603,7 @@ function AppLayout({ children, currentPageName }) {
           {/* Left: Dashboard, Products */}
           {[
             { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
-            { label: 'Products', icon: ShoppingBag, page: 'Products', pulse: navPulse.products },
+            { label: itemWords(tenant?.seller_type).Products, icon: ShoppingBag, page: 'Products', pulse: navPulse.products },
           ].map(({ label, icon: Icon, page, pulse }) => {
             const isActive = currentPageName === page;
             return (

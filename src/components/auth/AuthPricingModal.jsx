@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Check } from 'lucide-react';
+import { paymentLinkFor } from '@/lib/accountFlow';
 
 const PLANS = [
   {
@@ -41,7 +42,9 @@ const PLANS = [
   },
 ];
 
-export default function AuthPricingModal({ onClose }) {
+// prefilledEmail: a signed-in account's email, locked on the Stripe page so the
+// business plan it pays for belongs to this account.
+export default function AuthPricingModal({ onClose, prefilledEmail = '' }) {
   const [annual, setAnnual] = useState(false);
 
   return (
@@ -80,7 +83,7 @@ export default function AuthPricingModal({ onClose }) {
             const isGrowth = plan.key === 'growth';
             const price = annual ? plan.yearly : plan.monthly;
             const saving = plan.monthly * 12 - plan.yearly;
-            const link = annual ? plan.links.yearly : plan.links.monthly;
+            const link = paymentLinkFor(annual ? plan.links.yearly : plan.links.monthly, prefilledEmail);
             return (
               <div
                 key={plan.key}

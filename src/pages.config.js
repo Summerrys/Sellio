@@ -49,6 +49,7 @@
  */
 import { lazy } from 'react';
 
+const Account = lazy(() => import('./pages/Account'));
 const Auth = lazy(() => import('./pages/Auth'));
 const Categories = lazy(() => import('./pages/Categories'));
 const CoinShop = lazy(() => import('./pages/CoinShop'));
@@ -57,6 +58,7 @@ const CustomerOrder = lazy(() => import('./pages/CustomerOrder'));
 const Counter = lazy(() => import('./pages/Counter'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Inventory = lazy(() => import('./pages/Inventory'));
+const Join = lazy(() => import('./pages/Join'));
 const KitchenDisplay = lazy(() => import('./pages/KitchenDisplay'));
 const Notifications = lazy(() => import('./pages/Notifications'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
@@ -71,6 +73,7 @@ import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "Account": Account,
     "Auth": Auth,
     "Categories": Categories,
     "CoinShop": CoinShop,
@@ -79,6 +82,7 @@ export const PAGES = {
     "Counter": Counter,
     "Dashboard": Dashboard,
     "Inventory": Inventory,
+    "Join": Join,
     "KitchenDisplay": KitchenDisplay,
     "Notifications": Notifications,
     "Onboarding": Onboarding,

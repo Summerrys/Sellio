@@ -107,6 +107,12 @@ export default function Auth() {
               return;
             }
           }
+          // Signed in and back from a Stripe checkout (?token=…): the account page
+          // checks the payment belongs to this account and finishes the setup.
+          if (urlToken) {
+            completeAuthNavigation(`/Account?token=${encodeURIComponent(urlToken)}`);
+            return;
+          }
         }
       } catch {
         // silently fall through to normal auth flow
@@ -226,8 +232,11 @@ export default function Auth() {
         const isNewAuthUser = createdAt && (Date.now() - createdAt.getTime()) < 60 * 1000;
         const tokenInUrl = new URLSearchParams(window.location.search).get('token');
         const isBypass = BYPASS_EMAILS.includes((user.email || '').toLowerCase());
+        // From the free sign-up (/Join, or the Sign Up tab): a new account is welcome
+        // without a plan; Join then asks for name, mobile number and password.
+        const joinInUrl = new URLSearchParams(window.location.search).get('join') === '1';
 
-        if (isNewAuthUser && !tokenInUrl && !isBypass) {
+        if (isNewAuthUser && !tokenInUrl && !isBypass && !joinInUrl) {
           // Reject the session. Do not expose a public admin deletion endpoint merely
           // to clean up an unapproved OAuth identity.
           await supabase.auth.signOut();
@@ -327,7 +336,7 @@ export default function Auth() {
             .eq('status', 'pending');
         }
 
-        completeAuthNavigation(accountDeletionDestination(appUser.onboarding_completed ? '/Dashboard' : '/Onboarding'));
+        completeAuthNavigation(accountDeletionDestination(appUser.onboarding_completed ? '/Dashboard' : (joinInUrl ? '/Join' : '/Onboarding')));
       } catch (err) {
         toast.error(err.message || 'Google Sign-In failed');
         setGoogleLoading(false);
@@ -345,7 +354,8 @@ export default function Auth() {
       const supabase = await getSupabase();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${getBaseUrl()}/Auth` },
+        // Sign Up tab: creating a free account with Google is allowed (join=1).
+        options: { redirectTo: isLogin ? `${getBaseUrl()}/Auth` : `${getBaseUrl()}/Auth?join=1` },
       });
       if (error) throw error;
     } catch (err) {
@@ -590,6 +600,24 @@ export default function Auth() {
     if (params.get('type') === 'recovery') {
       setForgotMode(true);
       setForgotStep(3);
+      // Reset emails that link straight here carry a token_hash: exchange it for the
+      // reset session (links that go through Supabase first arrive with the session).
+      const tokenHash = params.get('token_hash');
+      if (tokenHash) {
+        setForgotLoading(true);
+        getSupabase()
+          .then((supabase) => supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' }))
+          .then(({ error }) => {
+            if (error) throw error;
+            window.history.replaceState(null, '', `${window.location.pathname}?type=recovery`);
+          })
+          .catch(() => {
+            window.history.replaceState(null, '', window.location.pathname);
+            toast.error('This reset link has expired or was already used. Please request a new one.');
+            setForgotStep(1);
+          })
+          .finally(() => setForgotLoading(false));
+      }
     }
   }, []);
 
@@ -790,11 +818,11 @@ export default function Auth() {
                     <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
                       <p className="text-xs font-semibold text-slate-600 mb-2">Need further help?</p>
                       <a
-                        href="mailto:hello@apptelier.sg"
+                        href="mailto:sellio@apptelier.sg"
                         className="flex items-center gap-2 text-xs text-slate-600 hover:text-orange-500 transition-colors mb-2"
                       >
                         <Mail className="w-3.5 h-3.5 flex-shrink-0" />
-                        hello@apptelier.sg
+                        sellio@apptelier.sg
                       </a>
                       {forgotPlan === 'pro' && (
                         <a
@@ -1047,18 +1075,24 @@ export default function Auth() {
               </>
             )}
 
-            {/* Pricing wall teaser in card */}
+            {/* Sign Up: a free Sellio account first; business plans (pay first) one tap away */}
             {showPricingWall && !checkingToken && (
               <div className="text-center py-4">
                 <p className="text-sm text-slate-500 mb-4">
-                  Choose a plan below to start your free trial and get your registration link.
+                  Create a free Sellio account: sell from home for free, or choose a business plan.
                 </p>
-                <button
-                  onClick={() => setShowPricingModal(true)}
-                  className="w-full py-2.5 rounded-xl text-white text-sm font-semibold"
+                <a
+                  href="/Join"
+                  className="block w-full py-2.5 rounded-xl text-white text-sm font-semibold"
                   style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
                 >
-                  View Plans ↓
+                  Create my free account
+                </a>
+                <button
+                  onClick={() => setShowPricingModal(true)}
+                  className="w-full mt-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
+                >
+                  Business plans (7-day free trial)
                 </button>
               </div>
             )}
@@ -1095,8 +1129,10 @@ export default function Auth() {
                   <div className="mt-3 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                     <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-amber-800">
-                      Account creation requires a valid plan.{' '}
-                      <span onClick={() => setShowPricingModal(true)} style={{ fontWeight: 600, color: '#d97706', textDecoration: 'underline', cursor: 'pointer' }}>Get started here.</span>
+                      There’s no Sellio account for this Google email yet.{' '}
+                      <a href="/Join" style={{ fontWeight: 600, color: '#d97706', textDecoration: 'underline' }}>Create a free account</a>
+                      {' '}or{' '}
+                      <span onClick={() => setShowPricingModal(true)} style={{ fontWeight: 600, color: '#d97706', textDecoration: 'underline', cursor: 'pointer' }}>see business plans</span>.
                     </p>
                   </div>
                 )}

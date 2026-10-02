@@ -31,8 +31,9 @@ function SectionCard({ children, className = '' }) {
 }
 
 export default function AccountProfileModal({ open, onClose, user, subscription: propSubscription, onOpenPricing, clearAppUser }) {
-  const { tenantId, isOwner } = useTenant();
+  const { tenantId, isOwner, tenant } = useTenant();
   const { subscription, tier } = useSubscription();
+  const isPersonalShop = tenant?.seller_type === 'individual';
   const activeSub = subscription || propSubscription;
 
   const [fullName, setFullName] = useState('');
@@ -93,10 +94,13 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
 
   // Plan name
   const tierNames = { starter: 'Starter Plan', growth: 'Growth Plan', pro: 'Professional Plan' };
-  const tierLabel = tierNames[tier] ?? (tier ? tier.charAt(0).toUpperCase() + tier.slice(1) + ' Plan' : 'Starter Plan');
+  const tierLabel = isPersonalShop
+    ? 'Personal Seller (free)'
+    : (tierNames[tier] ?? (tier ? tier.charAt(0).toUpperCase() + tier.slice(1) + ' Plan' : 'Starter Plan'));
 
   // Status badge
   const statusConfig = (() => {
+    if (isPersonalShop) return { label: 'Free', color: 'bg-green-100 text-green-700' };
     switch (activeSub?.status) {
       case 'trial':    return { label: 'Trial',    color: 'bg-amber-100 text-amber-700' };
       case 'active':   return { label: 'Active',   color: 'bg-green-100 text-green-700' };

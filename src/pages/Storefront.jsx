@@ -1046,7 +1046,7 @@ function StorefrontInner() {
 
       {/* The assistant stays mounted (keeping the conversation) while the cart,
           checkout, order history or an item's product screen is open; it just hides. */}
-      {products.length > 0 && (isPreview || isStoreOpen) && (
+      {products.length > 0 && tenant?.chat_enabled !== false && (isPreview || isStoreOpen) && (
         <MenuAssistantWidget
           products={products}
           tenant={tenant}

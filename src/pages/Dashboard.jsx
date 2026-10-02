@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { useProductTour } from '@/hooks/useProductTour';
 import TourGuide from '@/components/tour/TourGuide';
 import { getDashboardSteps } from '@/components/tour/tourSteps';
+import { itemWords } from '@/lib/planFeatures';
 
 const featureCards = [
   { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view', color: 'bg-blue-50 text-blue-600 border-blue-100' },
@@ -340,6 +341,7 @@ export default function Dashboard() {
         <TourGuide
           steps={getDashboardSteps({
             hasTakeOrders: hasPermission('orders.create'),
+            listings: tenant?.seller_type === 'individual',
             isDesktop: isDesktopTour,
             hasAiAssistant: hasPermission('dashboard.ai_assistant'),
             hasDesignStore: hasPermission('dashboard.design_store'),
@@ -415,7 +417,7 @@ export default function Dashboard() {
             <FeatureCard
               key={f.page}
               icon={f.icon}
-              label={f.label}
+              label={f.page === 'Products' ? itemWords(tenant?.seller_type).Products : f.label}
               color={f.color}
               onClick={() => navigate(createPageUrl(f.page))}
             />

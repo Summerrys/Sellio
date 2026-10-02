@@ -100,7 +100,8 @@ function printReceipt(order, currency, merchantName) {
 }
 
 function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel, tenantId, onStatusUpdate, onMarkPaid, onOrderUpdated, tourTag = false }) {
-  const { hasPermission, tenant } = useTenant();
+  const { hasPermission, tenant, canUseFeature } = useTenant();
+  const canPrintReceipts = !canUseFeature || canUseFeature('can_print');
   const canEditOrders = hasPermission('orders.edit');
   const canCancelOrders = hasPermission('orders.cancel');
   const canPrintChit = hasPermission('orders.print_chit');
@@ -270,7 +271,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 </button>
               )
             )}
-            {showPrint && (
+            {showPrint && canPrintReceipts && (
               <button
                 onClick={(e) => { e.stopPropagation(); setShowReceipt(true); }}
                 className="flex-1 h-11 flex items-center justify-center gap-1.5 rounded-lg text-sm font-semibold transition-colors"
@@ -472,7 +473,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
 }
 
 export default function Orders() {
-  const { tenantId, tenant, hasPermission, subscription } = useTenant();
+  const { tenantId, tenant, hasPermission, subscription, canUseFeature } = useTenant();
   const ordersTour = useProductTour('orders');
   const { appUser } = useAppUser();
   const navigate = useNavigate();
@@ -807,7 +808,7 @@ export default function Orders() {
               <p className="text-sm text-slate-500">Manage incoming and active orders</p>
             </div>
             <div className="flex flex-col items-end gap-2 flex-shrink-0">
-              {isFnB && (
+              {isFnB && canUseFeature('can_use_kitchen_display') && (
                 <button
                   data-tour="kitchen-display-btn"
                   onClick={() => navigate(createPageUrl('KitchenDisplay'))}

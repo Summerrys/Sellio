@@ -17,6 +17,7 @@ import PricingModal from '../components/subscription/PricingModal';
 import { useProductTour } from '@/hooks/useProductTour';
 import TourGuide from '@/components/tour/TourGuide';
 import { getProductsSteps } from '@/components/tour/tourSteps';
+import { itemWords } from '@/lib/planFeatures';
 import DummyProductCard from '@/components/tour/DummyProductCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package, ScanLine, Trash2, CheckCircle2, AlertCircle, ImageIcon, Loader2, X } from 'lucide-react';
@@ -313,7 +314,11 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
 }
 
 export default function Products() {
-  const { tenantId, tenant, subscription, hasPermission } = useTenant();
+  const { tenantId, tenant, subscription, hasPermission, canUseFeature } = useTenant();
+  // A free personal shop: "Listings", no menu scan, no Inventory page (its plan).
+  const words = itemWords(tenant?.seller_type);
+  const canScanMenu = !canUseFeature || canUseFeature('can_scan_menu');
+  const canUseInventory = !canUseFeature || canUseFeature('can_use_inventory');
   const productsTour = useProductTour('products');
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -533,7 +538,8 @@ export default function Products() {
       <div className="space-y-6">
         <div className="flex flex-col gap-3 mb-6">
           <div data-tour="products-header" className="flex items-center justify-between mb-1">
-            <h1 className="text-2xl font-bold text-slate-900">Products</h1>
+            <h1 className="text-2xl font-bold text-slate-900">{words.Products}</h1>
+            {canUseInventory && (
             <button
               onClick={() => navigate('/Inventory')}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors"
@@ -549,8 +555,9 @@ export default function Products() {
             >
               <Package className="w-4 h-4" /> Inventory
             </button>
+            )}
           </div>
-          <p className="text-sm text-slate-500 -mt-3">Manage your product catalog</p>
+          <p className="text-sm text-slate-500 -mt-3">{tenant?.seller_type === 'individual' ? 'Manage your listings' : 'Manage your product catalog'}</p>
           <div className="flex flex-wrap items-center gap-2">
               <RequirePermission permission="products.create" silent>
               <DropdownMenu>
@@ -567,7 +574,7 @@ export default function Products() {
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleExport}>
                     <FileSpreadsheet className="w-4 h-4 mr-2" />
-                    Export All Products
+                    Export All {words.Products}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -575,6 +582,7 @@ export default function Products() {
                   <Upload className="w-4 h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Import</span>
                 </Button>
+                {canScanMenu && (
                 <NativeCameraScanControl
                   data-tour="scan-menu-btn"
                   label="Scan menu with camera"
@@ -582,22 +590,23 @@ export default function Products() {
                   onFile={handleScanPhoto}
                   onError={message => toast.message(message)}
                   className={`inline-flex h-9 items-center justify-center rounded-md border px-3 text-sm font-medium cursor-pointer transition-colors ${atProductLimit ? 'gap-1.5 border-slate-300 text-slate-400' : 'gap-1.5 border-orange-300 text-orange-600 hover:bg-orange-50'}`}
-                  title={atProductLimit ? `Product limit reached (${maxProducts}) — upgrade to add more` : undefined}
+                  title={atProductLimit ? `${words.Product} limit reached (${maxProducts}) — upgrade to add more` : undefined}
                 >
                   <ScanLine className="w-4 h-4 sm:mr-1" />
                   <span className="hidden sm:inline">Scan Menu</span>
                   <span className="sm:hidden">Scan</span>
                 </NativeCameraScanControl>
+                )}
                 <Button
                   data-tour="add-product-btn"
                   onClick={handleAdd}
                   size="sm"
                   className="text-white gap-1.5"
                   style={{ background: atProductLimit ? '#cbd5e1' : 'var(--color-primary-gradient)' }}
-                  title={atProductLimit ? `Product limit reached (${maxProducts}) — upgrade to add more` : undefined}
+                  title={atProductLimit ? `${words.Product} limit reached (${maxProducts}) — upgrade to add more` : undefined}
                 >
                   <Plus className="w-4 h-4" />
-                  <span className="hidden sm:inline">{atProductLimit ? 'Limit Reached' : 'Add Product'}</span>
+                  <span className="hidden sm:inline">{atProductLimit ? 'Limit Reached' : `Add ${words.Product}`}</span>
                   <span className="sm:hidden">{atProductLimit ? 'Limit' : 'Add'}</span>
                 </Button>
               </RequirePermission>
@@ -655,7 +664,7 @@ export default function Products() {
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
-              placeholder="Search products..."
+              placeholder={`Search ${words.products}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 h-11"
@@ -715,12 +724,12 @@ export default function Products() {
             <EmptyState
               icon={ShoppingBag}
               title={searchQuery || categoryFilter !== 'all' || statusFilter !== 'all' 
-                ? "No products found" 
-                : "No products yet"}
+                ? `No ${words.products} found`
+                : `No ${words.products} yet`}
               description={searchQuery || categoryFilter !== 'all' || statusFilter !== 'all'
                 ? "Try adjusting your filters"
-                : "Start building your catalog by adding your first product"}
-              actionLabel="Add Product"
+                : `Start building your catalog by adding your first ${words.product}`}
+              actionLabel={`Add ${words.Product}`}
               onAction={handleAdd}
             />
             {/* Tour needs a card to point at even with zero real products yet */}
@@ -767,7 +776,7 @@ export default function Products() {
 
         {productsTour.eligible && (
           <TourGuide
-            steps={getProductsSteps({ tier: subscription?.tier })}
+            steps={getProductsSteps({ tier: subscription?.tier, listings: tenant?.seller_type === 'individual' })}
             run={productsTour.eligible}
             onFinish={productsTour.completeStage}
             tour={productsTour}
