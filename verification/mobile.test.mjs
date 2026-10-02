@@ -134,6 +134,63 @@ try {
   globalThis.FileReader = Reader; globalThis.fetch = originalFetch;
   passed('Product AI and plain-photo selection stay separate; cancellation and read/upload failures recover');
 
+  const mediaDevices = navigator.mediaDevices;
+  const play = window.HTMLMediaElement.prototype.play;
+  const canvasContext = window.HTMLCanvasElement.prototype.getContext;
+  const canvasBlob = window.HTMLCanvasElement.prototype.toBlob;
+  const fileConstructor = globalThis.File;
+  globalThis.File = window.File;
+  window.HTMLMediaElement.prototype.play = async () => {};
+  const cameraRequests = []; let cameraStops = 0; let resolveCamera; let denyCamera = false;
+  Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: {
+    getUserMedia: constraints => {
+      cameraRequests.push(constraints);
+      if (denyCamera) return Promise.reject(Object.assign(new Error('Denied'), { name: 'NotAllowedError' }));
+      return new Promise(resolve => { resolveCamera = resolve; });
+    },
+  } });
+  const media = () => ({ getTracks: () => [{ stop: () => cameraStops++ }] });
+  const { default: CameraPhotoControl } = await loadComponent('src/components/ui-custom/CameraPhotoControl.jsx');
+  const cameraFiles = [];
+  const camera = mount(CameraPhotoControl, { label: 'Take menu photo', onFile: file => cameraFiles.push(file), children: 'Take Photo' });
+  await camera.render();
+  assert.equal(cameraRequests.length, 0, 'Mounting a page must not ask for camera access');
+  const cameraDialog = () => document.body.querySelector('[role="dialog"]');
+  const openCamera = () => click(camera.container.querySelector('button'));
+  const closeCamera = () => click(cameraDialog().querySelector('button[aria-label="Close camera"]'));
+  await act(async () => { openCamera(); await next(); });
+  assert.equal(cameraRequests[0].audio, false, 'Photo capture must not request microphone access');
+  assert.equal(cameraRequests[0].video.facingMode.ideal, 'environment');
+  await act(async () => { closeCamera(); resolveCamera(media()); await next(); });
+  assert.equal(cameraStops, 1, 'A grant arriving after cancellation must immediately release the camera');
+  assert.equal(cameraDialog(), null);
+  await act(async () => { openCamera(); resolveCamera(media()); await next(); });
+  const video = cameraDialog().querySelector('video');
+  Object.defineProperties(video, { videoWidth: { value: 2400 }, videoHeight: { value: 1600 } });
+  await act(async () => video.dispatchEvent(new Event('loadedmetadata', { bubbles: true })));
+  let capturedDimensions;
+  window.HTMLCanvasElement.prototype.getContext = function () { capturedDimensions = [this.width, this.height]; return { drawImage() {} }; };
+  window.HTMLCanvasElement.prototype.toBlob = callback => callback(new window.Blob(['captured-fixture'], { type: 'image/jpeg' }));
+  await act(async () => { click([...cameraDialog().querySelectorAll('button')].find(button => button.textContent === 'Take Photo')); await next(); });
+  assert.deepEqual(capturedDimensions, [1920, 1280]);
+  assert.equal(cameraFiles.length, 1);
+  assert.equal(cameraFiles[0].type, 'image/jpeg');
+  assert.equal(cameraStops, 2, 'Capturing must release the camera');
+  assert.equal(cameraDialog(), null);
+  denyCamera = true;
+  await act(async () => { openCamera(); await next(); });
+  assert.match(cameraDialog().textContent, /Allow Camera in your phone’s Sellio permissions/);
+  await act(async () => { closeCamera(); await next(); });
+  denyCamera = false;
+  await act(async () => { openCamera(); resolveCamera(media()); await next(); camera.root.unmount(); await next(); });
+  assert.equal(cameraStops, 3, 'Leaving the page must release the camera');
+  Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: mediaDevices });
+  window.HTMLMediaElement.prototype.play = play;
+  window.HTMLCanvasElement.prototype.getContext = canvasContext;
+  window.HTMLCanvasElement.prototype.toBlob = canvasBlob;
+  globalThis.File = fileConstructor;
+  passed('Camera permission starts on tap, excludes microphone, captures JPEG and releases streams on capture/cancel/unmount');
+
   const { completeAuthNavigation } = await import(pathToFileURL(path.join(app, 'src/lib/authNavigation.js')).href);
   const browserHistory = (userAgent, bridge = {}) => {
     const entries = ['/Auth']; let index = 0;
