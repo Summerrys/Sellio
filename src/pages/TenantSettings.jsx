@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
 import { base44 } from '@/api/base44Client';
@@ -23,7 +23,7 @@ import { toast } from 'sonner';
 import BusinessProfileTab from '../components/settings/BusinessProfileTab';
 import UserManagement from './UserManagement';
 import PricingModal from '../components/subscription/PricingModal';
-import PullToRefresh from '../components/ui-custom/PullToRefresh';
+import { useAppRefreshHandler, useAppReloadGuard } from '@/lib/AppRefreshContext';
 import useSettingsDraft from '@/hooks/useSettingsDraft';
 
 export default function TenantSettings() {
@@ -248,24 +248,12 @@ function TenantSettingsContent() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
-  const handleRefresh = useCallback(async () => {
-    if (!tenantId) return;
-    const supabase = await getSupabase();
-    await Promise.all([
-      supabase.from('tenants').select('*').eq('id', tenantId).limit(1).then(({ data, error }) => {
-        if (error) throw error;
-        if (!data?.length) throw new Error('Could not load your business settings.');
-        queryClient.setQueryData(['currentTenant', tenantId], data);
-      }),
-      ...['businessHours', 'staff', 'roles', 'allRoles', 'roleUsers'].map(key =>
-        queryClient.invalidateQueries({ queryKey: [key, tenantId] }, { throwOnError: true })),
-    ]);
-    setRefreshVersion(version => version + 1);
-  }, [queryClient, tenantId]);
+  useAppRefreshHandler(() => setRefreshVersion(version => version + 1));
+  useAppReloadGuard(() => ({ busy: isDeleting }));
 
   return (
     <PermissionGate permission="settings.view">
-      <PullToRefresh onRefresh={handleRefresh} disabled={isDeleting || showDeleteConfirm || showPricingModal}>
+      <>
       <PageHeader title="Settings" description="Configure your business and manage roles" />
 
       {settingsTour.isOwner && (
@@ -412,7 +400,7 @@ function TenantSettingsContent() {
       </Dialog>
 
       <PricingModal open={showPricingModal} onOpenChange={setShowPricingModal} tenantId={tenantId} currentTier={subscription?.tier ?? null} />
-      </PullToRefresh>
+      </>
     </PermissionGate>
   );
 }
