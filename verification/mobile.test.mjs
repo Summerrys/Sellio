@@ -48,6 +48,36 @@ function mount(Component, props = {}, client = queryClient()) {
   return { container, root, client, render: async values => act(async () => root.render(React.createElement(QueryClientProvider, { client }, React.createElement(Component, values || props)))) };
 }
 try {
+  const { completeAuthNavigation } = await import(pathToFileURL(path.join(app, 'src/lib/authNavigation.js')).href);
+  const browserHistory = (userAgent, bridge = {}) => {
+    const entries = ['/Auth']; let index = 0;
+    const browser = {
+      navigator: { userAgent }, ...bridge,
+      location: {
+        assign: destination => { entries.splice(index + 1); entries.push(destination); index++; },
+        replace: destination => { entries[index] = destination; },
+      },
+    };
+    return { browser, entries, back: () => { if (index > 0) index--; return entries[index]; } };
+  };
+  for (const bridge of [{ ReactNativeWebView: { postMessage() {} } }, { __hybrid_bridge: { sendMessage() {} } }]) {
+    const native = browserHistory('Android', bridge);
+    completeAuthNavigation('/Dashboard', native.browser);
+    assert.deepEqual(native.entries, ['/Dashboard'], 'Completed Auth must not remain behind the Android home page');
+    native.browser.location.assign('/Products');
+    assert.equal(native.back(), '/Dashboard', 'Normal page Back must still return home');
+    assert.equal(native.back(), '/Dashboard', 'Back must not re-enter Auth and start a redirect loop');
+    const invite = browserHistory('Android', bridge);
+    completeAuthNavigation('/Onboarding?token=test-only', invite.browser);
+    assert.deepEqual(invite.entries, ['/Onboarding?token=test-only'], 'Keep destination parameters');
+  }
+  for (const [agent, bridge] of [['Android', {}], ['iPhone', { ReactNativeWebView: { postMessage() {} } }]]) {
+    const ordinary = browserHistory(agent, bridge);
+    completeAuthNavigation('/Dashboard', ordinary.browser);
+    assert.deepEqual(ordinary.entries, ['/Auth', '/Dashboard'], 'Browser and iOS navigation should retain their existing behavior');
+  }
+  passed('Android completed-auth history avoids a login loop; page Back and destination parameters stay intact');
+
   // A lost response must keep the same checkout request key; changed carts are blocked.
   const checkout = await import(pathToFileURL(path.join(app, 'src/lib/mobileCheckout.js')).href);
   const params = { p_tenant_id: 'test-store', p_items: [{ product_id: 'p', quantity: 2 }], p_type: 'takeaway' };
