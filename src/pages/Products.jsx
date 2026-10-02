@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import PullToRefresh from '../components/ui-custom/PullToRefresh';
 import NativeCameraScanControl from '../components/ui-custom/NativeCameraScanControl';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useBackToClose } from '@/lib/useBackToClose';
@@ -484,12 +483,6 @@ export default function Products() {
     window.URL.revokeObjectURL(url);
   };
 
-  const handleRefresh = useCallback(() =>
-    Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['products', tenantId] }, { throwOnError: true }),
-      queryClient.invalidateQueries({ queryKey: ['categories', tenantId] }, { throwOnError: true }),
-    ]), [queryClient, tenantId]);
-
   const handleLongPress = (productId) => {
     // FIX: long-press multi-select only exists to enable bulk delete — with no
     // products.delete permission there's nothing useful it can do, so don't let it
@@ -537,7 +530,6 @@ export default function Products() {
 
   return (
     <RequirePermission permission="products.view">
-      <PullToRefresh onRefresh={handleRefresh}>
       <div className="space-y-6">
         <div className="flex flex-col gap-3 mb-6">
           <div data-tour="products-header" className="flex items-center justify-between mb-1">
@@ -825,7 +817,6 @@ export default function Products() {
           hasUsedTrial={tenant?.has_used_trial ?? false}
         />
       </div>
-      </PullToRefresh>
     </RequirePermission>
   );
 }
