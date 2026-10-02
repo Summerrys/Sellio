@@ -1,3 +1,4 @@
+import { escapePrintHtml, printImageSrc } from '@/lib/printSafety';
 import React, { useState } from 'react';
 import QRCode from 'qrcode';
 import { jsPDF } from 'jspdf';
@@ -150,9 +151,9 @@ export default function BulkQRActions({ tables, tenant }) {
       qrData.forEach(({ table, dataUrl }) => {
         htmlContent += `
           <div class="card">
-            <h1>${tenant.name}</h1>
-            <h2>Table ${table.name}</h2>
-            <img src="${dataUrl}" alt="QR Code" />
+            <h1>${escapePrintHtml(tenant.name)}</h1>
+            <h2>Table ${escapePrintHtml(table.name)}</h2>
+            <img src="${printImageSrc(dataUrl)}" alt="QR Code" />
             <p>Scan to Order</p>
             <div class="footer">Powered by Apptelier</div>
           </div>

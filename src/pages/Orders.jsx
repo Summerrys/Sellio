@@ -1,3 +1,4 @@
+import { escapePrintHtml } from '@/lib/printSafety';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { loadPrinterConfig, buildOrderReceipt, buildOrderChit, sendViaBluetooth, sendViaEpsonEPos } from '@/lib/printerUtils';
 import { getSupabase } from '@/lib/supabaseClient';
@@ -58,8 +59,8 @@ function printReceipt(order, currency, merchantName) {
   const itemsHtml = (order.items || []).map(item => {
     const lineTotal = ((item.price || item.unit_price || 0) * (item.quantity || 1)).toFixed(2);
     return `<tr>
-      <td style="padding:4px 8px 4px 0">${item.quantity}× ${item.name || item.product_name}${item.variant ? ` (${item.variant})` : ''}</td>
-      <td style="padding:4px 0;text-align:right">${currency} ${lineTotal}</td>
+      <td style="padding:4px 8px 4px 0">${escapePrintHtml(item.quantity)}× ${escapePrintHtml(item.name || item.product_name)}${item.variant ? ` (${escapePrintHtml(item.variant)})` : ''}</td>
+      <td style="padding:4px 0;text-align:right">${escapePrintHtml(currency)} ${lineTotal}</td>
     </tr>`;
   }).join('');
   const subtotal = parseFloat(order.subtotal || order.total_amount || 0).toFixed(2);
@@ -77,19 +78,19 @@ function printReceipt(order, currency, merchantName) {
     .total{font-weight:bold;font-size:14px} .small{font-size:11px;color:#555}
     @media print{body{padding:0}button{display:none}}
   </style></head><body>
-  <h2>${merchantName || 'Receipt'}</h2>
-  <p class="center small">${date}</p>
+  <h2>${escapePrintHtml(merchantName || 'Receipt')}</h2>
+  <p class="center small">${escapePrintHtml(date)}</p>
   <div class="divider"></div>
-  <p><strong>Order:</strong> ${order.order_number || order.id?.slice(-6)}</p>
-  ${order.table_name ? `<p><strong>Table:</strong> ${order.table_name}</p>` : ''}
-  ${order.customer_name && order.customer_name.toLowerCase() !== 'nil' ? `<p><strong>Customer:</strong> ${order.customer_name}</p>` : ''}
+  <p><strong>Order:</strong> ${escapePrintHtml(order.order_number || order.id?.slice(-6))}</p>
+  ${order.table_name ? `<p><strong>Table:</strong> ${escapePrintHtml(order.table_name)}</p>` : ''}
+  ${order.customer_name && order.customer_name.toLowerCase() !== 'nil' ? `<p><strong>Customer:</strong> ${escapePrintHtml(order.customer_name)}</p>` : ''}
   <div class="divider"></div>
   <table>${itemsHtml}</table>
   <div class="divider"></div>
   <table>
-    <tr><td>Subtotal</td><td style="text-align:right">${currency} ${subtotal}</td></tr>
-    <tr><td>Tax</td><td style="text-align:right">${currency} ${tax}</td></tr>
-    <tr class="total"><td>Total</td><td style="text-align:right">${currency} ${total}</td></tr>
+    <tr><td>Subtotal</td><td style="text-align:right">${escapePrintHtml(currency)} ${subtotal}</td></tr>
+    <tr><td>Tax</td><td style="text-align:right">${escapePrintHtml(currency)} ${tax}</td></tr>
+    <tr class="total"><td>Total</td><td style="text-align:right">${escapePrintHtml(currency)} ${total}</td></tr>
   </table>
   <div class="divider"></div>
   <p class="center small">Thank you for your visit!</p>
