@@ -26,7 +26,6 @@ import {
   Copy,
   Check,
   Store,
-  Coins,
   Menu
 } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
@@ -78,7 +77,6 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
     ...(isFnBIndustry(tenant?.industry) ? [{ label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view' }] : []),
     { label: 'User Management', icon: Users, page: 'UserManagement', permission: ['staff.view', 'roles.view'] },
     { label: 'Reports', icon: BarChart3, page: 'Reports', permission: 'reports.view' },
-    { label: 'Coin Store', icon: Coins, page: 'CoinShop', permission: null },
     { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view' },
   ];
 
