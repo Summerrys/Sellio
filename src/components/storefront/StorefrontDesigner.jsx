@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useAppReloadGuard } from '@/lib/AppRefreshContext';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1573,6 +1574,7 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
   const [previewTenant, setPreviewTenant] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const storeUrl = `https://sellio.apptelier.sg/store/${tenantSlug}?preview=true`;
+  useAppReloadGuard(() => ({ dirty: open && !!sessionStorage.getItem(`storefront_draft_${tenantId}`), busy: open && saving }));
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 1024);
@@ -1754,7 +1756,7 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
   if (!open) return null;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200 }} className="flex">
+    <div data-app-refresh-block="true" style={{ position: 'fixed', inset: 0, zIndex: 200 }} className="flex">
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
         <AlertDialogContent
           overlayClassName="z-[210] bg-black/50"
