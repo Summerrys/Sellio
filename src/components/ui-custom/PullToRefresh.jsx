@@ -25,7 +25,7 @@ export function isRefreshAtTop(target, root, doc = document) {
   return getRefreshScrollTargets(target, root, doc).every(el => el.scrollTop <= 1);
 }
 
-export default function PullToRefresh({ onRefresh, children, disabled = false }) {
+export default function PullToRefresh({ onRefresh, children, disabled = false, appWide = false }) {
   const [refreshing, setRefreshing] = useState(false);
   const containerRef = useRef(null);
   const indicatorRef = useRef(null);
@@ -37,8 +37,8 @@ export default function PullToRefresh({ onRefresh, children, disabled = false })
   const clickBlockRef = useRef(null);
   const refreshingRef = useRef(false);
   const mountedRef = useRef(false);
-  const optionsRef = useRef({ onRefresh, disabled });
-  optionsRef.current = { onRefresh, disabled };
+  const optionsRef = useRef({ onRefresh, disabled, appWide });
+  optionsRef.current = { onRefresh, disabled, appWide };
 
   // Keep drag frames out of React and out of page layout. Only the small
   // overlay moves; fixed navigation and page content keep their positions.
@@ -110,6 +110,7 @@ export default function PullToRefresh({ onRefresh, children, disabled = false })
       reset();
       const target = event.target instanceof Element ? event.target : event.target?.parentElement;
       if (optionsRef.current.disabled || event.touches.length !== 1 || !target || !root.contains(target) || target.closest(BLOCKED)) return;
+      if (optionsRef.current.appWide && document.querySelector('[role="dialog"], [role="alertdialog"], [data-app-refresh-block="true"]')) return;
       const scrollTargets = getRefreshScrollTargets(target, root, document);
       if (scrollTargets.some(el => el.scrollTop > 1)) return;
       gestureRef.current = {
@@ -184,7 +185,7 @@ export default function PullToRefresh({ onRefresh, children, disabled = false })
   }, [disabled, reset]);
 
   return (
-    <div ref={containerRef} className="sellio-pull-refresh relative" aria-busy={refreshing}>
+    <div ref={containerRef} className={`sellio-pull-refresh relative${appWide ? ' sellio-pull-refresh--app' : ''}`} aria-busy={refreshing}>
       <style>{`
         .sellio-pull-refresh {
           min-height: calc(100svh - 176px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
@@ -193,6 +194,15 @@ export default function PullToRefresh({ onRefresh, children, disabled = false })
           .sellio-pull-refresh {
             min-height: calc(100svh - 144px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
           }
+        }
+        .sellio-pull-refresh--app { min-height: 100svh; }
+        .sellio-pull-refresh--app > .sellio-pull-refresh-indicator {
+          position: fixed;
+          top: calc(56px + env(safe-area-inset-top, 0px));
+          z-index: 180;
+        }
+        @media (min-width: 1024px) {
+          .sellio-pull-refresh--app > .sellio-pull-refresh-indicator { top: 64px; }
         }
         @media (prefers-reduced-motion: reduce) {
           .sellio-pull-refresh-indicator { transition: none !important; }
