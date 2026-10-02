@@ -381,7 +381,7 @@ function TenantSettingsContent() {
               onClick={async () => {
                 setIsDeleting(true);
                 try {
-                  const res = await base44.functions.invoke('deleteTenantWithCascade', { tenant_id: tenantId });
+                  const res = await base44.functions.invoke('deleteTenantWithCascade', { tenant_id: tenantId, confirmation: deleteConfirmText });
                   if (res.data?.success) {
                     toast.success('Account deleted. Redirecting...');
                     setTimeout(() => { window.location.href = '/'; }, 1500);
