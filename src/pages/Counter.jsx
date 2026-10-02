@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useAppRefreshHandler, useAppReloadGuard } from '@/lib/AppRefreshContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Loader2, ShoppingBag } from 'lucide-react';
@@ -101,55 +102,63 @@ function CounterScreen() {
   const byId = useMemo(() => Object.fromEntries(products.map(p => [p.id, p])), [products]);
   const groupsById = useMemo(() => Object.fromEntries(products.map(p => [p.id, getOptionGroups(p)])), [products]);
 
-  const loadSessions = useCallback(async () => {
+  const loadSessions = useCallback(async (throwOnError = false) => {
     if (!tenantId) return;
     const supabase = await getSupabase();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('table_sessions')
       .select('id, table_id, order_ids, total_amount')
       .eq('tenant_id', tenantId)
       .eq('status', 'active');
+    if (error) { if (throwOnError === true) throw error; return; }
     const map = {};
     (data || []).forEach(s => { map[s.table_id] = s; });
     setSessions(map);
   }, [tenantId]);
 
+  const loadCatalog = useCallback(async (shouldApply = () => true) => {
+    if (!tenantId) return;
+    const supabase = await getSupabase();
+    const since = new Date(Date.now() - 90 * 864e5).toISOString();
+    const [catalog, tablesRes, itemsRes] = await Promise.all([
+      fetchStorefrontCatalog(supabase, tenantId),
+      supabase.from('tables').select('id, name, zone, status, sort_order')
+        .eq('tenant_id', tenantId)
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true }),
+      supabase.from('order_items').select('product_id, quantity')
+        .eq('tenant_id', tenantId)
+        .gte('created_date', since)
+        .limit(5000),
+    ]);
+    if (tablesRes.error) throw tablesRes.error;
+    if (itemsRes.error) throw itemsRes.error;
+    if (!shouldApply()) return;
+    setProducts(catalog.products || []);
+    setCategories(catalog.categories || []);
+    setTables(tablesRes.data || []);
+    const counts = {};
+    (itemsRes.data || []).forEach(i => { counts[i.product_id] = (counts[i.product_id] || 0) + (i.quantity || 0); });
+    setSold(counts);
+  }, [tenantId]);
+
+  useAppRefreshHandler(() => Promise.all([loadCatalog(), loadSessions(true)]));
+  useAppReloadGuard(() => ({
+    dirty: Object.values(tickets).some(ticket => ticket.length > 0) || !!sheet,
+    busy: sendingRef.current || settling,
+  }));
+
   useEffect(() => {
     if (!tenantId) return undefined;
     let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const supabase = await getSupabase();
-        const since = new Date(Date.now() - 90 * 864e5).toISOString();
-        const [catalog, tablesRes, itemsRes] = await Promise.all([
-          fetchStorefrontCatalog(supabase, tenantId),
-          supabase.from('tables').select('id, name, zone, status, sort_order')
-            .eq('tenant_id', tenantId)
-            .order('sort_order', { ascending: true })
-            .order('name', { ascending: true }),
-          supabase.from('order_items').select('product_id, quantity')
-            .eq('tenant_id', tenantId)
-            .gte('created_date', since)
-            .limit(5000),
-        ]);
-        if (cancelled) return;
-        setProducts(catalog.products || []);
-        setCategories(catalog.categories || []);
-        setTables(tablesRes.data || []);
-        const counts = {};
-        (itemsRes.data || []).forEach(i => { counts[i.product_id] = (counts[i.product_id] || 0) + (i.quantity || 0); });
-        setSold(counts);
-      } catch (e) {
-        toast.error('Could not load the menu. Check your connection and try again.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
+    setLoading(true);
+    loadCatalog(() => !cancelled)
+      .catch(() => { if (!cancelled) toast.error('Could not load the menu. Check your connection and try again.'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
     loadSessions();
     const timer = setInterval(loadSessions, 20000);
     return () => { cancelled = true; clearInterval(timer); };
-  }, [tenantId, loadSessions]);
+  }, [tenantId, loadCatalog, loadSessions]);
 
   useEffect(() => {
     const onKey = e => {
