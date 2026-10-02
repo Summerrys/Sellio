@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { ThemeProvider } from './components/theme/ThemeProvider';
 import { NotificationProvider } from './components/notifications/NotificationProvider';
 import NotificationBell from './components/notifications/NotificationBell';
+import PointOfSaleIcon from './components/ui-custom/PointOfSaleIcon';
 import RoleSwitcher from './components/dev/RoleSwitcher';
 import {
   LayoutDashboard,
@@ -21,7 +22,6 @@ import {
   X,
   QrCode,
   ArrowLeft,
-  ShoppingCart,
   Clock,
   Copy,
   Check,
@@ -500,7 +500,7 @@ function AppLayout({ children, currentPageName }) {
                 className="inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-semibold text-white shadow-sm transition-transform active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgb(var(--color-primary))]"
                 style={{ background: 'var(--color-primary-gradient)' }}
               >
-                <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+                <PointOfSaleIcon className="h-5 w-5" aria-hidden="true" />
                 Take Orders
               </Link>
             )}
@@ -623,7 +623,7 @@ function AppLayout({ children, currentPageName }) {
                   className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg"
                   style={{ background: 'var(--color-primary-gradient)' }}
                 >
-                  <ShoppingCart className="w-6 h-6 text-white" strokeWidth={2.5} aria-hidden="true" />
+                  <PointOfSaleIcon className="w-6 h-6 text-white" aria-hidden="true" />
                 </span>
                 <span className="text-xs font-semibold" style={{ color: 'rgb(var(--color-primary))' }}>Counter</span>
               </Link>
