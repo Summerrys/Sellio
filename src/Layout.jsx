@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { ThemeProvider } from './components/theme/ThemeProvider';
 import { NotificationProvider } from './components/notifications/NotificationProvider';
 import NotificationBell from './components/notifications/NotificationBell';
+import KitchenAutoPrint from './components/orders/KitchenAutoPrint';
 import PointOfSaleIcon from './components/ui-custom/PointOfSaleIcon';
 import RoleSwitcher from './components/dev/RoleSwitcher';
 import {
@@ -709,6 +710,7 @@ export default function Layout({ children, currentPageName }) {
         return (
           <ThemeProvider tenantId={themeScope}>
             <NotificationProvider>
+              <KitchenAutoPrint />
               <AppLayout currentPageName={currentPageName}>{children}</AppLayout>
             </NotificationProvider>
           </ThemeProvider>
