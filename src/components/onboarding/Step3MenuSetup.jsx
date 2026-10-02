@@ -6,6 +6,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ImageEditModal from './ImageEditModal';
 import EditItemModal from './EditItemModal';
 import { getSupabase } from '@/lib/supabaseClient';
+import { requestProductImageAnalysis } from '@/lib/productImageAnalysis';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -230,11 +231,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       // Upload to temp/ and run AI in parallel
       const [uploadResult, aiRes] = await Promise.all([
         uploadToStorage(firstFile),
-        fetch('https://selliosg.base44.app/api/functions/analyzeProductImage', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64: firstPreview }),
-        }),
+        requestProductImageAnalysis(firstPreview),
       ]);
 
       // Store the uploaded URL and path
