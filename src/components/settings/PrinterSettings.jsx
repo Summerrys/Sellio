@@ -198,7 +198,7 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
   const handleToggleAutoPrint = (checked) => {
     setAutoPrintChit(checked);
     const cfg = loadPrinterConfig(tenantId) || {};
-    savePrinterConfig(tenantId, { ...cfg, autoPrintChit: checked });
+    savePrinterConfig(tenantId, { ...cfg, autoPrintChit: checked, autoPrintSince: checked ? new Date().toISOString() : cfg.autoPrintSince });
     toast.success(checked ? 'Auto-print enabled' : 'Auto-print disabled');
   };
 
@@ -372,15 +372,13 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
         {/* Auto-print order chits — off by default; this fires a kitchen chit
             for every new order automatically, unattended, so it only shows
             once a printer is actually connected and stays opt-in. */}
-        {isConnected && (
-          <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mt-3">
+        <div className="flex items-center justify-between gap-4 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mt-3">
             <div>
-              <p className="text-sm font-medium text-slate-700">Auto-print new orders</p>
-              <p className="text-xs text-slate-400">Automatically prints a kitchen chit the instant a new order arrives — no tap required.</p>
+              <p className="text-sm font-medium text-slate-700">Auto-print kitchen chits</p>
+              <p className="text-xs text-slate-500">{isConnected ? "Enable on the kitchen device. Keep Sellio open; new orders print from any page." : "Connect a receipt printer on this kitchen device first."}</p>
             </div>
-            <Switch checked={autoPrintChit} onCheckedChange={handleToggleAutoPrint} />
+            <Switch aria-label="Auto-print kitchen chits" checked={autoPrintChit} disabled={!isConnected || (mode === 'bluetooth' && protocol === 'tspl') || (mode === 'network' && brand !== 'epson')} onCheckedChange={handleToggleAutoPrint} />
           </div>
-        )}
       </div>
 
       {/* Scan bottom sheet */}
