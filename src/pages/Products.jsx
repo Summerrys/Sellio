@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PullToRefresh from '../components/ui-custom/PullToRefresh';
 import PhotoPickerControl from '../components/ui-custom/PhotoPickerControl';
+import CameraPhotoControl from '../components/ui-custom/CameraPhotoControl';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
 import { toast } from 'sonner';
@@ -187,16 +188,15 @@ export function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuc
                     <span style={{ fontWeight: 600, fontSize: 13, color: '#374151' }}>Upload Photo</span>
                     <span style={{ fontSize: 11, color: '#94a3b8' }}>Choose from gallery</span>
                   </PhotoPickerControl>
-                  <PhotoPickerControl
+                  <CameraPhotoControl
                     label="Take menu photo"
-                    capture="environment"
                     onFile={handleFile}
                     style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, border: '2px dashed #e2e8f0', borderRadius: 14, padding: '24px 12px', background: '#f8fafc', cursor: 'pointer' }}
                   >
                     <Camera size={28} color="#94a3b8" />
                     <span style={{ fontWeight: 600, fontSize: 13, color: '#374151' }}>Take Photo</span>
                     <span style={{ fontSize: 11, color: '#94a3b8' }}>Use your camera</span>
-                  </PhotoPickerControl>
+                  </CameraPhotoControl>
                 </div>
               ) : (
                 <div
