@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAppRefreshHandler } from '@/lib/AppRefreshContext';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { TenantProvider, useTenant } from './components/tenant/TenantContext';
@@ -314,12 +315,14 @@ function AppLayout({ children, currentPageName }) {
   }, [customUser]);
 
   const tenantId = tenant?.id;
+  const refreshSubscriptionRef = useRef(null);
+  useAppRefreshHandler(() => refreshSubscriptionRef.current?.(true));
 
   useEffect(() => {
     if (!tenantId) return;
     let cancelled = false;
 
-    const refreshSubscription = async () => {
+    const refreshSubscription = async (throwOnError = false) => {
       try {
         const supabase = await getSupabase();
         const { data, error } = await supabase
@@ -332,14 +335,17 @@ function AppLayout({ children, currentPageName }) {
         if (error) throw error;
         if (!cancelled) setSubscription(data);
       } catch (error) {
+        if (throwOnError) throw error;
         console.warn('Subscription refresh failed:', error.message);
       }
     };
 
+    refreshSubscriptionRef.current = refreshSubscription;
     refreshSubscription();
     const timer = window.setInterval(refreshSubscription, 30 * 1000);
     return () => {
       cancelled = true;
+      refreshSubscriptionRef.current = null;
       window.clearInterval(timer);
     };
   }, [tenantId]);
