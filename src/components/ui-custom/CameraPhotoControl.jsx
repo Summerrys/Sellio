@@ -39,7 +39,13 @@ export default function CameraPhotoControl({ label, children, className, style, 
   useEffect(() => {
     if (!stream || !videoRef.current) return;
     videoRef.current.srcObject = stream;
-    videoRef.current.play().catch(() => setError('Could not start the camera preview. Please try again.'));
+    const request = requestRef.current;
+    videoRef.current.play().catch(() => {
+      if (request !== requestRef.current) return;
+      stopStream(streamRef.current);
+      streamRef.current = null;
+      setError('Could not start the camera preview. Please try again.');
+    });
   }, [stream]);
 
   const start = () => {
@@ -104,7 +110,18 @@ export default function CameraPhotoControl({ label, children, className, style, 
       <button ref={triggerRef} type="button" aria-label={label} className={className} style={style} onClick={start} data-pull-refresh-block>{children}</button>
       {open && createPortal(
         <div className="fixed inset-0 flex items-center justify-center bg-black/70 p-6" style={{ zIndex: 300 }} data-pull-refresh-block>
-          <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="w-full max-w-lg rounded-2xl bg-white overflow-y-auto" style={{ maxHeight: 'calc(100dvh - 48px)' }}>
+          <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="w-full max-w-lg rounded-2xl bg-white overflow-y-auto" style={{ maxHeight: 'calc(100dvh - 48px)' }}
+            onKeyDown={event => {
+              if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
+              if (event.key !== 'Tab') return;
+              const controls = [...event.currentTarget.querySelectorAll('button:not([disabled]), input:not([disabled])')];
+              const edge = event.shiftKey ? controls[0] : controls.at(-1);
+              if (document.activeElement === edge) {
+                event.preventDefault();
+                (event.shiftKey ? controls.at(-1) : controls[0])?.focus();
+              }
+            }}>
+
             <div className="flex items-center justify-between p-4 border-b border-slate-100">
               <h2 id={titleId} className="font-semibold text-slate-900">Take Photo</h2>
               <button type="button" onClick={close} aria-label="Close camera" autoFocus className="rounded-lg p-2 text-slate-500"><X size={20} /></button>
