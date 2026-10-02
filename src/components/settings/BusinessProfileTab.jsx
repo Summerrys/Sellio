@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import useSettingsDraft from '@/hooks/useSettingsDraft';
+import { useAppReloadGuard } from '@/lib/AppRefreshContext';
 import ImageEditModal from '@/components/onboarding/ImageEditModal';
 import { INDUSTRY_OPTIONS, normalizeIndustry } from '@/lib/industry';
 import { cn } from '@/lib/utils';
@@ -89,6 +90,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
   const [businessHoursOpen, setBusinessHoursOpen] = useState(false);
   const [businessHours, setBusinessHours, applyRemoteHours, markHoursSaved] = useSettingsDraft(tenantId, DEFAULT_BUSINESS_HOURS);
   const [isSavingHours, setIsSavingHours] = useState(false);
+  useAppReloadGuard(() => ({ dirty: !!logoFile, busy: isSaving || isSavingHours || isUploadingLogo }));
   const [form, setForm, applyRemoteForm, markFormSaved] = useSettingsDraft(tenantId, {
     name: '',
     branch_name: '',
