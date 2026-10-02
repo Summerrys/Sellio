@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { useAppReloadGuard } from '@/lib/AppRefreshContext';
 
 // Inputs often hold numbers as strings, while saved settings hold numbers.
 function sameDraft(left, right) {
@@ -12,6 +13,7 @@ export default function useSettingsDraft(scopeKey, initialValue) {
   const valueRef = useRef(value);
   valueRef.current = value;
   const baselineRef = useRef({ scopeKey, value: initialValue });
+  useAppReloadGuard(() => ({ dirty: baselineRef.current.scopeKey === scopeKey && !sameDraft(valueRef.current, baselineRef.current.value) }));
 
   const applyRemote = useCallback(incoming => {
     const baseline = baselineRef.current;
