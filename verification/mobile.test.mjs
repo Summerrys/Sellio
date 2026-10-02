@@ -191,34 +191,159 @@ try {
   globalThis.File = fileConstructor;
   passed('Camera permission starts on tap, excludes microphone, captures JPEG and releases streams on capture/cancel/unmount');
 
+  // Android capture must release the permission stream before launching the
+  // external camera. These fixtures verify web/native handoff, not a phone.
+  const agentDescriptor = Object.getOwnPropertyDescriptor(navigator, 'userAgent');
+  const originalBridge = window.ReactNativeWebView;
+  const originalDevices = navigator.mediaDevices;
+  Object.defineProperty(navigator, 'userAgent', { configurable: true, value: 'Android Sellio fixture' });
+  window.ReactNativeWebView = { postMessage() {} };
+  const { default: NativeCameraScanControl } = await loadComponent('src/components/ui-custom/NativeCameraScanControl.jsx');
+  const nativeErrors = []; const nativeFiles = []; const nativeRequests = [];
+  let grant; let rejectGrant; let released = 0; let launches = 0;
+  Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: {
+    getUserMedia: constraints => { nativeRequests.push(constraints); return new Promise((resolve, reject) => { grant = resolve; rejectGrant = reject; }); },
+  } });
+  const nativeProps = { label: 'Scan menu with camera', onFile: file => nativeFiles.push(file), onError: error => nativeErrors.push(error), children: 'Scan' };
+  const nativeScan = mount(NativeCameraScanControl, nativeProps);
+  await nativeScan.render();
+  const captureInput = () => nativeScan.container.querySelector('input[type="file"]');
+  assert.equal(captureInput().getAttribute('capture'), 'environment');
+  assert.equal(nativeRequests.length, 0, 'Mounting must not request camera permission');
+  captureInput().showPicker = () => { assert.ok(released > launches, 'Release the permission stream before external capture'); launches++; };
+  await act(async () => { click(captureInput()); grant({ getTracks: () => [{ stop: () => released++ }] }); await next(); });
+  assert.equal(launches, 1);
+  assert.equal(nativeRequests[0].audio, false);
+  assert.equal(nativeScan.container.querySelector('video'), null, 'Scan uses no Sellio camera preview');
+  await selectPhoto(captureInput(), null);
+  assert.equal(nativeFiles.length, 0, 'Camera cancellation must not start extraction');
+  await selectPhoto(captureInput(), fixturePhoto);
+  assert.equal(nativeFiles[0], fixturePhoto);
+  captureInput().showPicker = () => { throw new DOMException('Gesture expired', 'NotAllowedError'); };
+  await act(async () => { click(captureInput()); grant({ getTracks: () => [{ stop: () => released++ }] }); await next(); });
+  assert.match(nativeErrors.at(-1), /Tap Scan again/);
+  const requestsBeforeRetry = nativeRequests.length;
+  await act(async () => {
+    const retryTap = new MouseEvent('click', { bubbles: true, cancelable: true });
+    captureInput().dispatchEvent(retryTap);
+    assert.equal(retryTap.defaultPrevented, false, 'A new real tap can launch native capture after a slow permission prompt');
+  });
+  assert.equal(nativeRequests.length, requestsBeforeRetry);
+  await act(async () => { click(captureInput()); rejectGrant(new DOMException('Denied', 'NotAllowedError')); await next(); });
+  assert.match(nativeErrors.at(-1), /Allow Camera/);
+  const blocked = mount(NativeCameraScanControl, { ...nativeProps, onBeforeOpen: () => false });
+  await blocked.render();
+  await act(async () => {
+    const tap = new MouseEvent('click', { bubbles: true, cancelable: true });
+    blocked.container.querySelector('input').dispatchEvent(tap);
+    assert.equal(tap.defaultPrevented, true);
+  });
+  assert.equal(nativeRequests.length, requestsBeforeRetry + 1, 'A quota block must not request camera permission');
+  const late = mount(NativeCameraScanControl, nativeProps);
+  await late.render();
+  await act(async () => { click(late.container.querySelector('input')); late.root.unmount(); grant({ getTracks: () => [{ stop: () => released++ }] }); await next(); });
+  assert.equal(released, 3, 'Permission granted after navigation must release the camera');
+  if (agentDescriptor) Object.defineProperty(navigator, 'userAgent', agentDescriptor);
+  else delete navigator.userAgent;
+  window.ReactNativeWebView = originalBridge;
+  Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: originalDevices });
+  passed('Native camera capture handles permission, gesture expiry, cancellation, denial, quota blocks and late grants');
+
   const scanMocks = { name: 'scan-no-live-client', setup(builder) {
     builder.onResolve({ filter: /base44Client$/ }, () => ({ path: 'client', namespace: 'scan-fixture' }));
     builder.onLoad({ filter: /.*/, namespace: 'scan-fixture' }, () => ({ contents: 'export const base44 = {};', loader: 'js' }));
   } };
   const { ScanMenuDialog } = await loadComponent('src/pages/Products.jsx', [mock, scanMocks]);
-  globalThis.FileReader = class { readAsDataURL() { queueMicrotask(() => { this.result = 'data:image/jpeg;base64,cGhvdG8='; this.onload?.({ target: this }); }); } };
-  globalThis.__sellioTestClient = { auth: { getSession: async () => ({ data: { session: { access_token: 'scan-test-fixture' } } }) } };
+  let scanReadFails = false;
+  globalThis.FileReader = class {
+    readAsDataURL() {
+      this.readyState = 1;
+      queueMicrotask(() => {
+        if (this.readyState !== 1) return;
+        this.readyState = 2;
+        if (scanReadFails) this.onerror?.();
+        else { this.result = 'data:image/jpeg;base64,cGhvdG8='; this.onload?.({ target: this }); }
+      });
+    }
+    abort() { this.readyState = 2; this.onabort?.(); }
+  };
+  const catalogWrites = [];
+  globalThis.__sellioTestClient = {
+    auth: { getSession: async () => ({ data: { session: { access_token: 'scan-test-fixture' } } }) },
+    from: table => ({ insert: rows => {
+      catalogWrites.push({ table, rows });
+      if (table === 'products') return { select: async () => ({ data: rows.map((row, i) => ({ ...row, id: 'fixture-product-' + i })), error: null }) };
+      return Promise.resolve({ error: null });
+    } }),
+  };
   const scanRequests = [];
-  globalThis.fetch = async (url, options) => { scanRequests.push({ url, options }); return { ok: false, json: async () => ({ error: 'Try a clearer menu photo.' }) }; };
-  const scan = mount(ScanMenuDialog, { open: true, tenantId: 'scan-fixture', categories: [], onOpenChange: () => {} });
+  let scanFails = true;
+  globalThis.fetch = async (url, options) => {
+    scanRequests.push({ url, options });
+    return { ok: !scanFails, json: async () => scanFails ? ({ error: 'Try a clearer menu photo.' }) : ({
+      items: [{ name: 'Fixture Latte', price: 4, category: 'Drinks' }, { name: 'Fixture Tea', price: 3, category: 'Drinks' }],
+    }) };
+  };
+  const closeCalls = [];
+  const scanProps = { open: false, photo: fixturePhoto, onPhoto() {}, tenantId: 'scan-fixture', categories: [{ id: 'fixture-drinks', name: 'Drinks' }], maxProducts: 2, currentProductCount: 1, onOpenChange: value => closeCalls.push(value) };
+  const scan = mount(ScanMenuDialog, scanProps);
   await scan.render();
-  await selectPhoto(scan.container.querySelector('input[aria-label="Upload menu photo"]'), null);
-  assert.equal(scan.container.querySelector('img'), null, 'Cancelling Scan upload leaves the chooser available');
-  await selectPhoto(scan.container.querySelector('input[aria-label="Upload menu photo"]'), fixturePhoto);
-  assert.equal(scan.container.querySelector('img').src, 'data:image/jpeg;base64,cGhvdG8=');
-  assert.equal(scanRequests.length, 0, 'Selecting a menu photo must wait for Scan confirmation');
-  await act(async () => { click([...scan.container.querySelectorAll('button')].find(button => button.textContent.trim() === 'Scan Menu')); await next(); });
-  assert.equal(scanRequests.length, 1);
+  assert.equal(scanRequests.length, 0, 'An unopened scan must not send images');
+  await scan.render({ ...scanProps, open: true });
+  await act(async () => next());
+  assert.equal(scanRequests.length, 1, 'Accepted camera output starts extraction automatically');
+  assert.equal(scan.container.querySelector('input[aria-label="Upload menu photo"]'), null, 'No upload/take-photo choice sheet');
   assert.equal(scanRequests[0].options.headers.Authorization, 'Bearer scan-test-fixture');
   assert.equal(JSON.parse(scanRequests[0].options.body).tenantId, 'scan-fixture');
   assert.match(scan.container.textContent, /Try a clearer menu photo/);
-  await act(async () => click([...scan.container.querySelectorAll('button')].find(button => button.textContent.trim() === 'Change Photo')));
-  const cameraFallback = scan.container.querySelector('input[aria-label="Take menu photo"]');
-  assert.equal(cameraFallback.getAttribute('capture'), 'environment');
-  await selectPhoto(cameraFallback, fixturePhoto);
-  assert.ok(scan.container.querySelector('img'), 'Camera output returns to the same menu preview');
+  scanFails = false;
+  await act(async () => { click([...scan.container.querySelectorAll('button')].find(button => button.textContent === 'Try Again')); await next(); });
+  assert.equal(scanRequests.length, 2);
+  assert.ok(scan.container.querySelector('input[placeholder="Product name"]'), 'Extracted names remain editable');
+  assert.equal(catalogWrites.length, 0, 'Extraction must never save products without review');
+  const importButton = () => [...scan.container.querySelectorAll('button')].find(button => /Add \d+ Products/.test(button.textContent));
+  await act(async () => { click(importButton()); await next(); });
+  assert.match(scan.container.textContent, /Your plan allows up to 2 products/);
+  assert.equal(catalogWrites.length, 0, 'The subscription limit still blocks batch creation');
+  await act(async () => click(scan.container.querySelector('input[type="checkbox"]')));
+  await act(async () => { click(importButton()); await next(); });
+  assert.equal(catalogWrites[0].table, 'products');
+  assert.equal(catalogWrites[0].rows.length, 1);
+  assert.equal(catalogWrites[0].rows[0].tenant_id, 'scan-fixture');
+  assert.equal(catalogWrites[1].table, 'inventory_items');
+  assert.match(scan.container.textContent, /Products Added/);
+  passed('Accepted capture auto-extracts; authenticated review, retries, quotas and explicit import remain intact');
+
+  // Closing or retaking invalidates an old OCR response, even if the network
+  // finishes after AbortController aborts the request.
+  const responses = [];
+  globalThis.fetch = (url, options) => new Promise(resolve => responses.push({ options, resolve }));
+  const stale = mount(ScanMenuDialog, { ...scanProps, open: true, maxProducts: null });
+  await stale.render(); await act(async () => next());
+  assert.equal(responses.length, 1);
+  await stale.render({ ...scanProps, open: false });
+  assert.equal(responses[0].options.signal.aborted, true);
+  await stale.render({ ...scanProps, open: true, photo: new window.File(['new'], 'retake.jpg', { type: 'image/jpeg' }) });
+  await act(async () => next());
+  await act(async () => {
+    responses[0].resolve({ ok: true, json: async () => ({ items: [{ name: 'Stale capture', price: 1 }] }) });
+    await next();
+  });
+  assert.equal(stale.container.querySelector('input[placeholder="Product name"]'), null);
+  await act(async () => {
+    responses[1].resolve({ ok: true, json: async () => ({ items: [{ name: 'Fresh capture', price: 2 }] }) });
+    await next();
+  });
+  assert.equal(stale.container.querySelector('input[placeholder="Product name"]').value, 'Fresh capture');
+  const callCount = responses.length;
+  scanReadFails = true;
+  const badPhoto = mount(ScanMenuDialog, { ...scanProps, open: true });
+  await badPhoto.render(); await act(async () => next());
+  assert.match(badPhoto.container.textContent, /Could not read this photo/);
+  assert.equal(responses.length, callCount, 'Unreadable images must not reach the extraction service');
+  assert.equal(badPhoto.container.querySelector('input[aria-label="Retake menu photo"]').getAttribute('capture'), 'environment');
   globalThis.FileReader = Reader; globalThis.fetch = originalFetch;
-  passed('Scan gallery/camera selection previews the photo; scanning keeps authentication and handles rejection');
+  passed('Scan cancellation aborts requests, late responses cannot replace retakes, and photo-read failures recover');
 
   const { completeAuthNavigation } = await import(pathToFileURL(path.join(app, 'src/lib/authNavigation.js')).href);
   const browserHistory = (userAgent, bridge = {}) => {
