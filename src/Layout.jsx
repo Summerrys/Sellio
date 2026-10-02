@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { TenantProvider, useTenant } from './components/tenant/TenantContext';
@@ -21,7 +21,7 @@ import {
   X,
   QrCode,
   ArrowLeft,
-  Plus,
+  ShoppingCart,
   Clock,
   Copy,
   Check,
@@ -30,7 +30,6 @@ import {
 } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import PricingModal from './components/subscription/PricingModal';
-import ProductFormDialog from './components/products/ProductFormDialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAppUser } from '@/lib/AppUserContext';
@@ -46,7 +45,6 @@ import TrialReminderModal from './components/subscription/TrialReminderModal';
 import AccountProfileModal from './components/profile/AccountProfileModal';
 import InstallPWAModal from './components/onboarding/InstallPWAModal';
 import { canShowInstallPrompt, isStandalone } from '@/lib/pwaInstall';
-import { useSubscription } from '@/hooks/useSubscription';
 
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth'];
@@ -69,7 +67,6 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
   // Tenant menu with permission requirements
   const allTenantItems = [
     { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard', permission: null },
-    { label: 'Counter', icon: Store, page: 'Counter', permission: 'orders.create' },
     { label: 'Products', icon: ShoppingBag, page: 'Products', permission: 'products.view' },
     { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view' },
     { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view' },
@@ -259,7 +256,6 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
 function AppLayout({ children, currentPageName }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isNewProductOpen, setIsNewProductOpen] = useState(false);
   const [subscription, setSubscription] = useState(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [showTrialModal, setShowTrialModal] = useState(false);
@@ -288,7 +284,6 @@ function AppLayout({ children, currentPageName }) {
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [queryClient]);
-  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   // Derived straight from the persisted tour progress rather than an ephemeral
   // signal — so it's correct on a fresh page load too, not just while the
   // Dashboard tour happens to be open. Once Dashboard is done, every remaining
@@ -319,26 +314,6 @@ function AppLayout({ children, currentPageName }) {
   }, [customUser]);
 
   const tenantId = tenant?.id;
-
-  // Lightweight product count (head-only) so the Sell FAB can gate against the
-  // plan's product limit the same way the Products page's Add/Scan buttons do —
-  // previously the FAB had no limit check at all, so it stayed active and just
-  // let the create fail (or silently succeed past the cap) instead of prompting
-  // an upgrade like every other entry point.
-  const { data: productCount = 0 } = useQuery({
-    queryKey: ['productCount', tenantId],
-    queryFn: async () => {
-      const supabase = await getSupabase();
-      const { count } = await supabase.from('products').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId);
-      return count ?? 0;
-    },
-    enabled: !!tenantId,
-    staleTime: 60 * 1000,
-  });
-  // From the store's entitlements once they load, else the subscription row.
-  const { maxProducts: entitlementMaxProducts } = useSubscription();
-  const maxProducts = entitlementMaxProducts !== undefined ? entitlementMaxProducts : (subscription?.max_products ?? null);
-  const atProductLimit = maxProducts != null && productCount >= maxProducts;
 
   useEffect(() => {
     if (!tenantId) return;
@@ -499,6 +474,7 @@ function AppLayout({ children, currentPageName }) {
       {/* Desktop Sidebar */}
       {currentPageName !== 'Onboarding' && (
       <aside
+        data-tour="desktop-nav"
         className={cn(
           "hidden lg:flex flex-col fixed left-0 top-0 h-screen bg-white border-r border-slate-100 z-30 transition-all duration-300",
           collapsed ? "w-[72px]" : "w-[260px]"
@@ -515,7 +491,19 @@ function AppLayout({ children, currentPageName }) {
           className="hidden lg:flex fixed right-0 top-0 h-16 items-center justify-end border-b border-slate-100 bg-white z-30 transition-[left] duration-300"
           style={{ left: collapsed ? '72px' : '260px' }}
         >
-          <div className="flex w-full max-w-[1280px] items-center justify-end px-8 mx-auto">
+          <div className="flex w-full max-w-[1280px] items-center justify-end gap-3 px-8 mx-auto">
+            {hasPermission('orders.create') && (
+              <Link
+                to={createPageUrl('Counter')}
+                data-tour="take-orders-btn"
+                aria-label="Take Orders"
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-semibold text-white shadow-sm transition-transform active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgb(var(--color-primary))]"
+                style={{ background: 'var(--color-primary-gradient)' }}
+              >
+                <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+                Take Orders
+              </Link>
+            )}
             {displayUser && <NotificationBell />}
           </div>
         </header>
@@ -620,34 +608,27 @@ function AppLayout({ children, currentPageName }) {
             );
           })}
 
-          {/* Center: Sell FAB */}
-          <div data-tour="sell-fab" className="flex-1 flex flex-col items-center justify-end pb-1" style={{ minHeight: 60 }}>
-            <button
-              onClick={() => {
-                // FIX: previously only checked the plan's product-count limit — never
-                // whether the account actually has products.create at all, so someone
-                // with that permission explicitly turned off could still open Add
-                // Product from here even though the Products page itself correctly
-                // blocks them.
-                if (!hasPermission('products.create')) {
-                  toast.error("You don't have access to add products.");
-                  return;
-                }
-                atProductLimit ? setUpgradeModalOpen(true) : setIsNewProductOpen(true);
-              }}
-              className="flex flex-col items-center gap-0.5 -mt-5"
-              style={{ outline: 'none' }}
-              title={atProductLimit ? `Product limit reached (${maxProducts}) — upgrade to add more` : undefined}
-            >
-              <div
-                className="w-8 h-8 rounded-xl flex items-center justify-center shadow-lg"
-                style={{ background: atProductLimit ? '#cbd5e1' : 'var(--color-primary-gradient)' }}
+          {/* Center: Counter — available to accounts that can take orders. */}
+          {hasPermission('orders.create') && (
+            <div className="flex-1 flex flex-col items-center justify-end pb-1" style={{ minHeight: 60 }}>
+              <Link
+                to={createPageUrl('Counter')}
+                data-tour="counter-shortcut"
+                aria-label="Counter — take orders"
+                aria-current={currentPageName === 'Counter' ? 'page' : undefined}
+                onClick={() => handleTabNavigate('Counter', currentPageName === 'Counter')}
+                className="flex min-h-11 min-w-11 flex-col items-center gap-0.5 -mt-5 rounded-xl transition-transform active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgb(var(--color-primary))]"
               >
-                <Plus className="w-5 h-5 text-white" strokeWidth={2.5} />
-              </div>
-              <span className="text-xs font-semibold" style={{ color: atProductLimit ? '#94a3b8' : 'rgb(var(--color-primary))' }}>{atProductLimit ? 'Limit' : 'Sell'}</span>
-            </button>
-          </div>
+                <span
+                  className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg"
+                  style={{ background: 'var(--color-primary-gradient)' }}
+                >
+                  <ShoppingCart className="w-6 h-6 text-white" strokeWidth={2.5} aria-hidden="true" />
+                </span>
+                <span className="text-xs font-semibold" style={{ color: 'rgb(var(--color-primary))' }}>Counter</span>
+              </Link>
+            </div>
+          )}
 
           {/* Right: Orders, Settings */}
           {[
@@ -680,23 +661,6 @@ function AppLayout({ children, currentPageName }) {
           })}
         </nav>
       )}
-
-      {/* Global New Product Modal */}
-      <ProductFormDialog
-        open={isNewProductOpen}
-        onOpenChange={setIsNewProductOpen}
-        product={null}
-        tenantId={tenant?.id}
-      />
-
-      {/* Plan upgrade prompt — shown when the Sell FAB is tapped after hitting the product limit */}
-      <PricingModal
-        open={upgradeModalOpen}
-        onOpenChange={setUpgradeModalOpen}
-        tenantId={tenantId}
-        currentTier={subscription?.tier ?? null}
-        hasUsedTrial={tenant?.has_used_trial ?? false}
-      />
 
       <AccountProfileModal
         open={showProfileModal}
