@@ -2,6 +2,9 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from '@/App.jsx'
 import '@/index.css'
+import { removeAppReloadParam } from '@/lib/appUpdates'
+
+removeAppReloadParam()
 
 // Register our minimal PWA service worker (required for install prompts on Chrome/Android).
 // It intentionally does no caching — see public/sw.js.
