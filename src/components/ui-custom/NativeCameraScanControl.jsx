@@ -20,24 +20,16 @@ export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen,
     return () => { mounted.current = false; request.current += 1; };
   }, []);
 
-  useEffect(() => {
-    if (!nativeAndroid || !navigator.permissions?.query) return undefined;
-    let active = true;
-    let permission;
-    const update = () => { granted.current = permission.state === 'granted'; };
-    navigator.permissions.query({ name: 'camera' }).then(result => {
-      if (!active) return;
-      permission = result;
-      update();
-      permission.addEventListener('change', update);
-    }).catch(() => { /* Some WebViews do not expose camera permission status. */ });
-    return () => { active = false; permission?.removeEventListener('change', update); };
-  }, [nativeAndroid]);
-
   const activate = event => {
     if (onBeforeOpen?.() === false) { event.preventDefault(); return; }
     if (pending.current) { event.preventDefault(); return; }
-    if (granted.current || !navigator.mediaDevices?.getUserMedia) return;
+    if (!nativeAndroid) return;
+    if (granted.current) { granted.current = false; return; }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      event.preventDefault();
+      onError?.('Allow Camera in your phone’s Sellio permissions, then try Scan again.');
+      return;
+    }
     event.preventDefault();
     const input = event.currentTarget;
     const id = ++request.current;
@@ -58,7 +50,7 @@ export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen,
       try {
         // Some browsers retain the gesture across the OS permission prompt.
         // If it expires, the next real tap opens the camera directly.
-        if (typeof input.showPicker === 'function') input.showPicker();
+        if (typeof input.showPicker === 'function') { input.showPicker(); granted.current = false; }
         else input.click();
       } catch {
         onError?.('Camera access enabled. Tap Scan again to open your camera.');
@@ -87,3 +79,4 @@ export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen,
     </PhotoPickerControl>
   );
 }
+
