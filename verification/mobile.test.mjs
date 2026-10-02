@@ -191,6 +191,35 @@ try {
   globalThis.File = fileConstructor;
   passed('Camera permission starts on tap, excludes microphone, captures JPEG and releases streams on capture/cancel/unmount');
 
+  const scanMocks = { name: 'scan-no-live-client', setup(builder) {
+    builder.onResolve({ filter: /base44Client$/ }, () => ({ path: 'client', namespace: 'scan-fixture' }));
+    builder.onLoad({ filter: /.*/, namespace: 'scan-fixture' }, () => ({ contents: 'export const base44 = {};', loader: 'js' }));
+  } };
+  const { ScanMenuDialog } = await loadComponent('src/pages/Products.jsx', [mock, scanMocks]);
+  globalThis.FileReader = class { readAsDataURL() { queueMicrotask(() => { this.result = 'data:image/jpeg;base64,cGhvdG8='; this.onload?.({ target: this }); }); } };
+  globalThis.__sellioTestClient = { auth: { getSession: async () => ({ data: { session: { access_token: 'scan-test-fixture' } } }) } };
+  const scanRequests = [];
+  globalThis.fetch = async (url, options) => { scanRequests.push({ url, options }); return { ok: false, json: async () => ({ error: 'Try a clearer menu photo.' }) }; };
+  const scan = mount(ScanMenuDialog, { open: true, tenantId: 'scan-fixture', categories: [], onOpenChange: () => {} });
+  await scan.render();
+  await selectPhoto(scan.container.querySelector('input[aria-label="Upload menu photo"]'), null);
+  assert.equal(scan.container.querySelector('img'), null, 'Cancelling Scan upload leaves the chooser available');
+  await selectPhoto(scan.container.querySelector('input[aria-label="Upload menu photo"]'), fixturePhoto);
+  assert.equal(scan.container.querySelector('img').src, 'data:image/jpeg;base64,cGhvdG8=');
+  assert.equal(scanRequests.length, 0, 'Selecting a menu photo must wait for Scan confirmation');
+  await act(async () => { click([...scan.container.querySelectorAll('button')].find(button => button.textContent.trim() === 'Scan Menu')); await next(); });
+  assert.equal(scanRequests.length, 1);
+  assert.equal(scanRequests[0].options.headers.Authorization, 'Bearer scan-test-fixture');
+  assert.equal(JSON.parse(scanRequests[0].options.body).tenantId, 'scan-fixture');
+  assert.match(scan.container.textContent, /Try a clearer menu photo/);
+  await act(async () => click([...scan.container.querySelectorAll('button')].find(button => button.textContent.trim() === 'Change Photo')));
+  const cameraFallback = scan.container.querySelector('input[aria-label="Take menu photo"]');
+  assert.equal(cameraFallback.getAttribute('capture'), 'environment');
+  await selectPhoto(cameraFallback, fixturePhoto);
+  assert.ok(scan.container.querySelector('img'), 'Camera output returns to the same menu preview');
+  globalThis.FileReader = Reader; globalThis.fetch = originalFetch;
+  passed('Scan gallery/camera selection previews the photo; scanning keeps authentication and handles rejection');
+
   const { completeAuthNavigation } = await import(pathToFileURL(path.join(app, 'src/lib/authNavigation.js')).href);
   const browserHistory = (userAgent, bridge = {}) => {
     const entries = ['/Auth']; let index = 0;
