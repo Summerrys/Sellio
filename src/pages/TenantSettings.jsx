@@ -49,6 +49,7 @@ function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
   const setPaymentReference = reference => setPaymentDraft(prev => ({ ...prev, reference }));
   const [isUploadingQR, setIsUploadingQR] = useState(false);
   const [isSavingQR, setIsSavingQR] = useState(false);
+  useAppReloadGuard(() => ({ busy: isUploadingQR || isSavingQR }));
   const [qrHovered, setQrHovered] = useState(false);
 
   useEffect(() => {
