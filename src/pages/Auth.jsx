@@ -269,7 +269,6 @@ export default function Auth() {
             email: user.email,
             full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
             auth_provider: 'google',
-            role: 'admin',
             is_active: true,
             onboarding_completed: false,
             last_login_at: now,
@@ -553,7 +552,6 @@ export default function Auth() {
           auth_provider: 'phone',
           onboarding_completed: false,
           is_active: true,
-          role: 'admin',
         });
         if (insertError) throw insertError;
 
@@ -564,7 +562,7 @@ export default function Auth() {
           .limit(1);
 
         const appUserRow = rows?.[0];
-        setAppUser(appUserRow || { email: authEmail, full_name: formData.full_name, role: 'admin', onboarding_completed: false });
+        setAppUser(appUserRow || { email: authEmail, full_name: formData.full_name, role: 'user', onboarding_completed: false });
 
         // Mark merchant invite as registered
         if (urlToken) {
