@@ -15,7 +15,6 @@ import {
   Shield, Settings, BarChart2, ChevronRight, AlertTriangle, Paintbrush
 } from 'lucide-react';
 import StorefrontDesigner from '../components/storefront/StorefrontDesigner';
-import TakeOrdersModal from '../components/dashboard/TakeOrdersModal';
 import MerchantAssistantWidget from '../components/merchant/MerchantAssistantWidget';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
@@ -101,7 +100,15 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const [showDesigner, setShowDesigner] = React.useState(false);
   const [aiOpen, setAiOpen] = React.useState(false);
-  const [showTakeOrders, setShowTakeOrders] = React.useState(false);
+  const [isDesktopTour, setIsDesktopTour] = React.useState(() => window.matchMedia('(min-width: 1024px)').matches);
+
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 1024px)');
+    const syncViewport = () => setIsDesktopTour(desktop.matches);
+    syncViewport();
+    desktop.addEventListener('change', syncViewport);
+    return () => desktop.removeEventListener('change', syncViewport);
+  }, []);
 
   // Safety net: the bottom-nav step lets someone click straight through to
   // Products/Orders/Settings (spotlightClicks) instead of tapping Next, which
@@ -336,16 +343,11 @@ export default function Dashboard() {
         tenantSlug={tenant?.slug}
       />
       <MerchantAssistantWidget externalOpen={aiOpen} onExternalClose={() => setAiOpen(false)} />
-      <TakeOrdersModal
-        open={showTakeOrders}
-        onClose={() => setShowTakeOrders(false)}
-        tenantId={tenantId}
-        tenantSlug={tenant?.slug}
-      />
       {dashboardTour.eligible && (
         <TourGuide
           steps={getDashboardSteps({
             hasTakeOrders: hasPermission('orders.create'),
+            isDesktop: isDesktopTour,
             hasAiAssistant: hasPermission('dashboard.ai_assistant'),
             hasDesignStore: hasPermission('dashboard.design_store'),
           })}
@@ -408,27 +410,6 @@ export default function Dashboard() {
       <RequirePermission permission="orders.view" silent>
         <OrderUsageMeter />
       </RequirePermission>
-
-      {/* Take Orders — staff-assisted order entry, only shown when the account can
-          actually create orders. Reuses the public storefront for the actual cart/
-          checkout, this button just supplies the missing Dine-in/Takeaway/table step. */}
-      {hasPermission('orders.create') && (
-        <button
-          data-tour="take-orders-btn"
-          onClick={() => navigate(createPageUrl('Counter'))}
-          className="w-full flex items-center gap-3 p-4 rounded-2xl text-white active:scale-[0.98] transition-transform"
-          style={{ background: 'linear-gradient(135deg, #fb923c, #e0449a, #8b5cf6)', boxShadow: '0 4px 16px rgba(224, 68, 154, 0.3)' }}
-        >
-          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-            <ShoppingCart className="w-5 h-5" />
-          </div>
-          <div className="text-left flex-1">
-            <p className="text-sm font-bold">Take Orders</p>
-            <p className="text-xs text-white/80">Open the counter: pick a table, tap dishes, send</p>
-          </div>
-          <ChevronRight className="w-5 h-5 text-white/80" />
-        </button>
-      )}
 
       {/* Feature Grid */}
       <div data-tour="quick-access">
