@@ -1,9 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PullToRefresh from '../components/ui-custom/PullToRefresh';
-import PhotoPickerControl from '../components/ui-custom/PhotoPickerControl';
-import CameraPhotoControl from '../components/ui-custom/CameraPhotoControl';
+import NativeCameraScanControl from '../components/ui-custom/NativeCameraScanControl';
 import { getSupabase } from '@/lib/supabaseClient';
+import { useBackToClose } from '@/lib/useBackToClose';
 import { useTenant } from '../components/tenant/TenantContext';
 import { toast } from 'sonner';
 import RequirePermission from '../components/auth/RequirePermission';
@@ -20,7 +20,7 @@ import TourGuide from '@/components/tour/TourGuide';
 import { getProductsSteps } from '@/components/tour/tourSteps';
 import DummyProductCard from '@/components/tour/DummyProductCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package, ScanLine, Trash2, CheckCircle2, AlertCircle, ImageIcon, Lightbulb, Loader2, X, Camera } from 'lucide-react';
+import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package, ScanLine, Trash2, CheckCircle2, AlertCircle, ImageIcon, Loader2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
 import { applyCanonicalProductOrder } from '@/lib/storefrontCatalog';
@@ -47,56 +47,79 @@ const TEMPLATE_ROWS = [
   'Simple Snack,,No variants,Food,9.90,5.00,,200,20,false,true,false,"snack",,',
 ];
 
-export function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess, maxProducts, currentProductCount, onLimitExceeded }) {
-  const [image, setImage] = React.useState(null);
-  const [imagePreview, setImagePreview] = React.useState(null);
-  const [scanning, setScanning] = React.useState(false);
-  const [scannedItems, setScannedItems] = React.useState([]);
-  const [saving, setSaving] = React.useState(false);
-  const [error, setError] = React.useState(null);
-  const [step, setStep] = React.useState('upload');
+export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, categories, onSuccess, maxProducts, currentProductCount, onLimitExceeded }) {
+  const [imagePreview, setImagePreview] = useState(null);
+  const [scanning, setScanning] = useState(false);
+  const [scannedItems, setScannedItems] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [step, setStep] = useState('scan');
+  const activeScan = useRef({ id: 0, controller: null, reader: null });
   const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
   const primaryGradient = 'var(--color-primary-gradient)';
 
-  const reset = () => { setImage(null); setImagePreview(null); setScanning(false); setScannedItems([]); setSaving(false); setError(null); setStep('upload'); };
-  const handleClose = () => { reset(); onOpenChange(false); };
-
-  const handleFile = (file) => {
-    if (!file) return;
-    setImage(file);
-    const reader = new FileReader();
-    reader.onload = e => setImagePreview(e.target.result);
-    reader.onerror = () => { setImage(null); setError('Could not read this photo. Please choose another image.'); };
-    reader.readAsDataURL(file);
-    setError(null);
+  const cancelScan = useCallback(() => {
+    activeScan.current.id += 1;
+    activeScan.current.controller?.abort();
+    if (activeScan.current.reader?.readyState === 1) activeScan.current.reader.abort();
+  }, []);
+  const handleClose = () => {
+    if (saving) return;
+    cancelScan();
+    onOpenChange(false);
   };
+  useBackToClose(open, handleClose);
 
-  const handleScan = async () => {
-    if (!image) return;
-    setScanning(true); setError(null);
+  const handleScan = useCallback(async file => {
+    if (!file) return;
+    cancelScan();
+    const id = activeScan.current.id;
+    const controller = new AbortController();
+    activeScan.current.controller = controller;
+    const current = () => activeScan.current.id === id && !controller.signal.aborted;
+    setScanning(true); setError(null); setStep('scan'); setImagePreview(null); setScannedItems([]);
     try {
+      if (!file.size || (file.type && !file.type.startsWith('image/'))) throw new Error('Please take a clear photo of your menu.');
       const reader = new FileReader();
-      const base64 = await new Promise((res, rej) => { reader.onload = e => res(e.target.result.split(',')[1]); reader.onerror = rej; reader.readAsDataURL(image); });
-      const mediaType = image.type || 'image/jpeg';
-      // scanMenu v15 checks who is scanning: send the signed-in session token.
+      activeScan.current.reader = reader;
+      const dataUrl = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Could not read this photo. Please take another one.'));
+        reader.onabort = () => reject(new DOMException('Scan cancelled', 'AbortError'));
+        reader.readAsDataURL(file);
+      });
+      if (!current()) return;
+      if (typeof dataUrl !== 'string' || !dataUrl.includes(',')) throw new Error('Could not read this photo. Please take another one.');
+      setImagePreview(dataUrl);
       const { data: { session } } = await (await getSupabase()).auth.getSession();
+      if (!current()) return;
       const res = await fetch(`${SUPABASE_URL}/functions/v1/scanMenu`, {
         method: 'POST',
+        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ imageBase64: base64, mediaType, tenantId }),
+        body: JSON.stringify({ imageBase64: dataUrl.split(',')[1], mediaType: file.type || 'image/jpeg', tenantId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Scan failed');
+      if (!current()) return;
+      if (!res.ok) throw new Error(data.error || 'Scan failed. Please try again.');
       if (!data.items?.length) throw new Error('No items found. Try a clearer photo.');
-      const rawItems = data.items.map((item, i) => ({ ...item, _id: i, _selected: true, image_url: null }));
-      setScanning(false);
-      setScannedItems(rawItems);
+      setScannedItems(data.items.map((item, i) => ({ ...item, _id: i, _selected: true, image_url: null })));
       setStep('review');
-    } catch (e) { setError(e.message); setScanning(false); }
-  };
+    } catch (err) {
+      if (current() && err.name !== 'AbortError') setError(err.message || 'Scan failed. Please try again.');
+    } finally {
+      if (current()) setScanning(false);
+    }
+  }, [cancelScan, tenantId]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    if (photo) handleScan(photo);
+    return cancelScan;
+  }, [open, photo, handleScan, cancelScan]);
 
   const updateItem = (id, field, value) => setScannedItems(prev => prev.map(item => item._id === id ? { ...item, [field]: value } : item));
   const removeItem = (id) => setScannedItems(prev => prev.filter(item => item._id !== id));
@@ -150,7 +173,7 @@ export function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuc
   const selectedCount = scannedItems.filter(i => i._selected).length;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }}>
+    <div role="dialog" aria-modal="true" aria-labelledby="scan-menu-title" data-pull-refresh-block onKeyDown={event => { if (event.key === 'Escape') handleClose(); }} style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }}>
       <div style={{ width: '100%', maxWidth: 560, background: 'white', borderRadius: '20px 20px 0 0', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Header */}
@@ -159,14 +182,14 @@ export function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuc
             <ScanLine size={18} color="rgb(var(--color-primary))" />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Scan Menu</p>
+            <p id="scan-menu-title" style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Scan Menu</p>
             <p style={{ margin: '1px 0 0', fontSize: 12, color: '#64748b' }}>
-              {step === 'upload' && 'Upload or take a photo of your menu'}
+              {step === 'scan' && (scanning ? 'Reading your menu…' : 'Try again or take another photo')}
               {step === 'review' && `${scannedItems.length} items found — review before saving`}
               {step === 'done' && 'Products added successfully!'}
             </p>
           </div>
-          <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4, display: 'flex', alignItems: 'center' }}>
+          <button type="button" aria-label="Close menu scan" disabled={saving} autoFocus onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4, display: 'flex', alignItems: 'center' }}>
             <X size={20} />
           </button>
         </div>
@@ -174,59 +197,20 @@ export function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuc
         {/* Body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
 
-          {/* Step: Upload */}
-          {step === 'upload' && (
+          {/* Extraction starts as soon as the native camera returns a photo. */}
+          {step === 'scan' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {!imagePreview ? (
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <PhotoPickerControl
-                    label="Upload menu photo"
-                    onFile={handleFile}
-                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, border: '2px dashed #e2e8f0', borderRadius: 14, padding: '24px 12px', background: '#f8fafc', cursor: 'pointer' }}
-                  >
-                    <ImageIcon size={28} color="#94a3b8" />
-                    <span style={{ fontWeight: 600, fontSize: 13, color: '#374151' }}>Upload Photo</span>
-                    <span style={{ fontSize: 11, color: '#94a3b8' }}>Choose from gallery</span>
-                  </PhotoPickerControl>
-                  <CameraPhotoControl
-                    label="Take menu photo"
-                    onFile={handleFile}
-                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, border: '2px dashed #e2e8f0', borderRadius: 14, padding: '24px 12px', background: '#f8fafc', cursor: 'pointer' }}
-                  >
-                    <Camera size={28} color="#94a3b8" />
-                    <span style={{ fontWeight: 600, fontSize: 13, color: '#374151' }}>Take Photo</span>
-                    <span style={{ fontSize: 11, color: '#94a3b8' }}>Use your camera</span>
-                  </CameraPhotoControl>
-                </div>
-              ) : (
-                <div
-                  style={{ border: `2px dashed rgb(var(--color-primary))`, borderRadius: 14, padding: 16, textAlign: 'center', background: 'rgba(var(--color-primary), 0.04)' }}
-                >
-                  <img src={imagePreview} style={{ maxHeight: 200, maxWidth: '100%', borderRadius: 10, objectFit: 'contain', margin: '0 auto', display: 'block' }} />
-                </div>
-              )}
-
-              {imagePreview && (
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => { setImage(null); setImagePreview(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', fontSize: 13, fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>
-                    Change Photo
-                  </button>
-                  <button onClick={handleScan} disabled={scanning} style={{ flex: 2, padding: '10px', borderRadius: 10, border: 'none', background: scanning ? '#cbd5e1' : primaryGradient, color: 'white', fontSize: 13, fontWeight: 700, cursor: scanning ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                    {scanning ? <><Loader2 size={14} className="animate-spin" /> Scanning...</> : <><ScanLine size={14} /> Scan Menu</>}
-                  </button>
-                </div>
-              )}
-
+              {imagePreview && <img src={imagePreview} alt="Menu being scanned" style={{ maxHeight: 220, maxWidth: '100%', borderRadius: 12, objectFit: 'contain', margin: '0 auto' }} />}
+              {scanning && <div role="status" aria-live="polite" className="flex items-center justify-center gap-3 py-8 text-slate-600"><Loader2 size={22} className="animate-spin" /><span>Reading your menu…</span></div>}
               {error && (
-                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#dc2626', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <AlertCircle size={16} /> {error}
-                </div>
+                <>
+                  <div role="alert" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#dc2626', display: 'flex', alignItems: 'center', gap: 8 }}><AlertCircle size={16} />{error}</div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => handleScan(photo)} className="flex-1 rounded-lg px-3 py-3 text-sm font-semibold text-white" style={{ background: primaryGradient }}>Try Again</button>
+                    <NativeCameraScanControl label="Retake menu photo" onFile={onPhoto} onError={message => toast.message(message)} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-3 text-sm font-semibold text-slate-600 cursor-pointer"><ScanLine size={16} />Retake</NativeCameraScanControl>
+                  </div>
+                </>
               )}
-
-              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#92400e', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                <Lightbulb size={14} style={{ flexShrink: 0, marginTop: 1 }} />
-                <span><strong>Tips:</strong> Use a clear, well-lit photo. Ensure text is readable. Works best with printed menus.</span>
-              </div>
             </div>
           )}
 
@@ -311,9 +295,9 @@ export function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuc
         {/* Footer */}
         {step === 'review' && (
           <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10, flexShrink: 0 }}>
-            <button onClick={() => setStep('upload')} style={{ flex: 1, padding: 11, borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', fontSize: 13, fontWeight: 600, color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <ScanLine size={14} /> Rescan
-            </button>
+            <NativeCameraScanControl label="Scan another menu photo" disabled={saving} onFile={onPhoto} onError={message => toast.message(message)} style={{ flex: 1, padding: 11, borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', fontSize: 13, fontWeight: 600, color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <ScanLine size={14} /> Retake
+            </NativeCameraScanControl>
             <button onClick={handleSave} disabled={saving || !selectedCount} style={{ flex: 2, padding: 11, borderRadius: 10, border: 'none', background: saving || !selectedCount ? '#cbd5e1' : primaryGradient, color: 'white', fontSize: 13, fontWeight: 700, cursor: saving || !selectedCount ? 'not-allowed' : 'pointer' }}>
               {saving ? 'Saving...' : `Add ${selectedCount} Products`}
             </button>
@@ -348,6 +332,7 @@ export default function Products() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [scanMenuOpen, setScanMenuOpen] = useState(false);
+  const [scanPhoto, setScanPhoto] = useState(null);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -439,9 +424,18 @@ export default function Products() {
     setShowDialog(true);
   };
 
-  const handleOpenScanMenu = () => {
-    if (atProductLimit) { setUpgradeModalOpen(true); return; }
+  const canOpenScan = () => {
+    if (atProductLimit) { setUpgradeModalOpen(true); return false; }
+    return true;
+  };
+  const handleScanPhoto = file => {
+    if (!canOpenScan()) return;
+    setScanPhoto(file);
     setScanMenuOpen(true);
+  };
+  const handleScanOpenChange = open => {
+    setScanMenuOpen(open);
+    if (!open) setScanPhoto(null);
   };
 
   const csvEscape = (val) => {
@@ -589,18 +583,19 @@ export default function Products() {
                   <Upload className="w-4 h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Import</span>
                 </Button>
-                <Button
+                <NativeCameraScanControl
                   data-tour="scan-menu-btn"
-                  onClick={handleOpenScanMenu}
-                  variant="outline"
-                  size="sm"
-                  className={atProductLimit ? "gap-1.5 border-slate-300 text-slate-400" : "gap-1.5 border-orange-300 text-orange-600 hover:bg-orange-50"}
+                  label="Scan menu with camera"
+                  onBeforeOpen={canOpenScan}
+                  onFile={handleScanPhoto}
+                  onError={message => toast.message(message)}
+                  className={`inline-flex h-9 items-center justify-center rounded-md border px-3 text-sm font-medium cursor-pointer transition-colors ${atProductLimit ? 'gap-1.5 border-slate-300 text-slate-400' : 'gap-1.5 border-orange-300 text-orange-600 hover:bg-orange-50'}`}
                   title={atProductLimit ? `Product limit reached (${maxProducts}) — upgrade to add more` : undefined}
                 >
                   <ScanLine className="w-4 h-4 sm:mr-1" />
                   <span className="hidden sm:inline">Scan Menu</span>
                   <span className="sm:hidden">Scan</span>
-                </Button>
+                </NativeCameraScanControl>
                 <Button
                   data-tour="add-product-btn"
                   onClick={handleAdd}
@@ -806,7 +801,9 @@ export default function Products() {
         {/* Scan Menu Dialog */}
         <ScanMenuDialog
           open={scanMenuOpen}
-          onOpenChange={setScanMenuOpen}
+          onOpenChange={handleScanOpenChange}
+          photo={scanPhoto}
+          onPhoto={handleScanPhoto}
           tenantId={tenantId}
           categories={categories}
           maxProducts={maxProducts}
