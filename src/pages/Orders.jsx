@@ -5,7 +5,7 @@ import { useTenant } from '../components/tenant/TenantContext';
 import { isFnBIndustry } from '@/lib/industry';
 import { useAppUser } from '@/lib/AppUserContext';
 import RequirePermission from '../components/auth/RequirePermission';
-import PullToRefresh from '../components/ui-custom/PullToRefresh';
+import { useAppRefreshHandler } from '@/lib/AppRefreshContext';
 import { useSyncExternalStore } from 'react';
 import { getPendingCheckouts, subscribePendingCheckouts } from '@/lib/mobileCheckout';
 import TableCallAlerts from '../components/orders/TableCallAlerts';
@@ -755,7 +755,7 @@ export default function Orders() {
   };
 
   const pendingCheckouts = useSyncExternalStore(subscribePendingCheckouts, getPendingCheckouts, getPendingCheckouts).filter(item => item.tenantId === tenantId);
-  const handleRefresh = useCallback(() => fetchOrders(true), [fetchOrders]);
+  useAppRefreshHandler(() => fetchOrders(true));
 
   const tabOrders = activeTab === 'all' ? orders : orders.filter(o => o.status === activeTab);
   const filteredOrders = searchQuery.trim()
@@ -807,7 +807,6 @@ export default function Orders() {
 
   return (
     <RequirePermission permission="orders.view">
-      <PullToRefresh onRefresh={handleRefresh}>
         <div className="space-y-4">
           {pendingCheckouts.length > 0 && (
             <div role="status" aria-live="polite" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -966,7 +965,6 @@ export default function Orders() {
             </div>
           )}
         </div>
-      </PullToRefresh>
       {ordersTour.eligible && (
         <TourGuide
           steps={getOrdersSteps({ tier: subscription?.tier })}
