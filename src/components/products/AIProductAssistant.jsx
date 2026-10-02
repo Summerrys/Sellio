@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useImperativeHandle } from 'react';
-import { Sparkles, Upload, Loader2, Check, AlertCircle, X, Wand2, ImagePlus, Pencil, Plus, Search } from 'lucide-react';
+import { Sparkles, Upload, Loader2, Check, AlertCircle, X, Wand2, ImagePlus, Pencil, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
