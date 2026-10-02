@@ -40,7 +40,7 @@ function onPopState() {
   if (!armed) return;
   armed = false;                    // the browser consumed our entry
   const top = stack.pop();          // remove now so settle() sees the truth
-  if (top) top.close();
+  if (top && top.close() === false) stack.push(top); // A save/print in progress keeps Back armed.
   scheduleSettle();                 // re-arm if more overlays are still open
 }
 
