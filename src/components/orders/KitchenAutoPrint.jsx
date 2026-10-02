@@ -34,9 +34,10 @@ export default function KitchenAutoPrint() {
       if (cancelled || polling || !client || !loadPrinterConfig(tenantId)?.autoPrintChit) return;
       polling = true;
       try {
+        const enabledSince = loadPrinterConfig(tenantId)?.autoPrintSince || since;
         const { data, error } = await client.from('orders').select('*')
           .eq('tenant_id', tenantId).eq('status', 'pending').eq('is_deleted', false)
-          .gte('created_date', since).order('created_date', { ascending: true }).limit(200);
+          .gte('created_date', enabledSince).order('created_date', { ascending: true }).limit(200);
         if (!error) for (const order of data || []) { if (cancelled) break; await handle(order); }
       } finally { polling = false; }
     };
