@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PullToRefresh from '../components/ui-custom/PullToRefresh';
+import PhotoPickerControl from '../components/ui-custom/PhotoPickerControl';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
 import { toast } from 'sonner';
@@ -45,7 +46,7 @@ const TEMPLATE_ROWS = [
   'Simple Snack,,No variants,Food,9.90,5.00,,200,20,false,true,false,"snack",,',
 ];
 
-function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess, maxProducts, currentProductCount, onLimitExceeded }) {
+export function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess, maxProducts, currentProductCount, onLimitExceeded }) {
   const [image, setImage] = React.useState(null);
   const [imagePreview, setImagePreview] = React.useState(null);
   const [scanning, setScanning] = React.useState(false);
@@ -53,8 +54,6 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess, m
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState(null);
   const [step, setStep] = React.useState('upload');
-  const fileInputRef = React.useRef(null);
-  const cameraInputRef = React.useRef(null);
   const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
   const primaryGradient = 'var(--color-primary-gradient)';
 
@@ -66,6 +65,7 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess, m
     setImage(file);
     const reader = new FileReader();
     reader.onload = e => setImagePreview(e.target.result);
+    reader.onerror = () => { setImage(null); setError('Could not read this photo. Please choose another image.'); };
     reader.readAsDataURL(file);
     setError(null);
   };
@@ -178,24 +178,25 @@ function ScanMenuDialog({ open, onOpenChange, tenantId, categories, onSuccess, m
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {!imagePreview ? (
                 <div style={{ display: 'flex', gap: 10 }}>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
+                  <PhotoPickerControl
+                    label="Upload menu photo"
+                    onFile={handleFile}
                     style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, border: '2px dashed #e2e8f0', borderRadius: 14, padding: '24px 12px', background: '#f8fafc', cursor: 'pointer' }}
                   >
                     <ImageIcon size={28} color="#94a3b8" />
                     <span style={{ fontWeight: 600, fontSize: 13, color: '#374151' }}>Upload Photo</span>
                     <span style={{ fontSize: 11, color: '#94a3b8' }}>Choose from gallery</span>
-                  </button>
-                  <button
-                    onClick={() => cameraInputRef.current?.click()}
+                  </PhotoPickerControl>
+                  <PhotoPickerControl
+                    label="Take menu photo"
+                    capture="environment"
+                    onFile={handleFile}
                     style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, border: '2px dashed #e2e8f0', borderRadius: 14, padding: '24px 12px', background: '#f8fafc', cursor: 'pointer' }}
                   >
                     <Camera size={28} color="#94a3b8" />
                     <span style={{ fontWeight: 600, fontSize: 13, color: '#374151' }}>Take Photo</span>
                     <span style={{ fontSize: 11, color: '#94a3b8' }}>Use your camera</span>
-                  </button>
-                  <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleFile(e.target.files[0])} />
-                  <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => handleFile(e.target.files[0])} />
+                  </PhotoPickerControl>
                 </div>
               ) : (
                 <div
