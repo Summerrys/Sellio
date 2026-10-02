@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useAppRefreshHandler } from '@/lib/AppRefreshContext';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
 import { useAppUser } from '@/lib/AppUserContext';
@@ -446,7 +447,7 @@ function KitchenDisplayScreen() {
     setIsFullscreen(false);
   };
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (throwOnError = false) => {
     if (!tenantId) return;
     const supabase = await getSupabase();
     const { data, error } = await supabase
@@ -458,7 +459,9 @@ function KitchenDisplayScreen() {
       .order('created_date', { ascending: true });
     if (!error) setOrders(data || []);
     setIsLoading(false);
+    if (error && throwOnError === true) throw error;
   };
+  useAppRefreshHandler(() => fetchOrders(true));
 
   useEffect(() => {
     if (!tenantId) return;
