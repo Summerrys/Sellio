@@ -12,6 +12,7 @@ const { JSDOM } = require('jsdom');
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://sellio.example.invalid', pretendToBeVisual: true });
 for (const key of ['window','document','Element','HTMLElement','Node','Event','MouseEvent','MutationObserver','sessionStorage','localStorage','getComputedStyle','navigator','DOMParser']) Object.defineProperty(globalThis, key, { value: dom.window[key], configurable: true, writable: true });
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+Object.defineProperty(window, 'innerWidth', {value:412,configurable:true,writable:true});
 const React = await import('react');
 const act = React.act || (await import('react-dom/test-utils')).act;
 const { createRoot } = await import('react-dom/client');
