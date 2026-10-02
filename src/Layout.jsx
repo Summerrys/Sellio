@@ -27,7 +27,8 @@ import {
   Copy,
   Check,
   Store,
-  Menu
+  Menu,
+  Monitor
 } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import PricingModal from './components/subscription/PricingModal';
@@ -629,7 +630,7 @@ function AppLayout({ children, currentPageName }) {
                   className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg"
                   style={{ background: 'var(--color-primary-gradient)' }}
                 >
-                  <PointOfSaleIcon className="w-6 h-6 text-white" aria-hidden="true" />
+                  <Monitor className="w-8 h-8 text-white" aria-hidden="true" />
                 </span>
                 <span className="text-xs font-semibold" style={{ color: 'rgb(var(--color-primary))' }}>Counter</span>
               </Link>
