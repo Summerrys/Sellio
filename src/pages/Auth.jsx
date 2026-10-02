@@ -7,6 +7,7 @@ import { useAppUser } from '@/lib/AppUserContext';
 import AuthPricingModal from '@/components/auth/AuthPricingModal';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import { accountDeletionDestination } from '@/components/profile/AccountDeletionForm';
+import { completeAuthNavigation } from '@/lib/authNavigation';
 
 const BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
 
@@ -102,7 +103,7 @@ export default function Auth() {
             console.log('[Auth] session recovery for', session.user.email, '→ activeMember:', isActiveMember);
             if (isActiveMember) {
               setAppUser(appUserRow);
-              window.location.href = accountDeletionDestination('/Dashboard');
+              completeAuthNavigation(accountDeletionDestination('/Dashboard'));
               return;
             }
           }
@@ -326,7 +327,7 @@ export default function Auth() {
             .eq('status', 'pending');
         }
 
-        window.location.href = accountDeletionDestination(appUser.onboarding_completed ? '/Dashboard' : '/Onboarding');
+        completeAuthNavigation(accountDeletionDestination(appUser.onboarding_completed ? '/Dashboard' : '/Onboarding'));
       } catch (err) {
         toast.error(err.message || 'Google Sign-In failed');
         setGoogleLoading(false);
@@ -520,7 +521,7 @@ export default function Auth() {
         setAppUser(userForCookie);
         showSuccess('Welcome back!');
         setTimeout(() => {
-          window.location.href = accountDeletionDestination(createPageUrl(appUserRow.onboarding_completed ? 'Dashboard' : 'Onboarding'));
+          completeAuthNavigation(accountDeletionDestination(createPageUrl(appUserRow.onboarding_completed ? 'Dashboard' : 'Onboarding')));
         }, 500);
 
       } else {
@@ -575,7 +576,7 @@ export default function Auth() {
         }
 
         showSuccess('Account created!');
-        setTimeout(() => { window.location.href = createPageUrl('Onboarding'); }, 500);
+        setTimeout(() => { completeAuthNavigation(createPageUrl('Onboarding')); }, 500);
       }
     } catch (error) {
       toast.error(error.message || 'An unexpected error occurred');
