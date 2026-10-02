@@ -34,12 +34,14 @@ export default function KitchenAutoPrint() {
       if (cancelled || polling || !client || !loadPrinterConfig(tenantId)?.autoPrintChit) return;
       polling = true;
       try {
-        const enabledSince = new Date(Math.max(Date.parse(loadPrinterConfig(tenantId)?.autoPrintSince || since), Date.now() - 864e5)).toISOString();
+        const configuredSince = Date.parse(loadPrinterConfig(tenantId)?.autoPrintSince || since);
+        const enabledSince = new Date(Math.max(Number.isFinite(configuredSince) ? configuredSince : Date.parse(since), Date.now() - 864e5)).toISOString();
         const { data, error } = await client.from('orders').select('*')
           .eq('tenant_id', tenantId).eq('status', 'pending').eq('is_deleted', false)
           .gte('created_date', enabledSince).order('created_date', { ascending: true }).limit(200);
         if (!error) for (const order of data || []) { if (cancelled) break; await handle(order); }
-      } finally { polling = false; }
+      } catch { /* Realtime and the next poll recover temporary network failures. */ }
+      finally { polling = false; }
     };
     getSupabase().then(sc => {
       if (cancelled) return;
