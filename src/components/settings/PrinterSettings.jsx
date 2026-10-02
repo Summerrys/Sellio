@@ -369,9 +369,7 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
           </button>
         )}
 
-        {/* Auto-print order chits — off by default; this fires a kitchen chit
-            for every new order automatically, unattended, so it only shows
-            once a printer is actually connected and stays opt-in. */}
+        {/* Device-specific opt-in; connect a compatible receipt printer first. */}
         <div className="flex items-center justify-between gap-4 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mt-3">
             <div>
               <p className="text-sm font-medium text-slate-700">Auto-print kitchen chits</p>
