@@ -2,7 +2,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppRefreshHandler, useAppReloadGuard } from '@/lib/AppRefreshContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, ShoppingBag } from 'lucide-react';
+import { Loader2, ShoppingBag, X } from 'lucide-react';
+import { getCounterOptionGroups, toggleCounterOption, validCounterOptions } from '@/lib/counterOptions';
+import { useBackToClose } from '@/lib/useBackToClose';
+import CounterOrderResult from '@/components/counter/CounterOrderResult';
 import { getSupabase } from '@/lib/supabaseClient';
 import { submitCheckout } from '@/lib/mobileCheckout';
 import { useTenant } from '../components/tenant/TenantContext';
@@ -15,7 +18,7 @@ import { createPageUrl } from '@/utils';
 // and each table's running bill are handled server-side by place_order().
 
 const CURRENCY_SYMBOLS = { SGD: '$', MYR: 'RM ', USD: '$', AUD: 'A$', GBP: '£', EUR: '€' };
-const KNOWN_VARIANT_KEYS = ['size', 'color', 'colour', 'addon', 'flavour', 'flavor', 'type', 'option', 'variant'];
+
 
 function splitName(s) {
   const str = String(s || '').replace(/^❌\s*/, 'No ');
@@ -23,36 +26,6 @@ function splitName(s) {
   if (m && m[1].trim()) return { cjk: m[2].trim(), latin: m[1].trim() };
   if (m) return { cjk: m[2].trim(), latin: '' };
   return { cjk: '', latin: str };
-}
-
-// Mirrors place_order()'s option parsing so the price staff see is the price charged.
-function getOptionGroups(product) {
-  const raw = Array.isArray(product?.variants) ? product.variants : [];
-  if (!raw.length) return [];
-  if (raw[0] && Array.isArray(raw[0].options)) {
-    return raw
-      .filter(g => Array.isArray(g.options) && g.options.length)
-      .map(g => ({
-        name: g.name || 'Options',
-        required: String(g.type || '').toLowerCase() === 'size',
-        options: g.options.map(o => ({ label: String(o.label ?? ''), price: Number(o.price_modifier) || 0 })),
-      }));
-  }
-  const keys = Object.keys(raw[0] || {});
-  const vKey = keys.find(k => KNOWN_VARIANT_KEYS.includes(k.toLowerCase())) || keys.find(k => k !== 'price' && k !== 'price_modifier');
-  if (vKey) {
-    const prices = raw.map(v => parseFloat(v.price) || 0).filter(p => p > 0);
-    const base = parseFloat(product.price) > 0 ? parseFloat(product.price) : (prices.length ? Math.min(...prices) : 0);
-    return [{
-      name: vKey.charAt(0).toUpperCase() + vKey.slice(1).toLowerCase(),
-      required: true,
-      options: raw.map(v => ({
-        label: String(v[vKey] ?? ''),
-        price: Math.max(0, Math.round(((parseFloat(v.price) || 0) - base) * 100) / 100),
-      })),
-    }];
-  }
-  return [{ name: 'Options', required: false, options: raw.map(v => ({ label: String(v.name || v.label || ''), price: Number(v.price_modifier) || 0 })) }];
 }
 
 function optionPrice(groups, sel) {
@@ -73,7 +46,8 @@ export default function Counter() {
 
 function CounterScreen() {
   const navigate = useNavigate();
-  const { tenantId, tenant } = useTenant();
+  const { tenantId, tenant, user, hasPermission } = useTenant();
+  const draftKey = `sellio_counter_drafts:${tenantId}:${user?.id || 'staff'}`;
   const sym = CURRENCY_SYMBOLS[tenant?.currency] || (tenant?.currency ? `${tenant.currency} ` : '$');
   const money = useCallback(n => `${sym}${(Number(n) || 0).toFixed(2)}`, [sym]);
 
@@ -85,10 +59,15 @@ function CounterScreen() {
   const [sold, setSold] = useState({});
   const [view, setView] = useState('tables');
   const [target, setTarget] = useState(null);
-  const [tickets, setTickets] = useState({});
+  const [tickets, setTickets] = useState(() => {
+    try { const saved = JSON.parse(sessionStorage.getItem(draftKey) || '{}'); return saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {}; } catch { return {}; }
+  });
   const [cat, setCat] = useState('popular');
   const [query, setQuery] = useState('');
   const [sheet, setSheet] = useState(null);
+  const [quantityProduct, setQuantityProduct] = useState(null);
+  const [sentOrder, setSentOrder] = useState(null);
+  const [printing, setPrinting] = useState(false);
   const [ticketOpen, setTicketOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
@@ -96,11 +75,24 @@ function CounterScreen() {
   const [nameMode, setNameMode] = useState(() => {
     try { return localStorage.getItem('counter_name_mode') || 'cjk'; } catch { return 'cjk'; }
   });
-  const uidRef = useRef(1);
+  const uidRef = useRef(Date.now());
+  const gestureRef = useRef(null);
+  const suppressClickUntil = useRef(0);
+  const draftKeyRef = useRef(draftKey);
   const sendingRef = useRef(false);
 
+  useEffect(() => {
+    if (draftKeyRef.current !== draftKey) {
+      draftKeyRef.current = draftKey;
+      try { setTickets(JSON.parse(sessionStorage.getItem(draftKey) || '{}')); } catch { setTickets({}); }
+      setTarget(null); setView('tables'); setSheet(null); setQuantityProduct(null); setSentOrder(null);
+      return;
+    }
+    try { sessionStorage.setItem(draftKey, JSON.stringify(tickets)); } catch { /* Drafts remain in memory. */ }
+  }, [draftKey, tickets]);
+
   const byId = useMemo(() => Object.fromEntries(products.map(p => [p.id, p])), [products]);
-  const groupsById = useMemo(() => Object.fromEntries(products.map(p => [p.id, getOptionGroups(p)])), [products]);
+  const groupsById = useMemo(() => Object.fromEntries(products.map(p => [p.id, getCounterOptionGroups(p)])), [products]);
 
   const loadSessions = useCallback(async (throwOnError = false) => {
     if (!tenantId) return;
@@ -145,7 +137,7 @@ function CounterScreen() {
   useAppRefreshHandler(() => Promise.all([loadCatalog(), loadSessions(true)]));
   useAppReloadGuard(() => ({
     dirty: Object.values(tickets).some(ticket => ticket.length > 0) || !!sheet,
-    busy: sendingRef.current || settling,
+    busy: sendingRef.current || settling || printing,
   }));
 
   useEffect(() => {
@@ -162,14 +154,16 @@ function CounterScreen() {
 
   useEffect(() => {
     const onKey = e => {
-      if (e.key !== 'Escape') return;
+      if (e.key !== 'Escape' || sendingRef.current || settling || printing) return;
       if (sheet) setSheet(null);
+      else if (quantityProduct) setQuantityProduct(null);
+      else if (sentOrder) setSentOrder(null);
       else if (settleOpen && !settling) setSettleOpen(false);
       else if (ticketOpen) setTicketOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [sheet, settleOpen, settling, ticketOpen]);
+  }, [sheet, quantityProduct, sentOrder, settleOpen, settling, printing, ticketOpen]);
 
   const popular = useMemo(
     () => products.filter(p => sold[p.id]).sort((a, b) => sold[b.id] - sold[a.id]).slice(0, 8),
@@ -240,42 +234,48 @@ function CounterScreen() {
     setQuery('');
     setTicketOpen(false);
     setSheet(null);
+    setQuantityProduct(null);
     setSettleOpen(false);
   };
-  const backToTables = () => { setView('tables'); setSheet(null); setSettleOpen(false); setTicketOpen(false); };
+  const backToTables = () => { setView('tables'); setSheet(null); setQuantityProduct(null); setSettleOpen(false); setTicketOpen(false); };
+  const closeUnlessBusy = close => () => {
+    if (sendingRef.current || settling || printing) return false;
+    close();
+  };
+  useBackToClose(view === 'order', closeUnlessBusy(backToTables));
+  useBackToClose(ticketOpen, closeUnlessBusy(() => setTicketOpen(false)));
+  useBackToClose(!!quantityProduct, closeUnlessBusy(() => setQuantityProduct(null)));
+  useBackToClose(settleOpen, closeUnlessBusy(() => setSettleOpen(false)));
+  useBackToClose(!!sheet, closeUnlessBusy(() => setSheet(null)));
+  useBackToClose(!!sentOrder, closeUnlessBusy(() => setSentOrder(null)));
 
   const addProduct = p => {
     const groups = groupsById[p.id] || [];
-    if (groups.some(g => g.required)) { setSheet({ mode: 'new', pid: p.id, sel: [] }); return; }
+    if (groups.length) { setSheet({ mode: 'new', pid: p.id, sel: [] }); return; }
     setLines(prev => {
       const same = prev.find(l => l.pid === p.id && !l.sel.length && !l.note);
-      if (same) return prev.map(l => (l === same ? { ...l, qty: l.qty + 1 } : l));
+      if (same) return prev.map(l => (l === same ? { ...l, qty: Math.min(99, l.qty + 1) } : l));
       return [...prev, { uid: uidRef.current++, pid: p.id, qty: 1, sel: [], note: '', noteOpen: false }];
     });
   };
   const changeQty = (uid, d) => setLines(prev => prev
-    .map(l => (l.uid === uid ? { ...l, qty: l.qty + d } : l))
+    .map(l => (l.uid === uid ? { ...l, qty: Math.min(99, l.qty + d) } : l))
     .filter(l => l.qty > 0));
   const toggleNote = uid => setLines(prev => prev.map(l => (l.uid === uid ? { ...l, noteOpen: !l.noteOpen } : l)));
   const updateNote = (uid, note) => setLines(prev => prev.map(l => (l.uid === uid ? { ...l, note } : l)));
 
   const toggleOption = (group, label) => setSheet(s => {
     if (!s) return s;
-    const on = s.sel.some(x => x.group === group.name && x.label === label);
-    const sel = group.required
-      ? [...s.sel.filter(x => x.group !== group.name), { group: group.name, label }]
-      : on
-        ? s.sel.filter(x => !(x.group === group.name && x.label === label))
-        : [...s.sel, { group: group.name, label }];
+    const sel = toggleCounterOption(s.sel, group, label);
     return { ...s, sel };
   });
   const confirmSheet = () => {
-    if (!sheet) return;
+    if (!sheet || !validCounterOptions(groupsById[sheet.pid] || [], sheet.sel)) return;
     if (sheet.mode === 'new') {
       const k = selKey(sheet.sel);
       setLines(prev => {
         const same = prev.find(l => l.pid === sheet.pid && !l.note && selKey(l.sel) === k);
-        if (same) return prev.map(l => (l === same ? { ...l, qty: l.qty + 1 } : l));
+        if (same) return prev.map(l => (l === same ? { ...l, qty: Math.min(99, l.qty + 1) } : l));
         return [...prev, { uid: uidRef.current++, pid: sheet.pid, qty: 1, sel: sheet.sel, note: '', noteOpen: false }];
       });
     } else {
@@ -284,8 +284,42 @@ function CounterScreen() {
     setSheet(null);
   };
 
+  const reduceProduct = p => {
+    const matches = lines.filter(l => l.pid === p.id);
+    if (matches.length === 1) changeQty(matches[0].uid, -1);
+    else if (matches.length > 1) setQuantityProduct(p.id);
+  };
+  const startSwipe = event => {
+    gestureRef.current = null;
+    if (event.touches.length !== 1 || sendingRef.current || settling || sheet || quantityProduct || sentOrder || settleOpen) return;
+    const element = event.target;
+    if (element.closest('input, textarea, .ctr-cats, .ctr-card-stepper, .ctr-stepper, .ctr-l-tools')) return;
+    const area = element.closest('.ctr-tables, .ctr-menu-scroll, .ctr-lines');
+    const touch = event.touches[0];
+    if (!area || touch.clientX < 24 || touch.clientX > window.innerWidth - 24) return;
+    gestureRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+  };
+  const finishSwipe = event => {
+    const start = gestureRef.current; gestureRef.current = null;
+    if (!start || !event.changedTouches.length || event.touches.length || sendingRef.current || settling) return;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - start.x, dy = touch.clientY - start.y;
+    if (Math.abs(dx) < 72 || Math.abs(dy) > Math.abs(dx) * .5 || Date.now() - start.time > 700) return;
+    let handled = false;
+    if (ticketOpen && dx > 0) { setTicketOpen(false); handled = true; }
+    else if (!ticketOpen && view === 'order' && dx > 0) { backToTables(); handled = true; }
+    else if (!ticketOpen && view === 'order' && dx < 0 && count > 0) { setTicketOpen(true); handled = true; }
+    else if (view === 'tables' && dx < 0 && target) { setView('order'); handled = true; }
+    if (handled) suppressClickUntil.current = Date.now() + 400;
+  };
+
   const send = async () => {
     if (!lines.length || sendingRef.current || sending || !target) return;
+    if (lines.some(line => !byId[line.pid] || !validCounterOptions(groupsById[line.pid] || [], line.sel))) {
+      toast.error('Check each item’s options before sending. A menu option may have changed.');
+      setTicketOpen(true);
+      return;
+    }
     sendingRef.current = true;
     setSending(true);
     try {
@@ -307,6 +341,7 @@ function CounterScreen() {
       setTickets(prev => ({ ...prev, [target.key]: [] }));
       backToTables();
       setTarget(null);
+      setSentOrder(data);
       loadSessions();
     } catch (e) {
       const msg = e?.message || '';
@@ -374,7 +409,11 @@ function CounterScreen() {
 
   return (
     <div className="ctr-root" aria-busy={sending}
-      onClickCapture={event => { if (sendingRef.current) { event.preventDefault(); event.stopPropagation(); } }}
+      onTouchStart={startSwipe}
+      onTouchMove={event => { if (event.touches.length !== 1) gestureRef.current = null; }}
+      onTouchEnd={finishSwipe}
+      onTouchCancel={() => { gestureRef.current = null; }}
+      onClickCapture={event => { if (sendingRef.current || Date.now() < suppressClickUntil.current) { event.preventDefault(); event.stopPropagation(); } }}
       onChangeCapture={event => { if (sendingRef.current) { event.preventDefault(); event.stopPropagation(); } }}
       onKeyDownCapture={event => { if (sendingRef.current) { event.preventDefault(); event.stopPropagation(); } }}>
       <style>{CSS}</style>
@@ -471,9 +510,10 @@ function CounterScreen() {
                   const n = nameParts(p.name);
                   const q = inTicket[p.id];
                   const groups = groupsById[p.id] || [];
-                  const req = groups.find(g => g.required);
+
                   return (
-                    <button key={p.id} className={`ctr-item ${q ? 'in' : ''}`} onClick={() => addProduct(p)} aria-label={`Add ${p.name}, ${money(p.price)}`}>
+                    <article key={p.id} className={`ctr-item ${q ? 'in' : ''}`} aria-label={p.name}>
+                      <button className="ctr-item-add" onClick={() => addProduct(p)} aria-label={`Add ${p.name}, ${money(p.price)}`}>
                       {q ? <span className="ctr-qty">×{q}</span> : null}
                       <span className="ctr-i-media">
                         {p.image_url
@@ -487,10 +527,16 @@ function CounterScreen() {
                       <span className="ctr-i-foot">
                         <span className="ctr-i-price">{money(p.price)}</span>
                         <span className="ctr-i-hint">
-                          {req ? `Choose ${req.name.toLowerCase()}` : groups.length ? '+ extras' : (cat === 'popular' && sold[p.id] ? `${sold[p.id]} sold` : '')}
+                          {groups.length ? 'Choose options' : (cat === 'popular' && sold[p.id] ? `${sold[p.id]} sold` : '')}
                         </span>
                       </span>
-                    </button>
+                      </button>
+                      <div className="ctr-card-stepper" aria-label={`Quantity for ${p.name}`}>
+                        <button disabled={!q} onClick={() => reduceProduct(p)} aria-label={`Remove one ${p.name}`}>−</button>
+                        <span aria-live="polite">{q || 0}</span>
+                        <button onClick={() => addProduct(p)} aria-label={`Add one ${p.name}`}>+</button>
+                      </div>
+                    </article>
                   );
                 })}
               </div>
@@ -534,7 +580,7 @@ function CounterScreen() {
                       {line.note && !line.noteOpen && <span className="ctr-l-note">“{line.note}”</span>}
                       <div className="ctr-l-tools">
                         {groups.length > 0 && (
-                          <button className="ctr-chip" onClick={() => setSheet({ mode: 'edit', uid: line.uid, pid: line.pid, sel: line.sel })}>Extras</button>
+                          <button className="ctr-chip" onClick={() => setSheet({ mode: 'edit', uid: line.uid, pid: line.pid, sel: line.sel })}>Options</button>
                         )}
                         <button className="ctr-chip" onClick={() => toggleNote(line.uid)}>{line.noteOpen ? 'Done' : 'Note'}</button>
                       </div>
@@ -561,7 +607,7 @@ function CounterScreen() {
                   </li>
                 );
               }) : (
-                <li className="ctr-empty">Tap a dish to add it. Dishes go in plain; tap <b>Extras</b> on the line to add toppings.</li>
+                <li className="ctr-empty">Add dishes from the menu. Use + and − to adjust quantities.</li>
               )}
             </ul>
             <div className="ctr-foot">
@@ -579,21 +625,24 @@ function CounterScreen() {
         const p = byId[sheet.pid];
         const groups = groupsById[sheet.pid] || [];
         const n = nameParts(p.name);
-        const ready = groups.filter(g => g.required).every(g => sheet.sel.some(x => x.group === g.name));
+        const ready = validCounterOptions(groups, sheet.sel);
         const unit = (Number(p.price) || 0) + sheet.sel.reduce((s, x) => s + optionPrice(groups, x), 0);
         const line = sheet.mode === 'edit' ? lines.find(l => l.uid === sheet.uid) : null;
         return (
           <div className="ctr-sheet-back" onClick={() => setSheet(null)}>
             <div className="ctr-sheet" role="dialog" aria-modal="true" aria-label={`Options for ${p.name}`} onClick={e => e.stopPropagation()}>
-              <div>
+              <div className="ctr-sheet-heading">
+                <div>
                 <h3>{n.main} {n.sub ? <span className="ctr-sheet-alt">{n.sub}</span> : null}</h3>
                 <p className="ctr-sheet-sub">
                   {sheet.mode === 'new' ? 'Choose the options, then add.' : line && line.qty > 1 ? `Applies to all ${line.qty} on this line.` : 'Tap to add or remove.'}
                 </p>
+                </div>
+                <button className="ctr-sheet-close" aria-label="Close options" onClick={() => setSheet(null)}><X size={22} /></button>
               </div>
               {groups.map(g => (
                 <div key={g.name} className="ctr-opt-group">
-                  <h4>{g.name}{g.required ? ' · pick one' : ''}</h4>
+                  <h4>{g.name} · {g.multiple ? 'pick any' : 'pick one'}</h4>
                   <div className="ctr-opts">
                     {g.options.map(o => {
                       const on = sheet.sel.some(x => x.group === g.name && x.label === o.label);
@@ -615,6 +664,26 @@ function CounterScreen() {
           </div>
         );
       })()}
+
+      {quantityProduct && byId[quantityProduct] && (
+        <div className="ctr-sheet-back" onClick={() => setQuantityProduct(null)}>
+          <div className="ctr-sheet" role="dialog" aria-modal="true" aria-label={`Quantities for ${byId[quantityProduct].name}`} onClick={e => e.stopPropagation()}>
+            <div className="ctr-sheet-heading"><h3>{byId[quantityProduct].name}</h3><button className="ctr-sheet-close" aria-label="Close quantities" onClick={() => setQuantityProduct(null)}><X size={22} /></button></div>
+            {lines.filter(l => l.pid === quantityProduct).map(line => (
+              <div className="ctr-row" key={line.uid}>
+                <span>{line.sel.map(x => x.label).join(', ') || 'Standard'}{line.note ? ` · ${line.note}` : ''}</span>
+                <div className="ctr-stepper">
+                  <button onClick={() => changeQty(line.uid, -1)} aria-label={`Remove one ${line.sel.map(x => x.label).join(', ') || 'standard'}`}>−</button>
+                  <span>{line.qty}</span>
+                  <button disabled={line.qty >= 99} onClick={() => changeQty(line.uid, 1)} aria-label="Add one of these options">+</button>
+                </div>
+              </div>
+            ))}
+            <button className="ctr-sheet-done" onClick={() => setQuantityProduct(null)}>Done</button>
+          </div>
+        </div>
+      )}
+      {sentOrder && <CounterOrderResult order={sentOrder} tenant={tenant} tenantId={tenantId} canPrintChit={hasPermission('orders.print_chit')} printing={printing} setPrinting={setPrinting} onClose={() => setSentOrder(null)} />}
 
       {settleOpen && session && target && (
         <div className="ctr-sheet-back" onClick={() => !settling && setSettleOpen(false)}>
@@ -684,13 +753,22 @@ const CSS = `
 .ctr-cat { flex-shrink: 0; display: flex; align-items: baseline; gap: 6px; padding: 10px 16px; border-radius: 999px; background: #fff !important; border: 1px solid #e5e0ea !important; white-space: nowrap; min-height: 44px; }
 .ctr-cat .m { font-weight: 700; font-size: 16px; }
 .ctr-cat .s { font-size: 12px; color: #6f6879; font-weight: 600; }
-.ctr-cat[aria-selected="true"] { background: rgb(var(--color-primary, 194 51 138)) !important; border-color: rgb(var(--color-primary, 194 51 138)) !important; color: #fff !important; }
+.ctr-cat[aria-selected="true"] { background: var(--color-primary-gradient, rgb(var(--color-primary, 194 51 138))) !important; border-color: rgb(var(--color-primary, 194 51 138)) !important; color: #fff !important; }
 .ctr-cat[aria-selected="true"] .s { color: inherit; opacity: .75; }
 .ctr-menu-scroll { flex: 1; overflow-y: auto; padding: 14px 16px 24px; }
 .ctr-note { font-size: 12px; color: #6f6879; margin: 0 0 10px; font-weight: 600; }
 .ctr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 12px; }
 .ctr-item { position: relative; text-align: left; background: #fff !important; border: 2px solid #e5e0ea !important; border-radius: 16px; padding: 8px 8px 10px; display: flex; flex-direction: column; gap: 6px; min-width: 0; overflow: hidden; transition: transform .08s ease, border-color .15s ease; }
-.ctr-item:active { transform: scale(.97); }
+.ctr-item-add { position: relative; text-align: left; display: flex; flex-direction: column; gap: 6px; width: 100%; flex: 1; min-width: 0; padding: 0; }
+.ctr-item-add:active { transform: scale(.98); }
+.ctr-card-stepper { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; text-align: center; border-top: 1px solid #e5e0ea; padding-top: 6px; font-weight: 800; }
+.ctr-card-stepper button { min-width: 44px; min-height: 44px; border-radius: 10px; font-size: 24px; background: color-mix(in srgb, rgb(var(--color-primary)) 10%, white); color: rgb(var(--color-primary)); }
+.ctr-card-stepper button:disabled { opacity: .35; }
+.ctr-menu-scroll, .ctr-lines, .ctr-tables { touch-action: pan-y; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.ctr-sheet-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.ctr-sheet-close { width: 44px; min-height: 44px; flex-shrink: 0; display: grid; place-items: center; border-radius: 12px; background: #f1f5f9 !important; }
+.ctr-tables, .ctr-menu, .ctr-ticket { animation: ctr-enter .18s ease-out; }
+@keyframes ctr-enter { from { opacity: .6; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
 .ctr-item.in { border-color: rgb(var(--color-primary, 194 51 138)) !important; background: color-mix(in srgb, rgb(var(--color-primary, 194 51 138)) 12%, #fff) !important; }
 .ctr-i-main { font-weight: 700; font-size: 16px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .ctr-i-sub { font-size: 12px; color: #6f6879; font-weight: 600; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -774,5 +852,5 @@ const CSS = `
   .ctr-store { display: none; }
   .ctr-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
 }
-@media (prefers-reduced-motion: reduce) { .ctr-root * { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { .ctr-root * { transition: none !important; animation: none !important; } }
 `;
