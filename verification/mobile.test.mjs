@@ -91,13 +91,14 @@ try {
     }
   };
   globalThis.__sellioTestClient = {
+    auth: { getSession: async () => ({ data: { session: { access_token: 'photo-test-fixture' } } }) },
     storage: { from: bucket => ({
       upload: async (storagePath, file) => { uploadCalls.push({ bucket, storagePath, file }); return { error: uploadFails ? { message: 'Upload unavailable' } : null }; },
       getPublicUrl: storagePath => ({ data: { publicUrl: 'https://images.example.invalid/' + storagePath } }),
     }) },
   };
   globalThis.fetch = async (url, options) => {
-    analysisCalls.push({ url, body: JSON.parse(options.body) });
+    analysisCalls.push({ url, body: JSON.parse(options.body), headers: options.headers });
     return { ok: true, json: async () => ({ confidence: 0.9, name: 'Test drink', description: 'Fixture', price: 4, category: 'Drinks' }) };
   };
   const { default: AIProductAssistant } = await loadComponent('src/components/products/AIProductAssistant.jsx');
@@ -119,6 +120,8 @@ try {
   await selectPhoto(ai.container.querySelector('input[aria-label="Choose photo for AI analysis"]'), fixturePhoto);
   assert.equal(analysisCalls.length, 1);
   assert.equal(analysisCalls[0].body.imageBase64, 'data:image/jpeg;base64,cGhvdG8=');
+  assert.equal(analysisCalls[0].body.tenantId, 'photo-fixture');
+  assert.equal(analysisCalls[0].headers.Authorization, 'Bearer photo-test-fixture');
   assert.match(ai.container.textContent, /AI suggestions ready/);
   const unreadable = mount(AIProductAssistant, assistantProps);
   await unreadable.render(); readFails = true;
