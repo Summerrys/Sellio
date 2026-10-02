@@ -161,6 +161,18 @@ try{
  await printCounterOrder(order,'counter-test',{},'receipt');assert.equal(__prints.at(-1).kind,1);
  pass('Auto-print is serial, tenant scoped, deduplicated and never blindly retries uncertain printer sends');
  await act(async()=>{for(const {root} of roots.slice(1))root.unmount();await tick();});
+ // Test the actual workspace listener with a Realtime event fixture.
+ let realtime, removed=0;
+ __client.channel=()=>({on:(event,filter,callback)=>{realtime=callback;return {subscribe:callback=>{queueMicrotask(()=>callback('SUBSCRIBED'));return {fixture:true};}};}});
+ __client.removeChannel=()=>{removed++;};
+ const {default:KitchenAutoPrint}=await bundle('src/components/orders/KitchenAutoPrint.jsx');
+ const kitchen=await mount(KitchenAutoPrint);
+ localStorage.setItem('sellio_printer_counter-test',JSON.stringify({mode:'bluetooth',deviceName:'Fixture Printer',autoPrintChit:false}));
+ const off=__prints.length;await act(async()=>{realtime({new:{...order,id:'disabled-auto'}});await tick();});assert.equal(__prints.length,off);
+ localStorage.setItem('sellio_printer_counter-test',JSON.stringify({mode:'bluetooth',deviceName:'Fixture Printer',autoPrintChit:true}));
+ await act(async()=>{realtime({new:{...order,id:'workspace-auto'}});realtime({new:{...order,id:'workspace-auto'}});await tick();});assert.equal(__prints.length,off+1);
+ await act(async()=>{roots.at(-1).root.unmount();await tick();});assert.equal(removed,1);
+ pass('Workspace listener prints arrivals once, respects opt-out and unsubscribes on exit');
  const {sendViaEpsonEPos,savePrinterConfig,loadPrinterConfig}=await bundle('src/lib/printerUtils.js',[]);
  let printerEvents=0;window.addEventListener('sellio:printer-config',()=>printerEvents++);
  savePrinterConfig('network-test',{mode:'network',autoPrintChit:true,ip:'192.0.2.1'});savePrinterConfig('network-test',{ip:'192.0.2.2'});
