@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import ImageEditModal from '../onboarding/ImageEditModal';
 import { getSupabase } from '@/lib/supabaseClient';
 import { deleteImageFromStorage } from '@/lib/imageStorage';
+import PhotoPickerControl from '../ui-custom/PhotoPickerControl';
 
 // Expose cleanup for parent to call
 export const cleanupDeletedImages = async (componentRef) => {
@@ -314,8 +315,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleFileSelect = async (e) => {
-    const file = e.target.files?.[0];
+  const handleFileSelect = async (file) => {
     if (!file) return;
     if (fileInputRef.current) fileInputRef.current.value = '';
 
@@ -324,9 +324,11 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
 
     try {
       // Read base64 for AI analysis + upload to storage in parallel
-      const base64 = await new Promise((resolve) => {
+      const base64 = await new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Could not read this photo. Please choose another image.'));
+        reader.onabort = () => reject(new Error('Photo reading was interrupted. Please try again.'));
         reader.readAsDataURL(file);
       });
 
@@ -427,10 +429,8 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     setResult(null);
   };
 
-  const handlePlainImageSelect = async (e) => {
-    const file = e.target.files?.[0];
+  const handlePlainImageSelect = async (file) => {
     if (!file) return;
-    e.target.value = '';
     setStep('uploading');
     try {
       const publicUrl = await uploadToStorage(file);
@@ -593,19 +593,19 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                 <p className="text-xs text-slate-500 mt-0.5">Upload a photo — AI generates name, price & category</p>
               </div>
               <div className="flex gap-2 w-full">
-                <label className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-white text-sm font-medium rounded-lg cursor-pointer" style={{ background: themeColor }}>
+                <PhotoPickerControl label="Choose photo for AI analysis" inputRef={fileInputRef} onFile={handleFileSelect} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-white text-sm font-medium rounded-lg cursor-pointer" style={{ background: themeColor }}>
                   <Upload className="w-4 h-4 flex-shrink-0" />
                   <span>AI Analyse</span>
-                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
-                </label>
-                <button
-                  type="button"
-                  onClick={() => plainImageInputRef.current?.click()}
+                </PhotoPickerControl>
+                <PhotoPickerControl
+                  label="Upload product photo"
+                  inputRef={plainImageInputRef}
+                  onFile={handlePlainImageSelect}
                   className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-medium rounded-lg border border-slate-300 text-slate-600 bg-white hover:bg-slate-50"
                 >
                   <ImagePlus className="w-4 h-4 flex-shrink-0" />
                   <span>Upload Photo</span>
-                </button>
+                </PhotoPickerControl>
               </div>
               <p className="text-xs text-slate-400">PNG, JPG up to 5MB</p>
             </div>
@@ -628,7 +628,6 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                 themeColor={themeColor}
               />
             </div>
-            <input ref={plainImageInputRef} type="file" accept="image/*" className="hidden" onChange={handlePlainImageSelect} />
           </div>
         )}
 
