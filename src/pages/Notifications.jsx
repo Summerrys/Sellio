@@ -144,7 +144,15 @@ export default function Notifications() {
               {typeFilter !== 'all' && <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[rgb(var(--color-primary))]" />}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" collisionPadding={12} className="rounded-xl p-2" style={{ width: 'min(280px, calc(100vw - 24px))' }}>
+          <PopoverContent
+            align="end"
+            collisionPadding={12}
+            className="overflow-y-auto rounded-xl p-2"
+            style={{
+              width: 'min(280px, calc(100vw - 24px))',
+              maxHeight: 'min(400px, var(--radix-popover-content-available-height, 70dvh))',
+            }}
+          >
             <p className="px-2 py-1 text-xs font-semibold text-muted-foreground">Type</p>
             <div role="group" aria-label="Notification type">
               {TYPE_FILTERS.map(({ value, label }) => (
