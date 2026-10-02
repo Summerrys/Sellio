@@ -450,8 +450,14 @@ export async function sendViaEpsonEPos(ip, bytes, merchantName) {
     method: 'POST',
     headers: { 'Content-Type': 'text/xml; charset=utf-8', SOAPAction: '""' },
     body: xml,
+    signal: AbortSignal.timeout(12000),
   });
   if (!res.ok) throw new Error(`ePOS error: ${res.status}`);
+  const response = await res.text();
+  const success = new DOMParser().parseFromString(response, 'application/xml').getElementsByTagNameNS('*', 'response')[0];
+  if (!success || success.getAttribute('success') !== 'true') {
+    throw new Error(`Printer did not confirm the print${success?.getAttribute('code') ? ': ' + success.getAttribute('code') : ''}`);
+  }
 }
 
 // Test connection for network printers
@@ -483,9 +489,11 @@ export function loadPrinterConfig(tenantId) {
 }
 
 export function savePrinterConfig(tenantId, config) {
-  localStorage.setItem(`sellio_printer_${tenantId}`, JSON.stringify(config));
+  localStorage.setItem(`sellio_printer_${tenantId}`, JSON.stringify({ ...(loadPrinterConfig(tenantId) || {}), ...config }));
+  window.dispatchEvent(new Event('sellio:printer-config'));
 }
 
 export function clearPrinterConfig(tenantId) {
   localStorage.removeItem(`sellio_printer_${tenantId}`);
+  window.dispatchEvent(new Event('sellio:printer-config'));
 }
