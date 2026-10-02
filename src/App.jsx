@@ -15,6 +15,7 @@ import Storefront from './pages/Storefront';
 import { useEffect, useState, Suspense } from 'react';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import AppLoader from '@/components/ui-custom/AppLoader';
+import AppRefreshProvider from '@/components/ui-custom/AppRefreshProvider';
 import { AppUserProvider, useAppUser } from '@/lib/AppUserContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import UserManagement from './pages/UserManagement';
@@ -147,6 +148,7 @@ function App() {
     <AppUserProvider>
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
+        <AppRefreshProvider>
         <Router>
           <RouteIndexingGuard />
           <NavigationTracker />
@@ -159,6 +161,7 @@ function App() {
           </Routes>
         </Router>
         <SonnerToaster />
+        </AppRefreshProvider>
       </QueryClientProvider>
     </AuthProvider>
     </AppUserProvider>
