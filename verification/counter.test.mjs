@@ -155,8 +155,8 @@ try{
  localStorage.setItem('sellio_printer_counter-test',JSON.stringify({mode:'bluetooth',deviceName:'Fixture Printer',autoPrintChit:true}));
  const before=__prints.length;await Promise.all([autoPrintKitchenOrder(order,'counter-test',{}),autoPrintKitchenOrder(order,'counter-test',{})]);assert.equal(__prints.length,before+1);
  await autoPrintKitchenOrder({...order,tenant_id:'different'},'counter-test',{});assert.equal(__prints.length,before+1);
- __printFails=true;await assert.rejects(()=>autoPrintKitchenOrder({...order,id:'failed-print'},'counter-test',{}));
- __printFails=false;await autoPrintKitchenOrder({...order,id:'failed-print'},'counter-test',{});assert.equal(__prints.length,before+2);
+ globalThis.__printFails=true;await assert.rejects(()=>autoPrintKitchenOrder({...order,id:'failed-print'},'counter-test',{}));
+ globalThis.__printFails=false;await autoPrintKitchenOrder({...order,id:'failed-print'},'counter-test',{});assert.equal(__prints.length,before+2);
  assert.equal(hasKitchenPrinter({mode:'network',ip:'192.0.2.1',brand:'generic'}),false);
  await printCounterOrder(order,'counter-test',{},'receipt');assert.equal(__prints.at(-1).kind,1);
  pass('Auto-print is serial, tenant scoped, deduplicated and never blindly retries uncertain printer sends');
