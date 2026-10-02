@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     }
     const email = user.email.toLowerCase();
     const { data: profile, error: profileError } = await supabase.from('app_users')
-      .select('is_active, onboarding_completed, tenant_id').ilike('email', email).maybeSingle();
+      .select('is_active, onboarding_completed, tenant_id').in('email', [...new Set([user.email, email])]).maybeSingle();
     if (profileError) throw profileError;
     if (!profile || profile.is_active !== true) return json({ error: 'Your account cannot use product analysis.' }, 403);
 
@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
       // Supplying another store's ID must never fall back to onboarding access.
       if (tenantId || profile.onboarding_completed || profile.tenant_id) return json({ error: 'You do not have access to product analysis for this store.' }, 403);
       const { data: invite, error: inviteError } = await supabase.from('merchant_invites')
-        .select('status, stripe_subscription_id').ilike('email', email)
+        .select('status, stripe_subscription_id').in('email', [...new Set([user.email, email])])
         .order('created_date', { ascending: false }).limit(1).maybeSingle();
       if (inviteError) throw inviteError;
       const eligible = ONBOARDING_BYPASS_EMAILS.includes(email) ||
