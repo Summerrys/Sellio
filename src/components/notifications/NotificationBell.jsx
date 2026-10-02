@@ -5,11 +5,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Bell, Check, ShoppingBag, AlertTriangle, Users, TrendingUp, Building2 } from 'lucide-react';
 import { useNotifications } from './NotificationProvider';
-import { format, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../../utils';
 
@@ -43,7 +41,7 @@ export default function NotificationBell() {
   const recentNotifications = notifications.slice(0, 10);
 
   const handleNotificationClick = (notification) => {
-    markAsRead(notification.id);
+    if (!notification.is_read) markAsRead(notification.id);
     if (notification.link) {
       navigate(notification.link);
       setOpen(false);
@@ -53,7 +51,7 @@ export default function NotificationBell() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative min-h-[44px] min-w-[44px]" aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}>
           <Bell className="w-5 h-5" />
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white text-xs rounded-full flex items-center justify-center">
@@ -62,79 +60,92 @@ export default function NotificationBell() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-96 p-0" align="end">
+      <PopoverContent
+        className="flex flex-col overflow-hidden rounded-xl p-0"
+        align="end"
+        sideOffset={8}
+        collisionPadding={12}
+        aria-label="Recent notifications"
+        style={{
+          width: 'min(384px, calc(100vw - 24px))',
+          maxHeight: 'min(560px, var(--radix-popover-content-available-height, 70dvh))',
+        }}
+      >
         {/* Header */}
-        <div className="p-4 border-b flex items-center justify-between">
-          <h3 className="font-semibold">Notifications</h3>
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2">
+          <h3 className="min-w-0 font-semibold [overflow-wrap:anywhere]">Notifications</h3>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
               onClick={markAllAsRead}
-              className="text-xs"
+              className="min-h-[44px] min-w-[44px] shrink-0 px-2 text-xs"
+              aria-label="Mark all as read"
+              title="Mark all as read"
             >
-              Mark all as read
+              <Check className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Read all</span>
             </Button>
           )}
         </div>
 
         {/* Notifications List */}
-        <ScrollArea className="h-[400px]">
+        <div className="min-h-0 overflow-y-auto overscroll-contain" style={{ maxHeight: 'min(360px, 52dvh)' }}>
           {recentNotifications.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">
+            <div className="p-6 text-center text-muted-foreground">
               <Bell className="w-12 h-12 mx-auto mb-2 text-slate-300" />
               <p>No notifications yet</p>
             </div>
           ) : (
-            <div className="divide-y">
+            <div className="min-w-0 divide-y">
               {recentNotifications.map((notification) => {
                 const Icon = NOTIFICATION_ICONS[notification.type] || Bell;
                 const colorClass = NOTIFICATION_COLORS[notification.type] || 'text-slate-600 bg-slate-100';
                 
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={notification.id}
                     onClick={() => handleNotificationClick(notification)}
-                    className={`p-4 hover:bg-slate-50 cursor-pointer transition-colors ${
-                      !notification.is_read ? 'bg-blue-50/50' : ''
-                    }`}
+                    className="block w-full min-w-0 px-3 py-3 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[rgb(var(--color-primary))]"
+                    style={{ backgroundColor: !notification.is_read ? 'rgb(var(--color-primary) / 0.06)' : undefined }}
                   >
                     <div className="flex gap-3">
-                      <div className={`w-10 h-10 rounded-full ${colorClass} flex items-center justify-center flex-shrink-0`}>
+                      <div className={`w-9 h-9 rounded-full ${colorClass} flex items-center justify-center flex-shrink-0`}>
                         <Icon className="w-5 h-5" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2 mb-1">
-                          <p className="font-medium text-sm text-slate-900">{notification.title}</p>
+                          <p className="min-w-0 flex-1 text-sm font-semibold text-popover-foreground [overflow-wrap:anywhere]">{notification.title}</p>
                           {!notification.is_read && (
-                            <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-1" />
+                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[rgb(var(--color-primary))]" aria-label="Unread" />
                           )}
                         </div>
-                        <p className="text-sm text-slate-600 line-clamp-2">{notification.message}</p>
-                        <p className="text-xs text-slate-400 mt-1">
+                        <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">{notification.message}</p>
+                        <p className="mt-1 text-xs text-muted-foreground [overflow-wrap:anywhere]">
                           {formatDistanceToNow(new Date(notification.created_date), { addSuffix: true })}
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
           )}
-        </ScrollArea>
+        </div>
 
         {/* Footer */}
         {notifications.length > 0 && (
-          <div className="p-3 border-t">
+          <div className="shrink-0 border-t p-2">
             <Button
               variant="ghost"
-              className="w-full"
+              className="h-auto min-h-[44px] w-full whitespace-normal text-sm"
               onClick={() => {
                 navigate(createPageUrl('Notifications'));
                 setOpen(false);
               }}
             >
-              View All Notifications
+              View all notifications
             </Button>
           </div>
         )}
