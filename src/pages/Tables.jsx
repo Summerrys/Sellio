@@ -1,4 +1,3 @@
-import { escapePrintHtml, printImageSrc } from '@/lib/printSafety';
 import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -772,7 +771,7 @@ export default function Tables() {
                   onClick={() => {
                     const imgSrc = qrCodes[qrModalTable.id] || qrModalTable.qr_image_url;
                     const w = window.open();
-                    w.document.write(`<html><head><title>${escapePrintHtml(qrModalTable.name)}</title></head><body style="text-align:center;font-family:Arial;padding:24px"><h2>${escapePrintHtml(qrModalTable.name)}</h2><p>${escapePrintHtml(qrModalTable.capacity)} pax</p><img src="${printImageSrc(imgSrc)}" style="max-width:400px;" /><p>Scan to order</p></body></html>`);
+                    w.document.write(`<html><head><title>${qrModalTable.name}</title></head><body style="text-align:center;font-family:Arial;padding:24px"><h2>${qrModalTable.name}</h2><p>${qrModalTable.capacity} pax</p><img src="${imgSrc}" style="max-width:400px;" /><p>Scan to order</p></body></html>`);
                     w.document.close();
                     setTimeout(() => w.print(), 300);
                   }}

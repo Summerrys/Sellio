@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import ImageEditModal from '../onboarding/ImageEditModal';
 import { getSupabase } from '@/lib/supabaseClient';
-import { requestProductImageAnalysis } from '@/lib/productImageAnalysis';
 import { deleteImageFromStorage } from '@/lib/imageStorage';
 import PhotoPickerControl from '../ui-custom/PhotoPickerControl';
 
@@ -338,7 +337,11 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
 
       const [publicUrl, res] = await Promise.all([
         uploadToStorage(file),
-        requestProductImageAnalysis(base64, tenantId),
+        fetch('https://selliosg.base44.app/api/functions/analyzeProductImage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: base64 }),
+        }),
       ]);
 
       // Replace temp base64 preview with real URL

@@ -1,4 +1,3 @@
-import { escapePrintHtml, printImageSrc } from '@/lib/printSafety';
 import React, { useState, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -153,7 +152,7 @@ export default function QRCodeGenerator({ open, onOpenChange, table, tenant }) {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Table ${escapePrintHtml(table.name)} QR Code</title>
+          <title>Table ${table.name} QR Code</title>
           <style>
             body {
               margin: 0;
@@ -180,9 +179,9 @@ export default function QRCodeGenerator({ open, onOpenChange, table, tenant }) {
         </head>
         <body>
           <div class="card">
-            <h1>${escapePrintHtml(tenant.name)}</h1>
-            <h2>Table ${escapePrintHtml(table.name)}</h2>
-            <img src="${printImageSrc(qrImage)}" alt="QR Code" />
+            <h1>${tenant.name}</h1>
+            <h2>Table ${table.name}</h2>
+            <img src="${qrImage}" alt="QR Code" />
             <p>Scan to Order</p>
             <div class="footer">Powered by Apptelier</div>
           </div>

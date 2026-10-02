@@ -9,25 +9,17 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
  */
 
 Deno.serve(async (req) => {
-  if (req.method !== 'POST') return Response.json({ error: 'Method not allowed' }, { status: 405 });
   try {
     const base44 = createClientFromRequest(req);
-    let user;
-    try { user = await base44.auth.me(); } catch {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    const user = await base44.auth.me();
 
     if (user?.role !== 'admin') {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
-    const { tenant_id, confirmation } = await req.json();
-    if (confirmation !== 'DELETE') {
-      return Response.json({ error: 'Deletion confirmation required' }, { status: 400 });
-    }
+    const { tenant_id } = await req.json();
 
-    if (typeof tenant_id !== 'string' || !tenant_id || tenant_id.length > 200) {
+    if (!tenant_id) {
       return Response.json({ error: 'tenant_id is required' }, { status: 400 });
     }
 
@@ -125,7 +117,8 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     return Response.json({ 
-      error: 'Tenant deletion failed. Contact support.' 
+      error: error.message,
+      stack: error.stack 
     }, { status: 500 });
   }
 });

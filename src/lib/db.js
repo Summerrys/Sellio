@@ -162,7 +162,7 @@ export const db = {
   // Direct supabase access for custom queries
   getSupabase,
   
-  // Cached display profile for legacy notification rendering; not authentication.
+  // Auth helpers (for custom auth system)
   auth: {
     async me() {
       // Read from cookie (set by AppUserContext) — works across all domains
@@ -178,7 +178,41 @@ export const db = {
       return legacy ? JSON.parse(legacy) : null;
     },
     
-
+    async login(phone, password) {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase
+        .from('app_users')
+        .select('*')
+        .eq('phone', phone.trim())
+        .single();
+      if (error || !data) throw new Error('Invalid credentials');
+      if (!data.is_active) throw new Error('Account is inactive');
+      return data;
+    },
+    
+    logout(redirectUrl) {
+      localStorage.removeItem('app_user');
+      window.location.href = redirectUrl || '/Auth';
+    },
+    
+    async isAuthenticated() {
+      return !!localStorage.getItem('app_user');
+    },
+    
+    async updateMe(updates) {
+      const user = await this.me();
+      if (!user) throw new Error('Not authenticated');
+      const supabase = await getSupabase();
+      const { data, error } = await supabase
+        .from('app_users')
+        .update(updates)
+        .eq('id', user.id)
+        .select()
+        .single();
+      if (error) throw error;
+      localStorage.setItem('app_user', JSON.stringify(data));
+      return data;
+    }
   }
 };
 

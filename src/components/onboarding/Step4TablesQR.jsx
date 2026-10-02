@@ -1,4 +1,3 @@
-import { escapePrintHtml, printImageSrc } from '@/lib/printSafety';
 import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -179,10 +178,10 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
       const printWindow = window.open();
       printWindow.document.write(`
         <html>
-          <head><title>${escapePrintHtml(singleQrLabel)}</title></head>
+          <head><title>${singleQrLabel}</title></head>
           <body style="text-align:center;font-family:Arial">
-            <h2>${escapePrintHtml(singleQrLabel)}</h2>
-            <img src="${printImageSrc(qrCode)}" style="max-width:400px;margin:20px auto;" />
+            <h2>${singleQrLabel}</h2>
+            <img src="${qrCode}" style="max-width:400px;margin:20px auto;" />
             <p>Scan to access menu</p>
           </body>
         </html>
@@ -509,7 +508,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                   style={{ background: themeColor }}
                 ><Download className="w-4 h-4" /> Download</button>
                 <button
-                  onClick={() => { const w = window.open(); w.document.write(`<html><head><title>${escapePrintHtml(selectedQR.name)}</title></head><body style="text-align:center;font-family:Arial"><h2>${escapePrintHtml(selectedQR.name)}</h2><p>${escapePrintHtml(selectedQR.capacity)} pax</p><img src="${printImageSrc(qrCodes[selectedQR.id])}" /></body></html>`); w.document.close(); setTimeout(() => w.print(), 250); }}
+                  onClick={() => { const w = window.open(); w.document.write(`<html><head><title>${selectedQR.name}</title></head><body style="text-align:center;font-family:Arial"><h2>${selectedQR.name}</h2><p>${selectedQR.capacity} pax</p><img src="${qrCodes[selectedQR.id]}" /></body></html>`); w.document.close(); setTimeout(() => w.print(), 250); }}
                   className="flex-1 px-3 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 flex items-center gap-2 justify-center"
                   style={{ background: themeColor }}
                 ><Printer className="w-4 h-4" /> Print</button>
