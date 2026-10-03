@@ -6,6 +6,7 @@ import { ChevronRight, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { shopMethod, shopStatusLabel } from '@/lib/shopSelling';
 
 const STATUS_LABEL = {
   pending:   { text: 'New',        cls: 'bg-amber-100 text-amber-700' },
@@ -16,7 +17,8 @@ const STATUS_LABEL = {
   cancelled: { text: 'Cancelled',  cls: 'bg-red-100 text-red-600' },
 };
 
-export default function RecentOrders({ tenantId }) {
+// shop: a free shop's order words (step 15); food: it sells food.
+export default function RecentOrders({ tenantId, shop = false, food = false }) {
   const navigate = useNavigate();
 
   const { data: orders = [] } = useQuery({
@@ -48,7 +50,8 @@ export default function RecentOrders({ tenantId }) {
       ) : (
         <div className="space-y-3">
           {orders.map((order) => {
-            const statusInfo = STATUS_LABEL[order.status] || { text: order.status, cls: 'bg-slate-100 text-slate-600' };
+            const baseInfo = STATUS_LABEL[order.status] || { text: order.status, cls: 'bg-slate-100 text-slate-600' };
+            const statusInfo = shop ? { ...baseInfo, text: shopStatusLabel(order.status, shopMethod(order), food) } : baseInfo;
             return (
               <div
                 key={order.id}

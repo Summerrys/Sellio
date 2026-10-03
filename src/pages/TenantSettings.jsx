@@ -17,7 +17,7 @@ import TourGuide from '@/components/tour/TourGuide';
 import { getSettingsSteps } from '@/components/tour/tourSteps';
 import {
   Building2, Save, Palette, AlertTriangle,
-  Loader2, QrCode, X, RefreshCw, Users
+  Loader2, QrCode, X, RefreshCw, Users, Truck
 } from 'lucide-react';
 import { toast } from 'sonner';
 import BusinessProfileTab from '../components/settings/BusinessProfileTab';
@@ -25,6 +25,7 @@ import UserManagement from './UserManagement';
 import PricingModal from '../components/subscription/PricingModal';
 import { useAppRefreshHandler, useAppReloadGuard } from '@/lib/AppRefreshContext';
 import useSettingsDraft from '@/hooks/useSettingsDraft';
+import SellingSettingsForm from '../components/shop/SellingSettingsForm';
 
 export default function TenantSettings() {
   return (
@@ -34,7 +35,8 @@ export default function TenantSettings() {
   );
 }
 
-function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
+// Also used in a free shop's setup steps (ShopSetup.jsx).
+export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
   const { hasPermission } = useTenant();
   // Payment QR changes follow the "Modify Payments" permission; everyone who
   // can open Settings can still see the QR (view-only).
@@ -244,6 +246,9 @@ function TenantSettingsContent() {
   const [settingsTab, setSettingsTab] = useState('business');
   const { hasPermission: canAccess } = useTenant();
   const canSeeUsersTab = canAccess('staff.view') || canAccess('roles.view');
+  // Free shops (step 15): how they sell, for the owner.
+  const { isOwner } = useTenant();
+  const showSellingTab = tenant?.seller_type === 'individual' && isOwner;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -284,6 +289,16 @@ function TenantSettingsContent() {
           >
             <Building2 className="w-4 h-4" /> Business
           </button>
+          {showSellingTab && (
+          <button
+            data-testid="settings-selling-tab"
+            onClick={() => setSettingsTab('selling')}
+            className="flex-1 h-9 rounded-lg text-[11px] sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5"
+            style={settingsTab === 'selling' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
+          >
+            <Truck className="w-4 h-4" /> Selling
+          </button>
+          )}
           <button
             data-tour="settings-payment-tab"
             onClick={() => setSettingsTab('payment_qr')}
@@ -315,6 +330,11 @@ function TenantSettingsContent() {
         {settingsTab === 'business' && (
           <div className="max-w-2xl mx-auto">
             <BusinessProfileTab tenant={tenant} tenantId={tenantId} refreshVersion={refreshVersion} />
+          </div>
+        )}
+        {settingsTab === 'selling' && showSellingTab && (
+          <div className="max-w-2xl mx-auto">
+            <SellingSettingsForm tenantId={tenantId} currencySymbol={tenant?.currency === 'MYR' ? 'RM ' : '$'} />
           </div>
         )}
         {settingsTab === 'payment_qr' && (

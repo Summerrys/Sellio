@@ -9,6 +9,8 @@ import { isFnBIndustry } from '@/lib/industry';
 import { fetchStorefrontCatalog } from '@/lib/storefrontCatalog';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { toast } from 'sonner';
+import { ShopCheckout, ShopOrderDetails, ShopOrderHistory } from '@/components/shop/ShopStorefront';
+import { shopT } from '@/lib/shopSelling';
 
 // Pure function (no component state) so it can be reused by the initial
 // load, the periodic re-check, and the Realtime handler alike — all it needs
@@ -42,7 +44,7 @@ const STATUS_COLORS = {
 
 function StorefrontInner() {
   const { tenantSlug, tableId } = useParams();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const isDineIn = !!tableId;
   const isPreview = new URLSearchParams(window.location.search).get('preview') === 'true';
   // Set by the staff-facing "Take Orders" flow on the Dashboard, so a staff member
@@ -73,6 +75,10 @@ function StorefrontInner() {
   // Set when the store can't take orders (subscription ended or suspended):
   // the page shows a "Store unavailable" screen instead of the menu.
   const [unavailableStore, setUnavailableStore] = useState(null);
+  // Free shops (step 15): how the shop sells (null for business stores), and the
+  // order just placed (for its collection/delivery details).
+  const [shopSelling, setShopSelling] = useState(null);
+  const [lastOrder, setLastOrder] = useState(null);
 
   const CART_KEY = `sf_cart_${tenantSlug}`;
   const [cart, setCart] = useState(() => {
@@ -134,11 +140,13 @@ function StorefrontInner() {
       if (tenantData.is_available === false) { setUnavailableStore(tenantData); setLoading(false); return; }
       setTenant(tenantData);
       const tenantId = tenantData.id;
-      const [themeRes, storefrontRes, catalog] = await Promise.all([
+      const [themeRes, storefrontRes, catalog, shopRes] = await Promise.all([
         supabase.from('theme_configs').select('*').eq('tenant_id', tenantId).maybeSingle(),
         supabase.from('storefront_configs').select('*').eq('tenant_id', tenantId).maybeSingle(),
         fetchStorefrontCatalog(supabase, tenantId),
+        supabase.rpc('get_shop_selling', { p_tenant_id: tenantId }),
       ]);
+      setShopSelling(shopRes?.error ? null : (shopRes?.data || null));
       setTheme(themeRes.data);
       setStorefrontConfig(storefrontRes.data);
       setCategories(catalog.categories);
@@ -455,13 +463,15 @@ function StorefrontInner() {
     const supabase = await getSupabase();
     const currentSessionOrders = (() => { try { const s = localStorage.getItem(SESSION_ORDERS_KEY); return s ? JSON.parse(s) : []; } catch { return []; } })();
     if (!currentSessionOrders.length) { setOrderHistory([]); return; }
-    const { data } = await supabase.rpc('get_storefront_orders', { p_tenant_id: tenant.id, p_order_ids: currentSessionOrders });
+    const { data } = await supabase.rpc(shopSelling ? 'get_shop_orders' : 'get_storefront_orders', { p_tenant_id: tenant.id, p_order_ids: currentSessionOrders });
     setOrderHistory(data || []);
   };
 
   const checkoutGuard = useRef(false);
-  const handleSubmitOrder = async () => {
+  const handleSubmitOrder = async (shopDetails) => {
     if (checkoutGuard.current || isSubmitting || !cart.length) return;
+    // A free shop's checkout passes how the buyer gets the order (step 15).
+    const shopOrder = shopSelling && shopDetails?.method ? shopDetails : null;
     checkoutGuard.current = true;
     setIsSubmitting(true);
     const savedCartTotal = cartTotal;
@@ -475,20 +485,33 @@ function StorefrontInner() {
     let error = null;
     try {
       const supabase = await getSupabase();
-      order = await submitCheckout(supabase, {
-        p_tenant_id: tenant.id,
-        p_items: savedCart.map(item => ({
-          key: item.key,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          options: item.variant ? String(item.variant).split(', ') : [],
-          notes: item.notes || null,
-        })),
-        p_type: isDineIn ? 'dine_in' : 'takeaway',
-        p_table_id: tableId || null,
-        p_notes: checkoutForm.notes || null,
-        p_customer_id: customerId || null,
-      }, `storefront:${tenant.id}:${tableId || 'takeaway'}`);
+      const items = savedCart.map(item => ({
+        key: item.key,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        options: item.variant ? String(item.variant).split(', ') : [],
+        notes: item.notes || null,
+      }));
+      order = shopOrder
+        ? await submitCheckout(supabase, {
+            p_tenant_id: tenant.id,
+            p_items: items,
+            p_method: shopOrder.method,
+            p_name: shopOrder.name,
+            p_phone: shopOrder.phone,
+            p_address: shopOrder.address,
+            p_date: shopOrder.date,
+            p_notes: shopOrder.notes,
+            p_customer_id: customerId || null,
+          }, `shop:${tenant.id}`, 'place_shop_order')
+        : await submitCheckout(supabase, {
+            p_tenant_id: tenant.id,
+            p_items: items,
+            p_type: isDineIn ? 'dine_in' : 'takeaway',
+            p_table_id: tableId || null,
+            p_notes: checkoutForm.notes || null,
+            p_customer_id: customerId || null,
+          }, `storefront:${tenant.id}:${tableId || 'takeaway'}`);
     } catch (e) {
       error = e;
     }
@@ -499,7 +522,7 @@ function StorefrontInner() {
       const serverTotal = parseFloat(order.total_amount);
       setLastCart(Array.isArray(order.items) ? order.items : savedCart);
       setLastCartTotal(Number.isFinite(serverTotal) ? serverTotal : savedCartTotal);
-      setPlacedOrderNumber(orderNumber); setCart([]);
+      setPlacedOrderNumber(orderNumber); setLastOrder(order); setCart([]);
       try { localStorage.removeItem(CART_KEY); } catch {}
       // Track this order in session
       const updatedSessionOrders = [...sessionOrderIds, order.id];
@@ -779,7 +802,9 @@ function StorefrontInner() {
               <p style={{ fontWeight: 700, fontSize: 17, margin: 0 }}>Order History</p>
               <button onClick={() => setShowOrderHistory(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22, lineHeight: 1 }}>✕</button>
             </div>
-            {orderHistory.length === 0 ? (
+            {shopSelling ? (
+              <ShopOrderHistory orders={orderHistory} sym={sym} lang={lang} food={isFnB} primaryColor={primaryColor} paymentQrUrl={tenant.payment_qr_url} />
+            ) : orderHistory.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0' }}><p style={{ fontSize: 36, margin: '0 0 8px' }}>🍽️</p><p style={{ color: '#94a3b8', fontSize: 14 }}>No orders yet</p></div>
             ) : (
               orderHistory.map(order => {
@@ -843,11 +868,28 @@ function StorefrontInner() {
                   <span style={{ fontWeight: 700, fontSize: 13, color: primaryColor }}>{sym}{(item.price * item.quantity).toFixed(2)}</span>
                 </div>
               ))}
+              {!shopSelling && (
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
                 <span style={{ fontWeight: 700, fontSize: 15 }}>{t('total')}</span>
                 <span style={{ fontWeight: 700, fontSize: 17, color: primaryColor }}>{sym}{cartTotal.toFixed(2)}</span>
               </div>
+              )}
             </div>
+            {shopSelling ? (
+              <ShopCheckout
+                selling={shopSelling}
+                cartTotal={cartTotal}
+                sym={sym}
+                primaryColor={primaryColor}
+                lang={lang}
+                isSubmitting={isSubmitting}
+                isStoreOpen={isStoreOpen}
+                closedText={t('orderingUnavailable')}
+                placeText={t('placeOrder')}
+                placingText={t('placingOrder')}
+                onSubmit={handleSubmitOrder}
+              />
+            ) : (<>
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 4 }}>Notes (optional)</label>
               <textarea
@@ -872,6 +914,7 @@ function StorefrontInner() {
                 {isSubmitting ? t('placingOrder') : `${t('placeOrder')} · ${sym}${cartTotal.toFixed(2)}`}
               </button>
             )}
+            </>)}
           </div>
         </div>
       )}
@@ -928,6 +971,12 @@ function StorefrontInner() {
                 </>
               )}
             </div>
+
+            {shopSelling && lastOrder?.fulfilment && (
+              <div style={{ width: '100%', background: 'white', borderRadius: 16, border: '1px solid #e2e8f0', padding: '14px 16px', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                <ShopOrderDetails order={lastOrder} sym={sym} lang={lang} food={isFnB} sellerPhone={tenant.phone} />
+              </div>
+            )}
 
             {/* Order summary card */}
             <div style={{ width: '100%', background: 'white', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
@@ -1027,8 +1076,8 @@ function StorefrontInner() {
                   </svg>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{t('payAtCounter')}</p>
-                  <p style={{ margin: 0, fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>{t('payAtCounterDesc')}</p>
+                  <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{shopSelling ? shopT(lang, 'notPaid') : t('payAtCounter')}</p>
+                  <p style={{ margin: 0, fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>{shopSelling ? shopT(lang, 'payLater') : t('payAtCounterDesc')}</p>
                 </div>
               </div>
             )}

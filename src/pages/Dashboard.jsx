@@ -21,6 +21,8 @@ import { useProductTour } from '@/hooks/useProductTour';
 import TourGuide from '@/components/tour/TourGuide';
 import { getDashboardSteps } from '@/components/tour/tourSteps';
 import { itemWords } from '@/lib/planFeatures';
+import ShopSetupCard from '@/components/shop/ShopSetupCard';
+import { isFnBIndustry } from '@/lib/industry';
 
 const featureCards = [
   { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view', color: 'bg-blue-50 text-blue-600 border-blue-100' },
@@ -352,6 +354,9 @@ export default function Dashboard() {
         />
       )}
 
+      {/* Free shop: setup steps not finished yet (step 15) */}
+      {tenant?.seller_type === 'individual' && <ShopSetupCard />}
+
       {/* Stats Row — 4 compact cards always in a row */}
       <div data-tour="dashboard-stats" className="grid grid-cols-4 gap-2">
         <RequirePermission permission="orders.view" silent>
@@ -427,7 +432,7 @@ export default function Dashboard() {
 
       {/* Recent Orders */}
       <RequirePermission permission="orders.view" silent>
-        <RecentOrders tenantId={tenantId} />
+        <RecentOrders tenantId={tenantId} shop={tenant?.seller_type === 'individual'} food={isFnBIndustry(tenant?.industry)} />
       </RequirePermission>
 
       {/* Revenue Chart */}

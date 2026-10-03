@@ -119,7 +119,9 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
       const taxRate = oldSubtotal > 0 ? oldTax / oldSubtotal : 0;
       const newTax = Math.round(subtotal * taxRate * 100) / 100;
       const discount = parseFloat(order.discount_amount) || 0;
-      const newTotal = Math.max(subtotal + newTax - discount, 0);
+      // A free-shop order keeps its delivery charge (step 15); other orders have none.
+      const deliveryCharge = parseFloat(order.fulfilment?.fee) || 0;
+      const newTotal = Math.max(subtotal + newTax - discount, 0) + deliveryCharge;
 
       const { error: orderError } = await supabase.from('orders').update({
         items, notes: notes.trim() || null,

@@ -364,6 +364,9 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
           price: parseFloat(formData.price) || 0,
           cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
           compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
+          // Free shops (step 15): a listing with no category is saved without one (an
+          // empty category fails the database's category check). Business stores unchanged.
+          ...(tenant?.seller_type === 'individual' && !formData.category_id ? { category_id: null } : {}),
           // Do NOT include sku — let DB trigger generate it
         };
         const { data: inserted, error } = await supabase.from('products').insert(payload).select('id, sku, tenant_id, stock_quantity, low_stock_threshold').single();

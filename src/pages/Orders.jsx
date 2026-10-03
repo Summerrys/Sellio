@@ -24,6 +24,8 @@ import { toast } from 'sonner';
 import { createPageUrl } from '../utils';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
+import ShopOrderInfo, { ShopMethodBadge } from '@/components/shop/ShopOrderInfo';
+import { isShopTenant, shopMethod, shopNextAction, shopStatusLabel, shopStatusTabs } from '@/lib/shopSelling';
 
 const STATUS_TABS = [
   { value: 'all',       label: 'All' },
@@ -108,7 +110,10 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
   const [showEditOrder, setShowEditOrder] = useState(false);
   const [showPaymentQR, setShowPaymentQR] = useState(false);
   const isFinal = order.status === 'completed' || order.status === 'cancelled';
-  const action = STATUS_NEXT[order.status];
+  // Free shops (step 15): steps and words for collection or delivery.
+  const isShop = isShopTenant(tenant);
+  const shopFood = isFnBIndustry(tenant?.industry);
+  const action = isShop ? shopNextAction(order.status, shopMethod(order), shopFood) : STATUS_NEXT[order.status];
   const accent = STATUS_ACCENT[order.status] || STATUS_ACCENT.completed;
   const elapsed = formatDistanceToNow(new Date(order.created_date || order.created_at), { addSuffix: true });
   const customerName = order.customer_name && order.customer_name.toLowerCase() !== 'nil' ? order.customer_name : null;
@@ -187,7 +192,11 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
           <div className="flex items-start justify-between gap-2 mb-2">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-slate-900 text-sm">#{order.order_number || order.id?.slice(-6)}</span>
-              {order.table_name && (
+              {isShop && <ShopMethodBadge order={order} />}
+              {isShop && order.payment_status === 'paid' && (
+                <span className="text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">Paid</span>
+              )}
+              {!isShop && order.table_name && (
                 <span className="text-xs bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-medium">
                   🪑 {order.table_name}
                 </span>
@@ -204,7 +213,9 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
           </div>
 
           {/* Customer */}
-          {customerName && (
+          {isShop ? (
+            <ShopOrderInfo order={order} currency={currency} shopName={merchantName} />
+          ) : customerName && (
             <p className="text-xs text-slate-500 mb-2">{customerName}</p>
           )}
 
@@ -237,7 +248,10 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-bold text-slate-900">{currency} {parseFloat(order.total_amount || 0).toFixed(2)}</span>
             {order.status === 'completed' && (
-              <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">✓ Completed</span>
+              <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">✓ {isShop ? shopStatusLabel('completed', shopMethod(order), shopFood) : 'Completed'}</span>
+            )}
+            {isShop && order.status === 'cancelled' && (
+              <span className="text-xs font-semibold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">Cancelled</span>
             )}
           </div>
 
@@ -246,7 +260,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
               previous mix of a sometimes-column wrapper plus a separate full-width
               Cancel block underneath. */}
           <div className="flex items-center gap-2">
-            {canEditOrders && order.payment_status !== 'paid' && (order.status === 'completed' || order.status === 'ready') && (
+            {canEditOrders && order.payment_status !== 'paid' && (isShop ? order.status !== 'cancelled' : (order.status === 'completed' || order.status === 'ready')) && (
               paymentQrUrl ? (
                 // Frontline staff workflow: show the QR, let the customer pay, confirm
                 // from inside that same modal — rather than a blind "Mark as Paid"
@@ -261,7 +275,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 </button>
               ) : (
                 <button
-                  onClick={(e) => { e.stopPropagation(); onMarkPaid(order); }}
+                  onClick={(e) => { e.stopPropagation(); onMarkPaid(order, isShop); }}
                   className="flex-1 h-11 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
                   style={{ border: '1.5px solid #16a34a', color: '#16a34a', background: '#f0fdf4' }}
                   onMouseEnter={e => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.color = '#fff'; }}
@@ -291,6 +305,15 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
               >
                 <Printer className="w-4 h-4" /> Order
+              </button>
+            )}
+            {isShop && order.status === 'pending' && canEditOrders && canCancelOrders && (
+              <button
+                onClick={(e) => { e.stopPropagation(); if (window.confirm('Decline this order? The buyer will see it as cancelled.')) onStatusUpdate(order.id, 'cancelled'); }}
+                className="h-11 px-3 flex-shrink-0 rounded-lg text-sm font-semibold border border-red-200 text-red-600 bg-white"
+                data-testid="shop-decline"
+              >
+                Decline
               </button>
             )}
             {action && canEditOrders && (
@@ -454,7 +477,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
               style={{ width: '100%', maxWidth: 240, aspectRatio: '1', objectFit: 'contain', borderRadius: 12, border: '1px solid #f1f5f9', margin: '0 auto 20px' }}
             />
             <button
-              onClick={() => { onMarkPaid(order); setShowPaymentQR(false); }}
+              onClick={() => { onMarkPaid(order, isShop); setShowPaymentQR(false); }}
               style={{ width: '100%', padding: '13px', borderRadius: 12, border: 'none', background: '#16a34a', color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}
             >
               💳 Mark as Paid
@@ -535,6 +558,8 @@ export default function Orders() {
   const alertIntervalRef = useRef(60);
 
   const isFnB = isFnBIndustry(tenant?.industry);
+  const isShop = isShopTenant(tenant);
+  const statusTabs = isShop ? shopStatusTabs(isFnB) : STATUS_TABS;
   const currency = tenant?.settings?.currency || tenant?.currency || 'SGD';
   const canViewOrders = hasPermission?.('orders.view');
 
@@ -712,11 +737,12 @@ export default function Orders() {
     toast.success('Order updated');
   };
 
-  const handleMarkPaid = async (order) => {
+  const handleMarkPaid = async (order, keepStep = false) => {
     const supabase = await getSupabase();
+    // Free shops: paying doesn't finish the order (it still has to be collected or delivered).
     const { error: paymentError } = await supabase.from('orders').update({
       payment_status: 'paid',
-      status: 'completed',
+      ...(keepStep ? {} : { status: 'completed' }),
       updated_date: new Date().toISOString(),
     }).eq('id', order.id).eq('tenant_id', tenantId);
     if (paymentError) { toast.error('Could not mark this order as paid'); return; }
@@ -737,7 +763,7 @@ export default function Orders() {
     }
 
     setOrders(prev => prev.map(o =>
-      o.id === order.id ? { ...o, payment_status: 'paid', status: 'completed' } : o
+      o.id === order.id ? { ...o, payment_status: 'paid', ...(keepStep ? {} : { status: 'completed' }) } : o
     ));
     toast.success('Marked as paid ✓');
   };
@@ -753,6 +779,7 @@ export default function Orders() {
           (o.order_number || '').toLowerCase().includes(q) ||
           (o.table_name || '').toLowerCase().includes(q) ||
           (o.customer_name || '').toLowerCase().includes(q) ||
+          (isShop && (o.customer_phone || '').toLowerCase().includes(q)) ||
           (o.items || []).some(i => (i.name || i.product_name || '').toLowerCase().includes(q))
         );
       })
@@ -760,6 +787,25 @@ export default function Orders() {
   const countFor = (status) => orders.filter(o => o.status === status).length;
 
   const handleDownload = () => {
+    if (isShop) {
+      const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      const shopRows = orders.map(o => [
+        o.order_number || '', shopStatusLabel(o.status, shopMethod(o), isFnB), shopMethod(o) === 'delivery' ? 'Delivery' : 'Self-collect',
+        o.fulfilment?.date || '', cell(o.customer_name), cell(o.customer_phone), cell(o.fulfilment?.address),
+        cell((o.items || []).map(i => `${i.quantity}x ${i.name || i.product_name}`).join(', ')),
+        (Number(o.fulfilment?.fee) || 0).toFixed(2), parseFloat(o.total_amount || 0).toFixed(2),
+        o.payment_status === 'paid' ? 'paid' : 'unpaid', o.created_date || '',
+      ].join(','));
+      const shopCsv = '\uFEFF' + ['order_number,status,method,date,buyer,mobile,address,items,delivery_charge,total_amount,payment,created_date', ...shopRows].join('\n');
+      const shopBlob = new Blob([shopCsv], { type: 'text/csv;charset=utf-8;' });
+      const shopUrl = URL.createObjectURL(shopBlob);
+      const link = document.createElement('a');
+      link.href = shopUrl;
+      link.download = `orders_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      URL.revokeObjectURL(shopUrl);
+      return;
+    }
     const rows = orders.map(o => {
       const itemsStr = (o.items || []).map(i => `${i.quantity}x ${i.name || i.product_name}`).join(', ');
       return [
@@ -786,7 +832,12 @@ export default function Orders() {
   const preparingCount = countFor('preparing');
   const readyCount     = countFor('ready');
 
-  const STAT_CARDS = [
+  const STAT_CARDS = isShop ? [
+    { label: 'New',       count: pendingCount,   status: 'pending',   bg: 'bg-amber-50',  border: 'border-amber-200',  activeBorder: '#f59e0b', text: 'text-amber-900',  sub: 'text-amber-700' },
+    { label: 'Accepted',  count: confirmCount,   status: 'confirmed', bg: 'bg-blue-50',   border: 'border-blue-200',   activeBorder: '#3b82f6', text: 'text-blue-900',   sub: 'text-blue-700' },
+    { label: isFnB ? 'Preparing' : 'Packing', count: preparingCount, status: 'preparing', bg: 'bg-purple-50', border: 'border-purple-200', activeBorder: '#8b5cf6', text: 'text-purple-900', sub: 'text-purple-700' },
+    { label: 'Ready / Out', count: readyCount,   status: 'ready',     bg: 'bg-green-50',  border: 'border-green-200',  activeBorder: '#10b981', text: 'text-green-900',  sub: 'text-green-700' },
+  ] : [
     { label: 'New',       count: pendingCount,   status: 'pending',   bg: 'bg-amber-50',  border: 'border-amber-200',  activeBorder: '#f59e0b', text: 'text-amber-900',  sub: 'text-amber-700' },
     { label: 'Confirmed', count: confirmCount,   status: 'confirmed', bg: 'bg-blue-50',   border: 'border-blue-200',   activeBorder: '#3b82f6', text: 'text-blue-900',   sub: 'text-blue-700' },
     { label: 'Preparing', count: preparingCount, status: 'preparing', bg: 'bg-purple-50', border: 'border-purple-200', activeBorder: '#8b5cf6', text: 'text-purple-900', sub: 'text-purple-700' },
@@ -855,7 +906,7 @@ export default function Orders() {
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search orders, table, items..."
+                placeholder={isShop ? 'Search orders, buyers, items...' : 'Search orders, table, items...'}
                 className="w-full pl-9 pr-3 h-9 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2"
                 style={{ '--tw-ring-color': 'rgba(var(--color-primary),0.3)' }}
               />
@@ -870,7 +921,7 @@ export default function Orders() {
           </div>
 
           {/* Table Call Alerts */}
-          <TableCallAlerts tenantId={tenantId} />
+          {!isShop && <TableCallAlerts tenantId={tenantId} />}
 
           {/* Stats — 4 clickable cards */}
           <div data-tour="order-status-cards" className="grid grid-cols-4 gap-2">
@@ -892,7 +943,7 @@ export default function Orders() {
 
           {/* Status tabs */}
           <div data-tour="order-tabs" className="flex w-full gap-1">
-            {STATUS_TABS.map(tab => {
+            {statusTabs.map(tab => {
               const count = tab.value === 'all' ? orders.length : countFor(tab.value);
               const isActive = activeTab === tab.value;
               return (
@@ -924,7 +975,7 @@ export default function Orders() {
             <div className="text-center py-12">
               <ClipboardList className="w-16 h-16 text-slate-300 mx-auto mb-4" />
               <p className="text-slate-500">
-                {searchQuery ? 'No orders match your search' : `No ${activeTab !== 'all' ? `${STATUS_TABS.find(t => t.value === activeTab)?.label} ` : ''}orders yet`}
+                {searchQuery ? 'No orders match your search' : `No ${activeTab !== 'all' ? `${statusTabs.find(t => t.value === activeTab)?.label} ` : ''}orders yet`}
               </p>
               {/* Tour needs a card to point at even with zero real orders yet */}
               {ordersTour.eligible && (

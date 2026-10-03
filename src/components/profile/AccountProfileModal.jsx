@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
-import AccountDeletionForm from './AccountDeletionForm';
+import AccountDeletionRequest from './AccountDeletionRequest';
 import { useTenant } from '@/components/tenant/TenantContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Input } from '@/components/ui/input';
@@ -54,7 +54,6 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
   const [confirmToggle, setConfirmToggle] = useState(null); // 'email' | 'orders' | null
 
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
-  const [deletingAccount, setDeletingAccount] = useState(false);
   const [isOpeningBilling, setIsOpeningBilling] = useState(false);
 
   // Detect if user is email/password (not OAuth)
@@ -468,15 +467,15 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
         </div>
       </div>
 
-      <AlertDialog open={showDeleteAlert} onOpenChange={value => { if (!deletingAccount) setShowDeleteAlert(value); }}>
+      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
         <AlertDialogContent className="max-h-[90dvh] overflow-y-auto">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete your Sellio account?</AlertDialogTitle>
-            <AlertDialogDescription>Confirm the account below before proceeding.</AlertDialogDescription>
+            <AlertDialogTitle>Delete your Sellio account</AlertDialogTitle>
+            <AlertDialogDescription>Account deletion is done on request.</AlertDialogDescription>
           </AlertDialogHeader>
-          <AccountDeletionForm expectedEmail={user?.email} onBusyChange={setDeletingAccount} onCompleted={() => window.location.assign('/delete-account')} />
+          <AccountDeletionRequest email={user?.email} shopName={tenant?.name?.trim() || ''} />
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deletingAccount}>Close</AlertDialogCancel>
+            <AlertDialogCancel>Close</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

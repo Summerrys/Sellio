@@ -133,8 +133,9 @@ export default function Account() {
       const { error } = await supabase.rpc('create_personal_store', { p_name: name, p_sells_food: sellsFood });
       if (error) throw error;
       await rememberProfile(supabase, status.email);
-      // Full reload so the workspace loads the new shop from scratch (as after onboarding).
-      window.location.href = '/Dashboard';
+      // Full reload so the workspace loads the new shop from scratch (as after onboarding),
+      // straight into the shop's setup steps (step 15).
+      window.location.href = '/ShopSetup';
     } catch (err) {
       toast.error(accountErrorMessage(err));
       setCreating(false);
