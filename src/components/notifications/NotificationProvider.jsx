@@ -1,50 +1,49 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import db from '@/lib/db';
+import { getSupabase } from '@/lib/supabaseClient';
+import { useTenant } from '@/components/tenant/TenantContext';
 import { toast } from 'sonner';
 
 const NotificationContext = createContext();
 
 export function NotificationProvider({ children }) {
   const queryClient = useQueryClient();
-  const [user, setUser] = useState(null);
+  // Only for a real sign-in (the Supabase session, looked up by TenantProvider).
+  // The saved profile cookie outlives some sign-outs, and a signed-out visitor
+  // can't read notifications: the login page showed "permission denied for
+  // table notifications" after a pull to refresh.
+  const { user } = useTenant();
+  const email = user?.email || null;
   const audioRef = useRef(null);
-
-  useEffect(() => {
-    loadUser();
-  }, []);
-
-  const loadUser = async () => {
-    try {
-      const currentUser = await db.auth.me();
-      setUser(currentUser);
-    } catch (error) {
-      console.error('Failed to load user:', error);
-    }
-  };
 
   // Fetch notifications
   const { data: notifications = [] } = useQuery({
-    queryKey: ['notifications', user?.email],
+    queryKey: ['notifications', email],
     queryFn: async () => {
-      if (!user) return [];
+      if (!email) return [];
+      // The session can also end while a page is open (signed out elsewhere).
+      const supabase = await getSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return [];
       return db.entities.Notification.filter(
-        { user_email: user.email },
+        { user_email: email },
         '-created_date',
         50
       );
     },
-    enabled: !!user,
+    enabled: !!email,
     refetchInterval: 30000, // Backup polling every 30s
   });
 
   // Real-time subscription
   useEffect(() => {
-    if (!user) return;
+    if (!email) return;
 
+    let cancelled = false;
     let unsubscribeFn;
     db.entities.Notification.subscribe((event) => {
-      if (event.type === 'create' && event.data?.user_email === user.email) {
+      if (event.type === 'create' && event.data?.user_email === email) {
         queryClient.invalidateQueries({ queryKey: ['notifications'] });
         toast.info(event.data.title, {
           description: event.data.message,
@@ -54,10 +53,10 @@ export function NotificationProvider({ children }) {
           playNotificationSound();
         }
       }
-    }).then(fn => { unsubscribeFn = fn; });
+    }).then(fn => { if (cancelled) fn(); else unsubscribeFn = fn; });
 
-    return () => { if (unsubscribeFn) unsubscribeFn(); };
-  }, [user, queryClient]);
+    return () => { cancelled = true; if (unsubscribeFn) unsubscribeFn(); };
+  }, [email, queryClient]);
 
   const playNotificationSound = () => {
     if (audioRef.current) {
