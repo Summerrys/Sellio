@@ -19,6 +19,8 @@ import AppRefreshProvider from '@/components/ui-custom/AppRefreshProvider';
 import { AppUserProvider, useAppUser } from '@/lib/AppUserContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import UserManagement from './pages/UserManagement';
+import MobileOAuthReturn from '@/components/auth/MobileOAuthReturn';
+import { isMobileOAuthCallback } from '@/lib/mobileOAuth';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -144,6 +146,9 @@ const AuthenticatedApp = () => {
 
 
 function App() {
+  // The external-browser callback must not initialize the normal auth/profile
+  // providers or consume the code before it reaches the originating WebView.
+  if (isMobileOAuthCallback(window.location.href)) return <MobileOAuthReturn />;
   return (
     <AppUserProvider>
     <AuthProvider>
