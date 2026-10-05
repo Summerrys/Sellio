@@ -64,6 +64,7 @@ const loaded = [];
 const callbackModule = await load('src/components/auth/MobileOAuthReturn.jsx'); loaded.push(callbackModule.local);
 const googleModule = await load('src/lib/googleSignIn.js'); loaded.push(googleModule.local);
 const authModule = await load('src/pages/Auth.jsx'); loaded.push(authModule.local);
+const splashModule = await load('src/pages/Splash.jsx'); loaded.push(splashModule.local);
 const mount = async Component => {
   const container = document.createElement('div'); document.body.appendChild(container);
   const root = createRoot(container);
@@ -152,6 +153,41 @@ try {
   assert.match(location.assigned, /^https:\/\/oauth.example.invalid\/auth\/v1\/authorize/);
   assert.equal(JSON.parse(win.localStorage.getItem('sellio-mobile-google-pending')).inviteToken, 'paid-invite');
   passed('Android sign-in requests PKCE and launches the wrapper external flow while retaining invite context');
+
+  reset();
+  win.ReactNativeWebView = { postMessage() {} };
+  let finishSessionCheck;
+  globalThis.appClient = { auth: {
+    getSession: () => new Promise(resolve => { finishSessionCheck = resolve; }),
+  } };
+  const pending = await mount(authModule.module.default);
+  assert.ok(pending.container.querySelector('[data-sellio-startup]'));
+  assert.ok(pending.container.querySelector('img[alt="Your business, beautifully online."]'));
+  assert.equal(pending.container.querySelector('input[type="password"]'), null);
+  await act(async () => { finishSessionCheck({ data: { session: null } }); });
+  assert.equal(pending.container.querySelector('[data-sellio-startup]'), null);
+  assert.ok(pending.container.querySelector('input[type="password"]'));
+  await pending.close();
+  passed('Startup branding stays visible while session recovery is pending and yields directly to the login form');
+
+  const { MemoryRouter, Routes, Route, useLocation } = await import('react-router-dom');
+  function Destination() {
+    const route = useLocation();
+    return React.createElement('output', null, route.pathname + route.search + route.hash);
+  }
+  function LegacySplashEntry() {
+    return React.createElement(MemoryRouter, {
+      initialEntries: ['/Splash?type=recovery&token=invite-fixture#recovery-fixture'],
+      future: { v7_startTransition: true, v7_relativeSplatPath: true },
+    }, React.createElement(Routes, null,
+      React.createElement(Route, { path: '/Splash', element: React.createElement(splashModule.module.default) }),
+      React.createElement(Route, { path: '/Auth', element: React.createElement(Destination) }),
+    ));
+  }
+  const legacy = await mount(LegacySplashEntry);
+  assert.equal(legacy.container.textContent, '/Auth?type=recovery&token=invite-fixture#recovery-fixture');
+  await legacy.close();
+  passed('Existing Splash links immediately start Auth and preserve recovery and invite parameters');
 
   for (const onboarded of [true, false]) {
     reset(); win.ReactNativeWebView = { postMessage() {} };
