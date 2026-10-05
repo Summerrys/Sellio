@@ -32,7 +32,7 @@ export default function MobileOAuthReturn() {
         try {
           const destination = await completeMobileGoogleAuth({
             browser: window, callback,
-            oauthClient: getMobileOAuthClient(), appClient: await getSupabase(),
+            oauthClient: getMobileOAuthClient(), getAppClient: getSupabase,
           });
           if (alive) window.location.replace(destination);
         } catch (failure) {
