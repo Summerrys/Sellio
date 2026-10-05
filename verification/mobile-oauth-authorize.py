@@ -49,4 +49,4 @@ for origin in ['https://sellio.apptelier.sg', 'https://selliosg.base44.app']:
     }
     print(json.dumps(result))
     if status != 302 or target.hostname != 'accounts.google.com' or not preserved:
-        print('Callback acceptance cannot be certified by this cancellation probe; review redirect allowlist or test a successful login.')
+        raise SystemExit('Callback acceptance cannot be certified by this cancellation probe; review redirect allowlist or test a successful login.')
