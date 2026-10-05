@@ -124,13 +124,16 @@ export function buildAndroidReturnIntent(callback) {
 export function hasMobileGoogleCompletion(browser = window) {
   try {
     const value = JSON.parse(browser.sessionStorage.getItem(COMPLETE_KEY));
-    return value?.origin === browser.location.origin && Date.now() - value.createdAt < 30000;
+    const age = Date.now() - value?.createdAt;
+    return value?.origin === browser.location.origin && age >= 0 && age < 30000;
   } catch { return false; }
 }
 
-const exchanges = new Map();
+const exchangesByStorage = new WeakMap();
 export function completeMobileGoogleAuth({ browser, callback, oauthClient, appClient }) {
   const key = callback.attempt + ':' + callback.code;
+  let exchanges = exchangesByStorage.get(browser.localStorage);
+  if (!exchanges) { exchanges = new Map(); exchangesByStorage.set(browser.localStorage, exchanges); }
   if (exchanges.has(key)) return exchanges.get(key);
   const task = (async () => {
     const pending = readPendingMobileAuth(browser.localStorage);
@@ -165,6 +168,7 @@ export function completeMobileGoogleAuth({ browser, callback, oauthClient, appCl
       throw error;
     }
   })();
-  exchanges.set(key, task);
-  return task;
+  const tracked = task.finally(() => exchanges.delete(key));
+  exchanges.set(key, tracked);
+  return tracked;
 }
