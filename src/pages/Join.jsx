@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { completeAuthNavigation } from '@/lib/authNavigation';
+import { startGoogleSignIn } from '@/lib/googleSignIn';
+import { clearMobileAuth, isNativeAndroid } from '@/lib/mobileOAuth';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import {
   PHONE_COUNTRIES, JOIN_LINK_TYPES, accountErrorMessage, appBaseUrl, fullPhone, isEmail,
@@ -169,16 +171,24 @@ export default function Join() {
     }
   };
 
+  useEffect(() => {
+    if (!googleLoading || !isNativeAndroid()) return;
+    let wasHidden = document.visibilityState === 'hidden';
+    const resume = () => {
+      if (document.visibilityState === 'hidden') wasHidden = true;
+      else if (wasHidden) setGoogleLoading(false);
+    };
+    document.addEventListener('visibilitychange', resume);
+    return () => document.removeEventListener('visibilitychange', resume);
+  }, [googleLoading]);
+
   const continueWithGoogle = async () => {
     setGoogleLoading(true);
     try {
-      const supabase = await getSupabase();
-      // Same Google handling (and gate) as the login page; join=1 lets a new account through.
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: `${appBaseUrl(window.location)}/Auth?join=1` },
+      // Preserve the existing free-account onboarding after the Google return.
+      await startGoogleSignIn({
+        redirectTo: `${appBaseUrl(window.location)}/Auth?join=1`,
       });
-      if (error) throw error;
     } catch (err) {
       toast.error(accountErrorMessage(err));
       setGoogleLoading(false);
@@ -275,6 +285,12 @@ export default function Join() {
                 {googleLoading ? <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" /> : <GoogleIcon />}
                 {googleLoading ? 'Redirecting…' : 'Continue with Google'}
               </button>
+              {googleLoading && isNativeAndroid() && (
+                <button type="button" className="w-full min-h-11 mt-2 text-sm text-orange-700 underline"
+                  onClick={() => { clearMobileAuth(window.localStorage); setGoogleLoading(false); }}>
+                  Cancel Google sign-in
+                </button>
+              )}
               <p className="mt-5 text-center text-sm text-slate-500">
                 Already have an account?{' '}
                 <a href="/Auth" className="font-semibold text-orange-500 hover:text-orange-600">Log in</a>
