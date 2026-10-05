@@ -1,5 +1,6 @@
 import { getSupabase, getMobileOAuthClient } from './supabaseClient';
 import { createMobileAuthAttempt, clearMobileAuth, isNativeAndroid } from './mobileOAuth';
+import { googleRelayUrl } from './googleRelay';
 
 // Use the wrapper's observed external-navigation behaviour. Do not invent a
 // native bridge command or embed Google's authorization page in the WebView.
@@ -28,7 +29,9 @@ export async function startGoogleSignIn(options, browser = window) {
         url.searchParams.get('code_challenge_method') !== 's256') {
       throw new Error('Secure Google sign-in could not be started. Please try again.');
     }
-    browser.location.assign(url.href);
+    // Through sellio.apptelier.sg/google-signin, so the app's "Open External Link?"
+    // box names Sellio; that page forwards to this same address (lib/googleRelay.js).
+    browser.location.assign(googleRelayUrl(url.href));
     return { mobile: true };
   } catch (error) {
     clearMobileAuth(browser.localStorage);

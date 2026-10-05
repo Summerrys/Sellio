@@ -3,11 +3,17 @@
  * BrandedSpinner — inline button spinner
  * SkeletonCard — shimmer skeleton placeholder
  */
+import { useState, useEffect } from 'react';
+import { holdLaunch } from '@/lib/appLaunch';
 
 const CSS = `
 @keyframes sellio-bounce {
   0%, 60%, 100% { transform: translateY(0); }
   30% { transform: translateY(-8px); }
+}
+@keyframes sellio-pulse-logo {
+  0%, 100% { transform: scale(1.0); }
+  50% { transform: scale(1.05); }
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
@@ -19,9 +25,7 @@ const CSS = `
 .sellio-dot-1 { animation: sellio-bounce 1.2s ease-in-out infinite 0ms; background: #fb923c; }
 .sellio-dot-2 { animation: sellio-bounce 1.2s ease-in-out infinite 200ms; background: #e0449a; }
 .sellio-dot-3 { animation: sellio-bounce 1.2s ease-in-out infinite 400ms; background: #8b2fc9; }
-@media (prefers-reduced-motion: reduce) {
-  .sellio-dot-1, .sellio-dot-2, .sellio-dot-3 { animation: none; }
-}
+.sellio-logo-pulse { animation: sellio-pulse-logo 1.5s ease-in-out infinite; }
 .sellio-shimmer {
   background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
   background-size: 200% 100%;
@@ -39,60 +43,55 @@ function injectCSS() {
 }
 
 // ── Full-screen app loading screen ──────────────────────────────────────────
+// While the Android app starts, the Sellio splash covers this and stays up as long
+// as a loader is showing (lib/appLaunch.js); websites see this loader as before.
 export default function AppLoader({ visible = true }) {
   injectCSS();
-  if (!visible) return null;
+  const [show, setShow] = useState(false);
+
+  useEffect(() => (visible ? holdLaunch() : undefined), [visible]);
+
+  useEffect(() => {
+    if (visible) {
+      const t = setTimeout(() => setShow(true), 30);
+      return () => clearTimeout(t);
+    } else {
+      setShow(false);
+    }
+  }, [visible]);
 
   return (
     <div
       role="status"
       aria-label="Loading Sellio"
-      data-sellio-startup
       style={{
         position: 'fixed', inset: 0,
         background: '#ffffff',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        overflow: 'hidden', zIndex: 9999,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        zIndex: 9999,
+        opacity: show ? 1 : 0,
+        transition: 'opacity 0.3s ease',
+        pointerEvents: visible ? 'auto' : 'none',
       }}
     >
-      <div aria-hidden="true" style={{
-        position: 'absolute', width: 480, height: 480, top: -80, left: -100,
-        borderRadius: '50%', filter: 'blur(64px)', pointerEvents: 'none',
-        background: 'radial-gradient(circle, rgba(254,120,36,0.08) 0%, transparent 70%)',
-      }} />
-      <div aria-hidden="true" style={{
-        position: 'absolute', width: 400, height: 400, bottom: -60, right: -80,
-        borderRadius: '50%', filter: 'blur(64px)', pointerEvents: 'none',
-        background: 'radial-gradient(circle, rgba(254,120,36,0.06) 0%, transparent 70%)',
-      }} />
-      <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        width: '100%', padding: '0 32px', boxSizing: 'border-box',
-        position: 'relative',
-      }}>
-        <img
-          src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png"
-          alt="Sellio"
-          style={{
-            height: 'clamp(100px, 25dvh, 200px)', maxWidth: '100%',
-            objectFit: 'contain', marginBottom: 40, flexShrink: 0,
-          }}
-        />
-        {/* Outlined lettering preserves the splash at every Android font size. */}
-        <img
-          src="/branding/sellio-splash-tagline.svg"
-          alt="Your business, beautifully online."
-          style={{
-            display: 'block', width: 256.98, maxWidth: '100%', height: 'auto',
-            aspectRatio: '256.98 / 86.5', marginBottom: 48, flexShrink: 0,
-          }}
-        />
-        <div aria-hidden="true" style={{ display: 'flex', gap: 8 }}>
-          <span className="sellio-dot-1" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
-          <span className="sellio-dot-2" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
-          <span className="sellio-dot-3" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
-        </div>
+      {/* Logo */}
+      <img
+        src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png"
+        alt="Sellio"
+        className="sellio-logo-pulse"
+        style={{ width: 80, objectFit: 'contain', marginBottom: 24 }}
+      />
+
+      {/* Bouncing dots */}
+      <div style={{ display: 'flex', gap: 7, marginBottom: 16 }}>
+        <span className="sellio-dot-1" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
+        <span className="sellio-dot-2" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
+        <span className="sellio-dot-3" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
       </div>
+
+      {/* Text */}
+      <p style={{ color: '#9ca3af', fontSize: 13, margin: 0 }}>Loading...</p>
     </div>
   );
 }

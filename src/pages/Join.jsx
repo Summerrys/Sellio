@@ -7,6 +7,7 @@ import { completeAuthNavigation } from '@/lib/authNavigation';
 import { startGoogleSignIn } from '@/lib/googleSignIn';
 import { clearMobileAuth, isNativeAndroid } from '@/lib/mobileOAuth';
 import AppLoader from '@/components/ui-custom/AppLoader';
+import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
 import {
   PHONE_COUNTRIES, JOIN_LINK_TYPES, accountErrorMessage, appBaseUrl, fullPhone, isEmail,
   isStaffLoginEmail, nextStepFor, readEmailLink,
@@ -285,6 +286,7 @@ export default function Join() {
                 {googleLoading ? <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" /> : <GoogleIcon />}
                 {googleLoading ? 'Redirecting…' : 'Continue with Google'}
               </button>
+              <GoogleBrowserHint />
               {googleLoading && isNativeAndroid() && (
                 <button type="button" className="w-full min-h-11 mt-2 text-sm text-orange-700 underline"
                   onClick={() => { clearMobileAuth(window.localStorage); setGoogleLoading(false); }}>

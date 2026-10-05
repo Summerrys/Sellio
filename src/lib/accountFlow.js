@@ -35,6 +35,15 @@ export function appBaseUrl(location) {
   return 'https://sellio.apptelier.sg';
 }
 
+// Links a shop shares with its customers (store link, WhatsApp, QR code). The Android
+// app runs on selliosg.base44.app, but customers should always see Sellio's own
+// address. Test hosts keep their own address so links can be tried there.
+export const SELLIO_SITE = 'https://sellio.apptelier.sg';
+export function publicSiteUrl(location) {
+  if (location.hostname === 'selliosg.base44.app') return SELLIO_SITE;
+  return appBaseUrl(location);
+}
+
 // What an emailed link left in the address bar:
 //   ?token_hash=…&type=magiclink   (email templates that link straight to Sellio)
 //   #access_token=…                (links that go through Supabase first)

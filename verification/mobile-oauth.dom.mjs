@@ -150,9 +150,14 @@ try {
   assert.equal(new URL(nativeRequest.options.redirectTo).searchParams.get(CALLBACK_PARAM), '1');
   assert.equal(new URL(nativeRequest.options.redirectTo).searchParams.has('token'), false);
   assert.equal(globalThis.clientReads, 0);
-  assert.match(location.assigned, /^https:\/\/oauth.example.invalid\/auth\/v1\/authorize/);
+  // Opens via Sellio's own relay page (the app's "Open External Link?" box names
+  // sellio.apptelier.sg), which forwards to exactly this authorize address.
+  const relay = new URL(location.assigned);
+  assert.equal(relay.origin + relay.pathname, 'https://sellio.apptelier.sg/google-signin');
+  assert.match(relay.searchParams.get('to'), /^https:\/\/oauth.example.invalid\/auth\/v1\/authorize\?/);
+  assert.equal(new URL(relay.searchParams.get('to')).searchParams.get('code_challenge'), 'fixture-S256');
   assert.equal(JSON.parse(win.localStorage.getItem('sellio-mobile-google-pending')).inviteToken, 'paid-invite');
-  passed('Android sign-in requests PKCE and launches the wrapper external flow while retaining invite context');
+  passed('Android sign-in requests PKCE and launches the wrapper external flow (via the Sellio relay page) while retaining invite context');
 
   reset();
   win.ReactNativeWebView = { postMessage() {} };
@@ -160,15 +165,16 @@ try {
   globalThis.appClient = { auth: {
     getSession: () => new Promise(resolve => { finishSessionCheck = resolve; }),
   } };
+  // The page shows the normal loader while it checks; in the app the launch splash
+  // (LaunchSplash, mounted once in App.jsx) covers it, which tests/20 checks in a browser.
   const pending = await mount(authModule.module.default);
-  assert.ok(pending.container.querySelector('[data-sellio-startup]'));
-  assert.ok(pending.container.querySelector('img[alt="Your business, beautifully online."]'));
+  assert.ok(pending.container.querySelector('[aria-label="Loading Sellio"]'));
   assert.equal(pending.container.querySelector('input[type="password"]'), null);
   await act(async () => { finishSessionCheck({ data: { session: null } }); });
-  assert.equal(pending.container.querySelector('[data-sellio-startup]'), null);
+  assert.equal(pending.container.querySelector('[aria-label="Loading Sellio"]'), null);
   assert.ok(pending.container.querySelector('input[type="password"]'));
   await pending.close();
-  passed('Startup branding stays visible while session recovery is pending and yields directly to the login form');
+  passed('The loader stays visible while session recovery is pending and yields directly to the login form');
 
   const { MemoryRouter, Routes, Route, useLocation } = await import('react-router-dom');
   function Destination() {

@@ -3,10 +3,12 @@ import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
 import { Copy, Check, Download, ExternalLink, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { publicSiteUrl } from '@/lib/accountFlow';
 
 // The free shop's store page link: copy it, share it on WhatsApp, or save a QR code.
+// Always Sellio's own address, even inside the Android app (see publicSiteUrl).
 export function storeLink(slug) {
-  return `${window.location.origin}/store/${encodeURIComponent(slug || '')}`;
+  return `${publicSiteUrl(window.location)}/store/${encodeURIComponent(slug || '')}`;
 }
 
 export default function ShareShop({ slug, shopName }) {

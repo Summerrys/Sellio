@@ -2,6 +2,8 @@
 
 The Android wrapper opens Google in the external browser. Sellio now starts that flow with Supabase PKCE, keeps the verifier in the originating WebView, and sends a one-use authorization code back to the same origin. The browser callback does not consume a session. It provides a **Return to Sellio** button when Android has not already opened the app.
 
+The external browser opens `https://sellio.apptelier.sg/google-signin?to=<authorize address>` first. That way the wrapper's "Open External Link?" box names Sellio. The page forwards only to Sellio's own Supabase Google authorize address with a PKCE S256 challenge and a Sellio Android return; see android-startup.md and `src/lib/googleRelay.js`. The verifier and the return address are unchanged.
+
 The app validates its local attempt, exchanges the code, installs the session in the existing Supabase client, clears callback data, and resumes the existing Auth page's profile, staff-role, invitation and onboarding logic. Password sign-in, email recovery, and ordinary browser Google sign-in retain their original client and flow.
 
 ## Inspected release

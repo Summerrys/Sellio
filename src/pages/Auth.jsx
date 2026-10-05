@@ -10,6 +10,7 @@ import { accountDeletionDestination } from '@/components/profile/AccountDeletion
 import { completeAuthNavigation } from '@/lib/authNavigation';
 import { startGoogleSignIn } from '@/lib/googleSignIn';
 import { COMPLETE_KEY, clearMobileAuth, hasMobileGoogleCompletion, isNativeAndroid } from '@/lib/mobileOAuth';
+import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
 
 const BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
 
@@ -1096,6 +1097,7 @@ export default function Auth() {
                   )}
                   {googleLoading ? 'Redirecting...' : 'Sign up with Google'}
                 </button>
+                <GoogleBrowserHint />
                 {googleSignupError && (
                   <div className="mt-3 flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
                     <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
@@ -1162,6 +1164,7 @@ export default function Auth() {
                   )}
                   {googleLoading ? 'Redirecting...' : 'Sign in with Google'}
                 </button>
+                <GoogleBrowserHint />
 
                 {googleGateError && (
                   <div className="mt-3 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">

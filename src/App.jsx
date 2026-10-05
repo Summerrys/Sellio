@@ -12,7 +12,7 @@ import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import AccountDeletion from './pages/AccountDeletion';
 import Storefront from './pages/Storefront';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useLayoutEffect, useState, Suspense } from 'react';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import AppRefreshProvider from '@/components/ui-custom/AppRefreshProvider';
@@ -21,6 +21,10 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import UserManagement from './pages/UserManagement';
 import MobileOAuthReturn from '@/components/auth/MobileOAuthReturn';
 import { isMobileOAuthCallback } from '@/lib/mobileOAuth';
+import LaunchSplash from '@/components/ui-custom/LaunchSplash';
+import GoogleSignInRelay from '@/components/auth/GoogleSignInRelay';
+import { startLaunch } from '@/lib/appLaunch';
+import { GOOGLE_RELAY_PATH } from '@/lib/googleRelay';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -58,8 +62,9 @@ function RouteIndexingGuard() {
 }
 
 // Base44's native wrapper opens the root URL and exposes these bridges.
-// Native launches start Auth's session recovery under the shared splash; ordinary
-// browser visits keep the public landing page. Only the root route changes,
+// Native launches go straight to Auth's session recovery under the Sellio launch
+// splash (LaunchSplash, lib/appLaunch.js); ordinary browser visits keep the public
+// landing page. Only the root route changes,
 // so storefront, password recovery and other deep links keep their routes.
 const hasNativeBridge = () => typeof window !== 'undefined' && (
   typeof window.ReactNativeWebView?.postMessage === 'function' ||
@@ -83,6 +88,11 @@ const RootRoute = () => {
       window.clearInterval(timer);
       window.clearTimeout(timeout);
     };
+  }, [isNativeApp]);
+
+  // The app's start: one Sellio splash until the first screen is ready.
+  useLayoutEffect(() => {
+    if (isNativeApp) startLaunch();
   }, [isNativeApp]);
 
   if (isNativeApp) {
@@ -121,7 +131,7 @@ const AuthenticatedApp = () => {
             path={`/${path}`}
             element={
               <LayoutWrapper currentPageName={path}>
-                {['Auth', 'Join'].includes(path) ? <Page /> : <motion.div
+                <motion.div
                   key={path}
                   initial={{ opacity: 0, x: 16 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -129,7 +139,7 @@ const AuthenticatedApp = () => {
                   transition={{ duration: 0.18, ease: 'easeOut' }}
                 >
                   <Page />
-                </motion.div>}
+                </motion.div>
               </LayoutWrapper>
             }
           />
@@ -149,6 +159,8 @@ function App() {
   // The external-browser callback must not initialize the normal auth/profile
   // providers or consume the code before it reaches the originating WebView.
   if (isMobileOAuthCallback(window.location.href)) return <MobileOAuthReturn />;
+  // Google sign-in from the app starts here (index.html forwards before this loads).
+  if (window.location.pathname === GOOGLE_RELAY_PATH) return <GoogleSignInRelay />;
   return (
     <AppUserProvider>
     <AuthProvider>
@@ -166,6 +178,7 @@ function App() {
           </Routes>
         </Router>
         <SonnerToaster />
+        <LaunchSplash />
         </AppRefreshProvider>
       </QueryClientProvider>
     </AuthProvider>

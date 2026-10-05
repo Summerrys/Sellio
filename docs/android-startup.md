@@ -1,12 +1,33 @@
 # Sellio Android startup
 
-## Web changes
+## What the app shows when it opens
 
-Sellio now uses one AppLoader design: full Sellio logo, outlined tagline and branded dots. It paints immediately and remains visible while the destination checks its session or store data. There is no separate small-logo "Loading..." screen, fixed 2.6-second splash timer, logo pulse, or Auth/Join route slide animation.
+- **In the Android app only:** one Sellio splash (logo, outlined tagline, branded dots). It shows from the first paint of the app's start page until the first screen is ready: the login page, or the Dashboard for someone already signed in.
+  - `index.html` starts it before the code loads when the app's bridge is already there. Otherwise `RootRoute` starts it when the code runs.
+  - The splash stays up for at least 1.5 seconds.
+  - It stays while any full-screen loader is showing, and for 0.3 seconds after the last one, so pages that swap one loader for another stay covered.
+  - It also covers the reload on the way to the Dashboard. `index.html` shows the same splash before the code loads again, so there is no white gap.
+  - It never stays longer than 10 seconds.
+  - It fades out over 0.2 seconds.
+- **On the website:** the splash never appears. Visitors see the normal small "Loading..." loader (`AppLoader`), as before.
+- **How the app is detected:** by the native bridge (`isNativeApp` in `RootRoute`). The app's start page `/` goes straight to `/Auth`. Browser visitors to `/` still get the landing page.
+- **Old `/Splash` links** forward to `/Auth` at once, keeping their search and hash parameters (invites, password recovery).
+- **Auth and Join** keep the usual page slide-in.
 
-The native root starts /Auth directly. Existing /Splash links immediately forward to /Auth while preserving search and hash parameters. Browser visitors to / still receive the public landing page. Logo and tagline images are preloaded. Android text scaling remains available on interactive pages; the outlined splash tagline cannot reflow.
+The code:
 
-Publish these web changes manually in Base44. They do not require a new AAB. Native launch screens are a separate issue.
+- `src/lib/appLaunch.js`: the timing rules.
+  - The launch state is kept in sessionStorage under `sellio-launch`, so it survives the reload.
+  - Every `AppLoader` holds the splash while it is mounted.
+- `index.html`:
+  - the splash itself, the `#sellio-launch-splash` element, with its `.sellio-launch` styles. The tagline is inline, so it is there from the first paint; keep it in step with `public/branding/sellio-splash-tagline.svg`.
+  - the script that shows it before the code loads.
+  - If the code never runs, the script still removes the splash after the 10 seconds.
+  - Keep the key, the 10-second limit and the bridge test in step with `appLaunch.js` and `App.jsx`.
+- `src/components/ui-custom/LaunchSplash.jsx`: mounted once in `App.jsx`. It keeps that same element up and fades it out, so the page never swaps one splash for another.
+- The Google sign-in return (`?sellio_mobile_oauth=`) never shows the splash.
+
+Publish these web changes in Base44. They do not need a new AAB.
 
 ## Native screens still present in approved version 13
 
@@ -17,24 +38,65 @@ The supplied android-2.133512.13.aab contains:
 - base/res/drawable/ic_app_icon.png: the packaged icon.
 - appColor, splash_color and brandedColor: white.
 
-The first two plain-logo screenshots are consistent with Android's system launch splash followed by the wrapper's own native splash. This attribution is based on the screenshots and static package inspection, not a device recording. Both appear before Sellio's editable React code.
+**What the two plain-logo screens are:**
 
-Android 12+ applies a system splash window on cold/warm starts. A native wrapper should use AndroidX SplashScreen, avoid a second independent splash layout, and hand off to the ready WebView with a matching background. If the goal is no visible plain logo, the native starting theme's icon needs a deliberate minimal/transparent treatment; removing web images cannot change it. The system launch window itself still exists.
+- The first two plain-logo screenshots match two native screens: Android's system launch splash, then the wrapper's own native splash.
+- This comes from the screenshots and from reading the package, not from a recording on a phone.
+- Both appear before Sellio's editable web code runs, so web changes cannot remove them.
 
-Base44's available sandbox tools edit web code, not the Android wrapper source or packaged splash layout. The requested removal of native duplicates remains pending a supported Base44 packaging setting or a native-wrapper change by the packager, followed by a new correctly signed AAB. Simply regenerating the same wrapper cannot guarantee that change.
+**Removing them needs a native wrapper change:**
 
-Preserve package com.base6985959ce9aaceadb8b7cc41.app and its Play signing identity when rebuilding. Do not patch/re-sign the supplied AAB as an arbitrary new application.
+- Android 12 and later always shows a system launch window. A wrapper should use AndroidX SplashScreen and hand over to the WebView with a matching background, rather than adding a second splash layout of its own.
+- This needs either a Base44 packaging setting or a change to the native wrapper, followed by a new correctly signed AAB.
+- Keep package com.base6985959ce9aaceadb8b7cc41.app and its Play signing identity.
 
 Android guidance: https://developer.android.com/develop/ui/views/launch/splash-screen/migrate
 
-## OAuth
+## Google sign-in from the app
 
-The user reports that approved version 13 now returns automatically from Google into Sellio. Keep the callback/session handoff and browser Return to Sellio fallback: normal verified App Links bypass the fallback page, while devices that cannot open the app automatically can still recover. No auth migration or Despia integration was performed for this startup change.
+**The relay page:**
+
+- The app starts Google sign-in at `https://sellio.apptelier.sg/google-signin?to=<Supabase authorize address>`, so the wrapper's "Open External Link?" box names sellio.apptelier.sg.
+- The script at the top of `index.html` forwards the browser at once, before the app's code loads. It forwards only to Sellio's own Supabase Google authorize address, and only when:
+  - the request uses a PKCE S256 challenge;
+  - the return address is Sellio's Android sign-in return (`sellio_mobile_oauth=1` on sellio.apptelier.sg or selliosg.base44.app).
+- Anything else stays on the page, which says the link isn't valid.
+- The same rules are in `src/lib/googleRelay.js`.
+
+**What you can't change from web code:**
+
+- The box's own wording is drawn by the Base44 wrapper.
+- The Chrome tab left behind after Google hands back to the app is also native: the wrapper opens sign-in as an ordinary Chrome tab.
+- A web page cannot close a tab it did not open.
+- Opening sign-in in an in-app browser sheet (Custom Tab) is a wrapper change.
+
+**The hint:** in the app, a line under the Google buttons on Auth and Join reads "Google sign-in opens in your browser, then brings you back here."
+
+**Google's return:**
+
+- Google still returns to `https://selliosg.base44.app/Auth?sellio_mobile_oauth=1&…`, which version 13 opens in the app automatically (verified App Link).
+- See android-google-signin.md.
 
 ## Verification
 
-Production build passed. All 11 OAuth checks and 8 DOM checks passed, including pending session recovery, direct login-form transition, legacy Splash recovery/invite links, callback handling and existing staff/onboarding routing. Changed JavaScript/JSX files have zero ESLint errors; src/App.jsx retains its pre-existing unused MainPage warning. These are code/DOM checks, not Android device acceptance.
+- `node --test verification/mobile-oauth.test.mjs` and `node verification/mobile-oauth.dom.mjs`. The DOM checks expect:
+  - the relay address;
+  - the page loader while the session check is pending.
+- In sellio-security, tests/20:
+  - launch timelines in a production build, with the native bridge simulated, signed out and signed in. Every frame Chrome paints is checked: splash from the first frame until the fade, then the first screen;
+  - the website loader;
+  - the relay rules in `index.html` and `googleRelay.js`, including a real supabase-js authorize address;
+  - the hint;
+  - the share link.
+
+These are browser checks, not Android device acceptance.
 
 ## Device acceptance still needed
 
-Check a cold launch and a warm launch on the approved Play build after publishing. The preferred web splash should now yield directly to Auth or the authenticated destination. The two packaged native screens will remain until the native wrapper is changed. Also check a returning staff account, Google sign-up, password recovery, and an invite link.
+After publishing, on the Play-installed app:
+
+- **Cold launch:**
+  - signed out: the Sellio splash, then the login page;
+  - signed in: the Sellio splash straight to the Dashboard.
+- **Google sign-in:** the box names sellio.apptelier.sg, and sign-in still returns to the app on its own.
+- **Other flows:** password recovery and an invite link.
