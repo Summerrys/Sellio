@@ -113,7 +113,9 @@ await assert.rejects(completeMobileGoogleAuth({ browser: cancelled, callback: ca
   oauthClient, appClient }), /cancelled/);
 assert.equal(cancelled.localStorage.getItem(VERIFIER_KEY), null);
 assert.equal(exchanges, 1);
-passed('Provider cancellation never exchanges a code and clears pending secrets');
+assert.equal(parseMobileOAuthCallback(cancelledAttempt.redirectTo + '#error=access_denied&error_description=Cancelled').error, 'access_denied');
+assert.throws(() => parseMobileOAuthCallback(cancelledAttempt.redirectTo + '#error=access_denied&access_token=bearer'));
+passed('Provider cancellation in a query or fragment never exchanges a code and clears pending secrets');
 
 const failedBrowser = makeBrowser();
 const failedAttempt = createMobileAuthAttempt(failedBrowser);
