@@ -4,7 +4,6 @@
  * SkeletonCard — shimmer skeleton placeholder
  */
 
-
 const CSS = `
 @keyframes sellio-bounce {
   0%, 60%, 100% { transform: translateY(0); }
