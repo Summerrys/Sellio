@@ -652,6 +652,21 @@ export default function Auth() {
         .orange-scroll::-webkit-scrollbar { width: 4px; }
         .orange-scroll::-webkit-scrollbar-track { background: transparent; }
         .orange-scroll::-webkit-scrollbar-thumb { background: #fe7824; border-radius: 4px; }
+        /* The card fits the screen without scrolling: spacing and the logo shrink on
+           shorter screens (phones, the Android app, 720px laptops). Each value is given
+           twice so phones without dvh support keep today's sizes. */
+        .auth-card { padding-top: 32px; padding-bottom: 32px; padding-top: clamp(20px, 3.5dvh, 32px); padding-bottom: clamp(20px, 3.5dvh, 32px); }
+        .auth-gap-b { margin-bottom: 24px; margin-bottom: clamp(12px, 2.6dvh, 24px); }
+        .auth-gap-y { margin-top: 16px; margin-bottom: 16px; margin-top: clamp(10px, 2dvh, 16px); margin-bottom: clamp(10px, 2dvh, 16px); }
+        .auth-gap-t { margin-top: 20px; margin-top: clamp(12px, 2.2dvh, 20px); }
+        .auth-fields > * + * { margin-top: 16px; margin-top: clamp(10px, 1.8dvh, 16px); }
+        /* The logo image has empty space above (15%) and below (25%) the artwork;
+           trim most of it so the visible logo stays the same size. */
+        .auth-logo { height: 112px; margin-top: -15px; margin-bottom: -22px;
+          height: clamp(64px, 13dvh, 112px);
+          margin-top: calc(clamp(64px, 13dvh, 112px) * -0.13);
+          margin-bottom: calc(clamp(64px, 13dvh, 112px) * -0.2); }
+        .auth-logo-gap { margin-bottom: 12px; margin-bottom: clamp(6px, 1.2dvh, 12px); }
       `}</style>
       <div
         className="h-[100dvh] w-full flex flex-col items-center justify-center p-4 overflow-hidden"
@@ -660,7 +675,7 @@ export default function Auth() {
       >
         {/* Auth card — always visible */}
         <div className="w-full max-w-sm sm:max-w-md max-h-full overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="auth-card bg-white rounded-2xl shadow-xl px-8">
             {forgotMode ? (
               <div>
                 {/* Back button + title */}
@@ -864,16 +879,16 @@ export default function Auth() {
             ) : (
             <>
             {/* Header */}
-            <div className="text-center mb-6">
-              <div className="flex items-center justify-center mb-3">
-                <img src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png" alt="Sellio" className="h-28 w-auto object-contain" />
+            <div className="auth-gap-b text-center">
+              <div className="auth-logo-gap flex items-center justify-center">
+                <img src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png" alt="Sellio" className="auth-logo w-auto object-contain" />
               </div>
               <p className="text-xl font-semibold text-slate-800 mb-0.5">Welcome!</p>
               <p className="text-sm text-slate-500">Let's get you started</p>
             </div>
 
             {/* Tab Toggle */}
-            <div className="flex rounded-xl p-1 mb-6" style={{ background: '#fde8d8' }}>
+            <div className="auth-gap-b flex rounded-xl p-1" style={{ background: '#fde8d8' }}>
               <button
                 type="button"
                 onClick={() => setIsLogin(true)}
@@ -929,7 +944,7 @@ export default function Auth() {
 
             {/* Main form — shown for login always, or signup when allowed */}
             {showForm && !checkingToken && (
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="auth-fields">
                 {!isLogin && (
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
@@ -1018,7 +1033,19 @@ export default function Auth() {
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Password *</label>
+                  {/* "Forgot password?" sits on the label's line (saves a row) */}
+                  <div className="flex items-center justify-between gap-3 mb-1">
+                    <label className="block text-sm font-medium text-slate-700">Password *</label>
+                    {isLogin && (
+                      <button
+                        type="button"
+                        onClick={() => { setForgotMode(true); setForgotStep(1); }}
+                        className="text-xs text-orange-500 hover:text-orange-600 font-medium bg-transparent border-none cursor-pointer p-0"
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
@@ -1031,18 +1058,6 @@ export default function Auth() {
                     />
                   </div>
                 </div>
-
-                {isLogin && (
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => { setForgotMode(true); setForgotStep(1); }}
-                      className="text-xs text-orange-500 hover:text-orange-600 font-medium bg-transparent border-none cursor-pointer p-0"
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
-                )}
 
                 <button
                   type="submit"
@@ -1058,7 +1073,7 @@ export default function Auth() {
             {/* Google signup option — shown on signup tab when token is valid */}
             {!isLogin && signupMode === 'allowed' && !checkingToken && (
               <>
-                <div className="flex items-center gap-3 my-4">
+                <div className="auth-gap-y flex items-center gap-3">
                   <div className="flex-1 h-px bg-slate-200" />
                   <span className="text-xs text-slate-400 font-medium">or sign up with</span>
                   <div className="flex-1 h-px bg-slate-200" />
@@ -1123,7 +1138,7 @@ export default function Auth() {
             {/* Divider + Google — login tab always, signup tab only when no token (pricing wall) */}
             {!checkingToken && (isLogin || showPricingWall) && (
               <>
-                <div className="flex items-center gap-3 my-4">
+                <div className="auth-gap-y flex items-center gap-3">
                   <div className="flex-1 h-px bg-slate-200" />
                   <span className="text-xs text-slate-400 font-medium">or continue with</span>
                   <div className="flex-1 h-px bg-slate-200" />
@@ -1163,7 +1178,7 @@ export default function Auth() {
             )}
 
             {!checkingToken && (
-              <p className="mt-5 text-center text-[11px] leading-relaxed text-slate-400">
+              <p className="auth-gap-t text-center text-[11px] leading-relaxed text-slate-400">
                 By continuing, you agree to Sellio's{' '}
                 <br></br>
                 <a href="/terms" className="font-semibold text-orange-500 hover:text-orange-600 underline underline-offset-2">Terms and Conditions</a>
