@@ -8,6 +8,8 @@ import AuthPricingModal from '@/components/auth/AuthPricingModal';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import { accountDeletionDestination } from '@/components/profile/AccountDeletionForm';
 import { completeAuthNavigation } from '@/lib/authNavigation';
+import { startGoogleSignIn } from '@/lib/googleSignIn';
+import { COMPLETE_KEY, clearMobileAuth, hasMobileGoogleCompletion, isNativeAndroid } from '@/lib/mobileOAuth';
 
 const BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
 
@@ -26,6 +28,7 @@ const getBaseUrl = () => {
 
 export default function Auth() {
   const { setAppUser } = useAppUser();
+  const [mobileGoogleCompleted] = useState(() => hasMobileGoogleCompletion());
   // Read token from URL on mount
   const urlToken = new URLSearchParams(window.location.search).get('token');
 
@@ -68,6 +71,10 @@ export default function Auth() {
   // If so, redirect immediately — do NOT run invite-token validation at all.
   useEffect(() => {
     const checkAuth = async () => {
+      if (mobileGoogleCompleted) {
+        setAuthChecking(false);
+        return; // The Google callback below keeps existing onboarding/invite handling.
+      }
       try {
         const supabase = await getSupabase();
         // If this is a password recovery redirect, skip auto-redirect entirely
@@ -215,7 +222,8 @@ export default function Auth() {
       window.history.replaceState(null, '', window.location.pathname);
       return;
     }
-    if (!hash.includes('access_token')) return;
+    if (!hash.includes('access_token') && !mobileGoogleCompleted) return;
+    if (mobileGoogleCompleted) window.sessionStorage.removeItem(COMPLETE_KEY);
 
     setGoogleLoading(true);
     const processSession = async () => {
@@ -225,6 +233,9 @@ export default function Auth() {
         if (error || !session) throw error || new Error('No session found');
 
         const user = session.user;
+        if (mobileGoogleCompleted && !user.identities?.some(identity => identity.provider === 'google')) {
+          throw new Error('Google did not return a valid sign-in. Please try again.');
+        }
         const now = new Date(Date.now() + 8 * 3600 * 1000).toISOString().replace('Z', '').replace('T', ' ').substring(0, 23);
 
         // Token gate: check if this is a brand-new Supabase auth user
@@ -347,17 +358,26 @@ export default function Auth() {
     processSession();
   }, []);
 
+  // Returning from a cancelled browser sign-in must leave a usable button.
+  useEffect(() => {
+    if (!googleLoading || !isNativeAndroid()) return;
+    let wasHidden = document.visibilityState === 'hidden';
+    const resume = () => {
+      if (document.visibilityState === 'hidden') wasHidden = true;
+      else if (wasHidden) setGoogleLoading(false);
+    };
+    document.addEventListener('visibilitychange', resume);
+    return () => document.removeEventListener('visibilitychange', resume);
+  }, [googleLoading]);
+
   const handleGoogleSignIn = async () => {
     setGoogleGateError('');
     setGoogleLoading(true);
     try {
-      const supabase = await getSupabase();
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        // Sign Up tab: creating a free account with Google is allowed (join=1).
-        options: { redirectTo: isLogin ? `${getBaseUrl()}/Auth` : `${getBaseUrl()}/Auth?join=1` },
+      // Sign Up tab: creating a free account with Google is allowed (join=1).
+      await startGoogleSignIn({
+        redirectTo: isLogin ? `${getBaseUrl()}/Auth` : `${getBaseUrl()}/Auth?join=1`,
       });
-      if (error) throw error;
     } catch (err) {
       toast.error(err.message || 'Google Sign-In failed. Please try again.');
       setGoogleLoading(false);
@@ -453,18 +473,13 @@ export default function Auth() {
     setGoogleSignupError('');
     setGoogleLoading(true);
     try {
-      const supabase = await getSupabase();
       const redirectTo = urlToken
-        ? `${getBaseUrl()}/Auth?token=${urlToken}`
+        ? `${getBaseUrl()}/Auth?token=${encodeURIComponent(urlToken)}`
         : `${getBaseUrl()}/Auth`;
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo,
-          ...(inviteEmail ? { queryParams: { login_hint: inviteEmail } } : {}),
-        },
+      await startGoogleSignIn({
+        redirectTo,
+        ...(inviteEmail ? { queryParams: { login_hint: inviteEmail } } : {}),
       });
-      if (error) throw error;
     } catch (err) {
       toast.error(err.message || 'Google Sign-Up failed. Please try again.');
       setGoogleLoading(false);
@@ -1095,6 +1110,14 @@ export default function Auth() {
                   Business plans (7-day free trial)
                 </button>
               </div>
+            )}
+
+            {googleLoading && isNativeAndroid() && (
+              <button type="button" className="w-full min-h-11 mt-3 text-sm underline"
+                style={{ color: 'var(--primary)' }}
+                onClick={() => { clearMobileAuth(window.localStorage); setGoogleLoading(false); }}>
+                Cancel Google sign-in
+              </button>
             )}
 
             {/* Divider + Google — login tab always, signup tab only when no token (pricing wall) */}
