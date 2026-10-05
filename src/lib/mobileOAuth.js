@@ -84,12 +84,18 @@ export function parseMobileOAuthCallback(input) {
       ['attempt', 'code', 'error'].some(key => params.getAll(key).length > 1)) {
     throw new Error('This sign-in link is invalid. Start Google sign-in again in Sellio.');
   }
-  // Never forward bearer tokens, fragments, arbitrary destinations or extras.
-  if (url.hash || params.has('access_token') || params.has('refresh_token')) {
+  // Supabase can report provider cancellation in a fragment, including for
+  // PKCE. Normalize only those error fields; never forward a token fragment.
+  const fragment = new URLSearchParams(url.hash.slice(1));
+  const fragmentError = fragment.get('error');
+  const safeErrorFragment = fragmentError && [...fragment.keys()].every(key =>
+    ['error', 'error_code', 'error_description'].includes(key));
+  if ((url.hash && !safeErrorFragment) || params.has('access_token') || params.has('refresh_token') ||
+      fragment.getAll('error').length > 1 || (params.has('error') && fragmentError)) {
     throw new Error('This sign-in link uses an unsupported return format.');
   }
   const code = params.get('code');
-  const error = params.get('error');
+  const error = params.get('error') || fragmentError;
   if ((!code || !CODE.test(code)) && !error) {
     throw new Error('This sign-in link is incomplete. Start Google sign-in again.');
   }
@@ -130,7 +136,7 @@ export function hasMobileGoogleCompletion(browser = window) {
 }
 
 const exchangesByStorage = new WeakMap();
-export function completeMobileGoogleAuth({ browser, callback, oauthClient, appClient }) {
+export function completeMobileGoogleAuth({ browser, callback, oauthClient, appClient, getAppClient }) {
   const key = callback.attempt + ':' + callback.code;
   let exchanges = exchangesByStorage.get(browser.localStorage);
   if (!exchanges) { exchanges = new Map(); exchangesByStorage.set(browser.localStorage, exchanges); }
@@ -151,7 +157,10 @@ export function completeMobileGoogleAuth({ browser, callback, oauthClient, appCl
       if (!session.user?.identities?.some(identity => identity.provider === 'google')) {
         throw new Error('Google did not return a valid sign-in.');
       }
-      const { error: sessionError } = await appClient.auth.setSession({
+      // Initialize the existing client only after the callback was scrubbed.
+      // It must not attempt its own automatic URL-session detection first.
+      const client = appClient || await getAppClient();
+      const { error: sessionError } = await client.auth.setSession({
         access_token: session.access_token, refresh_token: session.refresh_token,
       });
       if (sessionError) throw new Error('Could not finish signing in. Please try again.');
