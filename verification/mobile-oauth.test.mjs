@@ -94,7 +94,8 @@ assert.equal(browser.localStorage.getItem(VERIFIER_KEY), null);
 assert.equal(hasMobileGoogleCompletion(browser), true);
 assert.equal(JSON.stringify([...browser.localStorage.data]), '[]');
 assert.ok(!browser.sessionStorage.getItem(COMPLETE_KEY).includes('test-access'));
-passed('Duplicate returns exchange once, install the app session, preserve signup context and clean secrets');
+await assert.rejects(finish(), /not started/);
+passed('Duplicate returns exchange once, install the app session, preserve signup context and reject later replay');
 
 const wrongBrowser = makeBrowser();
 const wrongAttempt = createMobileAuthAttempt(wrongBrowser);
