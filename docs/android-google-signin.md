@@ -41,7 +41,7 @@ Attempts expire after 10 minutes. Callbacks must match the stored nonce and orig
 
 ## Play signing and link verification
 
-The inspected AAB signer matches the website verification fingerprint observed during this work. Google Play may sign installed APKs with a different **app signing certificate**. The AAB certificate alone cannot prove that a Play-installed app's links are verified.
+The live website verification file was rechecked after inspecting version 13. It includes both the AAB signer above and an additional fingerprint: `6E:0A:13:CA:39:84:E9:F7:1A:A4:51:E2:86:7B:A2:C2:E8:BF:48:9A:55:7D:B8:0A:CF:65:42:23:E0:56:3F:F6`. The connected tools cannot identify the Play Console certificate from that value alone. Google Play may sign installed APKs with a different **app signing certificate**. The AAB certificate alone cannot prove that a Play-installed app's links are verified.
 
 If the app does not open from the return button, check Google Play Console's App integrity > App signing certificate SHA-256 against `https://selliosg.base44.app/.well-known/assetlinks.json`. Base44 exposes the corresponding setting under Publish > Mobile app > Build Stores Files > More > Add Google Play SHA-256. Do not substitute the upload-key certificate for Play's app-signing certificate. Also check Sellio's Android **Open supported links** setting.
 
