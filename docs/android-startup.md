@@ -31,6 +31,10 @@ Android guidance: https://developer.android.com/develop/ui/views/launch/splash-s
 
 The user reports that approved version 13 now returns automatically from Google into Sellio. Keep the callback/session handoff and browser Return to Sellio fallback: normal verified App Links bypass the fallback page, while devices that cannot open the app automatically can still recover. No auth migration or Despia integration was performed for this startup change.
 
+## Verification
+
+Production build passed. All 11 OAuth checks and 8 DOM checks passed, including pending session recovery, direct login-form transition, legacy Splash recovery/invite links, callback handling and existing staff/onboarding routing. Changed JavaScript/JSX files have zero ESLint errors; src/App.jsx retains its pre-existing unused MainPage warning. These are code/DOM checks, not Android device acceptance.
+
 ## Device acceptance still needed
 
 Check a cold launch and a warm launch on the approved Play build after publishing. The preferred web splash should now yield directly to Auth or the authenticated destination. The two packaged native screens will remain until the native wrapper is changed. Also check a returning staff account, Google sign-up, password recovery, and an invite link.
