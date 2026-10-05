@@ -12,15 +12,6 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *args):
         return None
 
-def contains(value, expected):
-    if value == expected:
-        return True
-    if isinstance(value, dict):
-        return any(contains(item, expected) for item in value.values())
-    if isinstance(value, list):
-        return any(contains(item, expected) for item in value)
-    return False
-
 opener = urllib.request.build_opener(NoRedirect, urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 for origin in ['https://sellio.apptelier.sg', 'https://selliosg.base44.app']:
     callback = origin + '/Auth?sellio_mobile_oauth=1&attempt=' + secrets.token_hex(32)
