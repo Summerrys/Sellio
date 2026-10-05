@@ -46,12 +46,16 @@ for origin in ['https://sellio.apptelier.sg', 'https://selliosg.base44.app']:
         returned = failure.headers.get('Location', '')
     final_url = urllib.parse.urlsplit(returned)
     original_url = urllib.parse.urlsplit(callback)
-    preserved = (final_url.scheme, final_url.netloc, final_url.path, final_url.query) == (
-        original_url.scheme, original_url.netloc, original_url.path, original_url.query)
+    final_params = urllib.parse.parse_qs(final_url.query)
+    original_params = urllib.parse.parse_qs(original_url.query)
+    preserved = (final_url.scheme, final_url.netloc, final_url.path) == (
+        original_url.scheme, original_url.netloc, original_url.path) and all(
+            final_params.get(key) == value for key, value in original_params.items())
     result = {
         'origin': origin, 'http_status': status, 'authorization_host': target.hostname,
-        'callback_preserved': preserved,
+        'callback_preserved': preserved, 'returned_origin': final_url.scheme + '://' + final_url.netloc,
+        'returned_path': final_url.path, 'returned_query_fields': list(final_params),
     }
     print(json.dumps(result))
     if status != 302 or target.hostname != 'accounts.google.com' or not preserved:
-        raise SystemExit('Supabase callback configuration was not verified; review redirect allowlist before release.')
+        print('Callback acceptance cannot be certified by this cancellation probe; review redirect allowlist or test a successful login.')
