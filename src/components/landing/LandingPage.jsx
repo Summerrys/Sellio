@@ -467,14 +467,8 @@ function Footer({ onCookieSettings }) {
 
 export default function LandingPage() {
   useImmersiveReleaseSnap();
-  // Start closed so prerendered HTML hydrates deterministically, then apply
-  // the visitor's saved consent choice on the client.
-  const [cookieOpen, setCookieOpen] = useState(false);
+  const [cookieOpen, setCookieOpen] = useState(() => !getCookieConsent());
   const cookieReturnFocus = useRef(null);
-
-  useEffect(() => {
-    setCookieOpen(!getCookieConsent());
-  }, []);
 
   useEffect(() => {
     const previousTitle = document.title;
