@@ -34,8 +34,12 @@ const appShell = await readFile('dist/app.html', 'utf8');
 if (!appShell.includes('<div id="root"></div>')) failures.push('app.html: SPA root should stay empty');
 if (!/name="robots"[^>]*content="noindex, nofollow"/i.test(appShell)) failures.push('app.html: noindex missing');
 
+const storeShell = await readFile('dist/store.html', 'utf8');
+if (!storeShell.includes('<div id="root"></div>')) failures.push('store.html: SPA root should stay empty');
+if (/name="robots"[^>]*content="[^"]*noindex/i.test(storeShell)) failures.push('store.html: public storefront shell must not be noindex');
+
 const redirects = await readFile('dist/_redirects', 'utf8');
-for (const line of ['/ /index.html 200', '/privacy /privacy/index.html 200', '/terms /terms/index.html 200', '/* /app.html 200']) {
+for (const line of ['/ /index.html 200', '/privacy /privacy/index.html 200', '/terms /terms/index.html 200', '/store/* /store.html 200', '/* /app.html 200']) {
   if (!redirects.includes(line)) failures.push(`_redirects: missing ${line}`);
 }
 
