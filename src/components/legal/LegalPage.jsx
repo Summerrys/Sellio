@@ -125,7 +125,7 @@ export default function LegalPage({
           </a>
           <nav className="sellio-legal-header__actions" aria-label="Policy navigation">
             <a href="/" className="sellio-legal-back"><ArrowLeft aria-hidden="true" /> Back to Sellio</a>
-            <a href="/auth" className="sellio-legal-login">Merchant Login <ArrowRight aria-hidden="true" /></a>
+            <a href="/auth" rel="nofollow" className="sellio-legal-login">Merchant Login <ArrowRight aria-hidden="true" /></a>
           </nav>
         </div>
       </header>
