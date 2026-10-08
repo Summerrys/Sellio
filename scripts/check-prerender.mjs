@@ -18,8 +18,8 @@ for (const [path, [signature, canonical]] of Object.entries(routes)) {
   }
 
   const html = await readFile(file, 'utf8');
-  if (!html.includes('data-prerendered="true"')) failures.push(`${path}: prerender marker missing`);
-  if (html.includes('<div id="root"></div>')) failures.push(`${path}: root is still empty`);
+  if (!html.includes('id="sellio-prerender" data-prerendered="true"')) failures.push(`${path}: prerender marker missing`);
+  if (!html.includes('<div id="root"></div>')) failures.push(`${path}: SPA root should remain empty`);
   if (!html.includes(signature)) failures.push(`${path}: visible route content missing`);
   if (!html.includes(`rel="canonical" href="${canonical}"`) && !html.includes(`href="${canonical}" rel="canonical"`)) {
     failures.push(`${path}: canonical missing or incorrect`);
