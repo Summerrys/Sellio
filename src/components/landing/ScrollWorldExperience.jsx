@@ -81,7 +81,12 @@ const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 
 function SceneCta({ cta, secondary = false }) {
   if (!cta) return null;
-  const props = cta.external ? { target: '_blank', rel: 'noopener noreferrer' } : {};
+  const privateDestination = /^\/(auth|join)(?:[/?#]|$)/i.test(cta.href) || cta.href.includes('preview=true');
+  const rel = [cta.external ? 'noopener noreferrer' : '', privateDestination ? 'nofollow' : ''].filter(Boolean).join(' ');
+  const props = {
+    ...(cta.external ? { target: '_blank' } : {}),
+    ...(rel ? { rel } : {}),
+  };
   return (
     <a className={secondary ? 'sl-sw-button sl-sw-button--ghost' : 'sl-sw-button'} href={cta.href} {...props}>
       {cta.label} <ArrowRight aria-hidden="true" />
