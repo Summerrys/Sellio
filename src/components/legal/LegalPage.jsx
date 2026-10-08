@@ -110,8 +110,14 @@ export default function LegalPage({
     dateModified: '2026-09-22',
   });
 
-  const [cookieOpen, setCookieOpen] = useState(() => !getCookieConsent());
+  // Match the prerender on the first client pass; consent state is applied
+  // immediately after hydration.
+  const [cookieOpen, setCookieOpen] = useState(false);
   const cookieReturnFocus = useRef(null);
+
+  useEffect(() => {
+    setCookieOpen(!getCookieConsent());
+  }, []);
 
   return (
     <div className="sellio-legal-page">
