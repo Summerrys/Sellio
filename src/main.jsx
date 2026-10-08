@@ -1,5 +1,5 @@
 import React from 'react'
-import ReactDOM, { hydrateRoot } from 'react-dom/client'
+import ReactDOM from 'react-dom/client'
 import App from '@/App.jsx'
 import '@/index.css'
 import { removeAppReloadParam } from '@/lib/appUpdates'
@@ -14,11 +14,9 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-const rootElement = document.getElementById('root')
-const app = <App />
+// Public routes include a build-time prerender for non-JavaScript crawlers.
+document.getElementById('sellio-prerender')?.remove()
 
-if (rootElement?.hasChildNodes()) {
-  hydrateRoot(rootElement, app)
-} else {
-  ReactDOM.createRoot(rootElement).render(app)
-}
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <App />
+)
