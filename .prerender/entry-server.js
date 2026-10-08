@@ -124,7 +124,7 @@ function ScrollWorldExperience() {
   const reduceMotion = useReducedMotion();
   const [active, setActive] = useState(0);
   const [readySource, setReadySource] = useState(null);
-  const [mobile, setMobile] = useState(false);
+  const [mobile, setMobile] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 860px), (hover: none) and (pointer: coarse)").matches);
   const scene = SCENES[active];
   const source = mobile ? MOBILE_VIDEO : DESKTOP_VIDEO;
   const scenePoster = mobile ? SELLIO_WORLD_MEDIA.poster.mobile : SELLIO_WORLD_MEDIA.poster.desktop;
@@ -1619,7 +1619,7 @@ function LandingHeader() {
           /* @__PURE__ */ jsx("a", { href: "/", className: "sellio-landing-logo", "aria-label": "Sellio home", children: /* @__PURE__ */ jsx("img", { src: LOGO_URL$1, alt: "Sellio" }) }),
           /* @__PURE__ */ jsx("nav", { className: "sellio-landing-nav", "aria-label": "Main navigation", children: NAV_ITEMS.map((item) => /* @__PURE__ */ jsx("a", { href: item.href, children: item.label }, item.label)) }),
           /* @__PURE__ */ jsxs("div", { className: "sellio-landing-header__actions", children: [
-            /* @__PURE__ */ jsx("a", { href: "/Join", className: "sellio-login-link", children: "Sign up free" }),
+            /* @__PURE__ */ jsx("a", { href: "/join", className: "sellio-login-link", children: "Sign up free" }),
             /* @__PURE__ */ jsx("a", { href: "/auth", className: "sellio-login-link", children: "Merchant Login" }),
             /* @__PURE__ */ jsxs("a", { href: "#pricing", className: "sellio-button sellio-button--small sellio-button--gradient", children: [
               "Start Free Trial ",
@@ -1637,7 +1637,7 @@ function LandingHeader() {
             item.label,
             /* @__PURE__ */ jsx(ChevronRight, {})
           ] }, item.label)),
-          /* @__PURE__ */ jsxs("a", { href: "/Join", onClick: () => setMenuOpen(false), children: [
+          /* @__PURE__ */ jsxs("a", { href: "/join", onClick: () => setMenuOpen(false), children: [
             "Create a free account",
             /* @__PURE__ */ jsx(ChevronRight, {})
           ] }),
@@ -1710,7 +1710,7 @@ function PricingSection() {
     /* @__PURE__ */ jsx("p", { className: "sellio-pricing-note", children: "Eligible new merchants receive a seven-day trial. Prices exclude applicable taxes. Every active merchant can establish a presence in Sellio World." }),
     /* @__PURE__ */ jsxs("p", { className: "sellio-pricing-note", children: [
       "Selling from home? ",
-      /* @__PURE__ */ jsx("a", { href: "/Join", style: { fontWeight: 700, textDecoration: "underline" }, children: "Open a free personal shop" }),
+      /* @__PURE__ */ jsx("a", { href: "/join", style: { fontWeight: 700, textDecoration: "underline" }, children: "Open a free personal shop" }),
       ": up to 10 listings and 100 orders a month."
     ] })
   ] }) });
@@ -1754,7 +1754,7 @@ function Footer({ onCookieSettings }) {
           "View Plans ",
           /* @__PURE__ */ jsx(ArrowRight, {})
         ] }),
-        /* @__PURE__ */ jsx("a", { href: "/Join", className: "sellio-button sellio-button--footer-ghost", children: "Start free" }),
+        /* @__PURE__ */ jsx("a", { href: "/join", className: "sellio-button sellio-button--footer-ghost", children: "Start free" }),
         /* @__PURE__ */ jsx("a", { href: "/auth", className: "sellio-button sellio-button--footer-ghost", children: "Merchant Login" })
       ] })
     ] }),
@@ -1824,11 +1824,8 @@ function Footer({ onCookieSettings }) {
 }
 function LandingPage() {
   useImmersiveReleaseSnap();
-  const [cookieOpen, setCookieOpen] = useState(false);
+  const [cookieOpen, setCookieOpen] = useState(() => !getCookieConsent());
   const cookieReturnFocus = useRef(null);
-  useEffect(() => {
-    setCookieOpen(!getCookieConsent());
-  }, []);
   useEffect(() => {
     const previousTitle = document.title;
     const selectors = [
@@ -2076,11 +2073,8 @@ function LegalPage({
     path,
     dateModified: "2026-09-22"
   });
-  const [cookieOpen, setCookieOpen] = useState(false);
+  const [cookieOpen, setCookieOpen] = useState(() => !getCookieConsent());
   const cookieReturnFocus = useRef(null);
-  useEffect(() => {
-    setCookieOpen(!getCookieConsent());
-  }, []);
   return /* @__PURE__ */ jsxs("div", { className: "sellio-legal-page", children: [
     /* @__PURE__ */ jsx("a", { className: "sellio-legal-skip", href: "#legal-content", children: "Skip to content" }),
     /* @__PURE__ */ jsx("header", { className: "sellio-legal-header", children: /* @__PURE__ */ jsxs("div", { className: "sellio-legal-container sellio-legal-header__inner", children: [
