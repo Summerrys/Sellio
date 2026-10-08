@@ -98,9 +98,7 @@ export default function ScrollWorldExperience() {
   const reduceMotion = useReducedMotion();
   const [active, setActive] = useState(0);
   const [readySource, setReadySource] = useState(null);
-  // Keep the server render and the browser's first hydration render identical.
-  // The effect below applies the real mobile media query immediately after mount.
-  const [mobile, setMobile] = useState(false);
+  const [mobile, setMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 860px), (hover: none) and (pointer: coarse)').matches);
 
   const scene = SCENES[active];
   const source = mobile ? MOBILE_VIDEO : DESKTOP_VIDEO;
