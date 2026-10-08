@@ -28,7 +28,10 @@ for (const path of PRERENDER_ROUTES) {
 
   const output = template
     .replace(SEO_BLOCK, head)
-    .replace(ROOT, `<div id="root" data-prerendered="true">${html}</div>`);
+    .replace(
+      ROOT,
+      `<div id="sellio-prerender" data-prerendered="true">${html}</div>\n    ${ROOT}`
+    );
 
   const directory = path === '/' ? 'dist' : `dist${path}`;
   await mkdir(directory, { recursive: true });
