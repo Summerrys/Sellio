@@ -108,7 +108,12 @@ const SCENES = [
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 function SceneCta({ cta, secondary = false }) {
   if (!cta) return null;
-  const props = cta.external ? { target: "_blank", rel: "noopener noreferrer" } : {};
+  const privateDestination = /^\/(auth|join)(?:[/?#]|$)/i.test(cta.href) || cta.href.includes("preview=true");
+  const rel = [cta.external ? "noopener noreferrer" : "", privateDestination ? "nofollow" : ""].filter(Boolean).join(" ");
+  const props = {
+    ...cta.external ? { target: "_blank" } : {},
+    ...rel ? { rel } : {}
+  };
   return /* @__PURE__ */ jsxs("a", { className: secondary ? "sl-sw-button sl-sw-button--ghost" : "sl-sw-button", href: cta.href, ...props, children: [
     cta.label,
     " ",
@@ -1619,8 +1624,8 @@ function LandingHeader() {
           /* @__PURE__ */ jsx("a", { href: "/", className: "sellio-landing-logo", "aria-label": "Sellio home", children: /* @__PURE__ */ jsx("img", { src: LOGO_URL$1, alt: "Sellio" }) }),
           /* @__PURE__ */ jsx("nav", { className: "sellio-landing-nav", "aria-label": "Main navigation", children: NAV_ITEMS.map((item) => /* @__PURE__ */ jsx("a", { href: item.href, children: item.label }, item.label)) }),
           /* @__PURE__ */ jsxs("div", { className: "sellio-landing-header__actions", children: [
-            /* @__PURE__ */ jsx("a", { href: "/join", className: "sellio-login-link", children: "Sign up free" }),
-            /* @__PURE__ */ jsx("a", { href: "/auth", className: "sellio-login-link", children: "Merchant Login" }),
+            /* @__PURE__ */ jsx("a", { href: "/join", rel: "nofollow", className: "sellio-login-link", children: "Sign up free" }),
+            /* @__PURE__ */ jsx("a", { href: "/auth", rel: "nofollow", className: "sellio-login-link", children: "Merchant Login" }),
             /* @__PURE__ */ jsxs("a", { href: "#pricing", className: "sellio-button sellio-button--small sellio-button--gradient", children: [
               "Start Free Trial ",
               /* @__PURE__ */ jsx(ArrowRight, {})
@@ -1637,11 +1642,11 @@ function LandingHeader() {
             item.label,
             /* @__PURE__ */ jsx(ChevronRight, {})
           ] }, item.label)),
-          /* @__PURE__ */ jsxs("a", { href: "/join", onClick: () => setMenuOpen(false), children: [
+          /* @__PURE__ */ jsxs("a", { href: "/join", rel: "nofollow", onClick: () => setMenuOpen(false), children: [
             "Create a free account",
             /* @__PURE__ */ jsx(ChevronRight, {})
           ] }),
-          /* @__PURE__ */ jsxs("a", { href: "/auth", onClick: () => setMenuOpen(false), children: [
+          /* @__PURE__ */ jsxs("a", { href: "/auth", rel: "nofollow", onClick: () => setMenuOpen(false), children: [
             "Merchant Login",
             /* @__PURE__ */ jsx(ChevronRight, {})
           ] }),
@@ -1710,7 +1715,7 @@ function PricingSection() {
     /* @__PURE__ */ jsx("p", { className: "sellio-pricing-note", children: "Eligible new merchants receive a seven-day trial. Prices exclude applicable taxes. Every active merchant can establish a presence in Sellio World." }),
     /* @__PURE__ */ jsxs("p", { className: "sellio-pricing-note", children: [
       "Selling from home? ",
-      /* @__PURE__ */ jsx("a", { href: "/join", style: { fontWeight: 700, textDecoration: "underline" }, children: "Open a free personal shop" }),
+      /* @__PURE__ */ jsx("a", { href: "/join", rel: "nofollow", style: { fontWeight: 700, textDecoration: "underline" }, children: "Open a free personal shop" }),
       ": up to 10 listings and 100 orders a month."
     ] })
   ] }) });
@@ -1754,8 +1759,8 @@ function Footer({ onCookieSettings }) {
           "View Plans ",
           /* @__PURE__ */ jsx(ArrowRight, {})
         ] }),
-        /* @__PURE__ */ jsx("a", { href: "/join", className: "sellio-button sellio-button--footer-ghost", children: "Start free" }),
-        /* @__PURE__ */ jsx("a", { href: "/auth", className: "sellio-button sellio-button--footer-ghost", children: "Merchant Login" })
+        /* @__PURE__ */ jsx("a", { href: "/join", rel: "nofollow", className: "sellio-button sellio-button--footer-ghost", children: "Start free" }),
+        /* @__PURE__ */ jsx("a", { href: "/auth", rel: "nofollow", className: "sellio-button sellio-button--footer-ghost", children: "Merchant Login" })
       ] })
     ] }),
     /* @__PURE__ */ jsxs("div", { className: "sellio-footer-main", children: [
@@ -1802,8 +1807,8 @@ function Footer({ onCookieSettings }) {
           /* @__PURE__ */ jsxs("div", { children: [
             /* @__PURE__ */ jsx("strong", { children: "Merchants" }),
             /* @__PURE__ */ jsx("a", { href: "#pricing", children: "Plans & pricing" }),
-            /* @__PURE__ */ jsx("a", { href: "/auth", children: "Merchant Login" }),
-            /* @__PURE__ */ jsx("a", { href: DEMO_STORE_URL, target: "_blank", rel: "noopener noreferrer", children: "Explore Demo Store" })
+            /* @__PURE__ */ jsx("a", { href: "/auth", rel: "nofollow", children: "Merchant Login" }),
+            /* @__PURE__ */ jsx("a", { href: DEMO_STORE_URL, target: "_blank", rel: "noopener noreferrer nofollow", children: "Explore Demo Store" })
           ] }),
           /* @__PURE__ */ jsxs("div", { children: [
             /* @__PURE__ */ jsx("strong", { children: "Support" }),
@@ -2087,7 +2092,7 @@ function LegalPage({
           /* @__PURE__ */ jsx(ArrowLeft, { "aria-hidden": "true" }),
           " Back to Sellio"
         ] }),
-        /* @__PURE__ */ jsxs("a", { href: "/auth", className: "sellio-legal-login", children: [
+        /* @__PURE__ */ jsxs("a", { href: "/auth", rel: "nofollow", className: "sellio-legal-login", children: [
           "Merchant Login ",
           /* @__PURE__ */ jsx(ArrowRight, { "aria-hidden": "true" })
         ] })
@@ -2328,7 +2333,7 @@ const sections$1 = [
         "To delete your Sellio account, email ",
         /* @__PURE__ */ jsx("a", { href: "mailto:sellio@apptelier.sg", children: "sellio@apptelier.sg" }),
         " from the email address you sign in with, tell us it is a deletion request and why (see ",
-        /* @__PURE__ */ jsx("a", { href: "/delete-account", children: "how to request account deletion" }),
+        /* @__PURE__ */ jsx("a", { href: "/delete-account", rel: "nofollow", children: "how to request account deletion" }),
         "). We will confirm with you before anything is deleted. If your account owns a store, we will also agree with you what happens to the store and its records so shared business data is protected."
       ] }),
       /* @__PURE__ */ jsxs("p", { children: [
