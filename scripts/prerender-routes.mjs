@@ -20,6 +20,14 @@ const appShell = template
 
 await writeFile('dist/app.html', appShell);
 
+// Public storefronts remain client-rendered because their metadata/content is
+// tenant-specific. Keep this shell crawlable by default; preview/staff variants
+// are still switched to noindex by RouteIndexingGuard in the browser.
+const storeShell = template
+  .replace(SEO_BLOCK, '<title>Sellio Storefront</title>')
+  .replace(ROOT, ROOT);
+await writeFile('dist/store.html', storeShell);
+
 for (const path of PRERENDER_ROUTES) {
   const { html, head } = renderRoute(path);
   if (!html || html.length < 1000) throw new Error(`Prerender output for ${path} is unexpectedly small.`);
