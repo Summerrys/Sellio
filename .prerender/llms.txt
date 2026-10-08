@@ -1,0 +1,41 @@
+# Sellio
+
+> Sellio is a connected commerce platform by Apptelier for branded storefronts, ordering, merchant operations and an evolving sector-based marketplace world.
+
+Canonical website: https://sellio.apptelier.sg/
+Creator: Apptelier, Singapore
+Contact: sellio@apptelier.sg
+
+## Public pages
+
+- Homepage: https://sellio.apptelier.sg/
+- Privacy Policy: https://sellio.apptelier.sg/privacy
+- Terms and Conditions: https://sellio.apptelier.sg/terms
+
+## What Sellio does
+
+Sellio gives merchants tools for branded online storefronts, QR and table ordering, order workflows, kitchen display, products and inventory, reporting, staff roles and permissions, and AI-assisted business workflows.
+
+Sellio World is the marketplace layer. Merchants can establish a storefront presence in relevant business districts while retaining their own brand, products, imagery and customer experience.
+
+## Merchant plans
+
+- Starter: SGD 79/month
+- Growth: SGD 139/month
+- Professional: SGD 199/month
+
+Eligible new merchants receive a seven-day trial. Current plan details and limits are shown on the homepage and should be treated as the source of truth.
+
+## Public storefronts
+
+Public merchant storefronts use URLs under:
+https://sellio.apptelier.sg/store/
+
+Preview URLs, merchant administration pages, dashboards, order-management interfaces and authenticated application routes are not public reference pages and should not be treated as canonical product documentation.
+
+## Key concepts
+
+- Sellio storefront: a merchant-branded customer-facing commerce page.
+- Sellio World: the connected marketplace and merchant discovery environment.
+- Sellio Coins: in-platform rewards used for eligible marketplace progression and cosmetic customisation.
+- Merchant workspace: operational tools for orders, inventory, reporting, staff access and related workflows.
