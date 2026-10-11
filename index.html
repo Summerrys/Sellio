@@ -10,7 +10,8 @@
             Supabase Google sign-in; anything else stays on the page with an error.
          2. During the app's start, show the Sellio splash at once: from the first paint
             when the app opens or comes back from Google sign-in, and across the reloads
-            on the way to the first screen (Dashboard, Join, …). */
+            on the way to the first screen (Dashboard, Join, …).
+         3. The app opening at "/" goes straight to /Auth, without loading the landing page. */
       (function () {
         var w = window, l = w.location;
         if (l.pathname === '/google-signin') {
@@ -31,16 +32,16 @@
           } catch (e) { /* stays 'invalid' */ }
           return;
         }
+        // Same bridge test as App.jsx's RootRoute: only the Android app has it.
+        var bridge = (w.ReactNativeWebView && typeof w.ReactNativeWebView.postMessage === 'function') ||
+          (w.__hybrid_bridge && typeof w.__hybrid_bridge.sendMessage === 'function');
         try {
           var store = w.sessionStorage, now = Date.now();
           var launch = JSON.parse(store.getItem('sellio-launch') || 'null');
           var age = launch ? now - launch.start : -1;
           var active = !!launch && !launch.done && age >= 0 && age < 10000;
-          // The app opening at its start page, or coming back from Google sign-in (same
-          // bridge test as App.jsx's RootRoute): start the launch here, so the splash is
-          // there from the first paint.
-          var bridge = (w.ReactNativeWebView && typeof w.ReactNativeWebView.postMessage === 'function') ||
-            (w.__hybrid_bridge && typeof w.__hybrid_bridge.sendMessage === 'function');
+          // The app opening at its start page, or coming back from Google sign-in: start
+          // the launch here, so the splash is there from the first paint.
           var googleReturn = l.pathname === '/Auth' && new URLSearchParams(l.search).get('sellio_mobile_oauth') === '1';
           if (!active && bridge && (l.pathname === '/' || googleReturn)) {
             store.setItem('sellio-launch', JSON.stringify({ start: now, done: false }));
@@ -55,6 +56,13 @@
             w.setTimeout(function () { html.removeAttribute('data-sellio-launch'); }, 10000 - age);
           }
         } catch (e) { /* no storage: no splash */ }
+        // The app never shows the landing page (the website's start page, which arrives
+        // with the landing page's images and video): stop loading it and open the
+        // sign-in page straight away. Websites keep the landing page.
+        if (bridge && l.pathname === '/') {
+          try { w.stop(); } catch (e) { /* keep going */ }
+          l.replace('/Auth' + l.search + l.hash);
+        }
       })();
     </script>
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/sellio-tab-16.png" />

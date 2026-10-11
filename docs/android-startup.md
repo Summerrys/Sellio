@@ -16,7 +16,8 @@
   - If the sign-in can't finish (cancelled, expired, another window), the splash goes after its 1.5 seconds and the message shows.
   - The same return opened in a phone browser shows `AppLoader` while it checks, then "Return to Sellio"; never the splash.
 - **On the website:** the splash never appears. Visitors see the normal small "Loading..." loader (`AppLoader`), as before.
-- **How the app is detected:** by the native bridge (`isNativeApp` in `RootRoute`). The app's start page `/` goes straight to `/Auth`. Browser visitors to `/` still get the landing page.
+- **How the app is detected:** by the native bridge (`isNativeApp` in `RootRoute`). Browser visitors to `/` still get the landing page.
+- **The app never loads the landing page.** On the website, `/` arrives with the landing page prerendered into it (about 95 KB, with its images and an autoplay video) for search engines. In the app, the script at the top of `index.html` stops that page loading and opens `/Auth` (the small `app.html`) straight away, keeping any query and hash. If the bridge only appears later, `RootRoute` still sends the app to `/Auth`.
 - **Old `/Splash` links** forward to `/Auth` at once, keeping their search and hash parameters (invites, password recovery).
 - **Auth and Join** keep the usual page slide-in.
 
