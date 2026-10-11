@@ -24,8 +24,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import TableFormDialog from '../components/tables/TableFormDialog';
 import TableCard from '../components/tables/TableCard';
-import QRCodeGenerator from '../components/tables/QRCodeGenerator';
-import BulkQRActions from '../components/tables/BulkQRActions';
 import { QrCode, Plus, Search, LayoutGrid, List, Trash2, Download, Pencil, CheckCircle2, Users, Clock, Wrench, Check, X, Printer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -86,7 +84,6 @@ export default function Tables() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [zoneFilter, setZoneFilter] = useState('all');
   const [showFormDialog, setShowFormDialog] = useState(false);
-  const [showQRDialog, setShowQRDialog] = useState(false);
   const [selectedTable, setSelectedTable] = useState(null);
   const [tableToDelete, setTableToDelete] = useState(null);
   const [qrCodes, setQrCodes] = useState({}); // tableId → data URL or static URL
@@ -268,11 +265,6 @@ export default function Tables() {
   const handleAdd = () => {
     setSelectedTable(null);
     setShowFormDialog(true);
-  };
-
-  const handleShowQR = (table) => {
-    setSelectedTable(table);
-    setShowQRDialog(true);
   };
 
   const handleDelete = (table) => {
@@ -715,13 +707,6 @@ export default function Tables() {
           allTables={tables}
           canDelete={canDelete}
           onDelete={(t) => { setShowFormDialog(false); handleDelete(t); }}
-        />
-
-        <QRCodeGenerator
-          open={showQRDialog}
-          onOpenChange={setShowQRDialog}
-          table={selectedTable}
-          tenant={tenant}
         />
 
         {/* QR Preview Modal */}

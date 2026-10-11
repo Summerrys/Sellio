@@ -9,6 +9,12 @@
   - It also covers the reload on the way to the Dashboard. `index.html` shows the same splash before the code loads again, so there is no white gap.
   - It never stays longer than 10 seconds.
   - It fades out over 0.2 seconds.
+- **Coming back from Google sign-in (in the app):** the same splash, from the first paint of the return (`/Auth?sellio_mobile_oauth=1&…`) through the reloads until the next screen is ready: the Join page for a new account, or the Dashboard.
+  - `index.html` starts it; `MobileOAuthReturn` starts it too if the bridge was late.
+  - While the return is checked, `MobileOAuthReturn` shows the bouncing-dots loader (`AppLoader`) under the splash.
+  - While Auth finishes the Google sign-in, Auth shows `AppLoader`, not the sign-in form.
+  - If the sign-in can't finish (cancelled, expired, another window), the splash goes after its 1.5 seconds and the message shows.
+  - The same return opened in a phone browser shows `AppLoader` while it checks, then "Return to Sellio"; never the splash.
 - **On the website:** the splash never appears. Visitors see the normal small "Loading..." loader (`AppLoader`), as before.
 - **How the app is detected:** by the native bridge (`isNativeApp` in `RootRoute`). The app's start page `/` goes straight to `/Auth`. Browser visitors to `/` still get the landing page.
 - **Old `/Splash` links** forward to `/Auth` at once, keeping their search and hash parameters (invites, password recovery).
@@ -25,7 +31,6 @@ The code:
   - If the code never runs, the script still removes the splash after the 10 seconds.
   - Keep the key, the 10-second limit and the bridge test in step with `appLaunch.js` and `App.jsx`.
 - `src/components/ui-custom/LaunchSplash.jsx`: mounted once in `App.jsx`. It keeps that same element up and fades it out, so the page never swaps one splash for another.
-- The Google sign-in return (`?sellio_mobile_oauth=`) never shows the splash.
 
 Publish these web changes in Base44. They do not need a new AAB.
 

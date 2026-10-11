@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 import { getSupabase, getMobileOAuthClient } from '@/lib/supabaseClient';
+import { startLaunch } from '@/lib/appLaunch';
+import AppLoader from '@/components/ui-custom/AppLoader';
+import LaunchSplash from '@/components/ui-custom/LaunchSplash';
 import {
   buildAndroidReturnIntent, buildMobileReturnUrl, completeMobileGoogleAuth,
   isNativeAndroid, parseMobileOAuthCallback, readPendingMobileAuth,
@@ -29,6 +32,9 @@ export default function MobileOAuthReturn() {
       const pending = readPendingMobileAuth(window.localStorage);
       // Storage binds the return to this WebView even if bridge injection is late.
       if (pending?.attempt === callback.attempt && pending.origin === callback.origin) {
+        // The app coming back from Google: the Sellio splash stays up until the next
+        // screen is ready (index.html usually started it already; lib/appLaunch.js).
+        startLaunch();
         try {
           const destination = await completeMobileGoogleAuth({
             browser: window, callback,
@@ -55,7 +61,11 @@ export default function MobileOAuthReturn() {
   }, [callback]);
 
   const failed = new URLSearchParams(window.location.search).get('app_link_failed') === '1';
+  // While checking: the loader with the bouncing dots (in the app, under the splash).
+  if (status === 'checking') return <><AppLoader visible={true} /><LaunchSplash /></>;
   return (
+    <>
+    <LaunchSplash />
     <main className="min-h-[100dvh] bg-white flex items-center justify-center p-6" data-pull-refresh-block>
       <div className="w-full max-w-sm text-center">
         <img src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png"
@@ -90,5 +100,6 @@ export default function MobileOAuthReturn() {
         </a>}
       </div>
     </main>
+    </>
   );
 }

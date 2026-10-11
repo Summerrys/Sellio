@@ -643,7 +643,8 @@ export default function Auth() {
   // Show the form if: login tab, OR (signup tab AND allowed), OR (signup tab AND bypass email typed)
   const showForm = isLogin || signupMode === 'allowed' || (signupMode === 'pricing_wall' && BYPASS_EMAILS.includes(formData.email.trim().toLowerCase()));
 
-  if (authChecking) {
+  // Also while it finishes the app's Google sign-in (the launch splash stays over it).
+  if (authChecking || (mobileGoogleCompleted && googleLoading)) {
     return <AppLoader visible={true} />;
   }
 

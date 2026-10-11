@@ -1,10 +1,10 @@
-// The Android app's start: one Sellio splash from the moment Sellio's code decides
-// it is in the app until the first screen is ready. It stays at least MIN_MS, keeps
+// The Android app's start (and its return from Google sign-in): one Sellio splash from
+// the moment Sellio's code decides it is in the app until the first screen is ready. It stays at least MIN_MS, keeps
 // covering while any loader is up (and across the reload on the way to the
 // Dashboard), and never longer than MAX_MS. Websites never start it.
 // index.html uses the same sessionStorage entry: it starts the launch itself when the
-// app opens at "/" with its bridge already there (so the splash is up from the first
-// paint), and shows the splash before the code loads after a reload. Keep the key,
+// app opens at "/" or comes back from Google sign-in with its bridge already there (so
+// the splash is up from the first paint), and shows the splash before the code loads after a reload. Keep the key,
 // MAX_MS and the bridge test in step with it.
 export const LAUNCH_KEY = 'sellio-launch';
 export const MIN_MS = 1500;
@@ -27,8 +27,8 @@ export function readLaunch(storage = globalThis.sessionStorage, now = Date.now()
   } catch { return null; }
 }
 
-// Called when the app (not a website) opens at its start page; keeps a launch that
-// index.html already started.
+// Called when the app (not a website) opens at its start page or comes back from
+// Google sign-in; keeps a launch that index.html already started.
 export function startLaunch(storage = globalThis.sessionStorage, now = Date.now()) {
   if (readLaunch(storage, now)) return; // already running (e.g. a second render)
   try { storage.setItem(LAUNCH_KEY, JSON.stringify({ start: now, done: false })); } catch { return; }
