@@ -362,7 +362,7 @@ const SECTORS = [
     name: "Retail Avenue",
     status: "Open for onboarding",
     Icon: ShoppingBag,
-    detailX: "27%",
+    detailX: "22%",
     detailY: "58%",
     summary: "Boutiques and product-led merchants receive a recognisable storefront along a dedicated retail route."
   },
@@ -379,7 +379,7 @@ const SECTORS = [
     status: "Open for onboarding",
     Icon: BriefcaseBusiness,
     detailX: "70%",
-    detailY: "52%",
+    detailY: "calc(36% + 64px)",
     summary: "Wellness, studios and professional services occupy a calmer appointment-led neighbourhood."
   }
 ];
@@ -743,7 +743,7 @@ const STEPS = [
     title: "A storefront that feels like your own.",
     description: "Customers enter through your link or table QR and browse a polished, mobile-first storefront.",
     Icon: QrCode,
-    point: { x: "22%", y: "48%", mobileX: "38%", mobileY: "76%" }
+    point: { x: "22%", y: "48%", mobileX: "calc(38% + 8px)", mobileY: "calc(76% + 36px)" }
   },
   {
     key: "order",
@@ -761,7 +761,7 @@ const STEPS = [
     title: "Service teams see what comes next.",
     description: "Kitchen and service teams move each order from new to preparing and ready with confidence.",
     Icon: ChefHat,
-    point: { x: "49%", y: "48%", mobileX: "39%", mobileY: "54%" }
+    point: { x: "49%", y: "48%", mobileX: "calc(39% + 8px)", mobileY: "54%" }
   },
   {
     key: "update",
@@ -779,7 +779,7 @@ const STEPS = [
     title: "The day becomes useful business insight.",
     description: "Sales, popular products and operational patterns are ready to review without rebuilding the story.",
     Icon: BarChart3,
-    point: { x: "72%", y: "45%", mobileX: "46%", mobileY: "34%" }
+    point: { x: "72%", y: "45%", mobileX: "46%", mobileY: "28%" }
   }
 ];
 function CommerceJourney() {
@@ -900,7 +900,7 @@ const CONNECTED_STAGES = [
     description: "Order details, product context and operational status move together without manual re-entry.",
     Icon: Sparkles,
     point: { x: "50%", y: "49%", mobileX: "55%", mobileY: "57%" },
-    callout: { mobileX: "55%", mobileY: "51%" }
+    callout: { mobileX: "calc(55% + 34px)", mobileY: "57%" }
   },
   {
     key: "merchant",
@@ -910,7 +910,7 @@ const CONNECTED_STAGES = [
     description: "Teams act on live orders, connected stock and useful performance signals from one side of Sellio.",
     Icon: BellRing,
     point: { x: "76%", y: "57%", mobileX: "72%", mobileY: "72%" },
-    callout: { mobileX: "72%", mobileY: "58%" }
+    callout: { mobileX: "72%", mobileY: "70%" }
   }
 ];
 function PointList({ title, eyebrow, points, tone, reduceMotion }) {
@@ -1145,11 +1145,12 @@ const PLANS = [
 ];
 const CALLOUT_POSITIONS = [
   { x: "5%", y: "62%", mobileX: "48%", mobileY: "63%" },
-  { x: "23%", y: "58%", mobileX: "48%", mobileY: "57%" },
-  { x: "43%", y: "59%", mobileX: "48%", mobileY: "52%" },
-  // Use the open left-side floor for the upper-right stages so their markers stay unobstructed.
-  { x: "59%", y: "57%", mobileX: "4%", mobileY: "54%" },
-  { x: "70%", y: "52%", mobileX: "4%", mobileY: "45%" }
+  // Phones: cards 02-05 share the clear lower-right floor, just below 03 and right of 01 and 02, so
+  // no card covers a number (04 and 05 on the left used to cover 02 and 03).
+  { x: "23%", y: "60%", mobileX: "48%", mobileY: "calc(49% + 58px)" },
+  { x: "43%", y: "59%", mobileX: "48%", mobileY: "calc(49% + 58px)" },
+  { x: "59%", y: "57%", mobileX: "48%", mobileY: "calc(49% + 58px)" },
+  { x: "66%", y: "56%", mobileX: "48%", mobileY: "calc(49% + 58px)" }
 ];
 function ProductShowcase() {
   const [activeKey, setActiveKey] = useState("storefront");
