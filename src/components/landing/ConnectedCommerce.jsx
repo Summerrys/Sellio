@@ -43,7 +43,7 @@ const CONNECTED_STAGES = [
     description: 'Order details, product context and operational status move together without manual re-entry.',
     Icon: Sparkles,
     point: { x: '50%', y: '49%', mobileX: '55%', mobileY: '57%' },
-    callout: { mobileX: '55%', mobileY: '51%' },
+    callout: { mobileX: 'calc(55% + 34px)', mobileY: '57%' },
   },
   {
     key: 'merchant',
@@ -53,7 +53,7 @@ const CONNECTED_STAGES = [
     description: 'Teams act on live orders, connected stock and useful performance signals from one side of Sellio.',
     Icon: BellRing,
     point: { x: '76%', y: '57%', mobileX: '72%', mobileY: '72%' },
-    callout: { mobileX: '72%', mobileY: '58%' },
+    callout: { mobileX: '72%', mobileY: '70%' },
   },
 ];
 

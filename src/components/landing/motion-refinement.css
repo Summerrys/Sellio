@@ -2159,3 +2159,153 @@
     transition: none;
   }
 }
+
+/* Waypoint cards never cover a waypoint (2026-10-12).
+   Tablet and desktop: an Order journey card opens below the row of numbers, centred under the
+   selected one (kept inside the scene), with a dashed line up to it; beside the number it landed on
+   the next number in the row and blocked it. A Connected commerce card opens just below its own
+   number (the three numbers are far apart, so there is room under each). */
+@media (min-width: 601px) {
+  .sl-cinematic-journey .sl-waypoint-callout-anchor,
+  .sl-cinematic-connected .sl-waypoint-callout-anchor {
+    --sl-row-card-w: clamp(220px, 21vw, 280px);
+    --sl-row-point-y: var(--callout-y);
+    inset: 0;
+    width: auto;
+    height: auto;
+  }
+
+  /* Journey card top: below the lowest number in the row (44px number, its active ring, a gap). */
+  .sl-cinematic-journey .sl-waypoint-callout-anchor { --sl-row-card-top: calc(51% + 68px); }
+
+  .sl-cinematic-connected .sl-waypoint-callout-anchor {
+    --sl-row-card-w: min(clamp(280px, 26vw, 300px), 42vw);
+    --sl-row-card-top: calc(var(--callout-y) + 58px);
+  }
+
+  .sl-cinematic-journey .sl-waypoint-callout-anchor.is-left .sl-waypoint-callout,
+  .sl-cinematic-journey .sl-waypoint-callout-anchor.is-right .sl-waypoint-callout,
+  .sl-cinematic-connected .sl-waypoint-callout-anchor.is-left .sl-waypoint-callout,
+  .sl-cinematic-connected .sl-waypoint-callout-anchor.is-right .sl-waypoint-callout {
+    top: var(--sl-row-card-top);
+    right: auto;
+    left: clamp(16px, calc(var(--callout-x) + 22px - var(--sl-row-card-w) / 2), calc(100% - var(--sl-row-card-w) - 16px));
+    width: var(--sl-row-card-w);
+    transform-origin: 50% 0;
+  }
+
+  .sl-cinematic-journey .sl-waypoint-callout-anchor .sl-waypoint-callout::before,
+  .sl-cinematic-connected .sl-waypoint-callout-anchor .sl-waypoint-callout::before {
+    display: none;
+  }
+
+  .sl-cinematic-journey .sl-waypoint-callout-anchor::before {
+    content: "";
+    position: absolute;
+    left: calc(var(--callout-x) + 21.5px);
+    top: calc(var(--sl-row-point-y) + 54px);
+    height: calc(var(--sl-row-card-top) - var(--sl-row-point-y) - 54px);
+    border-left: 1px dashed rgba(157, 50, 117, .56);
+  }
+
+  /* Merchant workspace: 05 sits higher so its label clears 04's on tablets. */
+  .sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(5) {
+    top: 37%;
+  }
+}
+
+/* Between 601px and 900px the journey numbers sit 2% lower. */
+@media (min-width: 601px) and (max-width: 900px) {
+  .sl-cinematic-journey .sl-waypoint-callout-anchor {
+    --sl-row-card-top: calc(53% + 68px);
+    --sl-row-point-y: calc(var(--callout-y) + 2%);
+  }
+}
+
+/* Merchant workspace on narrow tablets: 04 moves right so its label clears 03's. */
+@media (min-width: 601px) and (max-width: 700px) {
+  .sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(4) {
+    left: 71%;
+  }
+}
+
+/* Sellio World on narrower desktop layouts: Services' card opens above its pin, at the right edge,
+   clear of the F&B District label (below the pin it reached under that label). */
+@media (min-width: 901px) and (max-width: 1110px) {
+  .sl-page-turn-world .sl-map-detail-anchor--services {
+    top: auto;
+    bottom: calc(64% + 12px);
+    left: auto;
+    right: 16px;
+    width: min(330px, 26vw);
+    transform: none;
+  }
+}
+
+/* Wide screens have room for 05's label beside 04's, as before. */
+@media (min-width: 1181px) {
+  .sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(5) {
+    top: 42%;
+  }
+}
+
+/* Phones held sideways: the scenes are taller than the screen, so a card below the numbers would
+   open off screen. The card shows in the scene's top-right corner instead, clear of the numbers and
+   the heading. */
+@media (min-width: 601px) and (max-height: 500px) {
+  .sl-cinematic-journey .sl-waypoint-callout-anchor.is-left .sl-waypoint-callout,
+  .sl-cinematic-journey .sl-waypoint-callout-anchor.is-right .sl-waypoint-callout,
+  .sl-cinematic-connected .sl-waypoint-callout-anchor.is-left .sl-waypoint-callout,
+  .sl-cinematic-connected .sl-waypoint-callout-anchor.is-right .sl-waypoint-callout {
+    top: 16px;
+    left: auto;
+    right: 16px;
+    width: 240px;
+  }
+
+  .sl-cinematic-journey .sl-waypoint-callout-anchor::before {
+    display: none;
+  }
+
+  .sl-cinematic-workspace .sl-waypoint-callout--workspace {
+    top: 16px;
+    left: auto;
+    right: 16px;
+    width: 240px;
+  }
+
+  .sl-page-turn-world .sl-map-detail-anchor {
+    top: 12px;
+    bottom: auto;
+    left: auto;
+    right: 12px;
+    width: min(360px, 44vw);
+  }
+
+  .sl-page-turn-world .sl-map-detail-anchor .sl-map-detail-overlay {
+    max-height: none;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Connected commerce card 02 fits between the left edge and its number. */
+  .sl-waypoint-callout-anchor.sl-connected-callout-anchor .sl-waypoint-callout {
+    width: min(196px, 49vw);
+  }
+
+  /* Sellio World: the district card shows in front of the capability panel, not behind it, and
+     the panel steps aside while a card is open (browsers without :has() show the card over it). */
+  .sl-page-turn-world .sl-map-detail-anchor {
+    z-index: 34;
+  }
+
+  .sl-page-turn-world .sl-world-proof-strip {
+    transition: opacity .2s ease, visibility .2s ease;
+  }
+
+  .sl-page-turn-world:has(.sl-map-detail-anchor) .sl-world-proof-strip {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}

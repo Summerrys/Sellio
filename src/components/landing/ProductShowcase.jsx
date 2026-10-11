@@ -7,11 +7,12 @@ import './mobile-pan.css';
 
 const CALLOUT_POSITIONS = [
   { x: '5%', y: '62%', mobileX: '48%', mobileY: '63%' },
-  { x: '23%', y: '58%', mobileX: '48%', mobileY: '57%' },
-  { x: '43%', y: '59%', mobileX: '48%', mobileY: '52%' },
-  // Use the open left-side floor for the upper-right stages so their markers stay unobstructed.
-  { x: '59%', y: '57%', mobileX: '4%', mobileY: '54%' },
-  { x: '70%', y: '52%', mobileX: '4%', mobileY: '45%' },
+  // Phones: cards 02-05 share the clear lower-right floor, just below 03 and right of 01 and 02, so
+  // no card covers a number (04 and 05 on the left used to cover 02 and 03).
+  { x: '23%', y: '60%', mobileX: '48%', mobileY: 'calc(49% + 58px)' },
+  { x: '43%', y: '59%', mobileX: '48%', mobileY: 'calc(49% + 58px)' },
+  { x: '59%', y: '57%', mobileX: '48%', mobileY: 'calc(49% + 58px)' },
+  { x: '66%', y: '56%', mobileX: '48%', mobileY: 'calc(49% + 58px)' },
 ];
 
 export default function ProductShowcase() {

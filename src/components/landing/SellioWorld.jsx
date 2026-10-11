@@ -21,7 +21,7 @@ const SECTORS = [
     name: 'Retail Avenue',
     status: 'Open for onboarding',
     Icon: ShoppingBag,
-    detailX: '27%',
+    detailX: '22%',
     detailY: '58%',
     summary: 'Boutiques and product-led merchants receive a recognisable storefront along a dedicated retail route.',
   },
@@ -38,7 +38,7 @@ const SECTORS = [
     status: 'Open for onboarding',
     Icon: BriefcaseBusiness,
     detailX: '70%',
-    detailY: '52%',
+    detailY: 'calc(36% + 64px)',
     summary: 'Wellness, studios and professional services occupy a calmer appointment-led neighbourhood.',
   },
 ];

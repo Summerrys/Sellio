@@ -20,7 +20,7 @@ const STEPS = [
     title: 'A storefront that feels like your own.',
     description: 'Customers enter through your link or table QR and browse a polished, mobile-first storefront.',
     Icon: QrCode,
-    point: { x: '22%', y: '48%', mobileX: '38%', mobileY: '76%' },
+    point: { x: '22%', y: '48%', mobileX: 'calc(38% + 8px)', mobileY: 'calc(76% + 36px)' },
   },
   {
     key: 'order',
@@ -38,7 +38,7 @@ const STEPS = [
     title: 'Service teams see what comes next.',
     description: 'Kitchen and service teams move each order from new to preparing and ready with confidence.',
     Icon: ChefHat,
-    point: { x: '49%', y: '48%', mobileX: '39%', mobileY: '54%' },
+    point: { x: '49%', y: '48%', mobileX: 'calc(39% + 8px)', mobileY: '54%' },
   },
   {
     key: 'update',
@@ -56,7 +56,7 @@ const STEPS = [
     title: 'The day becomes useful business insight.',
     description: 'Sales, popular products and operational patterns are ready to review without rebuilding the story.',
     Icon: BarChart3,
-    point: { x: '72%', y: '45%', mobileX: '46%', mobileY: '34%' },
+    point: { x: '72%', y: '45%', mobileX: '46%', mobileY: '28%' },
   },
 ];
 
