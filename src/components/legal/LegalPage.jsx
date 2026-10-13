@@ -113,6 +113,15 @@ export default function LegalPage({
   const [cookieOpen, setCookieOpen] = useState(() => !getCookieConsent());
   const cookieReturnFocus = useRef(null);
 
+  // A link such as /privacy#cookies (the cookie card's policy link) opens at that section. The browser's
+  // own jump is lost when the prerendered page is replaced, so scroll once the page has rendered.
+  useEffect(() => {
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (!id) return undefined;
+    const frame = window.requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: 'start' }));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
   return (
     <div className="sellio-legal-page">
       <a className="sellio-legal-skip" href="#legal-content">Skip to content</a>
