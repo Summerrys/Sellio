@@ -32,7 +32,7 @@ const CONNECTED_STAGES = [
     title: 'A customer enters through the merchant’s own brand.',
     description: 'Discovery, product choice and checkout stay simple while the storefront keeps its identity.',
     Icon: Store,
-    point: { x: '24%', y: '56%', mobileX: '24%', mobileY: '42%' },
+    point: { x: '24%', y: '56%', wideX: '11%', wideY: '58%', mobileX: '24%', mobileY: '42%' },
     callout: { mobileX: '30%', mobileY: '37%' },
   },
   {
@@ -42,7 +42,7 @@ const CONNECTED_STAGES = [
     title: 'Sellio carries the order into one connected flow.',
     description: 'Order details, product context and operational status move together without manual re-entry.',
     Icon: Sparkles,
-    point: { x: '50%', y: '49%', mobileX: '55%', mobileY: '57%' },
+    point: { x: '50%', y: '49%', wideX: '48.5%', wideY: '44%', mobileX: '55%', mobileY: '57%' },
     callout: { mobileX: 'calc(55% + 34px)', mobileY: '57%' },
   },
   {
@@ -52,7 +52,7 @@ const CONNECTED_STAGES = [
     title: 'The merchant sees what happened and what comes next.',
     description: 'Teams act on live orders, connected stock and useful performance signals from one side of Sellio.',
     Icon: BellRing,
-    point: { x: '76%', y: '57%', mobileX: '72%', mobileY: '72%' },
+    point: { x: '76%', y: '57%', wideX: '88%', wideY: '53%', mobileX: '72%', mobileY: '72%' },
     callout: { mobileX: '72%', mobileY: '70%' },
   },
 ];
@@ -100,6 +100,7 @@ export default function ConnectedCommerce() {
             >
               <picture className="sl-responsive-art">
                 <source media="(max-width: 600px)" srcSet={SELLIO_IMMERSIVE_MOBILE_ASSETS.connected} />
+                <source media="(min-width: 901px)" srcSet={SELLIO_IMMERSIVE_ASSETS.connectedWide} />
                 <img
                   src={SELLIO_IMMERSIVE_ASSETS.connected}
                   alt="A premium connected commerce environment linking a customer storefront to merchant operations"
@@ -120,7 +121,7 @@ export default function ConnectedCommerce() {
                     key={stage.key}
                     type="button"
                     className={index === activeIndex ? 'is-active' : ''}
-                    style={{ '--point-x': stage.point.x, '--point-y': stage.point.y, '--point-mobile-x': stage.point.mobileX, '--point-mobile-y': stage.point.mobileY }}
+                    style={{ '--point-x': stage.point.x, '--point-y': stage.point.y, '--point-wide-x': stage.point.wideX, '--point-wide-y': stage.point.wideY, '--point-mobile-x': stage.point.mobileX, '--point-mobile-y': stage.point.mobileY }}
                     onClick={() => setActiveIndex(index)}
                     aria-pressed={index === activeIndex}
                     aria-label={`${stage.number}. ${stage.label}: show this connection stage`}
@@ -135,6 +136,8 @@ export default function ConnectedCommerce() {
                 style={{
                   '--callout-x': activeStage.point.x,
                   '--callout-y': activeStage.point.y,
+                  '--callout-wide-x': activeStage.point.wideX,
+                  '--callout-wide-y': activeStage.point.wideY,
                   '--callout-mobile-x': activeStage.callout?.mobileX || activeStage.point.mobileX,
                   '--callout-mobile-y': activeStage.callout?.mobileY || activeStage.point.mobileY,
                 }}

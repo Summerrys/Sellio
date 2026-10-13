@@ -14,6 +14,9 @@ export const SELLIO_IMMERSIVE_ASSETS = {
   journey: `${desktopImageRoot}/03-commerce-journey.jpg`,
   workspace: `${desktopImageRoot}/04-connected-workspace.jpg`,
   connected: `${desktopImageRoot}/05-connected-commerce.webp`,
+  // Connected commerce on screens wider than 900px: the 2400×800 panorama (fills the 16:9 scene,
+  // showing its middle). Tablets held upright keep the 16:9 picture above.
+  connectedWide: '/assets/immersive-hd/05-connected-commerce.webp',
   progression: `${desktopImageRoot}/06-coins-progression.jpg`,
   ready: `${desktopImageRoot}/07-ready-world.jpg`,
 };

@@ -2222,6 +2222,24 @@
   }
 }
 
+/* Connected commerce wider than 900px shows the 2400×800 panorama (ConnectedCommerce.jsx), filling
+   the 16:9 scene; its numbers and cards use the panorama positions (--point-wide-*, --callout-wide-*). */
+@media (min-width: 901px) {
+  .sl-cinematic-connected .sl-connection-waypoints button {
+    left: var(--point-wide-x) !important;
+    top: var(--point-wide-y) !important;
+  }
+
+  .sl-cinematic-connected .sl-waypoint-callout-anchor {
+    --sl-row-card-top: calc(var(--callout-wide-y) + 58px);
+  }
+
+  .sl-cinematic-connected .sl-waypoint-callout-anchor.is-left .sl-waypoint-callout,
+  .sl-cinematic-connected .sl-waypoint-callout-anchor.is-right .sl-waypoint-callout {
+    left: clamp(16px, calc(var(--callout-wide-x) + 22px - var(--sl-row-card-w) / 2), calc(100% - var(--sl-row-card-w) - 16px));
+  }
+}
+
 /* Merchant workspace on narrow tablets: 04 moves right so its label clears 03's. */
 @media (min-width: 601px) and (max-width: 700px) {
   .sl-cinematic-workspace .sl-workspace-waypoints button:nth-child(4) {
