@@ -15,6 +15,9 @@ const SELLIO_IMMERSIVE_ASSETS = {
   journey: `${desktopImageRoot}/03-commerce-journey.jpg`,
   workspace: `${desktopImageRoot}/04-connected-workspace.jpg`,
   connected: `${desktopImageRoot}/05-connected-commerce.webp`,
+  // Connected commerce on screens wider than 900px: the 2400×800 panorama (fills the 16:9 scene,
+  // showing its middle). Tablets held upright keep the 16:9 picture above.
+  connectedWide: "/assets/immersive-hd/05-connected-commerce.webp",
   progression: `${desktopImageRoot}/06-coins-progression.jpg`
 };
 const SELLIO_IMMERSIVE_MOBILE_ASSETS = {
@@ -889,7 +892,7 @@ const CONNECTED_STAGES = [
     title: "A customer enters through the merchant’s own brand.",
     description: "Discovery, product choice and checkout stay simple while the storefront keeps its identity.",
     Icon: Store,
-    point: { x: "24%", y: "56%", mobileX: "24%", mobileY: "42%" },
+    point: { x: "24%", y: "56%", wideX: "11%", wideY: "58%", mobileX: "24%", mobileY: "42%" },
     callout: { mobileX: "30%", mobileY: "37%" }
   },
   {
@@ -899,7 +902,7 @@ const CONNECTED_STAGES = [
     title: "Sellio carries the order into one connected flow.",
     description: "Order details, product context and operational status move together without manual re-entry.",
     Icon: Sparkles,
-    point: { x: "50%", y: "49%", mobileX: "55%", mobileY: "57%" },
+    point: { x: "50%", y: "49%", wideX: "48.5%", wideY: "44%", mobileX: "55%", mobileY: "57%" },
     callout: { mobileX: "calc(55% + 34px)", mobileY: "57%" }
   },
   {
@@ -909,7 +912,7 @@ const CONNECTED_STAGES = [
     title: "The merchant sees what happened and what comes next.",
     description: "Teams act on live orders, connected stock and useful performance signals from one side of Sellio.",
     Icon: BellRing,
-    point: { x: "76%", y: "57%", mobileX: "72%", mobileY: "72%" },
+    point: { x: "76%", y: "57%", wideX: "88%", wideY: "53%", mobileX: "72%", mobileY: "72%" },
     callout: { mobileX: "72%", mobileY: "70%" }
   }
 ];
@@ -954,6 +957,7 @@ function ConnectedCommerce() {
         children: [
           /* @__PURE__ */ jsxs("picture", { className: "sl-responsive-art", children: [
             /* @__PURE__ */ jsx("source", { media: "(max-width: 600px)", srcSet: SELLIO_IMMERSIVE_MOBILE_ASSETS.connected }),
+            /* @__PURE__ */ jsx("source", { media: "(min-width: 901px)", srcSet: SELLIO_IMMERSIVE_ASSETS.connectedWide }),
             /* @__PURE__ */ jsx(
               "img",
               {
@@ -981,7 +985,7 @@ function ConnectedCommerce() {
             {
               type: "button",
               className: index === activeIndex ? "is-active" : "",
-              style: { "--point-x": stage.point.x, "--point-y": stage.point.y, "--point-mobile-x": stage.point.mobileX, "--point-mobile-y": stage.point.mobileY },
+              style: { "--point-x": stage.point.x, "--point-y": stage.point.y, "--point-wide-x": stage.point.wideX, "--point-wide-y": stage.point.wideY, "--point-mobile-x": stage.point.mobileX, "--point-mobile-y": stage.point.mobileY },
               onClick: () => setActiveIndex(index),
               "aria-pressed": index === activeIndex,
               "aria-label": `${stage.number}. ${stage.label}: show this connection stage`,
@@ -996,6 +1000,8 @@ function ConnectedCommerce() {
               style: {
                 "--callout-x": activeStage.point.x,
                 "--callout-y": activeStage.point.y,
+                "--callout-wide-x": activeStage.point.wideX,
+                "--callout-wide-y": activeStage.point.wideY,
                 "--callout-mobile-x": ((_a = activeStage.callout) == null ? void 0 : _a.mobileX) || activeStage.point.mobileX,
                 "--callout-mobile-y": ((_b = activeStage.callout) == null ? void 0 : _b.mobileY) || activeStage.point.mobileY
               },
