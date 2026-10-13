@@ -2303,9 +2303,17 @@
     transition: opacity .2s ease, visibility .2s ease;
   }
 
-  .sl-page-turn-world:has(.sl-map-detail-anchor) .sl-world-proof-strip {
+  .sl-page-turn-world:has(.sl-map-detail-anchor) .sl-world-proof-strip,
+  .sl-page-turn-world:has(.sl-world-stage--storefront) .sl-world-proof-strip {
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
+  }
+
+  /* Cafetelier storefront (F&B District): "Back to Sellio World" sits at the bottom left on phones,
+     where the capability panel covered it. The panel steps aside while the storefront is open (above),
+     and the button is layered above the panel for browsers without :has(). */
+  .sl-page-turn-world .sl-world-stage--storefront .sl-storefront-back-fixed {
+    z-index: 35;
   }
 }
