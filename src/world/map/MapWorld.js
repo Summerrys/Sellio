@@ -460,6 +460,15 @@ export function createMapWorld(container, {
   }
   // a side panel (desktop) or bottom sheet (phone) covers part of the map
   const padding = () => ({ left: 0, right: inset.x * 2, top: 0, bottom: inset.y * 2 });
+  // A "look over there" flight (a district you peek at). Closing a panel
+  // changes the padding mid-flight; re-aiming the flight keeps it going where
+  // a separate padding move would stop it short.
+  let lookAt = null;
+  map.on('moveend', () => { lookAt = null; });
+  function lookTo(view, duration) {
+    map.flyTo({ ...view, padding: padding(), duration: reduceMotion ? 0 : duration, essential: true });
+    if (!reduceMotion) lookAt = view; // (set after flyTo: starting it ends the previous move)
+  }
 
   function enter(key = 'plaza', { instant = false, at = null } = {}) {
     const pad = padFor(key) || padFor('plaza');
@@ -539,6 +548,7 @@ export function createMapWorld(container, {
       // A new camera move would cancel one in progress: re-aim the current
       // close-up with the new padding instead.
       if (focus?.redo) focus.redo();
+      else if (lookAt) lookTo(lookAt, 900);
       else map.easeTo({ padding: padding(), duration: reduceMotion ? 0 : 350 });
     },
     setInputBlocked(on) { blocked = !!on; if (blocked) { keys.clear(); applyKeys(); } },
@@ -552,7 +562,10 @@ export function createMapWorld(container, {
     flyToDistrict(key) {
       const d = DISTRICTS.find((x) => x.key === key) || { center: PLAZA.center, view: { zoom: 18.5, pitch: 55, bearing: 0 } };
       autoSpin = false;
-      map.flyTo({ center: toLngLat(d.center[0], d.center[1]), zoom: d.view.zoom, pitch: d.view.pitch, bearing: d.view.bearing, duration: reduceMotion ? 0 : 1600, essential: true, padding: padding() });
+      // Looking somewhere else lets go of Mochi (like dragging the map away);
+      // the find-Mochi button brings the camera back.
+      focus = null; setFollow(false);
+      lookTo({ center: toLngLat(d.center[0], d.center[1]), zoom: d.view.zoom, pitch: d.view.pitch, bearing: d.view.bearing }, 1600);
     },
     zoomBy(delta) { map.easeTo({ zoom: map.getZoom() + delta, duration: 250 }); },
     setOverviewPadding(p) {
