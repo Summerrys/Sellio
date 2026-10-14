@@ -52,7 +52,7 @@ import PlanFeatureNotice from './components/subscription/PlanFeatureNotice';
 import { PAGE_FEATURES, itemWords } from '@/lib/planFeatures';
 
 
-const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth', 'Join', 'Account'];
+const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth', 'Join', 'Account', 'World'];
 
 function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription, onOpenProfile, onToggleCollapse, onClose }) {
   const [linkCopied, setLinkCopied] = useState(false);
