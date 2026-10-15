@@ -9,6 +9,7 @@ Contact: sellio@apptelier.sg
 ## Public pages
 
 - Homepage: https://sellio.apptelier.sg/
+- Explore: https://sellio.apptelier.sg/explore
 - Privacy Policy: https://sellio.apptelier.sg/privacy
 - Terms and Conditions: https://sellio.apptelier.sg/terms
 
@@ -16,7 +17,9 @@ Contact: sellio@apptelier.sg
 
 Sellio gives merchants tools for branded online storefronts, QR and table ordering, order workflows, kitchen display, products and inventory, reporting, staff roles and permissions, and AI-assisted business workflows.
 
-Sellio World is the marketplace layer. Merchants can establish a storefront presence in relevant business districts while retaining their own brand, products, imagery and customer experience.
+Sellio Explore (https://sellio.apptelier.sg/explore) is a public feed of items from participating Sellio shops. Anyone can browse it without an account.
+
+Sellio World, a marketplace map where merchants get a storefront presence in business districts, is coming soon.
 
 ## Merchant plans
 
@@ -39,5 +42,5 @@ Preview URLs, merchant administration pages, dashboards, order-management interf
 
 - Sellio storefront: a merchant-branded customer-facing commerce page.
 - Sellio World: the connected marketplace and merchant discovery environment.
-- Sellio Coins: in-platform rewards used for eligible marketplace progression and cosmetic customisation.
+- Sellio Coins (coming with Sellio World): planned in-platform rewards for marketplace progression and cosmetic customisation.
 - Merchant workspace: operational tools for orders, inventory, reporting, staff access and related workflows.

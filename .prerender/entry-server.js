@@ -46,14 +46,14 @@ const SCENES = [
   {
     id: "world",
     nav: "Sellio World",
-    eyebrow: "A connected commerce world",
+    eyebrow: "Sellio World · coming soon",
     title: "Commerce has a place to grow.",
-    body: "Enter a living marketplace where F&B, Retail and Services merchants each have a district, a storefront and room to grow.",
+    body: "A marketplace map where F&B, Retail and Services merchants each get a district, a storefront and room to grow. Opening soon; your storefront and Sellio Explore work today.",
     tags: ["F&B district", "Retail district", "Services district"],
     poster: "01-world.jpg",
     accent: "#e0449a",
     primary: { label: "Start your 7-day free trial", href: "#pricing" },
-    secondary: { label: "Explore Cafetelier", href: "/store/cafetelier?preview=true", external: true }
+    secondary: { label: "Explore Cafetelier", href: "https://sellio.apptelier.sg/store/cafetelier", external: true }
   },
   {
     id: "storefront",
@@ -88,9 +88,9 @@ const SCENES = [
   {
     id: "vision",
     nav: "Progression",
-    eyebrow: "Merchant progression",
+    eyebrow: "Coming soon · merchant progression",
     title: "Grow your presence. Make it yours.",
-    body: "Earn Sellio Coins, unlock seasonal décor and customise your storefront while the marketplace keeps commerce simple and intuitive.",
+    body: "Coming with Sellio World: earn Sellio Coins, unlock seasonal décor and customise your storefront, while ordering stays simple.",
     tags: ["Sellio Coins", "Seasonal décor", "Merchant expression"],
     poster: "05-progression.jpg",
     accent: "#f59e0b"
@@ -99,9 +99,9 @@ const SCENES = [
     id: "ready",
     nav: "Get started",
     eyebrow: "Ready when you are",
-    title: "Open your storefront. Take your place in the world.",
-    body: "Launch your Sellio storefront, join the right merchant district and start growing in the connected marketplace from day one.",
-    tags: ["Seven-day free trial", "Set up at your pace", "Sellio World access"],
+    title: "Open your storefront. Start selling today.",
+    body: "Launch your Sellio storefront, start taking orders and get found on Sellio Explore from day one.",
+    tags: ["Seven-day free trial", "Set up at your pace", "Listed on Sellio Explore"],
     poster: "06-ready.jpg",
     accent: "#ec4899",
     primary: { label: "View plans", href: "#pricing" },
@@ -363,7 +363,7 @@ const SECTORS = [
   {
     key: "retail",
     name: "Retail Avenue",
-    status: "Open for onboarding",
+    status: "Coming soon",
     Icon: ShoppingBag,
     detailX: "22%",
     detailY: "58%",
@@ -372,14 +372,14 @@ const SECTORS = [
   {
     key: "fnb",
     name: "F&B District",
-    status: "Live district",
+    status: "Opening first",
     Icon: Utensils,
     summary: "Restaurants, cafés, bakeries and beverage concepts live around shared discovery and ordering routes."
   },
   {
     key: "services",
     name: "Services Garden",
-    status: "Open for onboarding",
+    status: "Coming soon",
     Icon: BriefcaseBusiness,
     detailX: "70%",
     detailY: "calc(36% + 64px)",
@@ -1010,7 +1010,7 @@ function ConnectedCommerce() {
     ] })
   ] }) }) });
 }
-const SELLIO_WHATSAPP = "6565805411";
+const SELLIO_WHATSAPP = "6582228103";
 function sellioWhatsAppUrl(text = "") {
   return `https://wa.me/${SELLIO_WHATSAPP}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
 }
@@ -1347,7 +1347,7 @@ function ChapterTransition({ children, className = "", label }) {
 }
 const SITE_URL$1 = "https://sellio.apptelier.sg/";
 const LOGO_URL$1 = "https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png";
-const DEMO_STORE_URL = "/store/cafetelier?preview=true";
+const DEMO_STORE_URL = "https://sellio.apptelier.sg/store/cafetelier";
 const LANDING_TITLE = "Sellio — Storefronts, Operations & Marketplace for Modern Commerce";
 const LANDING_DESCRIPTION = "Sellio connects branded storefronts, F&B ordering and merchant operations with an evolving sector-based marketplace world.";
 const NAV_ITEMS = [
@@ -1355,16 +1355,17 @@ const NAV_ITEMS = [
   { label: "How it flows", href: "#journey" },
   { label: "Product", href: "#product" },
   { label: "Vision", href: "#vision" },
-  { label: "Pricing", href: "#pricing" }
+  { label: "Pricing", href: "#pricing" },
+  { label: "Explore", href: "/explore" }
 ];
 const FAQ_ITEMS = [
-  { question: "How does my business join Sellio World?", answer: "Start a Sellio merchant plan and complete your storefront setup. Your business is then placed in the most relevant F&B, Retail or Services district so customers can discover it naturally." },
-  { question: "What happens when a customer selects my storefront?", answer: "Sellio moves the customer from the district view into your branded storefront, where they can browse products or services and complete the relevant ordering journey." },
-  { question: "Can my storefront keep its own branding?", answer: "Yes. Sellio supplies the connected world and commerce structure while your storefront keeps its own colours, products, imagery, content and decorative style." },
-  { question: "How do Sellio Coins work?", answer: "Merchants earn Sellio Coins through eligible marketplace activity and milestones. Coins can be used for cosmetic storefront upgrades, seasonal decorations and selected world customisations." },
-  { question: "Are seasonal decorations available?", answer: "Yes. Merchants can personalise their storefront for occasions such as Chinese New Year and Christmas while keeping the core shopping and ordering experience consistent." },
-  { question: "Which merchant districts are available?", answer: "Sellio World supports dedicated F&B, Retail and Services districts. Merchants are allocated according to their primary business category, with room for new districts as the marketplace grows." },
-  { question: "Do customers need an account to browse?", answer: "No. Customers can explore participating storefronts and browse available products or services without creating a marketplace account. Account features can be introduced only when they add useful continuity or rewards." }
+  { question: "How do customers find my shop?", answer: "Through your own storefront link, your table QR codes and Sellio Explore, a public feed where anyone can browse items from Sellio shops without an account. Your shop is listed on Explore by default and you can switch it off in Settings." },
+  { question: "What happens when a customer selects my storefront?", answer: "They land on your branded storefront, where they can browse your products and order directly from you." },
+  { question: "Can my storefront keep its own branding?", answer: "Yes. Your storefront keeps its own colours, logo, products, imagery and content." },
+  { question: "What is Sellio World?", answer: "Sellio World is a marketplace map we are building, where merchants get a storefront in an F&B, Retail or Services district. It is coming soon, with F&B opening first." },
+  { question: "How will Sellio Coins work?", answer: "Sellio Coins are coming with Sellio World. The plan is for merchants to earn coins through marketplace activity and milestones and spend them on cosmetic storefront upgrades. Details will be shared before launch." },
+  { question: "Are seasonal decorations available?", answer: "Not yet. Seasonal storefront decorations for occasions such as Chinese New Year and Christmas are planned alongside Sellio World." },
+  { question: "Do customers need an account to browse or order?", answer: "No. Customers can browse Sellio Explore and storefronts and place orders without creating an account." }
 ];
 const SNAP_PAGE_SELECTORS = ["#sellio-film", "#world-experience", "#journey", "#connected", "#product", "#vision"];
 function useImmersiveReleaseSnap() {
@@ -1665,9 +1666,9 @@ function PricingSection() {
       /* @__PURE__ */ jsxs("h2", { id: "sellio-pricing-heading", children: [
         "Launch your storefront.",
         /* @__PURE__ */ jsx("br", {}),
-        "Claim your place in Sellio World."
+        "Start taking orders."
       ] }),
-      /* @__PURE__ */ jsx("p", { children: "Choose the operations plan that fits your business, enter the right merchant district and start building your presence in the connected marketplace." })
+      /* @__PURE__ */ jsx("p", { children: "Choose the plan that fits your business. Every plan includes your own storefront, QR ordering and the Sellio counter." })
     ] }),
     /* @__PURE__ */ jsxs("div", { className: "sellio-billing-toggle", role: "group", "aria-label": "Billing period", children: [
       /* @__PURE__ */ jsx("button", { type: "button", className: !annual ? "is-active" : "", onClick: () => setAnnual(false), children: "Monthly" }),
@@ -1710,7 +1711,7 @@ function PricingSection() {
         ] })
       ] }, plan.key);
     }) }),
-    /* @__PURE__ */ jsx("p", { className: "sellio-pricing-note", children: "Eligible new merchants receive a seven-day trial. Prices exclude applicable taxes. Every active merchant can establish a presence in Sellio World." }),
+    /* @__PURE__ */ jsx("p", { className: "sellio-pricing-note", children: "Eligible new merchants receive a seven-day trial. Prices exclude applicable taxes. Sellio World, our marketplace map, is coming soon." }),
     /* @__PURE__ */ jsxs("p", { className: "sellio-pricing-note", children: [
       "Selling from home? ",
       /* @__PURE__ */ jsx("a", { href: "/join", rel: "nofollow", style: { fontWeight: 700, textDecoration: "underline" }, children: "Open a free personal shop" }),
@@ -1739,8 +1740,8 @@ function FAQSection() {
         /* @__PURE__ */ jsx(ShieldCheck, {}),
         " Join with confidence"
       ] }),
-      /* @__PURE__ */ jsx("h2", { id: "sellio-faq-heading", children: "Your business in Sellio World." }),
-      /* @__PURE__ */ jsx("p", { children: "How merchant placement, storefront identity, Sellio Coins and customer discovery work together." })
+      /* @__PURE__ */ jsx("h2", { id: "sellio-faq-heading", children: "Your business on Sellio." }),
+      /* @__PURE__ */ jsx("p", { children: "Storefronts, customer discovery and what is coming next." })
     ] }),
     /* @__PURE__ */ jsx("div", { className: "sellio-faq-list", children: FAQ_ITEMS.map((item) => /* @__PURE__ */ jsxs("details", { children: [
       /* @__PURE__ */ jsxs("summary", { children: [
@@ -1762,9 +1763,9 @@ function Footer({ onCookieSettings }) {
         /* @__PURE__ */ jsxs("h2", { id: "sellio-footer-launch-heading", children: [
           "Build your storefront.",
           /* @__PURE__ */ jsx("br", {}),
-          "Enter Sellio World."
+          "Get discovered on Sellio."
         ] }),
-        /* @__PURE__ */ jsx("p", { children: "Bring your business online, join the right merchant district and create a storefront customers can discover, remember and return to." })
+        /* @__PURE__ */ jsx("p", { children: "Bring your business online with a storefront customers can find on Sellio Explore, remember and return to." })
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "sellio-footer-launch__actions", children: [
         /* @__PURE__ */ jsxs("a", { href: "#pricing", className: "sellio-button sellio-button--gradient", children: [
@@ -1784,25 +1785,21 @@ function Footer({ onCookieSettings }) {
         /* @__PURE__ */ jsxs("h3", { children: [
           "Your storefront today.",
           /* @__PURE__ */ jsx("br", {}),
-          "Your place in Sellio World."
+          "Sellio World next."
         ] }),
         /* @__PURE__ */ jsx("p", { children: "Bring storefronts, orders, operations and merchant progression together in one bright, connected commerce platform." }),
         /* @__PURE__ */ jsxs("a", { className: "sellio-footer-brand__credit", href: "https://apptelier.sg", target: "_blank", rel: "noopener noreferrer", children: [
           "Crafted in Singapore by Apptélier ",
           /* @__PURE__ */ jsx(ArrowUpRight, {})
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "sellio-footer-live", "aria-label": "Sellio World availability", children: [
-          /* @__PURE__ */ jsxs("span", { children: [
-            /* @__PURE__ */ jsx("i", {}),
-            " Sellio World live"
-          ] }),
+        /* @__PURE__ */ jsxs("div", { className: "sellio-footer-live", "aria-label": "Sellio availability", children: [
           /* @__PURE__ */ jsxs("span", { children: [
             /* @__PURE__ */ jsx("i", {}),
             " Onboarding open"
           ] }),
           /* @__PURE__ */ jsxs("span", { children: [
             /* @__PURE__ */ jsx("i", {}),
-            " Sellio Coins active"
+            " Sellio Explore live"
           ] })
         ] })
       ] }),
