@@ -1,5 +1,5 @@
 import { jsxs, jsx, Fragment } from "react/jsx-runtime";
-import React, { useRef, useState, useEffect, useMemo } from "react";
+import React, { useRef, useState, useEffect, useMemo, useLayoutEffect } from "react";
 import { renderToString } from "react-dom/server";
 import { Sparkles, Check, MousePointer2, ChevronDown, ArrowRight, ShoppingBag, Utensils, BriefcaseBusiness, Compass, X, MapPin, MousePointerClick, ArrowLeft, Palette, Store, QrCode, Bell, Package, BarChart3, Users, BellRing, ChefHat, PackageCheck, HeartHandshake, Warehouse, Bot, ArrowUpRight, Map, Coins, MoveHorizontal, ArrowDown, Menu, ChevronRight, CircleDollarSign, ShieldCheck, Cookie } from "lucide-react";
 import { useReducedMotion, AnimatePresence, motion } from "framer-motion";
@@ -1346,7 +1346,8 @@ function ChapterTransition({ children, className = "", label }) {
   );
 }
 const SITE_URL$1 = "https://sellio.apptelier.sg/";
-const LOGO_URL$1 = "https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png";
+const LOGO_URL$1 = "/branding/sellio-logo.webp";
+const useBrowserLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 const DEMO_STORE_URL = "https://sellio.apptelier.sg/store/cafetelier";
 const LANDING_TITLE = "Sellio — Storefronts, Operations & Marketplace for Modern Commerce";
 const LANDING_DESCRIPTION = "Sellio connects branded storefronts, F&B ordering and merchant operations with an evolving sector-based marketplace world.";
@@ -1365,7 +1366,7 @@ const FAQ_ITEMS = [
   { question: "What is Sellio World?", answer: "Sellio World is a marketplace map we are building, where merchants get a storefront in an F&B, Retail or Services district. It is coming soon, with F&B opening first." },
   { question: "How will Sellio Coins work?", answer: "Sellio Coins are coming with Sellio World. The plan is for merchants to earn coins through marketplace activity and milestones and spend them on cosmetic storefront upgrades. Details will be shared before launch." },
   { question: "Are seasonal decorations available?", answer: "Not yet. Seasonal storefront decorations for occasions such as Chinese New Year and Christmas are planned alongside Sellio World." },
-  { question: "Do customers need an account to browse or order?", answer: "No. Customers can browse Sellio Explore and storefronts and place orders without creating an account." }
+  { question: "Do customers need an account to browse or order?", answer: "Not to browse: anyone can look through Sellio Explore and storefronts. On the web and at your tables, customers order without an account; in the Sellio app, they sign in before placing an order." }
 ];
 const SNAP_PAGE_SELECTORS = ["#sellio-film", "#world-experience", "#journey", "#connected", "#product", "#vision"];
 function useImmersiveReleaseSnap() {
@@ -1838,6 +1839,10 @@ function Footer({ onCookieSettings }) {
 }
 function LandingPage() {
   useImmersiveReleaseSnap();
+  useBrowserLayoutEffect(() => {
+    var _a;
+    (_a = document.getElementById("sellio-prerender")) == null ? void 0 : _a.remove();
+  }, []);
   const [cookieOpen, setCookieOpen] = useState(() => !getCookieConsent());
   const cookieReturnFocus = useRef(null);
   useEffect(() => {
@@ -1990,7 +1995,16 @@ function LandingPage() {
     /* @__PURE__ */ jsx(CookieConsent, { open: cookieOpen, onOpenChange: setCookieOpen, returnFocusRef: cookieReturnFocus })
   ] });
 }
-const LOGO_URL = "https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png";
+const HREF = "https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap";
+function loadExtraFonts() {
+  if (typeof document === "undefined" || document.getElementById("sellio-extra-fonts")) return;
+  const link = document.createElement("link");
+  link.id = "sellio-extra-fonts";
+  link.rel = "stylesheet";
+  link.href = HREF;
+  document.head.appendChild(link);
+}
+const LOGO_URL = "/branding/sellio-logo.webp";
 const SITE_URL = "https://sellio.apptelier.sg";
 function useLegalMetadata({ title, description, path, dateModified }) {
   useEffect(() => {
@@ -2087,6 +2101,9 @@ function LegalPage({
     path,
     dateModified: "2026-09-22"
   });
+  useEffect(() => {
+    loadExtraFonts();
+  }, []);
   const [cookieOpen, setCookieOpen] = useState(() => !getCookieConsent());
   const cookieReturnFocus = useRef(null);
   useEffect(() => {
