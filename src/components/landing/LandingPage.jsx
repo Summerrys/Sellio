@@ -414,7 +414,7 @@ function PricingSection() {
             );
           })}
         </div>
-        <p className="sellio-pricing-note">Eligible new merchants receive a seven-day trial. Prices exclude applicable taxes. Sellio World, our marketplace map, is coming soon.</p>
+        <p className="sellio-pricing-note">Eligible new merchants receive a seven-day trial. Sellio World, our marketplace map, is coming soon.</p>
         <p className="sellio-pricing-note">Selling from home? <a href="/join" rel="nofollow" style={{ fontWeight: 700, textDecoration: 'underline' }}>Open a free personal shop</a>: up to 10 listings and 100 orders a month.</p>
         <p className="sellio-pricing-note">Multi-outlet? <a href={MULTI_OUTLET_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline' }}>Talk to us on WhatsApp</a>.</p>
         <p className="sellio-pricing-note">Want us to set it up for you? Done-for-you setup is SGD {SETUP_OFFER.price} one-time: {SETUP_OFFER.includes}. <a href={SETUP_OFFER.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline' }}>Book on WhatsApp</a>.</p>

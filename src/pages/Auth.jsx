@@ -858,7 +858,7 @@ export default function Auth() {
                       </a>
                       {forgotPlan === 'pro' && (
                         <a
-                          href={`https://wa.me/6565805411?text=Hi%2C%20I%20need%20help%20resetting%20my%20Sellio%20password.%20My%20registered%20phone%20is%3A%20${encodeURIComponent(forgotFullPhone)}`}
+                          href={`https://wa.me/6582228103?text=Hi%2C%20I%20need%20help%20resetting%20my%20Sellio%20password.%20My%20registered%20phone%20is%3A%20${encodeURIComponent(forgotFullPhone)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 text-xs font-medium text-green-700 hover:text-green-800 transition-colors"
