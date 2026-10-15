@@ -2,97 +2,16 @@ import React, { useState } from 'react';
 import { Lock, Check } from 'lucide-react';
 import { useTenant } from '../tenant/TenantContext';
 import { getSupabase } from '@/lib/supabaseClient';
+import { BUSINESS_PLANS, NO_TRIAL_LINKS } from '@/lib/plans';
+import PlanFootnotes from './PlanFootnotes';
 
-const PLANS = [
-  {
-    key: 'starter',
-    name: 'Starter',
-    monthly: 79,
-    yearly: 790,
-    description: 'Perfect for small businesses just getting started',
-    color: 'blue',
-    features: [
-      '10 products',
-      'Up to 100 orders/month',
-      '3 staff accounts',
-      '5 tables & QR codes',
-      '1 branch',
-      'Basic reports',
-      'Custom theme',
-      'In-app notifications',
-      'Email support (72hr)',
-    ],
-    links: {
-      monthly: 'https://buy.stripe.com/00wdRbdyV1kn8qfebK7bW02',
-      yearly: 'https://buy.stripe.com/fZu5kF1Qd8MP0XN3x67bW03',
-    },
-  },
-  {
-    key: 'growth',
-    name: 'Growth',
-    monthly: 139,
-    yearly: 1390,
-    description: 'For growing businesses with higher demands',
-    color: 'purple',
-    badge: 'Most Popular',
-    features: [
-      '50 products',
-      'Up to 1,000 orders/month',
-      '5 staff accounts',
-      '5 tables & QR codes',
-      'Up to 3 branches',
-      'Advanced reports',
-      'Custom theme',
-      'In-app & email notifications',
-      'Email + Chat support (24hr)',
-      'Custom editable roles (up to 5)',
-    ],
-    links: {
-      monthly: 'https://buy.stripe.com/6oUaEZ52pbZ135V7Nm7bW04',
-      yearly: 'https://buy.stripe.com/8x23cxcuR9QTgWL7Nm7bW05',
-    },
-  },
-  {
-    key: 'pro',
-    name: 'Professional',
-    monthly: 199,
-    yearly: 1990,
-    description: 'Enterprise-grade solution for maximum scalability',
-    color: 'gold',
-    features: [
-      'Unlimited products',
-      'Unlimited orders',
-      'Unlimited staff accounts',
-      'Unlimited tables & QR codes',
-      'Up to 10 branches',
-      'Custom real-time reports',
-      'Custom theme',
-      'In-app, email & WhatsApp notifications',
-      'Email + Chat + Phone support (24hr)',
-      'Unlimited custom roles',
-    ],
-    links: {
-      monthly: 'https://buy.stripe.com/5kQ5kFcuR8MP6i76Ji7bW06',
-      yearly: 'https://buy.stripe.com/eVq7sNcuR2or21R2t27bW07',
-    },
-  },
-];
-
-const NO_TRIAL_LINKS = {
-  starter: {
-    monthly: 'https://buy.stripe.com/bJefZjdyV7ILeOD0kU7bW08',
-    yearly:  'https://buy.stripe.com/8x26oJ2UhgfhbCr4Ba7bW09',
-  },
-  growth: {
-    monthly: 'https://buy.stripe.com/14A00leCZ8MPbCr3x67bW0a',
-    yearly:  'https://buy.stripe.com/28EdRb8eB3svcGv4Ba7bW0b',
-  },
-  pro: {
-    monthly: 'https://buy.stripe.com/eVqdRb66tfbdbCrc3C7bW0c',
-    yearly:  'https://buy.stripe.com/4gM3cxdyVd35aync3C7bW0d',
-  },
+// Presentation only: prices, Stripe links and features come from lib/plans.js.
+const PLAN_STYLE = {
+  starter: { description: 'Perfect for small businesses just getting started', color: 'blue' },
+  growth: { description: 'For growing businesses with higher demands', color: 'purple', badge: 'Most Popular' },
+  pro: { description: 'Enterprise-grade solution for maximum scalability', color: 'gold' },
 };
-
+const PLANS = BUSINESS_PLANS.map((plan) => ({ ...plan, ...PLAN_STYLE[plan.key] }));
 
 // Sellio platform screen: same palette for every tenant, never the tenant theme.
 // Matches the sign-up "View Plans" pricing card; the plan the merchant had is
@@ -248,6 +167,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
             );
           })}
         </div>
+        <PlanFootnotes showSetup={false} />
       </div>
 
       <p className="mt-8 text-sm text-slate-500">

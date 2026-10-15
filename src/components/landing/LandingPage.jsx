@@ -25,6 +25,7 @@ import ProductShowcase from './ProductShowcase';
 import WorldLayers from './WorldLayers';
 import ChapterTransition from './ChapterTransition';
 import { PLANS } from './landingData';
+import { MULTI_OUTLET_URL, SETUP_OFFER } from '@/lib/plans';
 import './landing.css';
 import './phase1b.css';
 import './immersive.css';
@@ -414,6 +415,8 @@ function PricingSection() {
         </div>
         <p className="sellio-pricing-note">Eligible new merchants receive a seven-day trial. Prices exclude applicable taxes. Every active merchant can establish a presence in Sellio World.</p>
         <p className="sellio-pricing-note">Selling from home? <a href="/join" rel="nofollow" style={{ fontWeight: 700, textDecoration: 'underline' }}>Open a free personal shop</a>: up to 10 listings and 100 orders a month.</p>
+        <p className="sellio-pricing-note">Multi-outlet? <a href={MULTI_OUTLET_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline' }}>Talk to us on WhatsApp</a>.</p>
+        <p className="sellio-pricing-note">Want us to set it up for you? Done-for-you setup is SGD {SETUP_OFFER.price} one-time: {SETUP_OFFER.includes}. <a href={SETUP_OFFER.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline' }}>Book on WhatsApp</a>.</p>
       </div>
     </section>
   );

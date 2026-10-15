@@ -20,9 +20,11 @@ Sellio World is the marketplace layer. Merchants can establish a storefront pres
 
 ## Merchant plans
 
-- Starter: SGD 79/month
-- Growth: SGD 139/month
-- Professional: SGD 199/month
+- Starter: SGD 39/month
+- Growth: SGD 79/month
+- Professional: SGD 119/month
+- Optional done-for-you setup: SGD 149 one-time
+- Multi-outlet businesses: contact Sellio
 
 Eligible new merchants receive a seven-day trial. Current plan details and limits are shown on the homepage and should be treated as the source of truth.
 

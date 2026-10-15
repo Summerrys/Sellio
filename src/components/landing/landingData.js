@@ -24,6 +24,7 @@ import {
   WandSparkles,
   Warehouse,
 } from 'lucide-react';
+import { BUSINESS_PLANS } from '@/lib/plans';
 
 export const SELLIO_COLORS = {
   orange: '#fb923c',
@@ -197,74 +198,19 @@ export const PRODUCT_VIEWS = [
   },
 ];
 
-export const PLANS = [
-  {
-    key: 'starter',
-    name: 'Starter',
-    monthly: 79,
-    yearly: 790,
-    description: 'For small businesses getting online.',
-    badge: null,
-    accent: '#3b82f6',
-    features: [
-      '10 products',
-      'Up to 100 orders/month',
-      '3 staff accounts',
-      '5 tables and QR codes',
-      '1 branch',
-      'Basic reports',
-      'Custom theme',
-    ],
-    links: {
-      monthly: 'https://buy.stripe.com/00wdRbdyV1kn8qfebK7bW02',
-      annual: 'https://buy.stripe.com/fZu5kF1Qd8MP0XN3x67bW03',
-    },
-  },
-  {
-    key: 'growth',
-    name: 'Growth',
-    monthly: 139,
-    yearly: 1390,
-    description: 'For growing teams and busier operations.',
-    badge: 'Most popular',
-    accent: '#8b2fc9',
-    features: [
-      '50 products',
-      'Up to 1,000 orders/month',
-      '5 staff accounts',
-      'Up to 3 branches',
-      'Advanced reports',
-      'Custom editable roles',
-      'Email and chat support',
-    ],
-    links: {
-      monthly: 'https://buy.stripe.com/6oUaEZ52pbZ135V7Nm7bW04',
-      annual: 'https://buy.stripe.com/8x23cxcuR9QTgWL7Nm7bW05',
-    },
-  },
-  {
-    key: 'pro',
-    name: 'Professional',
-    monthly: 199,
-    yearly: 1990,
-    description: 'For businesses that need maximum scale.',
-    badge: null,
-    accent: '#e0449a',
-    features: [
-      'Unlimited products and orders',
-      'Unlimited staff accounts',
-      'Unlimited tables and QR codes',
-      'Up to 10 branches',
-      'Custom real-time reports',
-      'Unlimited custom roles',
-      'Priority support',
-    ],
-    links: {
-      monthly: 'https://buy.stripe.com/5kQ5kFcuR8MP6i76Ji7bW06',
-      annual: 'https://buy.stripe.com/eVq7sNcuR2or21R2t27bW07',
-    },
-  },
-];
+// Prices, Stripe links and features come from lib/plans.js (shared with the
+// app's pricing screens); this adds the landing page's presentation fields.
+const LANDING_PLAN_STYLE = {
+  starter: { description: 'For small businesses getting online.', badge: null, accent: '#3b82f6' },
+  growth: { description: 'For growing teams and busier operations.', badge: 'Most popular', accent: '#8b2fc9' },
+  pro: { description: 'For businesses that need maximum scale.', badge: null, accent: '#e0449a' },
+};
+
+export const PLANS = BUSINESS_PLANS.map((plan) => ({
+  ...plan,
+  ...LANDING_PLAN_STYLE[plan.key],
+  links: { monthly: plan.links.monthly, annual: plan.links.yearly },
+}));
 
 export const ROADMAP = [
   {

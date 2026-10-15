@@ -1,46 +1,16 @@
 import React, { useState } from 'react';
 import { X, Check } from 'lucide-react';
 import { paymentLinkFor } from '@/lib/accountFlow';
+import { BUSINESS_PLANS } from '@/lib/plans';
+import PlanFootnotes from '@/components/subscription/PlanFootnotes';
 
-const PLANS = [
-  {
-    key: 'starter',
-    name: 'Starter',
-    monthly: 79,
-    yearly: 790,
-    description: 'Perfect for small businesses just getting started',
-    features: ['10 products', 'Up to 100 orders/month', '3 staff accounts', '5 tables & QR codes', '1 branch', 'Basic reports'],
-    links: {
-      monthly: 'https://buy.stripe.com/00wdRbdyV1kn8qfebK7bW02',
-      yearly: 'https://buy.stripe.com/fZu5kF1Qd8MP0XN3x67bW03',
-    },
-  },
-  {
-    key: 'growth',
-    name: 'Growth',
-    monthly: 139,
-    yearly: 1390,
-    description: 'For growing businesses with higher demands',
-    badge: 'Most Popular',
-    features: ['50 products', 'Up to 1,000 orders/month', '5 staff accounts', 'Up to 3 branches', 'Advanced reports', 'Custom editable roles'],
-    links: {
-      monthly: 'https://buy.stripe.com/6oUaEZ52pbZ135V7Nm7bW04',
-      yearly: 'https://buy.stripe.com/8x23cxcuR9QTgWL7Nm7bW05',
-    },
-  },
-  {
-    key: 'pro',
-    name: 'Professional',
-    monthly: 199,
-    yearly: 1990,
-    description: 'Enterprise-grade solution for maximum scalability',
-    features: ['Unlimited products', 'Unlimited orders', 'Unlimited staff', 'Up to 10 branches', 'Custom reports', 'Unlimited roles'],
-    links: {
-      monthly: 'https://buy.stripe.com/5kQ5kFcuR8MP6i76Ji7bW06',
-      yearly: 'https://buy.stripe.com/eVq7sNcuR2or21R2t27bW07',
-    },
-  },
-];
+// Presentation only: prices, Stripe links and features come from lib/plans.js.
+const PLAN_STYLE = {
+  starter: { description: 'Perfect for small businesses just getting started' },
+  growth: { description: 'For growing businesses with higher demands', badge: 'Most Popular' },
+  pro: { description: 'Enterprise-grade solution for maximum scalability' },
+};
+const PLANS = BUSINESS_PLANS.map((plan) => ({ ...plan, ...PLAN_STYLE[plan.key] }));
 
 // prefilledEmail: a signed-in account's email, locked on the Stripe page so the
 // business plan it pays for belongs to this account.
@@ -129,6 +99,7 @@ export default function AuthPricingModal({ onClose, prefilledEmail = '' }) {
             );
           })}
         </div>
+        <PlanFootnotes />
       </div>
     </div>
   );
