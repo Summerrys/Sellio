@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Plus, X, Loader2, RefreshCw, Store } from 'lucide-react';
+import { Search, Plus, X, Loader2, RefreshCw, Store, ChevronRight } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 
@@ -18,7 +18,7 @@ const KINDS = [
   { key: 'food', label: 'Food & drinks' },
   { key: 'goods', label: 'Goods' },
   { key: 'home', label: 'Home sellers' },
-  { key: 'shops', label: 'Shops' },
+  { key: 'merchants', label: 'Merchants' },
 ];
 
 const hideScrollbar = { scrollbarWidth: 'none', msOverflowStyle: 'none' };
@@ -48,6 +48,15 @@ function timeAgo(iso) {
 }
 
 const storeUrl = (slug) => `/store/${encodeURIComponent(slug)}`;
+const rowKey = (row) => row.product_id || row.shop_id;
+
+function industryLabel(industry) {
+  const value = String(industry || '').toLowerCase();
+  if (/f.?b|cafe|restaurant|food|beverage/.test(value)) return 'Food & drinks';
+  if (/retail|fashion|electronics/.test(value)) return 'Retail';
+  if (/service|beauty|wellness|health|education/.test(value)) return 'Services';
+  return 'Merchant';
+}
 
 function ShopAvatar({ name, logo, size = 24 }) {
   const [failed, setFailed] = useState(false);
@@ -131,6 +140,46 @@ function ItemCard({ item }) {
   );
 }
 
+function Thumb({ src }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) return <div className="aspect-square rounded-lg bg-slate-100" />;
+  return (
+    <img
+      src={src}
+      alt=""
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="aspect-square w-full rounded-lg object-cover bg-slate-100"
+    />
+  );
+}
+
+// One card per paid merchant: its storefront, not a flood of its items.
+function MerchantCard({ shop }) {
+  const images = (shop.preview_images || []).filter(Boolean).slice(0, 4);
+  const count = Number(shop.item_count) || 0;
+  return (
+    <Link
+      to={storeUrl(shop.shop_slug)}
+      className="group block bg-white rounded-2xl border border-slate-100 overflow-hidden hover:shadow-md transition-shadow"
+    >
+      <div className="flex items-center gap-3 p-3">
+        <ShopAvatar name={shop.shop_name} logo={shop.shop_logo_url} size={44} />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-slate-900 truncate">{shop.shop_name}</p>
+          <p className="text-xs text-slate-500">{industryLabel(shop.industry)} · {count} {count === 1 ? 'item' : 'items'}</p>
+        </div>
+        <span className="text-xs font-semibold text-slate-700 inline-flex items-center whitespace-nowrap group-hover:text-slate-900">
+          Visit store <ChevronRight className="w-4 h-4" />
+        </span>
+      </div>
+      <div className="grid grid-cols-4 gap-1 px-3 pb-3">
+        {[0, 1, 2, 3].map((i) => <Thumb key={i} src={images[i]} />)}
+      </div>
+    </Link>
+  );
+}
+
 function SkeletonGrid() {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3" aria-hidden="true">
@@ -160,6 +209,7 @@ export default function Explore() {
   const [search, setSearch] = useState('');
   const [kind, setKind] = useState('all');
   const [items, setItems] = useState([]);
+  const [itemsKind, setItemsKind] = useState('all');
   const [shops, setShops] = useState([]);
   const [status, setStatus] = useState('loading'); // loading | ready | error
   const [hasMore, setHasMore] = useState(false);
@@ -180,16 +230,20 @@ export default function Explore() {
     return () => clearTimeout(timer);
   }, [query]);
 
+  // Items for every chip except Merchants, which lists storefronts instead.
+  // The feed is interleaved by shop on the server, so one shop can't fill it.
   const fetchPage = useCallback(async (offset) => {
     const supabase = await getSupabase();
-    const { data, error } = await supabase.rpc('explore_feed', {
-      p_search: search || null,
-      p_kind: kind === 'all' ? null : kind,
-      p_limit: PAGE_SIZE,
-      p_offset: offset,
-    });
+    const { data, error } = kind === 'merchants'
+      ? await supabase.rpc('explore_merchants', { p_search: search || null, p_limit: PAGE_SIZE, p_offset: offset })
+      : await supabase.rpc('explore_feed', {
+        p_search: search || null,
+        p_kind: kind === 'all' ? null : kind,
+        p_limit: PAGE_SIZE,
+        p_offset: offset,
+      });
     if (error) throw error;
-    return data || [];
+    return { kind, rows: data || [] };
   }, [search, kind]);
 
   useEffect(() => {
@@ -197,9 +251,10 @@ export default function Explore() {
     setStatus('loading');
     setHasMore(false);
     fetchPage(0)
-      .then((rows) => {
+      .then(({ kind: forKind, rows }) => {
         if (id !== requestId.current) return;
         setItems(rows);
+        setItemsKind(forKind);
         setHasMore(rows.length === PAGE_SIZE);
         setStatus('ready');
       })
@@ -229,11 +284,11 @@ export default function Explore() {
     const id = requestId.current;
     setLoadingMore(true);
     try {
-      const rows = await fetchPage(items.length);
+      const { rows } = await fetchPage(items.length);
       if (id !== requestId.current) return;
       setItems((prev) => {
-        const seen = new Set(prev.map((r) => r.product_id));
-        return [...prev, ...rows.filter((r) => !seen.has(r.product_id))];
+        const seen = new Set(prev.map(rowKey));
+        return [...prev, ...rows.filter((r) => !seen.has(rowKey(r)))];
       });
       setHasMore(rows.length === PAGE_SIZE);
     } catch (err) {
@@ -255,7 +310,8 @@ export default function Explore() {
   }, [hasMore, loadMore]);
 
   const filtered = !!search || kind !== 'all';
-  const heading = search ? `Results for “${search}”` : kind === 'all' ? 'Fresh finds' : KINDS.find((k) => k.key === kind)?.label;
+  const kindLabel = kind === 'merchants' ? 'Merchants on Sellio' : KINDS.find((k) => k.key === kind)?.label;
+  const heading = search ? `Results for “${search}”` : kind === 'all' ? 'Fresh finds' : kindLabel;
   const sellHref = hasShop ? '/Products' : '/join';
 
   return (
@@ -395,9 +451,15 @@ export default function Explore() {
 
           {status === 'ready' && items.length > 0 && (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                {items.map((item) => <ItemCard key={item.product_id} item={item} />)}
-              </div>
+              {itemsKind === 'merchants' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {items.map((shop) => <MerchantCard key={shop.shop_id} shop={shop} />)}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                  {items.map((item) => <ItemCard key={item.product_id} item={item} />)}
+                </div>
+              )}
               <div ref={sentinelRef} className="h-px" />
               {hasMore && (
                 <div className="flex justify-center mt-6">
