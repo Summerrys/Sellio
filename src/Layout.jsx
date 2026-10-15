@@ -29,7 +29,8 @@ import {
   Check,
   Store,
   Menu,
-  Monitor
+  Monitor,
+  Compass
 } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import PricingModal from './components/subscription/PricingModal';
@@ -52,7 +53,7 @@ import PlanFeatureNotice from './components/subscription/PlanFeatureNotice';
 import { PAGE_FEATURES, itemWords } from '@/lib/planFeatures';
 
 
-const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth', 'Join', 'Account', 'World'];
+const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth', 'Join', 'Account', 'World', 'Explore'];
 
 function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription, onOpenProfile, onToggleCollapse, onClose }) {
   const [linkCopied, setLinkCopied] = useState(false);
@@ -80,6 +81,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
     { label: 'User Management', icon: Users, page: 'UserManagement', permission: ['staff.view', 'roles.view'] },
     { label: 'Reports', icon: BarChart3, page: 'Reports', permission: 'reports.view' },
     { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view' },
+    { label: 'Explore', icon: Compass, page: 'Explore', permission: null },
   ];
 
   // Filter tenant items based on permissions

@@ -37,7 +37,7 @@ import './motion-refinement.css';
 
 const SITE_URL = 'https://sellio.apptelier.sg/';
 const LOGO_URL = 'https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png';
-const DEMO_STORE_URL = '/store/cafetelier?preview=true';
+const DEMO_STORE_URL = 'https://sellio.apptelier.sg/store/cafetelier';
 const LANDING_TITLE = 'Sellio — Storefronts, Operations & Marketplace for Modern Commerce';
 const LANDING_DESCRIPTION = 'Sellio connects branded storefronts, F&B ordering and merchant operations with an evolving sector-based marketplace world.';
 
@@ -47,16 +47,17 @@ const NAV_ITEMS = [
   { label: 'Product', href: '#product' },
   { label: 'Vision', href: '#vision' },
   { label: 'Pricing', href: '#pricing' },
+  { label: 'Explore', href: '/explore' },
 ];
 
 const FAQ_ITEMS = [
-  { question: 'How does my business join Sellio World?', answer: 'Start a Sellio merchant plan and complete your storefront setup. Your business is then placed in the most relevant F&B, Retail or Services district so customers can discover it naturally.' },
-  { question: 'What happens when a customer selects my storefront?', answer: 'Sellio moves the customer from the district view into your branded storefront, where they can browse products or services and complete the relevant ordering journey.' },
-  { question: 'Can my storefront keep its own branding?', answer: 'Yes. Sellio supplies the connected world and commerce structure while your storefront keeps its own colours, products, imagery, content and decorative style.' },
-  { question: 'How do Sellio Coins work?', answer: 'Merchants earn Sellio Coins through eligible marketplace activity and milestones. Coins can be used for cosmetic storefront upgrades, seasonal decorations and selected world customisations.' },
-  { question: 'Are seasonal decorations available?', answer: 'Yes. Merchants can personalise their storefront for occasions such as Chinese New Year and Christmas while keeping the core shopping and ordering experience consistent.' },
-  { question: 'Which merchant districts are available?', answer: 'Sellio World supports dedicated F&B, Retail and Services districts. Merchants are allocated according to their primary business category, with room for new districts as the marketplace grows.' },
-  { question: 'Do customers need an account to browse?', answer: 'No. Customers can explore participating storefronts and browse available products or services without creating a marketplace account. Account features can be introduced only when they add useful continuity or rewards.' },
+  { question: 'How do customers find my shop?', answer: 'Through your own storefront link, your table QR codes and Sellio Explore, a public feed where anyone can browse items from Sellio shops without an account. Your shop is listed on Explore by default and you can switch it off in Settings.' },
+  { question: 'What happens when a customer selects my storefront?', answer: 'They land on your branded storefront, where they can browse your products and order directly from you.' },
+  { question: 'Can my storefront keep its own branding?', answer: 'Yes. Your storefront keeps its own colours, logo, products, imagery and content.' },
+  { question: 'What is Sellio World?', answer: 'Sellio World is a marketplace map we are building, where merchants get a storefront in an F&B, Retail or Services district. It is coming soon, with F&B opening first.' },
+  { question: 'How will Sellio Coins work?', answer: 'Sellio Coins are coming with Sellio World. The plan is for merchants to earn coins through marketplace activity and milestones and spend them on cosmetic storefront upgrades. Details will be shared before launch.' },
+  { question: 'Are seasonal decorations available?', answer: 'Not yet. Seasonal storefront decorations for occasions such as Chinese New Year and Christmas are planned alongside Sellio World.' },
+  { question: 'Do customers need an account to browse or order?', answer: 'No. Customers can browse Sellio Explore and storefronts and place orders without creating an account.' },
 ];
 
 const SNAP_PAGE_SELECTORS = ['#sellio-film', '#world-experience', '#journey', '#connected', '#product', '#vision'];
@@ -395,7 +396,7 @@ function PricingSection() {
   return (
     <section id="pricing" className="sellio-section sellio-pricing-section sellio-pricing-section--phase1b" aria-labelledby="sellio-pricing-heading">
       <div className="sellio-container">
-        <div className="sellio-section-heading sellio-section-heading--center"><span className="sellio-eyebrow"><CircleDollarSign /> Start your next chapter</span><h2 id="sellio-pricing-heading">Launch your storefront.<br />Claim your place in Sellio World.</h2><p>Choose the operations plan that fits your business, enter the right merchant district and start building your presence in the connected marketplace.</p></div>
+        <div className="sellio-section-heading sellio-section-heading--center"><span className="sellio-eyebrow"><CircleDollarSign /> Start your next chapter</span><h2 id="sellio-pricing-heading">Launch your storefront.<br />Start taking orders.</h2><p>Choose the plan that fits your business. Every plan includes your own storefront, QR ordering and the Sellio counter.</p></div>
         <div className="sellio-billing-toggle" role="group" aria-label="Billing period"><button type="button" className={!annual ? 'is-active' : ''} onClick={() => setAnnual(false)}>Monthly</button><button type="button" className={annual ? 'is-active' : ''} onClick={() => setAnnual(true)}>Annual <span>2 months free</span></button></div>
         <div className="sellio-pricing-grid">
           {PLANS.map((plan) => {
@@ -413,7 +414,7 @@ function PricingSection() {
             );
           })}
         </div>
-        <p className="sellio-pricing-note">Eligible new merchants receive a seven-day trial. Prices exclude applicable taxes. Every active merchant can establish a presence in Sellio World.</p>
+        <p className="sellio-pricing-note">Eligible new merchants receive a seven-day trial. Prices exclude applicable taxes. Sellio World, our marketplace map, is coming soon.</p>
         <p className="sellio-pricing-note">Selling from home? <a href="/join" rel="nofollow" style={{ fontWeight: 700, textDecoration: 'underline' }}>Open a free personal shop</a>: up to 10 listings and 100 orders a month.</p>
         <p className="sellio-pricing-note">Multi-outlet? <a href={MULTI_OUTLET_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline' }}>Talk to us on WhatsApp</a>.</p>
         <p className="sellio-pricing-note">Want us to set it up for you? Done-for-you setup is SGD {SETUP_OFFER.price} one-time: {SETUP_OFFER.includes}. <a href={SETUP_OFFER.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline' }}>Book on WhatsApp</a>.</p>
@@ -424,7 +425,7 @@ function PricingSection() {
 
 function FAQSection() {
   return (
-    <section className="sellio-section sellio-faq-section" aria-labelledby="sellio-faq-heading"><div className="sellio-container sellio-faq-layout"><div className="sellio-section-heading"><span className="sellio-eyebrow"><ShieldCheck /> Join with confidence</span><h2 id="sellio-faq-heading">Your business in Sellio World.</h2><p>How merchant placement, storefront identity, Sellio Coins and customer discovery work together.</p></div><div className="sellio-faq-list">{FAQ_ITEMS.map((item) => <details key={item.question}><summary>{item.question}<span>+</span></summary><p>{item.answer}</p></details>)}</div></div></section>
+    <section className="sellio-section sellio-faq-section" aria-labelledby="sellio-faq-heading"><div className="sellio-container sellio-faq-layout"><div className="sellio-section-heading"><span className="sellio-eyebrow"><ShieldCheck /> Join with confidence</span><h2 id="sellio-faq-heading">Your business on Sellio.</h2><p>Storefronts, customer discovery and what is coming next.</p></div><div className="sellio-faq-list">{FAQ_ITEMS.map((item) => <details key={item.question}><summary>{item.question}<span>+</span></summary><p>{item.answer}</p></details>)}</div></div></section>
   );
 }
 
@@ -435,8 +436,8 @@ function Footer({ onCookieSettings }) {
         <section className="sellio-footer-launch" aria-labelledby="sellio-footer-launch-heading">
           <div className="sellio-footer-launch__copy">
             <span className="sellio-eyebrow"><Sparkles /> Now onboarding merchants</span>
-            <h2 id="sellio-footer-launch-heading">Build your storefront.<br />Enter Sellio World.</h2>
-            <p>Bring your business online, join the right merchant district and create a storefront customers can discover, remember and return to.</p>
+            <h2 id="sellio-footer-launch-heading">Build your storefront.<br />Get discovered on Sellio.</h2>
+            <p>Bring your business online with a storefront customers can find on Sellio Explore, remember and return to.</p>
           </div>
           <div className="sellio-footer-launch__actions">
             <a href="#pricing" className="sellio-button sellio-button--gradient">View Plans <ArrowRight /></a>
@@ -448,10 +449,10 @@ function Footer({ onCookieSettings }) {
         <div className="sellio-footer-main">
           <div className="sellio-footer-brand">
             <div className="sellio-footer-brand__top"><img src={LOGO_URL} alt="Sellio" /><span>Commerce, connected.</span></div>
-            <h3>Your storefront today.<br />Your place in Sellio World.</h3>
+            <h3>Your storefront today.<br />Sellio World next.</h3>
             <p>Bring storefronts, orders, operations and merchant progression together in one bright, connected commerce platform.</p>
             <a className="sellio-footer-brand__credit" href="https://apptelier.sg" target="_blank" rel="noopener noreferrer">Crafted in Singapore by Apptélier <ArrowUpRight /></a>
-            <div className="sellio-footer-live" aria-label="Sellio World availability"><span><i /> Sellio World live</span><span><i /> Onboarding open</span><span><i /> Sellio Coins active</span></div>
+            <div className="sellio-footer-live" aria-label="Sellio availability"><span><i /> Onboarding open</span><span><i /> Sellio Explore live</span></div>
           </div>
           <div className="sellio-footer-navigation">
             <span className="sellio-footer-navigation__label">Explore the platform</span>

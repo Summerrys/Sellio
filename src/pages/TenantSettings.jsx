@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import BusinessProfileTab from '../components/settings/BusinessProfileTab';
+import ExploreListingSetting from '../components/settings/ExploreListingSetting';
 import UserManagement from './UserManagement';
 import PricingModal from '../components/subscription/PricingModal';
 import { useAppRefreshHandler, useAppReloadGuard } from '@/lib/AppRefreshContext';
@@ -330,6 +331,7 @@ function TenantSettingsContent() {
         {settingsTab === 'business' && (
           <div className="max-w-2xl mx-auto">
             <BusinessProfileTab tenant={tenant} tenantId={tenantId} refreshVersion={refreshVersion} />
+            <ExploreListingSetting tenantId={tenantId} />
           </div>
         )}
         {settingsTab === 'selling' && showSellingTab && (

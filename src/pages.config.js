@@ -55,6 +55,7 @@ const Categories = lazy(() => import('./pages/Categories'));
 const CoinShop = lazy(() => import('./pages/CoinShop'));
 const CustomerMenu = lazy(() => import('./pages/CustomerMenu'));
 const CustomerOrder = lazy(() => import('./pages/CustomerOrder'));
+const Explore = lazy(() => import('./pages/Explore'));
 const Counter = lazy(() => import('./pages/Counter'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Inventory = lazy(() => import('./pages/Inventory'));
@@ -83,6 +84,7 @@ export const PAGES = {
     "CustomerOrder": CustomerOrder,
     "Counter": Counter,
     "Dashboard": Dashboard,
+    "Explore": Explore,
     "Inventory": Inventory,
     "Join": Join,
     "KitchenDisplay": KitchenDisplay,

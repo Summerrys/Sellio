@@ -45,7 +45,7 @@ function RouteIndexingGuard() {
     const params = new URLSearchParams(location.search);
     const isStorefront = /^\/store\/[^/]+$/.test(path);
     const isPrivateStoreVariant = isStorefront && (params.get('preview') === 'true' || params.get('staff') === 'true');
-    const isPublicPage = path === '/' || path === '/privacy' || path === '/terms';
+    const isPublicPage = path === '/' || path === '/privacy' || path === '/terms' || path === '/explore';
     const isPublicStorefront = isStorefront && !isPrivateStoreVariant;
     const content = isPublicPage || isPublicStorefront ? PUBLIC_INDEX_ROBOTS : PRIVATE_ROBOTS;
 

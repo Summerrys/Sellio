@@ -19,7 +19,7 @@ const SECTORS = [
   {
     key: 'retail',
     name: 'Retail Avenue',
-    status: 'Open for onboarding',
+    status: 'Coming soon',
     Icon: ShoppingBag,
     detailX: '22%',
     detailY: '58%',
@@ -28,14 +28,14 @@ const SECTORS = [
   {
     key: 'fnb',
     name: 'F&B District',
-    status: 'Live district',
+    status: 'Opening first',
     Icon: Utensils,
     summary: 'Restaurants, cafés, bakeries and beverage concepts live around shared discovery and ordering routes.',
   },
   {
     key: 'services',
     name: 'Services Garden',
-    status: 'Open for onboarding',
+    status: 'Coming soon',
     Icon: BriefcaseBusiness,
     detailX: '70%',
     detailY: 'calc(36% + 64px)',

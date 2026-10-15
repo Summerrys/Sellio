@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Store, Briefcase, Compass, ArrowRight, AlertCircle, Sparkles, LogOut, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { completeAuthNavigation } from '@/lib/authNavigation';
@@ -262,9 +263,12 @@ export default function Account() {
           </Card>
         )}
 
-        <Card icon={Compass} iconClass="bg-slate-100 text-slate-400" title="Explore and buy" badge="Coming soon">
-          <p className="text-sm text-slate-400 mt-1">Discover local shops and order from them, all in one place.</p>
-        </Card>
+        <Link to="/explore" className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-200">
+          <Card icon={Compass} iconClass="bg-pink-50 text-pink-600" title="Explore and buy">
+            <p className="text-sm text-slate-500 mt-1">Discover local shops and order from them, all in one place.</p>
+            <span className="inline-flex items-center gap-1 text-sm font-semibold text-slate-800 mt-2">Start exploring <ArrowRight className="w-4 h-4" /></span>
+          </Card>
+        </Link>
 
         <p className="text-center text-xs text-slate-400 pt-2">
           Need help? <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium text-slate-500 underline underline-offset-2">{SUPPORT_EMAIL}</a>
