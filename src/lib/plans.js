@@ -20,7 +20,7 @@ export const MULTI_OUTLET_URL = sellioWhatsAppUrl('Hi, I run more than one outle
 export const SETUP_OFFER = {
   price: 149,
   includes: 'menu scan, storefront build, printer setup and on-site staff training',
-  url: sellioWhatsAppUrl("Hi, I'd like to book Sellio's done-for-you setup (SGD 149)."),
+  url: sellioWhatsAppUrl("Hi, I would like to book the Sellio done-for-you setup (SGD 149)."),
 };
 
 // October 2026 pricing. links = with the 7-day free trial; noTrialLinks = for
