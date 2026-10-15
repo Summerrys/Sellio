@@ -48,8 +48,16 @@ function injectCSS() {
 export default function AppLoader({ visible = true }) {
   injectCSS();
   const [show, setShow] = useState(false);
+  const [slow, setSlow] = useState(false);
 
   useEffect(() => (visible ? holdLaunch() : undefined), [visible]);
+
+  // Still loading after 12 seconds: offer a reload instead of an endless wait.
+  useEffect(() => {
+    if (!visible) { setSlow(false); return undefined; }
+    const t = setTimeout(() => setSlow(true), 12000);
+    return () => clearTimeout(t);
+  }, [visible]);
 
   useEffect(() => {
     if (visible) {
@@ -92,6 +100,18 @@ export default function AppLoader({ visible = true }) {
 
       {/* Text */}
       <p style={{ color: '#9ca3af', fontSize: 13, margin: 0 }}>Loading...</p>
+      {slow && (
+        <div style={{ marginTop: 20, textAlign: 'center' }}>
+          <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 10px' }}>This is taking longer than usual.</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            style={{ minHeight: 44, padding: '0 20px', borderRadius: 12, border: 'none', background: 'var(--color-primary-gradient, #8b2fc9)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+          >
+            Reload
+          </button>
+        </div>
+      )}
     </div>
   );
 }

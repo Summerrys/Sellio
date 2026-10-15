@@ -158,7 +158,7 @@ export default function ShopSetup() {
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['shop-setup-status', tenantId] });
       toast.success('Your shop is ready');
-      navigate(createPageUrl('Dashboard'));
+      navigate(createPageUrl('Dashboard'), { replace: true });
     } catch (err) {
       toast.error(err.message || 'Could not finish setup.');
       setFinishing(false);

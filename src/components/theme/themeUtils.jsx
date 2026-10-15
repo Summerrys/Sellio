@@ -1,7 +1,23 @@
-// Default gradient fallback (blue-to-purple) — not a selectable palette
-export const DEFAULT_GRADIENT = 'linear-gradient(135deg, #3b82f6 0%, #9333ea 100%)';
-export const DEFAULT_PRIMARY = '#3b82f6';
-export const DEFAULT_ACCENT = '#9333ea';
+// Sellio purple: the look before a store picks a palette, and for visitors who
+// aren't signed in. Not a selectable palette.
+export const DEFAULT_GRADIENT = 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)';
+export const DEFAULT_PRIMARY = '#8b2fc9';
+export const DEFAULT_ACCENT = '#f3e8ff';
+// The default saved before Oct 2026 (blue to purple); rows holding it get today's default.
+const LEGACY_DEFAULT = { primary: '#3b82f6', accent: '#9333ea' };
+
+// The colours a saved theme_configs row stands for: its palette when one is named,
+// its own colours when they were custom, otherwise the default.
+export function resolveSavedTheme(row) {
+  const named = row?.color_set_name && COLOR_SETS.find((s) => s.name === row.color_set_name);
+  if (named) return { dark: named.dark, light: named.light };
+  const primary = String(row?.primary_color || '').toLowerCase();
+  const accent = String(row?.accent_color || '').toLowerCase();
+  if (!primary || (primary === LEGACY_DEFAULT.primary && accent === LEGACY_DEFAULT.accent)) {
+    return { dark: DEFAULT_PRIMARY, light: DEFAULT_ACCENT };
+  }
+  return { dark: row.primary_color, light: row.accent_color || DEFAULT_ACCENT };
+}
 
 // Color theme sets with light and dark anchor colors (no Default entry)
 export const COLOR_SETS = [
@@ -23,6 +39,25 @@ function hexToRgb(hex) {
     g: parseInt(result[2], 16),
     b: parseInt(result[3], 16),
   } : null;
+}
+
+// "H S% L%" for shadcn's hsl(var(--primary)) variables.
+function hexToHslTriplet(hex) {
+  const c = hexToRgb(hex);
+  if (!c) return null;
+  const r = c.r / 255; const g = c.g / 255; const b = c.b / 255;
+  const max = Math.max(r, g, b); const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0; let s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h /= 6;
+  }
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
 // Generate intermediate shades between light and dark
@@ -63,10 +98,8 @@ export function generateThemeVariables(darkHex, lightHex) {
   const dark   = hexToRgb(darkHex);
   const light  = hexToRgb(lightHex);
 
-  // For default theme, generate shades from blue → light blue
-  // instead of blue → purple (which produces muddy/saturated tints)
-  const shadeLight = isDefault ? '#EFF6FF' : lightHex;
-  const shades = generateShades(shadeLight, darkHex);
+  const shades = generateShades(lightHex, darkHex);
+  const primaryHsl = hexToHslTriplet(darkHex);
 
   return {
     '--color-primary':          `${dark.r} ${dark.g} ${dark.b}`,
@@ -74,6 +107,11 @@ export function generateThemeVariables(darkHex, lightHex) {
     // Consumers: use var(--color-primary-gradient) for buttons/CTAs.
     // If it equals "none", fall back to rgb(var(--color-primary)).
     '--color-primary-gradient': isDefault ? DEFAULT_GRADIENT : `rgb(${dark.r} ${dark.g} ${dark.b})`,
+    // shadcn components (Button, Switch, Checkbox, Progress…) read --primary, so the
+    // store's colour reaches every default button, not only the gradient buttons.
+    '--primary': primaryHsl,
+    '--primary-foreground': '0 0% 100%',
+    '--ring': primaryHsl,
     ...Object.entries(shades).reduce((acc, [key, value]) => {
       acc[`--color-primary-${key}`] = value;
       return acc;

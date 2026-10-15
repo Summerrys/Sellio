@@ -11,6 +11,8 @@ import { useBackToClose } from '@/lib/useBackToClose';
 import { toast } from 'sonner';
 import { ShopCheckout, ShopOrderDetails, ShopOrderHistory } from '@/components/shop/ShopStorefront';
 import { shopT } from '@/lib/shopSelling';
+import { isNativeApp } from '@/lib/nativeApp';
+import { rememberReturnPath } from '@/lib/authNavigation';
 
 // Pure function (no component state) so it can be reused by the initial
 // load, the periodic re-check, and the Realtime handler alike — all it needs
@@ -105,6 +107,38 @@ function StorefrontInner() {
   useBackToClose(showOrderHistory, () => setShowOrderHistory(false));
   useBackToClose(orderSuccess, () => { setOrderSuccess(false); setLastCart([]); setLastCartTotal(0); });
   useBackToClose(showLimitReachedModal, () => setShowLimitReachedModal(false));
+
+  // In the Android app, buying from a store page needs a Sellio sign-in. Table QR
+  // orders, staff taking orders and previews stay as they are; the cart is kept and
+  // signing in comes back here.
+  const startCheckout = async () => {
+    if (!isDineIn && !isStaffMode && !isPreview && isNativeApp()) {
+      try {
+        const supabase = await getSupabase();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
+          setShowCart(false);
+          rememberReturnPath(`${window.location.pathname}?checkout=1`);
+          toast.info('Please sign in to place your order.');
+          window.location.assign('/Auth');
+          return;
+        }
+      } catch { /* session unknown: let them check out */ }
+    }
+    setShowCart(false);
+    setShowCheckout(true);
+  };
+
+  // Back from signing in: reopen the cart.
+  useEffect(() => {
+    if (!tenant) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('checkout') !== '1') return;
+    params.delete('checkout');
+    const query = params.toString();
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+    if (cart.length) setShowCart(true);
+  }, [tenant]); // eslint-disable-line react-hooks/exhaustive-deps
   const [businessHours, setBusinessHours] = useState([]);
   const [isStoreOpen, setIsStoreOpen] = useState(true);
   const [todayHours, setTodayHours] = useState(null);
@@ -785,7 +819,7 @@ function StorefrontInner() {
                     🔒 Store is closed
                   </div>
                 ) : (
-                  <button onClick={() => { setShowCart(false); setShowCheckout(true); }} style={{ width: '100%', padding: 14, background: primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>{t('proceedToCheckout')}</button>
+                  <button onClick={startCheckout} style={{ width: '100%', padding: 14, background: primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>{t('proceedToCheckout')}</button>
                 )}
               </>
             )}

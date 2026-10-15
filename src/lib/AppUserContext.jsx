@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
-import { generateThemeVariables } from '@/components/theme/themeUtils';
+import { generateThemeVariables, resolveSavedTheme } from '@/components/theme/themeUtils';
 
 // Session helpers — cookies only
 export const cookieUtils = {
@@ -27,14 +27,12 @@ async function loadAndApplyTheme(tenantId) {
   const supabase = await getSupabase();
   const { data } = await supabase
     .from('theme_configs')
-    .select('primary_color, accent_color')
+    .select('color_set_name, primary_color, accent_color')
     .eq('tenant_id', tenantId)
     .maybeSingle();
 
-  const primary = data?.primary_color || '#3b82f6';
-  const accent = data?.accent_color || '#9333ea';
-
-  const variables = generateThemeVariables(primary, accent);
+  const { dark, light } = resolveSavedTheme(data);
+  const variables = generateThemeVariables(dark, light);
   const root = document.documentElement;
   Object.entries(variables).forEach(([key, value]) => {
     root.style.setProperty(key, value);

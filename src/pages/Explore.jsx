@@ -10,7 +10,8 @@ import { useAppUser } from '@/lib/AppUserContext';
 // return shops that are listed (tenants.is_public) and allowed to sell.
 
 const LOGO_URL = 'https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png';
-const BRAND_GRADIENT = 'linear-gradient(90deg, #fb923c, #e0449a, #8b2fc9)';
+// The visitor's colour: Sellio purple when signed out, a seller's own theme once chosen.
+const BRAND_GRADIENT = 'var(--color-primary-gradient, linear-gradient(135deg, #a855f7, #7e22ce))';
 const PAGE_SIZE = 24;
 
 const KINDS = [
@@ -312,7 +313,7 @@ export default function Explore() {
   const filtered = !!search || kind !== 'all';
   const kindLabel = kind === 'merchants' ? 'Merchants on Sellio' : KINDS.find((k) => k.key === kind)?.label;
   const heading = search ? `Results for “${search}”` : kind === 'all' ? 'Fresh finds' : kindLabel;
-  const sellHref = hasShop ? '/Products' : '/join';
+  const sellHref = hasShop ? '/Products?new=1' : '/join';
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -486,7 +487,7 @@ export default function Explore() {
 
       <Link
         to={sellHref}
-        className="fixed right-5 z-40 h-12 pl-4 pr-5 rounded-full text-white font-semibold text-[15px] inline-flex items-center gap-1.5 shadow-lg shadow-pink-500/30 active:scale-95 transition-transform"
+        className="fixed right-5 z-40 h-12 pl-4 pr-5 rounded-full text-white font-semibold text-[15px] inline-flex items-center gap-1.5 shadow-lg shadow-black/20 active:scale-95 transition-transform"
         style={{ background: BRAND_GRADIENT, bottom: 'calc(20px + env(safe-area-inset-bottom, 0px))' }}
       >
         <Plus className="w-5 h-5" /> Sell

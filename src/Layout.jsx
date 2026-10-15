@@ -30,7 +30,8 @@ import {
   Store,
   Menu,
   Monitor,
-  Compass
+  Compass,
+  Plus
 } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import PricingModal from './components/subscription/PricingModal';
@@ -51,6 +52,7 @@ import InstallPWAModal from './components/onboarding/InstallPWAModal';
 import { canShowInstallPrompt, isStandalone } from '@/lib/pwaInstall';
 import PlanFeatureNotice from './components/subscription/PlanFeatureNotice';
 import { PAGE_FEATURES, itemWords } from '@/lib/planFeatures';
+import { isShopTenant } from '@/lib/shopSelling';
 
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth', 'Join', 'Account', 'World', 'Explore'];
@@ -276,18 +278,25 @@ function AppLayout({ children, currentPageName }) {
   // Keep a signed-in staff member's permissions current: re-read their role and
   // membership every minute and whenever they return to the app, so an owner's
   // role change applies without the staff member signing out.
+  // At most once every 30 seconds, and never restarting a read already on its way:
+  // a burst of focus events once re-sent these two requests hundreds of times a
+  // second and kept the workspace on its loading screen.
   useEffect(() => {
-    const refresh = () => {
-      queryClient.invalidateQueries({ queryKey: ['userRole'] });
-      queryClient.invalidateQueries({ queryKey: ['tenantUser'] });
+    let last = Date.now();
+    const refresh = (force = false) => {
+      if (!force && Date.now() - last < 30 * 1000) return;
+      last = Date.now();
+      queryClient.invalidateQueries({ queryKey: ['userRole'] }, { cancelRefetch: false });
+      queryClient.invalidateQueries({ queryKey: ['tenantUser'] }, { cancelRefetch: false });
     };
+    const onFocus = () => refresh();
     const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
-    const id = setInterval(refresh, 60 * 1000);
-    window.addEventListener('focus', refresh);
+    const id = setInterval(() => refresh(true), 60 * 1000);
+    window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       clearInterval(id);
-      window.removeEventListener('focus', refresh);
+      window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [queryClient]);
@@ -632,8 +641,9 @@ function AppLayout({ children, currentPageName }) {
             );
           })}
 
-          {/* Center: Counter — available to accounts that can take orders. */}
-          {hasPermission('orders.create') && (
+          {/* Center: Counter for stores that take orders at a counter; Sell (a new
+              listing) for free shops, which have no counter. */}
+          {hasPermission('orders.create') ? (
             <div className="flex-1 flex flex-col items-center justify-end pb-1" style={{ minHeight: 60 }}>
               <Link
                 to={createPageUrl('Counter')}
@@ -652,7 +662,24 @@ function AppLayout({ children, currentPageName }) {
                 <span className="text-xs font-semibold" style={{ color: 'rgb(var(--color-primary))' }}>Counter</span>
               </Link>
             </div>
-          )}
+          ) : isShopTenant(tenant) && hasPermission('products.create') ? (
+            <div className="flex-1 flex flex-col items-center justify-end pb-1" style={{ minHeight: 60 }}>
+              <Link
+                to={`${createPageUrl('Products')}?new=1`}
+                data-tour="sell-shortcut"
+                aria-label="Sell — add a listing"
+                className="flex min-h-11 min-w-11 flex-col items-center gap-0.5 -mt-5 rounded-xl transition-transform active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgb(var(--color-primary))]"
+              >
+                <span
+                  className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg"
+                  style={{ background: 'var(--color-primary-gradient)' }}
+                >
+                  <Plus className="w-7 h-7 text-white" aria-hidden="true" />
+                </span>
+                <span className="text-xs font-semibold" style={{ color: 'rgb(var(--color-primary))' }}>Sell</span>
+              </Link>
+            </div>
+          ) : null}
 
           {/* Right: Orders, Settings */}
           {[

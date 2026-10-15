@@ -21,7 +21,7 @@ import { itemWords } from '@/lib/planFeatures';
 import DummyProductCard from '@/components/tour/DummyProductCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package, ScanLine, Trash2, CheckCircle2, AlertCircle, ImageIcon, Loader2, X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
 import { applyCanonicalProductOrder } from '@/lib/storefrontCatalog';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -342,9 +342,7 @@ export default function Products() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
-  // Auto-open new product dialog when navigated from Sell button (?new=1)
-  const urlParams = new URLSearchParams(window.location.search);
-  const [showDialog, setShowDialog] = useState(urlParams.get('new') === '1');
+  const [showDialog, setShowDialog] = useState(false);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products', tenantId],
@@ -427,6 +425,18 @@ export default function Products() {
     setEditingProduct(null);
     setShowDialog(true);
   };
+
+  // "Sell" (bottom bar, Explore) opens Products?new=1: once the list has loaded (so
+  // the plan's listing limit applies), start a new listing and drop the flag.
+  const location = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (isLoading || params.get('new') !== '1') return;
+    params.delete('new');
+    const query = params.toString();
+    navigate({ search: query ? `?${query}` : '' }, { replace: true });
+    if (hasPermission('products.create')) handleAdd();
+  }, [location.search, isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const canOpenScan = () => {
     if (atProductLimit) { setUpgradeModalOpen(true); return false; }

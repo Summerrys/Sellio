@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
-import { COLOR_SETS, DEFAULT_PRIMARY, DEFAULT_ACCENT, generateThemeVariables } from './themeUtils';
+import { COLOR_SETS, DEFAULT_PRIMARY, DEFAULT_ACCENT, generateThemeVariables, resolveSavedTheme } from './themeUtils';
 
 const ThemeContext = createContext({});
 
@@ -75,9 +75,27 @@ export function ThemeProvider({ children, tenantId }) {
         }, { onConflict: 'tenant_id' });
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['themeConfig'] });
+    // Show the new colours at once (buttons included); the saved row follows.
+    onMutate: async (colorSetName) => {
+      const key = ['themeConfig', tenantId];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData(key);
+      const colorSet = resolveColorSet(colorSetName);
+      queryClient.setQueryData(key, (old) => ({
+        ...(old || {}),
+        tenant_id: tenantId,
+        color_set_name: colorSetName || null,
+        primary_color: colorSet.dark,
+        accent_color: colorSet.light,
+      }));
       setPreviewTheme(null);
+      return { previous };
+    },
+    onError: (_error, _name, context) => {
+      queryClient.setQueryData(['themeConfig', tenantId], context?.previous ?? null);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['themeConfig'] });
     },
   });
 
@@ -87,10 +105,8 @@ export function ThemeProvider({ children, tenantId }) {
       applyColorSet(resolveColorSet(previewTheme));
       return;
     }
-    // Use saved theme if available, otherwise apply default gradient colors
-    const dark = themeConfig?.primary_color || DEFAULT_PRIMARY;
-    const light = themeConfig?.accent_color || DEFAULT_ACCENT;
-    applyColorSet({ dark, light });
+    // The saved palette, or Sellio purple when none is chosen (or no one is signed in).
+    applyColorSet(resolveSavedTheme(themeConfig));
   }, [previewTheme, themeConfig]);
 
   const value = {
