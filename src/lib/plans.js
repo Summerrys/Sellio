@@ -7,7 +7,7 @@
 // step with those.
 
 // Sales and setup enquiries go to Sellio's WhatsApp.
-export const SELLIO_WHATSAPP = '6565805411';
+export const SELLIO_WHATSAPP = '6582228103';
 
 export function sellioWhatsAppUrl(text = '') {
   return `https://wa.me/${SELLIO_WHATSAPP}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
