@@ -112,3 +112,8 @@
 .dark [data-sellio-workspace] :is(.text-slate-600,.text-slate-500,.text-slate-400) { color: hsl(var(--muted-foreground)); }
 .dark [data-sellio-workspace] :is(.border-slate-100,.border-slate-200) { border-color: hsl(var(--border)); }
 .dark [data-sellio-workspace] .hover\:bg-slate-50:hover { background-color: hsl(var(--muted)); }
+
+/* Page entrance (was a framer-motion wrapper in App.jsx): fade in with a 16px slide. */
+@keyframes sellio-page-enter { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+.sellio-page-enter { animation: sellio-page-enter 180ms ease-out both; }
+@media (prefers-reduced-motion: reduce) { .sellio-page-enter { animation: none; } }

@@ -9,7 +9,7 @@ import { useAppUser } from '@/lib/AppUserContext';
 // storefront. Data comes from the explore_feed / explore_shops RPCs, which only
 // return shops that are listed (tenants.is_public) and allowed to sell.
 
-const LOGO_URL = 'https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png';
+const LOGO_URL = '/branding/sellio-logo.webp';
 // The visitor's colour: Sellio purple when signed out, a seller's own theme once chosen.
 const BRAND_GRADIENT = 'var(--color-primary-gradient, linear-gradient(135deg, #a855f7, #7e22ce))';
 const PAGE_SIZE = 24;

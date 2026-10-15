@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -36,7 +36,9 @@ import './ux-corrections.css';
 import './motion-refinement.css';
 
 const SITE_URL = 'https://sellio.apptelier.sg/';
-const LOGO_URL = 'https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png';
+const LOGO_URL = '/branding/sellio-logo.webp';
+// Layout effect in the browser (no flash between prerender and page); plain effect in the prerender build.
+const useBrowserLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 const DEMO_STORE_URL = 'https://sellio.apptelier.sg/store/cafetelier';
 const LANDING_TITLE = 'Sellio — Storefronts, Operations & Marketplace for Modern Commerce';
 const LANDING_DESCRIPTION = 'Sellio connects branded storefronts, F&B ordering and merchant operations with an evolving sector-based marketplace world.';
@@ -57,7 +59,7 @@ const FAQ_ITEMS = [
   { question: 'What is Sellio World?', answer: 'Sellio World is a marketplace map we are building, where merchants get a storefront in an F&B, Retail or Services district. It is coming soon, with F&B opening first.' },
   { question: 'How will Sellio Coins work?', answer: 'Sellio Coins are coming with Sellio World. The plan is for merchants to earn coins through marketplace activity and milestones and spend them on cosmetic storefront upgrades. Details will be shared before launch.' },
   { question: 'Are seasonal decorations available?', answer: 'Not yet. Seasonal storefront decorations for occasions such as Chinese New Year and Christmas are planned alongside Sellio World.' },
-  { question: 'Do customers need an account to browse or order?', answer: 'No. Customers can browse Sellio Explore and storefronts and place orders without creating an account.' },
+  { question: 'Do customers need an account to browse or order?', answer: 'Not to browse: anyone can look through Sellio Explore and storefronts. On the web and at your tables, customers order without an account; in the Sellio app, they sign in before placing an order.' },
 ];
 
 const SNAP_PAGE_SELECTORS = ['#sellio-film', '#world-experience', '#journey', '#connected', '#product', '#vision'];
@@ -471,6 +473,10 @@ function Footer({ onCookieSettings }) {
 
 export default function LandingPage() {
   useImmersiveReleaseSnap();
+  // The prerendered copy of this page stays on screen until now (main.jsx).
+  useBrowserLayoutEffect(() => {
+    document.getElementById('sellio-prerender')?.remove();
+  }, []);
   const [cookieOpen, setCookieOpen] = useState(() => !getCookieConsent());
   const cookieReturnFocus = useRef(null);
 

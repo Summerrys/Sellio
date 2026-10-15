@@ -1,30 +1,31 @@
 import { Toaster as SonnerToaster } from 'sonner';
-import { motion } from 'framer-motion';
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
-import PageNotFound from './lib/PageNotFound';
 import Splash from './pages/Splash';
-import LandingPage from '@/components/landing/LandingPage';
-import Privacy from './pages/Privacy';
-import Terms from './pages/Terms';
-import AccountDeletion from './pages/AccountDeletion';
 import Storefront from './pages/Storefront';
-import { useEffect, useLayoutEffect, useState, Suspense } from 'react';
+import { useEffect, useLayoutEffect, useState, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import AppRefreshProvider from '@/components/ui-custom/AppRefreshProvider';
 import { AppUserProvider, useAppUser } from '@/lib/AppUserContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
-import UserManagement from './pages/UserManagement';
 import MobileOAuthReturn from '@/components/auth/MobileOAuthReturn';
 import { isMobileOAuthCallback } from '@/lib/mobileOAuth';
 import LaunchSplash from '@/components/ui-custom/LaunchSplash';
 import GoogleSignInRelay from '@/components/auth/GoogleSignInRelay';
 import { startLaunch } from '@/lib/appLaunch';
 import { GOOGLE_RELAY_PATH } from '@/lib/googleRelay';
+
+// Pages the app never starts on load on demand, so its first download stays small.
+const LandingPage = lazy(() => import('@/components/landing/LandingPage'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Terms = lazy(() => import('./pages/Terms'));
+const AccountDeletion = lazy(() => import('./pages/AccountDeletion'));
+const UserManagement = lazy(() => import('./pages/UserManagement'));
+const PageNotFound = lazy(() => import('./lib/PageNotFound'));
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -96,6 +97,12 @@ const RootRoute = () => {
     if (isNativeApp) startLaunch();
   }, [isNativeApp]);
 
+  // Leaving the start page for the app or the Dashboard: drop the landing prerender
+  // (LandingPage removes it itself once loaded).
+  useLayoutEffect(() => {
+    if (isNativeApp || appUser) document.getElementById('sellio-prerender')?.remove();
+  }, [isNativeApp, appUser]);
+
   if (isNativeApp) {
     if (location.search || location.hash) {
       return <Navigate to={{ pathname: '/Auth', search: location.search, hash: location.hash }} replace />;
@@ -135,15 +142,9 @@ const AuthenticatedApp = () => {
             path={`/${path}`}
             element={
               <LayoutWrapper currentPageName={path}>
-                <motion.div
-                  key={path}
-                  initial={{ opacity: 0, x: 16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -16 }}
-                  transition={{ duration: 0.18, ease: 'easeOut' }}
-                >
+                <div key={path} className="sellio-page-enter">
                   <Page />
-                </motion.div>
+                </div>
               </LayoutWrapper>
             }
           />
@@ -173,13 +174,15 @@ function App() {
         <Router>
           <RouteIndexingGuard />
           <NavigationTracker />
-          <Routes>
-            <Route path="/" element={<RootRoute />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/delete-account" element={<AccountDeletion />} />
-            <Route path="/*" element={<AuthenticatedApp />} />
-          </Routes>
+          <Suspense fallback={null}>
+            <Routes>
+              <Route path="/" element={<RootRoute />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/delete-account" element={<AccountDeletion />} />
+              <Route path="/*" element={<AuthenticatedApp />} />
+            </Routes>
+          </Suspense>
         </Router>
         <SonnerToaster />
         <LaunchSplash />

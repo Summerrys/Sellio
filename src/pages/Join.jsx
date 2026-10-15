@@ -13,7 +13,7 @@ import {
   isStaffLoginEmail, nextStepFor, readEmailLink,
 } from '@/lib/accountFlow';
 
-const LOGO_URL = 'https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png';
+const LOGO_URL = '/branding/sellio-logo.webp';
 const BUTTON_STYLE = { background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' };
 const INPUT_CLASS = 'w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400';
 const RESEND_SECONDS = 60;

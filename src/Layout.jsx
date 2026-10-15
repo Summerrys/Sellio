@@ -115,7 +115,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
             <img src={tenant.logo_url} alt={tenant.name} className={collapsed ? 'h-7 w-7 object-contain rounded' : 'h-8 object-contain'} />
           ) : (
             <>
-              <img src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png" alt="Sellio" className={collapsed ? 'h-8 w-auto object-contain' : 'h-10 w-auto object-contain'} />
+              <img src="/branding/sellio-logo.webp" alt="Sellio" className={collapsed ? 'h-8 w-auto object-contain' : 'h-10 w-auto object-contain'} />
               {!collapsed && tenant?.name && (
                 <div>
                   <span className="font-bold text-sm text-slate-900 tracking-tight">{tenant.name}</span>
@@ -557,7 +557,7 @@ function AppLayout({ children, currentPageName }) {
           ) : (
             <button onClick={() => setMobileOpen(true)} data-tour="avatar-menu-btn" aria-label="Open menu" className="flex items-center gap-2 h-11 active:opacity-70 transition-opacity">
               <Menu className="w-6 h-6 text-slate-700 flex-shrink-0" />
-              <img src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png" alt="Sellio" className="h-10 w-auto object-contain" />
+              <img src="/branding/sellio-logo.webp" alt="Sellio" className="h-10 w-auto object-contain" />
             </button>
           )}
         </div>

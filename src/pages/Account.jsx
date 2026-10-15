@@ -9,7 +9,7 @@ import AppLoader from '@/components/ui-custom/AppLoader';
 import AuthPricingModal from '@/components/auth/AuthPricingModal';
 import { accountErrorMessage, nextStepFor } from '@/lib/accountFlow';
 
-const LOGO_URL = 'https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png';
+const LOGO_URL = '/branding/sellio-logo.webp';
 const BUTTON_STYLE = { background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' };
 const SUPPORT_EMAIL = 'sellio@apptelier.sg';
 

@@ -11,7 +11,9 @@
          2. During the app's start, show the Sellio splash at once: from the first paint
             when the app opens or comes back from Google sign-in, and across the reloads
             on the way to the first screen (Dashboard, Join, …).
-         3. The app opening at "/" goes straight to /Auth, without loading the landing page. */
+         3. The app opening at "/" goes straight to Explore (Auth for invite or recovery
+            links) in this same page load, and the landing markup stays hidden and idle
+            everywhere except the website's start page. */
       (function () {
         var w = window, l = w.location;
         if (l.pathname === '/google-signin') {
@@ -56,13 +58,17 @@
             w.setTimeout(function () { html.removeAttribute('data-sellio-launch'); }, 10000 - age);
           }
         } catch (e) { /* no storage: no splash */ }
-        // The app never shows the landing page (the website's start page, which arrives
-        // with the landing page's images and video): stop loading it and open the
-        // sign-in page straight away. Websites keep the landing page.
+        // The app never shows the landing page: it opens on Explore (or Auth for invite and
+        // recovery links) in this same page load, with no second load. Websites keep the
+        // landing page.
         if (bridge && l.pathname === '/') {
-          try { w.stop(); } catch (e) { /* keep going */ }
-          l.replace('/Auth' + l.search + l.hash);
+          var start = (l.search || l.hash) ? '/Auth' : '/explore';
+          try { w.history.replaceState(w.history.state, '', start + l.search + l.hash); }
+          catch (e) { try { w.stop(); } catch (e2) { /* keep going */ } l.replace(start + l.search + l.hash); }
         }
+        // The landing markup in this page is for crawlers and the website's start page. In
+        // the app and on every other page it stays hidden, so its images never load.
+        if (bridge || l.pathname !== '/') document.documentElement.setAttribute('data-sellio-shell', '');
       })();
     </script>
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/sellio-tab-16.png" />
@@ -70,14 +76,16 @@
     <link rel="icon" type="image/png" sizes="64x64" href="/icons/sellio-tab-64.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/sellio-apple-touch-180.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preload" as="image" href="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png" />
+    <link rel="preload" as="image" href="/branding/sellio-logo.webp" type="image/webp" />
     <link rel="preload" as="image" href="/branding/sellio-splash-tagline.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Inter only; the storefront and legal fonts load where they're used (src/lib/extraFonts.js). -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#ffffff" />
-    <style>html, body, #root { background: #ffffff; margin: 0; min-height: 100%; }</style>
+    <style>html, body, #root { background: #ffffff; margin: 0; min-height: 100%; }
+      html[data-sellio-shell] #sellio-prerender { display: none !important; }</style>
     <style>
       /* The Sellio splash while the Android app starts: #sellio-launch-splash below, kept up
          by LaunchSplash.jsx until the first screen is ready. */
@@ -133,7 +141,7 @@
       <div class="sellio-launch__glow sellio-launch__glow--a"></div>
       <div class="sellio-launch__glow sellio-launch__glow--b"></div>
       <div class="sellio-launch__content">
-        <img class="sellio-launch__logo" alt="" src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png" />
+        <img class="sellio-launch__logo" alt="" src="/branding/sellio-logo.webp" />
         <!-- public/branding/sellio-splash-tagline.svg, inline so it is there from the first paint (keep in step) -->
         <svg class="sellio-launch__tagline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256.98 86.5" aria-hidden="true">
         <defs>

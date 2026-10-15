@@ -14,8 +14,10 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Public routes include a build-time prerender for non-JavaScript crawlers.
-document.getElementById('sellio-prerender')?.remove()
+// Public routes include a build-time prerender for non-JavaScript crawlers. On the
+// website's start page it stays on screen until the landing page has loaded
+// (LandingPage removes it); everywhere else it goes now.
+if (window.location.pathname !== '/') document.getElementById('sellio-prerender')?.remove()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <App />

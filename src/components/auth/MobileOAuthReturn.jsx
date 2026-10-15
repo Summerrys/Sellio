@@ -68,7 +68,7 @@ export default function MobileOAuthReturn() {
     <LaunchSplash />
     <main className="min-h-[100dvh] bg-white flex items-center justify-center p-6" data-pull-refresh-block>
       <div className="w-full max-w-sm text-center">
-        <img src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png"
+        <img src="/branding/sellio-logo.webp"
           alt="Sellio" className="w-24 h-24 object-contain mx-auto mb-8" />
         <h1 className="text-2xl font-semibold text-slate-900">
           {status === 'checking' ? 'Finishing sign-in…' : status === 'error' ? 'Sign-in could not finish' : 'Return to Sellio'}

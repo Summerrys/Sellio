@@ -1,3 +1,5 @@
+import { loadExtraFonts } from './extraFonts';
+
 export const STOREFRONT_TYPOGRAPHY_PERSONALITIES = [
   {
     value: 'Inter',
@@ -41,6 +43,7 @@ export function getStorefrontTypographyPersonality(value) {
 }
 
 export function getStorefrontFontStack(value) {
+  loadExtraFonts(); // once per page; storefront fonts aren't loaded up front
   return getStorefrontTypographyPersonality(value).stack;
 }
 

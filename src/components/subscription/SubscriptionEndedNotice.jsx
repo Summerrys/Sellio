@@ -21,7 +21,7 @@ export default function SubscriptionEndedNotice({ subscription, storeName }) {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md text-center">
         <img
-          src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png"
+          src="/branding/sellio-logo.webp"
           alt="Sellio"
           className="h-16 sm:h-20 w-auto object-contain mx-auto mb-10"
         />

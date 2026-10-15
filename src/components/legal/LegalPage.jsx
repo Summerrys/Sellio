@@ -3,8 +3,9 @@ import { ArrowLeft, ArrowRight, Cookie, ShieldCheck } from 'lucide-react';
 import CookieConsent from '@/components/landing/CookieConsent';
 import { getCookieConsent } from '@/lib/cookieConsent';
 import './legal.css';
+import { loadExtraFonts } from '@/lib/extraFonts';
 
-const LOGO_URL = 'https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png';
+const LOGO_URL = '/branding/sellio-logo.webp';
 const SITE_URL = 'https://sellio.apptelier.sg';
 
 function useLegalMetadata({ title, description, path, dateModified }) {
@@ -109,6 +110,7 @@ export default function LegalPage({
     path,
     dateModified: '2026-09-22',
   });
+  useEffect(() => { loadExtraFonts(); }, []);
 
   const [cookieOpen, setCookieOpen] = useState(() => !getCookieConsent());
   const cookieReturnFocus = useRef(null);

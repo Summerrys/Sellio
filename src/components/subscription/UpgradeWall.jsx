@@ -76,7 +76,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center px-4 py-10">
       <img
-        src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png"
+        src="/branding/sellio-logo.webp"
         alt="Sellio"
         className="h-12 sm:h-14 w-auto object-contain mb-8"
       />

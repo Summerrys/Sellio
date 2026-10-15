@@ -883,7 +883,7 @@ export default function Auth() {
             {/* Header */}
             <div className="auth-gap-b text-center">
               <div className="auth-logo-gap flex items-center justify-center">
-                <img src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png" alt="Sellio" className="auth-logo w-auto object-contain" />
+                <img src="/branding/sellio-logo.webp" alt="Sellio" className="auth-logo w-auto object-contain" />
               </div>
               <p className="text-xl font-semibold text-slate-800 mb-0.5">Welcome!</p>
               <p className="text-sm text-slate-500">Let's get you started</p>

@@ -7,7 +7,7 @@
 // the splash is up from the first paint), and shows the splash before the code loads after a reload. Keep the key,
 // MAX_MS and the bridge test in step with it.
 export const LAUNCH_KEY = 'sellio-launch';
-export const MIN_MS = 1500;
+export const MIN_MS = 0; // no fixed minimum: Base44's own launch screen already shows first
 export const MAX_MS = 10000;
 export const SETTLE_MS = 300; // a page swapping one loader for the next stays covered
 

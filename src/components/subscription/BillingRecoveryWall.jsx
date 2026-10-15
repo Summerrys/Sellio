@@ -36,7 +36,7 @@ export default function BillingRecoveryWall({ subscription, tenantId, isOwner })
       <div className="w-full max-w-lg">
         <div className="text-center mb-7">
           <img
-            src="https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png"
+            src="/branding/sellio-logo.webp"
             alt="Sellio"
             className="h-10 w-auto object-contain mx-auto mb-8"
           />

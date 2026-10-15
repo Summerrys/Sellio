@@ -6,6 +6,20 @@ const serverBundle = pathToFileURL(`${process.cwd()}/.prerender/entry-server.js`
 const { PRERENDER_ROUTES, renderRoute } = await import(serverBundle);
 
 const SEO_BLOCK = /<!-- ROUTE_SEO_START -->[\s\S]*?<!-- ROUTE_SEO_END -->/;
+
+// The prerender serves crawlers and the website's first paint; Sellio replaces it at
+// once, and index.html hides it everywhere else (the host serves this page for every
+// address). So its video never preloads or autoplays, and its images are lazy, which
+// keeps them from downloading while hidden.
+const inertMedia = (html) => html
+  .replace(/<video\b[^>]*>/g, (tag) => tag
+    .replace(/\sautoplay(?:="[^"]*")?(?=[\s/>])/g, '')
+    .replace(/\spreload="[^"]*"/g, '')
+    .replace(/^<video\b/, '<video preload="none"'))
+  .replace(/<img\b[^>]*>/g, (tag) => {
+    const lazy = tag.replace(/\sfetchpriority="[^"]*"/g, '').replace(/\sloading="[^"]*"/g, '');
+    return lazy.replace(/^<img\b/, '<img loading="lazy"');
+  });
 const ROOT = '<div id="root"></div>';
 
 if (!SEO_BLOCK.test(template)) throw new Error('Missing ROUTE_SEO markers in index.html.');
@@ -38,7 +52,7 @@ for (const path of PRERENDER_ROUTES) {
     .replace(SEO_BLOCK, head)
     .replace(
       ROOT,
-      `<div id="sellio-prerender" data-prerendered="true">${html}</div>\n    ${ROOT}`
+      `<div id="sellio-prerender" data-prerendered="true">${inertMedia(html)}</div>\n    ${ROOT}`
     );
 
   const directory = path === '/' ? 'dist' : `dist${path}`;
