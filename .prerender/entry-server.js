@@ -1037,8 +1037,8 @@ const BUSINESS_PLANS = [
       "Sellio AI tools"
     ],
     links: {
-      monthly: "https://buy.stripe.com/28EfZjeCZ6EH35V1oY7bW0e",
-      yearly: "https://buy.stripe.com/cNi00l1Qd4wzdKz4Ba7bW0f"
+      monthly: "https://buy.stripe.com/14A28t1Qd2or6i72t27bW0r",
+      yearly: "https://buy.stripe.com/9B6dRb1Qdgfh8qf7Nm7bW0s"
     },
     noTrialLinks: {
       monthly: "https://buy.stripe.com/00w9AVfH30gj6i7d7G7bW0k",
@@ -1060,8 +1060,8 @@ const BUSINESS_PLANS = [
       "Email and chat support"
     ],
     links: {
-      monthly: "https://buy.stripe.com/aFabJ3bqN4wz35V8Rq7bW0g",
-      yearly: "https://buy.stripe.com/4gMfZj52p1kn7mb8Rq7bW0h"
+      monthly: "https://buy.stripe.com/6oU8wRgL77ILbCr7Nm7bW0t",
+      yearly: "https://buy.stripe.com/fZudRbgL7e79ayn5Fe7bW0u"
     },
     noTrialLinks: {
       monthly: "https://buy.stripe.com/4gM14p2Uhe79fSH3x67bW0m",
@@ -1083,8 +1083,8 @@ const BUSINESS_PLANS = [
       "Priority support"
     ],
     links: {
-      monthly: "https://buy.stripe.com/4gM9AV7ax9QTdKz0kU7bW0i",
-      yearly: "https://buy.stripe.com/5kQ28tamJ6EHbCr9Vu7bW0j"
+      monthly: "https://buy.stripe.com/dRm3cxeCZ0gj9uj9Vu7bW0v",
+      yearly: "https://buy.stripe.com/28EaEZ1QdaUXfSH2t27bW0w"
     },
     noTrialLinks: {
       monthly: "https://buy.stripe.com/4gM4gBcuR5ADayn0kU7bW0o",
@@ -1711,7 +1711,7 @@ function PricingSection() {
         ] })
       ] }, plan.key);
     }) }),
-    /* @__PURE__ */ jsx("p", { className: "sellio-pricing-note", children: "Eligible new merchants receive a seven-day trial. Prices exclude applicable taxes. Sellio World, our marketplace map, is coming soon." }),
+    /* @__PURE__ */ jsx("p", { className: "sellio-pricing-note", children: "Eligible new merchants receive a seven-day trial. Sellio World, our marketplace map, is coming soon." }),
     /* @__PURE__ */ jsxs("p", { className: "sellio-pricing-note", children: [
       "Selling from home? ",
       /* @__PURE__ */ jsx("a", { href: "/join", rel: "nofollow", style: { fontWeight: 700, textDecoration: "underline" }, children: "Open a free personal shop" }),
