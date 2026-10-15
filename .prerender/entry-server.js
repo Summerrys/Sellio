@@ -1010,6 +1010,89 @@ function ConnectedCommerce() {
     ] })
   ] }) }) });
 }
+const SELLIO_WHATSAPP = "6565805411";
+function sellioWhatsAppUrl(text = "") {
+  return `https://wa.me/${SELLIO_WHATSAPP}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
+}
+const MULTI_OUTLET_URL = sellioWhatsAppUrl("Hi, I run more than one outlet and would like to talk about Sellio.");
+const SETUP_OFFER = {
+  price: 149,
+  includes: "menu scan, storefront build, printer setup and on-site staff training",
+  url: sellioWhatsAppUrl("Hi, I'd like to book Sellio's done-for-you setup (SGD 149).")
+};
+const BUSINESS_PLANS = [
+  {
+    key: "starter",
+    name: "Starter",
+    monthly: 39,
+    yearly: 390,
+    features: [
+      "10 products",
+      "Up to 100 orders/month",
+      "3 staff accounts",
+      "5 tables and QR codes",
+      "POS counter, QR ordering and storefront",
+      "Kitchen display and receipt printing",
+      "Basic reports",
+      "Sellio AI tools"
+    ],
+    links: {
+      monthly: "https://buy.stripe.com/28EfZjeCZ6EH35V1oY7bW0e",
+      yearly: "https://buy.stripe.com/cNi00l1Qd4wzdKz4Ba7bW0f"
+    },
+    noTrialLinks: {
+      monthly: "https://buy.stripe.com/00w9AVfH30gj6i7d7G7bW0k",
+      yearly: "https://buy.stripe.com/cNicN7bqN5ADcGv4Ba7bW0l"
+    }
+  },
+  {
+    key: "growth",
+    name: "Growth",
+    monthly: 79,
+    yearly: 790,
+    features: [
+      "Everything in Starter",
+      "50 products",
+      "Up to 1,000 orders/month",
+      "5 staff accounts",
+      "Advanced reports",
+      "Custom editable roles",
+      "Email and chat support"
+    ],
+    links: {
+      monthly: "https://buy.stripe.com/aFabJ3bqN4wz35V8Rq7bW0g",
+      yearly: "https://buy.stripe.com/4gMfZj52p1kn7mb8Rq7bW0h"
+    },
+    noTrialLinks: {
+      monthly: "https://buy.stripe.com/4gM14p2Uhe79fSH3x67bW0m",
+      yearly: "https://buy.stripe.com/7sY00lfH39QT49Z3x67bW0n"
+    }
+  },
+  {
+    key: "pro",
+    name: "Professional",
+    monthly: 119,
+    yearly: 1190,
+    features: [
+      "Everything in Growth",
+      "Unlimited products and orders",
+      "Unlimited staff accounts",
+      "Unlimited tables and QR codes",
+      "Custom real-time reports",
+      "Unlimited custom roles",
+      "Priority support"
+    ],
+    links: {
+      monthly: "https://buy.stripe.com/4gM9AV7ax9QTdKz0kU7bW0i",
+      yearly: "https://buy.stripe.com/5kQ28tamJ6EHbCr9Vu7bW0j"
+    },
+    noTrialLinks: {
+      monthly: "https://buy.stripe.com/4gM4gBcuR5ADayn0kU7bW0o",
+      yearly: "https://buy.stripe.com/4gM14pbqN2or21RffO7bW0p"
+    }
+  }
+];
+Object.fromEntries(BUSINESS_PLANS.map((plan) => [plan.key, plan.noTrialLinks]));
 const PRODUCT_VIEWS = [
   {
     key: "storefront",
@@ -1047,74 +1130,16 @@ const PRODUCT_VIEWS = [
     Icon: Bot
   }
 ];
-const PLANS = [
-  {
-    key: "starter",
-    name: "Starter",
-    monthly: 79,
-    yearly: 790,
-    description: "For small businesses getting online.",
-    badge: null,
-    accent: "#3b82f6",
-    features: [
-      "10 products",
-      "Up to 100 orders/month",
-      "3 staff accounts",
-      "5 tables and QR codes",
-      "1 branch",
-      "Basic reports",
-      "Custom theme"
-    ],
-    links: {
-      monthly: "https://buy.stripe.com/00wdRbdyV1kn8qfebK7bW02",
-      annual: "https://buy.stripe.com/fZu5kF1Qd8MP0XN3x67bW03"
-    }
-  },
-  {
-    key: "growth",
-    name: "Growth",
-    monthly: 139,
-    yearly: 1390,
-    description: "For growing teams and busier operations.",
-    badge: "Most popular",
-    accent: "#8b2fc9",
-    features: [
-      "50 products",
-      "Up to 1,000 orders/month",
-      "5 staff accounts",
-      "Up to 3 branches",
-      "Advanced reports",
-      "Custom editable roles",
-      "Email and chat support"
-    ],
-    links: {
-      monthly: "https://buy.stripe.com/6oUaEZ52pbZ135V7Nm7bW04",
-      annual: "https://buy.stripe.com/8x23cxcuR9QTgWL7Nm7bW05"
-    }
-  },
-  {
-    key: "pro",
-    name: "Professional",
-    monthly: 199,
-    yearly: 1990,
-    description: "For businesses that need maximum scale.",
-    badge: null,
-    accent: "#e0449a",
-    features: [
-      "Unlimited products and orders",
-      "Unlimited staff accounts",
-      "Unlimited tables and QR codes",
-      "Up to 10 branches",
-      "Custom real-time reports",
-      "Unlimited custom roles",
-      "Priority support"
-    ],
-    links: {
-      monthly: "https://buy.stripe.com/5kQ5kFcuR8MP6i76Ji7bW06",
-      annual: "https://buy.stripe.com/eVq7sNcuR2or21R2t27bW07"
-    }
-  }
-];
+const LANDING_PLAN_STYLE = {
+  starter: { description: "For small businesses getting online.", badge: null, accent: "#3b82f6" },
+  growth: { description: "For growing teams and busier operations.", badge: "Most popular", accent: "#8b2fc9" },
+  pro: { description: "For businesses that need maximum scale.", badge: null, accent: "#e0449a" }
+};
+const PLANS = BUSINESS_PLANS.map((plan) => ({
+  ...plan,
+  ...LANDING_PLAN_STYLE[plan.key],
+  links: { monthly: plan.links.monthly, annual: plan.links.yearly }
+}));
 const CALLOUT_POSITIONS = [
   { x: "5%", y: "62%", mobileX: "48%", mobileY: "63%" },
   // Phones: cards 02-05 share the clear lower-right floor, just below 03 and right of 01 and 02, so
@@ -1690,6 +1715,20 @@ function PricingSection() {
       "Selling from home? ",
       /* @__PURE__ */ jsx("a", { href: "/join", rel: "nofollow", style: { fontWeight: 700, textDecoration: "underline" }, children: "Open a free personal shop" }),
       ": up to 10 listings and 100 orders a month."
+    ] }),
+    /* @__PURE__ */ jsxs("p", { className: "sellio-pricing-note", children: [
+      "Multi-outlet? ",
+      /* @__PURE__ */ jsx("a", { href: MULTI_OUTLET_URL, target: "_blank", rel: "noopener noreferrer", style: { fontWeight: 700, textDecoration: "underline" }, children: "Talk to us on WhatsApp" }),
+      "."
+    ] }),
+    /* @__PURE__ */ jsxs("p", { className: "sellio-pricing-note", children: [
+      "Want us to set it up for you? Done-for-you setup is SGD ",
+      SETUP_OFFER.price,
+      " one-time: ",
+      SETUP_OFFER.includes,
+      ". ",
+      /* @__PURE__ */ jsx("a", { href: SETUP_OFFER.url, target: "_blank", rel: "noopener noreferrer", style: { fontWeight: 700, textDecoration: "underline" }, children: "Book on WhatsApp" }),
+      "."
     ] })
   ] }) });
 }
