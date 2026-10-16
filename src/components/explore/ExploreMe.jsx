@@ -73,7 +73,9 @@ export default function ExploreMe() {
                 : <Row to="/join" icon={Store} label="Start selling" detail="Open a free shop" />}
               <Row to="/explore/listings" icon={LayoutGrid} label="My listings" />
               <Row to="/explore/chats" icon={MessageCircle} label="Chats" />
-              <Row to="/Account" icon={UserRound} label="Account" />
+              {hasShop
+                ? <Row to="/Me" icon={UserRound} label="Account & settings" detail="Profile, password, shop settings" />
+                : <Row to="/Account" icon={UserRound} label="Account" />}
             </section>
           </>
         ) : (
