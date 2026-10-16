@@ -69,6 +69,16 @@
         // The landing markup in this page is for crawlers and the website's start page. In
         // the app and on every other page it stays hidden, so its images never load.
         if (bridge || l.pathname !== '/') document.documentElement.setAttribute('data-sellio-shell', '');
+        // The website's start page: the landing styles ship with the landing page's own
+        // code (loaded on demand), so they're linked here before the first paint and the
+        // prerendered page is never shown unstyled. The app never loads them.
+        // scripts/prerender-routes.mjs fills in the list at build time.
+        var landingCss = [/* LANDING_CSS */];
+        if (!bridge && l.pathname === '/') {
+          for (var c = 0; c < landingCss.length; c++) {
+            document.write('<link rel="stylesheet" crossorigin href="' + landingCss[c] + '">');
+          }
+        }
       })();
     </script>
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/sellio-tab-16.png" />

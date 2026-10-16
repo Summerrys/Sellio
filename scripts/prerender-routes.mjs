@@ -1,7 +1,24 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
-const template = await readFile('dist/index.html', 'utf8');
+let template = await readFile('dist/index.html', 'utf8');
+
+// The landing page loads on demand, so its styles are separate files. Find them in
+// the build (the entry chunk lists each lazy import's files) and let index.html link
+// them on the website's start page before first paint.
+{
+  const entry = template.match(/<script[^>]+type="module"[^>]+src="\/(assets\/index-[^"]+\.js)"/);
+  if (!entry) throw new Error('Entry script not found in dist/index.html.');
+  const entryJs = await readFile(`dist/${entry[1]}`, 'utf8');
+  const files = entryJs.match(/m\.f=(\[[^\]]*\])/);
+  const deps = entryJs.match(/import\("\.\/LandingPage-[^"]+\.js"\),__vite__mapDeps\(\[([\d,]+)\]\)/);
+  if (!files || !deps) throw new Error('Landing page files not found in the entry chunk.');
+  const list = JSON.parse(files[1]);
+  const css = deps[1].split(',').map(Number).map((i) => list[i]).filter((f) => f && f.endsWith('.css'));
+  if (!css.some((f) => /LandingPage-[^/]+\.css$/.test(f))) throw new Error('Landing page styles not found in the build.');
+  if (!template.includes('/* LANDING_CSS */')) throw new Error('Missing LANDING_CSS marker in index.html.');
+  template = template.replace('/* LANDING_CSS */', css.map((f) => JSON.stringify('/' + f)).join(', '));
+}
 const serverBundle = pathToFileURL(`${process.cwd()}/.prerender/entry-server.js`).href;
 const { PRERENDER_ROUTES, renderRoute } = await import(serverBundle);
 

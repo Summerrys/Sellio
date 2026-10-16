@@ -323,7 +323,7 @@ export default function Explore() {
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
           <a href="/" aria-label="Sellio home" className="flex items-center gap-2">
-            <img src={LOGO_URL} alt="Sellio" className="h-7 w-auto object-contain" />
+            <img src={LOGO_URL} alt="Sellio" className="h-10 w-auto object-contain" />
           </a>
           <span className="text-sm font-semibold text-slate-400">Explore</span>
           <div className="ml-auto flex items-center gap-2">
