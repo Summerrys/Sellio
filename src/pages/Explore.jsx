@@ -4,10 +4,11 @@ import { Search, Plus, X, Loader2, RefreshCw, Store, ChevronRight } from 'lucide
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { isNativeApp } from '@/lib/nativeApp';
+import ExploreTabBar, { markExploreHome } from '@/components/explore/ExploreTabBar';
+import { listingUrl } from '@/components/explore/shared';
 
 // Sellio Explore: a public, Carousell-style feed of items from Sellio shops.
-// Anyone can browse without an account; tapping an item opens that shop's
-// storefront. Data comes from the explore_feed / explore_shops RPCs, which only
+// Anyone can browse without an account; tapping an item opens its listing page. Data comes from the explore_feed / explore_shops RPCs, which only
 // return shops that are listed (tenants.is_public) and allowed to sell.
 
 const LOGO_URL = '/branding/sellio-logo.webp';
@@ -94,7 +95,7 @@ function ItemCard({ item }) {
   const hasDiscount = item.compare_at_price != null && Number(item.compare_at_price) > Number(item.price);
   return (
     <Link
-      to={storeUrl(item.shop_slug)}
+      to={listingUrl(item.product_id)}
       className="group block bg-white rounded-2xl overflow-hidden border border-slate-100 hover:shadow-md transition-shadow"
     >
       <div className="flex items-center gap-2 px-2.5 py-2">
@@ -225,6 +226,7 @@ export default function Explore() {
   useEffect(() => {
     const previous = document.title;
     document.title = 'Explore shops and items · Sellio';
+    markExploreHome();
     return () => { document.title = previous; };
   }, []);
 
@@ -488,13 +490,15 @@ export default function Explore() {
         </footer>
       </main>
 
+      {/* Phones use the bottom bar's Sell; wider screens keep this button. */}
       <Link
         to={sellHref}
-        className="fixed right-5 z-40 h-12 pl-4 pr-5 rounded-full text-white font-semibold text-[15px] inline-flex items-center gap-1.5 shadow-lg shadow-black/20 active:scale-95 transition-transform"
+        className="fixed right-5 z-40 h-12 pl-4 pr-5 rounded-full text-white font-semibold text-[15px] hidden md:inline-flex items-center gap-1.5 shadow-lg shadow-black/20 active:scale-95 transition-transform"
         style={{ background: BRAND_GRADIENT, bottom: NATIVE_ANDROID ? '20px' : 'calc(20px + env(safe-area-inset-bottom, 0px))' }}
       >
         <Plus className="w-5 h-5" /> Sell
       </Link>
+      <ExploreTabBar active="home" />
     </div>
   );
 }

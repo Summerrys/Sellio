@@ -52,6 +52,7 @@ import { lazy } from 'react';
 const Account = lazy(() => import('./pages/Account'));
 const Auth = lazy(() => import('./pages/Auth'));
 const Categories = lazy(() => import('./pages/Categories'));
+const Chats = lazy(() => import('./pages/Chats'));
 const CoinShop = lazy(() => import('./pages/CoinShop'));
 const CustomerMenu = lazy(() => import('./pages/CustomerMenu'));
 const CustomerOrder = lazy(() => import('./pages/CustomerOrder'));
@@ -79,6 +80,7 @@ export const PAGES = {
     "Account": Account,
     "Auth": Auth,
     "Categories": Categories,
+    "Chats": Chats,
     "CoinShop": CoinShop,
     "CustomerMenu": CustomerMenu,
     "CustomerOrder": CustomerOrder,

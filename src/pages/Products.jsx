@@ -428,14 +428,23 @@ export default function Products() {
 
   // "Sell" (bottom bar, Explore) opens Products?new=1: once the list has loaded (so
   // the plan's listing limit applies), start a new listing and drop the flag.
+  // "Edit listing" on an Explore listing page opens Products?edit=<id> the same way.
   const location = useLocation();
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    if (isLoading || params.get('new') !== '1') return;
+    const editId = params.get('edit');
+    const wantsNew = params.get('new') === '1';
+    if (isLoading || (!wantsNew && !editId)) return;
     params.delete('new');
+    params.delete('edit');
     const query = params.toString();
     navigate({ search: query ? `?${query}` : '' }, { replace: true });
-    if (hasPermission('products.create')) handleAdd();
+    if (wantsNew) {
+      if (hasPermission('products.create')) handleAdd();
+    } else {
+      const product = products.find((p) => String(p.id) === editId);
+      if (product) handleEdit(product);
+    }
   }, [location.search, isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const canOpenScan = () => {

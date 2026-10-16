@@ -26,6 +26,11 @@ const Terms = lazy(() => import('./pages/Terms'));
 const AccountDeletion = lazy(() => import('./pages/AccountDeletion'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
 const PageNotFound = lazy(() => import('./lib/PageNotFound'));
+const ListingPage = lazy(() => import('@/components/explore/ListingPage'));
+const ExploreListings = lazy(() => import('@/components/explore/ExploreListings'));
+const ExploreMe = lazy(() => import('@/components/explore/ExploreMe'));
+const ExploreChats = lazy(() => import('@/components/explore/ExploreChats'));
+const ExploreChatThread = lazy(() => import('@/components/explore/ExploreChats').then((m) => ({ default: m.ExploreChatThread })));
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -45,10 +50,11 @@ function RouteIndexingGuard() {
     const path = location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
     const params = new URLSearchParams(location.search);
     const isStorefront = /^\/store\/[^/]+$/.test(path);
+    const isListing = /^\/listing\/[^/]+$/.test(path);
     const isPrivateStoreVariant = isStorefront && (params.get('preview') === 'true' || params.get('staff') === 'true');
     const isPublicPage = path === '/' || path === '/privacy' || path === '/terms' || path === '/explore';
     const isPublicStorefront = isStorefront && !isPrivateStoreVariant;
-    const content = isPublicPage || isPublicStorefront ? PUBLIC_INDEX_ROBOTS : PRIVATE_ROBOTS;
+    const content = isPublicPage || isPublicStorefront || isListing ? PUBLIC_INDEX_ROBOTS : PRIVATE_ROBOTS;
 
     let robots = document.querySelector('meta[name="robots"]');
     if (!robots) {
@@ -151,6 +157,11 @@ const AuthenticatedApp = () => {
         ))}
         <Route path="/Splash" element={<Splash />} />
         <Route path="/UserManagement" element={<LayoutWrapper currentPageName="UserManagement"><UserManagement /></LayoutWrapper>} />
+        <Route path="/listing/:productId" element={<LayoutWrapper currentPageName="Explore"><ListingPage /></LayoutWrapper>} />
+        <Route path="/explore/listings" element={<LayoutWrapper currentPageName="Explore"><ExploreListings /></LayoutWrapper>} />
+        <Route path="/explore/me" element={<LayoutWrapper currentPageName="Explore"><ExploreMe /></LayoutWrapper>} />
+        <Route path="/explore/chats" element={<LayoutWrapper currentPageName="Explore"><ExploreChats /></LayoutWrapper>} />
+        <Route path="/explore/chats/:conversationId" element={<LayoutWrapper currentPageName="Explore"><ExploreChatThread /></LayoutWrapper>} />
         <Route path="/store/:tenantSlug" element={<Storefront />} />
         <Route path="/order/:tenantSlug/:tableId" element={<Storefront />} />
         <Route path="*" element={<PageNotFound />} />

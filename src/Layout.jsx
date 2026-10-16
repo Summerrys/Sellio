@@ -31,8 +31,11 @@ import {
   Menu,
   Monitor,
   Compass,
-  Plus
+  Plus,
+  MessageCircle
 } from 'lucide-react';
+import ChatHeaderButton from './components/chat/ChatHeaderButton';
+import { useChatUnread } from '@/lib/chat';
 import { getSupabase } from '@/lib/supabaseClient';
 import PricingModal from './components/subscription/PricingModal';
 import { Button } from '@/components/ui/button';
@@ -78,6 +81,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
     { label: itemWords(tenant?.seller_type).Products, icon: ShoppingBag, page: 'Products', permission: 'products.view' },
     { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view' },
     { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view' },
+    { label: 'Chats', icon: MessageCircle, page: 'Chats', permission: 'orders.view' },
     { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view' },
     ...(isFnBIndustry(tenant?.industry) ? [{ label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view' }] : []),
     { label: 'User Management', icon: Users, page: 'UserManagement', permission: ['staff.view', 'roles.view'] },
@@ -94,6 +98,8 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
   );
 
   const navItems = [...superAdminItems, ...tenantItems];
+  const chatUnread = useChatUnread(!!tenant?.id && hasPermission?.('orders.view'));
+  const chatsWaiting = Number(chatUnread.by_tenant?.[tenant?.id]) || 0;
 
   return (
     <div className="flex flex-col h-full">
@@ -194,7 +200,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
               to={createPageUrl(item.page)}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
+                "relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
                 isActive
                   ? "text-white shadow-sm"
                   : "text-slate-500 hover:text-slate-900 hover:bg-[rgb(var(--color-primary-100))]",
@@ -205,6 +211,13 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
             >
               <Icon className="w-4.5 h-4.5 flex-shrink-0" style={{ width: 18, height: 18 }} />
               {!collapsed && <span>{item.label}</span>}
+              {item.page === 'Chats' && chatsWaiting > 0 && (collapsed ? (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500" aria-label={`${chatsWaiting} waiting`} />
+              ) : (
+                <span className={cn("ml-auto min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold leading-5 text-center", isActive ? "bg-white/90 text-slate-900" : "bg-rose-500 text-white")}>
+                  {chatsWaiting > 99 ? '99+' : chatsWaiting}
+                </span>
+              ))}
             </Link>
           );
         })}
@@ -535,6 +548,7 @@ function AppLayout({ children, currentPageName }) {
                 Take Orders
               </Link>
             )}
+            {displayUser && tenantId && hasPermission('orders.view') && <ChatHeaderButton tenantId={tenantId} />}
             {displayUser && <NotificationBell />}
           </div>
         </header>
@@ -561,7 +575,8 @@ function AppLayout({ children, currentPageName }) {
             </button>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          {displayUser && tenantId && hasPermission('orders.view') && <ChatHeaderButton tenantId={tenantId} />}
           {displayUser && <NotificationBell />}
         </div>
       </div>

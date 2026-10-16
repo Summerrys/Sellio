@@ -139,6 +139,19 @@ function StorefrontInner() {
     window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
     if (cart.length) setShowCart(true);
   }, [tenant]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // From an Explore listing (Buy): open that item's screen once the menu has loaded.
+  useEffect(() => {
+    if (!products.length) return;
+    const params = new URLSearchParams(window.location.search);
+    const itemId = params.get('item');
+    if (!itemId) return;
+    params.delete('item');
+    const query = params.toString();
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+    const product = products.find((p) => String(p.id) === itemId);
+    if (product) { setAssistantProductRequest({ product }); setShowProductModal(true); }
+  }, [products]);
   const [businessHours, setBusinessHours] = useState([]);
   const [isStoreOpen, setIsStoreOpen] = useState(true);
   const [todayHours, setTodayHours] = useState(null);
