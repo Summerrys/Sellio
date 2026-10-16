@@ -55,13 +55,21 @@ try {
     outfile: bundle, bundle: true, packages: 'external', format: 'esm', platform: 'node',
     alias: { '@': path.join(app, 'src') }, logLevel: 'silent',
   });
-  const { default: Fixture, getAppAssetVersion, fetchPublishedAppVersion, getAppReloadUrl, removeAppReloadParam } = await import(pathToFileURL(bundle).href);
+  const { default: Fixture, getAppAssetVersion, fetchPublishedAppVersion, getAppReloadUrl, removeAppReloadParam, isNewAppVersion } = await import(pathToFileURL(bundle).href);
   const baseline = getAppAssetVersion(document, location.href);
   assert.equal(baseline, '/assets/index-old.css|/assets/index-old.js');
   const same = new DOMParser().parseFromString(html() + '<script src="https://third-party.example/script.js"></script>', 'text/html');
   assert.equal(getAppAssetVersion(same, location.href), baseline);
   assert.notEqual(getAppAssetVersion(new DOMParser().parseFromString(html('old','new'), 'text/html'), location.href), baseline);
   passed('Version fingerprint detects CSS/JS changes and ignores unrelated scripts');
+
+  const startPage = getAppAssetVersion(new DOMParser().parseFromString(html().replace('</head>', '<link rel="stylesheet" href="/assets/LandingPage-x.css"><link rel="stylesheet" href="/assets/CookieConsent-y.css"></head>'), 'text/html'), location.href);
+  assert.equal(isNewAppVersion(baseline, startPage), false);
+  assert.equal(isNewAppVersion(baseline, baseline), false);
+  assert.equal(isNewAppVersion(getAppAssetVersion(new DOMParser().parseFromString(html('new'), 'text/html'), location.href), startPage), true);
+  assert.equal(isNewAppVersion(getAppAssetVersion(new DOMParser().parseFromString(html('old', 'new'), 'text/html'), location.href), startPage), true);
+  assert.equal(isNewAppVersion(null, baseline), false);
+  passed("The start page's own extra styles never look like a new release");
 
   assert.equal(await fetchPublishedAppVersion(location.origin), baseline);
   assert.equal(lastRequest.options.cache, 'no-store');
@@ -155,6 +163,16 @@ try {
   assert.equal(globalThis.__manualReads, modalReads);
   dialog.remove();
   passed('An open editor blocks pull gestures and reload without losing its state');
+
+  const cookieNotice = document.createElement('div'); cookieNotice.setAttribute('role','dialog'); cookieNotice.setAttribute('data-reload-ok',''); document.body.append(cookieNotice);
+  const noticeReads = globalThis.__manualReads;
+  await act(async () => { touch('touchstart',0); touch('touchmove',160); touch('touchend',160); await flush(); });
+  assert.equal(globalThis.__manualReads, noticeReads + 1);
+  assert.ok(button('Reload'));
+  await act(async () => click(button('Reload')));
+  assert.equal(navigations.length, 2);
+  cookieNotice.remove();
+  passed('The cookie notice (data-reload-ok) holds neither pull to refresh nor reload');
 
   fetchFails = true;
   const offlineReads = globalThis.__manualReads;

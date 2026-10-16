@@ -10,6 +10,15 @@ export function getAppAssetVersion(doc, baseUrl) {
   return [...new Set(assets)].sort().join('|') || null;
 }
 
+// Whether the published page needs a file this page doesn't have, i.e. a new release.
+// This page may have more (the website's start page links its own styles before the
+// app starts), so extra files here don't count.
+export function isNewAppVersion(published, running) {
+  if (!published || !running) return false;
+  const have = new Set(running.split('|'));
+  return published.split('|').some(asset => !have.has(asset));
+}
+
 export async function fetchPublishedAppVersion(origin, { fetcher = fetch, timeoutMs = 8000 } = {}) {
   const url = new URL('/', origin);
   url.searchParams.set('__sellio_update_check', String(Date.now()));

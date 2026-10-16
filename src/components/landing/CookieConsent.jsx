@@ -24,6 +24,7 @@ export default function CookieConsent({ open, onOpenChange, returnFocusRef }) {
       <Dialog.Portal>
         <Dialog.Content
           className="sellio-cookie-card"
+          data-reload-ok=""
           onInteractOutside={(event) => event.preventDefault()}
           onOpenAutoFocus={(event) => { event.preventDefault(); titleRef.current?.focus({ preventScroll: true }); }}
           onCloseAutoFocus={(event) => {

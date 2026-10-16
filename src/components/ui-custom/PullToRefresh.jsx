@@ -110,7 +110,7 @@ export default function PullToRefresh({ onRefresh, children, disabled = false, a
       reset();
       const target = event.target instanceof Element ? event.target : event.target?.parentElement;
       if (optionsRef.current.disabled || event.touches.length !== 1 || !target || !root.contains(target) || target.closest(BLOCKED)) return;
-      if (optionsRef.current.appWide && document.querySelector('[role="dialog"], [role="alertdialog"], [data-app-refresh-block="true"]')) return;
+      if (optionsRef.current.appWide && document.querySelector('[role="dialog"]:not([data-reload-ok]), [role="alertdialog"], [data-app-refresh-block="true"]')) return;
       const scrollTargets = getRefreshScrollTargets(target, root, document);
       if (scrollTargets.some(el => el.scrollTop > 1)) return;
       gestureRef.current = {

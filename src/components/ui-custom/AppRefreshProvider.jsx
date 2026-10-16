@@ -4,7 +4,7 @@ import { RefreshCw, X } from 'lucide-react';
 import { toast } from 'sonner';
 import PullToRefresh from './PullToRefresh';
 import { AppRefreshContext } from '@/lib/AppRefreshContext';
-import { fetchPublishedAppVersion, getAppAssetVersion, getAppReloadUrl } from '@/lib/appUpdates';
+import { fetchPublishedAppVersion, getAppAssetVersion, getAppReloadUrl, isNewAppVersion } from '@/lib/appUpdates';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -38,7 +38,7 @@ export default function AppRefreshProvider({ children }) {
         .finally(() => { checking.current = null; });
     }
     const version = await checking.current;
-    setNewVersion(version !== runningVersion.current ? version : null);
+    setNewVersion(isNewAppVersion(version, runningVersion.current) ? version : null);
     if (showAgain) setDismissed(false);
   }, []);
 
@@ -87,8 +87,9 @@ export default function AppRefreshProvider({ children }) {
       return;
     }
     if (!discard) {
-      // Finish or close an active editor, scanner or checkout before reloading.
-      const dialog = [...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')]
+      // Finish or close an active editor, scanner or checkout before reloading
+      // (notices marked data-reload-ok, like the cookie notice, don't count).
+      const dialog = [...document.querySelectorAll('[role="dialog"]:not([data-reload-ok]), [role="alertdialog"]')]
         .some(el => getComputedStyle(el).display !== 'none' && el.getAttribute('aria-hidden') !== 'true');
       if (dialog) {
         toast.info('Close the current window before reloading.');
