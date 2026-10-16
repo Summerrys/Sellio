@@ -674,6 +674,7 @@ function CookieConsent({ open, onOpenChange, returnFocusRef }) {
     Dialog.Content,
     {
       className: "sellio-cookie-card",
+      "data-reload-ok": "",
       onInteractOutside: (event) => event.preventDefault(),
       onOpenAutoFocus: (event) => {
         var _a;
