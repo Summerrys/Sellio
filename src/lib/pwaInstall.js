@@ -1,3 +1,5 @@
+import { isNativeApp } from './nativeApp';
+
 // Captures the browser's native `beforeinstallprompt` event as early as possible
 // (module load time, i.e. app start) so it's available whenever we later decide to
 // show our own custom install UI. The native event can only be triggered once and
@@ -32,7 +34,8 @@ export function isIOS() {
 }
 
 export function canShowInstallPrompt() {
-  if (isStandalone() || installed) return false;
+  // The Android app is already installed: no web-app install prompt there.
+  if (isStandalone() || installed || isNativeApp()) return false;
   // Always show something when accessed via a regular browser tab (not the
   // installed app). If the native beforeinstallprompt event has already fired,
   // clicking Install triggers it directly. Otherwise (event hasn't fired yet,

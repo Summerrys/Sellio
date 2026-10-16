@@ -115,5 +115,5 @@
 
 /* Page entrance (was a framer-motion wrapper in App.jsx): fade in with a 16px slide. */
 @keyframes sellio-page-enter { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
-.sellio-page-enter { animation: sellio-page-enter 180ms ease-out both; }
+.sellio-page-enter { animation: sellio-page-enter 180ms ease-out backwards; } /* not "both": a leftover transform would pin fixed children to the page */
 @media (prefers-reduced-motion: reduce) { .sellio-page-enter { animation: none; } }

@@ -105,7 +105,7 @@ export function ThemeProvider({ children, tenantId }) {
       applyColorSet(resolveColorSet(previewTheme));
       return;
     }
-    // The saved palette, or Sellio purple when none is chosen (or no one is signed in).
+    // The saved palette, or the default gradient when none is chosen (or no one is signed in).
     applyColorSet(resolveSavedTheme(themeConfig));
   }, [previewTheme, themeConfig]);
 

@@ -1,10 +1,11 @@
-// Sellio purple: the look before a store picks a palette, and for visitors who
-// aren't signed in. Not a selectable palette.
-export const DEFAULT_GRADIENT = 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)';
-export const DEFAULT_PRIMARY = '#8b2fc9';
-export const DEFAULT_ACCENT = '#f3e8ff';
-// The default saved before Oct 2026 (blue to purple); rows holding it get today's default.
-const LEGACY_DEFAULT = { primary: '#3b82f6', accent: '#9333ea' };
+// Default gradient fallback (blue-to-purple) — not a selectable palette. Stores that
+// haven't chosen a theme, and visitors who aren't signed in, see this.
+export const DEFAULT_GRADIENT = 'linear-gradient(135deg, #3b82f6 0%, #9333ea 100%)';
+export const DEFAULT_PRIMARY = '#3b82f6';
+export const DEFAULT_ACCENT = '#9333ea';
+// A short-lived purple default (16 Oct 2026) was saved for stores that switched their
+// theme off then; those rows mean "no theme" too.
+const PURPLE_DEFAULT = { primary: '#8b2fc9', accent: '#f3e8ff' };
 
 // The colours a saved theme_configs row stands for: its palette when one is named,
 // its own colours when they were custom, otherwise the default.
@@ -13,7 +14,7 @@ export function resolveSavedTheme(row) {
   if (named) return { dark: named.dark, light: named.light };
   const primary = String(row?.primary_color || '').toLowerCase();
   const accent = String(row?.accent_color || '').toLowerCase();
-  if (!primary || (primary === LEGACY_DEFAULT.primary && accent === LEGACY_DEFAULT.accent)) {
+  if (!primary || (primary === PURPLE_DEFAULT.primary && accent === PURPLE_DEFAULT.accent)) {
     return { dark: DEFAULT_PRIMARY, light: DEFAULT_ACCENT };
   }
   return { dark: row.primary_color, light: row.accent_color || DEFAULT_ACCENT };
@@ -98,8 +99,12 @@ export function generateThemeVariables(darkHex, lightHex) {
   const dark   = hexToRgb(darkHex);
   const light  = hexToRgb(lightHex);
 
-  const shades = generateShades(lightHex, darkHex);
-  const primaryHsl = hexToHslTriplet(darkHex);
+  // For default theme, generate shades from blue → light blue
+  // instead of blue → purple (which produces muddy/saturated tints)
+  const shadeLight = isDefault ? '#EFF6FF' : lightHex;
+  const shades = generateShades(shadeLight, darkHex);
+  // Only a chosen theme recolours the standard buttons; without one they stay as before.
+  const primaryHsl = isDefault ? '' : hexToHslTriplet(darkHex);
 
   return {
     '--color-primary':          `${dark.r} ${dark.g} ${dark.b}`,
@@ -107,10 +112,10 @@ export function generateThemeVariables(darkHex, lightHex) {
     // Consumers: use var(--color-primary-gradient) for buttons/CTAs.
     // If it equals "none", fall back to rgb(var(--color-primary)).
     '--color-primary-gradient': isDefault ? DEFAULT_GRADIENT : `rgb(${dark.r} ${dark.g} ${dark.b})`,
-    // shadcn components (Button, Switch, Checkbox, Progress…) read --primary, so the
-    // store's colour reaches every default button, not only the gradient buttons.
+    // shadcn components (Button, Switch, Checkbox, Progress…) read --primary, so a
+    // chosen theme reaches every standard button. '' removes the override (no theme).
     '--primary': primaryHsl,
-    '--primary-foreground': '0 0% 100%',
+    '--primary-foreground': primaryHsl ? '0 0% 100%' : '',
     '--ring': primaryHsl,
     ...Object.entries(shades).reduce((acc, [key, value]) => {
       acc[`--color-primary-${key}`] = value;
