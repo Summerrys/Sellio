@@ -1006,7 +1006,7 @@ export default function Orders() {
         </div>
       {ordersTour.eligible && (
         <TourGuide
-          steps={getOrdersSteps({ tier: subscription?.tier })}
+          steps={getOrdersSteps({ tier: subscription?.tier, listings: isShop })}
           run={ordersTour.eligible}
           onFinish={ordersTour.completeStage}
           tour={ordersTour}

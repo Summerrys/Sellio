@@ -113,7 +113,7 @@ export default function AppRefreshProvider({ children }) {
           <span className="min-w-0 flex-1 text-sm font-semibold">Update available</span>
           <button type="button" onClick={() => reload()}
             className="min-h-11 rounded-xl px-4 text-sm font-semibold text-white active:opacity-80"
-            style={{ background: 'var(--color-primary-gradient, #3b82f6)' }}>Reload</button>
+            style={{ background: 'var(--color-primary-gradient, linear-gradient(135deg, #3b82f6 0%, #9333ea 100%))' }}>Reload</button>
           <button type="button" onClick={() => setDismissed(true)} aria-label="Update later"
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500">
             <X className="h-4 w-4" aria-hidden="true" />
@@ -129,7 +129,7 @@ export default function AppRefreshProvider({ children }) {
           <AlertDialogFooter>
             <AlertDialogCancel>Keep working</AlertDialogCancel>
             <AlertDialogAction onClick={event => { event.preventDefault(); reload(true); }}
-              style={{ background: 'var(--color-primary-gradient, #3b82f6)' }}>Reload anyway</AlertDialogAction>
+              style={{ background: 'var(--color-primary-gradient, linear-gradient(135deg, #3b82f6 0%, #9333ea 100%))' }}>Reload anyway</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

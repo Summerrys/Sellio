@@ -32,8 +32,12 @@ import {
   Monitor,
   Compass,
   Plus,
-  MessageCircle
+  MessageCircle,
+  House,
+  LayoutGrid,
+  CircleUserRound
 } from 'lucide-react';
+import BottomTabBar from './components/navigation/BottomTabBar';
 import ChatHeaderButton from './components/chat/ChatHeaderButton';
 import { useChatUnread } from '@/lib/chat';
 import { getSupabase } from '@/lib/supabaseClient';
@@ -78,7 +82,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
   // Tenant menu with permission requirements
   const allTenantItems = [
     { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard', permission: null },
-    { label: itemWords(tenant?.seller_type).Products, icon: ShoppingBag, page: 'Products', permission: 'products.view' },
+    { label: isShopTenant(tenant) ? 'Manage listings' : itemWords(tenant?.seller_type).Products, icon: ShoppingBag, page: 'Products', permission: 'products.view' },
     { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view' },
     { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view' },
     { label: 'Chats', icon: MessageCircle, page: 'Chats', permission: 'orders.view' },
@@ -329,6 +333,13 @@ function AppLayout({ children, currentPageName }) {
     settings: tourActive && !tourProgress.settings,
   };
 
+  // A free shop (no counter): Home · Listings · Sell · Chat · Me, like Explore.
+  // Orders open from the top of Listings; Settings from Me.
+  const freeShopNav = isShopTenant(tenant) && !hasPermission('orders.create');
+  const shopTabPages = freeShopNav ? ['Dashboard', 'Listings', 'Chats', 'Me'] : ['Dashboard', 'Orders', 'Products', 'TenantSettings'];
+  const shopChats = useChatUnread(freeShopNav && !!tenant?.id && hasPermission('orders.view'));
+  const shopChatsWaiting = Number(shopChats.by_tenant?.[tenant?.id]) || 0;
+
   // Prompt to install as an app whenever a merchant or staff logs in via browser.
   // Skipped entirely if already running as an installed PWA, or already shown
   // this browser session (so it doesn't nag on every page navigation).
@@ -454,13 +465,13 @@ function AppLayout({ children, currentPageName }) {
 
   // Restore scroll position when page changes (bottom-tab pages only)
   useEffect(() => {
-    const tabPages = ['Dashboard', 'Orders', 'Products', 'TenantSettings'];
+    const tabPages = shopTabPages;
     if (tabPages.includes(currentPageName)) {
       const saved = scrollPositions.current[currentPageName] ?? 0;
       // Use rAF to wait for render before restoring
       requestAnimationFrame(() => window.scrollTo({ top: saved, behavior: 'instant' }));
     }
-  }, [currentPageName]);
+  }, [currentPageName, freeShopNav]); // eslint-disable-line react-hooks/exhaustive-deps
   
   // Check if this is a REAL SuperAdmin OR dev role is set to superadmin
   const devRoleOverride = localStorage.getItem('dev_role_override');
@@ -559,7 +570,7 @@ function AppLayout({ children, currentPageName }) {
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-100 z-30 flex items-center px-4 justify-between"
         style={{ height: 'calc(56px + env(safe-area-inset-top, 0px))', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="flex items-center gap-2">
-          {window.history.length > 1 && !['Dashboard','Orders','Products','TenantSettings'].includes(currentPageName) ? (
+          {window.history.length > 1 && !shopTabPages.includes(currentPageName) ? (
             <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => window.history.back()}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
@@ -576,7 +587,7 @@ function AppLayout({ children, currentPageName }) {
           )}
         </div>
         <div className="flex items-center gap-1">
-          {displayUser && tenantId && hasPermission('orders.view') && <ChatHeaderButton tenantId={tenantId} />}
+          {displayUser && tenantId && !freeShopNav && hasPermission('orders.view') && <ChatHeaderButton tenantId={tenantId} />}
           {displayUser && <NotificationBell />}
         </div>
       </div>
@@ -620,7 +631,24 @@ function AppLayout({ children, currentPageName }) {
       </main>
 
       {/* Mobile Bottom Tab Bar — never show on public storefront routes */}
-      {currentPageName !== 'Onboarding' && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (
+      {currentPageName !== 'Onboarding' && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (freeShopNav ? (
+        <BottomTabBar
+          bottomInset={bottomSafeAreaInset}
+          sell={{ to: `${createPageUrl('Products')}?new=1`, pulse: navPulse.products }}
+          tabs={[
+            { page: 'Dashboard', label: 'Home', icon: House },
+            { page: 'Listings', label: 'Listings', icon: LayoutGrid, pulse: navPulse.orders },
+            { page: 'Chats', label: 'Chat', icon: MessageCircle, badge: shopChatsWaiting },
+            { page: 'Me', label: 'Me', icon: CircleUserRound, pulse: navPulse.settings },
+          ].map((tab) => ({
+            ...tab,
+            key: tab.page,
+            to: createPageUrl(tab.page),
+            active: currentPageName === tab.page,
+            onClick: () => handleTabNavigate(tab.page, currentPageName === tab.page),
+          }))}
+        />
+      ) : (
         <nav
           data-tour="bottom-nav"
           className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-30 flex items-stretch"
@@ -726,7 +754,7 @@ function AppLayout({ children, currentPageName }) {
             );
           })}
         </nav>
-      )}
+      ))}
 
       <AccountProfileModal
         open={showProfileModal}

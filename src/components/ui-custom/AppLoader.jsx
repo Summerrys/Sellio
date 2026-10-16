@@ -106,7 +106,7 @@ export default function AppLoader({ visible = true }) {
           <button
             type="button"
             onClick={() => window.location.reload()}
-            style={{ minHeight: 44, padding: '0 20px', borderRadius: 12, border: 'none', background: 'var(--color-primary-gradient, #8b2fc9)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+            style={{ minHeight: 44, padding: '0 20px', borderRadius: 12, border: 'none', background: 'var(--color-primary-gradient, linear-gradient(135deg, #3b82f6 0%, #9333ea 100%))', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
           >
             Reload
           </button>

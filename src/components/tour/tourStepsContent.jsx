@@ -64,7 +64,11 @@ export function getDashboardSteps({ hasTakeOrders, hasAiAssistant, hasDesignStor
       target: isDesktop ? '[data-tour="desktop-nav"]' : '[data-tour="bottom-nav"]',
       placement: isDesktop ? 'right' : 'top',
       spotlightClicks: true,
-      content: (
+      content: listings && !isDesktop ? (
+        <>
+          Tap <strong>Sell</strong> to add an item. <strong>Listings</strong> shows everything you sell, with <strong>Orders</strong> at the top, and <strong>Me</strong> has your <strong>Settings</strong>.
+        </>
+      ) : (
         <>
           Open <strong>{itemsPage}</strong> and use <strong>Add</strong> to create an item. Next, explore <strong>Orders</strong> and <strong>Settings</strong> {isDesktop ? 'in the sidebar' : 'in the bottom navigation'}.
         </>
@@ -74,7 +78,9 @@ export function getDashboardSteps({ hasTakeOrders, hasAiAssistant, hasDesignStor
       target: 'body',
       placement: 'center',
       title: "That's the Dashboard!",
-      content: isDesktop ? `Open ${itemsPage} in the sidebar to continue.` : `Tap ${itemsPage} in the bottom navigation to continue.`,
+      content: isDesktop ? `Open ${itemsPage} in the sidebar to continue.`
+        : listings ? 'Tap Sell in the bottom navigation to add your first listing.'
+          : `Tap ${itemsPage} in the bottom navigation to continue.`,
     },
   );
   return steps;
@@ -122,12 +128,12 @@ export function getProductsSteps({ tier, listings = false }) {
     target: 'body',
     placement: 'center',
     title: 'Nice work!',
-    content: 'Tap Orders below to see how orders come in.',
+    content: listings ? 'Next, tap Listings below, then Orders at the top, to see how orders come in.' : 'Tap Orders below to see how orders come in.',
   });
   return steps;
 }
 
-export function getOrdersSteps({ tier }) {
+export function getOrdersSteps({ tier, listings = false }) {
   const steps = [
     {
       target: '[data-tour="order-status-cards"]',
@@ -171,7 +177,7 @@ export function getOrdersSteps({ tier }) {
     target: 'body',
     placement: 'center',
     title: "You've got Orders covered.",
-    content: 'Last stop — tap Settings below.',
+    content: listings ? 'Last stop — tap Me below, then Settings.' : 'Last stop — tap Settings below.',
   });
   return steps;
 }

@@ -117,3 +117,10 @@
 @keyframes sellio-page-enter { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
 .sellio-page-enter { animation: sellio-page-enter 180ms ease-out backwards; } /* not "both": a leftover transform would pin fixed children to the page */
 @media (prefers-reduced-motion: reduce) { .sellio-page-enter { animation: none; } }
+
+/* The default brand colours when no store theme is applied (the website, Explore,
+   signed out). A store's theme sets these on <html>, which wins over this. */
+:root {
+  --color-primary: 59 130 246;
+  --color-primary-gradient: linear-gradient(135deg, #3b82f6 0%, #9333ea 100%);
+}

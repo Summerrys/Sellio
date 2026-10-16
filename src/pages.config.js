@@ -61,6 +61,8 @@ const Counter = lazy(() => import('./pages/Counter'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Inventory = lazy(() => import('./pages/Inventory'));
 const Join = lazy(() => import('./pages/Join'));
+const Listings = lazy(() => import('./pages/Listings'));
+const Me = lazy(() => import('./pages/Me'));
 const KitchenDisplay = lazy(() => import('./pages/KitchenDisplay'));
 const Notifications = lazy(() => import('./pages/Notifications'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
@@ -89,6 +91,8 @@ export const PAGES = {
     "Explore": Explore,
     "Inventory": Inventory,
     "Join": Join,
+    "Listings": Listings,
+    "Me": Me,
     "KitchenDisplay": KitchenDisplay,
     "Notifications": Notifications,
     "Onboarding": Onboarding,
