@@ -25,6 +25,15 @@ import { getStorefrontFontStack, getStorefrontTypographyScale } from '@/lib/stor
 
 const sfType = pixels => `calc(${pixels}px * var(--sf-type-scale, 1))`;
 
+// The header's back arrow: back to wherever the customer came from (Explore, a listing,
+// the Dashboard's Take Order). A menu opened straight from a link or QR code has nothing
+// behind it, so it goes to Explore (staff taking an order: the Dashboard).
+function leaveStore() {
+  if ((window.history.state?.idx ?? 0) > 0) { window.history.back(); return; }
+  const staff = new URLSearchParams(window.location.search).get('staff') === 'true';
+  window.location.assign(staff ? '/Dashboard' : '/explore');
+}
+
 export const STOREFRONT_BANNER_MIN_HEIGHT = 120;
 export const STOREFRONT_BANNER_MAX_HEIGHT = 360;
 export const STOREFRONT_BANNER_DEFAULT_HEIGHT = 220;
@@ -109,7 +118,7 @@ function findPreviewScrollParent(startEl) {
   return null;
 }
 
-const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHistoryClick, showBackButton = false, isDesktop = false, searchOpen, setSearchOpen, searchQuery, setSearchQuery, stickyTop = 0 }, ref) {
+const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHistoryClick, showBackButton = false, isDesktop = false, searchOpen, setSearchOpen, searchQuery, setSearchQuery, stickyTop = 0, safeTop = null }, ref) {
   const branchName = tenant?.settings?.branch_name;
   const address = tenant?.address || '';
   const truncatedAddress = address.length > 25 ? address.slice(0, 25) + '…' : address;
@@ -133,17 +142,21 @@ const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryC
     <>
     <div ref={ref} style={{
       position: 'sticky', top: stickyTop, zIndex: 50,
-      height: headerHeight,
+      height: safeTop ? `calc(${headerHeight}px + ${safeTop})` : headerHeight,
       background: '#ffffff',
       display: 'flex', alignItems: 'center',
       padding: '0 14px',
+      ...(safeTop ? { paddingTop: safeTop } : {}),
       boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
     }}>
       {/* Left: logo + name */}
+      {/* Stays tappable while the store is closed (the rest of the menu is switched off). */}
       {showBackButton && (
         <button
-          onClick={() => window.location.href = '/Dashboard'}
-          style={{ width: 32, height: 32, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: 6 }}
+          type="button"
+          aria-label="Back"
+          onClick={leaveStore}
+          style={{ width: 32, height: 32, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: 6, pointerEvents: 'auto' }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 12H5M12 5l-7 7 7 7"/>
@@ -355,13 +368,14 @@ function StorefrontBanner({
 // the old static headline/tagline text used to be. Messages are joined into
 // one continuous string with a separator and duplicated once so the loop
 // wraps seamlessly with no visible gap or jump.
-const PromoMarquee = forwardRef(function PromoMarquee({ messages, primaryColor }, ref) {
+const PromoMarquee = forwardRef(function PromoMarquee({ messages, primaryColor, safeTop = null }, ref) {
   if (!messages || messages.length === 0) return null;
   const joined = messages.join('   •   ');
   return (
     <div ref={ref} style={{
       position: 'sticky', top: 0, zIndex: 51,
       background: primaryColor, overflow: 'hidden', padding: '7px 0', whiteSpace: 'nowrap',
+      ...(safeTop ? { paddingTop: `calc(7px + ${safeTop})` } : {}),
     }}>
       <style>{`
         @keyframes sfPromoScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
@@ -774,11 +788,12 @@ export default function StorefrontView({
       `}</style>
 
       {/* ── STICKY HEADER ── */}
-      {showPromoTicker && <PromoMarquee ref={marqueeCallbackRef} messages={promoMessages} primaryColor={primaryColor} />}
+      {showPromoTicker && <PromoMarquee ref={marqueeCallbackRef} messages={promoMessages} primaryColor={primaryColor} safeTop={previewMode ? null : 'env(safe-area-inset-top, 0px)'} />}
 
       <StorefrontHeader
         ref={headerRef}
         stickyTop={marqueeHeight}
+        safeTop={previewMode || (showPromoTicker && promoMessages?.length > 0) ? null : 'env(safe-area-inset-top, 0px)'}
         tenant={tenant}
         primaryColor={primaryColor}
         cartCount={cartCount}

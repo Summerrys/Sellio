@@ -483,10 +483,12 @@ export default function Explore() {
           )}
         </section>
 
-        <footer className="mt-12 text-center text-xs text-slate-400 space-x-3">
-          <span>Sellio Explore by Apptélier</span>
-          <a href="/privacy" className="hover:text-slate-600">Privacy</a>
-          <a href="/terms" className="hover:text-slate-600">Terms</a>
+        {/* The same footer as the ordering page. Privacy and Terms are under Me. */}
+        <footer className="mt-12" style={{ textAlign: 'center', padding: '16px 0 24px', color: '#c8d0dc', fontSize: 9, letterSpacing: '0.03em' }}>
+          Powered by{' '}
+          <span style={{ fontWeight: 700, background: 'linear-gradient(90deg, #fb923c, #e0449a, #8b2fc9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            Sellio
+          </span>
         </footer>
       </main>
 

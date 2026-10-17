@@ -334,7 +334,8 @@ function AppLayout({ children, currentPageName }) {
   };
 
   // A free shop (no counter): Home · Listings · Sell · Chat · Me, like Explore.
-  // Orders open from the top of Listings; Settings from Me.
+  // Home opens Explore (the Dashboard opens from Explore's "My shop"); Orders open
+  // from the top of Listings; Settings from Me.
   const freeShopNav = isShopTenant(tenant) && !hasPermission('orders.create');
   const shopTabPages = freeShopNav ? ['Dashboard', 'Listings', 'Chats', 'Me'] : ['Dashboard', 'Orders', 'Products', 'TenantSettings'];
   const shopChats = useChatUnread(freeShopNav && !!tenant?.id && hasPermission('orders.view'));
@@ -636,14 +637,14 @@ function AppLayout({ children, currentPageName }) {
           bottomInset={bottomSafeAreaInset}
           sell={{ to: `${createPageUrl('Products')}?new=1`, pulse: navPulse.products }}
           tabs={[
-            { page: 'Dashboard', label: 'Home', icon: House },
+            { page: 'Explore', to: '/explore', label: 'Home', icon: House },
             { page: 'Listings', label: 'Listings', icon: LayoutGrid, pulse: navPulse.orders },
             { page: 'Chats', label: 'Chat', icon: MessageCircle, badge: shopChatsWaiting },
             { page: 'Me', label: 'Me', icon: CircleUserRound, pulse: navPulse.settings },
           ].map((tab) => ({
             ...tab,
             key: tab.page,
-            to: createPageUrl(tab.page),
+            to: tab.to || createPageUrl(tab.page),
             active: currentPageName === tab.page,
             onClick: () => handleTabNavigate(tab.page, currentPageName === tab.page),
           }))}
