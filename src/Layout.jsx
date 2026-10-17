@@ -333,13 +333,14 @@ function AppLayout({ children, currentPageName }) {
     settings: tourActive && !tourProgress.settings,
   };
 
-  // A free shop (no counter): Home · Listings · Sell · Chat · Me, like Explore.
-  // Home opens Explore (the Dashboard opens from Explore's "My shop"); Orders open
-  // from the top of Listings; Settings from Me.
+  // A free shop (no counter): Home · Listings · Sell · Chat · Me — the same bar and the
+  // same four pages as Explore, so there is one of each. The Dashboard opens from
+  // "My shop" (Explore's header and Me); Orders from the top of Listings; Settings from Me.
   const freeShopNav = isShopTenant(tenant) && !hasPermission('orders.create');
   const shopTabPages = freeShopNav ? ['Dashboard', 'Listings', 'Chats', 'Me'] : ['Dashboard', 'Orders', 'Products', 'TenantSettings'];
-  const shopChats = useChatUnread(freeShopNav && !!tenant?.id && hasPermission('orders.view'));
-  const shopChatsWaiting = Number(shopChats.by_tenant?.[tenant?.id]) || 0;
+  // The same count as Explore's Chat tab: chats about things you buy and you sell.
+  const shopChats = useChatUnread(freeShopNav);
+  const shopChatsWaiting = (Number(shopChats.buying) || 0) + (Number(shopChats.selling) || 0);
 
   // Prompt to install as an app whenever a merchant or staff logs in via browser.
   // Skipped entirely if already running as an installed PWA, or already shown
@@ -638,9 +639,9 @@ function AppLayout({ children, currentPageName }) {
           sell={{ to: `${createPageUrl('Products')}?new=1`, pulse: navPulse.products }}
           tabs={[
             { page: 'Explore', to: '/explore', label: 'Home', icon: House },
-            { page: 'Listings', label: 'Listings', icon: LayoutGrid, pulse: navPulse.orders },
-            { page: 'Chats', label: 'Chat', icon: MessageCircle, badge: shopChatsWaiting },
-            { page: 'Me', label: 'Me', icon: CircleUserRound, pulse: navPulse.settings },
+            { page: 'Listings', to: '/explore/listings', label: 'Listings', icon: LayoutGrid, pulse: navPulse.orders },
+            { page: 'Chats', to: '/explore/chats', label: 'Chat', icon: MessageCircle, badge: shopChatsWaiting },
+            { page: 'Me', to: '/explore/me', label: 'Me', icon: CircleUserRound, pulse: navPulse.settings },
           ].map((tab) => ({
             ...tab,
             key: tab.page,

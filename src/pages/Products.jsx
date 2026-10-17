@@ -557,7 +557,7 @@ export default function Products() {
       <div className="space-y-6">
         <div className="flex flex-col gap-3 mb-6">
           <div data-tour="products-header" className="flex items-center justify-between mb-1">
-            <h1 className="text-2xl font-bold text-slate-900">{words.Products}</h1>
+            <h1 className="text-2xl font-bold text-slate-900">{tenant?.seller_type === 'individual' ? 'Manage listings' : words.Products}</h1>
             {canUseInventory && (
             <button
               onClick={() => navigate('/Inventory')}
@@ -576,7 +576,7 @@ export default function Products() {
             </button>
             )}
           </div>
-          <p className="text-sm text-slate-500 -mt-3">{tenant?.seller_type === 'individual' ? 'Manage your listings' : 'Manage your product catalog'}</p>
+          <p className="text-sm text-slate-500 -mt-3">{tenant?.seller_type === 'individual' ? 'Add, edit and hide what you sell' : 'Manage your product catalog'}</p>
           <div className="flex flex-wrap items-center gap-2">
               <RequirePermission permission="products.create" silent>
               <DropdownMenu>

@@ -422,7 +422,7 @@ export default function Dashboard() {
             <FeatureCard
               key={f.page}
               icon={f.icon}
-              label={f.page === 'Products' ? itemWords(tenant?.seller_type).Products : f.label}
+              label={f.page === 'Products' ? (tenant?.seller_type === 'individual' ? 'Manage listings' : itemWords(tenant?.seller_type).Products) : f.label}
               color={f.color}
               onClick={() => navigate(createPageUrl(f.page))}
             />

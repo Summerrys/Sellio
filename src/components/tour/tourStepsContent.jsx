@@ -15,7 +15,7 @@ function BrandWord({ children }) {
 // exists) since a couple of steps adapt or disappear based on that.
 
 export function getDashboardSteps({ hasTakeOrders, hasAiAssistant, hasDesignStore, isDesktop = false, listings = false }) {
-  const itemsPage = listings ? 'Listings' : 'Products';
+  const itemsPage = listings ? 'Manage listings' : 'Products';
   const steps = [
     {
       target: 'body',
