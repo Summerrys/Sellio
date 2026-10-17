@@ -150,7 +150,7 @@ function StorefrontInner() {
     const query = params.toString();
     window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
     const product = products.find((p) => String(p.id) === itemId);
-    if (product) { setAssistantProductRequest({ product }); setShowProductModal(true); }
+    if (product) { setAssistantProductRequest({ product, fromLink: true }); setShowProductModal(true); }
   }, [products]);
   const [businessHours, setBusinessHours] = useState([]);
   const [isStoreOpen, setIsStoreOpen] = useState(true);

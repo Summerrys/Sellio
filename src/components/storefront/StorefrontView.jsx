@@ -523,9 +523,14 @@ export default function StorefrontView({
   const [selectedVariants, setSelectedVariants] = useState({});
   const [itemNotes, setItemNotes] = useState('');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const closeProductModal = () => { setSelectedProduct(null); setSelectedVariants({}); setItemNotes(''); setActiveImageIndex(0); onProductModalChange?.(false); };
+  // An item that opened from a link (Buy on a listing or in a chat) is where that link
+  // landed, so it adds no Back step of its own: Back returns to the listing or chat.
+  // (It opens without a tap, and Android's app can skip a Back step added without one,
+  // which left Back doing nothing.) Its ✕ still closes it onto the menu.
+  const [linkProductId, setLinkProductId] = useState(null);
+  const closeProductModal = () => { setSelectedProduct(null); setSelectedVariants({}); setItemNotes(''); setActiveImageIndex(0); setLinkProductId(null); onProductModalChange?.(false); };
   // Phone/browser Back closes the product details instead of leaving the menu.
-  useBackToClose(!!selectedProduct, closeProductModal);
+  useBackToClose(!!selectedProduct && selectedProduct.id !== linkProductId, closeProductModal);
   // The menu assistant can ask to show an item's product screen: Storefront.jsx
   // sets openProductRequest to a new { product } object (and marks the screen
   // open) in the same tap. Applied while rendering, so the chat closing and the
@@ -536,6 +541,7 @@ export default function StorefrontView({
     if (!previewMode && openProductRequest.product) {
       setSelectedProduct(openProductRequest.product);
       setActiveImageIndex(0);
+      setLinkProductId(openProductRequest.fromLink ? openProductRequest.product.id : null);
     }
   }
 
@@ -1398,9 +1404,9 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
       )}
 
       <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', overflow: 'auto' }}>
-        <div onClick={onClose} style={{ position: 'absolute', inset: 0 }} />
+        <div onClick={onClose} style={{ position: 'absolute', inset: 0, pointerEvents: 'auto' }} />
         <div style={{ position: 'relative', width: '90%', maxWidth: 420, maxHeight: '85vh', overflowY: 'auto', borderRadius: 20, background: '#fff' }}>
-          <button onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, width: 36, height: 36, borderRadius: '50%', background: 'white', border: 'none', cursor: 'pointer', fontSize: sfType(18), boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          <button type="button" aria-label="Close" onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, width: 36, height: 36, borderRadius: '50%', background: 'white', border: 'none', cursor: 'pointer', fontSize: sfType(18), boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}>✕</button>
 
           {/* Main image with swipe and tap-to-lightbox */}
           <div
