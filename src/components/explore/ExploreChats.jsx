@@ -7,6 +7,7 @@ import { useChatUnread } from '@/lib/chat';
 import ChatInbox from '@/components/chat/ChatInbox';
 import ChatThread from '@/components/chat/ChatThread';
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
+import ShopBell from './ShopBell';
 import { BRAND_COLOR, BRAND_GRADIENT, ExploreTabHeader, chatUrl, goBack } from './shared';
 
 // Explore → Chat: chats as a buyer and about your own listings.
@@ -43,7 +44,7 @@ export default function ExploreChats() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <ExploreTabHeader title="Chats">
+      <ExploreTabHeader title="Chats" right={<ShopBell />}>
         {appUser && (
           <div className="max-w-6xl mx-auto px-4 pb-2 flex gap-2" role="tablist" aria-label="Chats">
             {BOXES.map(({ key, label }) => {

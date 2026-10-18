@@ -91,7 +91,7 @@ export function getProductsSteps({ tier, listings = false }) {
   const steps = [
     {
       target: '[data-tour="products-header"]',
-      content: "This is your menu — every item your customers can order lives here.",
+      content: listings ? 'These are your listings — everything you sell lives here.' : "This is your menu — every item your customers can order lives here.",
     },
     {
       target: '[data-tour="add-product-btn"]',
@@ -128,7 +128,7 @@ export function getProductsSteps({ tier, listings = false }) {
     target: 'body',
     placement: 'center',
     title: 'Nice work!',
-    content: listings ? 'Next, tap Listings below, then Orders at the top, to see how orders come in.' : 'Tap Orders below to see how orders come in.',
+    content: listings ? 'Next, tap Orders at the top to see how orders come in.' : 'Tap Orders below to see how orders come in.',
   });
   return steps;
 }

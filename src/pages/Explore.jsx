@@ -5,7 +5,9 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { isNativeApp } from '@/lib/nativeApp';
 import ExploreTabBar, { markExploreHome } from '@/components/explore/ExploreTabBar';
-import { listingUrl } from '@/components/explore/shared';
+import ShopBell from '@/components/explore/ShopBell';
+import { useSell } from '@/lib/sell';
+import { listingUrl, ExploreDesktopTabs } from '@/components/explore/shared';
 
 // Sellio Explore: a public, Carousell-style feed of items from Sellio shops.
 // Anyone can browse without an account; tapping an item opens its listing page. Data comes from the explore_feed / explore_shops RPCs, which only
@@ -212,6 +214,7 @@ export default function Explore() {
   const { appUser } = useAppUser() || {};
   const signedIn = !!appUser;
   const hasShop = !!appUser?.tenant_id;
+  const { openSell } = useSell();
 
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
@@ -321,7 +324,7 @@ export default function Explore() {
   const filtered = !!search || kind !== 'all';
   const kindLabel = kind === 'merchants' ? 'Merchants on Sellio' : KINDS.find((k) => k.key === kind)?.label;
   const heading = search ? `Results for “${search}”` : kind === 'all' ? 'Fresh finds' : kindLabel;
-  const sellHref = hasShop ? '/Products?new=1' : '/join';
+  const sellHref = hasShop ? '/explore/listings?new=1' : '/join';
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -330,15 +333,19 @@ export default function Explore() {
           <a href="/" aria-label="Sellio home" className="flex items-center gap-2">
             <img src={LOGO_URL} alt="Sellio" className="h-10 w-auto object-contain" />
           </a>
-          <span className="text-sm font-semibold text-slate-400">Explore</span>
+          <span className="text-sm font-semibold text-slate-400 md:hidden">Explore</span>
+          <ExploreDesktopTabs />
           <div className="ml-auto flex items-center gap-2">
             {signedIn ? (
+              <>
               <Link
                 to={hasShop ? '/Dashboard' : '/Account'}
                 className="h-9 px-3 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 inline-flex items-center gap-1.5 hover:bg-slate-50"
               >
                 <Store className="w-4 h-4" /> {hasShop ? 'My shop' : 'My account'}
               </Link>
+              <ShopBell />
+              </>
             ) : (
               <>
                 <Link to="/Auth" className="h-9 px-3 rounded-full text-sm font-semibold text-slate-700 inline-flex items-center hover:bg-slate-50">
@@ -498,6 +505,7 @@ export default function Explore() {
       {/* Phones use the bottom bar's Sell; wider screens keep this button. */}
       <Link
         to={sellHref}
+        onClick={hasShop ? (event) => { event.preventDefault(); openSell(); } : undefined}
         className="fixed right-5 z-40 h-12 pl-4 pr-5 rounded-full text-white font-semibold text-[15px] hidden md:inline-flex items-center gap-1.5 shadow-lg shadow-black/20 active:scale-95 transition-transform"
         style={{ background: BRAND_GRADIENT, bottom: NATIVE_ANDROID ? '20px' : 'calc(20px + env(safe-area-inset-bottom, 0px))' }}
       >

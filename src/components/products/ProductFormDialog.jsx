@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { handOverBackStep } from '@/lib/useBackToClose';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { X, ChevronDown, ChevronUp, Loader2, Trash2, PackagePlus } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Loader2, Trash2, PackagePlus, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import db from '@/lib/db';
@@ -185,7 +187,7 @@ function Section({ title, children, defaultOpen = true }) {
   );
 }
 
-export default function ProductFormDialog({ open, onOpenChange, product, tenantId }) {
+export default function ProductFormDialog({ open, onOpenChange, product, tenantId, onSaved }) {
     const { tenant, hasPermission } = useTenant();
     // Granular gating: editing an existing product needs products.edit, creating a
     // new one needs products.create (already gated upstream at the buttons that open
@@ -195,6 +197,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     const canEdit = product?.id ? hasPermission('products.edit') : hasPermission('products.create');
     const canDelete = hasPermission('products.delete');
     const queryClient = useQueryClient();
+    const navigate = useNavigate();
     const [formData, setFormData] = useState(EMPTY_FORM);
     const [categories, setCategories] = useState([]);
     const aiAssistantRef = useRef(null);
@@ -313,7 +316,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
 
   const validate = () => {
     const errs = {};
-    if (!formData.name?.trim()) errs.name = 'Product name is required';
+    if (!formData.name?.trim()) errs.name = tenant?.seller_type === 'individual' ? 'Listing name is required' : 'Product name is required';
     if (!formData.price && formData.price !== 0) errs.price = 'Price is required';
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -348,12 +351,13 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         if (error) throw new Error(error.message);
 
         await syncProductVariants(supabase, product.id, tenantId, formData.variants, formData.sku || product.sku);
-        toast.success('Product updated');
+        toast.success(tenant?.seller_type === 'individual' ? 'Listing updated' : 'Product updated');
         queryClient.setQueryData(['products', tenantId], (old) => {
           if (!Array.isArray(old)) return old;
           return old.map(p => p.id === product.id ? { ...p, ...payload } : p);
         });
         if (aiAssistantRef.current) await cleanupDeletedImages(aiAssistantRef.current);
+        onSaved?.(product.id);
         onOpenChange(false);
       } else {
         // Create: include user-typed SKU if provided, else let DB trigger generate it
@@ -385,7 +389,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         // Show the trigger-generated SKU briefly before closing
         setSavedSku(inserted.sku || '');
         await syncProductVariants(supabase, inserted.id, tenantId, formData.variants, inserted.sku);
-        toast.success('Product created');
+        toast.success(tenant?.seller_type === 'individual' ? 'Listing added' : 'Product created');
         queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
         // Keep the Layout's Sell-FAB product-count (used for the plan-limit gate) in sync too.
         queryClient.invalidateQueries({ queryKey: ['productCount', tenantId] });
@@ -393,6 +397,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
 
         // Wait 1.2s so user sees the generated SKU, then close
         await new Promise(res => setTimeout(res, 1200));
+        onSaved?.(inserted.id);
         onOpenChange(false);
       }
     } catch (err) {
@@ -409,7 +414,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
       const supabase = await getSupabase();
       await supabase.from('inventory_items').delete().eq('product_id', product.id);
       await db.entities.Product.delete(product.id);
-      toast.success('Product deleted');
+      toast.success(tenant?.seller_type === 'individual' ? 'Listing deleted' : 'Product deleted');
       queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
       queryClient.invalidateQueries({ queryKey: ['productCount', tenantId] });
       onOpenChange(false);
@@ -469,6 +474,16 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
                   currency={tenant?.currency || 'SGD'}
                 />
               </p>
+            )}
+            {product?.id && tenant?.seller_type === 'individual' && (
+              <button
+                type="button"
+                onClick={() => navigate(`/listing/${encodeURIComponent(product.id)}`, { replace: handOverBackStep() })}
+                className="mt-1 inline-flex items-center gap-1 text-xs font-semibold"
+                style={{ color: 'rgb(var(--color-primary))' }}
+              >
+                <Eye className="w-3.5 h-3.5" /> See it as buyers do
+              </button>
             )}
           </div>
           <div className="flex items-center gap-3">
@@ -540,6 +555,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
               categories={categories}
               errors={errors}
               isEditMode={!!product?.id}
+              listing={tenant?.seller_type === 'individual'}
               savedSku={savedSku}
               currentStock={product?.id ? currentStock : null}
               customPrimary={tenant?.primary_color || '#7c3aed'}
@@ -602,7 +618,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
               onClick={handleSave}
               disabled={saving}
             >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (product?.id ? 'Save Changes' : 'Create Product')}
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (product?.id ? 'Save Changes' : tenant?.seller_type === 'individual' ? 'Add listing' : 'Create Product')}
             </Button>
           )}
         </div>

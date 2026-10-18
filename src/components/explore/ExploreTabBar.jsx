@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { House, LayoutGrid, MessageCircle, CircleUserRound } from 'lucide-react';
 import { useAppUser } from '@/lib/AppUserContext';
 import { useChatUnread } from '@/lib/chat';
+import { useSell } from '@/lib/sell';
 import BottomTabBar from '@/components/navigation/BottomTabBar';
 import { BOTTOM_INSET } from './shared';
 
@@ -26,6 +27,7 @@ export default function ExploreTabBar({ active }) {
   const hasShop = !!appUser?.tenant_id;
   const unread = useChatUnread(!!appUser);
   const chatCount = (Number(unread.buying) || 0) + (Number(unread.selling) || 0);
+  const { openSell } = useSell();
 
   const open = (key, to) => (event) => {
     event.preventDefault();
@@ -45,7 +47,7 @@ export default function ExploreTabBar({ active }) {
       hideFrom="md"
       zIndex="z-40"
       bottomInset={BOTTOM_INSET}
-      sell={{ to: hasShop ? '/Products?new=1' : '/join' }}
+      sell={hasShop ? { to: '/explore/listings?new=1', onClick: (event) => { event.preventDefault(); openSell(); } } : { to: '/join' }}
       tabs={[
         tab('home', 'Home', House, '/explore'),
         tab('listings', 'Listings', LayoutGrid, '/explore/listings'),

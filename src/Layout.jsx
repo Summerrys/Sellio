@@ -60,6 +60,7 @@ import { canShowInstallPrompt, isStandalone } from '@/lib/pwaInstall';
 import PlanFeatureNotice from './components/subscription/PlanFeatureNotice';
 import { PAGE_FEATURES, itemWords } from '@/lib/planFeatures';
 import { isShopTenant } from '@/lib/shopSelling';
+import { SellProvider, useSell } from '@/lib/sell';
 
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth', 'Join', 'Account', 'World', 'Explore'];
@@ -340,6 +341,7 @@ function AppLayout({ children, currentPageName }) {
   const shopTabPages = freeShopNav ? ['Dashboard', 'Listings', 'Chats', 'Me'] : ['Dashboard', 'Orders', 'Products', 'TenantSettings'];
   // The same count as Explore's Chat tab: chats about things you buy and you sell.
   const shopChats = useChatUnread(freeShopNav);
+  const { openSell } = useSell();
   const shopChatsWaiting = (Number(shopChats.buying) || 0) + (Number(shopChats.selling) || 0);
 
   // Prompt to install as an app whenever a merchant or staff logs in via browser.
@@ -636,10 +638,10 @@ function AppLayout({ children, currentPageName }) {
       {currentPageName !== 'Onboarding' && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (freeShopNav ? (
         <BottomTabBar
           bottomInset={bottomSafeAreaInset}
-          sell={{ to: `${createPageUrl('Products')}?new=1`, pulse: navPulse.products }}
+          sell={{ to: '/explore/listings?new=1', onClick: (event) => { event.preventDefault(); openSell(); }, pulse: navPulse.products }}
           tabs={[
             { page: 'Explore', to: '/explore', label: 'Home', icon: House },
-            { page: 'Listings', to: '/explore/listings', label: 'Listings', icon: LayoutGrid, pulse: navPulse.orders },
+            { page: 'Listings', to: '/explore/listings', label: 'Listings', icon: LayoutGrid, pulse: navPulse.products || navPulse.orders },
             { page: 'Chats', to: '/explore/chats', label: 'Chat', icon: MessageCircle, badge: shopChatsWaiting },
             { page: 'Me', to: '/explore/me', label: 'Me', icon: CircleUserRound, pulse: navPulse.settings },
           ].map((tab) => ({
@@ -798,8 +800,10 @@ export default function Layout({ children, currentPageName }) {
         return (
           <ThemeProvider tenantId={themeScope}>
             <NotificationProvider>
-              <KitchenAutoPrint />
-              <AppLayout currentPageName={currentPageName}>{children}</AppLayout>
+              <SellProvider>
+                <KitchenAutoPrint />
+                <AppLayout currentPageName={currentPageName}>{children}</AppLayout>
+              </SellProvider>
             </NotificationProvider>
           </ThemeProvider>
         );

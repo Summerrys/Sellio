@@ -467,7 +467,7 @@ export default function ListingPage() {
           {isOwn ? (
             <>
               <Link
-                to={`/Products?edit=${encodeURIComponent(item.id)}`}
+                to={`/explore/listings?edit=${encodeURIComponent(item.id)}`}
                 className="flex-1 h-12 rounded-xl border-2 text-[15px] font-semibold inline-flex items-center justify-center gap-2"
                 style={{ borderColor: BRAND_COLOR, color: BRAND_COLOR }}
               >

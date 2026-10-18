@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Edit2, AlertCircle, Package, CheckCircle2, Circle, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import PriceDisplay from './PriceDisplay';
+import { ItemImage, formatPrice, timeAgo } from '@/components/explore/shared';
 
 function StockBadge({ product }) {
   if (product.track_inventory !== true) {
@@ -30,7 +31,9 @@ const countVariantGroups = (variants) => {
   return 1; // scan format — all items belong to one group
 };
 
-export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMode = 'list', selectionMode = false, selectedIds = new Set(), onLongPress, onToggleSelect, tourTagFirstCard = false }) {
+// variant 'listing': My listings' cards in the grid (what buyers see: photo, name, price,
+// when it was listed, Hidden / Sold out).
+export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMode = 'list', selectionMode = false, selectedIds = new Set(), onLongPress, onToggleSelect, tourTagFirstCard = false, variant = 'product' }) {
 
   const lpState = React.useRef({ timer: null, moved: false, longPressed: false, activeId: null });
 
@@ -135,6 +138,54 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
             </div>
           </div>
         ))}
+      </div>
+    );
+  }
+
+  if (variant === 'listing') {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {products.map((product, index) => {
+          const hidden = product.is_active === false;
+          const soldOut = product.track_inventory === true && Number(product.stock_quantity) === 0;
+          const selected = selectedIds.has(product.id);
+          return (
+            <div
+              key={product.id}
+              role="button"
+              tabIndex={0}
+              aria-label={`Edit ${product.name}`}
+              {...(index === 0 && tourTagFirstCard ? { 'data-tour': 'product-card' } : {})}
+              {...makeLongPressProps(product.id, () => onEdit(product))}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (selectionMode) onToggleSelect?.(product.id); else onEdit(product); } }}
+              className={cn(
+                'block bg-white rounded-2xl overflow-hidden border border-slate-100 hover:shadow-md transition-shadow cursor-pointer',
+                selected && 'ring-2 ring-[rgb(var(--color-primary))]'
+              )}
+            >
+              <div className="relative aspect-square">
+                <ItemImage src={product.image_url} name={product.name} className={`w-full h-full text-4xl ${hidden ? 'opacity-50' : ''}`} />
+                {(hidden || soldOut) && (
+                  <span className="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/95 text-slate-700 shadow-sm">
+                    {hidden ? 'Hidden' : 'Sold out'}
+                  </span>
+                )}
+                {selectionMode && (
+                  <div style={{ position: 'absolute', top: 6, right: 6, zIndex: 2 }}>
+                    {selected
+                      ? <CheckCircle2 size={22} color="rgb(var(--color-primary))" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />
+                      : <Circle size={22} color="white" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />}
+                  </div>
+                )}
+              </div>
+              <div className="px-2.5 pt-2 pb-3">
+                <p className="text-sm text-slate-800 leading-snug line-clamp-2 min-h-[2.5rem]">{product.name}</p>
+                <p className="mt-1 text-sm font-bold text-slate-900">{formatPrice(product.price, currency)}</p>
+                <p className="text-[11px] text-slate-400">{timeAgo(product.created_date)}</p>
+              </div>
+            </div>
+          );
+        })}
       </div>
     );
   }

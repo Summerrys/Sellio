@@ -20,6 +20,7 @@ export default function ProductFormBasic({
   onAdjustStock,
   trackInventory,
   onTrackInventoryChange,
+  listing = false, // a home seller's listing: listing words
 }) {
 
   const navigate = useNavigate();
@@ -29,8 +30,8 @@ export default function ProductFormBasic({
       {/* Featured toggle */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#fafafa', borderRadius: 10, border: '0.5px solid #e5e7eb' }}>
         <div>
-          <p style={{ fontWeight: 600, fontSize: 13, margin: 0 }}>⭐ Featured Product</p>
-          <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0' }}>Highlight this product in your storefront</p>
+          <p style={{ fontWeight: 600, fontSize: 13, margin: 0 }}>{listing ? '⭐ Featured listing' : '⭐ Featured Product'}</p>
+          <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0' }}>{listing ? 'Show it first in your shop' : 'Highlight this product in your storefront'}</p>
         </div>
         <Switch
           checked={formData.is_featured ?? false}
@@ -39,11 +40,11 @@ export default function ProductFormBasic({
       </div>
 
       <div>
-        <Label>Product Name *</Label>
+        <Label>{listing ? 'Listing name *' : 'Product Name *'}</Label>
         <Input
           value={formData.name || ''}
           onChange={(e) => onChange({ name: e.target.value })}
-          placeholder="e.g., Cappuccino, Blue T-Shirt, Haircut"
+          placeholder={listing ? 'e.g., Pandan chiffon cake, Preloved denim jacket' : 'e.g., Cappuccino, Blue T-Shirt, Haircut'}
           className="mt-1.5"
         />
         {errors?.name && (
@@ -125,7 +126,7 @@ export default function ProductFormBasic({
       <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
         <div>
           <p className="text-sm font-medium text-slate-700">Track Inventory</p>
-          <p className="text-xs text-slate-400">Monitor stock levels for this product</p>
+          <p className="text-xs text-slate-400">{listing ? 'Keep count of how many you have' : 'Monitor stock levels for this product'}</p>
         </div>
         <Switch
           checked={trackInventory ?? false}
@@ -138,7 +139,7 @@ export default function ProductFormBasic({
         <Textarea
           value={formData.description || ''}
           onChange={(e) => onChange({ description: e.target.value })}
-          placeholder="Describe your product..."
+          placeholder={listing ? "Describe it: condition, size, what's included…" : 'Describe your product...'}
           className="mt-1.5 h-24"
         />
       </div>

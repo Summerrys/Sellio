@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 // The phone bottom bar shared by a free shop and Explore: Home · Listings · Sell · Chat · Me.
 // tabs: [{ key, label, icon, to, active, pulse, badge, onClick }] (four of them; Sell sits
-// in the middle). sell: { to, pulse }. hideFrom: 'lg' (the shop) or 'md' (Explore).
+// in the middle). sell: { to, onClick, pulse } (onClick opens the new-listing form). hideFrom: 'lg' (the shop) or 'md' (Explore).
 // Same look as the workspace's bottom bar for stores that take orders at a counter.
 
 function Tab({ tab }) {
@@ -58,6 +58,7 @@ export default function BottomTabBar({ tabs, sell, hideFrom = 'lg', bottomInset,
       <div className="flex-1 flex flex-col items-center justify-end pb-1" style={{ minHeight: 60 }}>
         <Link
           to={sell.to}
+          onClick={sell.onClick}
           data-tour="sell-shortcut"
           aria-label="Sell — add a listing"
           className="relative flex min-h-11 min-w-11 flex-col items-center gap-0.5 -mt-5 rounded-xl transition-transform active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgb(var(--color-primary))]"

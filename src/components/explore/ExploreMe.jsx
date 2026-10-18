@@ -7,6 +7,7 @@ import { useTenant } from '@/components/tenant/TenantContext';
 import { rememberReturnPath } from '@/lib/authNavigation';
 import AccountProfileModal from '@/components/profile/AccountProfileModal';
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
+import ShopBell from './ShopBell';
 import { BRAND_GRADIENT, ExploreTabHeader, LOGO_URL } from './shared';
 
 // Me — the one Me tab for everyone (a free shop's bar opens this same page): the account,
@@ -83,7 +84,7 @@ export default function ExploreMe() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <ExploreTabHeader title="Me" />
+      <ExploreTabHeader title="Me" right={<ShopBell />} />
       <main className="max-w-xl mx-auto px-4 pt-4" style={{ paddingBottom: TAB_BAR_SPACE }}>
         {appUser ? (
           <>

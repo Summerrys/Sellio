@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { NavLink } from 'react-router-dom';
 import { isNativeApp } from '@/lib/nativeApp';
 
 // Shared by Explore, its listing pages and chats.
@@ -97,12 +98,32 @@ export function ItemImage({ src, name, className = '', rounded = '' }) {
   );
 }
 
+// Explore's four tabs as header links on wider screens, where the bottom bar is hidden.
+const DESKTOP_TABS = [['/explore', 'Home'], ['/explore/listings', 'Listings'], ['/explore/chats', 'Chat'], ['/explore/me', 'Me']];
+export function ExploreDesktopTabs() {
+  return (
+    <nav aria-label="Explore" className="hidden md:flex items-center gap-1">
+      {DESKTOP_TABS.map(([to, label]) => (
+        <NavLink
+          key={to}
+          to={to}
+          end={to === '/explore'}
+          className={({ isActive }) => `h-9 px-3 rounded-full text-sm font-semibold inline-flex items-center ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50'}`}
+        >
+          {label}
+        </NavLink>
+      ))}
+    </nav>
+  );
+}
+
 // A compact page header for Explore's tabs: clear of the phone's status bar.
 export function ExploreTabHeader({ title, right = null, children = null }) {
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
         <h1 className="text-lg font-bold text-slate-900">{title}</h1>
+        <ExploreDesktopTabs />
         <div className="ml-auto flex items-center gap-2">{right}</div>
       </div>
       {children}

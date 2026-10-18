@@ -44,6 +44,15 @@ function onPopState() {
   scheduleSettle();                 // re-arm if more overlays are still open
 }
 
+// A link inside an open window that leaves the page: call this first and navigate with
+// { replace: <its result> }, so the window's Back step becomes the new page's instead
+// of being undone (which would go straight back) once the window closes.
+export function handOverBackStep() {
+  if (!armed) return false;
+  armed = false;
+  return true;
+}
+
 export function useBackToClose(isOpen, onClose) {
   const closeRef = useRef(onClose);
   closeRef.current = onClose;

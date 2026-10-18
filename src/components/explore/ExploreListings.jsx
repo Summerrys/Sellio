@@ -4,10 +4,15 @@ import { Plus, ClipboardList, RefreshCw, Tag } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { rememberReturnPath } from '@/lib/authNavigation';
+import { useTenant } from '@/components/tenant/TenantContext';
+import Products from '@/pages/Products';
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
+import ShopBell from './ShopBell';
 import { BRAND_GRADIENT, ExploreTabHeader, ItemImage, formatPrice, listingUrl, timeAgo } from './shared';
 
-// A seller's own items: Explore → Listings, and the Listings tab of a free shop.
+// A seller's own items: Explore → Listings, and the Listings tab of a free shop. The
+// seller manages them here (the Manage listings tools); someone without access to the
+// shop's listings (or still signing in) sees the plain list below.
 
 function Prompt({ title, text, children }) {
   return (
@@ -28,6 +33,19 @@ export function OrdersButton() {
     <Link to="/Orders" className="h-9 px-3 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700 inline-flex items-center gap-1.5 hover:bg-slate-50">
       <ClipboardList className="w-4 h-4" /> Orders
     </Link>
+  );
+}
+
+function ListingsSkeleton() {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" aria-hidden="true">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="bg-white rounded-2xl border border-slate-100 overflow-hidden animate-pulse">
+          <div className="aspect-square bg-slate-200" />
+          <div className="p-2.5 space-y-2"><div className="h-3 rounded bg-slate-200" /><div className="h-3 w-12 rounded bg-slate-200" /></div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -75,18 +93,7 @@ export function MyListingsContent({ tenantId, signedIn, returnPath }) {
       </Prompt>
     );
   }
-  if (state.status === 'loading') {
-    return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" aria-hidden="true">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="bg-white rounded-2xl border border-slate-100 overflow-hidden animate-pulse">
-            <div className="aspect-square bg-slate-200" />
-            <div className="p-2.5 space-y-2"><div className="h-3 rounded bg-slate-200" /><div className="h-3 w-12 rounded bg-slate-200" /></div>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  if (state.status === 'loading') return <ListingsSkeleton />;
   if (state.status === 'error') {
     return (
       <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
@@ -139,6 +146,10 @@ export function MyListingsContent({ tenantId, signedIn, returnPath }) {
 export default function ExploreListings() {
   const { appUser } = useAppUser() || {};
   const tenantId = appUser?.tenant_id || null;
+  const { user, tenantUser, tenantId: shopId, noStore, isOwner, hasPermission } = useTenant();
+  // The shop's workspace details (who you are there, your role) load just after the page.
+  const shopLoading = !!tenantId && !noStore && (user === undefined || (!!user && (!tenantUser || !shopId)));
+  const canManage = !!tenantId && !!shopId && !noStore && (isOwner || hasPermission('products.view'));
 
   useEffect(() => {
     const previous = document.title;
@@ -148,9 +159,11 @@ export default function ExploreListings() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <ExploreTabHeader title="My listings" right={tenantId ? <OrdersButton /> : null} />
+      <ExploreTabHeader title="My listings" right={tenantId ? <><OrdersButton /><ShopBell /></> : null} />
       <main className="max-w-6xl mx-auto px-4 pt-4" style={{ paddingBottom: TAB_BAR_SPACE }}>
-        <MyListingsContent tenantId={tenantId} signedIn={!!appUser} returnPath="/explore/listings" />
+        {canManage ? <Products embedded />
+          : shopLoading ? <ListingsSkeleton />
+            : <MyListingsContent tenantId={tenantId} signedIn={!!appUser} returnPath="/explore/listings" />}
       </main>
       <ExploreTabBar active="listings" />
     </div>

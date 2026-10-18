@@ -21,7 +21,8 @@ import { itemWords } from '@/lib/planFeatures';
 import DummyProductCard from '@/components/tour/DummyProductCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package, ScanLine, Trash2, CheckCircle2, AlertCircle, ImageIcon, Loader2, X } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { isShopTenant } from '@/lib/shopSelling';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
 import { applyCanonicalProductOrder } from '@/lib/storefrontCatalog';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -313,8 +314,12 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
   );
 }
 
-export default function Products() {
+// embedded: inside My listings (Explore), which has its own title, Orders and bell.
+// A free shop has only My listings: its old Manage listings address opens it.
+export default function Products({ embedded = false } = {}) {
   const { tenantId, tenant, subscription, hasPermission, canUseFeature } = useTenant();
+  const toMyListings = !embedded && isShopTenant(tenant);
+  const isListings = tenant?.seller_type === 'individual';
   // A free personal shop: "Listings", no menu scan, no Inventory page (its plan).
   const words = itemWords(tenant?.seller_type);
   const canScanMenu = !canUseFeature || canUseFeature('can_scan_menu');
@@ -322,13 +327,15 @@ export default function Products() {
   const productsTour = useProductTour('products');
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState(
-    localStorage.getItem('products_view_mode') || 'list'
-  );
+  // My listings opens as a grid of cards; Manage products as a list (each remembered).
+  const viewKey = embedded ? 'listings_view_mode' : 'products_view_mode';
+  const [viewMode, setViewMode] = useState(() => {
+    try { return localStorage.getItem(viewKey) || (embedded ? 'grid' : 'list'); } catch { return embedded ? 'grid' : 'list'; }
+  });
 
   const handleViewToggle = (mode) => {
     setViewMode(mode);
-    localStorage.setItem('products_view_mode', mode);
+    try { localStorage.setItem(viewKey, mode); } catch { /* storage unavailable */ }
   };
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -343,6 +350,7 @@ export default function Products() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   const [showDialog, setShowDialog] = useState(false);
+  useBackToClose(showDialog, () => setShowDialog(false));
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products', tenantId],
@@ -434,7 +442,7 @@ export default function Products() {
     const params = new URLSearchParams(location.search);
     const editId = params.get('edit');
     const wantsNew = params.get('new') === '1';
-    if (isLoading || (!wantsNew && !editId)) return;
+    if (toMyListings || !tenantId || isLoading || (!wantsNew && !editId)) return;
     params.delete('new');
     params.delete('edit');
     const query = params.toString();
@@ -445,7 +453,7 @@ export default function Products() {
       const product = products.find((p) => String(p.id) === editId);
       if (product) handleEdit(product);
     }
-  }, [location.search, isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [location.search, isLoading, tenantId, toMyListings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const canOpenScan = () => {
     if (atProductLimit) { setUpgradeModalOpen(true); return false; }
@@ -552,10 +560,13 @@ export default function Products() {
     }
   };
 
+  if (toMyListings) return <Navigate to={`/explore/listings${location.search}`} replace />;
+
   return (
     <RequirePermission permission="products.view">
-      <div className="space-y-6">
-        <div className="flex flex-col gap-3 mb-6">
+      <div className={embedded ? 'space-y-4' : 'space-y-6'}>
+        <div className={embedded ? 'flex flex-col gap-3' : 'flex flex-col gap-3 mb-6'}>
+          {!embedded && (<>
           <div data-tour="products-header" className="flex items-center justify-between mb-1">
             <h1 className="text-2xl font-bold text-slate-900">{tenant?.seller_type === 'individual' ? 'Manage listings' : words.Products}</h1>
             {canUseInventory && (
@@ -577,13 +588,14 @@ export default function Products() {
             )}
           </div>
           <p className="text-sm text-slate-500 -mt-3">{tenant?.seller_type === 'individual' ? 'Add, edit and hide what you sell' : 'Manage your product catalog'}</p>
-          <div className="flex flex-wrap items-center gap-2">
+          </>)}
+          <div {...(embedded ? { 'data-tour': 'products-header' } : {})} className="flex flex-wrap items-center gap-2">
               <RequirePermission permission="products.create" silent>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
-                    <Download className="w-4 h-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Download</span>
+                    <Download className={embedded ? 'w-4 h-4 mr-1.5' : 'w-4 h-4 sm:mr-2'} />
+                    <span className={embedded ? '' : 'hidden sm:inline'}>Download</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -598,8 +610,8 @@ export default function Products() {
                 </DropdownMenuContent>
               </DropdownMenu>
               <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm">
-                  <Upload className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Import</span>
+                  <Upload className={embedded ? 'w-4 h-4 mr-1.5' : 'w-4 h-4 sm:mr-2'} />
+                  <span className={embedded ? '' : 'hidden sm:inline'}>Import</span>
                 </Button>
                 {canScanMenu && (
                 <NativeCameraScanControl
@@ -616,17 +628,26 @@ export default function Products() {
                   <span className="sm:hidden">Scan</span>
                 </NativeCameraScanControl>
                 )}
+                {embedded && canUseInventory && (
+                  <Button onClick={() => navigate('/Inventory')} variant="outline" size="sm">
+                    <Package className="w-4 h-4 mr-1.5" /> Inventory
+                  </Button>
+                )}
                 <Button
                   data-tour="add-product-btn"
                   onClick={handleAdd}
                   size="sm"
-                  className="text-white gap-1.5"
+                  className={embedded ? 'text-white gap-1.5 ml-auto' : 'text-white gap-1.5'}
                   style={{ background: atProductLimit ? '#cbd5e1' : 'var(--color-primary-gradient)' }}
                   title={atProductLimit ? `${words.Product} limit reached (${maxProducts}) — upgrade to add more` : undefined}
                 >
                   <Plus className="w-4 h-4" />
+                  {embedded ? (
+                    <span>{atProductLimit ? 'Limit reached' : `Add ${words.product}`}</span>
+                  ) : (<>
                   <span className="hidden sm:inline">{atProductLimit ? 'Limit Reached' : `Add ${words.Product}`}</span>
                   <span className="sm:hidden">{atProductLimit ? 'Limit' : 'Add'}</span>
+                  </>)}
                 </Button>
               </RequirePermission>
           </div>
@@ -692,6 +713,7 @@ export default function Products() {
 
           <div className="flex gap-2 items-center flex-wrap">
             {/* Category Filter */}
+            {!(embedded && categories.length === 0) && (
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="flex-1 min-w-[120px]" style={{ height: 36, background: 'white', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', borderRadius: 8 }}>
                 <SelectValue />
@@ -703,17 +725,18 @@ export default function Products() {
                 ))}
               </SelectContent>
             </Select>
+            )}
 
             {/* Status Filter */}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="flex-1 min-w-[110px]" style={{ height: 36, background: 'white', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+              <SelectTrigger className={embedded ? 'w-auto min-w-[130px]' : 'flex-1 min-w-[110px]'} style={{ height: 36, background: 'white', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', borderRadius: 8 }}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="low_stock">Low Stock</SelectItem>
+                <SelectItem value="all">{isListings ? 'All listings' : 'All Status'}</SelectItem>
+                <SelectItem value="active">{isListings ? 'Showing' : 'Active'}</SelectItem>
+                <SelectItem value="inactive">{isListings ? 'Hidden' : 'Inactive'}</SelectItem>
+                <SelectItem value="low_stock">{isListings ? 'Low stock' : 'Low Stock'}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -721,12 +744,16 @@ export default function Products() {
             <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', borderRadius: 8, padding: 3, marginLeft: 'auto', flexShrink: 0 }}>
               <button
                 onClick={() => handleViewToggle('grid')}
+                aria-label="Show as a grid"
+                aria-pressed={viewMode === 'grid'}
                 style={{ width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer', background: viewMode === 'grid' ? 'white' : 'transparent', boxShadow: viewMode === 'grid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: viewMode === 'grid' ? '#6366f1' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <LayoutGrid size={16} />
               </button>
               <button
                 onClick={() => handleViewToggle('list')}
+                aria-label="Show as a list"
+                aria-pressed={viewMode === 'list'}
                 style={{ width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer', background: viewMode === 'list' ? 'white' : 'transparent', boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: viewMode === 'list' ? '#6366f1' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <List size={16} />
@@ -747,7 +774,8 @@ export default function Products() {
                 : `No ${words.products} yet`}
               description={searchQuery || categoryFilter !== 'all' || statusFilter !== 'all'
                 ? "Try adjusting your filters"
-                : `Start building your catalog by adding your first ${words.product}`}
+                : isListings ? 'Add a photo, a name and a price. It shows on Explore straight away.'
+                  : `Start building your catalog by adding your first ${words.product}`}
               actionLabel={`Add ${words.Product}`}
               onAction={handleAdd}
             />
@@ -769,17 +797,31 @@ export default function Products() {
             selectedIds,
             onLongPress: handleLongPress,
             onToggleSelect: handleToggleSelect,
+            variant: embedded ? 'listing' : 'product',
           };
+          // My listings: how many, like before.
+          const count = embedded ? (
+            <p className="text-sm text-slate-500 -mb-1">
+              {filteredProducts.length === products.length
+                ? `${products.length} ${products.length === 1 ? words.product : words.products}`
+                : `${filteredProducts.length} of ${products.length} ${words.products}`}
+            </p>
+          ) : null;
           if (categoryFilter !== 'all' || searchQuery) {
-            return <ProductGrid products={filteredProducts} {...gridProps} tourTagFirstCard={productsTour.eligible} />;
+            return <>{count}<ProductGrid products={filteredProducts} {...gridProps} tourTagFirstCard={productsTour.eligible} /></>;
           }
           const knownIds = new Set(categories.map(c => c.id));
           const groups = [
             ...categories.map(c => ({ key: c.id, name: c.name, items: filteredProducts.filter(p => p.category_id === c.id) })),
             { key: 'uncategorized', name: 'Uncategorized', items: filteredProducts.filter(p => !p.category_id || !knownIds.has(p.category_id)) },
           ].filter(g => g.items.length > 0);
+          // Nothing grouped (a shop without categories): one plain list in My listings.
+          if (embedded && groups.length === 1 && groups[0].key === 'uncategorized') {
+            return <>{count}<ProductGrid products={filteredProducts} {...gridProps} tourTagFirstCard={productsTour.eligible} /></>;
+          }
           return (
-            <div className="space-y-6">
+            <div className={embedded ? 'space-y-5' : 'space-y-6'}>
+              {count}
               {groups.map((g, i) => (
                 <section key={g.key}>
                   <div className="flex items-baseline gap-2 mb-3">
