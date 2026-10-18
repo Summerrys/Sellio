@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppReloadGuard } from '@/lib/AppRefreshContext';
 import { getSupabase } from '@/lib/supabaseClient';
+import { shrinkImage, BANNER_MAX_SIDE } from '@/lib/imageShrink';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -640,9 +641,9 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
 
     setUploading(true);
     const supabase = await getSupabase();
-    const ext = file.name.split('.').pop() || 'jpg';
-    const path = `${tenantId}/storefront/banner-bg.${ext}`;
-    const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type });
+    const banner = await shrinkImage(file, { maxSide: BANNER_MAX_SIDE });
+    const path = `${tenantId}/storefront/banner-bg.${banner.ext}`;
+    const { error } = await supabase.storage.from('product-images').upload(path, banner.blob, { upsert: true, contentType: banner.type });
     if (error) { toast.error('Upload failed: ' + error.message); setUploading(false); return; }
     const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
     const nextImageUrl = publicUrl.split('?')[0] + '?t=' + Date.now();
@@ -682,10 +683,10 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
     setUploading(true);
     try {
       const res = await fetch(dataUrl);
-      const blob = await res.blob();
+      const banner = await shrinkImage(await res.blob(), { maxSide: BANNER_MAX_SIDE });
       const supabase = await getSupabase();
-      const path = `${tenantId}/storefront/banner-bg.jpg`;
-      const { error } = await supabase.storage.from('product-images').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+      const path = `${tenantId}/storefront/banner-bg.${banner.ext}`;
+      const { error } = await supabase.storage.from('product-images').upload(path, banner.blob, { upsert: true, contentType: banner.type });
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
       const nextImageUrl = publicUrl.split('?')[0] + '?t=' + Date.now();

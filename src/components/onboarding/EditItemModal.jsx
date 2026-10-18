@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ImageEditModal from './ImageEditModal';
 import { getSupabase } from '@/lib/supabaseClient';
+import { shrinkImage, withExt, PHOTO_MAX_SIDE } from '@/lib/imageShrink';
 import { toast } from 'sonner';
 
 export default function EditItemModal({ item, categories, themeColor, primaryColor, onSave, onClose }) {
@@ -32,9 +33,10 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
   const uploadToStorage = async (file) => {
      const supabase = await getSupabase();
      const pendingTenantId = localStorage.getItem('pending_tenant_id');
-     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+     const photo = await shrinkImage(file, { maxSide: PHOTO_MAX_SIDE });
+     const safeName = withExt(file.name, photo.ext).replace(/[^a-zA-Z0-9._-]/g, '_');
      const storagePath = `temp/onboarding/${pendingTenantId}/products/${Date.now()}-${safeName}`;
-     const { error } = await supabase.storage.from('product-images').upload(storagePath, file, { upsert: true });
+     const { error } = await supabase.storage.from('product-images').upload(storagePath, photo.blob, { upsert: true, contentType: photo.type });
      if (error) throw new Error(error.message);
      const { data } = supabase.storage.from('product-images').getPublicUrl(storagePath);
      return { publicUrl: data.publicUrl, storagePath };

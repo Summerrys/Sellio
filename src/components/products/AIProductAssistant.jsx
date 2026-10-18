@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import ImageEditModal from '../onboarding/ImageEditModal';
 import { getSupabase } from '@/lib/supabaseClient';
+import { shrinkImage, withExt, PHOTO_MAX_SIDE, LONG_CACHE } from '@/lib/imageShrink';
 import { deleteImageFromStorage } from '@/lib/imageStorage';
 import PhotoPickerControl from '../ui-custom/PhotoPickerControl';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -112,13 +113,13 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
       // Fetch full-quality image and upload to Supabase Storage
       const imgRes = await fetch(currentPhoto.downloadUrl);
       if (!imgRes.ok) throw new Error('Failed to fetch image');
-      const blob = await imgRes.blob();
+      const photo = await shrinkImage(await imgRes.blob(), { maxSide: PHOTO_MAX_SIDE });
 
       const supabase = await (await import('@/lib/supabaseClient')).getSupabase();
-      const filename = `${tenantId}/products/stock-${Date.now()}-photo.jpg`;
+      const filename = `${tenantId}/products/stock-${Date.now()}-photo.${photo.ext}`;
       const { error: uploadError } = await supabase.storage
         .from('product-images')
-        .upload(filename, blob, { contentType: 'image/jpeg', upsert: true });
+        .upload(filename, photo.blob, { contentType: photo.type, upsert: true, cacheControl: LONG_CACHE });
       if (uploadError) throw new Error(uploadError.message);
       const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(filename);
 
@@ -320,8 +321,9 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
 
   const uploadToStorage = async (file) => {
     const supabase = await getSupabase();
-    const storagePath = buildPermanentPath(tenantId, file.name);
-    const { error } = await supabase.storage.from('product-images').upload(storagePath, file, { upsert: true });
+    const photo = await shrinkImage(file, { maxSide: PHOTO_MAX_SIDE });
+    const storagePath = buildPermanentPath(tenantId, withExt(file.name, photo.ext));
+    const { error } = await supabase.storage.from('product-images').upload(storagePath, photo.blob, { upsert: true, contentType: photo.type, cacheControl: LONG_CACHE });
     if (error) throw new Error(error.message);
     // Track this path for cancel cleanup
     uploadedPaths.current.push(storagePath);

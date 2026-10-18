@@ -124,3 +124,9 @@
   --color-primary: 59 130 246;
   --color-primary-gradient: linear-gradient(135deg, #3b82f6 0%, #9333ea 100%);
 }
+
+/* Product and shop photos fade in once fully loaded instead of painting in from the top
+   (main.jsx marks each one data-loaded when it has loaded, or failed). */
+img.sellio-photo { opacity: 0; transition: opacity .25s ease; }
+img.sellio-photo[data-loaded] { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { img.sellio-photo { transition: none; } }

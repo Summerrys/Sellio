@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTenant } from '@/components/tenant/TenantContext';
 import { getSupabase } from '@/lib/supabaseClient';
+import { shrinkImage, LOGO_MAX_SIDE, LONG_CACHE } from '@/lib/imageShrink';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -202,9 +203,9 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
     if (!logoFile) return form.logo_url;
     setIsUploadingLogo(true);
     const supabase = await getSupabase();
-    const ext = logoFile.name.split('.').pop();
-    const path = `${tenantId}/logo/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from('product-images').upload(path, logoFile, { upsert: true });
+    const logo = await shrinkImage(logoFile, { maxSide: LOGO_MAX_SIDE });
+    const path = `${tenantId}/logo/${Date.now()}.${logo.ext}`;
+    const { error } = await supabase.storage.from('product-images').upload(path, logo.blob, { upsert: true, contentType: logo.type, cacheControl: LONG_CACHE });
     if (error) throw error;
     const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
     setIsUploadingLogo(false);
@@ -217,9 +218,9 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
     try {
       const supabase = await getSupabase();
       const res = await fetch(imageData);
-      const blob = await res.blob();
-      const path = `${tenantId}/logo/${Date.now()}.jpg`;
-      const { error } = await supabase.storage.from('product-images').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+      const logo = await shrinkImage(await res.blob(), { maxSide: LOGO_MAX_SIDE });
+      const path = `${tenantId}/logo/${Date.now()}.${logo.ext}`;
+      const { error } = await supabase.storage.from('product-images').upload(path, logo.blob, { upsert: true, contentType: logo.type, cacheControl: LONG_CACHE });
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
       setLogoPreview(publicUrl);

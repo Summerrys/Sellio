@@ -31,7 +31,9 @@ export default function ProductCard({ product, onAddToCart, currency }) {
           <img
             src={product.image_url}
             alt={product.name}
-            className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
+            loading="lazy"
+            decoding="async"
+            className="sellio-photo w-24 h-24 rounded-lg object-cover flex-shrink-0"
           />
         )}
 

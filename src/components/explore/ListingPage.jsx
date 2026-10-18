@@ -134,7 +134,7 @@ function Gallery({ images, name, onOpen }) {
             aria-label={`Open photo ${i + 1} of ${images.length}`}
             className="w-full flex-shrink-0 snap-center aspect-square block"
           >
-            <img src={src} alt={i === 0 ? name : ''} loading={i === 0 ? 'eager' : 'lazy'} className="w-full h-full object-cover" />
+            <img src={src} alt={i === 0 ? name : ''} loading={i === 0 ? 'eager' : 'lazy'} decoding="async" className="sellio-photo w-full h-full object-cover" />
           </button>
         )) : (
           <ItemImage name={name} className="w-full aspect-square text-7xl" />

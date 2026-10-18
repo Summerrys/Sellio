@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Building2, Upload, ArrowRight, Sparkles, Briefcase, Globe, X, Edit3, Check, Palette, Pipette, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { getSupabase } from '@/lib/supabaseClient';
+import { shrinkImage, withExt, LOGO_MAX_SIDE } from '@/lib/imageShrink';
 import { generateThemeVariables, COLOR_SETS as POPULAR_PALETTES, DEFAULT_GRADIENT, DEFAULT_PRIMARY, DEFAULT_ACCENT } from '../theme/themeUtils';
 import { cn } from '@/lib/utils';
 import { INDUSTRY_OPTIONS } from '@/lib/industry';
@@ -114,12 +115,13 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
       // TODO: schedule a Supabase Edge Function or cron job to delete files older than 48 hours under product-images/temp/onboarding/
       const pendingTenantId = getPendingTenantId();
       const supabaseClient = await getSupabase();
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const logo = await shrinkImage(file, { maxSide: LOGO_MAX_SIDE });
+      const safeName = withExt(file.name, logo.ext).replace(/[^a-zA-Z0-9._-]/g, '_');
       const storagePath = `temp/onboarding/${pendingTenantId}/logo/${safeName}`;
 
       const { error } = await supabaseClient.storage
         .from('product-images')
-        .upload(storagePath, file, { upsert: true });
+        .upload(storagePath, logo.blob, { upsert: true, contentType: logo.type });
 
       if (error) throw error;
 

@@ -6,6 +6,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ImageEditModal from './ImageEditModal';
 import EditItemModal from './EditItemModal';
 import { getSupabase } from '@/lib/supabaseClient';
+import { shrinkImage, withExt, PHOTO_MAX_SIDE } from '@/lib/imageShrink';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -136,8 +137,9 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const uploadToStorage = async (file) => {
     const supabase = await getSupabase();
     const tenantId = formData.pendingTenantId;
-    const storagePath = buildTempPath(tenantId, file.name);
-    const { error } = await supabase.storage.from('product-images').upload(storagePath, file, { upsert: true });
+    const photo = await shrinkImage(file, { maxSide: PHOTO_MAX_SIDE });
+    const storagePath = buildTempPath(tenantId, withExt(file.name, photo.ext));
+    const { error } = await supabase.storage.from('product-images').upload(storagePath, photo.blob, { upsert: true, contentType: photo.type });
     if (error) throw new Error(error.message);
     const { data } = supabase.storage.from('product-images').getPublicUrl(storagePath);
     return { publicUrl: data.publicUrl, storagePath };
@@ -331,10 +333,9 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       const mimeType = match?.[1] || 'image/jpeg';
       const base64Data = match?.[2] || newDataUrl.split(',')[1];
       const bytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-      const ext = mimeType.split('/')[1] || 'jpg';
-      const storagePath = buildTempPath(tenantId, `edited.${ext}`);
-      const file = new File([bytes], `edited.${ext}`, { type: mimeType });
-      const { error: uploadError } = await supabase.storage.from('product-images').upload(storagePath, file, { upsert: true });
+      const photo = await shrinkImage(new Blob([bytes], { type: mimeType }), { maxSide: PHOTO_MAX_SIDE });
+      const storagePath = buildTempPath(tenantId, `edited.${photo.ext}`);
+      const { error: uploadError } = await supabase.storage.from('product-images').upload(storagePath, photo.blob, { upsert: true, contentType: photo.type });
       if (uploadError) throw new Error(uploadError.message);
       const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(storagePath);
       const publicUrl = urlData.publicUrl;

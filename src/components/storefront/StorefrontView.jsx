@@ -166,7 +166,7 @@ const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryC
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
         {tenant?.logo_url ? (
           <div style={{ ...iconBtnBase, background: '#f1f5f9', overflow: 'hidden', padding: 0, flexShrink: 0 }}>
-            <img src={tenant.logo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={tenant.logo_url} alt="" decoding="async" className="sellio-photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
         ) : (
           <div style={{ ...iconBtnBase, background: '#f1f5f9', fontWeight: 700, fontSize: sfType(16), color: '#374151', flexShrink: 0 }}>
@@ -1110,7 +1110,7 @@ function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onA
     >
       <div style={{ position: 'relative', flexShrink: 0 }}>
         {product.image_url
-          ? <img src={product.image_url} style={{ width: thumbSize, height: thumbSize, borderRadius: 10, objectFit: 'cover', display: 'block' }} />
+          ? <img src={product.image_url} alt="" loading="lazy" decoding="async" className="sellio-photo" style={{ width: thumbSize, height: thumbSize, borderRadius: 10, objectFit: 'cover', display: 'block' }} />
           : <div style={{ width: thumbSize, height: thumbSize, borderRadius: 10, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: sfType(24) }}>🛍️</div>
         }
         {featured && (
@@ -1287,7 +1287,7 @@ function FeaturedCard({ product, currency, primaryColor, storefrontConfig, showS
   const imageSize = isCompact ? 94 : 110;
   return (
     <div onClick={() => onProductClick(product)} style={{ display: 'flex', background: '#f8fafc', borderRadius: isCompact ? 11 : 14, overflow: 'hidden', marginBottom: isCompact ? 7 : 10, border: '0.5px solid #e5e7eb', cursor: 'pointer' }}>
-      {product.image_url && <img src={product.image_url} style={{ width: imageSize, height: imageSize, objectFit: 'cover', flexShrink: 0 }} />}
+      {product.image_url && <img src={product.image_url} alt="" loading="lazy" decoding="async" className="sellio-photo" style={{ width: imageSize, height: imageSize, objectFit: 'cover', flexShrink: 0 }} />}
       <div style={{ flex: 1, padding: isCompact ? 9 : 12, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
         <div>
           <p style={{ fontWeight: 600, fontSize: sfType(14), margin: '0 0 3px', color: '#0f172a' }}>{name}</p>
@@ -1322,7 +1322,7 @@ function GridCard({ product, currency, primaryColor, storefrontConfig, showStock
     <div onClick={() => onProductClick(product)} style={{ background: '#fff', borderRadius: isCompact ? 9 : 12, border: '0.5px solid #e5e7eb', overflow: 'hidden', cursor: 'pointer' }}>
       <div style={{ position: 'relative' }}>
         {product.image_url
-          ? <img src={product.image_url} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover' }} />
+          ? <img src={product.image_url} alt="" loading="lazy" decoding="async" className="sellio-photo" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover' }} />
           : <div style={{ width: '100%', aspectRatio: '1', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: sfType(32) }}>🛍️</div>
         }
         {isOutOfStock && showStockBadge && (
@@ -1416,7 +1416,7 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
             style={{ cursor: activeImage ? 'zoom-in' : 'default', position: 'relative' }}
           >
             {activeImage
-              ? <img src={activeImage} style={{ width: '100%', aspectRatio: '1/1', objectFit: 'contain', background: '#f8f9fa', borderRadius: '20px 20px 0 0', display: 'block' }} />
+              ? <img key={activeImage} src={activeImage} alt="" decoding="async" className="sellio-photo" style={{ width: '100%', aspectRatio: '1/1', objectFit: 'contain', background: '#f8f9fa', borderRadius: '20px 20px 0 0', display: 'block' }} />
               : <div style={{ width: '100%', aspectRatio: '1/1', background: '#f8f9fa', borderRadius: '20px 20px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: sfType(48) }}>🛍️</div>
             }
             {/* Swipe dots */}

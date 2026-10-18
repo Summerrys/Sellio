@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
+import { shrinkImage, LOGO_MAX_SIDE, LONG_CACHE } from '@/lib/imageShrink';
 import { useTenant } from '@/components/tenant/TenantContext';
 import ThemeSelector from '@/components/theme/ThemeSelector';
 import SellingSettingsForm from '@/components/shop/SellingSettingsForm';
@@ -40,13 +41,13 @@ function LogoStep({ tenant, tenantId }) {
     e.target.value = '';
     if (!file) return;
     if (!file.type.startsWith('image/')) { toast.error('Please choose an image.'); return; }
-    if (file.size > 5 * 1024 * 1024) { toast.error('Please use an image under 5 MB.'); return; }
     setUploading(true);
     try {
+      const logo = await shrinkImage(file, { maxSide: LOGO_MAX_SIDE });
+      if (logo.blob.size > 5 * 1024 * 1024) { toast.error('Please use an image under 5 MB.'); return; }
       const supabase = await getSupabase();
-      const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
-      const path = `${tenantId}/logo/${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type });
+      const path = `${tenantId}/logo/${Date.now()}.${logo.ext}`;
+      const { error } = await supabase.storage.from('product-images').upload(path, logo.blob, { upsert: true, contentType: logo.type, cacheControl: LONG_CACHE });
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
       const { error: saveError } = await supabase.from('tenants').update({ logo_url: publicUrl }).eq('id', tenantId);

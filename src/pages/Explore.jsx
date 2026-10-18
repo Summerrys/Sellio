@@ -72,8 +72,9 @@ function ShopAvatar({ name, logo, size = 24 }) {
         src={logo}
         alt=""
         loading="lazy"
+        decoding="async"
         onError={() => setFailed(true)}
-        className="rounded-full object-cover bg-white border border-slate-100 flex-shrink-0"
+        className="sellio-photo rounded-full object-cover bg-white border border-slate-100 flex-shrink-0"
         style={{ width: size, height: size }}
       />
     );
@@ -111,8 +112,9 @@ function ItemCard({ item }) {
             src={item.image_url}
             alt={item.product_name}
             loading="lazy"
+            decoding="async"
             onError={() => setImageFailed(true)}
-            className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+            className="sellio-photo w-full h-full object-cover group-hover:scale-[1.03] transition-[transform,opacity] duration-300"
           />
         ) : (
           <div
@@ -153,8 +155,9 @@ function Thumb({ src }) {
       src={src}
       alt=""
       loading="lazy"
+      decoding="async"
       onError={() => setFailed(true)}
-      className="aspect-square w-full rounded-lg object-cover bg-slate-100"
+      className="sellio-photo aspect-square w-full rounded-lg object-cover bg-slate-100"
     />
   );
 }

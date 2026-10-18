@@ -6,6 +6,15 @@ import { removeAppReloadParam } from '@/lib/appUpdates'
 
 removeAppReloadParam()
 
+// Product and shop photos (class "sellio-photo") fade in once they've loaded (index.css).
+// A data attribute rather than a class, so React re-rendering the class never hides one.
+const markPhoto = (event) => {
+  const img = event.target
+  if (img instanceof HTMLImageElement && img.classList.contains('sellio-photo')) img.dataset.loaded = '1'
+}
+document.addEventListener('load', markPhoto, true)
+document.addEventListener('error', markPhoto, true)
+
 // Register our minimal PWA service worker (required for install prompts on Chrome/Android).
 // It intentionally does no caching — see public/sw.js.
 if ('serviceWorker' in navigator) {

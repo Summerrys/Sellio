@@ -60,8 +60,9 @@ export function ShopAvatar({ name, logo, size = 24 }) {
         src={logo}
         alt=""
         loading="lazy"
+        decoding="async"
         onError={() => setFailed(true)}
-        className="rounded-full object-cover bg-white border border-slate-100 flex-shrink-0"
+        className="sellio-photo rounded-full object-cover bg-white border border-slate-100 flex-shrink-0"
         style={{ width: size, height: size }}
       />
     );
@@ -81,7 +82,7 @@ export function ShopAvatar({ name, logo, size = 24 }) {
 export function ItemImage({ src, name, className = '', rounded = '' }) {
   const [failed, setFailed] = useState(false);
   if (src && !failed) {
-    return <img src={src} alt="" loading="lazy" onError={() => setFailed(true)} className={`object-cover bg-slate-100 ${rounded} ${className}`} />;
+    return <img src={src} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} className={`sellio-photo object-cover bg-slate-100 ${rounded} ${className}`} />;
   }
   return (
     <div
