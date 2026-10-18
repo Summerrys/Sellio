@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import { exploreItem, getChatUser } from '@/lib/chat';
 import { rememberReturnPath } from '@/lib/authNavigation';
 import { useBackToClose } from '@/lib/useBackToClose';
+import { useRatingSummaries } from '@/lib/ratings';
+import { RatingPill, RatingSheet } from '@/components/ratings/RatingParts';
 import {
   BRAND_COLOR, BRAND_GRADIENT, BOTTOM_INSET, PUBLIC_ORIGIN, hideScrollbar, formatPrice, timeAgo,
   ShopAvatar, ItemImage, storeUrl, listingUrl, chatUrl, newChatUrl, goBack,
@@ -210,6 +212,9 @@ export default function ListingPage() {
   const item = state.data?.product;
   const shop = state.data?.shop;
   const viewer = state.data?.viewer;
+  const [shopRatings] = useRatingSummaries(shop?.id ? [shop.id] : []);
+  const shopRating = shop?.id ? shopRatings[shop.id] || null : null;
+  const [ratingOpen, setRatingOpen] = useState(false);
 
   useEffect(() => {
     if (!item) return undefined;
@@ -399,6 +404,17 @@ export default function ListingPage() {
               <Store className="w-4 h-4" /> View shop
             </span>
           </Link>
+          {shopRating && (
+            <button
+              type="button"
+              onClick={() => setRatingOpen(true)}
+              className="mt-2 ml-[60px] inline-flex items-center gap-1 rounded-full px-2 py-1 -mx-2 hover:bg-slate-50"
+            >
+              <RatingPill summary={shopRating} size={13} variant="long" />
+              <span className="text-slate-400 text-sm" aria-hidden="true">›</span>
+            </button>
+          )}
+          <RatingSheet open={ratingOpen} onClose={() => setRatingOpen(false)} shopName={shop.name} summary={shopRating} />
         </section>
 
         {deals.length > 0 && (

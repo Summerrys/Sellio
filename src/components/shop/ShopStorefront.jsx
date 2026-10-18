@@ -199,7 +199,7 @@ const STATUS_STYLE = {
   cancelled: { bg: '#fee2e2', color: '#991b1b' },
 };
 
-export function ShopOrderHistory({ orders, sym, lang, food, primaryColor, paymentQrUrl }) {
+export function ShopOrderHistory({ orders, sym, lang, food, primaryColor, paymentQrUrl, renderExtra }) {
   const T = (k) => shopT(lang, k);
   const [qrFor, setQrFor] = useState(null);
   if (!orders.length) {
@@ -236,6 +236,7 @@ export function ShopOrderHistory({ orders, sym, lang, food, primaryColor, paymen
             ? <img src={paymentQrUrl} alt="Payment QR" style={{ width: 180, height: 180, objectFit: 'contain', display: 'block', margin: '10px auto 0', background: 'white', borderRadius: 10, padding: 8, border: '1px solid #e2e8f0' }} />
             : <button type="button" onClick={() => setQrFor(order.id)} style={{ marginTop: 8, fontSize: 12, fontWeight: 600, color: primaryColor, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>{T('showQr')}</button>
         )}
+        {renderExtra?.(order)}
       </div>
     );
   });

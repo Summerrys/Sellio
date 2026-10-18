@@ -6,6 +6,8 @@ import { useAppUser } from '@/lib/AppUserContext';
 import { isNativeApp } from '@/lib/nativeApp';
 import ExploreTabBar, { markExploreHome } from '@/components/explore/ExploreTabBar';
 import ShopBell from '@/components/explore/ShopBell';
+import { useRatingSummaries } from '@/lib/ratings';
+import { RatingPill } from '@/components/ratings/RatingParts';
 import { useSell } from '@/lib/sell';
 import { listingUrl, ExploreDesktopTabs } from '@/components/explore/shared';
 
@@ -92,7 +94,7 @@ function ShopAvatar({ name, logo, size = 24 }) {
   );
 }
 
-function ItemCard({ item }) {
+function ItemCard({ item, rating = null }) {
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = item.image_url && !imageFailed;
   const hasDiscount = item.compare_at_price != null && Number(item.compare_at_price) > Number(item.price);
@@ -105,7 +107,10 @@ function ItemCard({ item }) {
         <ShopAvatar name={item.shop_name} logo={item.shop_logo_url} size={26} />
         <div className="min-w-0">
           <p className="text-xs font-semibold text-slate-800 truncate">{item.shop_name}</p>
-          <p className="text-[11px] text-slate-400 leading-tight">{timeAgo(item.listed_at)}</p>
+          <p className="text-[11px] text-slate-400 leading-tight flex items-center gap-1 whitespace-nowrap">
+            {rating && <><RatingPill summary={rating} size={11} variant="bare" /><span aria-hidden="true">·</span></>}
+            <span className="truncate">{timeAgo(item.listed_at)}</span>
+          </p>
         </div>
       </div>
       <div className="relative aspect-square bg-slate-100 overflow-hidden">
@@ -165,7 +170,7 @@ function Thumb({ src }) {
 }
 
 // One card per paid merchant: its storefront, not a flood of its items.
-function MerchantCard({ shop }) {
+function MerchantCard({ shop, rating = null }) {
   const images = (shop.preview_images || []).filter(Boolean).slice(0, 4);
   const count = Number(shop.item_count) || 0;
   return (
@@ -177,7 +182,10 @@ function MerchantCard({ shop }) {
         <ShopAvatar name={shop.shop_name} logo={shop.shop_logo_url} size={44} />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-slate-900 truncate">{shop.shop_name}</p>
-          <p className="text-xs text-slate-500">{industryLabel(shop.industry)} · {count} {count === 1 ? 'item' : 'items'}</p>
+          <p className="text-xs text-slate-500 flex items-center gap-1 flex-wrap">
+            {rating && <><RatingPill summary={rating} size={12} /><span aria-hidden="true">·</span></>}
+            <span>{industryLabel(shop.industry)} · {count} {count === 1 ? 'item' : 'items'}</span>
+          </p>
         </div>
         <span className="text-xs font-semibold text-slate-700 inline-flex items-center whitespace-nowrap group-hover:text-slate-900">
           Visit store <ChevronRight className="w-4 h-4" />
@@ -222,6 +230,8 @@ export default function Explore() {
   const [items, setItems] = useState([]);
   const [itemsKind, setItemsKind] = useState('all');
   const [shops, setShops] = useState([]);
+  // Shops' ratings (3+ buyers), for the shop row and each card's seller line.
+  const [ratings] = useRatingSummaries([...shops.map((s) => s.shop_id), ...items.map((i) => i.shop_id)]);
   const [status, setStatus] = useState('loading'); // loading | ready | error
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -416,7 +426,9 @@ export default function Explore() {
                 <Link key={shop.shop_id} to={storeUrl(shop.shop_slug)} className="w-20 flex-shrink-0 flex flex-col items-center gap-1.5 text-center">
                   <ShopAvatar name={shop.shop_name} logo={shop.shop_logo_url} size={60} />
                   <span className="text-xs font-semibold text-slate-800 w-full truncate">{shop.shop_name}</span>
-                  <span className="text-[11px] text-slate-400 -mt-1">{shop.item_count} {Number(shop.item_count) === 1 ? 'item' : 'items'}</span>
+                  {ratings[shop.shop_id]
+                    ? <span className="-mt-1"><RatingPill summary={ratings[shop.shop_id]} size={11} /></span>
+                    : <span className="text-[11px] text-slate-400 -mt-1">{shop.item_count} {Number(shop.item_count) === 1 ? 'item' : 'items'}</span>}
                 </Link>
               ))}
             </div>
@@ -469,11 +481,11 @@ export default function Explore() {
             <>
               {itemsKind === 'merchants' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {items.map((shop) => <MerchantCard key={shop.shop_id} shop={shop} />)}
+                  {items.map((shop) => <MerchantCard key={shop.shop_id} shop={shop} rating={ratings[shop.shop_id]} />)}
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                  {items.map((item) => <ItemCard key={item.product_id} item={item} />)}
+                  {items.map((item) => <ItemCard key={item.product_id} item={item} rating={ratings[item.shop_id]} />)}
                 </div>
               )}
               <div ref={sentinelRef} className="h-px" />

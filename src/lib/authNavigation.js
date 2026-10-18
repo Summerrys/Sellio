@@ -16,7 +16,7 @@ export function takeReturnPath(storage = window.localStorage, now = Date.now()) 
     const saved = JSON.parse(storage.getItem(RETURN_KEY) || 'null');
     storage.removeItem(RETURN_KEY);
     if (!saved || typeof saved.path !== 'string' || !(now - saved.at < RETURN_TTL_MS)) return null;
-    return /^\/(store\/[^/?#]+|listing\/[^/?#]+|explore(\/(listings|me|chats(\/[^/?#]+)?))?)(\?[^#]*)?$/.test(saved.path) ? saved.path : null;
+    return /^\/(store\/[^/?#]+|order\/[^/?#]+\/[^/?#]+|listing\/[^/?#]+|explore(\/(listings|me|chats(\/[^/?#]+)?))?)(\?[^#]*)?$/.test(saved.path) ? saved.path : null;
   } catch { return null; }
 }
 

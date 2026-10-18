@@ -19,6 +19,7 @@ import {
   Gem, Wrench, Scissors, Sparkles, Search, X
 } from 'lucide-react';
 import LanguageToggle from './LanguageToggle';
+import { RatingPill } from '@/components/ratings/RatingParts';
 import { useLanguage, useTranslatedTexts } from '@/lib/LanguageContext';
 import { extractBannerEdgeAssets, isValidBannerEdgeColor } from '@/lib/bannerEdgeColors';
 import { getStorefrontFontStack, getStorefrontTypographyScale } from '@/lib/storefrontTypography';
@@ -118,7 +119,7 @@ function findPreviewScrollParent(startEl) {
   return null;
 }
 
-const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHistoryClick, showBackButton = false, isDesktop = false, searchOpen, setSearchOpen, searchQuery, setSearchQuery, stickyTop = 0, safeTop = null }, ref) {
+const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHistoryClick, showBackButton = false, isDesktop = false, searchOpen, setSearchOpen, searchQuery, setSearchQuery, stickyTop = 0, safeTop = null, rating = null, onRatingClick }, ref) {
   const branchName = tenant?.settings?.branch_name;
   const address = tenant?.address || '';
   const truncatedAddress = address.length > 25 ? address.slice(0, 25) + '…' : address;
@@ -136,7 +137,7 @@ const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryC
   const iconBtnBase = { width: 36, height: 36, borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 };
   const iconBtnNeutral = { ...iconBtnBase, background: tintBg };
 
-  const headerHeight = (subLine ? 64 : 56) + 20;
+  const headerHeight = (subLine ? 64 : 56) + 20 + (rating ? 10 : 0);
 
   return (
     <>
@@ -177,6 +178,16 @@ const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryC
           <div style={{ color: '#111827', fontWeight: 700, fontSize: sfType(17), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {tenant?.name || ''}
           </div>
+          {rating && (
+            <button
+              type="button"
+              onClick={onRatingClick}
+              aria-label={`Rated ${Number(rating.rating).toFixed(1)} out of 5 by ${rating.rating_count} buyers. See the ratings`}
+              style={{ display: 'block', background: 'none', border: 'none', padding: 0, marginTop: 2, cursor: 'pointer', pointerEvents: 'auto' }}
+            >
+              <RatingPill summary={rating} size={12} variant="long" />
+            </button>
+          )}
           {subLine && (
             <a
               href={address ? `https://maps.google.com/?q=${encodeURIComponent(address)}` : undefined}
@@ -198,7 +209,7 @@ const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryC
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
         <LanguageToggle primaryColor={primaryColor} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button onClick={onHistoryClick} style={iconBtnNeutral}>
+          <button type="button" aria-label="Your orders" onClick={onHistoryClick} style={{ ...iconBtnNeutral, pointerEvents: 'auto' }}>
             <Clock size={17} color="#374151" />
           </button>
           <button onClick={onCartClick} style={{ ...iconBtnNeutral, position: 'relative' }}>
@@ -441,6 +452,9 @@ export default function StorefrontView({
   cartTotal = 0,
   isDesktop: isDesktopProp,
   isLandscape: isLandscapeProp,
+  // The shop's rating (3+ buyers) under its name, and what tapping it does.
+  rating = null,
+  onRatingClick,
 }) {
   const { t } = useLanguage();
   const tenant = tenantProp;
@@ -805,6 +819,8 @@ export default function StorefrontView({
         cartCount={cartCount}
         onCartClick={() => setShowCart?.(true)}
         onHistoryClick={() => setShowOrderHistory?.(true)}
+        rating={previewMode ? null : rating}
+        onRatingClick={onRatingClick}
         showBackButton={showBackButton}
         isDesktop={isDesktop}
         searchOpen={searchOpen}

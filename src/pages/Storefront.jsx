@@ -13,6 +13,20 @@ import { ShopCheckout, ShopOrderDetails, ShopOrderHistory } from '@/components/s
 import { shopT } from '@/lib/shopSelling';
 import { isNativeApp } from '@/lib/nativeApp';
 import { rememberReturnPath } from '@/lib/authNavigation';
+import { fetchRatingSummaries, forgetRatingSummary, isSignedIn, myOrderRatings } from '@/lib/ratings';
+import { OrderRateRow, RateOrderSheet, RatePrompt, RatingSheet } from '@/components/ratings/RatingParts';
+
+// Orders whose "How was your order?" card was dismissed (shown once per order).
+const RATE_PROMPT_KEY = 'sellio_rate_prompt_dismissed';
+const promptDismissed = (orderId) => {
+  try { return (JSON.parse(localStorage.getItem(RATE_PROMPT_KEY) || '[]') || []).includes(orderId); } catch { return false; }
+};
+const dismissPrompt = (orderId) => {
+  try {
+    const list = (JSON.parse(localStorage.getItem(RATE_PROMPT_KEY) || '[]') || []).filter((id) => id !== orderId);
+    localStorage.setItem(RATE_PROMPT_KEY, JSON.stringify([orderId, ...list].slice(0, 50)));
+  } catch { /* storage unavailable */ }
+};
 
 // Pure function (no component state) so it can be reused by the initial
 // load, the periodic re-check, and the Realtime handler alike — all it needs
@@ -100,6 +114,14 @@ function StorefrontInner() {
   const [showProductModal, setShowProductModal] = useState(false);
   // Set when the menu assistant asks to show an item's product screen.
   const [assistantProductRequest, setAssistantProductRequest] = useState(null);
+  // Ratings: the shop's average (under its name), this buyer's own ratings of their
+  // orders here, the rate window, and the once-per-order prompt on the next visit.
+  const [ratingSummary, setRatingSummary] = useState(null);
+  const [showRatingSheet, setShowRatingSheet] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
+  const [myRatings, setMyRatings] = useState({});
+  const [rateTarget, setRateTarget] = useState(null); // { order, stars }
+  const [promptOrder, setPromptOrder] = useState(null);
   // Phone/browser Back closes these screens instead of leaving the menu
   // (customers arrive straight from their camera's QR scanner).
   useBackToClose(showCart, () => setShowCart(false));
@@ -505,14 +527,81 @@ function StorefrontInner() {
     });
   }, [tenant?.id]);
 
+  // The orders placed from this phone (their ids are kept here).
+  const fetchSavedOrders = async () => {
+    if (!tenant) return [];
+    const currentSessionOrders = (() => { try { const s = localStorage.getItem(SESSION_ORDERS_KEY); return s ? JSON.parse(s) : []; } catch { return []; } })();
+    if (!currentSessionOrders.length) return [];
+    const supabase = await getSupabase();
+    const { data } = await supabase.rpc(shopSelling ? 'get_shop_orders' : 'get_storefront_orders', { p_tenant_id: tenant.id, p_order_ids: currentSessionOrders });
+    return data || [];
+  };
+
   const loadOrderHistory = async () => {
     if (!tenant) return;
-    const supabase = await getSupabase();
-    const currentSessionOrders = (() => { try { const s = localStorage.getItem(SESSION_ORDERS_KEY); return s ? JSON.parse(s) : []; } catch { return []; } })();
-    if (!currentSessionOrders.length) { setOrderHistory([]); return; }
-    const { data } = await supabase.rpc(shopSelling ? 'get_shop_orders' : 'get_storefront_orders', { p_tenant_id: tenant.id, p_order_ids: currentSessionOrders });
-    setOrderHistory(data || []);
+    const orders = await fetchSavedOrders();
+    setOrderHistory(orders);
+    const done = orders.filter((o) => o.status === 'completed').map((o) => o.id);
+    if (signedIn && done.length) setMyRatings(await myOrderRatings(done));
   };
+
+  // Ratings, once the shop has loaded: its average; for a signed-in buyer, their ratings
+  // and the once-per-order prompt; and the rate window again after signing in to rate.
+  useEffect(() => {
+    if (loading || !tenant?.id || isPreview || isStaffMode) return undefined;
+    let cancelled = false;
+    (async () => {
+      const found = await fetchRatingSummaries([tenant.id]);
+      if (cancelled) return;
+      setRatingSummary(found[tenant.id] || null);
+      const params = new URLSearchParams(window.location.search);
+      const rateId = params.get('rate');
+      const rateStars = Math.min(5, Math.max(0, Number(params.get('stars')) || 0));
+      if (rateId) {
+        params.delete('rate');
+        params.delete('stars');
+        const query = params.toString();
+        window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+      }
+      const yes = await isSignedIn();
+      if (cancelled) return;
+      setSignedIn(yes);
+      if (!yes) return;
+      const orders = await fetchSavedOrders();
+      const done = orders.filter((o) => o.status === 'completed');
+      const mine = await myOrderRatings(done.map((o) => o.id));
+      if (cancelled) return;
+      setMyRatings(mine);
+      const back = rateId && done.find((o) => o.id === rateId);
+      if (back && (!mine[back.id] || mine[back.id].can_change)) {
+        setRateTarget({ order: back, stars: rateStars || mine[back.id]?.stars || 0 });
+        return;
+      }
+      const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      const waitingOrder = done
+        .filter((o) => !mine[o.id] && !promptDismissed(o.id) && new Date(o.updated_date || o.created_date).getTime() > monthAgo)
+        .sort((a, b) => new Date(b.updated_date || b.created_date) - new Date(a.updated_date || a.created_date))[0];
+      setPromptOrder(waitingOrder || null);
+    })().catch((e) => console.warn('Ratings unavailable:', e?.message || e));
+    return () => { cancelled = true; };
+  }, [loading, tenant?.id]);
+
+  const pickRating = (order, stars) => {
+    if (promptOrder?.id === order.id) dismissPrompt(order.id);
+    setPromptOrder(null);
+    setRateTarget({ order, stars });
+  };
+  const onRated = (saved) => {
+    setMyRatings((prev) => ({ ...prev, [saved.order_id]: { order_id: saved.order_id, stars: saved.stars, note: saved.note, can_change: true } }));
+    setRateTarget(null);
+    forgetRatingSummary(tenant.id);
+    fetchRatingSummaries([tenant.id]).then((found) => setRatingSummary(found[tenant.id] || null));
+    toast.success(saved.first ? 'Thanks for rating!' : 'Rating updated');
+  };
+  // A home seller's stars always show on their shop page; a business can hide them on
+  // its own ordering page (Settings → Business). Explore shows them either way.
+  const showRating = !!ratingSummary && (!!shopSelling || tenant?.settings?.show_rating_on_store !== false);
+  const promptVisible = !!promptOrder && !showOrderHistory && !showCart && !showCheckout && !showProductModal && !orderSuccess && !rateTarget && !showRatingSheet;
 
   const checkoutGuard = useRef(false);
   const handleSubmitOrder = async (shopDetails) => {
@@ -669,7 +758,7 @@ function StorefrontInner() {
 
   return (
     <>
-      {!isStoreOpen && (
+      {!isStoreOpen && !showOrderHistory && (
         <div style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 300,
           background: 'rgba(15,23,42,0.95)',
@@ -759,6 +848,8 @@ function StorefrontInner() {
           setShowCart={setShowCart}
           showOrderHistory={showOrderHistory}
           setShowOrderHistory={(v) => { setShowOrderHistory(v); if (v) loadOrderHistory(); }}
+          rating={showRating ? ratingSummary : null}
+          onRatingClick={() => setShowRatingSheet(true)}
           onAddToCart={!isStoreOpen ? () => {} : addToCart}
           cartCount={cartCount}
           cartTotal={cartTotal}
@@ -850,7 +941,8 @@ function StorefrontInner() {
               <button onClick={() => setShowOrderHistory(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22, lineHeight: 1 }}>✕</button>
             </div>
             {shopSelling ? (
-              <ShopOrderHistory orders={orderHistory} sym={sym} lang={lang} food={isFnB} primaryColor={primaryColor} paymentQrUrl={tenant.payment_qr_url} />
+              <ShopOrderHistory orders={orderHistory} sym={sym} lang={lang} food={isFnB} primaryColor={primaryColor} paymentQrUrl={tenant.payment_qr_url}
+                renderExtra={(order) => <OrderRateRow order={order} rating={myRatings[order.id]} onPick={(n) => pickRating(order, n)} accent={primaryColor} />} />
             ) : orderHistory.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0' }}><p style={{ fontSize: 36, margin: '0 0 8px' }}>🍽️</p><p style={{ color: '#94a3b8', fontSize: 14 }}>No orders yet</p></div>
             ) : (
@@ -875,6 +967,7 @@ function StorefrontInner() {
                       <span>{t('total')}</span>
                       <span style={{ color: primaryColor }}>{currency} {parseFloat(order.total_amount || 0).toFixed(2)}</span>
                     </div>
+                    <OrderRateRow order={order} rating={myRatings[order.id]} onPick={(n) => pickRating(order, n)} accent={primaryColor} />
                   </div>
                 );
               })
@@ -1140,6 +1233,29 @@ function StorefrontInner() {
         </div>
       )}
 
+      {/* Ratings: the shop's breakdown, the rate window, the once-per-order prompt. */}
+      <RatingSheet open={showRatingSheet} onClose={() => setShowRatingSheet(false)} shopName={tenant?.name} summary={ratingSummary} />
+      <RateOrderSheet
+        open={!!rateTarget}
+        onClose={() => setRateTarget(null)}
+        order={rateTarget?.order}
+        initialStars={rateTarget?.stars}
+        existing={rateTarget ? myRatings[rateTarget.order.id] || null : null}
+        shopName={tenant?.name}
+        signedIn={signedIn}
+        returnPath={window.location.pathname}
+        onRated={onRated}
+        accent={primaryColor}
+      />
+      {promptVisible && (
+        <RatePrompt
+          order={promptOrder}
+          bottom={!isStoreOpen ? 84 : cartCount > 0 ? 76 : 20}
+          onPick={(n) => pickRating(promptOrder, n)}
+          onDismiss={() => { dismissPrompt(promptOrder.id); setPromptOrder(null); }}
+        />
+      )}
+
       {/* The assistant stays mounted (keeping the conversation) while the cart,
           checkout, order history or an item's product screen is open; it just hides. */}
       {products.length > 0 && tenant?.chat_enabled !== false && (isPreview || isStoreOpen) && (
@@ -1147,7 +1263,7 @@ function StorefrontInner() {
           products={products}
           tenant={tenant}
           storefront={storefrontConfig}
-          hidden={showCart || showCheckout || showOrderHistory || showProductModal}
+          hidden={showCart || showCheckout || showOrderHistory || showProductModal || promptVisible}
           onProductSelect={(product) => { setAssistantProductRequest({ product }); setShowProductModal(true); }}
           onAddToCart={addToCart}
           cart={cart}

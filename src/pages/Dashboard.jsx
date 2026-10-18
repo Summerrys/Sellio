@@ -11,7 +11,7 @@ import OrderUsageMeter from '../components/dashboard/OrderUsageMeter';
 import {
   DollarSign, ShoppingCart, Package, Users,
   ClipboardList, ShoppingBag, Grid3X3, QrCode,
-  Shield, Settings, BarChart2, ChevronRight, AlertTriangle, Paintbrush
+  Shield, Settings, BarChart2, ChevronRight, AlertTriangle, Paintbrush, Star
 } from 'lucide-react';
 import StorefrontDesigner from '../components/storefront/StorefrontDesigner';
 import MerchantAssistantWidget from '../components/merchant/MerchantAssistantWidget';
@@ -26,6 +26,7 @@ import { isFnBIndustry } from '@/lib/industry';
 
 const featureCards = [
   { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view', color: 'bg-blue-50 text-blue-600 border-blue-100' },
+  { label: 'Ratings', icon: Star, page: 'Ratings', permission: 'orders.view', color: 'bg-yellow-50 text-yellow-600 border-yellow-100' },
   { label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view', color: 'bg-teal-50 text-teal-600 border-teal-100' },
   { label: 'Products', icon: ShoppingBag, page: 'Products', permission: 'products.view', color: 'bg-purple-50 text-purple-600 border-purple-100' },
   { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view', color: 'bg-pink-50 text-pink-600 border-pink-100' },

@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner';
 import BusinessProfileTab from '../components/settings/BusinessProfileTab';
 import ExploreListingSetting from '../components/settings/ExploreListingSetting';
+import RatingVisibilitySetting from '../components/settings/RatingVisibilitySetting';
 import UserManagement from './UserManagement';
 import PricingModal from '../components/subscription/PricingModal';
 import { useAppRefreshHandler, useAppReloadGuard } from '@/lib/AppRefreshContext';
@@ -332,6 +333,7 @@ function TenantSettingsContent() {
           <div className="max-w-2xl mx-auto">
             <BusinessProfileTab tenant={tenant} tenantId={tenantId} refreshVersion={refreshVersion} />
             <ExploreListingSetting tenantId={tenantId} />
+            {tenant?.seller_type !== 'individual' && <RatingVisibilitySetting tenantId={tenantId} />}
           </div>
         )}
         {settingsTab === 'selling' && showSellingTab && (

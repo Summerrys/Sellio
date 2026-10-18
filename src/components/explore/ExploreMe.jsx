@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Store, LayoutDashboard, Settings, UserRound, ShieldCheck, FileText, LogOut, ChevronRight, Loader2, Copy, Check } from 'lucide-react';
+import { Store, LayoutDashboard, Settings, UserRound, ShieldCheck, FileText, LogOut, ChevronRight, Loader2, Copy, Check, Star } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { useTenant } from '@/components/tenant/TenantContext';
 import { rememberReturnPath } from '@/lib/authNavigation';
+import { ratingText, shopRatingOverview } from '@/lib/ratings';
 import AccountProfileModal from '@/components/profile/AccountProfileModal';
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
 import ShopBell from './ShopBell';
@@ -44,6 +45,19 @@ export default function ExploreMe() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const hasShop = !!appUser?.tenant_id;
+  // The shop's ratings (its staff who see orders): "4.8 from 12 buyers".
+  const canSeeRatings = hasShop && !!tenant?.id && hasPermission('orders.view');
+  const [ratingLine, setRatingLine] = useState(null);
+  useEffect(() => {
+    if (!canSeeRatings) return undefined;
+    let cancelled = false;
+    shopRatingOverview(tenant.id).then((o) => {
+      if (cancelled) return;
+      const count = Number(o?.rating_count) || 0;
+      setRatingLine(count ? `${ratingText(o.rating)} from ${count} ${count === 1 ? 'buyer' : 'buyers'}${o.last_7_days ? ` · ${o.last_7_days} this week` : ''}` : 'No ratings yet');
+    }).catch(() => { if (!cancelled) setRatingLine('See what buyers think'); });
+    return () => { cancelled = true; };
+  }, [canSeeRatings, tenant?.id]);
 
   useEffect(() => {
     const previous = document.title;
@@ -128,6 +142,7 @@ export default function ExploreMe() {
               {hasShop ? (
                 <>
                   <Row to="/Dashboard" icon={LayoutDashboard} label="My shop" detail="Dashboard, orders and listings" />
+                  {canSeeRatings && <Row to="/Ratings" icon={Star} label="Ratings" detail={ratingLine || 'What buyers think of your shop'} />}
                   {hasPermission('settings.view') && (
                     <Row to="/TenantSettings" icon={Settings} label="Settings" detail="Shop details, payments, selling, theme" pulse={settingsPulse} />
                   )}

@@ -31,6 +31,7 @@ const ExploreListings = lazy(() => import('@/components/explore/ExploreListings'
 const ExploreMe = lazy(() => import('@/components/explore/ExploreMe'));
 const ExploreChats = lazy(() => import('@/components/explore/ExploreChats'));
 const ExploreChatThread = lazy(() => import('@/components/explore/ExploreChats').then((m) => ({ default: m.ExploreChatThread })));
+const ShopRatings = lazy(() => import('@/components/ratings/ShopRatingsPage'));
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -157,6 +158,7 @@ const AuthenticatedApp = () => {
         ))}
         <Route path="/Splash" element={<Splash />} />
         <Route path="/UserManagement" element={<LayoutWrapper currentPageName="UserManagement"><UserManagement /></LayoutWrapper>} />
+        <Route path="/Ratings" element={<LayoutWrapper currentPageName="Ratings"><ShopRatings /></LayoutWrapper>} />
         <Route path="/listing/:productId" element={<LayoutWrapper currentPageName="Explore"><ListingPage /></LayoutWrapper>} />
         <Route path="/explore/listings" element={<LayoutWrapper currentPageName="Explore"><ExploreListings /></LayoutWrapper>} />
         <Route path="/explore/me" element={<LayoutWrapper currentPageName="Explore"><ExploreMe /></LayoutWrapper>} />

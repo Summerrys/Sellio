@@ -35,7 +35,8 @@ import {
   MessageCircle,
   House,
   LayoutGrid,
-  CircleUserRound
+  CircleUserRound,
+  Star
 } from 'lucide-react';
 import BottomTabBar from './components/navigation/BottomTabBar';
 import ChatHeaderButton from './components/chat/ChatHeaderButton';
@@ -87,6 +88,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
     { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view' },
     { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view' },
     { label: 'Chats', icon: MessageCircle, page: 'Chats', permission: 'orders.view' },
+    { label: 'Ratings', icon: Star, page: 'Ratings', permission: 'orders.view' },
     { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view' },
     ...(isFnBIndustry(tenant?.industry) ? [{ label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view' }] : []),
     { label: 'User Management', icon: Users, page: 'UserManagement', permission: ['staff.view', 'roles.view'] },

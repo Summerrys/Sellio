@@ -5,7 +5,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Bell, Check, ShoppingBag, AlertTriangle, Users, TrendingUp, Building2, MessageCircle } from 'lucide-react';
+import { Bell, Check, ShoppingBag, AlertTriangle, Users, TrendingUp, Building2, MessageCircle, Star } from 'lucide-react';
 import { useNotifications } from './NotificationProvider';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +22,7 @@ const NOTIFICATION_ICONS = {
   usage_limit_warning: AlertTriangle,
   system_announcement: Bell,
   chat_message: MessageCircle,
+  new_rating: Star,
 };
 
 const NOTIFICATION_COLORS = {
@@ -33,6 +34,7 @@ const NOTIFICATION_COLORS = {
   order_status_changed: 'text-purple-600 bg-purple-100',
   system_announcement: 'text-slate-600 bg-slate-100',
   chat_message: 'text-pink-600 bg-pink-100',
+  new_rating: 'text-amber-600 bg-amber-100',
 };
 
 export default function NotificationBell() {
