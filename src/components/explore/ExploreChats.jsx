@@ -44,7 +44,7 @@ export default function ExploreChats() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <ExploreTabHeader title="Chats" right={<ShopBell />}>
+      <ExploreTabHeader title="Chats" right={<ShopBell withChat={false} />}>
         {appUser && (
           <div className="max-w-6xl mx-auto px-4 pb-2 flex gap-2" role="tablist" aria-label="Chats">
             {BOXES.map(({ key, label }) => {
