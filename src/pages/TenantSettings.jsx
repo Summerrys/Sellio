@@ -333,7 +333,7 @@ function TenantSettingsContent() {
           <div className="max-w-2xl mx-auto">
             <BusinessProfileTab tenant={tenant} tenantId={tenantId} refreshVersion={refreshVersion} />
             <ExploreListingSetting tenantId={tenantId} />
-            {tenant?.seller_type !== 'individual' && <RatingVisibilitySetting tenantId={tenantId} />}
+            <RatingVisibilitySetting tenantId={tenantId} />
           </div>
         )}
         {settingsTab === 'selling' && showSellingTab && (

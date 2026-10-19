@@ -835,7 +835,7 @@ export default function Orders() {
   const STAT_CARDS = isShop ? [
     { label: 'New',       count: pendingCount,   status: 'pending',   bg: 'bg-amber-50',  border: 'border-amber-200',  activeBorder: '#f59e0b', text: 'text-amber-900',  sub: 'text-amber-700' },
     { label: 'Accepted',  count: confirmCount,   status: 'confirmed', bg: 'bg-blue-50',   border: 'border-blue-200',   activeBorder: '#3b82f6', text: 'text-blue-900',   sub: 'text-blue-700' },
-    { label: isFnB ? 'Preparing' : 'Packing', count: preparingCount, status: 'preparing', bg: 'bg-purple-50', border: 'border-purple-200', activeBorder: '#8b5cf6', text: 'text-purple-900', sub: 'text-purple-700' },
+    { label: 'Preparing', count: preparingCount, status: 'preparing', bg: 'bg-purple-50', border: 'border-purple-200', activeBorder: '#8b5cf6', text: 'text-purple-900', sub: 'text-purple-700' },
     { label: 'Ready / Out', count: readyCount,   status: 'ready',     bg: 'bg-green-50',  border: 'border-green-200',  activeBorder: '#10b981', text: 'text-green-900',  sub: 'text-green-700' },
   ] : [
     { label: 'New',       count: pendingCount,   status: 'pending',   bg: 'bg-amber-50',  border: 'border-amber-200',  activeBorder: '#f59e0b', text: 'text-amber-900',  sub: 'text-amber-700' },

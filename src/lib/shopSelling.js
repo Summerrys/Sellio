@@ -9,7 +9,9 @@ export const isShopTenant = (tenant) => tenant?.seller_type === 'individual';
 
 // ── Order steps for a free shop ──────────────────────────────────────────────────
 // The same order statuses as every store (pending → confirmed → preparing → ready →
-// completed, or cancelled), with words that fit a home seller.
+// completed, or cancelled), with words that fit a home seller. A home seller can sell
+// anything, so an order being made or packed is "Preparing" for all of them (the
+// `food` argument is no longer used for words).
 export function shopMethod(order) {
   const method = order?.fulfilment?.method;
   if (method === 'delivery' || method === 'collection') return method;
@@ -20,7 +22,7 @@ export function shopStatusLabel(status, method, food) {
   switch (status) {
     case 'pending': return 'New';
     case 'confirmed': return 'Accepted';
-    case 'preparing': return food ? 'Preparing' : 'Packing';
+    case 'preparing': return 'Preparing';
     case 'ready':
     case 'served': return method === 'delivery' ? 'Out for delivery' : 'Ready for collection';
     case 'completed': return method === 'delivery' ? 'Delivered' : 'Collected';
@@ -33,7 +35,7 @@ export function shopStatusLabel(status, method, food) {
 export function shopNextAction(status, method, food) {
   switch (status) {
     case 'pending': return { label: 'Accept', next: 'confirmed' };
-    case 'confirmed': return { label: food ? 'Start preparing' : 'Start packing', next: 'preparing' };
+    case 'confirmed': return { label: 'Start preparing', next: 'preparing' };
     case 'preparing': return { label: method === 'delivery' ? 'Out for delivery' : 'Ready for collection', next: 'ready' };
     case 'ready':
     case 'served': return { label: method === 'delivery' ? 'Mark delivered' : 'Mark collected', next: 'completed' };
@@ -47,7 +49,7 @@ export function shopStatusTabs(food) {
     { value: 'all', label: 'All' },
     { value: 'pending', label: 'New' },
     { value: 'confirmed', label: 'Accepted' },
-    { value: 'preparing', label: food ? 'Preparing' : 'Packing' },
+    { value: 'preparing', label: 'Preparing' },
     { value: 'ready', label: 'Ready / Out' },
     { value: 'completed', label: 'Done' },
   ];
@@ -291,7 +293,7 @@ const BUYER_STATUS = {
 export function buyerStatusLabel(lang, status, method, food) {
   const words = BUYER_STATUS[lang] || BUYER_STATUS.en;
   let key = status;
-  if (status === 'preparing') key = food ? 'preparing_food' : 'preparing';
+  if (status === 'preparing') key = 'preparing_food';
   else if (status === 'ready' || status === 'served') key = method === 'delivery' ? 'ready_delivery' : 'ready_collection';
   else if (status === 'completed') key = method === 'delivery' ? 'completed_delivery' : 'completed_collection';
   return words[key] || BUYER_STATUS.en[key] || status;

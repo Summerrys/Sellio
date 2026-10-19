@@ -185,7 +185,7 @@ export default function SellingSettingsForm({ tenantId, currencySymbol = '$', on
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">Turn on self-collection, delivery, or both.</p>
       )}
 
-      <Button onClick={save} disabled={saving || (!c.enabled && !d.enabled)} className="w-full h-11" data-testid="selling-save">
+      <Button onClick={save} disabled={saving || (!c.enabled && !d.enabled)} className="w-full h-11 text-white" style={{ background: 'var(--color-primary-gradient, linear-gradient(135deg, #3b82f6, #9333ea))' }} data-testid="selling-save">
         {saving ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Saving…</> : saveLabel}
       </Button>
     </div>

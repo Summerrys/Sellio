@@ -41,7 +41,6 @@ export default function Account() {
   const [showPlans, setShowPlans] = useState(false);
   const [freeOpen, setFreeOpen] = useState(false);
   const [shopName, setShopName] = useState('');
-  const [sellsFood, setSellsFood] = useState(true);
   const [creating, setCreating] = useState(false);
   const [paymentEmail, setPaymentEmail] = useState('');
   const [waitingForPlan, setWaitingForPlan] = useState(false);
@@ -131,7 +130,8 @@ export default function Account() {
     setCreating(true);
     try {
       const supabase = await getSupabase();
-      const { error } = await supabase.rpc('create_personal_store', { p_name: name, p_sells_food: sellsFood });
+      // What a home seller sells isn't asked: a shop can sell anything (p_sells_food: null).
+      const { error } = await supabase.rpc('create_personal_store', { p_name: name, p_sells_food: null });
       if (error) throw error;
       await rememberProfile(supabase, status.email);
       // Full reload so the workspace loads the new shop from scratch (as after onboarding),
@@ -228,18 +228,6 @@ export default function Account() {
                     onChange={(e) => setShopName(e.target.value)}
                     className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400" />
                 </div>
-                <fieldset>
-                  <legend className="block text-sm font-medium text-slate-700 mb-1">What will you sell?</legend>
-                  <div className="flex gap-2">
-                    {[{ value: true, label: 'Food & drinks' }, { value: false, label: 'Other things' }].map((option) => (
-                      <label key={option.label}
-                        className={`flex-1 text-center cursor-pointer px-3 py-2 rounded-xl border text-sm font-medium ${sellsFood === option.value ? 'border-orange-400 bg-orange-50 text-orange-700' : 'border-slate-200 text-slate-600'}`}>
-                        <input type="radio" name="sells" className="sr-only" checked={sellsFood === option.value} onChange={() => setSellsFood(option.value)} />
-                        {option.label}
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
                 <div className="flex gap-2">
                   <button type="submit" disabled={creating}
                     className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-70" style={BUTTON_STYLE}>

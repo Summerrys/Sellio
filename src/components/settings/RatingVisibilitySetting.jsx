@@ -7,9 +7,10 @@ import { Switch } from '@/components/ui/switch';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '@/components/tenant/TenantContext';
 
-// "Show my rating on my ordering page" (tenants.settings.show_rating_on_store; shown
-// unless turned off). A business store's own choice for its ordering page; Explore and
-// listings show the rating either way. Saving needs settings.edit (tenants update policy).
+// "Show my rating on my ordering page" (a home seller's "shop page";
+// tenants.settings.show_rating_on_store; shown unless turned off). The shop's own choice
+// for its own page; Explore and listings show the rating either way. Saving needs
+// settings.edit (tenants update policy).
 export default function RatingVisibilitySetting({ tenantId }) {
   const { tenant, hasPermission } = useTenant();
   const queryClient = useQueryClient();
@@ -17,6 +18,7 @@ export default function RatingVisibilitySetting({ tenantId }) {
   const [saving, setSaving] = useState(false);
   const [override, setOverride] = useState(null);
   const shown = override ?? tenant?.settings?.show_rating_on_store !== false;
+  const page = tenant?.seller_type === 'individual' ? 'shop page' : 'ordering page';
 
   const toggle = async (next) => {
     if (!canEdit || saving || !tenantId) return;
@@ -35,7 +37,7 @@ export default function RatingVisibilitySetting({ tenantId }) {
         .maybeSingle();
       if (error || !data) throw error || new Error('Not saved');
       await queryClient.invalidateQueries({ queryKey: ['currentTenant'] });
-      toast.success(next ? 'Your rating shows on your ordering page' : 'Your rating is hidden on your ordering page');
+      toast.success(next ? `Your rating shows on your ${page}` : `Your rating is hidden on your ${page}`);
     } catch (e) {
       console.warn('Rating visibility update failed:', e);
       setOverride(!next);
@@ -52,9 +54,9 @@ export default function RatingVisibilitySetting({ tenantId }) {
           <Star className="w-5 h-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-slate-900">Show my rating on my ordering page</h3>
+          <h3 className="text-sm font-semibold text-slate-900">Show my rating on my {page}</h3>
           <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-            Your stars show under your name once 3 buyers have rated you. Turn this off to hide them on your own ordering page; Sellio Explore still shows them.
+            Your stars show under your name once 3 buyers have rated you. Turn this off to hide them on your own {page}; Sellio Explore still shows them.
           </p>
           {!canEdit && <p className="text-xs text-slate-400 mt-1">Only staff who can edit business settings can change this.</p>}
         </div>
@@ -62,7 +64,7 @@ export default function RatingVisibilitySetting({ tenantId }) {
           checked={shown}
           onCheckedChange={toggle}
           disabled={!canEdit || saving}
-          aria-label="Show my rating on my ordering page"
+          aria-label={`Show my rating on my ${page}`}
         />
       </div>
     </Card>

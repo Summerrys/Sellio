@@ -600,7 +600,8 @@ function StorefrontInner() {
   };
   // A home seller's stars always show on their shop page; a business can hide them on
   // its own ordering page (Settings → Business). Explore shows them either way.
-  const showRating = !!ratingSummary && (!!shopSelling || tenant?.settings?.show_rating_on_store !== false);
+  // Hidden on the shop's own page when its owner turned it off (Explore still shows it).
+  const showRating = !!ratingSummary && tenant?.settings?.show_rating_on_store !== false;
   const promptVisible = !!promptOrder && !showOrderHistory && !showCart && !showCheckout && !showProductModal && !orderSuccess && !rateTarget && !showRatingSheet;
 
   const checkoutGuard = useRef(false);

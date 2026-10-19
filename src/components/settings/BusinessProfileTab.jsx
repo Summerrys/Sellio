@@ -367,6 +367,8 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
             </div>
           </div>
 
+          {/* A home seller can sell anything, so their shop has no industry. */}
+          {tenant?.seller_type !== 'individual' && (
           <div>
             <Label className="text-xs text-slate-600 mb-1 block">Industry Type</Label>
             <Select value={form.industry} onValueChange={v => set('industry', v)}>
@@ -394,6 +396,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
               </SelectContent>
             </Select>
           </div>
+          )}
         </GatedFields>
         </Section>
       </Card>

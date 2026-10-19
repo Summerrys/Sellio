@@ -8,23 +8,30 @@ import ThemeSelector from '@/components/theme/ThemeSelector';
 import SellingSettingsForm from '@/components/shop/SellingSettingsForm';
 import ShareShop from '@/components/shop/ShareShop';
 import ProductFormDialog from '@/components/products/ProductFormDialog';
+import OnboardingProgress from '@/components/onboarding/OnboardingProgress';
 import { PaymentQRTab } from './TenantSettings';
 import { Button } from '@/components/ui/button';
-import { Loader2, ImagePlus, Plus, Check, ChevronLeft } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Loader2, ImagePlus, Plus, Check, ArrowLeft, ArrowRight, Palette, Truck, QrCode, ShoppingBag, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 import { isShopTenant } from '@/lib/shopSelling';
 
-// Setup steps for a new free shop (after "Sell from home"). Every step can be
-// skipped and changed later in Settings; the Dashboard shows "Finish setting up"
+// Setup steps for a new free shop (after "Sell from home"), in the same look as a
+// business's onboarding: the progress header, a card per step and the gradient
+// buttons, on a full screen (Layout hides the menu and bottom bar here). Every step can
+// be skipped and changed later in Settings; the Dashboard shows "Finish setting up"
 // until the owner finishes here.
+// progress: the step's name under its number in the progress header.
 const STEPS = [
-  { key: 'look', title: 'Your shop’s look', subtitle: 'Add a logo and pick your colours.' },
-  { key: 'selling', title: 'How you sell', subtitle: 'Self-collection, delivery, or both.' },
-  { key: 'payment', title: 'Get paid', subtitle: 'Upload your PayNow or DuitNow QR. Buyers see it after they order.' },
-  { key: 'listings', title: 'Your first listings', subtitle: 'Add what you sell. You can add up to 10 on the free plan.' },
-  { key: 'share', title: 'Share your shop', subtitle: 'Send your store page to your buyers.' },
+  { key: 'look', progress: 'Shop Look', icon: Palette, title: 'Your shop’s look', subtitle: 'Add a logo and pick your colours.' },
+  { key: 'selling', progress: 'How You Sell', icon: Truck, title: 'How you sell', subtitle: 'Self-collection, delivery, or both.' },
+  { key: 'payment', progress: 'Get Paid', icon: QrCode, title: 'Get paid', subtitle: 'Upload your PayNow or DuitNow QR. Buyers see it after they order.' },
+  { key: 'listings', progress: 'Listings', icon: ShoppingBag, title: 'Your first listings', subtitle: 'Add what you sell. You can add up to 10 on the free plan.' },
+  { key: 'share', progress: 'Share Shop', icon: Share2, title: 'Share your shop', subtitle: 'Send your store page to your buyers.' },
 ];
+const GRADIENT_BUTTON = { background: 'var(--color-primary-gradient, linear-gradient(135deg, #3b82f6, #9333ea))', color: '#fff' };
 
 const SYMBOLS = { SGD: '$', MYR: 'RM ' };
 
@@ -135,6 +142,7 @@ export default function ShopSetup() {
   const queryClient = useQueryClient();
   const { tenant, tenantId, isOwner, isLoading } = useTenant();
   const [step, setStep] = useState(0);
+  const [visited, setVisited] = useState([]); // step numbers (1-based) moved past
   const [finishing, setFinishing] = useState(false);
 
   useEffect(() => {
@@ -147,8 +155,12 @@ export default function ShopSetup() {
   }
 
   const current = STEPS[step];
+  const Icon = current.icon;
   const sym = SYMBOLS[tenant.currency] || '$';
-  const next = () => setStep(s => Math.min(s + 1, STEPS.length - 1));
+  const next = () => {
+    setVisited(v => (v.includes(step + 1) ? v : [...v, step + 1]));
+    setStep(s => Math.min(s + 1, STEPS.length - 1));
+  };
   const back = () => setStep(s => Math.max(s - 1, 0));
 
   const finish = async () => {
@@ -167,46 +179,73 @@ export default function ShopSetup() {
   };
 
   return (
-    <div className="max-w-lg mx-auto space-y-5 pb-8" data-testid="shop-setup">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-slate-500">Step {step + 1} of {STEPS.length}</p>
-        <button type="button" onClick={() => navigate(createPageUrl('Dashboard'))} className="text-xs text-slate-500 underline">
-          I&apos;ll finish this later
-        </button>
-      </div>
-      <div className="flex gap-1.5" aria-hidden="true">
-        {STEPS.map((s, i) => (
-          <div key={s.key} className="h-1.5 flex-1 rounded-full" style={{ background: i <= step ? 'rgb(var(--color-primary))' : '#e2e8f0' }} />
-        ))}
-      </div>
-      <div>
-        <h1 className="text-xl font-bold text-slate-900" data-testid="setup-title">{current.title}</h1>
-        <p className="text-sm text-slate-500">{current.subtitle}</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col overflow-x-hidden" data-testid="shop-setup">
+      {/* Header with the progress, as in a business's onboarding */}
+      <div className="bg-white border-b border-slate-100 px-4 py-4" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top, 0px))' }}>
+        <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 1rem' }}>
+          <OnboardingProgress currentStep={step + 1} completedSteps={visited} steps={STEPS.map(s => ({ title: s.progress }))} />
+        </div>
       </div>
 
-      {current.key === 'look' && <LogoStep tenant={tenant} tenantId={tenantId} />}
-      {current.key === 'selling' && (
-        <SellingSettingsForm tenantId={tenantId} currencySymbol={sym} saveLabel="Save and continue" onSaved={next} />
-      )}
-      {current.key === 'payment' && <PaymentQRTab tenant={tenant} tenantId={tenantId} />}
-      {current.key === 'listings' && <ListingsStep tenantId={tenantId} />}
-      {current.key === 'share' && <ShareShop slug={tenant.slug} shopName={tenant.name?.trim()} />}
+      <div className="flex-1 py-4 sm:py-6 overflow-x-hidden">
+        <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 1rem' }} className="w-full min-w-0">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={current.key}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+              className="w-full min-w-0"
+            >
+              <Card className="p-4 sm:p-6 border-0 shadow-lg">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
+                    <Icon className="w-8 h-8 text-white" />
+                  </div>
+                  <p className="text-xs font-medium text-slate-400 mb-1">Step {step + 1} of {STEPS.length}</p>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2" data-testid="setup-title">{current.title}</h1>
+                  <p className="text-slate-600">{current.subtitle}</p>
+                </div>
 
-      <div className="flex gap-2 pt-2">
-        {step > 0 && (
-          <Button variant="outline" className="h-11" onClick={back}>
-            <ChevronLeft className="w-4 h-4" /> Back
-          </Button>
-        )}
-        {current.key === 'share' ? (
-          <Button className="flex-1 h-11" onClick={finish} disabled={finishing} data-testid="setup-finish">
-            {finishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4 mr-1.5" /> Finish</>}
-          </Button>
-        ) : (
-          <Button variant={current.key === 'selling' ? 'outline' : 'default'} className="flex-1 h-11" onClick={next} data-testid="setup-next">
-            {current.key === 'selling' ? 'Skip for now' : 'Next'}
-          </Button>
-        )}
+                {current.key === 'look' && <LogoStep tenant={tenant} tenantId={tenantId} />}
+                {current.key === 'selling' && (
+                  <SellingSettingsForm tenantId={tenantId} currencySymbol={sym} saveLabel="Save and continue" onSaved={next} />
+                )}
+                {current.key === 'payment' && <PaymentQRTab tenant={tenant} tenantId={tenantId} />}
+                {current.key === 'listings' && <ListingsStep tenantId={tenantId} />}
+                {current.key === 'share' && <ShareShop slug={tenant.slug} shopName={tenant.name?.trim()} tenantId={tenantId} />}
+
+                <div className="flex gap-2 pt-6">
+                  {step > 0 && (
+                    <Button variant="outline" className="h-11 px-4 sm:px-6 gap-1" onClick={back}>
+                      <ArrowLeft className="w-4 h-4" /> Back
+                    </Button>
+                  )}
+                  {current.key === 'share' ? (
+                    <Button className="flex-1 h-11 text-white gap-1.5" style={GRADIENT_BUTTON} onClick={finish} disabled={finishing} data-testid="setup-finish">
+                      {finishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> Finish</>}
+                    </Button>
+                  ) : current.key === 'selling' ? (
+                    <Button variant="outline" className="flex-1 h-11" onClick={next} data-testid="setup-next">
+                      Skip for now
+                    </Button>
+                  ) : (
+                    <Button className="flex-1 h-11 text-white gap-1.5" style={GRADIENT_BUTTON} onClick={next} data-testid="setup-next">
+                      Continue <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </Card>
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="text-center pt-4">
+            <button type="button" onClick={() => navigate(createPageUrl('Dashboard'))} className="text-sm text-slate-500 underline underline-offset-2">
+              I&apos;ll finish this later
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

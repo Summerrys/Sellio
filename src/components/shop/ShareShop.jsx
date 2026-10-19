@@ -4,17 +4,26 @@ import { Button } from '@/components/ui/button';
 import { Copy, Check, Download, ExternalLink, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { publicSiteUrl } from '@/lib/accountFlow';
+import { isNativeApp } from '@/lib/nativeApp';
+import { getSupabase } from '@/lib/supabaseClient';
 
 // The free shop's store page link: copy it, share it on WhatsApp, or save a QR code.
 // Always Sellio's own address, even inside the Android app (see publicSiteUrl).
+// Saving the QR: a browser saves it straight from the page. Sellio's Android app can't
+// save files from a page, so there the QR goes online first (it only holds the shop's
+// public link) and "Save QR code" opens it in the phone's browser, which downloads it.
 export function storeLink(slug) {
   return `${publicSiteUrl(window.location)}/store/${encodeURIComponent(slug || '')}`;
 }
 
-export default function ShareShop({ slug, shopName }) {
+export default function ShareShop({ slug, shopName, tenantId }) {
   const link = storeLink(slug);
   const [qr, setQr] = useState('');
   const [copied, setCopied] = useState(false);
+  const inApp = isNativeApp();
+  const fileName = `${slug || 'shop'}-qr.png`;
+  // In the app: the QR's download address, '' when it couldn't be put online.
+  const [appSaveUrl, setAppSaveUrl] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -23,6 +32,26 @@ export default function ShareShop({ slug, shopName }) {
       .catch(() => {});
     return () => { cancelled = true; };
   }, [link]);
+
+  useEffect(() => {
+    if (!inApp || !qr || !tenantId) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const blob = await (await fetch(qr)).blob();
+        const supabase = await getSupabase();
+        const path = `${tenantId}/share/${fileName}`;
+        const { error } = await supabase.storage.from('product-images')
+          .upload(path, blob, { upsert: true, contentType: 'image/png', cacheControl: '300' });
+        if (error) throw error;
+        const { data } = supabase.storage.from('product-images').getPublicUrl(path, { download: fileName });
+        if (!cancelled) setAppSaveUrl(data.publicUrl);
+      } catch {
+        if (!cancelled) setAppSaveUrl('');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [inApp, qr, tenantId, fileName]);
 
   const copy = async () => {
     try {
@@ -59,9 +88,19 @@ export default function ShareShop({ slug, shopName }) {
       {qr && (
         <div className="flex flex-col items-center gap-2">
           <img src={qr} alt="QR code for your store page" className="w-44 h-44 rounded-xl border border-slate-200 bg-white p-2" />
-          <a href={qr} download={`${slug || 'shop'}-qr.png`} className="inline-flex items-center text-sm font-medium text-slate-700 underline">
-            <Download className="w-4 h-4 mr-1" /> Save QR code
-          </a>
+          {!inApp ? (
+            <a href={qr} download={fileName} className="inline-flex items-center text-sm font-medium text-slate-700 underline">
+              <Download className="w-4 h-4 mr-1" /> Save QR code
+            </a>
+          ) : appSaveUrl ? (
+            <a href={appSaveUrl} target="_blank" rel="noreferrer" data-testid="save-qr" className="inline-flex items-center text-sm font-medium text-slate-700 underline">
+              <Download className="w-4 h-4 mr-1" /> Save QR code
+            </a>
+          ) : appSaveUrl === '' ? (
+            <p className="text-xs text-slate-500 text-center">Couldn’t get the QR code ready to save. Take a screenshot of it instead.</p>
+          ) : (
+            <span className="inline-flex items-center text-sm text-slate-400"><Download className="w-4 h-4 mr-1" /> Getting your QR code ready…</span>
+          )}
         </div>
       )}
       <a href={link} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1 text-sm text-slate-500 underline">

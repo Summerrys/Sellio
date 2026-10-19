@@ -498,6 +498,10 @@ function AppLayout({ children, currentPageName }) {
     );
   const bottomSafeAreaInset = isNativeAndroid ? '0px' : 'env(safe-area-inset-bottom, 0px)';
 
+  // Setting up a store fills the screen, with no menu or bottom bar: a business's
+  // onboarding, and a home seller's shop setup (the same look).
+  const setupScreen = currentPageName === 'Onboarding' || currentPageName === 'ShopSetup';
+
   if (publicPages.includes(currentPageName)) {
     return <>{children}</>;
   }
@@ -536,7 +540,7 @@ function AppLayout({ children, currentPageName }) {
       `}</style>
 
       {/* Desktop Sidebar */}
-      {currentPageName !== 'Onboarding' && (
+      {!setupScreen && (
       <aside
         data-tour="desktop-nav"
         className={cn(
@@ -549,7 +553,7 @@ function AppLayout({ children, currentPageName }) {
       )}
 
       {/* Desktop workspace controls share the mobile notification provider. */}
-      {currentPageName !== 'Onboarding' && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (
+      {!setupScreen && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (
         <header
           aria-label="Desktop workspace controls"
           className="hidden lg:flex fixed right-0 top-0 h-16 items-center justify-end border-b border-slate-100 bg-white z-30 transition-[left] duration-300"
@@ -575,7 +579,7 @@ function AppLayout({ children, currentPageName }) {
       )}
 
       {/* Mobile Header — hidden on public storefront routes */}
-      {currentPageName !== 'Onboarding' && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (
+      {!setupScreen && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-100 z-30 flex items-center px-4 justify-between"
         style={{ height: 'calc(56px + env(safe-area-inset-top, 0px))', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="flex items-center gap-2">
@@ -619,12 +623,12 @@ function AppLayout({ children, currentPageName }) {
       <main
         className={cn(
           "flex-1 transition-all duration-300 min-h-screen overflow-x-hidden",
-          (currentPageName === 'Onboarding' || window.location.pathname.startsWith('/store/') || window.location.pathname.startsWith('/order/')) ? "pt-0" : "pt-[calc(56px+env(safe-area-inset-top,0px))] lg:pt-16",
-          currentPageName !== 'Onboarding' && (collapsed ? "lg:ml-[72px]" : "lg:ml-[260px]")
+          (setupScreen || window.location.pathname.startsWith('/store/') || window.location.pathname.startsWith('/order/')) ? "pt-0" : "pt-[calc(56px+env(safe-area-inset-top,0px))] lg:pt-16",
+          !setupScreen && (collapsed ? "lg:ml-[72px]" : "lg:ml-[260px]")
         )}
-        style={{ paddingBottom: currentPageName !== 'Onboarding' ? `calc(${bottomSafeAreaInset} + 72px)` : undefined }}
+        style={{ paddingBottom: !setupScreen ? `calc(${bottomSafeAreaInset} + 72px)` : undefined }}
       >
-        {currentPageName !== 'Onboarding' && (
+        {!setupScreen && (
           <BillingStatusBanner
             subscription={subscription}
             tenantId={tenantId}
@@ -640,7 +644,7 @@ function AppLayout({ children, currentPageName }) {
       </main>
 
       {/* Mobile Bottom Tab Bar — never show on public storefront routes */}
-      {currentPageName !== 'Onboarding' && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (freeShopNav ? (
+      {!setupScreen && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (freeShopNav ? (
         <BottomTabBar
           bottomInset={bottomSafeAreaInset}
           sell={{ to: '/explore/listings?new=1', onClick: (event) => { event.preventDefault(); openSell(); }, pulse: navPulse.products }}
