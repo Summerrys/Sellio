@@ -6,7 +6,7 @@ import { useAppUser } from '@/lib/AppUserContext';
 import { rememberReturnPath } from '@/lib/authNavigation';
 import { exploreItem } from '@/lib/chat';
 import { buyerStatusLabel, formatShopDate, shopMethod } from '@/lib/shopSelling';
-import { myOrderRatings } from '@/lib/ratings';
+import { myOrderRatings, removeMyComment } from '@/lib/ratings';
 import { cancelMyOrder, claimDeviceOrders, fetchPurchase, fetchPurchases } from '@/lib/purchases';
 import { OrderRateRow, RateOrderSheet } from '@/components/ratings/RatingParts';
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
@@ -15,7 +15,8 @@ import { BRAND_COLOR, BRAND_GRADIENT, ShopAvatar, chatUrl, formatPrice, goBack, 
 // My purchases (Me → My purchases): the signed-in buyer's orders from every shop,
 // Ongoing and Past, and each order's page: where it's at (a step-by-step timeline),
 // how it's collected or delivered, the items, paying the seller, chatting with them,
-// cancelling a home seller's order before it's accepted, and rating it once done.
+// cancelling a home seller's order before it's accepted, and rating it once done (and
+// taking the comment down at any time).
 
 const PAGE = 20;
 
@@ -415,6 +416,19 @@ export function PurchaseDetail() {
     setCancelling(false);
   };
 
+  const [removing, setRemoving] = useState(false);
+  const removeComment = async () => {
+    setRemoving(true);
+    try {
+      await removeMyComment(order.id);
+      setRating((r) => (r ? { ...r, note: null, note_public: false, note_state: 'visible' } : r));
+      toast.success('Your comment is removed. Your stars still count.');
+    } catch (e) {
+      toast.error(e.message);
+    }
+    setRemoving(false);
+  };
+
   const chatProduct = (order?.items || []).map((i) => i.product_id).find(Boolean) || null;
   const openChat = async () => {
     if (!chatProduct || opening) return;
@@ -531,6 +545,20 @@ export function PurchaseDetail() {
         {done && (
           <OrderRateRow order={order} rating={rating} onPick={(n) => setRateStars(n)} accent={BRAND_COLOR} />
         )}
+        {done && rating?.note && (
+          <section className="mt-2 bg-white rounded-2xl border border-slate-100 p-4" data-testid="purchase-my-comment">
+            <p className="text-sm text-slate-700 break-words">“{rating.note}”</p>
+            <p className="mt-1 text-xs text-slate-500">
+              {rating.note_state === 'removed' ? 'Removed by Sellio after a review.'
+                : !rating.note_public ? 'Only the seller sees it.'
+                  : rating.note_state === 'reported' ? 'Hidden while Sellio looks at a report.'
+                    : `Shown on ${order.shop_name || 'the shop'}’s page.`}
+            </p>
+            <button type="button" onClick={removeComment} disabled={removing} data-testid="purchase-remove-comment" className="mt-2 text-xs font-semibold text-rose-600 inline-flex items-center gap-1">
+              {removing && <Loader2 className="w-3 h-3 animate-spin" />} Remove my comment
+            </button>
+          </section>
+        )}
 
         <div className="mt-3 space-y-2">
           {chatProduct && (
@@ -576,7 +604,7 @@ export function PurchaseDetail() {
         returnPath={`/explore/purchases/${encodeURIComponent(order.id)}`}
         accent={BRAND_COLOR}
         onRated={(saved) => {
-          setRating({ stars: saved.stars, note: saved.note, can_change: true });
+          setRating({ stars: saved.stars, note: saved.note, can_change: true, note_public: !!saved.note_public, note_state: saved.note_state || 'visible' });
           setRateStars(null);
           toast.success('Thanks for rating!');
         }}

@@ -592,7 +592,7 @@ function StorefrontInner() {
     setRateTarget({ order, stars });
   };
   const onRated = (saved) => {
-    setMyRatings((prev) => ({ ...prev, [saved.order_id]: { order_id: saved.order_id, stars: saved.stars, note: saved.note, can_change: true } }));
+    setMyRatings((prev) => ({ ...prev, [saved.order_id]: { order_id: saved.order_id, stars: saved.stars, note: saved.note, can_change: true, note_public: !!saved.note_public, note_state: saved.note_state || 'visible' } }));
     setRateTarget(null);
     forgetRatingSummary(tenant.id);
     fetchRatingSummaries([tenant.id]).then((found) => setRatingSummary(found[tenant.id] || null));
@@ -1235,7 +1235,7 @@ function StorefrontInner() {
       )}
 
       {/* Ratings: the shop's breakdown, the rate window, the once-per-order prompt. */}
-      <RatingSheet open={showRatingSheet} onClose={() => setShowRatingSheet(false)} shopName={tenant?.name} summary={ratingSummary} />
+      <RatingSheet open={showRatingSheet} onClose={() => setShowRatingSheet(false)} shopName={tenant?.name} summary={ratingSummary} shopId={tenant?.id} />
       <RateOrderSheet
         open={!!rateTarget}
         onClose={() => setRateTarget(null)}

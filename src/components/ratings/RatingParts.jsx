@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { toast } from 'sonner';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { rememberReturnPath } from '@/lib/authNavigation';
-import { NOTE_MAX, STAR_COLOR, STAR_WORDS, rateOrder, ratingText } from '@/lib/ratings';
+import { useAppUser } from '@/lib/AppUserContext';
+import {
+  NOTE_MAX, REPORT_REASONS, STAR_COLOR, STAR_WORDS, isSignedIn, publicName, rateOrder, ratingText, reportComment, shopComments,
+} from '@/lib/ratings';
 
-// The pieces of shop ratings: stars, the "★ 4.8 (12)" pill, the breakdown window, the
-// rate window, the row on a finished order and the one-time prompt on the ordering page.
+// The pieces of shop ratings: stars, the "★ 4.8 (12)" pill, the breakdown window (with
+// buyers' public comments), the rate window, reporting a comment, the row on a finished
+// order and the one-time prompt on the ordering page.
 // Inline styles: these also show on ordering pages, which use the shop's own theme.
 
 const EMPTY = '#cbd5e1';
@@ -73,12 +78,42 @@ function Sheet({ open, onClose, labelledBy, children, zIndex = 1000 }) {
   );
 }
 
-// A shop's average, count and the 5→1 bars.
-export function RatingSheet({ open, onClose, shopName, summary }) {
+const COMMENTS_PAGE = 10;
+const monthYear = (iso) => (iso ? new Date(iso).toLocaleDateString('en-SG', { month: 'short', year: 'numeric' }) : '');
+
+// A shop's average, count and the 5→1 bars, then what buyers say (public comments;
+// shopId given). Each comment can be reported.
+export function RatingSheet({ open, onClose, shopName, summary, shopId = null }) {
   const count = Number(summary?.rating_count) || 0;
   const rows = [5, 4, 3, 2, 1].map((n) => [n, Number(summary?.[`stars_${n}`]) || 0]);
+  const [comments, setComments] = useState([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [reporting, setReporting] = useState(null);
+  const showing = open && !!summary;
+
+  useEffect(() => {
+    if (!showing || !shopId) return undefined;
+    let cancelled = false;
+    shopComments(shopId, 0, COMMENTS_PAGE)
+      .then((list) => { if (!cancelled) { setComments(list); setHasMore(list.length === COMMENTS_PAGE); } })
+      .catch(() => { if (!cancelled) { setComments([]); setHasMore(false); } });
+    return () => { cancelled = true; };
+  }, [showing, shopId]);
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const list = await shopComments(shopId, comments.length, COMMENTS_PAGE);
+      setComments((prev) => [...prev, ...list]);
+      setHasMore(list.length === COMMENTS_PAGE);
+    } catch { /* the button stays */ }
+    setLoadingMore(false);
+  };
+
   return (
-    <Sheet open={open && !!summary} onClose={onClose} labelledBy="rating-sheet-title">
+    <>
+    <Sheet open={showing} onClose={onClose} labelledBy="rating-sheet-title">
       <p id="rating-sheet-title" style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a', paddingRight: 40 }}>{shopName}</p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 12 }}>
         <div style={{ textAlign: 'center', flexShrink: 0 }}>
@@ -98,25 +133,146 @@ export function RatingSheet({ open, onClose, shopName, summary }) {
           ))}
         </div>
       </div>
+      {comments.length > 0 && (
+        <div style={{ marginTop: 18 }} data-testid="rating-comments">
+          <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700, color: '#0f172a' }}>What buyers say</p>
+          {comments.map((c) => (
+            <div key={c.id} data-testid="rating-comment" style={{ padding: '10px 0', borderTop: '1px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{c.rater_name}</span>
+                <Stars value={c.stars} size={11} />
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: '#94a3b8' }}>{monthYear(c.posted_at)}{c.edited ? ' · edited' : ''}</span>
+              </div>
+              <p style={{ margin: '4px 0 0', fontSize: 13, color: '#334155', lineHeight: 1.5, wordBreak: 'break-word' }}>{c.note}</p>
+              {!c.mine && (
+                <button type="button" onClick={() => setReporting(c)} data-testid="report-comment" style={{ marginTop: 4, background: 'none', border: 'none', padding: 0, fontSize: 11, color: '#94a3b8', cursor: 'pointer', textDecoration: 'underline' }}>
+                  Report
+                </button>
+              )}
+            </div>
+          ))}
+          {hasMore && (
+            <button type="button" onClick={loadMore} disabled={loadingMore} style={{ width: '100%', marginTop: 6, height: 36, borderRadius: 999, border: '1px solid #e2e8f0', background: '#fff', fontSize: 13, fontWeight: 600, color: '#334155', cursor: 'pointer' }}>
+              {loadingMore ? 'Loading…' : 'Show more'}
+            </button>
+          )}
+        </div>
+      )}
       <p style={{ margin: '16px 0 0', fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>
         Ratings come only from buyers who ordered on Sellio and got their order. Each buyer counts once (their latest rating).
       </p>
+    </Sheet>
+    <ReportCommentSheet
+      open={!!reporting}
+      comment={reporting}
+      onClose={() => setReporting(null)}
+      onReported={(result) => {
+        if (result?.hidden) setComments((prev) => prev.filter((c) => c.id !== reporting?.id));
+        setReporting(null);
+      }}
+    />
+    </>
+  );
+}
+
+// Report a public comment: why, and anything else to add. Logged out: log in first.
+export function ReportCommentSheet({ open, onClose, comment, onReported }) {
+  const [reason, setReason] = useState(null);
+  const [details, setDetails] = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState(null);
+  const [signedIn, setSignedIn] = useState(true);
+
+  useEffect(() => {
+    if (!open) return;
+    setReason(null);
+    setDetails('');
+    setError(null);
+    isSignedIn().then(setSignedIn);
+  }, [open, comment?.id]);
+
+  const logIn = () => {
+    rememberReturnPath(`${window.location.pathname}${window.location.search}`);
+    window.location.assign('/Auth');
+  };
+
+  const send = async () => {
+    if (!reason || sending) return;
+    setSending(true);
+    setError(null);
+    try {
+      const result = await reportComment(comment.id, reason, details.trim());
+      toast.success(result?.hidden ? 'Thanks. It’s hidden while Sellio takes a look.' : 'Thanks. Sellio will take a look.');
+      onReported?.(result);
+    } catch (e) {
+      if (e.hint === 'sign_in') setSignedIn(false);
+      setError(e.message);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Sheet open={open && !!comment} onClose={() => { if (!sending) onClose(); }} labelledBy="report-comment-title" zIndex={1020}>
+      <p id="report-comment-title" style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#0f172a', paddingRight: 40 }}>Report this comment</p>
+      <p style={{ margin: '8px 0 0', fontSize: 13, color: '#475569', lineHeight: 1.5, background: '#f8fafc', borderRadius: 10, padding: '8px 10px', wordBreak: 'break-word' }}>
+        “{comment?.note}” <span style={{ color: '#94a3b8' }}>— {comment?.rater_name}</span>
+      </p>
+      {!signedIn ? (
+        <>
+          <p style={{ margin: '14px 0 10px', fontSize: 13, color: '#475569' }}>Log in to report a comment, so reports can be trusted.</p>
+          <button type="button" onClick={logIn} style={{ width: '100%', height: 46, borderRadius: 12, border: 'none', background: 'linear-gradient(90deg, #fb923c, #e0449a, #8b2fc9)', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
+            Log in to report
+          </button>
+        </>
+      ) : (
+        <>
+          <div role="radiogroup" aria-label="Why are you reporting it?" style={{ marginTop: 12, display: 'grid', gap: 6 }}>
+            {REPORT_REASONS.map(([value, label]) => (
+              <label key={value} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, border: `1px solid ${reason === value ? '#0f172a' : '#e2e8f0'}`, fontSize: 14, color: '#0f172a', cursor: 'pointer' }}>
+                <input type="radio" name="report-reason" value={value} checked={reason === value} onChange={() => setReason(value)} style={{ width: 16, height: 16 }} />
+                {label}
+              </label>
+            ))}
+          </div>
+          <textarea
+            value={details}
+            maxLength={300}
+            onChange={(e) => setDetails(e.target.value)}
+            placeholder="Anything else we should know? (optional)"
+            rows={2}
+            aria-label="Anything else we should know?"
+            style={{ marginTop: 10, width: '100%', boxSizing: 'border-box', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', resize: 'none', outline: 'none' }}
+          />
+          <button type="button" onClick={send} disabled={!reason || sending} data-testid="report-send" style={{ marginTop: 8, width: '100%', height: 46, borderRadius: 12, border: 'none', background: reason ? '#0f172a' : '#e2e8f0', color: reason ? '#fff' : '#94a3b8', fontWeight: 700, fontSize: 15, cursor: reason && !sending ? 'pointer' : 'default', opacity: sending ? 0.7 : 1 }}>
+            {sending ? 'Sending…' : 'Send report'}
+          </button>
+          <p style={{ margin: '10px 0 0', fontSize: 11, color: '#94a3b8', textAlign: 'center' }}>A reported comment is hidden while Sellio looks at it. The buyer’s stars still count.</p>
+        </>
+      )}
+      {error && signedIn && <p role="alert" style={{ margin: '10px 0 0', fontSize: 13, color: '#dc2626', textAlign: 'center' }}>{error}</p>}
     </Sheet>
   );
 }
 
 // Rate (or change the rating of) a finished order. Signed out: the stars, then log in.
+// The comment shows on the shop's page as "Alicia T." unless the buyer unticks it (then
+// only the seller sees it).
 export function RateOrderSheet({ open, onClose, order, shopName, initialStars = 0, existing = null, signedIn, returnPath, onRated, accent = '#e0449a' }) {
+  const { appUser } = useAppUser() || {};
   const [stars, setStars] = useState(initialStars);
   const [note, setNote] = useState('');
+  const [isPublic, setIsPublic] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [needsLogin, setNeedsLogin] = useState(false);
+  const myName = publicName(appUser?.full_name);
 
   useEffect(() => {
     if (!open) return;
     setStars(initialStars || existing?.stars || 0);
     setNote(existing?.note || '');
+    setIsPublic(existing?.note ? !!existing.note_public : true);
     setError(null);
     setNeedsLogin(false);
   }, [open, order?.id]);
@@ -131,7 +287,7 @@ export function RateOrderSheet({ open, onClose, order, shopName, initialStars = 
     setSaving(true);
     setError(null);
     try {
-      const saved = await rateOrder(order.id, stars, note.trim());
+      const saved = await rateOrder(order.id, stars, note.trim(), isPublic);
       onRated?.(saved);
     } catch (e) {
       if (e.hint === 'sign_in') setNeedsLogin(true);
@@ -178,7 +334,7 @@ export function RateOrderSheet({ open, onClose, order, shopName, initialStars = 
       ) : (
         <>
           <label htmlFor="rate-note" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
-            Anything to tell the seller? <span style={{ fontWeight: 400, color: '#94a3b8' }}>(optional, only they see it)</span>
+            Your comment <span style={{ fontWeight: 400, color: '#94a3b8' }}>(optional)</span>
           </label>
           <textarea
             id="rate-note"
@@ -190,6 +346,21 @@ export function RateOrderSheet({ open, onClose, order, shopName, initialStars = 
             style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', resize: 'none', outline: 'none' }}
           />
           <p style={{ margin: '2px 0 0', fontSize: 11, color: '#94a3b8', textAlign: 'right' }}>{note.length}/{NOTE_MAX}</p>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 4, cursor: 'pointer' }}>
+            <input type="checkbox" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} data-testid="rate-public" style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0, accentColor: accent }} />
+            <span style={{ fontSize: 12, color: '#334155', lineHeight: 1.45 }}>
+              Show my comment on {shopName}’s page as <strong>{myName || 'your first name and initial'}</strong>
+              <span style={{ display: 'block', fontSize: 11, color: '#94a3b8' }}>
+                {isPublic ? 'Leave out phone numbers, addresses and other personal details.' : 'Only the seller will see it.'}
+              </span>
+            </span>
+          </label>
+          {existing?.note && existing?.note_state === 'removed' && (
+            <p data-testid="rate-comment-removed" style={{ margin: '8px 0 0', fontSize: 12, color: '#b45309', lineHeight: 1.45 }}>Sellio removed your comment after a review, so it isn’t shown. Your stars still count.</p>
+          )}
+          {existing?.note && existing?.note_public && existing?.note_state === 'reported' && (
+            <p style={{ margin: '8px 0 0', fontSize: 12, color: '#b45309', lineHeight: 1.45 }}>Your comment is hidden while Sellio looks at a report.</p>
+          )}
           <button type="button" onClick={post} disabled={!stars || saving} style={{ marginTop: 8, width: '100%', height: 48, borderRadius: 12, border: 'none', background: stars ? 'linear-gradient(90deg, #fb923c, #e0449a, #8b2fc9)' : '#e2e8f0', color: stars ? '#fff' : '#94a3b8', fontWeight: 700, fontSize: 15, cursor: stars && !saving ? 'pointer' : 'default', opacity: saving ? 0.7 : 1 }}>
             {saving ? 'Posting…' : existing ? 'Update rating' : 'Post rating'}
           </button>

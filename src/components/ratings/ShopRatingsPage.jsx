@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useTenant } from '@/components/tenant/TenantContext';
 import RequirePermission from '@/components/auth/RequirePermission';
-import { StarIcon, Stars } from '@/components/ratings/RatingParts';
+import { ReportCommentSheet, StarIcon, Stars } from '@/components/ratings/RatingParts';
 import { STAR_COLOR, ratingText, shopRatingOverview, shopRatings } from '@/lib/ratings';
 import { timeAgo } from '@/components/explore/shared';
 
 // Ratings: what buyers think of the shop. Its average and count (buyers see them once
-// 3 buyers have rated), and each rating with the buyer's private note.
+// 3 buyers have rated), and each rating with the buyer's comment: public (on the shop
+// page, which the shop can report) or only for the shop.
 
 const PAGE = 30;
 
@@ -20,6 +21,7 @@ export default function ShopRatings() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [reporting, setReporting] = useState(null);
   const home = tenant?.seller_type === 'individual';
 
   useEffect(() => {
@@ -147,8 +149,21 @@ export default function ShopRatings() {
                       </p>
                       {r.note && (
                         <p className="text-sm text-slate-600 mt-0.5 break-words">
-                          “{r.note}” <span className="text-[11px] text-slate-400">(only you see this)</span>
+                          “{r.note}”{' '}
+                          {!r.note_public && <span className="text-[11px] text-slate-400">(only you see this)</span>}
                         </p>
+                      )}
+                      {r.note && r.note_public && r.note_state === 'visible' && (
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          Shown on your shop page ·{' '}
+                          <button type="button" onClick={() => setReporting({ id: r.id, note: r.note, rater_name: r.rater_name || 'A buyer' })} className="underline" data-testid="shop-report-comment">Report</button>
+                        </p>
+                      )}
+                      {r.note && r.note_public && r.note_state === 'reported' && (
+                        <p className="text-[11px] text-amber-700 mt-0.5">Hidden from your shop page while Sellio looks at a report</p>
+                      )}
+                      {r.note_state === 'removed' && (
+                        <p className="text-[11px] text-slate-400 mt-0.5">Comment removed by Sellio</p>
                       )}
                     </div>
                   ))}
@@ -165,6 +180,12 @@ export default function ShopRatings() {
           </>
         )}
       </div>
+      <ReportCommentSheet
+        open={!!reporting}
+        comment={reporting}
+        onClose={() => setReporting(null)}
+        onReported={() => { setReporting(null); setReloadKey((k) => k + 1); }}
+      />
     </RequirePermission>
   );
 }

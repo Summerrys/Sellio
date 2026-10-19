@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Store, LayoutDashboard, Settings, UserRound, ShieldCheck, FileText, LogOut, ChevronRight, Loader2, Copy, Check, Star, ShoppingBag } from 'lucide-react';
+import { Store, LayoutDashboard, Settings, UserRound, ShieldCheck, FileText, LogOut, ChevronRight, Loader2, Copy, Check, Star, ShoppingBag, Flag } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { useTenant } from '@/components/tenant/TenantContext';
 import { rememberReturnPath } from '@/lib/authNavigation';
-import { ratingText, shopRatingOverview } from '@/lib/ratings';
+import { amIModerator, moderationQueue, ratingText, shopRatingOverview } from '@/lib/ratings';
 import { itemWords } from '@/lib/planFeatures';
 import { purchaseSummary } from '@/lib/purchases';
 import AccountProfileModal from '@/components/profile/AccountProfileModal';
@@ -72,6 +72,19 @@ export default function ExploreMe() {
       const ongoing = Number(s?.ongoing) || 0;
       setPurchasesLine(ongoing ? `${ongoing} on the way` : 'Orders you’ve placed and where they’re at');
     }).catch(() => { if (!cancelled) setPurchasesLine('Orders you’ve placed and where they’re at'); });
+    return () => { cancelled = true; };
+  }, [appUser]);
+
+  // Sellio's moderators: reported comments waiting for review.
+  const [moderation, setModeration] = useState(null);
+  useEffect(() => {
+    if (!appUser) return undefined;
+    let cancelled = false;
+    amIModerator().then(async (yes) => {
+      if (!yes || cancelled) return;
+      const waiting = await moderationQueue(0, 100).then((list) => list.length).catch(() => null);
+      if (!cancelled) setModeration(waiting == null ? 'Reported comments' : waiting ? `${waiting} to review` : 'Nothing to review');
+    });
     return () => { cancelled = true; };
   }, [appUser]);
 
@@ -156,6 +169,11 @@ export default function ExploreMe() {
 
             <section className="mt-4 bg-white rounded-2xl border border-slate-100 overflow-hidden">
               <Row to="/explore/purchases" icon={ShoppingBag} label="My purchases" detail={purchasesLine || 'Orders you’ve placed and where they’re at'} />
+              {moderation && (
+                <div className="border-t border-slate-100">
+                  <Row to="/moderation" icon={Flag} label="Reported comments" detail={moderation} />
+                </div>
+              )}
             </section>
 
             <section className="mt-4 bg-white rounded-2xl border border-slate-100 overflow-hidden divide-y divide-slate-100">

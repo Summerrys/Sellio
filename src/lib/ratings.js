@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
 
 // Shop ratings (Supabase: shop_ratings and its functions). Buyers rate a shop after a
-// completed order: 1–5 stars and an optional note only the shop sees. Everyone sees a
-// shop's average and count once 3 buyers have rated it (each buyer counts once).
+// completed order: 1–5 stars and an optional comment, shown on the shop's page as
+// "Alicia T." when the buyer chooses (checked by the server first: no contact details,
+// addresses, ID numbers or rude words), or kept for the shop only. Everyone sees a shop's
+// average, count and public comments once 3 buyers have rated it (each buyer counts once).
+// Anyone logged in can report a public comment; Sellio's moderators keep or remove it.
 
 export const STAR_WORDS = ['', 'Terrible', 'Not good', 'Okay', 'Good', 'Great'];
 export const STAR_COLOR = '#f59e0b';
@@ -78,9 +81,10 @@ export class RatingError extends Error {
   constructor(message, hint) { super(message); this.hint = hint || null; }
 }
 
-export async function rateOrder(orderId, stars, note) {
+// notePublic: show the comment on the shop's page (with the buyer's first name and initial).
+export async function rateOrder(orderId, stars, note, notePublic = false) {
   const supabase = await getSupabase();
-  const { data, error } = await supabase.rpc('rate_order', { p_order_id: orderId, p_stars: stars, p_note: note || null });
+  const { data, error } = await supabase.rpc('rate_order_v2', { p_order_id: orderId, p_stars: stars, p_note: note || null, p_note_public: !!(note && notePublic) });
   if (error) {
     const signIn = error.hint === 'sign_in' || (error.code === '42501' && /permission denied/i.test(error.message || ''));
     throw new RatingError(signIn ? 'Log in to rate your order.' : (error.message || 'Your rating couldn\'t be saved. Please try again.'), signIn ? 'sign_in' : error.hint);
@@ -88,13 +92,15 @@ export async function rateOrder(orderId, stars, note) {
   return data;
 }
 
-// { [orderId]: { stars, note, can_change } } — the signed-in buyer's own ratings.
+// { [orderId]: { stars, note, can_change, note_public, note_state } } — the signed-in
+// buyer's own ratings. note_state: 'visible' | 'reported' (hidden while it's reviewed) |
+// 'removed' (by Sellio).
 export async function myOrderRatings(orderIds) {
   const ids = (orderIds || []).filter(Boolean);
   if (!ids.length) return {};
   try {
     const supabase = await getSupabase();
-    const { data, error } = await supabase.rpc('my_order_ratings', { p_order_ids: ids.slice(0, 100) });
+    const { data, error } = await supabase.rpc('my_order_ratings_v2', { p_order_ids: ids.slice(0, 100) });
     if (error) throw error;
     return Object.fromEntries((data || []).map((row) => [row.order_id, row]));
   } catch {
@@ -112,9 +118,77 @@ export async function shopRatingOverview(shopId) {
 
 export async function shopRatings(shopId, offset = 0, limit = 30) {
   const supabase = await getSupabase();
-  const { data, error } = await supabase.rpc('get_shop_ratings', { p_tenant_id: shopId, p_limit: limit, p_offset: offset });
+  const { data, error } = await supabase.rpc('get_shop_ratings_v2', { p_tenant_id: shopId, p_limit: limit, p_offset: offset });
   if (error) throw error;
   return data || [];
+}
+
+// The buyer takes their comment down (any time; the stars stay).
+export async function removeMyComment(orderId) {
+  const supabase = await getSupabase();
+  const { error } = await supabase.rpc('remove_my_rating_comment', { p_order_id: orderId });
+  if (error) throw new RatingError(error.message || 'Couldn’t remove it. Please try again.', error.hint);
+}
+
+// "Alicia T.": how a buyer's name shows with a public comment (the server's rule).
+export function publicName(fullName) {
+  const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '';
+  return parts.length > 1 ? `${parts[0].slice(0, 40)} ${parts[1].charAt(0).toUpperCase()}.` : parts[0].slice(0, 40);
+}
+
+// ── Public comments ──
+export async function shopComments(shopId, offset = 0, limit = 10) {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase.rpc('shop_rating_comments', { p_tenant_id: shopId, p_limit: limit, p_offset: offset });
+  if (error) throw error;
+  return data || [];
+}
+
+export const REPORT_REASONS = [
+  ['abuse', 'Rude, hateful or harassing'],
+  ['personal_info', 'Shares someone’s personal details'],
+  ['spam', 'Spam or advertising'],
+  ['not_genuine', 'Not a real experience with this shop'],
+  ['other', 'Something else'],
+];
+
+// { hidden } — whether the comment is now hidden while Sellio reviews it.
+export async function reportComment(ratingId, reason, details) {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase.rpc('report_rating_comment', { p_rating_id: ratingId, p_reason: reason, p_details: details || null });
+  if (error) {
+    const signIn = error.hint === 'sign_in' || (error.code === '42501' && /permission denied/i.test(error.message || ''));
+    throw new RatingError(signIn ? 'Log in to report a comment.' : (error.message || 'Couldn’t send the report. Please try again.'), signIn ? 'sign_in' : error.hint);
+  }
+  return data || {};
+}
+
+// ── Sellio's moderators ──
+export async function amIModerator() {
+  try {
+    const supabase = await getSupabase();
+    const { data, error } = await supabase.rpc('am_i_moderator');
+    if (error) throw error;
+    return data === true;
+  } catch {
+    return false;
+  }
+}
+
+export async function moderationQueue(offset = 0, limit = 30) {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase.rpc('moderation_queue', { p_limit: limit, p_offset: offset });
+  if (error) throw error;
+  return data || [];
+}
+
+// action: 'keep' | 'remove'
+export async function moderateComment(ratingId, action) {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase.rpc('moderate_rating_comment', { p_rating_id: ratingId, p_action: action });
+  if (error) throw error;
+  return data;
 }
 
 // "4.8" for a rating number.

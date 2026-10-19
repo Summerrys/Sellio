@@ -414,7 +414,7 @@ export default function ListingPage() {
               <span className="text-slate-400 text-sm" aria-hidden="true">›</span>
             </button>
           )}
-          <RatingSheet open={ratingOpen} onClose={() => setRatingOpen(false)} shopName={shop.name} summary={shopRating} />
+          <RatingSheet open={ratingOpen} onClose={() => setRatingOpen(false)} shopName={shop.name} summary={shopRating} shopId={shop.id} />
         </section>
 
         {deals.length > 0 && (
