@@ -29,9 +29,7 @@ import {
   Check,
   Store,
   Menu,
-  Monitor,
   Compass,
-  Plus,
   MessageCircle,
   House,
   LayoutGrid,
@@ -39,6 +37,7 @@ import {
   Star
 } from 'lucide-react';
 import BottomTabBar from './components/navigation/BottomTabBar';
+import MerchantTabBar from './components/navigation/MerchantTabBar';
 import ChatHeaderButton from './components/chat/ChatHeaderButton';
 import { useChatUnread } from '@/lib/chat';
 import { getSupabase } from '@/lib/supabaseClient';
@@ -65,6 +64,8 @@ import { SellProvider, useSell } from '@/lib/sell';
 
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth', 'Join', 'Account', 'World', 'Explore'];
+// A business's workspace pages on its bottom bar (Home and Me are on Explore).
+const BUSINESS_TAB_PAGES = ['Products', 'Counter', 'Orders'];
 
 function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription, onOpenProfile, onToggleCollapse, onClose }) {
   const [linkCopied, setLinkCopied] = useState(false);
@@ -339,8 +340,10 @@ function AppLayout({ children, currentPageName }) {
   // A free shop (no counter): Home · Listings · Sell · Chat · Me — the same bar and the
   // same four pages as Explore, so there is one of each. The Dashboard opens from
   // "My shop" (Explore's header and Me); Orders from the top of Listings; Settings from Me.
+  // A business: Home · Products · Counter · Orders · Me (MerchantTabBar), also on Explore.
+  // Either way the Dashboard keeps the menu button in the header, as the shop's home page.
   const freeShopNav = isShopTenant(tenant) && !hasPermission('orders.create');
-  const shopTabPages = freeShopNav ? ['Dashboard', 'Listings', 'Chats', 'Me'] : ['Dashboard', 'Orders', 'Products', 'TenantSettings'];
+  const shopTabPages = freeShopNav ? ['Dashboard', 'Listings', 'Chats', 'Me'] : ['Dashboard', ...BUSINESS_TAB_PAGES];
   // The same count as Explore's Chat tab: chats about things you buy and you sell.
   const shopChats = useChatUnread(freeShopNav);
   const { openSell } = useSell();
@@ -655,111 +658,11 @@ function AppLayout({ children, currentPageName }) {
           }))}
         />
       ) : (
-        <nav
-          data-tour="bottom-nav"
-          className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-30 flex items-stretch"
-          style={{ paddingBottom: bottomSafeAreaInset }}
-        >
-          {/* Left: Dashboard, Products */}
-          {[
-            { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
-            { label: itemWords(tenant?.seller_type).Products, icon: ShoppingBag, page: 'Products', pulse: navPulse.products },
-          ].map(({ label, icon: Icon, page, pulse }) => {
-            const isActive = currentPageName === page;
-            return (
-              <Link
-                key={page}
-                to={createPageUrl(page)}
-                onClick={() => handleTabNavigate(page, isActive)}
-                className={cn(
-                  "relative flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors min-h-[60px]",
-                  isActive ? "text-[rgb(var(--color-primary))]" : "text-slate-400"
-                )}
-              >
-                <span className="relative">
-                  <Icon className="w-5 h-5" />
-                  {pulse && (
-                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--color-primary-gradient)' }} />
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ background: 'var(--color-primary-gradient)' }} />
-                    </span>
-                  )}
-                </span>
-                <span>{label}</span>
-              </Link>
-            );
-          })}
-
-          {/* Center: Counter for stores that take orders at a counter; Sell (a new
-              listing) for free shops, which have no counter. */}
-          {hasPermission('orders.create') ? (
-            <div className="flex-1 flex flex-col items-center justify-end pb-1" style={{ minHeight: 60 }}>
-              <Link
-                to={createPageUrl('Counter')}
-                data-tour="counter-shortcut"
-                aria-label="Counter — take orders"
-                aria-current={currentPageName === 'Counter' ? 'page' : undefined}
-                onClick={() => handleTabNavigate('Counter', currentPageName === 'Counter')}
-                className="flex min-h-11 min-w-11 flex-col items-center gap-0.5 -mt-5 rounded-xl transition-transform active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgb(var(--color-primary))]"
-              >
-                <span
-                  className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg"
-                  style={{ background: 'var(--color-primary-gradient)' }}
-                >
-                  <Monitor className="w-8 h-8 text-white" aria-hidden="true" />
-                </span>
-                <span className="text-xs font-semibold" style={{ color: 'rgb(var(--color-primary))' }}>Counter</span>
-              </Link>
-            </div>
-          ) : isShopTenant(tenant) && hasPermission('products.create') ? (
-            <div className="flex-1 flex flex-col items-center justify-end pb-1" style={{ minHeight: 60 }}>
-              <Link
-                to={`${createPageUrl('Products')}?new=1`}
-                data-tour="sell-shortcut"
-                aria-label="Sell — add a listing"
-                className="flex min-h-11 min-w-11 flex-col items-center gap-0.5 -mt-5 rounded-xl transition-transform active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgb(var(--color-primary))]"
-              >
-                <span
-                  className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg"
-                  style={{ background: 'var(--color-primary-gradient)' }}
-                >
-                  <Plus className="w-7 h-7 text-white" aria-hidden="true" />
-                </span>
-                <span className="text-xs font-semibold" style={{ color: 'rgb(var(--color-primary))' }}>Sell</span>
-              </Link>
-            </div>
-          ) : null}
-
-          {/* Right: Orders, Settings */}
-          {[
-            { label: 'Orders', icon: ClipboardList, page: 'Orders', pulse: navPulse.orders },
-            { label: 'Settings', icon: Settings, page: 'TenantSettings', pulse: navPulse.settings },
-          ].map(({ label, icon: Icon, page, pulse }) => {
-            const isActive = currentPageName === page;
-            return (
-              <Link
-                key={page}
-                to={createPageUrl(page)}
-                onClick={() => handleTabNavigate(page, isActive)}
-                className={cn(
-                  "relative flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors min-h-[60px]",
-                  isActive ? "text-[rgb(var(--color-primary))]" : "text-slate-400"
-                )}
-              >
-                <span className="relative">
-                  <Icon className="w-5 h-5" />
-                  {pulse && (
-                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--color-primary-gradient)' }} />
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ background: 'var(--color-primary-gradient)' }} />
-                    </span>
-                  )}
-                </span>
-                <span>{label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+        <MerchantTabBar
+          active={BUSINESS_TAB_PAGES.includes(currentPageName) ? currentPageName : null}
+          onTab={(key, isActive) => handleTabNavigate(key, isActive)}
+          bottomInset={bottomSafeAreaInset}
+        />
       ))}
 
       <AccountProfileModal

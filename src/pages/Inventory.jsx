@@ -11,6 +11,7 @@ import StockHistoryList from '../components/inventory/StockHistoryList';
 import { Package, Search, LayoutGrid, List, Activity, ChevronRight } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Switch } from '@/components/ui/switch';
+import { itemWords } from '@/lib/planFeatures';
 
 export default function Inventory() {
   return (
@@ -23,6 +24,10 @@ export default function Inventory() {
 function InventoryContent() {
   const { tenantId, tenant, hasPermission } = useTenant();
   const canAdjust = hasPermission('inventory.adjust');
+  // A home seller's shop has listings; a business has products.
+  const words = itemWords(tenant?.seller_type);
+  // Listings have no SKUs to show, and a shop without categories gets no category picker.
+  const isListings = tenant?.seller_type === 'individual';
 
   // Matches the same no-access message pattern used on Products/Categories.
   const handleProductClick = (product) => {
@@ -176,7 +181,7 @@ function InventoryContent() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
-                placeholder="Search products..."
+                placeholder={`Search ${words.products}...`}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 h-11"
@@ -185,6 +190,7 @@ function InventoryContent() {
 
             {/* Filters + View toggle */}
             <div className="flex gap-2 items-center flex-wrap">
+              {!(isListings && categories.length === 0) && (
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="flex-1 min-w-[120px]" style={{ height: 36, background: 'white', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', borderRadius: 8 }}>
                   <SelectValue />
@@ -196,6 +202,7 @@ function InventoryContent() {
                   ))}
                 </SelectContent>
               </Select>
+              )}
 
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="flex-1 min-w-[110px]" style={{ height: 36, background: 'white', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', borderRadius: 8 }}>
@@ -244,8 +251,8 @@ function InventoryContent() {
             ) : sortedProducts.length === 0 ? (
               <EmptyState
                 icon={Package}
-                title={searchQuery || statusFilter !== 'all' || categoryFilter !== 'all' ? "No products found" : "No inventory tracked"}
-                description={searchQuery || statusFilter !== 'all' || categoryFilter !== 'all' ? "Try adjusting your filters" : "Enable inventory tracking on products to see them here"}
+                title={searchQuery || statusFilter !== 'all' || categoryFilter !== 'all' ? `No ${words.products} found` : "No inventory tracked"}
+                description={searchQuery || statusFilter !== 'all' || categoryFilter !== 'all' ? "Try adjusting your filters" : `Enable inventory tracking on ${words.products} to see them here`}
               />
             ) : viewMode === 'grid' ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -269,7 +276,7 @@ function InventoryContent() {
                       <div className="p-3 flex flex-col gap-2">
                         <div>
                           <p style={{ fontWeight: '600', fontSize: '13px', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#0f172a' }}>{product.name}</p>
-                          <p style={{ fontSize: '11px', color: '#6b7280', margin: 0 }}>{product.sku || 'No SKU'}</p>
+                          {!isListings && <p style={{ fontSize: '11px', color: '#6b7280', margin: 0 }}>{product.sku || 'No SKU'}</p>}
                         </div>
                         <div>
                           {product.track_inventory ? (
@@ -320,7 +327,7 @@ function InventoryContent() {
                           {product.name}
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-slate-400">{product.sku || 'No SKU'}</span>
+                          {!isListings && <span className="text-xs text-slate-400">{product.sku || 'No SKU'}</span>}
                           {product.track_inventory ? (
                             <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                               stock === 0 ? 'bg-red-100 text-red-600' :

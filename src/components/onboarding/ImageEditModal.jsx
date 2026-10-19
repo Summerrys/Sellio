@@ -2,6 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, RotateCw, Crop, Undo2, ImagePlus, Save, Trash2 } from 'lucide-react';
 
 const TOOLS = { NONE: 'none', CROP: 'crop' };
+// preserveResolution: save from the photo itself (up to this many px on the long side),
+// not from the small on-screen preview, so an edited photo stays sharp. The upload
+// shrinks it to its own size afterwards (src/lib/imageShrink.js).
+const MAX_SAVED_SIDE = 2400;
 
 export default function ImageEditModal({
   src,
@@ -9,7 +13,7 @@ export default function ImageEditModal({
   onSave,
   onClose,
   cropAspectRatio = null,
-  preserveResolution = false,
+  preserveResolution = true,
   title = 'Edit Image',
   recommendation = '',
 }) {
@@ -173,13 +177,17 @@ export default function ImageEditModal({
 
   const renderCurrentAtNativeResolution = () => {
     const image = imgRef.current;
-    const sourceWidth = image.naturalWidth || image.width;
-    const sourceHeight = image.naturalHeight || image.height;
+    const naturalWidth = image.naturalWidth || image.width;
+    const naturalHeight = image.naturalHeight || image.height;
+    const scale = Math.min(1, MAX_SAVED_SIDE / Math.max(naturalWidth, naturalHeight, 1));
+    const sourceWidth = Math.max(1, Math.round(naturalWidth * scale));
+    const sourceHeight = Math.max(1, Math.round(naturalHeight * scale));
     const swapped = current.rotation % 180 !== 0;
     const output = document.createElement('canvas');
     output.width = swapped ? sourceHeight : sourceWidth;
     output.height = swapped ? sourceWidth : sourceHeight;
     const context = output.getContext('2d');
+    context.imageSmoothingQuality = 'high';
     context.save();
     context.translate(output.width / 2, output.height / 2);
     context.rotate((current.rotation * Math.PI) / 180);

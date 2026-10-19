@@ -6,6 +6,7 @@ import { useAppUser } from '@/lib/AppUserContext';
 import { useTenant } from '@/components/tenant/TenantContext';
 import { rememberReturnPath } from '@/lib/authNavigation';
 import { ratingText, shopRatingOverview } from '@/lib/ratings';
+import { itemWords } from '@/lib/planFeatures';
 import AccountProfileModal from '@/components/profile/AccountProfileModal';
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
 import ShopBell from './ShopBell';
@@ -141,7 +142,7 @@ export default function ExploreMe() {
             <section className="mt-4 bg-white rounded-2xl border border-slate-100 overflow-hidden divide-y divide-slate-100">
               {hasShop ? (
                 <>
-                  <Row to="/Dashboard" icon={LayoutDashboard} label="My shop" detail="Dashboard, orders and listings" />
+                  <Row to="/Dashboard" icon={LayoutDashboard} label="My shop" detail={tenant ? `Dashboard, orders and ${itemWords(tenant.seller_type).products}` : 'Dashboard and orders'} />
                   {canSeeRatings && <Row to="/Ratings" icon={Star} label="Ratings" detail={ratingLine || 'What buyers think of your shop'} />}
                   {hasPermission('settings.view') && (
                     <Row to="/TenantSettings" icon={Settings} label="Settings" detail="Shop details, payments, selling, theme" pulse={settingsPulse} />

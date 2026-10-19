@@ -86,6 +86,24 @@
     <link rel="icon" type="image/png" sizes="64x64" href="/icons/sellio-tab-64.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/sellio-apple-touch-180.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      /* Sellio's app, and Sellio added to a home screen, work like an app: no pinch or
+         double-tap zoom on any page. Sellio in a browser tab keeps zoom. The bridge test
+         is the same as the script above (only the Android app has it). */
+      (function () {
+        var w = window, d = document;
+        var app = (w.ReactNativeWebView && typeof w.ReactNativeWebView.postMessage === 'function') ||
+          (w.__hybrid_bridge && typeof w.__hybrid_bridge.sendMessage === 'function');
+        var installed = false;
+        try { installed = w.matchMedia('(display-mode: standalone)').matches || w.navigator.standalone === true; } catch (e) { /* no matchMedia */ }
+        if (!app && !installed) return;
+        var meta = d.querySelector('meta[name="viewport"]');
+        if (meta) meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+        d.documentElement.setAttribute('data-sellio-no-zoom', '');
+        // iPhone home-screen apps ignore user-scalable=no, so the pinch itself is stopped.
+        d.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
+      })();
+    </script>
     <link rel="preload" as="image" href="/branding/sellio-logo.webp" type="image/webp" />
     <link rel="preload" as="image" href="/branding/sellio-splash-tagline.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -95,7 +113,8 @@
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#ffffff" />
     <style>html, body, #root { background: #ffffff; margin: 0; min-height: 100%; }
-      html[data-sellio-shell] #sellio-prerender { display: none !important; }</style>
+      html[data-sellio-shell] #sellio-prerender { display: none !important; }
+      html[data-sellio-no-zoom] { touch-action: pan-x pan-y; }</style>
     <style>
       /* The Sellio splash while the Android app starts: #sellio-launch-splash below, kept up
          by LaunchSplash.jsx until the first screen is ready. */

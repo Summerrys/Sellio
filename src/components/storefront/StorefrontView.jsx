@@ -120,9 +120,13 @@ function findPreviewScrollParent(startEl) {
 }
 
 const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryColor, cartCount, onCartClick, onHistoryClick, showBackButton = false, isDesktop = false, searchOpen, setSearchOpen, searchQuery, setSearchQuery, stickyTop = 0, safeTop = null, rating = null, onRatingClick }, ref) {
-  const branchName = tenant?.settings?.branch_name;
-  const address = tenant?.address || '';
+  const branchName = (tenant?.settings?.branch_name || '').trim();
+  const address = (tenant?.address || '').trim();
   const truncatedAddress = address.length > 25 ? address.slice(0, 25) + '…' : address;
+  // The line opens Maps: the street address when there is one, else the area the shop
+  // shows (a home seller's, which never includes their collection address).
+  const mapPlace = address || (branchName ? [branchName, tenant?.country].filter(Boolean).join(', ') : '');
+  const mapHref = mapPlace ? `https://maps.google.com/?q=${encodeURIComponent(mapPlace)}` : undefined;
 
   let subLine = '';
   if (branchName && truncatedAddress) {
@@ -190,11 +194,12 @@ const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryC
           )}
           {subLine && (
             <a
-              href={address ? `https://maps.google.com/?q=${encodeURIComponent(address)}` : undefined}
+              href={mapHref}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label={mapHref ? `${subLine.replace('📍 ', '')}, open in Maps` : undefined}
               onClick={e => e.stopPropagation()}
-              style={{ display: 'block', color: '#6b7280', fontSize: sfType(11), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2, textDecoration: 'none' }}
+              style={{ display: 'block', color: '#6b7280', fontSize: sfType(11), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2, textDecoration: 'none', pointerEvents: 'auto' }}
             >
               {subLine}
             </a>

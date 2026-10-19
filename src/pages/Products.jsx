@@ -320,7 +320,7 @@ export default function Products({ embedded = false } = {}) {
   const { tenantId, tenant, subscription, hasPermission, canUseFeature } = useTenant();
   const toMyListings = !embedded && isShopTenant(tenant);
   const isListings = tenant?.seller_type === 'individual';
-  // A free personal shop: "Listings", no menu scan, no Inventory page (its plan).
+  // A free personal shop: "Listings" and no menu scan (its plan); Inventory when its plan has it.
   const words = itemWords(tenant?.seller_type);
   const canScanMenu = !canUseFeature || canUseFeature('can_scan_menu');
   const canUseInventory = !canUseFeature || canUseFeature('can_use_inventory');
@@ -593,9 +593,10 @@ export default function Products({ embedded = false } = {}) {
               <RequirePermission permission="products.create" silent>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Download className={embedded ? 'w-4 h-4 mr-1.5' : 'w-4 h-4 sm:mr-2'} />
-                    <span className={embedded ? '' : 'hidden sm:inline'}>Download</span>
+                  {/* My listings: icons only. Manage products: icons on phones, words on wider screens. */}
+                  <Button variant="outline" size="sm" aria-label={`Download ${words.products}`} title={`Download ${words.products}`} className={embedded ? 'w-9 px-0' : undefined}>
+                    <Download className={embedded ? 'w-4 h-4' : 'w-4 h-4 sm:mr-2'} />
+                    {!embedded && <span className="hidden sm:inline">Download</span>}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -609,9 +610,9 @@ export default function Products({ embedded = false } = {}) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm">
-                  <Upload className={embedded ? 'w-4 h-4 mr-1.5' : 'w-4 h-4 sm:mr-2'} />
-                  <span className={embedded ? '' : 'hidden sm:inline'}>Import</span>
+              <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm" aria-label={`Import ${words.products}`} title={`Import ${words.products}`} className={embedded ? 'w-9 px-0' : undefined}>
+                  <Upload className={embedded ? 'w-4 h-4' : 'w-4 h-4 sm:mr-2'} />
+                  {!embedded && <span className="hidden sm:inline">Import</span>}
                 </Button>
                 {canScanMenu && (
                 <NativeCameraScanControl
@@ -628,28 +629,30 @@ export default function Products({ embedded = false } = {}) {
                   <span className="sm:hidden">Scan</span>
                 </NativeCameraScanControl>
                 )}
-                {embedded && canUseInventory && (
-                  <Button onClick={() => navigate('/Inventory')} variant="outline" size="sm">
-                    <Package className="w-4 h-4 mr-1.5" /> Inventory
-                  </Button>
-                )}
+                {/* My listings: Download · Upload · + Add, with Inventory on the right. */}
                 <Button
                   data-tour="add-product-btn"
                   onClick={handleAdd}
                   size="sm"
-                  className={embedded ? 'text-white gap-1.5 ml-auto' : 'text-white gap-1.5'}
+                  aria-label={embedded && !atProductLimit ? `Add ${words.product}` : undefined}
+                  className="text-white gap-1.5"
                   style={{ background: atProductLimit ? '#cbd5e1' : 'var(--color-primary-gradient)' }}
                   title={atProductLimit ? `${words.Product} limit reached (${maxProducts}) — upgrade to add more` : undefined}
                 >
                   <Plus className="w-4 h-4" />
                   {embedded ? (
-                    <span>{atProductLimit ? 'Limit reached' : `Add ${words.product}`}</span>
+                    <span>{atProductLimit ? 'Limit reached' : 'Add'}</span>
                   ) : (<>
                   <span className="hidden sm:inline">{atProductLimit ? 'Limit Reached' : `Add ${words.Product}`}</span>
                   <span className="sm:hidden">{atProductLimit ? 'Limit' : 'Add'}</span>
                   </>)}
                 </Button>
               </RequirePermission>
+              {embedded && canUseInventory && hasPermission('inventory.view') && (
+                <Button onClick={() => navigate('/Inventory')} variant="outline" size="sm" className="ml-auto">
+                  <Package className="w-4 h-4 mr-1.5" /> Inventory
+                </Button>
+              )}
           </div>
         </div>
 

@@ -70,7 +70,9 @@ export function getDashboardSteps({ hasTakeOrders, hasAiAssistant, hasDesignStor
         </>
       ) : (
         <>
-          Open <strong>{itemsPage}</strong> and use <strong>Add</strong> to create an item. Next, explore <strong>Orders</strong> and <strong>Settings</strong> {isDesktop ? 'in the sidebar' : 'in the bottom navigation'}.
+          Open <strong>{itemsPage}</strong> and use <strong>Add</strong> to create an item. Next, explore {isDesktop
+            ? <><strong>Orders</strong> and <strong>Settings</strong> in the sidebar.</>
+            : <><strong>Orders</strong> in the bottom navigation, and <strong>Settings</strong> under <strong>Me</strong>.</>}
         </>
       ),
     },
@@ -133,7 +135,7 @@ export function getProductsSteps({ tier, listings = false }) {
   return steps;
 }
 
-export function getOrdersSteps({ tier, listings = false }) {
+export function getOrdersSteps({ tier, listings = false, isDesktop = false }) {
   const steps = [
     {
       target: '[data-tour="order-status-cards"]',
@@ -177,7 +179,7 @@ export function getOrdersSteps({ tier, listings = false }) {
     target: 'body',
     placement: 'center',
     title: "You've got Orders covered.",
-    content: listings ? 'Last stop — tap Me below, then Settings.' : 'Last stop — tap Settings below.',
+    content: isDesktop && !listings ? 'Last stop — open Settings in the sidebar.' : 'Last stop — tap Me below, then Settings.',
   });
   return steps;
 }
