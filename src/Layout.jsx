@@ -61,6 +61,7 @@ import PlanFeatureNotice from './components/subscription/PlanFeatureNotice';
 import { PAGE_FEATURES, itemWords } from '@/lib/planFeatures';
 import { isShopTenant } from '@/lib/shopSelling';
 import { SellProvider, useSell } from '@/lib/sell';
+import { inAppFiles, clearExpiredFiles } from '@/lib/appFiles';
 
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth', 'Join', 'Account', 'World', 'Explore'];
@@ -321,6 +322,11 @@ function AppLayout({ children, currentPageName }) {
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [queryClient]);
+  // Sellio's Android app: remove this person's saved files whose link has expired
+  // (lib/appFiles), each time the app opens a shop.
+  useEffect(() => {
+    if (tenant?.id && inAppFiles()) clearExpiredFiles(tenant.id);
+  }, [tenant?.id]);
   // Derived straight from the persisted tour progress rather than an ephemeral
   // signal — so it's correct on a fresh page load too, not just while the
   // Dashboard tour happens to be open. Once Dashboard is done, every remaining

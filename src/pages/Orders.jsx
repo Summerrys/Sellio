@@ -26,6 +26,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import ShopOrderInfo, { ShopMethodBadge } from '@/components/shop/ShopOrderInfo';
 import { isShopTenant, shopMethod, shopNextAction, shopStatusLabel, shopStatusTabs } from '@/lib/shopSelling';
+import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
 
 const STATUS_TABS = [
   { value: 'all',       label: 'All' },
@@ -798,6 +799,10 @@ export default function Orders() {
       ].join(','));
       const shopCsv = '\uFEFF' + ['order_number,status,method,date,buyer,mobile,address,items,delivery_charge,total_amount,payment,created_date', ...shopRows].join('\n');
       const shopBlob = new Blob([shopCsv], { type: 'text/csv;charset=utf-8;' });
+      if (inAppFiles()) {
+        saveFileInApp(shopBlob, `orders_${new Date().toISOString().split('T')[0]}.csv`, { tenantId, label: 'Orders file' });
+        return;
+      }
       const shopUrl = URL.createObjectURL(shopBlob);
       const link = document.createElement('a');
       link.href = shopUrl;
@@ -819,6 +824,10 @@ export default function Orders() {
     });
     const csv = '\uFEFF' + ['order_number,status,table_name,items,total_amount,created_date', ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    if (inAppFiles()) {
+      saveFileInApp(blob, `orders_${new Date().toISOString().split('T')[0]}.csv`, { tenantId, label: 'Orders file' });
+      return;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

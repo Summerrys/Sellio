@@ -26,6 +26,7 @@ import { isShopTenant } from '@/lib/shopSelling';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
 import { applyCanonicalProductOrder } from '@/lib/storefrontCatalog';
 import { useSubscription } from '@/hooks/useSubscription';
+import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
 
 const CSV_HEADERS = ['Name', 'SKU', 'Description', 'Category', 'Price', 'Cost Price', 'Compare At Price', 'Stock Quantity', 'Low Stock Threshold', 'Track Inventory', 'Active', 'Featured', 'Tags', 'Variants', 'Image URL', 'Additional Images'];
 
@@ -477,6 +478,10 @@ export default function Products({ embedded = false } = {}) {
   const handleDownloadTemplate = () => {
     const csv = [CSV_HEADERS.join(','), ...TEMPLATE_ROWS].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
+    if (inAppFiles()) {
+      saveFileInApp(blob, 'product_import_template.csv', { tenantId, label: 'Template' });
+      return;
+    }
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -507,6 +512,10 @@ export default function Products({ embedded = false } = {}) {
 
     const csv = [CSV_HEADERS.join(','), ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
+    if (inAppFiles()) {
+      saveFileInApp(blob, `products_export_${new Date().toISOString().split('T')[0]}.csv`, { tenantId, label: 'Product list' });
+      return;
+    }
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

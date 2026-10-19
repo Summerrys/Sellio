@@ -10,6 +10,23 @@ import { ArrowRight, ArrowLeft, QrCode, Table2, Download, Printer, Pencil, Trash
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 import QR from 'qrcode';
+import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
+import { zipFiles } from '@/lib/xlsxWriter';
+
+// Inside Sellio's Android app the QR codes are saved through the phone's browser
+// (lib/appFiles); all tables' codes go as one .zip there.
+async function saveQrCodesInApp(codes) {
+  if (codes.length === 1) return saveFileInApp(codes[0].url, codes[0].name, { publicQr: true, label: 'QR code' });
+  try {
+    const files = await Promise.all(codes.map(async (c) => ({ name: c.name, data: new Uint8Array(await (await fetch(c.url)).arrayBuffer()) })));
+    const zip = await zipFiles(files, new Date(), { compress: false });
+    return saveFileInApp(new Blob([zip], { type: 'application/zip' }), 'table_QR_codes.zip', { publicQr: true, label: 'QR codes' });
+  } catch (e) {
+    console.warn('Zipping the QR codes failed:', e);
+    toast.error('Couldn’t get the QR codes ready. Please try again.');
+    return false;
+  }
+}
 
 export default function Step4TablesQR({ formData, updateFormData, nextStep, prevStep }) {
   const [setupTables, setSetupTables] = useState(formData.tables && formData.tables.length > 0);
@@ -141,6 +158,13 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   };
 
   const handleBulkDownload = async () => {
+    if (inAppFiles()) {
+      const codes = localTables
+        .map((table, idx) => (qrCodes[table.id] ? { url: qrCodes[table.id], name: `${idx + 1}_${table.name.replace(/\s+/g, '_')}_QR.png` } : null))
+        .filter(Boolean);
+      if (codes.length) saveQrCodesInApp(codes);
+      return;
+    }
     if (typeof window !== 'undefined' && 'JSZip' in window === false) {
       const script = document.createElement('script');
       script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
@@ -164,6 +188,10 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
 
   const handleDownloadSingleQR = () => {
     const qrCode = qrCodes['single'];
+    if (qrCode && inAppFiles()) {
+      saveFileInApp(qrCode, `${singleQrLabel.replace(/\s+/g, '_')}_QR.png`, { publicQr: true, label: 'QR code' });
+      return;
+    }
     if (qrCode) {
       const link = document.createElement('a');
       link.href = qrCode;
@@ -503,7 +531,11 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
               <p className="text-sm text-slate-500">{selectedQR.capacity} pax</p>
               <div className="flex gap-2 w-full">
                 <button
-                  onClick={() => { const link = document.createElement('a'); link.href = qrCodes[selectedQR.id]; link.download = `${selectedQR.name.replace(/\s+/g, '_')}_QR.png`; link.click(); }}
+                  onClick={() => {
+                    const name = `${selectedQR.name.replace(/\s+/g, '_')}_QR.png`;
+                    if (inAppFiles()) { saveFileInApp(qrCodes[selectedQR.id], name, { publicQr: true, label: 'QR code' }); return; }
+                    const link = document.createElement('a'); link.href = qrCodes[selectedQR.id]; link.download = name; link.click();
+                  }}
                   className="flex-1 px-3 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 flex items-center gap-2 justify-center"
                   style={{ background: themeColor }}
                 ><Download className="w-4 h-4" /> Download</button>

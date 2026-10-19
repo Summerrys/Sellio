@@ -27,6 +27,7 @@ import TableCard from '../components/tables/TableCard';
 import { QrCode, Plus, Search, LayoutGrid, List, Trash2, Download, Pencil, CheckCircle2, Users, Clock, Wrench, Check, X, Printer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
 
 const STATUS_CONFIG = {
   available: { label: 'Available', color: 'bg-green-100 text-green-700 border-green-300' },
@@ -275,6 +276,10 @@ export default function Tables() {
     const imageUrl = table.qr_image_url || qrCodes[table.id];
     if (!imageUrl) {
       toast.error('QR code not ready yet. Please wait a moment.');
+      return;
+    }
+    if (inAppFiles()) {
+      saveFileInApp(imageUrl, `QR-${table.name}.png`, { tenantId, label: 'QR code' });
       return;
     }
     if (imageUrl.startsWith('data:')) {

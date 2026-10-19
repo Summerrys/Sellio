@@ -8,13 +8,18 @@ import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
 
 const EMPTY_SUPPLIER = { name: '', phone: '', contact_person: '', notes: '', is_active: true };
 
 const CSV_TEMPLATE_HEADER = 'name,phone,contact_person,email,notes';
 
-function downloadCSV(filename, content) {
+function downloadCSV(filename, content, { tenantId, label } = {}) {
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  if (inAppFiles()) {
+    saveFileInApp(blob, filename, { tenantId, label });
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -31,7 +36,7 @@ export default function SupplierDrawer({ open, onClose, tenantId }) {
   const fileRef = useRef();
 
   const handleDownloadTemplate = () => {
-    downloadCSV('suppliers_template.csv', CSV_TEMPLATE_HEADER + '\n');
+    downloadCSV('suppliers_template.csv', CSV_TEMPLATE_HEADER + '\n', { tenantId, label: 'Template' });
   };
 
   const handleDownloadAll = (suppliers) => {
@@ -41,7 +46,7 @@ export default function SupplierDrawer({ open, onClose, tenantId }) {
         .join(',')
     );
     const csv = 'name,phone,contact_person,email,notes,is_active\n' + rows.join('\n');
-    downloadCSV('suppliers.csv', csv);
+    downloadCSV('suppliers.csv', csv, { tenantId, label: 'Supplier list' });
   };
 
   const { data: suppliers = [], isLoading } = useQuery({

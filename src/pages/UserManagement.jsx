@@ -27,6 +27,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Link } from 'react-router-dom';
+import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
 
 // Visual identity per permission group in the toggle-based Roles editor — reuses
 // the exact same color language as Dashboard's Quick Access cards (Orders=blue,
@@ -217,6 +218,10 @@ function StaffContent({ onUpgrade }) {
   const handleDownloadTemplate = () => {
     const csv = 'name,email,role,status\nJohn Doe,john@example.com,staff,active';
     const blob = new Blob([csv], { type: 'text/csv' });
+    if (inAppFiles()) {
+      saveFileInApp(blob, 'staff_import_template.csv', { tenantId, label: 'Template' });
+      return;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'staff_import_template.csv'; a.click();
     URL.revokeObjectURL(url);
@@ -226,6 +231,10 @@ function StaffContent({ onUpgrade }) {
     const rows = staff.map(m => [m.user_name || '', m.user_email || '', m.role_name || '', m.status || ''].map(csvEscape).join(','));
     const csv = ['name,email,role,status', ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
+    if (inAppFiles()) {
+      saveFileInApp(blob, `staff_export_${new Date().toISOString().split('T')[0]}.csv`, { tenantId, label: 'Staff list' });
+      return;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `staff_export_${new Date().toISOString().split('T')[0]}.csv`; a.click();
     URL.revokeObjectURL(url);

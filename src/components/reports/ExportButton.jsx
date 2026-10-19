@@ -12,14 +12,23 @@ import { reportFileName } from '@/lib/reportData';
 import { buildReportWorkbook } from '@/lib/reportWorkbook';
 import { XLSX_MIME } from '@/lib/xlsxWriter';
 import { deliverFile } from '@/lib/deliverFile';
+import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
+import { useTenant } from '@/components/tenant/TenantContext';
 
 // Excel (.xlsx) and PDF exports of the report on screen. getReport() builds the
 // report (lib/reportData.js) from the data already loaded for the selected
-// period, so the files show the same numbers as the screen.
+// period, so the files show the same numbers as the screen. In Sellio's Android
+// app the file is saved through the phone's browser from private storage, with a
+// link that expires (lib/appFiles).
 export default function ExportButton({ getReport, disabled = false, accent, logoUrl }) {
   const [busy, setBusy] = useState(null);
+  const { tenantId } = useTenant();
 
   const finish = async (blob, filename, label) => {
+    if (inAppFiles()) {
+      await saveFileInApp(blob, filename, { tenantId, label });
+      return;
+    }
     const result = await deliverFile(blob, filename);
     if (result === 'downloaded') toast.success(`${label} downloaded`, { description: filename });
     if (result === 'needs-tap') {
