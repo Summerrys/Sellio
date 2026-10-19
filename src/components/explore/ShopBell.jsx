@@ -6,15 +6,15 @@ import { useChatUnread } from '@/lib/chat';
 import { useBusinessBar } from '@/components/navigation/MerchantTabBar';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
-// The workspace's notification bell (orders, chats, …) on Explore's tabs too, for
-// anyone with a shop — the same bell and the same notifications as My shop.
+// The notification bell on Explore's tabs, for anyone logged in: a shop's orders, chats
+// and ratings (the same bell as My shop), and a buyer's news about their purchases.
 // A business has no Chat tab in its bar, so its chats (buying and selling) sit next to
 // the bell here; a home seller's are in the bar. withChat: false on the Chats page itself.
 export default function ShopBell({ withChat = true }) {
   const { appUser } = useAppUser() || {};
   const hasShop = !!appUser?.tenant_id;
   const business = useBusinessBar(hasShop);
-  if (!hasShop) return null;
+  if (!appUser) return null;
   return (
     <>
       {withChat && business && <ChatsButton />}

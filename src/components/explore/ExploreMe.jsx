@@ -1,19 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Store, LayoutDashboard, Settings, UserRound, ShieldCheck, FileText, LogOut, ChevronRight, Loader2, Copy, Check, Star } from 'lucide-react';
+import { Store, LayoutDashboard, Settings, UserRound, ShieldCheck, FileText, LogOut, ChevronRight, Loader2, Copy, Check, Star, ShoppingBag } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { useTenant } from '@/components/tenant/TenantContext';
 import { rememberReturnPath } from '@/lib/authNavigation';
 import { ratingText, shopRatingOverview } from '@/lib/ratings';
 import { itemWords } from '@/lib/planFeatures';
+import { purchaseSummary } from '@/lib/purchases';
 import AccountProfileModal from '@/components/profile/AccountProfileModal';
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
 import ShopBell from './ShopBell';
 import { BRAND_GRADIENT, ExploreTabHeader, LOGO_URL } from './shared';
 
 // Me — the one Me tab for everyone (a free shop's bar opens this same page): the account,
-// the shop (its link, the Dashboard, Settings) and signing in or out.
+// what they've bought (My purchases), the shop (its link, the Dashboard, Settings) and
+// signing in or out.
 
 function Row({ to, href, icon: Icon, label, detail, onClick, pulse = false }) {
   const inner = (
@@ -59,6 +61,19 @@ export default function ExploreMe() {
     }).catch(() => { if (!cancelled) setRatingLine('See what buyers think'); });
     return () => { cancelled = true; };
   }, [canSeeRatings, tenant?.id]);
+
+  // My purchases: "2 on the way".
+  const [purchasesLine, setPurchasesLine] = useState(null);
+  useEffect(() => {
+    if (!appUser) return undefined;
+    let cancelled = false;
+    purchaseSummary().then((s) => {
+      if (cancelled) return;
+      const ongoing = Number(s?.ongoing) || 0;
+      setPurchasesLine(ongoing ? `${ongoing} on the way` : 'Orders you’ve placed and where they’re at');
+    }).catch(() => { if (!cancelled) setPurchasesLine('Orders you’ve placed and where they’re at'); });
+    return () => { cancelled = true; };
+  }, [appUser]);
 
   useEffect(() => {
     const previous = document.title;
@@ -138,6 +153,10 @@ export default function ExploreMe() {
                 </div>
               </section>
             )}
+
+            <section className="mt-4 bg-white rounded-2xl border border-slate-100 overflow-hidden">
+              <Row to="/explore/purchases" icon={ShoppingBag} label="My purchases" detail={purchasesLine || 'Orders you’ve placed and where they’re at'} />
+            </section>
 
             <section className="mt-4 bg-white rounded-2xl border border-slate-100 overflow-hidden divide-y divide-slate-100">
               {hasShop ? (
