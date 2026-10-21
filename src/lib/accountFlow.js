@@ -26,21 +26,30 @@ export function isStaffLoginEmail(value) {
   return typeof value === 'string' && value.trim().toLowerCase().endsWith('@sellio.app');
 }
 
-// Where emailed links and Google send people back to. Same rule as Auth.jsx.
+// Sellio's own web addresses. Both serve the same app. sellio.apptelier.sg stays the
+// main address: shared links, QR codes and search engines use it.
+export const SELLIO_SITE = 'https://sellio.apptelier.sg';
+export const SELLIO_WEB_ORIGINS = [SELLIO_SITE, 'https://sellio.sg'];
+
+// Where emailed links and Google send people back to: the Sellio address they started
+// on, so sign-in finishes in the same browser storage. Same rule as Auth.jsx.
 export function appBaseUrl(location) {
   const host = location.hostname;
-  if (host === 'localhost' || host.includes('base44.app') || host.includes('base44.com')) {
+  if (host === 'localhost' || host.includes('base44.app') || host.includes('base44.com') ||
+      SELLIO_WEB_ORIGINS.includes(location.origin)) {
     return location.origin;
   }
-  return 'https://sellio.apptelier.sg';
+  return SELLIO_SITE;
 }
 
 // Links a shop shares with its customers (store link, WhatsApp, QR code). The Android
-// app runs on selliosg.base44.app, but customers should always see Sellio's own
-// address. Test hosts keep their own address so links can be tried there.
-export const SELLIO_SITE = 'https://sellio.apptelier.sg';
+// app runs on selliosg.base44.app, but customers should always see Sellio's main
+// address, whichever Sellio address the shop is using. Test hosts keep their own
+// address so links can be tried there.
 export function publicSiteUrl(location) {
-  if (location.hostname === 'selliosg.base44.app') return SELLIO_SITE;
+  if (location.hostname === 'selliosg.base44.app' || SELLIO_WEB_ORIGINS.includes(location.origin)) {
+    return SELLIO_SITE;
+  }
   return appBaseUrl(location);
 }
 
