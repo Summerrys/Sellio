@@ -5,7 +5,7 @@
 // in plain JavaScript, so keep the two in step (tests/20 checks both).
 export const GOOGLE_RELAY_PATH = '/google-signin';
 export const GOOGLE_RELAY_ORIGIN = 'https://sellio.apptelier.sg';
-export const RETURN_ORIGINS = ['https://sellio.apptelier.sg', 'https://selliosg.base44.app'];
+export const RETURN_ORIGINS = ['https://sellio.apptelier.sg', 'https://selliosg.base44.app', 'https://sellio.sg'];
 const CHALLENGE = /^[A-Za-z0-9_-]{43,128}$/;
 
 // True only for <supabase>/auth/v1/authorize?provider=google with a PKCE challenge,
