@@ -24,7 +24,7 @@
             var to = new URL(new URLSearchParams(l.search).get('to') || '');
             var q = to.searchParams;
             var back = new URL(q.get('redirect_to') || '');
-            var apps = ['https://sellio.apptelier.sg', 'https://selliosg.base44.app'];
+            var apps = ['https://sellio.apptelier.sg', 'https://selliosg.base44.app', 'https://sellio.sg'];
             if (to.origin === sb.origin && to.pathname === '/auth/v1/authorize' && q.get('provider') === 'google' &&
                 /^[A-Za-z0-9_-]{43,128}$/.test(q.get('code_challenge') || '') && q.get('code_challenge_method') === 's256' &&
                 apps.indexOf(back.origin) >= 0 && back.searchParams.get('sellio_mobile_oauth') === '1') {
