@@ -24,6 +24,8 @@ Deno.serve(async (req) => {
           'https://selliosg.base44.app/Auth',
           'https://sellio.apptelier.sg',
           'https://sellio.apptelier.sg/Auth',
+          'https://sellio.sg',
+          'https://sellio.sg/Auth',
         ],
       }),
     });
