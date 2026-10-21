@@ -11,6 +11,7 @@ import { completeAuthNavigation } from '@/lib/authNavigation';
 import { startGoogleSignIn } from '@/lib/googleSignIn';
 import { COMPLETE_KEY, clearMobileAuth, hasMobileGoogleCompletion, isNativeAndroid } from '@/lib/mobileOAuth';
 import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
+import { SELLIO_WEB_ORIGINS } from '@/lib/accountFlow';
 
 const BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
 
@@ -19,9 +20,12 @@ const COUNTRY_CODES = [
   { code: '+60', flag: '🇲🇾', name: 'MY', placeholder: '112345678', validate: (p) => /^1\d{8,9}$/.test(p), hint: '9–10 digits, starting with 1' },
 ];
 
+// Same rule as appBaseUrl in src/lib/accountFlow.js: back to the Sellio address the
+// person started on (sellio.apptelier.sg or sellio.sg).
 const getBaseUrl = () => {
   const host = window.location.hostname;
-  if (host === 'localhost' || host.includes('base44.app') || host.includes('base44.com')) {
+  if (host === 'localhost' || host.includes('base44.app') || host.includes('base44.com') ||
+      SELLIO_WEB_ORIGINS.includes(window.location.origin)) {
     return window.location.origin;
   }
   return 'https://sellio.apptelier.sg';
