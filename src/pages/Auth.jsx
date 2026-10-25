@@ -31,6 +31,23 @@ const getBaseUrl = () => {
   return 'https://sellio.apptelier.sg';
 };
 
+// "1 minute" / "15 minutes", for the phone sign-in and reset limits.
+const waitText = (minutes) => {
+  const n = Math.max(1, Math.round(Number(minutes) || 1));
+  return n === 1 ? '1 minute' : `${n} minutes`;
+};
+
+// What to show when phone sign-in (the phone-auth server function) says no.
+const phoneSignInMessage = (result) => {
+  switch (result?.code) {
+    case 'invalid': return 'Phone number or password is incorrect.';
+    case 'locked': return `Too many wrong passwords for this number. Try again in ${waitText(result.retry_after_minutes)}, or reset your password.`;
+    case 'too_many': return `Too many sign-in attempts from this network. Try again in ${waitText(result.retry_after_minutes)}.`;
+    case 'busy': return 'Sign-in is busy right now. Please try again in a minute.';
+    default: return 'Could not sign in right now. Please try again.';
+  }
+};
+
 export default function Auth() {
   const { setAppUser } = useAppUser();
   const [mobileGoogleCompleted] = useState(() => hasMobileGoogleCompletion());
@@ -62,7 +79,7 @@ export default function Auth() {
   const [forgotNewPassword, setForgotNewPassword] = useState('');
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
-  const [forgotUserEmail, setForgotUserEmail] = useState('');
+  const [forgotMaskedEmail, setForgotMaskedEmail] = useState('');
   const [forgotUserTenantId, setForgotUserTenantId] = useState('');
   const [forgotPlan, setForgotPlan] = useState('');
   const [forgotFullPhone, setForgotFullPhone] = useState('');
@@ -398,38 +415,31 @@ export default function Auth() {
       const fullPhone = forgotCountry.code + cleanPhone;
       setForgotFullPhone(fullPhone);
 
-      const { data: appUserRow } = await supabase
-        .rpc('lookup_account_by_phone', { p_phone: fullPhone })
-        .maybeSingle();
+      // Sellio's server (phone-auth) finds the account and sends the reset email in the
+      // background, so the account's email address never reaches the browser: only a
+      // masked one (al•••@gmail.com) comes back to show.
+      const { data: result, error: resetError } = await supabase.functions.invoke('phone-auth', {
+        body: { action: 'reset', phone: fullPhone, redirect_to: `${getBaseUrl()}/Auth?type=recovery` },
+      });
+      if (resetError || !result) throw new Error('Something went wrong. Please try again.');
 
-      if (!appUserRow) {
-        toast.error('No account found for this phone number.');
-        setForgotLoading(false);
+      if (!result.ok) {
+        toast.error(result.code === 'not_found'
+          ? 'No account found for this phone number.'
+          : `Too many reset requests. Please try again in ${waitText(result.retry_after_minutes)}.`);
         return;
       }
 
-      setForgotUserEmail(appUserRow.email || '');
+      setForgotPlan(result.priority_support ? 'pro' : '');
 
-      if (appUserRow.plan) {
-        setForgotPlan(appUserRow.plan);
+      if (result.kind === 'staff') {
+        // Staff logins have no email of their own: the shop owner resets their password.
+        toast.error('Staff passwords are reset by the shop owner. Please ask your owner to reset yours.');
+        return;
       }
 
-      const isRealEmail = appUserRow.email && !appUserRow.email.endsWith('@sellio.app');
-
-      if (isRealEmail) {
-        // FIX: previously awaited resetPasswordForEmail before advancing the UI, so the
-        // user sat on a loading spinner for however long that network round-trip took.
-        // The call itself doesn't return anything the UI needs (Supabase's reset-email
-        // response is generic either way), so show the confirmation screen immediately
-        // and let the actual send happen in the background.
-        setForgotStep(4);
-        supabase.auth.resetPasswordForEmail(appUserRow.email, {
-          redirectTo: `${getBaseUrl()}/Auth?type=recovery`,
-        }).catch(err => console.warn('resetPasswordForEmail warning:', err.message));
-      } else {
-        // No real email on file yet — collect one before we can send a reset link
-        setForgotStep(2);
-      }
+      setForgotMaskedEmail(result.masked_email || '');
+      setForgotStep(4);
     } catch (err) {
       toast.error(err.message || 'Something went wrong. Please try again.');
     } finally {
@@ -514,22 +524,27 @@ export default function Auth() {
       const fullPhone = selectedCountry.code + cleanPhone;
 
       if (isLogin) {
-        const { data: account, error: lookupError } = await supabase
-          .rpc('lookup_account_by_phone', { p_phone: fullPhone })
-          .maybeSingle();
-
-        if (lookupError) throw lookupError;
-        if (!account?.email) throw new Error('No account found for this phone number. Please sign up first.');
-
-        // Supabase Auth validates the password. app_users is profile data only.
-        const { error } = await supabase.auth.signInWithPassword({ email: account.email, password: formData.password });
+        // Sellio's server (phone-auth) checks the phone number and password and hands back
+        // this browser's session, so the account's email address never reaches the browser.
+        // Supabase Auth still validates the password. app_users is profile data only.
+        const { data: result, error: signInError } = await supabase.functions.invoke('phone-auth', {
+          body: { action: 'sign_in', phone: fullPhone, password: formData.password },
+        });
+        if (signInError || !result) throw new Error('Could not sign in right now. Please try again.');
+        if (!result.ok || !result.session?.access_token || !result.session?.refresh_token) {
+          throw new Error(phoneSignInMessage(result));
+        }
+        const { error } = await supabase.auth.setSession({
+          access_token: result.session.access_token,
+          refresh_token: result.session.refresh_token,
+        });
         if (error) throw error;
 
-        // Signed in: the user can now read their own profile row.
+        // Signed in: the user can now read their own profile row (and only that row).
         const { data: rows, error: profileError } = await supabase
           .from('app_users')
           .select('id, email, full_name, role, onboarding_completed, tenant_id, phone')
-          .eq('email', account.email)
+          .eq('phone', fullPhone)
           .limit(1);
         if (profileError) throw profileError;
         const appUserRow = rows?.[0];
@@ -848,6 +863,7 @@ export default function Auth() {
                       </div>
                       <p className="text-sm font-semibold text-slate-800 text-center">Reset link sent!</p>
                       <p className="text-xs text-slate-500 text-center leading-relaxed">
+                        {forgotMaskedEmail ? <>We sent it to <span className="font-semibold text-slate-700">{forgotMaskedEmail}</span>. </> : null}
                         Check your email inbox and click the reset link. It may take a minute to arrive.
                       </p>
                     </div>
