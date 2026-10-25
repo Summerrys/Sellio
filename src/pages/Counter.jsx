@@ -354,29 +354,18 @@ function CounterScreen() {
     }
   };
 
-  // Same steps as "Mark as Paid" on the Orders page, applied to the whole bill.
+  // Settles the whole table bill in one step on the server (settle_table): every unpaid
+  // order is paid with this method, dishes still cooking stay on the Kitchen Display,
+  // cancelled orders are skipped, then the bill closes and the table is freed.
   const settle = async method => {
     if (!session || settling || !target) return;
     setSettling(true);
     try {
       const supabase = await getSupabase();
-      const now = new Date().toISOString();
-      const ids = Array.isArray(session.order_ids) ? session.order_ids : [];
-      if (ids.length) {
-        const { error } = await supabase.from('orders')
-          .update({ payment_status: 'paid', status: 'completed', payment_method: method, updated_date: now })
-          .in('id', ids)
-          .eq('tenant_id', tenantId)
-          .neq('payment_status', 'paid');
-        if (error) throw error;
-      }
-      await supabase.from('tables').update({ status: 'available', updated_date: now })
-        .eq('id', target.tableId).eq('tenant_id', tenantId);
-      const { error: sErr } = await supabase.from('table_sessions')
-        .update({ status: 'completed', ended_at: now, updated_date: now })
-        .eq('id', session.id);
-      if (sErr) throw sErr;
-      toast.success(`${target.label} settled · ${money(session.total_amount)}`);
+      const { data, error } = await supabase.rpc('settle_table', { p_session_id: session.id, p_method: method });
+      if (error) throw error;
+      if (data?.already_closed) toast.info(`${target.label} was already settled.`);
+      else toast.success(`${target.label} settled · ${money(data?.amount ?? session.total_amount)}`);
       setSettleOpen(false);
       await loadSessions();
       if (!lines.length) { backToTables(); setTarget(null); }

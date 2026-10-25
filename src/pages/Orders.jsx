@@ -110,6 +110,8 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
   const canPrintChit = hasPermission('orders.print_chit');
   const [showEditOrder, setShowEditOrder] = useState(false);
   const [showPaymentQR, setShowPaymentQR] = useState(false);
+  const [payBusy, setPayBusy] = useState(false);
+  const [tableBill, setTableBill] = useState(null);
   const isFinal = order.status === 'completed' || order.status === 'cancelled';
   // Free shops (step 15): steps and words for collection or delivery.
   const isShop = isShopTenant(tenant);
@@ -125,6 +127,32 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
   const [receiptPrinting, setReceiptPrinting] = useState(false);
   const [chitPrinting, setChitPrinting] = useState(false);
   const [showChit, setShowChit] = useState(false);
+  const qrPayLabel = tenant?.currency === 'MYR' ? 'QR · DuitNow / TNG' : 'QR · PayNow';
+
+  useEffect(() => {
+    if (!showPaymentQR || !order.table_id) { setTableBill(null); return undefined; }
+    let live = true;
+    (async () => {
+      const supabase = await getSupabase();
+      const { data } = await supabase.from('table_sessions')
+        .select('total_amount, order_ids')
+        .eq('tenant_id', tenantId).eq('table_id', order.table_id).eq('status', 'active')
+        .limit(1).maybeSingle();
+      const ids = Array.isArray(data?.order_ids) ? data.order_ids : [];
+      if (live) setTableBill(data && ids.includes(order.id) ? { total: Number(data.total_amount) || 0 } : null);
+    })().catch(() => { if (live) setTableBill(null); });
+    return () => { live = false; };
+  }, [showPaymentQR, order.table_id, order.id, tenantId]);
+
+  const pay = async (method) => {
+    if (payBusy) return;
+    setPayBusy(true);
+    try {
+      if (await onMarkPaid(order, isShop, method)) setShowPaymentQR(false);
+    } finally {
+      setPayBusy(false);
+    }
+  };
 
   const handlePrintChit = async (e) => {
     e?.stopPropagation();
@@ -276,7 +304,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 </button>
               ) : (
                 <button
-                  onClick={(e) => { e.stopPropagation(); onMarkPaid(order, isShop); }}
+                  onClick={(e) => { e.stopPropagation(); setShowPaymentQR(true); }}
                   className="flex-1 h-11 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
                   style={{ border: '1.5px solid #16a34a', color: '#16a34a', background: '#f0fdf4' }}
                   onMouseEnter={e => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.color = '#fff'; }}
@@ -456,34 +484,53 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
         />
       )}
 
-      {/* Payment QR Sheet — frontline staff shows this to the customer, collects
-          payment, then confirms from right here rather than a separate blind
-          "Mark as Paid" button with nothing guiding the actual payment step. */}
+      {/* Payment sheet: shows the shop's payment QR when one is uploaded, then records how
+          the customer paid (cash, QR or card). A table order settles the whole table bill,
+          since each table pays once for everything it ordered. */}
       {showPaymentQR && (
         <div
           style={{ position: 'fixed', inset: 0, zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, background: 'rgba(0,0,0,0.6)' }}
-          onClick={() => setShowPaymentQR(false)}
+          onClick={() => { if (!payBusy) setShowPaymentQR(false); }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={tableBill ? `Settle ${order.table_name || 'table'}` : 'Take payment'}
             style={{ background: 'white', borderRadius: 20, padding: '24px 22px', maxWidth: 340, width: '100%', textAlign: 'center' }}
             onClick={e => e.stopPropagation()}
           >
-            <p style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{paymentQrLabel || 'Scan to Pay'}</p>
-            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#64748b' }}>
-              #{order.order_number || order.id?.slice(-6)} · {currency} {parseFloat(order.total_amount || 0).toFixed(2)}
+            <p style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
+              {tableBill ? `Settle ${order.table_name || 'table'}` : (paymentQrUrl ? (paymentQrLabel || 'Scan to Pay') : 'Take payment')}
             </p>
-            <img
-              src={paymentQrUrl}
-              alt="Payment QR"
-              style={{ width: '100%', maxWidth: 240, aspectRatio: '1', objectFit: 'contain', borderRadius: 12, border: '1px solid #f1f5f9', margin: '0 auto 20px' }}
-            />
+            <p style={{ margin: '0 0 4px', fontSize: 13, color: '#64748b' }}>
+              {tableBill
+                ? `Whole table bill · ${currency} ${tableBill.total.toFixed(2)}`
+                : `#${order.order_number || order.id?.slice(-6)} · ${currency} ${parseFloat(order.total_amount || 0).toFixed(2)}`}
+            </p>
+            <p style={{ margin: '0 0 16px', fontSize: 12, color: '#94a3b8' }}>
+              {tableBill ? 'Pays every order on this table and frees the table.' : 'How did the customer pay?'}
+            </p>
+            {paymentQrUrl && (
+              <img
+                src={paymentQrUrl}
+                alt="Payment QR"
+                style={{ width: '100%', maxWidth: 240, aspectRatio: '1', objectFit: 'contain', borderRadius: 12, border: '1px solid #f1f5f9', margin: '0 auto 20px' }}
+              />
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: 8 }}>
+              {[['cash', 'Cash'], ['qr', qrPayLabel], ['card', 'Card']].map(([m, l]) => (
+                <button
+                  key={m}
+                  disabled={payBusy}
+                  onClick={() => pay(m)}
+                  style={{ minHeight: 48, padding: '8px 4px', borderRadius: 12, border: 'none', background: '#16a34a', color: 'white', fontSize: 13, fontWeight: 700, lineHeight: 1.2, cursor: payBusy ? 'default' : 'pointer', opacity: payBusy ? 0.6 : 1 }}
+                >
+                  {payBusy ? '…' : l}
+                </button>
+              ))}
+            </div>
             <button
-              onClick={() => { onMarkPaid(order, isShop); setShowPaymentQR(false); }}
-              style={{ width: '100%', padding: '13px', borderRadius: 12, border: 'none', background: '#16a34a', color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}
-            >
-              💳 Mark as Paid
-            </button>
-            <button
+              disabled={payBusy}
               onClick={() => setShowPaymentQR(false)}
               style={{ width: '100%', padding: '11px', borderRadius: 12, border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
             >
@@ -738,35 +785,30 @@ export default function Orders() {
     toast.success('Order updated');
   };
 
-  const handleMarkPaid = async (order, keepStep = false) => {
+  // One bill per table: paying a table order settles the whole table (mark_order_paid
+  // calls settle_table on the server). Other orders are paid on their own, as before.
+  // Free shops keep the order's step (it still has to be collected or delivered).
+  const handleMarkPaid = async (order, keepStep = false, method = 'cash') => {
     const supabase = await getSupabase();
-    // Free shops: paying doesn't finish the order (it still has to be collected or delivered).
-    const { error: paymentError } = await supabase.from('orders').update({
-      payment_status: 'paid',
-      ...(keepStep ? {} : { status: 'completed' }),
-      updated_date: new Date().toISOString(),
-    }).eq('id', order.id).eq('tenant_id', tenantId);
-    if (paymentError) { toast.error('Could not mark this order as paid'); return; }
-
-    if (order.table_id) {
-      await supabase.from('tables').update({
-        status: 'available',
-        updated_date: new Date().toISOString(),
-      }).eq('id', order.table_id);
-
-      await supabase.from('table_sessions').update({
-        status: 'completed',
-        ended_at: new Date().toISOString(),
-        updated_date: new Date().toISOString(),
-      }).eq('table_id', order.table_id)
-        .eq('tenant_id', tenantId)
-        .eq('status', 'active');
+    const { data, error } = await supabase.rpc('mark_order_paid', {
+      p_order_id: order.id, p_method: method, p_keep_step: keepStep,
+    });
+    if (error) {
+      const known = error.code === '22023' || error.code === 'P0002';
+      toast.error(known ? error.message : 'Could not mark this order as paid');
+      return false;
     }
-
-    setOrders(prev => prev.map(o =>
-      o.id === order.id ? { ...o, payment_status: 'paid', ...(keepStep ? {} : { status: 'completed' }) } : o
-    ));
-    toast.success('Marked as paid ✓');
+    if (data?.scope === 'table') {
+      if (data.already_closed) toast.info('This table was already settled.');
+      else toast.success(`${order.table_name || 'Table'} settled · ${currency} ${Number(data.amount || 0).toFixed(2)}`);
+      await fetchOrders();
+    } else {
+      setOrders(prev => prev.map(o =>
+        o.id === order.id ? { ...o, payment_status: 'paid', payment_method: method, ...(keepStep ? {} : { status: 'completed' }) } : o
+      ));
+      toast.success(data?.already_paid ? 'Already marked as paid' : 'Marked as paid ✓');
+    }
+    return true;
   };
 
   const pendingCheckouts = useSyncExternalStore(subscribePendingCheckouts, getPendingCheckouts, getPendingCheckouts).filter(item => item.tenantId === tenantId);
