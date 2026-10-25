@@ -1,4 +1,4 @@
-import { loadPrinterConfig, buildOrderReceipt, buildOrderChit, sendViaBluetooth, sendViaEpsonEPos } from '@/lib/printerUtils';
+import { loadPrinterConfig, buildOrderReceipt, buildOrderChit, buildTableReceipt, sendViaBluetooth, sendViaEpsonEPos } from '@/lib/printerUtils';
 
 let queue = Promise.resolve();
 function serialPrint(tenantId, work) {
@@ -26,6 +26,17 @@ async function sendOrder(order, tenant, config, kind) {
 
 export function printCounterOrder(order, tenantId, tenant, kind = 'receipt') {
   return serialPrint(tenantId, () => sendOrder(order, tenant, loadPrinterConfig(tenantId), kind));
+}
+
+// One receipt for a whole table bill (every round), from tableBill.js.
+export function printTableBill(bill, tenantId, tenant) {
+  return serialPrint(tenantId, async () => {
+    const config = loadPrinterConfig(tenantId);
+    if (!hasKitchenPrinter(config)) throw new Error('Connect a compatible receipt printer in Settings → Business → Receipt Printer.');
+    const bytes = buildTableReceipt(bill, tenant?.currency || 'SGD', tenant?.name, tenant?.receipt_paper_size);
+    if (config.mode === 'bluetooth') await sendViaBluetooth(config.deviceName, bytes);
+    else await sendViaEpsonEPos(config.ip, bytes, tenant?.name);
+  });
 }
 
 // A printer can accept bytes and then lose its connection. Automatic retries

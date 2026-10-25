@@ -34,14 +34,33 @@ globalThis.__toasts = [];
 globalThis.__prints = [];
 let failSend = false, resolveSend, holdSend = false;
 const requests=[];
+// Table bills and their orders come from __dbRows and honour eq/in filters, so open
+// and settled bills behave as they do on the server.
+globalThis.__dbRows = {};
 globalThis.__client = {
-  from: table => { const query = {}; for (const name of ['select','eq','gte','order','limit','update','in','neq']) query[name]=()=>query;
-    query.then=resolve=>Promise.resolve({ data:table==='tables'?[{id:'t1',name:'Table 1',zone:'Main'}]:[],error:null }).then(resolve);return query; },
+  from: table => { const query = {}, eqs = [], ins = [];
+    for (const name of ['select','gte','order','limit','update','neq']) query[name]=()=>query;
+    query.eq=(col,val)=>{eqs.push([col,val]);return query;};
+    query.in=(col,vals)=>{ins.push([col,vals]);return query;};
+    query.then=resolve=>{
+      const rows = __dbRows[table]
+        ? __dbRows[table].filter(r=>eqs.every(([c,v])=>r[c]===v)&&ins.every(([c,vs])=>vs.includes(r[c])))
+        : table==='tables'?[{id:'t1',name:'Table 1',zone:'Main'}]:[];
+      return Promise.resolve({ data:rows.map(r=>({...r})),error:null }).then(resolve);
+    };
+    return query; },
   rpc:async (name,payload)=>{
     requests.push({name,payload});
+    if(name==='settle_table'){
+      const s=(__dbRows.table_sessions||[]).find(x=>x.id===payload.p_session_id);
+      let amount=0,count=0;
+      for(const o of __dbRows.orders||[]) if(s.order_ids.includes(o.id)&&o.status!=='cancelled'&&o.payment_status!=='paid'){o.payment_status='paid';o.payment_method=payload.p_method;amount+=o.total_amount;count++;}
+      s.status='completed';
+      return {data:{settled:true,amount,orders:count,table_id:s.table_id},error:null};
+    }
     if(failSend) return {error:{message:'Network failed'}};
     if(holdSend) await new Promise(r=>{resolveSend=r;});
-    return { data:{ id:'order-fixture', tenant_id:'counter-test',order_number:'ORD-FIXTURE',total_amount:payload.p_items.reduce((s,i)=>s+i.quantity*2,0),payment_status:'unpaid',items:payload.p_items.map(i=>({name:i.product_id,quantity:i.quantity,price:2,variant:i.options.map(x=>x.label).join(', ')})),status:'pending' },error:null };
+    return { data:{ id:'order-fixture', tenant_id:'counter-test',table_id:payload.p_table_id||null,order_number:'ORD-FIXTURE',total_amount:payload.p_items.reduce((s,i)=>s+i.quantity*2,0),payment_status:'unpaid',items:payload.p_items.map(i=>({name:i.product_id,quantity:i.quantity,price:2,variant:i.options.map(x=>x.label).join(', ')})),status:'pending' },error:null };
   },
 };
 const mocks = { name:'counter-fixtures',setup(b){
@@ -50,8 +69,8 @@ const mocks = { name:'counter-fixtures',setup(b){
     client:'export const getSupabase = async () => globalThis.__client;',
     permission:'export default function Permission({children}) { return children; }',
     catalog:'export const fetchStorefrontCatalog = async () => globalThis.__catalog;',
-    toast:'export const toast={success:(...x)=>globalThis.__toasts.push(x),error:(...x)=>globalThis.__toasts.push(x)};',
-    printer:`export const loadPrinterConfig=id=>JSON.parse(localStorage.getItem('sellio_printer_'+id)||'null'); export const buildOrderReceipt=order=>new Uint8Array([1]); export const buildOrderChit=order=>new Uint8Array([2]); export const sendViaBluetooth=async(name,bytes)=>{globalThis.__prints.push({name,kind:bytes[0]});if(globalThis.__printFails)throw Error('Paper out');}; export const sendViaEpsonEPos=sendViaBluetooth;`,
+    toast:'export const toast={success:(...x)=>globalThis.__toasts.push(x),error:(...x)=>globalThis.__toasts.push(x),info:(...x)=>globalThis.__toasts.push(x)};',
+    printer:`export const loadPrinterConfig=id=>JSON.parse(localStorage.getItem('sellio_printer_'+id)||'null'); export const buildOrderReceipt=order=>new Uint8Array([1]); export const buildOrderChit=order=>new Uint8Array([2]); export const buildTableReceipt=bill=>{globalThis.__lastTableBill=bill;return new Uint8Array([3]);}; export const sendViaBluetooth=async(name,bytes)=>{globalThis.__prints.push({name,kind:bytes[0]});if(globalThis.__printFails)throw Error('Paper out');}; export const sendViaEpsonEPos=sendViaBluetooth;`,
   };
   b.onResolve({filter:/TenantContext$/},()=>({path:'tenant',namespace:'mock'}));
   b.onResolve({filter:/supabaseClient$/},()=>({path:'client',namespace:'mock'}));
@@ -151,6 +170,54 @@ try{
  await click(button(restored,'Print kitchen chit'));assert.equal(__prints.at(-1).kind,2);
  await click(button(restored,'Continue taking orders'));assert.equal(restored.querySelector('[aria-label="Order sent"]'),null);
  pass('Confirmed order offers receipt, kitchen print and continuing; server result is displayed');
+ const at = m => new Date(Date.UTC(2026, 9, 25, 11, m)).toISOString();
+ __dbRows.table_sessions=[{id:'s1',tenant_id:'counter-test',table_id:'t1',table_name:'Table 1',status:'active',order_ids:['r1','r2','r3'],total_amount:9,started_at:at(0)}];
+ __dbRows.orders=[
+  {id:'r2',tenant_id:'counter-test',table_id:'t1',table_name:'Table 1',order_number:'ORD-000002',status:'ready',payment_status:'unpaid',payment_method:'pending',created_date:at(20),items:[{name:'Americano',price:3.5,quantity:1,variant:'Small, Hot'}],subtotal:3.5,total_amount:3.5},
+  {id:'r1',tenant_id:'counter-test',table_id:'t1',table_name:'Table 1',order_number:'ORD-000001',status:'preparing',payment_status:'unpaid',payment_method:'pending',created_date:at(5),items:[{name:'Americano',price:3.5,quantity:1,variant:'Small, Hot'},{name:'Toast',price:2,quantity:1,notes:'no butter'}],subtotal:5.5,total_amount:5.5},
+  {id:'r3',tenant_id:'counter-test',table_id:'t1',table_name:'Table 1',order_number:'ORD-000003',status:'cancelled',payment_status:'unpaid',payment_method:'pending',created_date:at(30),items:[{name:'Rice',price:4,quantity:1}],subtotal:4,total_amount:4},
+ ];
+ await act(async()=>{for(const {root} of roots.slice(1))root.unmount();await tick();});
+ const tbl=await mount(Counter);
+ const tile=tbl.querySelector('.ctr-tile');assert.ok(tile.classList.contains('busy'));assert.match(tile.textContent,/\$9\.00/);
+ await click(tile);await act(async()=>{await tick();await tick();});
+ assert.match(tbl.querySelector('.ctr-bill-bar').textContent,/Bill \$9\.00 · 2 orders/);
+ const sent=tbl.querySelector('[aria-label="Already ordered"]');assert.ok(sent,'Occupied table lists what was already ordered');
+ const rounds=[...sent.querySelectorAll('.ctr-round')];assert.equal(rounds.length,3);
+ assert.match(rounds[0].textContent,/Round 1 · ORD-000001/);assert.match(rounds[0].textContent,/Preparing/);assert.match(rounds[0].textContent,/no butter/);
+ assert.match(rounds[1].textContent,/Round 2 · ORD-000002/);assert.match(rounds[1].textContent,/Ready/);
+ assert.ok(rounds[2].classList.contains('void'));assert.match(rounds[2].textContent,/Cancelled/);
+ assert.match(sent.querySelector('.ctr-sent-head').textContent,/\$9\.00/);assert.ok(tbl.querySelector('.ctr-new-head'));
+ pass('An occupied table shows every round, its kitchen status and cancelled rounds struck out');
+ await click(button(tbl,'Settle bill'));
+ const sheet=tbl.querySelector('[aria-label="Settle Table 1"]');assert.ok(sheet);
+ const billLines=[...sheet.querySelectorAll('[aria-label="Table 1 bill"] li')].map(li=>li.textContent);
+ assert.deepEqual(billLines,['2× Americano · Small, Hot$7.00','1× Toast$2.00']);
+ assert.equal(sheet.querySelector('.ctr-settle-total').textContent,'$9.00');assert.match(sheet.textContent,/Marks 2 orders/);
+ localStorage.setItem('sellio_printer_counter-test',JSON.stringify({mode:'bluetooth',deviceName:'Fixture Printer'}));
+ const printsBefore=__prints.length;
+ await click(button(sheet,'Print bill'));assert.equal(__prints.length,printsBefore+1);assert.equal(__prints.at(-1).kind,3);
+ assert.equal(__lastTableBill.total,9);assert.equal(__lastTableBill.paid,false);assert.deepEqual(__lastTableBill.orderNumbers,['ORD-000001','ORD-000002']);
+ pass('Settle sheet lists the merged bill with its total and prints the bill before payment');
+ await click(button(sheet,'QR · PayNow'));await act(async()=>{await tick();await tick();});
+ const settleCall=requests.filter(r=>r.name==='settle_table').at(-1);assert.deepEqual(settleCall.payload,{p_session_id:'s1',p_method:'qr'});
+ const done=tbl.querySelector('[aria-label="Table 1 settled"]');assert.ok(done,'Settling shows a confirmation');
+ assert.match(done.textContent,/\$9\.00 · Paid by QR · PayNow/);assert.equal(__prints.length,printsBefore+1,'Nothing prints unless tapped');
+ assert.ok(tbl.querySelector('.ctr-tables'));assert.match(tbl.querySelector('.ctr-tile').textContent,/Free/);
+ await click(button(done,'Print receipt'));assert.equal(__prints.length,printsBefore+2);assert.equal(__lastTableBill.paid,true);assert.deepEqual(__lastTableBill.paidMethods,['qr']);
+ await click(button(done,'Done'));assert.equal(tbl.querySelector('[aria-label="Table 1 settled"]'),null);
+ pass('Settling pays the whole table, frees it, and prints the paid receipt only when tapped');
+ const {default:CounterOrderResult}=await bundle('src/components/counter/CounterOrderResult.jsx');
+ __dbRows.table_sessions.push({id:'s2',tenant_id:'counter-test',table_id:'t1',table_name:'Table 1',status:'active',order_ids:['r4','r5'],total_amount:7,started_at:at(40)});
+ __dbRows.orders.push({id:'r4',tenant_id:'counter-test',table_id:'t1',table_name:'Table 1',order_number:'ORD-000004',status:'ready',payment_status:'unpaid',created_date:at(41),items:[{name:'Toast',price:2,quantity:1}],subtotal:2,total_amount:2},
+  {id:'r5',tenant_id:'counter-test',table_id:'t1',table_name:'Table 1',order_number:'ORD-000005',status:'pending',payment_status:'unpaid',created_date:at(45),items:[{name:'Rice',price:5,quantity:1}],subtotal:5,total_amount:5});
+ function RoundResult(){const [printing,setPrinting]=React.useState(false);return React.createElement(CounterOrderResult,{order:__dbRows.orders.at(-1),tenant:{name:'Fixture shop',currency:'SGD'},tenantId:'counter-test',canPrintChit:true,printing,setPrinting,onClose:()=>{}});}
+ const roundSheet=await mount(RoundResult);
+ assert.equal(button(roundSheet,'Receipt / Print'),undefined,'A table round does not offer a receipt of its own');
+ await click(button(roundSheet,'Print table bill so far'));await act(async()=>{await tick();});
+ assert.equal(__prints.at(-1).kind,3);assert.equal(__lastTableBill.total,7);assert.deepEqual(__lastTableBill.orderNumbers,['ORD-000004','ORD-000005']);
+ pass('After sending a table round, staff print the whole table bill so far');
+ globalThis.__dbRows = {};
  const {autoPrintKitchenOrder,printCounterOrder,hasKitchenPrinter}=await bundle('src/lib/orderPrinting.js');
  const order={id:'autoprint-one',tenant_id:'counter-test',status:'pending',order_number:'TEST',items:[]};
  localStorage.setItem('sellio_printer_counter-test',JSON.stringify({mode:'bluetooth',deviceName:'Fixture Printer',autoPrintChit:true}));

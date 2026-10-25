@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { loadPrinterConfig, buildOrderReceipt, buildOrderChit, sendViaBluetooth, sendViaEpsonEPos } from '@/lib/printerUtils';
+import { loadPrinterConfig, buildOrderReceipt, buildOrderChit, buildTableReceipt, sendViaBluetooth, sendViaEpsonEPos } from '@/lib/printerUtils';
+import { loadTableBillForOrder, paymentText, tableReceiptHtml } from '@/lib/tableBill';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
 import { isFnBIndustry } from '@/lib/industry';
@@ -102,6 +103,14 @@ function printReceipt(order, currency, merchantName) {
   win.document.close();
 }
 
+// Browser print of a whole table bill, for shops without a receipt printer.
+function printTableReceipt(bill, currency, merchantName) {
+  const win = window.open('', '_blank', 'width=400,height=600');
+  if (!win) { toast.error('Allow pop-ups to print, or connect a receipt printer in Settings.'); return; }
+  win.document.write(tableReceiptHtml(bill, currency, merchantName));
+  win.document.close();
+}
+
 function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel, tenantId, onStatusUpdate, onMarkPaid, onOrderUpdated, tourTag = false }) {
   const { hasPermission, tenant, canUseFeature } = useTenant();
   const canPrintReceipts = !canUseFeature || canUseFeature('can_print');
@@ -125,6 +134,8 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
   const [printing, setPrinting] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptPrinting, setReceiptPrinting] = useState(false);
+  const [receiptBill, setReceiptBill] = useState(null);
+  const [receiptBillState, setReceiptBillState] = useState('idle');
   const [chitPrinting, setChitPrinting] = useState(false);
   const [showChit, setShowChit] = useState(false);
   const qrPayLabel = tenant?.currency === 'MYR' ? 'QR · DuitNow / TNG' : 'QR · PayNow';
@@ -143,6 +154,18 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
     })().catch(() => { if (live) setTableBill(null); });
     return () => { live = false; };
   }, [showPaymentQR, order.table_id, order.id, tenantId]);
+
+  // One receipt per table: a table order's receipt is the whole table bill (every round).
+  useEffect(() => {
+    if (!showReceipt || !order.table_id) { setReceiptBill(null); setReceiptBillState('idle'); return undefined; }
+    let live = true;
+    setReceiptBillState('loading');
+    (async () => {
+      const next = await loadTableBillForOrder(await getSupabase(), tenantId, order);
+      if (live) { setReceiptBill(next); setReceiptBillState(next ? 'ready' : 'none'); }
+    })().catch(() => { if (live) { setReceiptBill(null); setReceiptBillState('failed'); } });
+    return () => { live = false; };
+  }, [showReceipt, order.id, order.table_id, tenantId]);
 
   const pay = async (method) => {
     if (payBusy) return;
@@ -182,21 +205,25 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
   };
 
   const handleActualPrint = async () => {
+    if (receiptBillState === 'loading') return;
     const cfg = loadPrinterConfig(tenantId);
+    const browserPrint = () => (receiptBill ? printTableReceipt(receiptBill, currency, merchantName) : printReceipt(order, currency, merchantName));
     if (!cfg) {
-      printReceipt(order, currency, merchantName);
+      browserPrint();
       setShowReceipt(false);
       return;
     }
     setReceiptPrinting(true);
-    const bytes = buildOrderReceipt(order, currency, merchantName, tenant?.receipt_paper_size);
+    const bytes = receiptBill
+      ? buildTableReceipt(receiptBill, currency, merchantName, tenant?.receipt_paper_size)
+      : buildOrderReceipt(order, currency, merchantName, tenant?.receipt_paper_size);
     try {
       if (cfg.mode === 'bluetooth' && cfg.deviceName) {
         await sendViaBluetooth(cfg.deviceName, bytes);
       } else if (cfg.mode === 'network') {
         await sendViaEpsonEPos(cfg.ip, bytes, merchantName);
       } else {
-        printReceipt(order, currency, merchantName);
+        browserPrint();
       }
       toast.success('Printed ✓');
       setShowReceipt(false);
@@ -401,13 +428,63 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', background: 'white', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
-              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Receipt Preview</p>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{receiptBill ? `${receiptBill.tableName} bill` : 'Receipt Preview'}</p>
               <button
                 onClick={() => setShowReceipt(false)}
                 style={{ width: 32, height: 32, borderRadius: 8, background: '#f1f5f9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#64748b' }}
               >✕</button>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px' }}>
+              {receiptBillState === 'loading' && (
+                <p style={{ textAlign: 'center', color: '#64748b', fontSize: 13, margin: '0 0 12px' }}>Loading the whole table's bill…</p>
+              )}
+              {receiptBillState === 'failed' && (
+                <p style={{ textAlign: 'center', color: '#b45309', fontSize: 13, margin: '0 0 12px' }}>Couldn't load the whole table's bill, so this shows this order only.</p>
+              )}
+              {receiptBill ? (
+              <div style={{ background: 'white', color: '#0f172a', borderRadius: 12, padding: '24px 20px', fontFamily: '"Courier New", Courier, monospace', fontSize: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', maxWidth: 360, margin: '0 auto' }}>
+                <p style={{ textAlign: 'center', fontWeight: 700, fontSize: 15, margin: '0 0 2px', letterSpacing: '0.02em' }}>{merchantName || 'Receipt'}</p>
+                <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '0 0 12px' }}>
+                  {new Date().toLocaleString('en-SG', { dateStyle: 'medium', timeStyle: 'short' })}
+                </p>
+                <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
+                <p style={{ margin: '5px 0', fontSize: 12 }}><strong>Table:</strong> {receiptBill.tableName}</p>
+                <p style={{ margin: '5px 0', fontSize: 12 }}><strong>Orders:</strong> {receiptBill.orderNumbers.map(n => `#${n}`).join(', ') || '-'}</p>
+                <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
+                {receiptBill.items.map((item, i) => (
+                  <div key={i} style={{ marginBottom: 6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                      <span style={{ flex: 1, marginRight: 8 }}>{item.quantity}× {item.name}</span>
+                      <span style={{ flexShrink: 0, fontWeight: 500 }}>{currency} {item.total.toFixed(2)}</span>
+                    </div>
+                    {item.variant && <p style={{ margin: '2px 0 0 14px', color: '#64748b', fontSize: 11 }}>({item.variant})</p>}
+                  </div>
+                ))}
+                <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
+                {receiptBill.subtotal > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                    <span>Subtotal</span><span>{currency} {receiptBill.subtotal.toFixed(2)}</span>
+                  </div>
+                )}
+                {receiptBill.tax > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                    <span>Tax</span><span>{currency} {receiptBill.tax.toFixed(2)}</span>
+                  </div>
+                )}
+                {receiptBill.discount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                    <span>Discount</span><span>-{currency} {receiptBill.discount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 13, marginTop: 6, padding: '6px 0', borderTop: '1px solid #e2e8f0' }}>
+                  <span>TOTAL</span><span>{currency} {receiptBill.total.toFixed(2)}</span>
+                </div>
+                <p style={{ margin: '4px 0', fontSize: 12, fontWeight: 700 }}>{paymentText(receiptBill)}</p>
+                <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
+                <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '4px 0' }}>Thank you for your visit!</p>
+                <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: 10, margin: '4px 0' }}>Powered by Sellio</p>
+              </div>
+              ) : (
               <div style={{ background: 'white', color: '#0f172a', borderRadius: 12, padding: '24px 20px', fontFamily: '"Courier New", Courier, monospace', fontSize: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', maxWidth: 360, margin: '0 auto' }}>
                 <p style={{ textAlign: 'center', fontWeight: 700, fontSize: 15, margin: '0 0 2px', letterSpacing: '0.02em' }}>{merchantName || 'Receipt'}</p>
                 <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '0 0 12px' }}>
@@ -450,6 +527,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '4px 0' }}>Thank you for your visit!</p>
                 <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: 10, margin: '4px 0' }}>Powered by Sellio</p>
               </div>
+              )}
             </div>
             <div style={{ padding: '12px 16px 28px', display: 'flex', gap: 8, background: 'white', borderTop: '1px solid #f1f5f9', flexShrink: 0 }}>
               <button
@@ -458,7 +536,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
               >Close</button>
               <button
                 onClick={handleActualPrint}
-                disabled={receiptPrinting}
+                disabled={receiptPrinting || receiptBillState === 'loading'}
                 style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: receiptPrinting ? '#e2e8f0' : 'var(--color-primary-gradient, rgb(var(--color-primary)))', fontSize: 13, fontWeight: 600, color: receiptPrinting ? '#94a3b8' : 'white', cursor: receiptPrinting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
               >
                 {receiptPrinting

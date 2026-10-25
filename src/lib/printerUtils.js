@@ -1,4 +1,5 @@
 // ESC/POS receipt builder utility
+import { paymentText } from './tableBill';
 
 // Known BLE thermal/label printer GATT service+characteristic UUID pairs.
 // Different chipsets use different UUIDs — we try each in order until one works.
@@ -177,6 +178,52 @@ export function buildOrderReceipt(order, currency, merchantName, paperSize = 'th
   const tax = parseFloat(order.tax_amount || 0);
   if (tax > 0) lines.push({ text: padLine('Tax', `${currency} ${tax.toFixed(2)}`, width), align: 'left' });
   lines.push({ text: padLine('TOTAL', `${currency} ${parseFloat(order.total_amount || 0).toFixed(2)}`, width), bold: true, align: 'left' });
+  lines.push({ text: sep, align: 'center' });
+  lines.push({ text: 'Thank you for your visit!', align: 'center' });
+  lines.push({ text: 'Powered by Sellio', align: 'center' });
+  return buildReceipt(lines);
+}
+
+// Breaks text at spaces so it fits the paper width (long lists of order numbers).
+function wrapText(text, width) {
+  const out = [];
+  let line = '';
+  for (const word of String(text).split(' ')) {
+    const next = line ? `${line} ${word}` : word;
+    if (line && displayWidth(next) > width) { out.push(line); line = word; }
+    else line = next;
+  }
+  if (line) out.push(line);
+  return out;
+}
+
+// One receipt for a whole table bill (from tableBill.js): every round merged, so the
+// same dish shows once (2x Latte), cancelled rounds left out, one total, and whether
+// the bill is paid. Same layout and paper widths as buildOrderReceipt above.
+export function buildTableReceipt(bill, currency, merchantName, paperSize = 'thermal_80') {
+  const wide = paperSize === 'thermal_80' || paperSize === 'a4';
+  const width = wide ? 48 : 32;
+  const sep = '-'.repeat(width);
+  const money = n => `${currency} ${(Number(n) || 0).toFixed(2)}`;
+  const lines = [
+    { text: merchantName || 'Receipt', bold: true, align: 'center' },
+    { text: new Date().toLocaleString('en-SG', { dateStyle: 'medium', timeStyle: 'short' }), align: 'center' },
+    { text: sep, align: 'center' },
+    { text: `Table: ${bill.tableName || 'Table'}`, bold: true, align: 'left' },
+  ];
+  const orders = (bill.orderNumbers || []).map(n => `#${n}`).join(', ') || '-';
+  wrapText(`Orders: ${orders}`, width).forEach(text => lines.push({ text, align: 'left' }));
+  lines.push({ text: sep, align: 'center' });
+  (bill.items || []).forEach(item => {
+    itemLine(`${item.quantity}x ${item.name}`, money(item.total), width).forEach(text => lines.push({ text, align: 'left' }));
+    if (item.variant) lines.push({ text: `  (${item.variant})`, align: 'left' });
+  });
+  lines.push({ text: sep, align: 'center' });
+  if (bill.subtotal > 0) lines.push({ text: padLine('Subtotal', money(bill.subtotal), width), align: 'left' });
+  if (bill.tax > 0) lines.push({ text: padLine('Tax', money(bill.tax), width), align: 'left' });
+  if (bill.discount > 0) lines.push({ text: padLine('Discount', `-${money(bill.discount)}`, width), align: 'left' });
+  lines.push({ text: padLine('TOTAL', money(bill.total), width), bold: true, align: 'left' });
+  lines.push({ text: paymentText(bill), bold: !bill.paid, align: 'left' });
   lines.push({ text: sep, align: 'center' });
   lines.push({ text: 'Thank you for your visit!', align: 'center' });
   lines.push({ text: 'Powered by Sellio', align: 'center' });

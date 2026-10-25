@@ -2,10 +2,12 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppRefreshHandler, useAppReloadGuard } from '@/lib/AppRefreshContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, ShoppingBag, X } from 'lucide-react';
+import { CheckCircle2, Loader2, Printer, ShoppingBag, X } from 'lucide-react';
 import { getCounterOptionGroups, toggleCounterOption, validCounterOptions } from '@/lib/counterOptions';
 import { useBackToClose } from '@/lib/useBackToClose';
 import CounterOrderResult from '@/components/counter/CounterOrderResult';
+import { printTableBill } from '@/lib/orderPrinting';
+import { ROUND_STATUS, itemName, itemQuantity, itemUnitPrice, loadTableBillBySession } from '@/lib/tableBill';
 import { getSupabase } from '@/lib/supabaseClient';
 import { submitCheckout } from '@/lib/mobileCheckout';
 import { useTenant } from '../components/tenant/TenantContext';
@@ -35,6 +37,11 @@ function optionPrice(groups, sel) {
 }
 
 const selKey = sel => JSON.stringify(sel.map(x => `${x.group}|${x.label}`).sort());
+
+const roundTime = value => {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' });
+};
 
 export default function Counter() {
   return (
@@ -72,6 +79,8 @@ function CounterScreen() {
   const [sending, setSending] = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
   const [settling, setSettling] = useState(false);
+  const [bill, setBill] = useState(null);
+  const [settled, setSettled] = useState(null);
   const [nameMode, setNameMode] = useState(() => {
     try { return localStorage.getItem('counter_name_mode') || 'cjk'; } catch { return 'cjk'; }
   });
@@ -80,6 +89,7 @@ function CounterScreen() {
   const suppressClickUntil = useRef(0);
   const draftKeyRef = useRef(draftKey);
   const sendingRef = useRef(false);
+  const billPrintRef = useRef(false);
 
   useEffect(() => {
     if (draftKeyRef.current !== draftKey) {
@@ -158,12 +168,13 @@ function CounterScreen() {
       if (sheet) setSheet(null);
       else if (quantityProduct) setQuantityProduct(null);
       else if (sentOrder) setSentOrder(null);
+      else if (settled) setSettled(null);
       else if (settleOpen && !settling) setSettleOpen(false);
       else if (ticketOpen) setTicketOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [sheet, quantityProduct, sentOrder, settleOpen, settling, printing, ticketOpen]);
+  }, [sheet, quantityProduct, sentOrder, settled, settleOpen, settling, printing, ticketOpen]);
 
   const popular = useMemo(
     () => products.filter(p => sold[p.id]).sort((a, b) => sold[b.id] - sold[a.id]).slice(0, 8),
@@ -211,6 +222,20 @@ function CounterScreen() {
   }, [lines]);
   const session = target?.tableId ? sessions[target.tableId] : null;
   const orderCount = Array.isArray(session?.order_ids) ? session.order_ids.length : 0;
+  // Every round already sent for this table, so staff can check them before settling.
+  const sessionId = session?.id || null;
+  const sessionTotal = session?.total_amount;
+  useEffect(() => {
+    if (!sessionId || !tenantId) { setBill(null); return undefined; }
+    let live = true;
+    (async () => {
+      const next = await loadTableBillBySession(await getSupabase(), tenantId, sessionId);
+      if (live) setBill(next);
+    })().catch(() => { /* Keep the last bill shown; the next refresh retries. */ });
+    return () => { live = false; };
+  }, [tenantId, sessionId, sessionTotal, orderCount, settleOpen]);
+  const shownBill = bill && sessionId && bill.sessionId === sessionId ? bill : null;
+  const liveRounds = shownBill ? shownBill.liveCount : orderCount;
 
   const zones = useMemo(() => {
     const m = new Map();
@@ -248,6 +273,7 @@ function CounterScreen() {
   useBackToClose(settleOpen, closeUnlessBusy(() => setSettleOpen(false)));
   useBackToClose(!!sheet, closeUnlessBusy(() => setSheet(null)));
   useBackToClose(!!sentOrder, closeUnlessBusy(() => setSentOrder(null)));
+  useBackToClose(!!settled, closeUnlessBusy(() => setSettled(null)));
 
   const addProduct = p => {
     const groups = groupsById[p.id] || [];
@@ -364,15 +390,38 @@ function CounterScreen() {
       const supabase = await getSupabase();
       const { data, error } = await supabase.rpc('settle_table', { p_session_id: session.id, p_method: method });
       if (error) throw error;
-      if (data?.already_closed) toast.info(`${target.label} was already settled.`);
-      else toast.success(`${target.label} settled · ${money(data?.amount ?? session.total_amount)}`);
+      const settledLabel = target.label;
+      const settledSessionId = session.id;
+      if (data?.already_closed) toast.info(`${settledLabel} was already settled.`);
+      else setSettled({ sessionId: settledSessionId, label: settledLabel, amount: data?.amount ?? session.total_amount, method, bill: null });
       setSettleOpen(false);
       await loadSessions();
       if (!lines.length) { backToTables(); setTarget(null); }
+      if (!data?.already_closed) {
+        // The paid receipt, ready for "Print receipt" (nothing prints unless tapped).
+        loadTableBillBySession(supabase, tenantId, settledSessionId)
+          .then(paidBill => setSettled(s => (s && s.sessionId === settledSessionId ? { ...s, bill: paidBill } : s)))
+          .catch(() => setSettled(s => (s && s.sessionId === settledSessionId ? { ...s, billFailed: true } : s)));
+      }
     } catch (e) {
       toast.error('Could not settle the bill. Please try again.');
     } finally {
       setSettling(false);
+    }
+  };
+
+  const printBill = async printable => {
+    if (!printable || billPrintRef.current) return;
+    billPrintRef.current = true;
+    setPrinting(true);
+    try {
+      await printTableBill(printable, tenantId, tenant);
+      toast.success(printable.paid ? 'Receipt sent to printer' : 'Bill sent to printer');
+    } catch (error) {
+      toast.error(error.message || 'Printing failed. Check the printer and try again.');
+    } finally {
+      billPrintRef.current = false;
+      setPrinting(false);
     }
   };
 
@@ -534,7 +583,9 @@ function CounterScreen() {
             <div className="ctr-review">
               {count
                 ? <button className="ctr-review-bar" onClick={() => setTicketOpen(true)}><span>{count} item{count > 1 ? 's' : ''} · {money(total)}</span><span>Review &amp; send →</span></button>
-                : <p className="ctr-review-hint">Tap dishes to add them to this order</p>}
+                : session
+                  ? <button className="ctr-review-bar ctr-bill-bar" onClick={() => setTicketOpen(true)}><span>Bill {money(shownBill ? shownBill.total : session.total_amount)} · {liveRounds} order{liveRounds === 1 ? '' : 's'}</span><span>View &amp; settle →</span></button>
+                  : <p className="ctr-review-hint">Tap dishes to add them to this order</p>}
             </div>
           </section>
 
@@ -549,12 +600,36 @@ function CounterScreen() {
               </div>
               {session && (
                 <div className="ctr-running">
-                  <span>Already sent <b>{money(session.total_amount)}</b> · {orderCount} order{orderCount === 1 ? '' : 's'}</span>
+                  <span>Already sent <b>{money(shownBill ? shownBill.total : session.total_amount)}</b> · {liveRounds} order{liveRounds === 1 ? '' : 's'}</span>
                   <button className="ctr-settle" onClick={() => setSettleOpen(true)}>Settle bill</button>
                 </div>
               )}
             </div>
             <ul className="ctr-lines">
+              {shownBill && shownBill.rounds.length > 0 && (
+                <li className="ctr-sent" aria-label="Already ordered">
+                  <div className="ctr-sent-head"><span>Already ordered</span><b>{money(shownBill.total)}</b></div>
+                  {shownBill.rounds.map((round, i) => (
+                    <div key={round.id} className={`ctr-round${round.status === 'cancelled' ? ' void' : ''}`}>
+                      <div className="ctr-round-head">
+                        <span>Round {i + 1} · {round.order_number || ''} · {roundTime(round.created_date)}</span>
+                        <span className={`ctr-st st-${round.status}`}>{ROUND_STATUS[round.status] || round.status}</span>
+                      </div>
+                      {(round.items || []).map((item, k) => (
+                        <div key={k} className="ctr-round-item">
+                          <span className="ctr-ri-name">
+                            {itemQuantity(item)}× {nameParts(itemName(item)).main}
+                            {item.variant ? <small> · {item.variant}</small> : null}
+                            {item.notes ? <small> · “{item.notes}”</small> : null}
+                          </span>
+                          <span className="ctr-ri-price">{money(itemUnitPrice(item) * itemQuantity(item))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </li>
+              )}
+              {shownBill && shownBill.rounds.length > 0 && <li className="ctr-new-head">Not sent yet</li>}
               {lines.length ? lines.map(line => {
                 const p = byId[line.pid];
                 if (!p) return null;
@@ -675,19 +750,52 @@ function CounterScreen() {
       {sentOrder && <CounterOrderResult order={sentOrder} tenant={tenant} tenantId={tenantId} canPrintChit={hasPermission('orders.print_chit')} printing={printing} setPrinting={setPrinting} onClose={() => setSentOrder(null)} />}
 
       {settleOpen && session && target && (
-        <div className="ctr-sheet-back" onClick={() => !settling && setSettleOpen(false)}>
+        <div className="ctr-sheet-back" onClick={() => !settling && !printing && setSettleOpen(false)}>
           <div className="ctr-sheet" role="dialog" aria-modal="true" aria-label={`Settle ${target.label}`} onClick={e => e.stopPropagation()}>
             <div>
               <h3>Settle {target.label}</h3>
-              <p className="ctr-sheet-sub">Marks {orderCount} order{orderCount === 1 ? '' : 's'} as paid and frees the table.</p>
+              <p className="ctr-sheet-sub">Marks {liveRounds} order{liveRounds === 1 ? '' : 's'} as paid and frees the table.</p>
             </div>
-            <div className="ctr-settle-total">{money(session.total_amount)}</div>
+            {shownBill && shownBill.items.length > 0 && (
+              <ul className="ctr-bill-items" aria-label={`${target.label} bill`}>
+                {shownBill.items.map((item, k) => (
+                  <li key={k}>
+                    <span>{item.quantity}× {nameParts(item.name).main}{item.variant ? <small> · {item.variant}</small> : null}</span>
+                    <b>{money(item.total)}</b>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="ctr-settle-total">{money(shownBill ? shownBill.total : session.total_amount)}</div>
             <div className="ctr-pay-grid">
               {[['cash', 'Cash'], ['qr', qrLabel], ['card', 'Card']].map(([m, l]) => (
-                <button key={m} className="ctr-pay" disabled={settling} onClick={() => settle(m)}>{settling ? '…' : l}</button>
+                <button key={m} className="ctr-pay" disabled={settling || printing} onClick={() => settle(m)}>{settling ? '…' : l}</button>
               ))}
             </div>
-            <button className="ctr-cancel" disabled={settling} onClick={() => setSettleOpen(false)}>Cancel</button>
+            <button className="ctr-print-bill" disabled={settling || printing || !shownBill} onClick={() => printBill(shownBill)}>
+              {printing ? <Loader2 size={18} className="animate-spin" /> : <Printer size={18} />}
+              {printing ? 'Sending to printer…' : 'Print bill'}
+            </button>
+            <button className="ctr-cancel" disabled={settling || printing} onClick={() => setSettleOpen(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {settled && (
+        <div className="ctr-sheet-back" onClick={() => !printing && setSettled(null)}>
+          <div className="ctr-sheet" role="dialog" aria-modal="true" aria-label={`${settled.label} settled`} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3">
+              <CheckCircle2 size={32} style={{ color: 'rgb(var(--color-primary))', flexShrink: 0 }} />
+              <div>
+                <h3>{settled.label} settled</h3>
+                <p className="ctr-sheet-sub">{money(settled.amount)} · Paid by {settled.method === 'qr' ? qrLabel : settled.method === 'card' ? 'Card' : 'Cash'}</p>
+              </div>
+            </div>
+            <button className="ctr-sheet-done flex items-center justify-center gap-2" disabled={printing || !settled.bill} onClick={() => printBill(settled.bill)}>
+              {printing ? <Loader2 size={22} className="animate-spin" /> : <Printer size={22} />}
+              {printing ? 'Sending to printer…' : settled.bill ? 'Print receipt' : settled.billFailed ? 'Receipt unavailable' : 'Preparing receipt…'}
+            </button>
+            <button className="ctr-cancel min-h-11" disabled={printing} onClick={() => setSettled(null)}>Done</button>
           </div>
         </div>
       )}
@@ -769,6 +877,28 @@ const CSS = `
 .ctr-review-bar { width: 100%; min-height: 56px; border-radius: 14px; background: var(--color-primary-gradient, rgb(var(--color-primary, 194 51 138))) !important; color: #fff !important; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 18px; font-weight: 800; font-size: 15px; }
 .ctr-review-bar span { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .ctr-review-hint { color: #6f6879; font-size: 13px; text-align: center; padding: 8px 0; margin: 0; }
+.ctr-bill-bar { background: #fff1dc !important; color: #9a4a06 !important; border: 1px solid #f2cf9c !important; }
+.ctr-sent { list-style: none; padding: 10px 16px 12px; border-bottom: 1px solid #e5e0ea; background: #fffaf2; display: flex; flex-direction: column; gap: 8px; }
+.ctr-sent-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: #9a4a06; font-weight: 800; }
+.ctr-sent-head b { font-size: 15px; letter-spacing: 0; text-transform: none; font-variant-numeric: tabular-nums; }
+.ctr-round { background: #fff; border: 1px solid #f2e3cc; border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+.ctr-round.void { opacity: .6; }
+.ctr-round.void .ctr-round-item { text-decoration: line-through; }
+.ctr-round-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: #6f6879; font-weight: 700; }
+.ctr-st { padding: 2px 8px; border-radius: 999px; background: #efebf3; color: #4b4556; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.ctr-st.st-pending, .ctr-st.st-confirmed { background: #fef3c7; color: #92400e; }
+.ctr-st.st-preparing { background: #ede9fe; color: #5b21b6; }
+.ctr-st.st-ready { background: #d1fae5; color: #065f46; }
+.ctr-st.st-cancelled { background: #fee2e2; color: #991b1b; }
+.ctr-round-item { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+.ctr-ri-name { min-width: 0; overflow-wrap: anywhere; }
+.ctr-ri-name small, .ctr-bill-items small { color: #6f6879; font-size: 12px; }
+.ctr-ri-price { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ctr-new-head { list-style: none; padding: 12px 16px 2px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: #6f6879; font-weight: 800; }
+.ctr-bill-items { list-style: none; margin: 0; padding: 10px 0; display: flex; flex-direction: column; gap: 6px; max-height: 38vh; overflow-y: auto; border-top: 1px solid #e5e0ea; border-bottom: 1px solid #e5e0ea; }
+.ctr-bill-items li { display: flex; justify-content: space-between; gap: 10px; font-size: 15px; }
+.ctr-bill-items b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ctr-print-bill { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border-radius: 12px; border: 1px solid #e5e0ea !important; background: #fff !important; font-weight: 700; }
 .ctr-ticket { display: none; flex-direction: column; min-height: 0; background: #fff; border-left: 1px solid #e5e0ea; }
 .ctr-ticket-head { padding: 14px 16px 12px; border-bottom: 1px solid #e5e0ea; display: flex; flex-direction: column; gap: 8px; }
 .ctr-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
