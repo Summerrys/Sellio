@@ -1,5 +1,8 @@
-// Phone / browser Back closes the top-most storefront overlay (product details,
-// cart, checkout, order-placed screen, …) instead of leaving the page.
+// Phone / browser Back (including the Android back button and back swipe) closes the
+// top-most open window — a storefront overlay (product details, cart, checkout,
+// order-placed screen, …), a workspace sheet or dialog, the phone menu — instead of
+// leaving the page. The shared Dialog, Sheet and AlertDialog components use it, so
+// every dialog built on them closes on Back.
 //
 // Customers open the menu straight from their camera's QR scanner, so the menu
 // is the first page in that tab's history and a plain Back exits to the camera.
@@ -9,11 +12,16 @@
 // so Back on the bare menu behaves exactly as before.
 import { useEffect, useRef } from 'react';
 
-const stack = [];        // open overlays, oldest → newest
+const stack = [];        // open overlays, oldest → newest (by seq)
 let armed = false;       // our extra history entry is currently on top
 let ignorePops = 0;      // pops caused by our own history.back()
 let listening = false;
 let settleTimer = null;
+let nextSeq = 0;
+
+// How long after Back to check whether a window really closed. Longer than the
+// windows' closing animations (the storefront designer takes 300ms).
+export const STILL_OPEN_CHECK_MS = 500;
 
 function settle() {
   settleTimer = null;
@@ -23,9 +31,21 @@ function settle() {
     armed = true;
   } else if (stack.length === 0 && armed) {
     armed = false;
-    ignorePops += 1;
-    window.history.back();
+    // Only step back over our own entry. If the page has moved on since (something in
+    // the window opened another page), that entry is no longer on top: stepping back
+    // would undo the new page, so leave history alone.
+    if (window.history.state?.sellioOverlay) {
+      ignorePops += 1;
+      window.history.back();
+    }
   }
+}
+
+// Back into the stack in its original place, below any window opened after it.
+function putBack(entry) {
+  const i = stack.findIndex(other => other.seq > entry.seq);
+  if (i === -1) stack.push(entry);
+  else stack.splice(i, 0, entry);
 }
 
 // Deferred so an overlay swap in one click (cart → checkout, checkout →
@@ -40,7 +60,17 @@ function onPopState() {
   if (!armed) return;
   armed = false;                    // the browser consumed our entry
   const top = stack.pop();          // remove now so settle() sees the truth
-  if (top && top.close() === false) stack.push(top); // A save/print in progress keeps Back armed.
+  if (top) {
+    if (top.close() === false) {
+      putBack(top);                   // A save/print in progress keeps Back armed.
+    } else {
+      // A window can also stay open after being asked to close (it asks "Discard
+      // changes?" first, or ignores closing while busy): Back stays armed for it.
+      setTimeout(() => {
+        if (top.isOpen() && !stack.includes(top)) { putBack(top); scheduleSettle(); }
+      }, STILL_OPEN_CHECK_MS);
+    }
+  }
   scheduleSettle();                 // re-arm if more overlays are still open
 }
 
@@ -63,10 +93,12 @@ export function useBackToClose(isOpen, onClose) {
       window.addEventListener('popstate', onPopState);
       listening = true;
     }
-    const entry = { close: () => closeRef.current?.() };
+    let open = true;
+    const entry = { seq: ++nextSeq, close: () => closeRef.current?.(), isOpen: () => open };
     stack.push(entry);
     scheduleSettle();
     return () => {
+      open = false;
       const i = stack.indexOf(entry);
       if (i !== -1) stack.splice(i, 1);
       scheduleSettle();
