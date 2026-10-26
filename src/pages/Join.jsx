@@ -78,7 +78,7 @@ export default function Join() {
         const supabase = await getSupabase();
         const link = readEmailLink(window.location.search, window.location.hash);
         if (link.error) {
-          window.history.replaceState(null, '', window.location.pathname);
+          window.history.replaceState(window.history.state, '', window.location.pathname);
           setNotice(link.errorCode === 'otp_expired' || /expired|invalid/i.test(link.errorDescription || '')
             ? 'This sign-in link has expired or was already used. Send yourself a new one.'
             : (link.errorDescription || 'That sign-in link didn’t work. Send yourself a new one.'));
@@ -88,7 +88,7 @@ export default function Join() {
         if (link.tokenHash) {
           const type = JOIN_LINK_TYPES.includes(link.type) ? link.type : 'magiclink';
           const { error } = await supabase.auth.verifyOtp({ token_hash: link.tokenHash, type });
-          window.history.replaceState(null, '', window.location.pathname);
+          window.history.replaceState(window.history.state, '', window.location.pathname);
           if (error) {
             setNotice('This sign-in link has expired or was already used. Send yourself a new one.');
             setStage('start');

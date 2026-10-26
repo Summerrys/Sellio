@@ -247,7 +247,7 @@ export default function Auth() {
     if (hash.includes('error=')) {
       const params = new URLSearchParams(hash.substring(1));
       toast.error(params.get('error_description') || 'Google Sign-In failed');
-      window.history.replaceState(null, '', window.location.pathname);
+      window.history.replaceState(window.history.state, '', window.location.pathname);
       return;
     }
     if (!hash.includes('access_token') && !mobileGoogleCompleted) return;
@@ -280,7 +280,7 @@ export default function Auth() {
           // to clean up an unapproved OAuth identity.
           await supabase.auth.signOut({ scope: 'local' }); // this device only
           setGoogleLoading(false);
-          window.history.replaceState(null, '', window.location.pathname);
+          window.history.replaceState(window.history.state, '', window.location.pathname);
           setGoogleGateError('true');
           return;
         }
@@ -295,7 +295,7 @@ export default function Auth() {
           if (inviteEmailForCheck && user.email?.toLowerCase() !== inviteEmailForCheck) {
             await supabase.auth.signOut({ scope: 'local' }); // this device only
             setGoogleLoading(false);
-            window.history.replaceState(null, '', `${window.location.pathname}?token=${tokenInUrl}`);
+            window.history.replaceState(window.history.state, '', `${window.location.pathname}?token=${tokenInUrl}`);
             setGoogleSignupError(`Please sign up with the email address used during payment (${invite.email})`);
             return;
           }
@@ -379,7 +379,7 @@ export default function Auth() {
       } catch (err) {
         toast.error(err.message || 'Google Sign-In failed');
         setGoogleLoading(false);
-        window.history.replaceState(null, '', window.location.pathname);
+        window.history.replaceState(window.history.state, '', window.location.pathname);
       }
     };
 
@@ -645,10 +645,10 @@ export default function Auth() {
           .then((supabase) => supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' }))
           .then(({ error }) => {
             if (error) throw error;
-            window.history.replaceState(null, '', `${window.location.pathname}?type=recovery`);
+            window.history.replaceState(window.history.state, '', `${window.location.pathname}?type=recovery`);
           })
           .catch(() => {
-            window.history.replaceState(null, '', window.location.pathname);
+            window.history.replaceState(window.history.state, '', window.location.pathname);
             toast.error('This reset link has expired or was already used. Please request a new one.');
             setForgotStep(1);
           })

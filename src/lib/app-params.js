@@ -17,7 +17,7 @@ const getAppParamValue = (paramName, { defaultValue = undefined, removeFromUrl =
 		urlParams.delete(paramName);
 		const newUrl = `${window.location.pathname}${urlParams.toString() ? `?${urlParams.toString()}` : ""
 			}${window.location.hash}`;
-		window.history.replaceState({}, document.title, newUrl);
+		window.history.replaceState(window.history.state, document.title, newUrl);
 	}
 	if (searchParam) {
 		storage.setItem(storageKey, searchParam);

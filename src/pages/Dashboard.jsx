@@ -132,7 +132,7 @@ export default function Dashboard() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('upgraded') === '1') {
       toast.success('Your plan has been upgraded successfully.');
-      window.history.replaceState(null, '', window.location.pathname);
+      window.history.replaceState(window.history.state, '', window.location.pathname);
       queryClient.invalidateQueries({ queryKey: ['subscription'] });
       queryClient.invalidateQueries({ queryKey: ['entitlements'] });
     }

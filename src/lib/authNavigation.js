@@ -2,7 +2,7 @@ const RETURN_KEY = 'sellio_return_to';
 const RETURN_TTL_MS = 30 * 60 * 1000;
 // Where a sign-in would normally land; a page waiting for the person (a store, a listing,
 // one of Explore's tabs) wins over these.
-const DEFAULT_LANDINGS = ['/Dashboard', '/Account', '/Onboarding', '/Join'];
+const DEFAULT_LANDINGS = ['/explore', '/Dashboard', '/Account', '/Onboarding', '/Join'];
 
 // A store page sends a signed-out buyer to sign in (checkout in the Android app);
 // so do a listing's Chat button and Explore's tabs.
@@ -20,16 +20,12 @@ export function takeReturnPath(storage = window.localStorage, now = Date.now()) 
   } catch { return null; }
 }
 
-// Keep completed authentication out of the Android WebView's Back history.
-// Returning to Auth while signed in otherwise immediately opens Dashboard again.
+// Keep completed sign-in out of Back history on every device (the app, iPhone, any
+// browser): Back to the sign-in page while signed in would send the person straight
+// forward again, so Back would look dead.
 export function completeAuthNavigation(destination, browser = window) {
   if (DEFAULT_LANDINGS.includes(destination)) {
     destination = takeReturnPath(browser.localStorage) || destination;
   }
-  const nativeAndroid = /Android/i.test(browser.navigator.userAgent) && (
-    typeof browser.ReactNativeWebView?.postMessage === 'function' ||
-    typeof browser.__hybrid_bridge?.sendMessage === 'function'
-  );
-  if (nativeAndroid) browser.location.replace(destination);
-  else browser.location.assign(destination);
+  browser.location.replace(destination);
 }

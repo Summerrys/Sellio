@@ -20,10 +20,10 @@ export function isHomeScreenApple(win = window) {
   return apple && homeScreen;
 }
 
-// Somewhere for Back to go: an earlier Sellio page, or an open window / step to close.
+// Somewhere for Back to go: an open window / step to close, or an earlier page (the
+// browser's own history, which an app update or a reload doesn't reset).
 function canGoBack(win) {
-  const state = win.history.state;
-  return !!state?.sellioOverlay || (state?.idx ?? 0) > 0;
+  return !!win.history.state?.sellioOverlay || win.history.length > 1;
 }
 
 // Fields keep their own touch handling (moving the cursor, selecting text), and an area

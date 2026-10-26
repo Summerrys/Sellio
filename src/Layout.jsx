@@ -432,7 +432,7 @@ function AppLayout({ children, currentPageName }) {
       .finally(() => {
         params.delete('billing');
         const query = params.toString();
-        window.history.replaceState({}, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+        window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`); // keeps the app's page count
       });
   }, [tenantId, isOwner]);
 
