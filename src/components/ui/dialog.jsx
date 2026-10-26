@@ -5,8 +5,13 @@ import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { useBackToClose } from "@/lib/useBackToClose"
 
-const Dialog = DialogPrimitive.Root
+// Phone / browser Back closes an open dialog (one whose parent controls it).
+function Dialog({ open, onOpenChange, ...props }) {
+  useBackToClose(open !== undefined && !!open && typeof onOpenChange === "function", () => onOpenChange?.(false))
+  return <DialogPrimitive.Root open={open} onOpenChange={onOpenChange} {...props} />
+}
 
 const DialogTrigger = DialogPrimitive.Trigger
 
