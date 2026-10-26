@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from '@/App.jsx'
 import '@/index.css'
 import { removeAppReloadParam } from '@/lib/appUpdates'
+import { installEdgeSwipeBack } from '@/lib/edgeSwipeBack'
 
 removeAppReloadParam()
 
@@ -14,6 +15,9 @@ const markPhoto = (event) => {
 }
 document.addEventListener('load', markPhoto, true)
 document.addEventListener('error', markPhoto, true)
+
+// iPhone / iPad from the Home Screen: swipe back from the left edge (iOS has none there).
+installEdgeSwipeBack()
 
 // Register our minimal PWA service worker (required for install prompts on Chrome/Android).
 // It intentionally does no caching — see public/sw.js.
