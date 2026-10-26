@@ -93,6 +93,7 @@ export default function Tables() {
   const [editingZone, setEditingZone] = useState(null);
   const [editingZoneName, setEditingZoneName] = useState('');
   const [qrModalTable, setQrModalTable] = useState(null);
+  useBackToClose(!!qrModalTable, () => setQrModalTable(null)); // phone / browser Back closes the QR preview
 
   const { data: tables = [], isLoading } = useQuery({
     queryKey: ['tables', tenantId],
