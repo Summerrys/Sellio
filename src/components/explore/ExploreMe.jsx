@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Store, LayoutDashboard, Settings, UserRound, ShieldCheck, FileText, LogOut, ChevronRight, Loader2, Copy, Check, Star, ShoppingBag, Flag } from 'lucide-react';
+import { Store, LayoutDashboard, Settings, UserRound, LogOut, ChevronRight, Loader2, Copy, Check, Star, ShoppingBag, Flag } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { useTenant } from '@/components/tenant/TenantContext';
@@ -206,12 +206,6 @@ export default function ExploreMe() {
           </section>
         )}
 
-        <section className="mt-4 bg-white rounded-2xl border border-slate-100 overflow-hidden divide-y divide-slate-100">
-          {/* Opened inside the app (no reload); "Back to Sellio" there returns here. */}
-          <Row to="/privacy" icon={ShieldCheck} label="Privacy" />
-          <Row to="/terms" icon={FileText} label="Terms" />
-        </section>
-
         {appUser && (
           <button
             type="button"
@@ -222,6 +216,13 @@ export default function ExploreMe() {
             {signingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />} Sign out
           </button>
         )}
+
+        {/* Opened inside the app (no reload); "Back to Sellio" there returns here. */}
+        <p className="mt-5 text-center text-xs text-slate-500">
+          <Link to="/privacy" className="underline underline-offset-2 hover:text-slate-700">Privacy</Link>
+          <span aria-hidden="true" className="mx-2">·</span>
+          <Link to="/terms" className="underline underline-offset-2 hover:text-slate-700">Terms</Link>
+        </p>
       </main>
       <ExploreTabBar active="me" />
 
