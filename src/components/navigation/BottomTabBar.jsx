@@ -21,11 +21,11 @@ function Tab({ tab }) {
       aria-label={badge ? `${tab.label}, ${badge} unread` : tab.label}
       className={cn(
         'relative flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors min-h-[60px]',
-        tab.active ? 'text-[rgb(var(--color-primary))]' : 'text-slate-400',
+        tab.active ? 'text-[rgb(var(--color-primary))]' : 'text-slate-600', // dark grey, not black
       )}
     >
       <span className="relative">
-        <Icon className="w-5 h-5" />
+        <Icon className="w-[22px] h-[22px]" />
         {badge ? (
           <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold leading-[18px] text-center">
             {badge}
