@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppRefreshHandler } from '@/lib/AppRefreshContext';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { TenantProvider, useTenant } from './components/tenant/TenantContext';
 import { toast } from 'sonner';
@@ -62,13 +62,18 @@ import { PAGE_FEATURES, itemWords } from '@/lib/planFeatures';
 import { isShopTenant } from '@/lib/shopSelling';
 import { SellProvider, useSell } from '@/lib/sell';
 import { inAppFiles, clearExpiredFiles } from '@/lib/appFiles';
+import { useBackToClose, handOverBackStep } from '@/lib/useBackToClose';
 
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth', 'Join', 'Account', 'World', 'Explore'];
 // A business's workspace pages on its bottom bar (Home and Me are on Explore).
 const BUSINESS_TAB_PAGES = ['Products', 'Counter', 'Orders'];
+// Where the header's back arrow goes on a page that was opened directly (nothing to go
+// back to in the app). Pages not listed go to the Dashboard.
+const HEADER_PARENT_PAGES = { Categories: 'Products', Inventory: 'Products' };
 
 function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription, onOpenProfile, onToggleCollapse, onClose }) {
+  const navigate = useNavigate();
   const [linkCopied, setLinkCopied] = useState(false);
   const storefrontUrl = tenant?.slug ? `https://sellio.apptelier.sg/store/${tenant.slug}` : null;
   const copyStorefrontLink = () => {
@@ -207,7 +212,14 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
             <Link
               key={item.page}
               to={createPageUrl(item.page)}
-              onClick={onNavigate}
+              onClick={onNavigate ? (event) => {
+                // From the phone menu: the new page takes over the menu's Back step, so
+                // Back from it returns to the page the menu was opened on.
+                if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                navigate(createPageUrl(item.page), { replace: handOverBackStep() });
+                onNavigate();
+              } : undefined}
               className={cn(
                 "relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
                 isActive
@@ -350,6 +362,26 @@ function AppLayout({ children, currentPageName }) {
   // Either way the Dashboard keeps the menu button in the header, as the shop's home page.
   const freeShopNav = isShopTenant(tenant) && !hasPermission('orders.create');
   const shopTabPages = freeShopNav ? ['Dashboard', 'Listings', 'Chats', 'Me'] : ['Dashboard', ...BUSINESS_TAB_PAGES];
+
+  // The header's back arrow, shown beside the menu button (never instead of it):
+  //  - back to the previous Sellio page whenever there is one (react-router's history
+  //    index, which counts only this app's pages, unlike window.history.length);
+  //  - on a sub-page opened directly, up to its parent page;
+  //  - none on the main (tab) pages when there is nothing to go back to.
+  // useLocation re-renders the header on every navigation, so this stays current.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const hasEarlierPage = (window.history.state?.idx ?? 0) > 0;
+  const showHeaderBack = hasEarlierPage || !shopTabPages.includes(currentPageName);
+  const goBackInApp = () => {
+    if ((window.history.state?.idx ?? 0) > 0) navigate(-1);
+    else navigate(createPageUrl(HEADER_PARENT_PAGES[currentPageName] || 'Dashboard'), { replace: true });
+  };
+  // Phone / browser Back closes the phone menu first.
+  useBackToClose(mobileOpen, () => setMobileOpen(false));
+  // …and the trial reminder, when it can be dismissed.
+  const dismissTrialModal = () => { sessionStorage.setItem('trial_modal_dismissed', 'true'); setShowTrialModal(false); };
+  useBackToClose(showTrialModal && canDismissTrialModal, dismissTrialModal);
   // The same count as Explore's Chat tab: chats about things you buy and you sell.
   const shopChats = useChatUnread(freeShopNav);
   const { openSell } = useSell();
@@ -588,20 +620,21 @@ function AppLayout({ children, currentPageName }) {
       {!setupScreen && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-100 z-30 flex items-center px-4 justify-between"
         style={{ height: 'calc(56px + env(safe-area-inset-top, 0px))', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-        <div className="flex items-center gap-2">
-          {window.history.length > 1 && !shopTabPages.includes(currentPageName) ? (
-            <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => window.history.back()}>
+        <div className="flex items-center gap-1 min-w-0">
+          {showHeaderBack && (
+            <Button variant="ghost" size="icon" className="h-11 w-11 -ml-2 flex-shrink-0" aria-label="Back" onClick={goBackInApp}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
-          ) : tenant?.logo_url ? (
-            <button onClick={() => setMobileOpen(true)} data-tour="avatar-menu-btn" aria-label="Open menu" className="flex items-center gap-2 h-11 active:opacity-70 transition-opacity">
+          )}
+          {tenant?.logo_url ? (
+            <button onClick={() => setMobileOpen(true)} data-tour="avatar-menu-btn" aria-label="Open menu" className="flex items-center gap-2 h-11 min-w-0 active:opacity-70 transition-opacity">
               <Menu className="w-6 h-6 text-slate-700 flex-shrink-0" />
-              <img src={tenant.logo_url} alt={tenant.name} className="h-8 w-auto object-contain rounded" />
+              <img src={tenant.logo_url} alt={tenant.name} className={cn("h-8 w-auto object-contain rounded", showHeaderBack && "max-w-[96px]")} />
             </button>
           ) : (
-            <button onClick={() => setMobileOpen(true)} data-tour="avatar-menu-btn" aria-label="Open menu" className="flex items-center gap-2 h-11 active:opacity-70 transition-opacity">
+            <button onClick={() => setMobileOpen(true)} data-tour="avatar-menu-btn" aria-label="Open menu" className="flex items-center gap-2 h-11 min-w-0 active:opacity-70 transition-opacity">
               <Menu className="w-6 h-6 text-slate-700 flex-shrink-0" />
-              <img src="/branding/sellio-logo.webp" alt="Sellio" className="h-10 w-auto object-contain" />
+              <img src="/branding/sellio-logo.webp" alt="Sellio" className={cn("h-10 w-auto object-contain", showHeaderBack && "max-w-[96px]")} />
             </button>
           )}
         </div>
@@ -690,7 +723,7 @@ function AppLayout({ children, currentPageName }) {
         <TrialReminderModal
           hoursLeft={Math.max(0, Math.floor((new Date(subscription.current_period_end) - new Date()) / (1000 * 60 * 60)))}
           onUpgrade={() => { setShowTrialModal(false); setShowPricingModal(true); }}
-          onDismiss={canDismissTrialModal ? () => { sessionStorage.setItem('trial_modal_dismissed', 'true'); setShowTrialModal(false); } : null}
+          onDismiss={canDismissTrialModal ? dismissTrialModal : null}
         />
       )}
 
