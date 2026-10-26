@@ -4,8 +4,13 @@ import { cva } from "class-variance-authority";
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { useBackToClose } from "@/lib/useBackToClose"
 
-const Sheet = SheetPrimitive.Root
+// Phone / browser Back closes an open sheet (one whose parent controls it).
+function Sheet({ open, onOpenChange, ...props }) {
+  useBackToClose(open !== undefined && !!open && typeof onOpenChange === "function", () => onOpenChange?.(false))
+  return <SheetPrimitive.Root open={open} onOpenChange={onOpenChange} {...props} />
+}
 
 const SheetTrigger = SheetPrimitive.Trigger
 
