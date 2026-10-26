@@ -98,7 +98,7 @@ function useLegalMetadata({ title, description, path, dateModified }) {
 // "Back to Sellio": opened from a Sellio page (inside the app, or a link on the site),
 // go back to that page; opened directly (a search result, a typed address), the link
 // opens Sellio's home page as before.
-function backToSellio(event) {
+export function backToSellio(event) {
   if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   const fromApp = (window.history.state?.idx ?? 0) > 0;
   let fromSellio = false;
