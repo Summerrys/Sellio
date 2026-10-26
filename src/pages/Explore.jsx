@@ -340,9 +340,11 @@ export default function Explore() {
     <div className="min-h-screen bg-slate-50">
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
-          <a href="/" aria-label="Sellio home" className="flex items-center gap-2">
+          {/* In the app, Sellio's home is this page: the logo stays here instead of
+              reloading it and adding a second copy to Back. */}
+          <Link to="/" replace={isNativeApp()} aria-label="Sellio home" className="flex items-center gap-2">
             <img src={LOGO_URL} alt="Sellio" className="h-10 w-auto object-contain" />
-          </a>
+          </Link>
           <span className="text-sm font-semibold text-slate-400 md:hidden">Explore</span>
           <ExploreDesktopTabs />
           <div className="ml-auto flex items-center gap-2">
