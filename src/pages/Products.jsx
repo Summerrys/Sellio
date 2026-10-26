@@ -710,10 +710,12 @@ export default function Products({ embedded = false } = {}) {
           </>
         )}
 
-        {/* Filters and View Toggle */}
+        {/* Filters and View Toggle (fits a narrow phone: the grid/list switch sits beside
+            the search, the two filters share the row below) */}
         <div className="flex flex-col gap-3">
+          <div className="flex gap-2 items-center">
           {/* Search */}
-          <div className="relative w-full">
+          <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
               placeholder={`Search ${words.products}...`}
@@ -723,11 +725,10 @@ export default function Products({ embedded = false } = {}) {
             />
           </div>
 
-          <div className="flex gap-2 items-center flex-wrap">
             {/* Category Filter */}
             {!(embedded && categories.length === 0) && (
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="flex-1 min-w-[120px]" style={{ height: 36, background: 'white', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+              <SelectTrigger className="flex-1 min-w-0" style={{ height: 36, background: 'white', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', borderRadius: 8 }}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -741,7 +742,7 @@ export default function Products({ embedded = false } = {}) {
 
             {/* Status Filter */}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className={embedded ? 'w-auto min-w-[130px]' : 'flex-1 min-w-[110px]'} style={{ height: 36, background: 'white', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+              <SelectTrigger className="flex-1 min-w-0" style={{ height: 36, background: 'white', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', borderRadius: 8 }}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

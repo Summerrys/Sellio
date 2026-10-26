@@ -219,9 +219,9 @@ export default function ExploreMe() {
 
         {/* Opened inside the app (no reload); "Back to Sellio" there returns here. */}
         <p className="mt-5 text-center text-xs text-slate-500">
-          <Link to="/privacy" className="underline underline-offset-2 hover:text-slate-700">Privacy</Link>
+          <Link to="/privacy" className="inline-block py-2 underline underline-offset-2 hover:text-slate-700">Privacy</Link>
           <span aria-hidden="true" className="mx-2">·</span>
-          <Link to="/terms" className="underline underline-offset-2 hover:text-slate-700">Terms</Link>
+          <Link to="/terms" className="inline-block py-2 underline underline-offset-2 hover:text-slate-700">Terms</Link>
         </p>
       </main>
       <ExploreTabBar active="me" />
