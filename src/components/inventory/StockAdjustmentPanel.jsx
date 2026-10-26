@@ -3,6 +3,7 @@ import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { getSupabase } from '@/lib/supabaseClient';
 import { BellRing, X } from 'lucide-react';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 export default function StockAdjustmentPanel({ open, onOpenChange, product, tenantId, onSuccess, onClose, initialThreshold }) {
   const queryClient = useQueryClient();

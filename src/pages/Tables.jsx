@@ -28,6 +28,7 @@ import { QrCode, Plus, Search, LayoutGrid, List, Trash2, Download, Pencil, Check
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 const STATUS_CONFIG = {
   available: { label: 'Available', color: 'bg-green-100 text-green-700 border-green-300' },

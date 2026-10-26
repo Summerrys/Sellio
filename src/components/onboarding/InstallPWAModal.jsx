@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { promptInstall, hasNativePrompt, isIOS, isAndroid } from '@/lib/pwaInstall';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 const IOS_STEPS = [
   'Tap the Share icon in Safari\u2019s toolbar',

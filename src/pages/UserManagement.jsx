@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Link } from 'react-router-dom';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 // Visual identity per permission group in the toggle-based Roles editor — reuses
 // the exact same color language as Dashboard's Quick Access cards (Orders=blue,

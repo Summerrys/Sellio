@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Send } from 'lucide-react';
 import { useTenant } from '@/components/tenant/TenantContext';
 import { getSupabase } from '@/lib/supabaseClient';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
 

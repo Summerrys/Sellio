@@ -5,6 +5,7 @@ import { useTenant } from '../tenant/TenantContext';
 import OutletDatesTab from './OutletDatesTab';
 import DeliveryOrderTab from './DeliveryOrderTab';
 import DailyReportTab from './DailyReportTab';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 export default function StockTakeOverlay({ open, onClose }) {
   const { tenant } = useTenant();

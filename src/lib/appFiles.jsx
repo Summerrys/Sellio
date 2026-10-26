@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Download, X } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { isNativeApp } from '@/lib/nativeApp';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 // Saving a file Sellio made (a CSV, a report, a QR code) inside Sellio's Android app.
 // The app can't save files straight from a page, so the file goes online first and

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useBackToClose } from '@/lib/useBackToClose';
 import { useAppReloadGuard } from '@/lib/AppRefreshContext';
 import { getSupabase } from '@/lib/supabaseClient';
 import { shrinkImage, BANNER_MAX_SIDE } from '@/lib/imageShrink';

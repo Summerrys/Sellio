@@ -17,6 +17,7 @@ import { Loader2, ImagePlus, Plus, Check, ArrowLeft, ArrowRight, Palette, Truck,
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 import { isShopTenant } from '@/lib/shopSelling';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 // Setup steps for a new free shop (after "Sell from home"), in the same look as a
 // business's onboarding: the progress header, a card per step and the gradient

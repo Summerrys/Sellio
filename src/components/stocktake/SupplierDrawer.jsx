@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 const EMPTY_SUPPLIER = { name: '', phone: '', contact_person: '', notes: '', is_active: true };
 
