@@ -105,9 +105,9 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
   const tenantItems = allTenantItems.filter(item => 
     // Staff logins have no Explore.
     !(staff && item.page === 'Explore') &&
-    (item.permission === null || Array.isArray(item.permission)
+    (item.permission === null || (Array.isArray(item.permission)
       ? item.permission.some(p => hasPermission?.(p))
-      : hasPermission?.(item.permission))
+      : hasPermission?.(item.permission)))
   );
 
   const navItems = [...superAdminItems, ...tenantItems];
