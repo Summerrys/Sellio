@@ -360,6 +360,7 @@ function RolesContent({ onUpgrade }) {
   const [originalForm, setOriginalForm] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
   const [mobilePreviewRole, setMobilePreviewRole] = useState(null);
+  useBackToClose(!!mobilePreviewRole, () => setMobilePreviewRole(null)); // phone / browser Back closes the permissions view
 
   const { data: roles = [] } = useQuery({
     queryKey: ['allRoles', tenantId],
