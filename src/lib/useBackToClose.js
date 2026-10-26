@@ -176,7 +176,7 @@ if (browser) {
   TAP_EVENTS.forEach(type => browser.addEventListener(type, () => { lastTapAt = now(); }, true));
   browser.addEventListener('popstate', onPopState);
   // Opened or reloaded on a Back step with nothing open: step off it.
-  setTimeout(scheduleSettle, 400);
+  try { if (onOurStep()) setTimeout(scheduleSettle, 400); } catch { /* no history to read */ }
 }
 
 // A link inside an open window that leaves the page: call this first and navigate with
