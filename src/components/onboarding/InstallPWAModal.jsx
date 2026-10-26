@@ -23,6 +23,7 @@ const DESKTOP_STEPS = [
 export default function InstallPWAModal({ open, onClose }) {
   const [installing, setInstalling] = useState(false);
   const [showManualSteps, setShowManualSteps] = useState(false);
+  useBackToClose(open, onClose); // phone / browser Back closes the install prompt
 
   if (!open) return null;
 
