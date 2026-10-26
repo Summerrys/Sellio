@@ -33,10 +33,15 @@ const PROFILE_FIELDS = 'id, email, full_name, role, onboarding_completed, tenant
 //   renew   — same person still signed in: keep the record and push its expiry out again
 //   restore — signed in but the record is missing or belongs to someone else: rebuild it
 //   clear   — Supabase says nobody is signed in on this device: drop the record
-//   keep    — couldn't check (offline, error): change nothing
+//   keep    — couldn't check (offline, Supabase busy): change nothing
 export async function syncAppUserWithSession(supabase, current) {
   const { data, error } = await supabase.auth.getSession();
-  if (error) return { action: 'keep' };
+  if (error) {
+    // A definite refusal (the stored sign-in is no longer valid) means signed out;
+    // anything else (no connection, rate limit) is not a reason to sign anyone out.
+    const refused = [400, 401, 403].includes(Number(error.status));
+    return refused && current ? { action: 'clear' } : { action: 'keep' };
+  }
   const email = data?.session?.user?.email?.toLowerCase();
   if (!email) return current ? { action: 'clear' } : { action: 'keep' };
   if (current && String(current.email || '').toLowerCase() === email) return { action: 'renew', user: current };
