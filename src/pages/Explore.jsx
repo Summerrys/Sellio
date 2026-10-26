@@ -218,6 +218,201 @@ function SkeletonGrid() {
   );
 }
 
+// Explore's top: the logo row and search stay; the categories under them slide away
+// behind the search bar when scrolling down (a button in the search bar brings them
+// back until the next scroll down) and slide back at the top of the page. The header
+// sits fixed over the page and only moves (transform and opacity), never resizing
+// anything, so the slide stays smooth and the page under it never jumps. It keeps its
+// own scroll state, so the feed doesn't re-render as it slides.
+const FOLD_EASE = 'cubic-bezier(0.2, 0, 0, 1)';
+
+function ExploreHeader({ query, onQuery, kind, onKind, signedIn, hasShop }) {
+  const [scrolled, setScrolled] = useState(false);
+  const [peek, setPeek] = useState(false);
+  const peekRef = useRef({ open: false, fromY: 0 });
+  useEffect(() => {
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      const y = window.scrollY;
+      setScrolled((was) => (was ? y > 8 : y > 40));
+      const opened = peekRef.current;
+      if (opened.open) {
+        if (y < opened.fromY) opened.fromY = y;                                // up a little: count from here
+        else if (y - opened.fromY > 12) { opened.open = false; setPeek(false); } // any scroll down folds them
+      }
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(check); };
+    check();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
+  useEffect(() => {
+    if (!scrolled) { peekRef.current.open = false; setPeek(false); }
+  }, [scrolled]);
+  const folded = scrolled && !peek;
+  const openCategories = () => {
+    peekRef.current = { open: true, fromY: window.scrollY };
+    setPeek(true);
+  };
+  const pick = (key) => {
+    onKind(key);
+    // Picked while scrolled down: back to the top, where the new results start.
+    if (scrolled) {
+      peekRef.current.open = false;
+      setPeek(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Room for the fixed header at the top of the page (its height never changes).
+  const headerRef = useRef(null);
+  const [height, setHeight] = useState(null);
+  useEffect(() => {
+    const node = headerRef.current;
+    if (!node) return undefined;
+    const measure = () => setHeight(node.offsetHeight);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const pickedLabel = KINDS.find((k) => k.key === kind)?.label;
+  return (
+    <>
+      <header ref={headerRef} className="fixed top-0 inset-x-0 z-30 pointer-events-none">
+        <div
+          className={`relative z-[2] bg-white pointer-events-auto border-b transition-colors duration-200 ${folded ? 'border-slate-100' : 'border-transparent'}`}
+          style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+        >
+            <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
+              {/* In the app, Sellio's home is this page: the logo stays here instead of
+                  reloading it and adding a second copy to Back. Websites keep the home link. */}
+              {isNativeApp() ? (
+                <Link to="/explore" replace aria-label="Sellio home" className="flex items-center gap-2">
+                  <img src={LOGO_URL} alt="Sellio" className="h-10 w-auto object-contain" />
+                </Link>
+              ) : (
+                <a href="/" aria-label="Sellio home" className="flex items-center gap-2">
+                  <img src={LOGO_URL} alt="Sellio" className="h-10 w-auto object-contain" />
+                </a>
+              )}
+              <span className="text-sm font-semibold text-slate-400 md:hidden">Explore</span>
+              <ExploreDesktopTabs />
+              <div className="ml-auto flex items-center gap-2">
+                {signedIn ? (
+                  <>
+                  <Link
+                    to={hasShop ? '/Dashboard' : '/Account'}
+                    className="h-9 px-3 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 inline-flex items-center gap-1.5 hover:bg-slate-50"
+                  >
+                    <Store className="w-4 h-4" /> {hasShop ? 'My shop' : 'My account'}
+                  </Link>
+                  <ShopBell />
+                  </>
+                ) : (
+                  <>
+                    <Link to="/Auth" className="h-9 px-3 rounded-full text-sm font-semibold text-slate-700 inline-flex items-center hover:bg-slate-50">
+                      Log in
+                    </Link>
+                    <Link
+                      to="/join"
+                      className="h-9 px-4 rounded-full text-sm font-semibold text-white inline-flex items-center"
+                      style={{ background: BRAND_GRADIENT }}
+                    >
+                      Sign up
+                    </Link>
+                  </>
+                )}
+              </div>
+            </div>
+          <div className="max-w-6xl mx-auto px-3 sm:px-4 pb-2">
+            <label className="relative block">
+              <span className="sr-only">Search Sellio Explore</span>
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => onQuery(e.target.value)}
+                placeholder="Search for an item or shop"
+                enterKeyHint="search"
+                className={`w-full h-[38px] pl-9 ${query ? 'pr-[76px]' : 'pr-11'} rounded-[10px] bg-slate-100 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none focus:bg-white focus:ring-2 focus:ring-pink-200 [&::-webkit-search-cancel-button]:hidden`}
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => onQuery('')}
+                  aria-label="Clear search"
+                  className="absolute right-1.5 top-1/2 w-7 h-7 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200"
+                  style={{ transform: `translate3d(${folded ? -36 : 0}px, -50%, 0)`, transition: `transform 220ms ${FOLD_EASE}` }}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={openCategories}
+                tabIndex={folded ? 0 : -1}
+                aria-hidden={folded ? undefined : true}
+                aria-label={kind === 'all' ? 'Show categories' : `Show categories (${pickedLabel} picked)`}
+                className="absolute right-1 top-1/2 w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-slate-700"
+                style={{
+                  transform: `translate3d(0, -50%, 0) scale(${folded ? 1 : 0.6})`,
+                  opacity: folded ? 1 : 0,
+                  pointerEvents: folded ? 'auto' : 'none',
+                  transition: `transform 220ms ${FOLD_EASE}, opacity 160ms ease`,
+                }}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                {kind !== 'all' && <span className="absolute top-1 right-1 w-[7px] h-[7px] rounded-full" style={{ background: 'rgb(var(--color-primary, 37 99 235))' }} />}
+              </button>
+            </label>
+          </div>
+        </div>
+        <div
+          className="relative z-[1] bg-white border-b border-slate-100"
+          aria-hidden={folded || undefined}
+          style={{
+            transform: folded ? 'translate3d(0, -100%, 0)' : 'translate3d(0, 0, 0)',
+            opacity: folded ? 0 : 1,
+            visibility: folded ? 'hidden' : 'visible',
+            pointerEvents: folded ? 'none' : 'auto',
+            willChange: 'transform',
+            transition: `transform 240ms ${FOLD_EASE}, opacity 180ms ease, visibility 0s linear ${folded ? '240ms' : '0s'}`,
+          }}
+        >
+          <div className="max-w-6xl mx-auto">
+            <div className="flex gap-2 overflow-x-auto px-3 sm:px-4 pb-2" style={hideScrollbar} role="tablist" aria-label="Filter listings">
+              {KINDS.map(({ key, label }) => {
+                const active = kind === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => pick(key)}
+                    className={`h-[30px] px-3.5 rounded-full text-sm font-semibold whitespace-nowrap border transition-colors ${active ? 'text-white border-transparent' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+                    style={active ? { background: BRAND_GRADIENT } : undefined}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </header>
+      <div aria-hidden="true" style={{ height: height ?? 'calc(132px + env(safe-area-inset-top, 0px))' }} />
+    </>
+  );
+}
+
 export default function Explore() {
   const { appUser } = useAppUser() || {};
   const signedIn = !!appUser;
@@ -238,35 +433,6 @@ export default function Explore() {
   const [reloadKey, setReloadKey] = useState(0);
   const requestId = useRef(0);
   const sentinelRef = useRef(null);
-
-  // Scrolling down folds the categories into a button in the search bar; back at the
-  // top they open out again (the button also opens them while scrolled down). Only
-  // when the page is long enough that folding can't pull the page back to the top.
-  const [scrolled, setScrolled] = useState(false);
-  const [peek, setPeek] = useState(false);
-  useEffect(() => {
-    let frame = 0;
-    const check = () => {
-      frame = 0;
-      const y = window.scrollY;
-      const room = document.documentElement.scrollHeight - window.innerHeight;
-      setScrolled((was) => (was ? y > 8 : y > 40 && room > 160));
-    };
-    const onScroll = () => { if (!frame) frame = requestAnimationFrame(check); };
-    check();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, []);
-  useEffect(() => { if (!scrolled) setPeek(false); }, [scrolled]);
-  const categoriesFolded = scrolled && !peek;
-  const pickKind = (key) => {
-    setKind(key);
-    // Picked while scrolled down: back to the top, where the new results start.
-    if (scrolled) { setPeek(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-  };
 
   useEffect(() => {
     const previous = document.title;
@@ -367,115 +533,14 @@ export default function Explore() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
-          {/* In the app, Sellio's home is this page: the logo stays here instead of
-              reloading it and adding a second copy to Back. Websites keep the home link. */}
-          {isNativeApp() ? (
-            <Link to="/explore" replace aria-label="Sellio home" className="flex items-center gap-2">
-              <img src={LOGO_URL} alt="Sellio" className="h-10 w-auto object-contain" />
-            </Link>
-          ) : (
-            <a href="/" aria-label="Sellio home" className="flex items-center gap-2">
-              <img src={LOGO_URL} alt="Sellio" className="h-10 w-auto object-contain" />
-            </a>
-          )}
-          <span className="text-sm font-semibold text-slate-400 md:hidden">Explore</span>
-          <ExploreDesktopTabs />
-          <div className="ml-auto flex items-center gap-2">
-            {signedIn ? (
-              <>
-              <Link
-                to={hasShop ? '/Dashboard' : '/Account'}
-                className="h-9 px-3 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 inline-flex items-center gap-1.5 hover:bg-slate-50"
-              >
-                <Store className="w-4 h-4" /> {hasShop ? 'My shop' : 'My account'}
-              </Link>
-              <ShopBell />
-              </>
-            ) : (
-              <>
-                <Link to="/Auth" className="h-9 px-3 rounded-full text-sm font-semibold text-slate-700 inline-flex items-center hover:bg-slate-50">
-                  Log in
-                </Link>
-                <Link
-                  to="/join"
-                  className="h-9 px-4 rounded-full text-sm font-semibold text-white inline-flex items-center"
-                  style={{ background: BRAND_GRADIENT }}
-                >
-                  Sign up
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-        <div className="max-w-6xl mx-auto px-3 sm:px-4 pb-2">
-          <label className="relative block">
-            <span className="sr-only">Search Sellio Explore</span>
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search for an item or shop"
-              enterKeyHint="search"
-              className={`w-full h-[38px] pl-9 ${categoriesFolded && query ? 'pr-[76px]' : 'pr-11'} rounded-[10px] bg-slate-100 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none focus:bg-white focus:ring-2 focus:ring-pink-200 [&::-webkit-search-cancel-button]:hidden`}
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery('')}
-                aria-label="Clear search"
-                className={`absolute ${categoriesFolded ? 'right-10' : 'right-1.5'} top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200`}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-            {categoriesFolded && (
-              <button
-                type="button"
-                onClick={() => setPeek(true)}
-                aria-label={kind === 'all' ? 'Show categories' : `Show categories (${KINDS.find((k) => k.key === kind)?.label} picked)`}
-                className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-slate-700"
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                {kind !== 'all' && <span className="absolute top-1 right-1 w-[7px] h-[7px] rounded-full" style={{ background: 'rgb(var(--color-primary, 37 99 235))' }} />}
-              </button>
-            )}
-          </label>
-        </div>
-        <div
-          className="overflow-hidden"
-          aria-hidden={categoriesFolded || undefined}
-          style={{
-            maxHeight: categoriesFolded ? 0 : 46,
-            opacity: categoriesFolded ? 0 : 1,
-            visibility: categoriesFolded ? 'hidden' : 'visible',
-            transition: `max-height 220ms ease, opacity 160ms ease, visibility 0s linear ${categoriesFolded ? '220ms' : '0s'}`,
-          }}
-        >
-          <div className="max-w-6xl mx-auto">
-            <div className="flex gap-2 overflow-x-auto px-3 sm:px-4 pb-2" style={hideScrollbar} role="tablist" aria-label="Filter listings">
-              {KINDS.map(({ key, label }) => {
-                const active = kind === key;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => pickKind(key)}
-                    className={`h-[30px] px-3.5 rounded-full text-sm font-semibold whitespace-nowrap border transition-colors ${active ? 'text-white border-transparent' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
-                    style={active ? { background: BRAND_GRADIENT } : undefined}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </header>
+      <ExploreHeader
+        query={query}
+        onQuery={setQuery}
+        kind={kind}
+        onKind={setKind}
+        signedIn={signedIn}
+        hasShop={hasShop}
+      />
 
       <main className="max-w-6xl mx-auto px-2 sm:px-4 pb-32">
         {!filtered && shops.length > 0 && (
