@@ -14,7 +14,9 @@ import BottomTabBar from './BottomTabBar';
 //   active: 'home' | 'Products' | 'Counter' | 'Orders' | 'me' (or null)
 //   onTab(key, isActive): runs on every tab (the workspace keeps each tab's scroll)
 //   homeClick / meClick: Explore's own Home and Me steps (Back returns to Home)
-export default function MerchantTabBar({ active = null, onTab, homeClick, meClick, hideFrom = 'lg', bottomInset, zIndex = 'z-30' }) {
+//   staff / onStaffMe: a staff login has no Explore, so its Home is the Dashboard and its
+//   Me opens the menu (its pages, profile and sign out)
+export default function MerchantTabBar({ active = null, onTab, homeClick, meClick, hideFrom = 'lg', bottomInset, zIndex = 'z-30', staff = false, onStaffMe }) {
   const { user, tenant, isOwner } = useTenant();
   // The getting-started tour: each page still to visit pulses (Settings is under Me).
   const tour = user?.tour_progress || {};
@@ -51,10 +53,14 @@ export default function MerchantTabBar({ active = null, onTab, homeClick, meClic
       bottomInset={bottomInset}
       center={center}
       tabs={[
-        tab('home', 'Home', House, '/explore', { click: homeClick }),
+        staff
+          ? tab('home', 'Home', House, createPageUrl('Dashboard'))
+          : tab('home', 'Home', House, '/explore', { click: homeClick }),
         tab('Products', itemWords(tenant?.seller_type).Products, ShoppingBag, createPageUrl('Products'), { pulse: tourActive && !tour.products }),
         tab('Orders', 'Orders', ClipboardList, createPageUrl('Orders'), { pulse: tourActive && !tour.orders }),
-        tab('me', 'Me', CircleUserRound, '/explore/me', { click: meClick, pulse: tourActive && !tour.settings }),
+        staff
+          ? tab('me', 'Me', CircleUserRound, createPageUrl('Dashboard'), { click: (event) => { event.preventDefault(); onStaffMe?.(); } })
+          : tab('me', 'Me', CircleUserRound, '/explore/me', { click: meClick, pulse: tourActive && !tour.settings }),
       ]}
     />
   );
