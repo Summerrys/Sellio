@@ -368,12 +368,12 @@ try {
     completeAuthNavigation('/Onboarding?token=test-only', invite.browser);
     assert.deepEqual(invite.entries, ['/Onboarding?token=test-only'], 'Keep destination parameters');
   }
-  for (const [agent, bridge] of [['Android', {}], ['iPhone', { ReactNativeWebView: { postMessage() {} } }]]) {
+  for (const [agent, bridge] of [['Android', {}], ['iPhone', {}], ['iPhone', { ReactNativeWebView: { postMessage() {} } }], ['Macintosh', {}]]) {
     const ordinary = browserHistory(agent, bridge);
     completeAuthNavigation('/Dashboard', ordinary.browser);
-    assert.deepEqual(ordinary.entries, ['/Auth', '/Dashboard'], 'Browser and iOS navigation should retain their existing behavior');
+    assert.deepEqual(ordinary.entries, ['/Dashboard'], `${agent}: completed sign-in must not stay behind the next page (Back to it bounces forward)`);
   }
-  passed('Android completed-auth history avoids a login loop; page Back and destination parameters stay intact');
+  passed('Completed sign-in never stays in Back history (app, iPhone, browsers); page Back and destination parameters stay intact');
 
   // A lost response must keep the same checkout request key; changed carts are blocked.
   const checkout = await import(pathToFileURL(path.join(app, 'src/lib/mobileCheckout.js')).href);
