@@ -28,6 +28,7 @@ import { formatDistanceToNow } from 'date-fns';
 import ShopOrderInfo, { ShopMethodBadge } from '@/components/shop/ShopOrderInfo';
 import { isShopTenant, shopMethod, shopNextAction, shopStatusLabel, shopStatusTabs } from '@/lib/shopSelling';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 const STATUS_TABS = [
   { value: 'all',       label: 'All' },
@@ -138,6 +139,12 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
   const [receiptBillState, setReceiptBillState] = useState('idle');
   const [chitPrinting, setChitPrinting] = useState(false);
   const [showChit, setShowChit] = useState(false);
+  // Phone / browser Back closes these sheets first; while paying or printing it waits,
+  // as tapping outside does.
+  useBackToClose(showEditOrder, () => setShowEditOrder(false));
+  useBackToClose(showReceipt, () => { if (receiptPrinting) return false; setShowReceipt(false); });
+  useBackToClose(showChit, () => { if (chitPrinting) return false; setShowChit(false); });
+  useBackToClose(showPaymentQR, () => { if (payBusy) return false; setShowPaymentQR(false); });
   const qrPayLabel = tenant?.currency === 'MYR' ? 'QR · DuitNow / TNG' : 'QR · PayNow';
 
   useEffect(() => {
