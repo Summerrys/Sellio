@@ -51,6 +51,21 @@ const h = React.createElement;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const settle = () => sleep(40);
 const pressBack = async () => { win.history.back(); await sleep(60); };   // a later task, as in a browser
+// A tap (the browser's user activation): what opens a window in real use.
+const tap = () => win.dispatchEvent(new win.Event('pointerup'));
+// Every Back step added, and whether it came straight after a tap (none since the last
+// Back / Forward): Android skips a page's history when one is added without.
+const stepPushes = [];
+{
+  let lastTap = 0, lastTraversal = 0, tick = 0;
+  win.addEventListener('pointerup', () => { lastTap = ++tick; }, true);
+  win.addEventListener('popstate', () => { lastTraversal = ++tick; }, true);
+  const push = win.history.pushState;
+  win.history.pushState = function pushState(state, ...rest) {
+    if (state?.sellioOverlay) stepPushes.push({ afterTap: lastTap > lastTraversal });
+    return push.call(this, state, ...rest);
+  };
+}
 const onOverlayEntry = () => !!win.history.state?.sellioOverlay;
 const text = () => win.document.body.textContent;
 
@@ -116,7 +131,7 @@ try {
 
   // 1
   const length0 = win.history.length;
-  overlays.A.setOpen(true); await settle();
+  tap(); overlays.A.setOpen(true); await settle();
   assert.ok(onOverlayEntry(), 'a Back step is added while the window is open');
   assert.equal(win.history.length, length0 + 1);
   assert.equal(win.history.state.idx, home.idx, 'react-router sees no new page');
@@ -127,20 +142,20 @@ try {
   passed('Back closes an open window and stays on the page');
 
   // 2
-  overlays.A.setOpen(true); await settle();
+  tap(); overlays.A.setOpen(true); await settle();
   assert.ok(onOverlayEntry());
   overlays.A.setOpen(false); await sleep(80);
   assert.ok(atHome(), 'the extra Back step is removed again');
   assert.equal(overlays.A.calls, 1, 'closing with its own button does not run the Back handler');
-  overlays.A.setOpen(true); await settle();
+  tap(); overlays.A.setOpen(true); await settle();
   await pressBack();
   assert.equal(overlays.A.open, false); assert.equal(overlays.A.calls, 2);
   assert.ok(atHome());
   passed('Closing a window with its own button removes its Back step (Back then works normally next time)');
 
   // 3
-  overlays.A.setOpen(true); await settle();
-  overlays.B.setOpen(true); await settle();
+  tap(); overlays.A.setOpen(true); await settle();
+  tap(); overlays.B.setOpen(true); await settle();
   await pressBack();
   assert.equal(overlays.B.open, false); assert.equal(overlays.A.open, true);
   assert.ok(onOverlayEntry(), 'Back is armed again for the window still open');
@@ -151,7 +166,7 @@ try {
 
   // 4
   overlays.A.onBack = () => false;          // e.g. saving or printing
-  overlays.A.setOpen(true); await settle();
+  tap(); overlays.A.setOpen(true); await settle();
   await pressBack();
   assert.equal(overlays.A.open, true);
   assert.ok(onOverlayEntry(), 'Back stays armed while busy');
@@ -163,7 +178,7 @@ try {
 
   // 5
   overlays.A.onBack = () => undefined;      // asks "Discard changes?" instead of closing
-  overlays.A.setOpen(true); await settle();
+  tap(); overlays.A.setOpen(true); await settle();
   const before = overlays.A.calls;
   await pressBack();
   assert.equal(overlays.A.open, true);
@@ -177,8 +192,8 @@ try {
   passed('A window that asks first ("Discard changes?") keeps Back armed; the next Back reaches it again');
 
   // 6
-  overlays.A.setOpen(true); await settle();
-  overlays.B.setOpen(true); await settle();
+  tap(); overlays.A.setOpen(true); await settle();
+  tap(); overlays.B.setOpen(true); await settle();
   overlays.B.onBack = () => undefined;
   const aCalls = overlays.A.calls, bCalls = overlays.B.calls;
   await pressBack();
@@ -195,7 +210,7 @@ try {
   // 7
   assert.equal(mod.handOverBackStep(), false);
   assert.ok(atHome(), 'nothing changes when no window is open');
-  overlays.A.setOpen(true); await settle();
+  tap(); overlays.A.setOpen(true); await settle();
   const replace = mod.handOverBackStep();
   assert.equal(replace, true);
   router.navigate('/Orders', { replace });
@@ -208,18 +223,18 @@ try {
   passed('A link in a window (phone menu, notifications) hands over its Back step: one Back returns to where it was opened');
 
   // 8
-  overlays.A.setOpen(true); await settle();
+  tap(); overlays.A.setOpen(true); await settle();
   router.navigate('/Products');                      // a link that does not hand over
   await settle();
   overlays.A.setOpen(false); await sleep(80);
   assert.equal(router.location.pathname, '/Products', 'closing the window does not undo the new page');
-  await pressBack(); await pressBack();
-  assert.ok(atHome());
-  passed('A page opened from a window without handing over is left alone when the window closes');
+  await pressBack(); await sleep(60);
+  assert.ok(atHome(), 'one Back returns: the step left behind is skipped');
+  passed('A page opened from a window without handing over: closing leaves it; one Back returns (leftover step skipped)');
 
   // 9
   for (const [kind, body] of [['dialog', 'DIALOG-BODY'], ['sheet', 'SHEET-BODY'], ['alert', 'ALERT-BODY']]) {
-    ui[kind].setOpen(true); await settle();
+    tap(); ui[kind].setOpen(true); await settle();
     assert.ok(text().includes(body), kind + ' opened');
     assert.ok(onOverlayEntry());
     await pressBack();
@@ -230,8 +245,8 @@ try {
   passed('Shared Dialog, Sheet and AlertDialog all close on Back');
 
   // 10
-  ui.sheet.setOpen(true); await settle();
-  ui.dialog.setOpen(true); await settle();
+  tap(); ui.sheet.setOpen(true); await settle();
+  tap(); ui.dialog.setOpen(true); await settle();
   await pressBack();
   assert.equal(ui.dialog.open, false); assert.equal(ui.sheet.open, true);
   assert.ok(onOverlayEntry());
@@ -241,7 +256,7 @@ try {
   passed('A dialog over a sheet: Back closes the dialog, then the sheet');
 
   // 11
-  ui.dialog.setOpen(true); await settle();
+  tap(); ui.dialog.setOpen(true); await settle();
   ui.dialog.setOpen(false); await sleep(80);
   assert.ok(atHome());
   passed('Closing a shared dialog with its own button removes its Back step');
@@ -262,9 +277,9 @@ try {
   // ---- Phase 2 ----
   // 13
   const lengthBeforeSteps = win.history.length;
-  flow.setStep(1); await settle();
-  flow.setStep(2); await settle();
-  flow.setStep(3); await settle();
+  tap(); flow.setStep(1); await settle();
+  tap(); flow.setStep(2); await settle();
+  tap(); flow.setStep(3); await settle();
   assert.ok(onOverlayEntry());
   for (const expected of [2, 1]) {
     await pressBack();
@@ -278,28 +293,33 @@ try {
   passed('Step-by-step screens: Back goes to the previous step each time, then works as normal from the first step');
 
   // 14
-  const activation = { hasBeenActive: false };
-  Object.defineProperty(win.navigator, 'userActivation', { value: activation, configurable: true });
+  // A page added and Back pressed: no step to move back onto, and the last tap came
+  // before that Back, so a window that now opens by itself must wait for a tap.
+  router.navigate('/Orders'); await settle();
+  await pressBack();
+  assert.ok(atHome());
+  const lengthBeforeAuto = win.history.length;
   overlays.A.setOpen(true); await settle();
-  assert.ok(!onOverlayEntry(), 'no Back step before the first tap (Android would skip it)');
-  activation.hasBeenActive = true;
-  win.dispatchEvent(new win.Event('pointerup'));
-  await settle();
-  assert.ok(onOverlayEntry(), 'the Back step is added at the first tap');
+  assert.ok(!onOverlayEntry(), 'no Back step without a tap (Android would skip the whole page)');
+  assert.equal(win.history.length, lengthBeforeAuto);
+  tap(); await settle();
+  assert.ok(onOverlayEntry(), 'the Back step is added at the next tap');
   await pressBack();
   assert.equal(overlays.A.open, false);
   assert.ok(atHome());
-  activation.hasBeenActive = false;
-  const lengthBeforeTap = win.history.length;
-  overlays.A.setOpen(true); await settle();
-  activation.hasBeenActive = true;
-  win.dispatchEvent(new win.Event('click'));
-  overlays.A.setOpen(false);                         // that first tap was the window's own close button
-  await sleep(80);
-  assert.ok(atHome());
-  assert.equal(win.history.length, lengthBeforeTap, 'nothing added for a window closed by the first tap');
-  delete win.navigator.userActivation;
-  passed('A window that opens by itself gets its Back step at the first tap (none if that tap closes it)');
+  passed('A window that opens without a tap gets its Back step at the next tap (no history added without one)');
+
+  // 14b: opening windows again and again reuses one step (history doesn't grow)
+  const lengthBeforeReuse = win.history.length;
+  for (let i = 0; i < 3; i++) {
+    tap(); overlays.A.setOpen(true); await settle();
+    assert.ok(onOverlayEntry());
+    if (i % 2) { await pressBack(); } else { overlays.A.setOpen(false); await sleep(80); }
+    assert.equal(overlays.A.open, false);
+    assert.ok(atHome());
+  }
+  assert.ok(win.history.length <= lengthBeforeReuse + 1, 'one step at most');
+  passed('Opening and closing windows again and again reuses one Back step: history does not grow');
 
   // 15
   const backCalls = [];
@@ -324,8 +344,8 @@ try {
   passed('Privacy / Terms "Back to Sellio" returns to the Sellio page it was opened from; opened directly, it opens the home page');
 
   // 16 (last: it replaces the home entry, as finishing a setup replaces its page)
-  flow.setStep(1); await settle();
-  flow.setStep(2); await settle();
+  tap(); flow.setStep(1); await settle();
+  tap(); flow.setStep(2); await settle();
   assert.ok(onOverlayEntry());
   const lengthAtFinish = win.history.length;
   await mod.removeBackStep();
@@ -340,7 +360,12 @@ try {
   assert.ok(win.history.length <= lengthAtFinish);
   passed('Finishing a flow takes its Back step off first, so Back from the next page skips the finished flow');
 
-  // 17: the app's code uses these pieces as tested here
+  // 17
+  assert.ok(stepPushes.length > 5);
+  assert.deepEqual(stepPushes.filter(p => !p.afterTap), [], 'every Back step was added straight after a tap');
+  passed(`All ${stepPushes.length} Back steps were added straight after a tap (none after a Back without one)`);
+
+  // 18: the app's code uses these pieces as tested here
   const layout = await readFile('src/Layout.jsx', 'utf8');
   assert.doesNotMatch(layout, /aria-label="Back"/, 'no on-screen back arrow in the header');
   assert.match(layout, /navigate\(createPageUrl\(item\.page\), \{ replace: handOverBackStep\(\) \}\)/);
@@ -352,7 +377,7 @@ try {
     'src/pages/Join.jsx': [/useBackToClose\(stage === 'sent',/],
     'src/pages/Auth.jsx': [/useBackToClose\(forgotMode && forgotStep !== 3, leaveForgotPassword\)/, /onClick=\{leaveForgotPassword\}/],
     'src/pages/KitchenDisplay.jsx': [/useBackToClose\(isFullscreen, handleExit\)/],
-    'src/components/explore/ExploreMe.jsx': [/<Row to="\/privacy"/, /<Row to="\/terms"/],
+    'src/components/explore/ExploreMe.jsx': [/<Link to="\/privacy"/, /<Link to="\/terms"/],
     'src/components/legal/LegalPage.jsx': [/className="sellio-legal-back" onClick=\{backToSellio\}/],
   };
   for (const [file, patterns] of Object.entries(wiring)) {
