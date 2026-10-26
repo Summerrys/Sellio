@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppRefreshHandler, useAppReloadGuard } from '@/lib/AppRefreshContext';
 import { useNavigate } from 'react-router-dom';
+import { goBack } from '@/lib/goBack';
 import { toast } from 'sonner';
 import { CheckCircle2, Loader2, Printer, ShoppingBag, X } from 'lucide-react';
 import { getCounterOptionGroups, toggleCounterOption, validCounterOptions } from '@/lib/counterOptions';
