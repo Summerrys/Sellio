@@ -459,7 +459,7 @@ function CounterScreen() {
 
       <header className="ctr-top">
         {view === 'tables'
-          ? <button className="ctr-back" onClick={() => navigate(createPageUrl('Dashboard'))}>← Exit</button>
+          ? <button className="ctr-back" onClick={() => goBack(navigate, createPageUrl('Dashboard'))}>← Exit</button>
           : <button className="ctr-back" onClick={backToTables}>← Tables</button>}
         <div className="ctr-title">
           {view === 'tables' || !target
