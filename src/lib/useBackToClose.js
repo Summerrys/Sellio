@@ -119,7 +119,10 @@ function onPopState() {
   if (ownTraversal && now() < ownTraversal.until) {
     const { direction } = ownTraversal;
     ownTraversal = null;
-    if (direction > 0) armed = onOurStep();
+    if (direction > 0) {
+      armed = onOurStep();
+      if (!armed) { stepAhead = null; traverse(-1); return; } // not our step after all: undo
+    }
     scheduleSettle();
     return;
   }
