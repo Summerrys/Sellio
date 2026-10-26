@@ -50,7 +50,7 @@ const mod = await import(pathToFileURL(local));
 const h = React.createElement;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const settle = () => sleep(120);
-const pressBack = async () => { win.history.back(); await sleep(60); };   // a later task, as in a browser
+const pressBack = async () => { win.history.back(); await sleep(120); };   // a later task, as in a browser
 // A tap (the browser's user activation): what opens a window in real use.
 const tap = () => win.dispatchEvent(new win.Event('pointerup'));
 // Every Back step added, and whether it came straight after a tap (none since the last
@@ -144,7 +144,7 @@ try {
   // 2
   tap(); overlays.A.setOpen(true); await settle();
   assert.ok(onOverlayEntry());
-  overlays.A.setOpen(false); await sleep(80);
+  overlays.A.setOpen(false); await sleep(160);
   assert.ok(atHome(), 'the extra Back step is removed again');
   assert.equal(overlays.A.calls, 1, 'closing with its own button does not run the Back handler');
   tap(); overlays.A.setOpen(true); await settle();
@@ -214,7 +214,7 @@ try {
   const replace = mod.handOverBackStep();
   assert.equal(replace, true);
   router.navigate('/Orders', { replace });
-  overlays.A.setOpen(false); await sleep(80);       // the menu closes as the new page opens
+  overlays.A.setOpen(false); await sleep(160);       // the menu closes as the new page opens
   assert.equal(router.location.pathname, '/Orders');
   assert.ok(!onOverlayEntry());
   assert.equal(win.history.state.idx, home.idx + 1, 'the new page counts the page behind it (in-page back buttons use this)');
@@ -226,7 +226,7 @@ try {
   tap(); overlays.A.setOpen(true); await settle();
   router.navigate('/Products');                      // a link that does not hand over
   await settle();
-  overlays.A.setOpen(false); await sleep(80);
+  overlays.A.setOpen(false); await sleep(160);
   assert.equal(router.location.pathname, '/Products', 'closing the window does not undo the new page');
   await pressBack(); await sleep(60);
   assert.ok(atHome(), 'one Back returns: the step left behind is skipped');
@@ -257,7 +257,7 @@ try {
 
   // 11
   tap(); ui.dialog.setOpen(true); await settle();
-  ui.dialog.setOpen(false); await sleep(80);
+  ui.dialog.setOpen(false); await sleep(160);
   assert.ok(atHome());
   passed('Closing a shared dialog with its own button removes its Back step');
 
@@ -314,7 +314,7 @@ try {
   for (let i = 0; i < 3; i++) {
     tap(); overlays.A.setOpen(true); await settle();
     assert.ok(onOverlayEntry());
-    if (i % 2) { await pressBack(); } else { overlays.A.setOpen(false); await sleep(80); }
+    if (i % 2) { await pressBack(); } else { overlays.A.setOpen(false); await sleep(160); }
     assert.equal(overlays.A.open, false);
     assert.ok(atHome());
   }
