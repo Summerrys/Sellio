@@ -32,6 +32,12 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
     onOpenChange(false);
     onClose?.();
   };
+  // Phone / browser Back closes the panel (not the product form under it); it waits
+  // while a stock change is being saved.
+  useBackToClose(open, () => {
+    if (submittingRef.current) return false;
+    handleClose();
+  });
 
   const submittingRef = useRef(false);
   const mutationKey = ['adjustInventory', tenantId, product?.id];
