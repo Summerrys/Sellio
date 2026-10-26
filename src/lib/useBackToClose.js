@@ -63,6 +63,11 @@ function onPopState() {
   if (top) {
     if (top.close() === false) {
       putBack(top);                   // A save/print in progress keeps Back armed.
+    } else if (stack.length > 0) {
+      // Other windows are still open, so Back is armed again straight away anyway. Keep
+      // this one in its place on top until it has really gone (its cleanup removes it),
+      // so a quick second Back reaches it rather than the window underneath.
+      putBack(top);
     } else {
       // A window can also stay open after being asked to close (it asks "Discard
       // changes?" first, or ignores closing while busy): Back stays armed for it.
