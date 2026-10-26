@@ -39,8 +39,9 @@ await build({
     export { AlertDialog, AlertDialogContent, AlertDialogTitle } from '@/components/ui/alert-dialog';
     export { headerBack, HEADER_PARENT_PAGES } from '@/lib/headerBack';
     export { goBack } from '@/lib/goBack';
+    export { backToSellio } from '@/components/legal/LegalPage';
   ` },
-  outfile, bundle: true, packages: 'external', format: 'esm', platform: 'node', jsx: 'automatic',
+  outfile, bundle: true, packages: 'external', format: 'esm', platform: 'node', jsx: 'automatic', loader: { '.css': 'empty' },
   alias: { '@': path.join(process.cwd(), 'src') }, logLevel: 'silent',
 });
 const local = path.join(process.cwd(), '.back-navigation-bundle.mjs');
@@ -92,6 +93,17 @@ try {
     mod.useBackToClose(open, () => { o.calls += 1; return o.onBack ? o.onBack() : setOpen(false); });
     return null;
   }
+  // A step-by-step screen, wired the way ShopSetup and Onboarding are.
+  const flow = {};
+  function Steps() {
+    const [step, setStep] = React.useState(0);
+    flow.step = step; flow.setStep = setStep;
+    mod.useBackToClose(step > 0, () => {
+      setStep(s => Math.max(s - 1, 0));
+      if (step > 1) return false;
+    });
+    return null;
+  }
   function Shared({ kind }) {
     const [open, setOpen] = React.useState(false);
     ui[kind] = { open, setOpen };
@@ -106,7 +118,7 @@ try {
   win.document.body.appendChild(container);
   root = createRoot(container);
   root.render(h(BrowserRouter, null, h(Probe), h(Overlay, { name: 'A' }), h(Overlay, { name: 'B' }),
-    h(Shared, { kind: 'dialog' }), h(Shared, { kind: 'sheet' }), h(Shared, { kind: 'alert' })));
+    h(Shared, { kind: 'dialog' }), h(Shared, { kind: 'sheet' }), h(Shared, { kind: 'alert' }), h(Steps)));
   await settle();
   const home = win.history.state;
   assert.equal(home.idx, 0);
@@ -259,16 +271,111 @@ try {
   await settle(); assert.ok(atHome());
   passed('Dialogs that manage their own open state are left as they were (no Back step added)');
 
-  // 13: the app's code uses these pieces as tested here
+  // ---- Phase 2 ----
+  // 13
+  const lengthBeforeSteps = win.history.length;
+  flow.setStep(1); await settle();
+  flow.setStep(2); await settle();
+  flow.setStep(3); await settle();
+  assert.ok(onOverlayEntry());
+  for (const expected of [2, 1]) {
+    await pressBack();
+    assert.equal(flow.step, expected);
+    assert.ok(onOverlayEntry(), 'Back stays armed while there are earlier steps');
+  }
+  await pressBack();
+  assert.equal(flow.step, 0);
+  assert.ok(atHome(), 'from the first step on, Back leaves the page as normal');
+  assert.ok(win.history.length <= lengthBeforeSteps + 1, 'only ever one extra Back step, however many steps');
+  passed('Step-by-step screens: Back goes to the previous step each time, then works as normal from the first step');
+
+  // 14
+  const activation = { hasBeenActive: false };
+  Object.defineProperty(win.navigator, 'userActivation', { value: activation, configurable: true });
+  overlays.A.setOpen(true); await settle();
+  assert.ok(!onOverlayEntry(), 'no Back step before the first tap (Android would skip it)');
+  activation.hasBeenActive = true;
+  win.dispatchEvent(new win.Event('pointerup'));
+  await settle();
+  assert.ok(onOverlayEntry(), 'the Back step is added at the first tap');
+  await pressBack();
+  assert.equal(overlays.A.open, false);
+  assert.ok(atHome());
+  activation.hasBeenActive = false;
+  const lengthBeforeTap = win.history.length;
+  overlays.A.setOpen(true); await settle();
+  activation.hasBeenActive = true;
+  win.dispatchEvent(new win.Event('click'));
+  overlays.A.setOpen(false);                         // that first tap was the window's own close button
+  await sleep(80);
+  assert.ok(atHome());
+  assert.equal(win.history.length, lengthBeforeTap, 'nothing added for a window closed by the first tap');
+  delete win.navigator.userActivation;
+  passed('A window that opens by itself gets its Back step at the first tap (none if that tap closes it)');
+
+  // 15
+  const backCalls = [];
+  const realBack = win.history.back;
+  win.history.back = () => backCalls.push('back');
+  const click = () => { const e = { button: 0, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } }; mod.backToSellio(e); return e.defaultPrevented; };
+  try {
+    win.history.replaceState({ ...win.history.state, idx: 3 }, '');
+    assert.equal(click(), true);
+    win.history.replaceState({ ...win.history.state, idx: home.idx }, '');
+    assert.equal(click(), false, 'opened directly: the link opens the home page as before');
+    Object.defineProperty(win.document, 'referrer', { value: 'https://sellio.apptelier.sg/Auth', configurable: true });
+    assert.equal(click(), true, 'opened from a link on a Sellio page');
+    Object.defineProperty(win.document, 'referrer', { value: 'https://www.google.com/', configurable: true });
+    assert.equal(click(), false, 'opened from a search result');
+    assert.deepEqual(backCalls, ['back', 'back']);
+  } finally {
+    win.history.back = realBack;
+    delete win.document.referrer;
+  }
+  assert.ok(atHome());
+  passed('Privacy / Terms "Back to Sellio" returns to the Sellio page it was opened from; opened directly, it opens the home page');
+
+  // 16 (last: it replaces the home entry, as finishing a setup replaces its page)
+  flow.setStep(1); await settle();
+  flow.setStep(2); await settle();
+  assert.ok(onOverlayEntry());
+  const lengthAtFinish = win.history.length;
+  await mod.removeBackStep();
+  assert.ok(!onOverlayEntry());
+  assert.equal(win.history.state.key, home.key, 'back on the page\'s own entry');
+  router.navigate('/Done', { replace: true });
+  flow.setStep(0);                                   // the flow goes away with its page
+  await sleep(120);
+  assert.equal(router.location.pathname, '/Done');
+  assert.ok(!onOverlayEntry());
+  assert.equal(win.history.state.idx, home.idx, 'the finished flow\'s entry was replaced, not stacked on');
+  assert.ok(win.history.length <= lengthAtFinish);
+  passed('Finishing a flow takes its Back step off first, so Back from the next page skips the finished flow');
+
+  // 17: the app's code uses these pieces as tested here
   const layout = await readFile('src/Layout.jsx', 'utf8');
   assert.match(layout, /headerBack\(currentPageName, shopTabPages\)/);
   assert.match(layout, /goBack\(navigate, createPageUrl\(headerParentPage\)\)/);
   assert.match(layout, /navigate\(createPageUrl\(item\.page\), \{ replace: handOverBackStep\(\) \}\)/);
   assert.match(layout, /useBackToClose\(mobileOpen, \(\) => setMobileOpen\(false\)\)/);
+  const wiring = {
+    'src/pages/ShopSetup.jsx': [/useBackToClose\(step > 0,/, /if \(finishing\) return false;/, /await removeBackStep\(\);[^\n]*\n\s*navigate\(createPageUrl\('Dashboard'\), \{ replace: true \}\)/, /replace: handOverBackStep\(\)/],
+    'src/pages/Onboarding.jsx': [/useBackToClose\(currentStep > 1,/, /await removeBackStep\(\);\s*navigate\(createPageUrl\('Dashboard'\), \{ replace: true \}\)/],
+    'src/components/onboarding/Step5Confirmation.jsx': [/useBackToClose\(isLaunching, \(\) => false\)/, /await onComplete\(\)/],
+    'src/pages/Join.jsx': [/useBackToClose\(stage === 'sent',/],
+    'src/pages/Auth.jsx': [/useBackToClose\(forgotMode && forgotStep !== 3, leaveForgotPassword\)/, /onClick=\{leaveForgotPassword\}/],
+    'src/pages/KitchenDisplay.jsx': [/useBackToClose\(isFullscreen, handleExit\)/],
+    'src/components/explore/ExploreMe.jsx': [/<Row to="\/privacy"/, /<Row to="\/terms"/],
+    'src/components/legal/LegalPage.jsx': [/className="sellio-legal-back" onClick=\{backToSellio\}/],
+  };
+  for (const [file, patterns] of Object.entries(wiring)) {
+    const source = await readFile(file, 'utf8');
+    for (const pattern of patterns) assert.match(source, pattern, file);
+  }
   for (const file of ['dialog', 'sheet', 'alert-dialog']) {
     assert.match(await readFile(`src/components/ui/${file}.jsx`, 'utf8'), /useBackToClose\(open !== undefined && !!open && typeof onOpenChange === "function"/);
   }
-  passed('Layout and the shared dialogs are wired to these rules');
+  passed('Layout, the shared dialogs, the step-by-step screens, Kitchen full screen and Privacy/Terms are wired to these rules');
 
   console.log(`\nAll ${passes} back-navigation checks passed.`);
 } catch (err) {
