@@ -95,8 +95,12 @@ function settle() {
   holdUntilEmpty = false;
   armed = false;
   // No window open: never sit on a Back step (Back from it would seem to do nothing).
-  // This also steps off one left behind when a window opened another page.
-  if (onOurStep()) traverse(-1);
+  // This also steps off one left behind when a window opened another page. The step
+  // stays just ahead, for the next window on this page to move back onto.
+  if (onOurStep()) {
+    stepAhead = { key: pageKey(), epoch: historyEpoch };
+    traverse(-1);
+  }
 }
 
 // Back into the stack in its original place, below any window opened after it.
