@@ -3,8 +3,13 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
+import { useBackToClose } from "@/lib/useBackToClose"
 
-const AlertDialog = AlertDialogPrimitive.Root
+// Phone / browser Back cancels an open confirmation (one whose parent controls it).
+function AlertDialog({ open, onOpenChange, ...props }) {
+  useBackToClose(open !== undefined && !!open && typeof onOpenChange === "function", () => onOpenChange?.(false))
+  return <AlertDialogPrimitive.Root open={open} onOpenChange={onOpenChange} {...props} />
+}
 
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger
 
