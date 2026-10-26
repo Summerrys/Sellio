@@ -80,6 +80,7 @@ export async function clearExpiredFiles(tenantId) {
 let openReady = null;
 
 function FileReady({ url, filename, label, expires, onClose }) {
+  useBackToClose(true, onClose); // phone / browser Back closes this box
   return (
     <div className="fixed inset-0 z-[2147483000] flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
