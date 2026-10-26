@@ -16,7 +16,7 @@ const { JSDOM } = require('jsdom');
 const dom = new JSDOM('<html><body></body></html>', { url: 'https://sellio.apptelier.sg/Dashboard', pretendToBeVisual: true });
 const win = dom.window;
 for (const key of ['document', 'Element', 'HTMLElement', 'HTMLInputElement', 'Node', 'Event', 'CustomEvent', 'KeyboardEvent',
-  'MouseEvent', 'FocusEvent', 'DocumentFragment', 'MutationObserver', 'navigator', 'getComputedStyle', 'localStorage']) {
+  'MouseEvent', 'FocusEvent', 'DocumentFragment', 'NodeFilter', 'HTMLAnchorElement', 'MutationObserver', 'navigator', 'getComputedStyle', 'localStorage']) {
   if (win[key] !== undefined) Object.defineProperty(globalThis, key, { value: win[key], configurable: true, writable: true });
 }
 globalThis.window = win;
@@ -182,15 +182,14 @@ try {
   const aCalls = overlays.A.calls, bCalls = overlays.B.calls;
   await pressBack();
   assert.ok(onOverlayEntry());
-  await sleep(mod.STILL_OPEN_CHECK_MS + 80);
-  await pressBack();
+  await pressBack();                                 // straight away, no waiting
   assert.equal(overlays.B.calls, bCalls + 2, 'the asking window is still the one on top');
   assert.equal(overlays.A.calls, aCalls, 'the window below was not closed');
   overlays.B.onBack = null;
   await pressBack(); assert.equal(overlays.B.open, false); assert.equal(overlays.A.open, true);
   await pressBack(); assert.equal(overlays.A.open, false);
   assert.ok(atHome());
-  passed('With another window below, a window that asks first stays on top for the next Back');
+  passed('With another window below, a window that asks first stays on top, even for a quick second Back');
 
   // 7
   assert.equal(mod.handOverBackStep(), false);
