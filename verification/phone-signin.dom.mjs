@@ -59,7 +59,7 @@ globalThis.appClient = {
     signInWithPassword: forbidden('sign in with an email itself'),
     resetPasswordForEmail: forbidden('send reset emails itself'),
   },
-  functions: { invoke: async (name, options) => { calls.push(['invoke', name, options?.body]); return invokeReply(options?.body); } },
+  functions: { invoke: async (name, options) => { calls.push(['invoke', name, options?.body]); calls.push(['region', options?.region]); return invokeReply(options?.body); } },
   rpc: forbidden('look up an account by phone'),
   from: table => {
     const filters = [];
@@ -99,6 +99,7 @@ try {
   await submit(form);
   await wait(700);
   assert.deepEqual(calls.find(c => c[0] === 'invoke'), ['invoke', 'phone-auth', { action: 'sign_in', phone: '+6591234567', password: 'right-password' }]);
+  assert.deepEqual(calls.find(c => c[0] === 'region'), ['region', 'ap-southeast-2'], 'Sign-in runs next to the database (Sydney)');
   assert.deepEqual(calls.find(c => c[0] === 'setSession'), ['setSession', { access_token: 'access-fixture', refresh_token: 'refresh-fixture' }]);
   assert.deepEqual(calls.find(c => c[0] === 'from' && c[1] === 'app_users'), ['from', 'app_users', [['phone', '+6591234567']]]);
   assert.equal(globalThis.profile?.tenant_id, 'tenant-fixture');
@@ -135,6 +136,7 @@ try {
   await click(continueButton);
   await wait(20);
   assert.deepEqual(calls.find(c => c[0] === 'invoke'), ['invoke', 'phone-auth', { action: 'reset', phone: '+6581234567', redirect_to: 'https://sellio.apptelier.sg/Auth?type=recovery' }]);
+  assert.deepEqual(calls.find(c => c[0] === 'region'), ['region', 'ap-southeast-2'], 'Forgot password runs next to the database (Sydney)');
   assert.match(container.textContent, /Reset link sent!/);
   assert.match(container.textContent, /We sent it to ow•••@example\.invalid\. Check your email inbox/);
   const whatsapp = container.querySelector('a[href^="https://wa.me/6582228103"]');
