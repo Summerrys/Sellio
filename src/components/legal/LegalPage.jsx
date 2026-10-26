@@ -95,6 +95,20 @@ function useLegalMetadata({ title, description, path, dateModified }) {
   }, [dateModified, description, path, title]);
 }
 
+// "Back to Sellio": opened from a Sellio page (inside the app, or a link on the site),
+// go back to that page; opened directly (a search result, a typed address), the link
+// opens Sellio's home page as before.
+function backToSellio(event) {
+  if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const fromApp = (window.history.state?.idx ?? 0) > 0;
+  let fromSellio = false;
+  try { fromSellio = !!document.referrer && new URL(document.referrer).origin === window.location.origin; } catch { /* no referrer */ }
+  if ((fromApp || fromSellio) && window.history.length > 1) {
+    event.preventDefault();
+    window.history.back();
+  }
+}
+
 export default function LegalPage({
   title,
   eyebrow,
@@ -135,7 +149,7 @@ export default function LegalPage({
             <span>Sellio</span>
           </a>
           <nav className="sellio-legal-header__actions" aria-label="Policy navigation">
-            <a href="/" className="sellio-legal-back"><ArrowLeft aria-hidden="true" /> Back to Sellio</a>
+            <a href="/" className="sellio-legal-back" onClick={backToSellio}><ArrowLeft aria-hidden="true" /> Back to Sellio</a>
             <a href="/auth" rel="nofollow" className="sellio-legal-login">Merchant Login <ArrowRight aria-hidden="true" /></a>
           </nav>
         </div>

@@ -207,8 +207,9 @@ export default function ExploreMe() {
         )}
 
         <section className="mt-4 bg-white rounded-2xl border border-slate-100 overflow-hidden divide-y divide-slate-100">
-          <Row href="/privacy" icon={ShieldCheck} label="Privacy" />
-          <Row href="/terms" icon={FileText} label="Terms" />
+          {/* Opened inside the app (no reload); "Back to Sellio" there returns here. */}
+          <Row to="/privacy" icon={ShieldCheck} label="Privacy" />
+          <Row to="/terms" icon={FileText} label="Terms" />
         </section>
 
         {appUser && (

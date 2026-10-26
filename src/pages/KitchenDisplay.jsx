@@ -448,6 +448,8 @@ function KitchenDisplayScreen() {
     }
     setIsFullscreen(false);
   };
+  // Phone / browser Back leaves full screen first, instead of leaving the Kitchen page.
+  useBackToClose(isFullscreen, handleExit);
 
   const fetchOrders = async (throwOnError = false) => {
     if (!tenantId) return;
