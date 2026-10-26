@@ -1,6 +1,6 @@
-// Phone / browser Back (Android back button, back swipe): closes the top window, hands
-// its Back step to a page opened from inside it, and the header's back arrow knows when
-// there is a page to go back to. Real react-router (BrowserRouter) and the shared
+// The phone's own Back (Android back button or gesture, iPhone swipe in Safari): closes
+// the top window, steps back through step-by-step screens, and hands its Back step to a
+// page opened from inside a window. Real react-router (BrowserRouter) and the shared
 // Dialog / Sheet / AlertDialog components, in jsdom.
 // Run: node verification/back-navigation.dom.mjs   (jsdom installed in /tmp/sellio-verification)
 import assert from 'node:assert/strict';
@@ -37,7 +37,6 @@ await build({
     export { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
     export { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
     export { AlertDialog, AlertDialogContent, AlertDialogTitle } from '@/components/ui/alert-dialog';
-    export { headerBack, HEADER_PARENT_PAGES } from '@/lib/headerBack';
     export { goBack } from '@/lib/goBack';
     export { backToSellio } from '@/components/legal/LegalPage';
   ` },
@@ -59,17 +58,7 @@ let passes = 0;
 const passed = name => { passes++; console.log('PASS ' + name); };
 let root;
 try {
-  // ---- The header's back arrow (pure rules), before any page is mounted ----
-  const tabs = ['Dashboard', 'Orders', 'Products', 'Me'];
-  assert.deepEqual(mod.headerBack('Dashboard', tabs, { idx: 0 }), { show: false, fallbackPage: 'Dashboard' });
-  assert.equal(mod.headerBack('Orders', tabs, { idx: 3 }).show, true);
-  assert.equal(mod.headerBack('Orders', tabs, null).show, false);
-  passed('Header arrow: hidden on a main tab page opened directly; shown once there is an earlier Sellio page');
-  assert.deepEqual(mod.headerBack('Categories', tabs, { idx: 0 }), { show: true, fallbackPage: 'Products' });
-  assert.deepEqual(mod.headerBack('Inventory', tabs, {}), { show: true, fallbackPage: 'Products' });
-  assert.deepEqual(mod.headerBack('Settings', tabs, { idx: 0 }), { show: true, fallbackPage: 'Dashboard' });
-  passed('Header arrow: always on sub-pages; opened directly, it goes up to the parent page (Categories/Inventory -> Products, others -> Dashboard)');
-
+  // ---- In-page back buttons (Counter's Exit, Explore), before any page is mounted ----
   const calls = [];
   const fakeNavigate = (...args) => calls.push(args);
   const saved = win.history.state;
@@ -213,11 +202,10 @@ try {
   overlays.A.setOpen(false); await sleep(80);       // the menu closes as the new page opens
   assert.equal(router.location.pathname, '/Orders');
   assert.ok(!onOverlayEntry());
-  assert.equal(win.history.state.idx, home.idx + 1, 'the new page counts the page behind it');
-  assert.equal(mod.headerBack('Orders', tabs).show, true, 'so the header shows its back arrow');
+  assert.equal(win.history.state.idx, home.idx + 1, 'the new page counts the page behind it (in-page back buttons use this)');
   await pressBack();
   assert.ok(atHome(), 'one Back returns to the page the window was opened on');
-  passed('A link in a window (phone menu, notifications) hands over its Back step: one Back returns, header arrow shows');
+  passed('A link in a window (phone menu, notifications) hands over its Back step: one Back returns to where it was opened');
 
   // 8
   overlays.A.setOpen(true); await settle();
@@ -354,8 +342,7 @@ try {
 
   // 17: the app's code uses these pieces as tested here
   const layout = await readFile('src/Layout.jsx', 'utf8');
-  assert.match(layout, /headerBack\(currentPageName, shopTabPages\)/);
-  assert.match(layout, /goBack\(navigate, createPageUrl\(headerParentPage\)\)/);
+  assert.doesNotMatch(layout, /aria-label="Back"/, 'no on-screen back arrow in the header');
   assert.match(layout, /navigate\(createPageUrl\(item\.page\), \{ replace: handOverBackStep\(\) \}\)/);
   assert.match(layout, /useBackToClose\(mobileOpen, \(\) => setMobileOpen\(false\)\)/);
   const wiring = {
@@ -375,7 +362,7 @@ try {
   for (const file of ['dialog', 'sheet', 'alert-dialog']) {
     assert.match(await readFile(`src/components/ui/${file}.jsx`, 'utf8'), /useBackToClose\(open !== undefined && !!open && typeof onOpenChange === "function"/);
   }
-  passed('Layout, the shared dialogs, the step-by-step screens, Kitchen full screen and Privacy/Terms are wired to these rules');
+  passed('Layout (no header arrow), the shared dialogs, the step-by-step screens, Kitchen full screen and Privacy/Terms are wired to these rules');
 
   console.log(`\nAll ${passes} back-navigation checks passed.`);
 } catch (err) {
