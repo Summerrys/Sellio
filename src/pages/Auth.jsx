@@ -75,15 +75,15 @@ export default function Auth() {
 
   const [forgotMode, setForgotMode] = useState(false);
   const [forgotStep, setForgotStep] = useState(1); // 1=phone, 2=otp, 3=new password, 4=email sent
-  // Phone / browser Back in forgot password returns to sign-in, like its back arrow. Not
-  // on the new-password screen, which is opened from the reset email.
-  const leaveForgotPassword = () => { setForgotMode(false); setForgotStep(1); setForgotPhone(''); setForgotStaffEmail(''); setForgotNewPassword(''); setForgotConfirmPassword(''); };
-  useBackToClose(forgotMode && forgotStep !== 3, leaveForgotPassword);
   const [forgotPhone, setForgotPhone] = useState('');
   const [forgotCountry, setForgotCountry] = useState(COUNTRY_CODES[0]);
   const [forgotStaffEmail, setForgotStaffEmail] = useState('');
   const [forgotNewPassword, setForgotNewPassword] = useState('');
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  // Phone / browser Back in forgot password returns to sign-in, like its back arrow. Not
+  // on the new-password screen, which is opened from the reset email.
+  const leaveForgotPassword = () => { setForgotMode(false); setForgotStep(1); setForgotPhone(''); setForgotStaffEmail(''); setForgotNewPassword(''); setForgotConfirmPassword(''); };
+  useBackToClose(forgotMode && forgotStep !== 3, leaveForgotPassword);
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMaskedEmail, setForgotMaskedEmail] = useState('');
   const [forgotUserTenantId, setForgotUserTenantId] = useState('');
