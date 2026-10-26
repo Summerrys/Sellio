@@ -62,13 +62,14 @@ import { isShopTenant } from '@/lib/shopSelling';
 import { SellProvider, useSell } from '@/lib/sell';
 import { inAppFiles, clearExpiredFiles } from '@/lib/appFiles';
 import { useBackToClose, handOverBackStep } from '@/lib/useBackToClose';
+import { isStaffAccount } from '@/lib/staffAccess';
 
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth', 'Join', 'Account', 'World', 'Explore'];
 // A business's workspace pages on its bottom bar (Home and Me are on Explore).
 const BUSINESS_TAB_PAGES = ['Products', 'Counter', 'Orders'];
 
-function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription, onOpenProfile, onToggleCollapse, onClose }) {
+function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription, onOpenProfile, onToggleCollapse, onClose, staff = false }) {
   const navigate = useNavigate();
   const [linkCopied, setLinkCopied] = useState(false);
   const storefrontUrl = tenant?.slug ? `https://sellio.apptelier.sg/store/${tenant.slug}` : null;
@@ -102,7 +103,9 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
 
   // Filter tenant items based on permissions
   const tenantItems = allTenantItems.filter(item => 
-    item.permission === null || (Array.isArray(item.permission)
+    // Staff logins have no Explore.
+    !(staff && item.page === 'Explore') &&
+    (item.permission === null || Array.isArray(item.permission)
       ? item.permission.some(p => hasPermission?.(p))
       : hasPermission?.(item.permission))
   );
@@ -303,7 +306,8 @@ function AppLayout({ children, currentPageName }) {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
 
   const { appUser: customUser, clearAppUser } = useAppUser();
-  const { user, tenant, isSuperAdmin, isLoading, hasPermission, isOwner, noStore, canUseFeature } = useTenant();
+  const { user, tenant, tenantUser, isSuperAdmin, isLoading, hasPermission, isOwner, noStore, canUseFeature } = useTenant();
+  const staffAccount = isStaffAccount(customUser, tenantUser);
   const queryClient = useQueryClient();
   // Keep a signed-in staff member's permissions current: re-read their role and
   // membership every minute and whenever they return to the app, so an owner's
@@ -522,6 +526,11 @@ function AppLayout({ children, currentPageName }) {
   // onboarding, and a home seller's shop setup (the same look).
   const setupScreen = currentPageName === 'Onboarding' || currentPageName === 'ShopSetup';
 
+  // Staff logins have no Explore (its pages, listings, chats and Me): their shop instead.
+  if (currentPageName === 'Explore' && staffAccount) {
+    return <Navigate to={createPageUrl('Dashboard')} replace />;
+  }
+
   if (publicPages.includes(currentPageName)) {
     return <>{children}</>;
   }
@@ -568,7 +577,7 @@ function AppLayout({ children, currentPageName }) {
           collapsed ? "w-[72px]" : "w-[260px]"
         )}
       >
-        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => {}} subscription={subscription} onOpenProfile={() => setShowProfileModal(true)} onToggleCollapse={() => setCollapsed(!collapsed)} />
+        <SidebarContent collapsed={collapsed} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => {}} subscription={subscription} onOpenProfile={() => setShowProfileModal(true)} onToggleCollapse={() => setCollapsed(!collapsed)} staff={staffAccount} />
       </aside>
       )}
 
@@ -631,7 +640,7 @@ function AppLayout({ children, currentPageName }) {
         >
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
           <aside className="absolute left-0 top-0 h-full w-[280px] bg-white shadow-xl">
-            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => setMobileOpen(false)} onClose={() => setMobileOpen(false)} subscription={subscription} onOpenProfile={() => { setMobileOpen(false); setShowProfileModal(true); }} />
+            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => setMobileOpen(false)} onClose={() => setMobileOpen(false)} subscription={subscription} onOpenProfile={() => { setMobileOpen(false); setShowProfileModal(true); }} staff={staffAccount} />
           </aside>
         </div>
       )}
@@ -680,9 +689,11 @@ function AppLayout({ children, currentPageName }) {
         />
       ) : (
         <MerchantTabBar
-          active={BUSINESS_TAB_PAGES.includes(currentPageName) ? currentPageName : null}
+          active={BUSINESS_TAB_PAGES.includes(currentPageName) ? currentPageName : (staffAccount && currentPageName === 'Dashboard' ? 'home' : null)}
           onTab={(key, isActive) => handleTabNavigate(key, isActive)}
           bottomInset={bottomSafeAreaInset}
+          staff={staffAccount}
+          onStaffMe={() => setMobileOpen(true)}
         />
       ))}
 
