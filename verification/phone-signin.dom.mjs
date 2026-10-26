@@ -131,7 +131,7 @@ try {
   ];
   for (const [reply, message] of refusals) {
     reset();
-    invokeReply = () => (reply instanceof Error ? reply : reply);
+    invokeReply = () => reply;
     await submit(form);
     await wait(30);
     assert.deepEqual(globalThis.toastErrors, [message]);
