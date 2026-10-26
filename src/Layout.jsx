@@ -63,8 +63,6 @@ import { isShopTenant } from '@/lib/shopSelling';
 import { SellProvider, useSell } from '@/lib/sell';
 import { inAppFiles, clearExpiredFiles } from '@/lib/appFiles';
 import { useBackToClose, handOverBackStep } from '@/lib/useBackToClose';
-import { headerBack } from '@/lib/headerBack';
-import { goBack } from '@/lib/goBack';
 
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth', 'Join', 'Account', 'World', 'Explore'];
@@ -362,13 +360,6 @@ function AppLayout({ children, currentPageName }) {
   const freeShopNav = isShopTenant(tenant) && !hasPermission('orders.create');
   const shopTabPages = freeShopNav ? ['Dashboard', 'Listings', 'Chats', 'Me'] : ['Dashboard', ...BUSINESS_TAB_PAGES];
 
-  // The header's back arrow, shown beside the menu button (never instead of it); the
-  // rules are in lib/headerBack.js. useLocation re-renders the header on every
-  // navigation, so it stays current.
-  useLocation();
-  const navigate = useNavigate();
-  const { show: showHeaderBack, fallbackPage: headerParentPage } = headerBack(currentPageName, shopTabPages);
-  const goBackInApp = () => goBack(navigate, createPageUrl(headerParentPage));
   // Phone / browser Back closes the phone menu first.
   useBackToClose(mobileOpen, () => setMobileOpen(false));
   // …and the trial reminder, when it can be dismissed.
@@ -612,21 +603,17 @@ function AppLayout({ children, currentPageName }) {
       {!setupScreen && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-100 z-30 flex items-center px-4 justify-between"
         style={{ height: 'calc(56px + env(safe-area-inset-top, 0px))', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-        <div className="flex items-center gap-1 min-w-0">
-          {showHeaderBack && (
-            <Button variant="ghost" size="icon" className="h-11 w-11 -ml-2 flex-shrink-0" aria-label="Back" onClick={goBackInApp}>
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          )}
+        {/* No on-screen back arrow: the phone's own Back (button or swipe) goes back. */}
+        <div className="flex items-center gap-2">
           {tenant?.logo_url ? (
-            <button onClick={() => setMobileOpen(true)} data-tour="avatar-menu-btn" aria-label="Open menu" className="flex items-center gap-2 h-11 min-w-0 active:opacity-70 transition-opacity">
+            <button onClick={() => setMobileOpen(true)} data-tour="avatar-menu-btn" aria-label="Open menu" className="flex items-center gap-2 h-11 active:opacity-70 transition-opacity">
               <Menu className="w-6 h-6 text-slate-700 flex-shrink-0" />
-              <img src={tenant.logo_url} alt={tenant.name} className={cn("h-8 w-auto object-contain rounded", showHeaderBack && "max-w-[96px]")} />
+              <img src={tenant.logo_url} alt={tenant.name} className="h-8 w-auto object-contain rounded" />
             </button>
           ) : (
-            <button onClick={() => setMobileOpen(true)} data-tour="avatar-menu-btn" aria-label="Open menu" className="flex items-center gap-2 h-11 min-w-0 active:opacity-70 transition-opacity">
+            <button onClick={() => setMobileOpen(true)} data-tour="avatar-menu-btn" aria-label="Open menu" className="flex items-center gap-2 h-11 active:opacity-70 transition-opacity">
               <Menu className="w-6 h-6 text-slate-700 flex-shrink-0" />
-              <img src="/branding/sellio-logo.webp" alt="Sellio" className={cn("h-10 w-auto object-contain", showHeaderBack && "max-w-[96px]")} />
+              <img src="/branding/sellio-logo.webp" alt="Sellio" className="h-10 w-auto object-contain" />
             </button>
           )}
         </div>
