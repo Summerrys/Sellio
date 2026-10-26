@@ -1700,6 +1700,17 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
     closeDesigner();
   };
 
+  // Phone / browser Back works like tapping ✕: with unsaved changes it asks first (and
+  // waits while saving), so Back never throws design work away.
+  useBackToClose(open, () => {
+    if (saving) return false;
+    if (sessionStorage.getItem(`storefront_draft_${tenantId}`)) {
+      setLeaveDialogOpen(true);
+      return false;
+    }
+    closeDesigner();
+  });
+
   const handleChange = useCallback((key, value) => {
     setForm(prev => ({ ...prev, [key]: value }));
   }, []);
