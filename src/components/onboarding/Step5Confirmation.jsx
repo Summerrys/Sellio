@@ -9,10 +9,13 @@ import { generateThemeVariables } from '../theme/themeUtils';
 import { useAppUser, cookieUtils } from '@/lib/AppUserContext';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 import { getSupabase } from '@/lib/supabaseClient';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   const { appUser, updateAppUser } = useAppUser();
   const [isLaunching, setIsLaunching] = useState(false);
+  // While the store is being created, phone / browser Back waits instead of stepping back.
+  useBackToClose(isLaunching, () => false);
 
   useEffect(() => {
     const colors = formData.customPrimary && formData.customSecondary
