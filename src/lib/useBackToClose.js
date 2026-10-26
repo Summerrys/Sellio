@@ -61,7 +61,10 @@ function onPopState() {
   armed = false;                    // the browser consumed our entry
   const top = stack.pop();          // remove now so settle() sees the truth
   if (top) {
-    if (top.close() === false) {
+    const result = top.close();
+    if (!top.isOpen()) {
+      // Already gone (closed straight away): nothing to keep.
+    } else if (result === false) {
       putBack(top);                   // A save/print in progress keeps Back armed.
     } else if (stack.length > 0) {
       // Other windows are still open, so Back is armed again straight away anyway. Keep
