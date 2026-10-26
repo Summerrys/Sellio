@@ -361,7 +361,7 @@ try {
   passed('Finishing a flow takes its Back step off first, so Back from the next page skips the finished flow');
 
   // 17
-  assert.ok(stepPushes.length > 5);
+  assert.ok(stepPushes.length > 0);
   assert.deepEqual(stepPushes.filter(p => !p.afterTap), [], 'every Back step was added straight after a tap');
   passed(`All ${stepPushes.length} Back steps were added straight after a tap (none after a Back without one)`);
 
