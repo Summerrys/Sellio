@@ -123,7 +123,7 @@ export default function OrderTracking() {
           <Button
             variant="ghost"
             className="text-white hover:bg-white/20 mb-4"
-            onClick={() => navigate(-1)}
+            onClick={() => goBack(navigate, '/explore')}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
