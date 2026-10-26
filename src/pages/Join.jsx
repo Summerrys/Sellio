@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mail, User, Phone, Lock, ChevronDown, AlertCircle, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
+import { isNativeApp } from '@/lib/nativeApp';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { completeAuthNavigation } from '@/lib/authNavigation';
@@ -237,9 +239,17 @@ export default function Join() {
       <div className="w-full max-w-sm sm:max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-6">
-            <a href="/" className="inline-flex items-center justify-center mb-3" aria-label="Sellio home">
-              <img src={LOGO_URL} alt="Sellio" className="h-20 w-auto object-contain" />
-            </a>
+            {/* In the app the logo opens Explore without reloading the app (websites keep
+                the home link). */}
+            {isNativeApp() ? (
+              <Link to="/explore" className="inline-flex items-center justify-center mb-3" aria-label="Sellio home">
+                <img src={LOGO_URL} alt="Sellio" className="h-20 w-auto object-contain" />
+              </Link>
+            ) : (
+              <a href="/" className="inline-flex items-center justify-center mb-3" aria-label="Sellio home">
+                <img src={LOGO_URL} alt="Sellio" className="h-20 w-auto object-contain" />
+              </a>
+            )}
             {stage === 'start' && (<>
               <h1 className="text-xl font-semibold text-slate-800 mb-1">Create your Sellio account</h1>
               <p className="text-sm text-slate-500">Free to start. Sell from home, or run your business on Sellio.</p>
