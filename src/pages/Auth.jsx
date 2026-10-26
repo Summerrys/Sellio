@@ -273,7 +273,7 @@ export default function Auth() {
         if (isNewAuthUser && !tokenInUrl && !isBypass && !joinInUrl) {
           // Reject the session. Do not expose a public admin deletion endpoint merely
           // to clean up an unapproved OAuth identity.
-          await supabase.auth.signOut();
+          await supabase.auth.signOut({ scope: 'local' }); // this device only
           setGoogleLoading(false);
           window.history.replaceState(null, '', window.location.pathname);
           setGoogleGateError('true');
@@ -288,7 +288,7 @@ export default function Auth() {
           const invite = inviteRow?.status === 'pending' ? inviteRow : null;
           const inviteEmailForCheck = invite?.email?.toLowerCase();
           if (inviteEmailForCheck && user.email?.toLowerCase() !== inviteEmailForCheck) {
-            await supabase.auth.signOut();
+            await supabase.auth.signOut({ scope: 'local' }); // this device only
             setGoogleLoading(false);
             window.history.replaceState(null, '', `${window.location.pathname}?token=${tokenInUrl}`);
             setGoogleSignupError(`Please sign up with the email address used during payment (${invite.email})`);
@@ -471,6 +471,7 @@ export default function Auth() {
       if (error) throw error;
       // Supabase Auth is the only password authority. Never duplicate password
       // material in the public application profile.
+      // After a password change, sign out on every device (deliberately not 'local').
       await supabase.auth.signOut();
 
       toast.success('Password updated successfully!');
