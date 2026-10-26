@@ -244,6 +244,7 @@ function KitchenDisplayScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [expandedOrder, setExpandedOrder] = useState(null);
+  useBackToClose(!!expandedOrder, () => setExpandedOrder(null)); // phone / browser Back closes the enlarged order
   const [soundEnabled, setSoundEnabled] = useState(false);
   const fallbackPollRef = useRef(null);
   const audioCtxRef = useRef(null);
