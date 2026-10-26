@@ -25,6 +25,7 @@ const renderMarkdown = (text) => {
 export default function MerchantAssistantWidget({ externalOpen, onExternalClose }) {
   const { tenantId } = useTenant();
   const [open, setOpen] = useState(false);
+  useBackToClose(open, () => setOpen(false)); // phone / browser Back closes the assistant
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
