@@ -103,31 +103,52 @@ try {
   const tablist = () => container.querySelector('[role="tablist"]');
   const foldBox = () => tablist().parentElement.parentElement;
   const foldButton = () => container.querySelector('button[aria-label^="Show categories"]');
-  assert.ok(header.contains(tablist()), 'categories sit in the sticky header');
+  const isFolded = () => foldBox().style.transform.includes('-100%');
+  const buttonShown = () => foldButton().style.opacity === '1' && foldButton().style.pointerEvents === 'auto';
+  assert.ok(header.contains(tablist()), 'categories sit in the header');
+  assert.match(header.className, /fixed top-0/, 'the header sits over the page (folding never moves the page)');
+  assert.ok(header.nextElementSibling?.getAttribute('aria-hidden') === 'true', 'room is kept for it at the top of the page');
   assert.match(header.querySelector('.h-14')?.className || '', /h-14/, 'logo row stays 56px');
   assert.match(container.querySelector('input[type="search"]').className, /h-\[38px\]/);
   assert.match(tablist().querySelector('button').className, /h-\[30px\]/);
-  assert.equal(foldBox().style.maxHeight, '46px');
-  assert.equal(foldButton(), null);
-  passed('Top: 56px logo row, 38px search, 30px category pills inside the header');
+  assert.ok(!isFolded());
+  assert.ok(!buttonShown());
+  passed('Top: 56px logo row, 38px search, 30px category pills; the header sits over the page');
+
+  for (const style of [foldBox().style, foldButton().style]) {
+    assert.match(style.transition, /transform/);
+    assert.doesNotMatch(style.transition, /height|max-height|top|margin|padding/, 'only transform and opacity move: no layout, so it stays smooth');
+  }
+  assert.equal(foldBox().style.willChange, 'transform');
+  passed('The slide moves only transform and opacity (smooth on phones: nothing is laid out again)');
 
   await scrollToY(30);
-  assert.equal(foldBox().style.maxHeight, '46px', 'a little scroll changes nothing');
+  assert.ok(!isFolded(), 'a little scroll changes nothing');
   await scrollToY(120);
-  assert.equal(parseFloat(foldBox().style.maxHeight), 0, 'scrolled down: categories fold away');
+  assert.ok(isFolded(), 'scrolled down: categories slide away');
   assert.equal(foldBox().style.visibility, 'hidden');
-  assert.ok(foldButton(), 'a categories button sits in the search bar');
+  assert.ok(buttonShown(), 'a categories button shows in the search bar');
   await scrollToY(20);
-  assert.equal(parseFloat(foldBox().style.maxHeight), 0, 'stays folded until the top');
+  assert.ok(isFolded(), 'stays folded until the top');
   await scrollToY(4);
-  assert.equal(foldBox().style.maxHeight, '46px', 'back at the top: categories open out');
-  assert.equal(foldButton(), null);
-  passed('Scrolling down folds the categories into a button in the search bar; back at the top they open out');
+  assert.ok(!isFolded(), 'back at the top: categories slide back');
+  assert.ok(!buttonShown());
+  passed('Scrolling down slides the categories away into a button in the search bar; back at the top they slide back');
 
   await scrollToY(400);
   foldButton().dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
   await sleep(60);
-  assert.equal(foldBox().style.maxHeight, '46px', 'the button opens them while scrolled down');
+  assert.ok(!isFolded(), 'the button brings them back while scrolled down');
+  await scrollToY(390);
+  await scrollToY(398);
+  assert.ok(!isFolded(), 'scrolling up a little keeps them');
+  await scrollToY(420);
+  assert.ok(isFolded(), 'any scroll down hides them again');
+  assert.ok(buttonShown());
+  passed('Opened from the button, the categories hide again on the next scroll down');
+
+  foldButton().dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  await sleep(60);
   const goods = [...tablist().querySelectorAll('button')].find(b => b.textContent === 'Goods');
   goods.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
   await sleep(400);
@@ -135,7 +156,7 @@ try {
   assert.equal(globalThis.feedCalls.at(-1)[1].p_kind, 'goods');
   await scrollToY(400);
   assert.ok(foldButton().querySelector('span'), 'a dot shows a category is picked');
-  passed('The button opens the categories; picking one shows its results from the top; a dot marks a picked category');
+  passed('Picking a category shows its results from the top; a dot marks a picked category');
 
   const grid = container.querySelector('.grid');
   assert.match(grid.className, /gap-2 sm:gap-3/);
