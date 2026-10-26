@@ -11,11 +11,24 @@ import { completeAuthNavigation } from '@/lib/authNavigation';
 import { startGoogleSignIn } from '@/lib/googleSignIn';
 import { COMPLETE_KEY, clearMobileAuth, hasMobileGoogleCompletion, isNativeAndroid } from '@/lib/mobileOAuth';
 import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
-import { SELLIO_WEB_ORIGINS } from '@/lib/accountFlow';
+import { SELLIO_WEB_ORIGINS, decideOnboardingAccess } from '@/lib/accountFlow';
+import { homeFor, isStaffAccount } from '@/lib/staffAccess';
 import { callPhoneAuth } from '@/lib/phoneAuth';
 import { useBackToClose } from '@/lib/useBackToClose';
 
 const BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
+
+// Signed in without a finished shop: a business plan waiting goes on to its setup;
+// anyone else starts on Explore (a staff login on its shop's Dashboard).
+async function landingWithoutShop(supabase, appUserRow) {
+  if (isStaffAccount(appUserRow)) return '/Dashboard';
+  try {
+    const { data, error } = await supabase.rpc('my_account_status');
+    return decideOnboardingAccess(data, error) === 'allowed' ? '/Onboarding' : '/explore';
+  } catch {
+    return '/Onboarding'; // the setup page checks again and sends them on
+  }
+}
 
 const COUNTRY_CODES = [
   { code: '+65', flag: '🇸🇬', name: 'SG', placeholder: '91234567', validate: (p) => /^[89]\d{7}$/.test(p), hint: '8 digits, starting with 8 or 9' },
@@ -138,7 +151,7 @@ export default function Auth() {
             console.log('[Auth] session recovery for', session.user.email, '→ activeMember:', isActiveMember);
             if (isActiveMember) {
               setAppUser(appUserRow);
-              completeAuthNavigation(accountDeletionDestination('/Dashboard'));
+              completeAuthNavigation(accountDeletionDestination(homeFor(appUserRow))); // Explore; staff: their shop
               return;
             }
           }
@@ -375,7 +388,7 @@ export default function Auth() {
             .eq('status', 'pending');
         }
 
-        completeAuthNavigation(accountDeletionDestination(appUser.onboarding_completed ? '/Dashboard' : (joinInUrl ? '/Join' : '/Onboarding')));
+        completeAuthNavigation(accountDeletionDestination(appUser.onboarding_completed ? homeFor(appUser) : (joinInUrl ? '/Join' : await landingWithoutShop(supabase, appUser))));
       } catch (err) {
         toast.error(err.message || 'Google Sign-In failed');
         setGoogleLoading(false);
@@ -568,7 +581,7 @@ export default function Auth() {
         setAppUser(userForCookie);
         showSuccess('Welcome back!');
         // Straight on to the app (it loads its first page in full), no extra pause.
-        completeAuthNavigation(accountDeletionDestination(createPageUrl(appUserRow.onboarding_completed ? 'Dashboard' : 'Onboarding')));
+        completeAuthNavigation(accountDeletionDestination(appUserRow.onboarding_completed ? homeFor(appUserRow) : await landingWithoutShop(supabase, appUserRow)));
 
       } else {
         // SIGNUP: check bypass list

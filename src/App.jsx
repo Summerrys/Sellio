@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import AppRefreshProvider from '@/components/ui-custom/AppRefreshProvider';
 import { AppUserProvider, useAppUser } from '@/lib/AppUserContext';
+import { homeFor } from '@/lib/staffAccess';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import MobileOAuthReturn from '@/components/auth/MobileOAuthReturn';
 import { isMobileOAuthCallback } from '@/lib/mobileOAuth';
@@ -120,7 +121,8 @@ const RootRoute = () => {
     return <Navigate to="/explore" replace />;
   }
 
-  return appUser ? <Navigate to="/Dashboard" replace /> : <LandingPage />;
+  // Signed in: Explore (a staff login: its shop's Dashboard).
+  return appUser ? <Navigate to={homeFor(appUser)} replace /> : <LandingPage />;
 };
 
 const AuthenticatedApp = () => {
