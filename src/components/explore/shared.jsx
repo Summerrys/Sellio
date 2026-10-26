@@ -47,10 +47,7 @@ export function timeAgo(iso) {
 }
 
 // Back within the app when there's somewhere to go back to, otherwise a sensible page.
-export function goBack(navigate, fallback = '/explore') {
-  if ((window.history.state?.idx ?? 0) > 0) navigate(-1);
-  else navigate(fallback, { replace: true });
-}
+export { goBack } from '@/lib/goBack';
 
 export function ShopAvatar({ name, logo, size = 24 }) {
   const [failed, setFailed] = useState(false);
