@@ -10,6 +10,7 @@ import { useNotifications } from './NotificationProvider';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../../utils';
+import { useBackToClose, handOverBackStep } from '@/lib/useBackToClose';
 
 const NOTIFICATION_ICONS = {
   new_order: ShoppingBag,
@@ -41,13 +42,16 @@ export default function NotificationBell() {
   const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [open, setOpen] = useState(false);
+  // Phone / browser Back closes the list. A page opened from it takes over that Back
+  // step, so Back from the page returns to where the list was opened.
+  useBackToClose(open, () => setOpen(false));
 
   const recentNotifications = notifications.slice(0, 10);
 
   const handleNotificationClick = (notification) => {
     if (!notification.is_read) markAsRead(notification.id);
     if (notification.link) {
-      navigate(notification.link);
+      navigate(notification.link, { replace: handOverBackStep() });
       setOpen(false);
     }
   };
@@ -145,7 +149,7 @@ export default function NotificationBell() {
               variant="ghost"
               className="h-auto min-h-[44px] w-full whitespace-normal text-sm"
               onClick={() => {
-                navigate(createPageUrl('Notifications'));
+                navigate(createPageUrl('Notifications'), { replace: handOverBackStep() });
                 setOpen(false);
               }}
             >
