@@ -32,7 +32,8 @@ let nextSeq = 0;
 let holdUntilEmpty = false;  // a finished flow took its step off: don't add it back
 let ownTraversal = null;     // our own history.back()/forward() on its way: { direction, until }
 let stepAhead = null;        // after Back took our step: { key, epoch } of the page it sat on
-let historyEpoch = 0;        // up by one whenever an entry is added (forward entries are gone)
+let historyEpoch = 0;        // up by one when an entry is added (forward entries are gone) or a
+                             // Back step is turned into a page
 let lastTapAt = 0;           // last tap or key press
 let lastTraversalAt = 0;     // last Back / Forward (anyone's)
 let waitingForTap = false;
@@ -157,13 +158,19 @@ function onPopState() {
 }
 
 if (browser) {
-  // Count added history entries (react-router's too): forward entries end there.
+  // Count changes to history (react-router's too) that end the step just ahead: an added
+  // entry (forward entries are gone), or a Back step replaced by a page (a hand-over).
   try {
     const push = browser.history.pushState;
+    const replace = browser.history.replaceState;
     if (!push.sellioCounted) {
-      const counted = function pushState(...args) { historyEpoch += 1; return push.apply(this, args); };
-      counted.sellioCounted = true;
-      browser.history.pushState = counted;
+      const countedPush = function pushState(...args) { historyEpoch += 1; return push.apply(this, args); };
+      countedPush.sellioCounted = true;
+      browser.history.pushState = countedPush;
+      browser.history.replaceState = function replaceState(state, ...rest) {
+        if (browser.history.state?.sellioOverlay && !state?.sellioOverlay) historyEpoch += 1;
+        return replace.call(this, state, ...rest);
+      };
     }
   } catch { /* history left as it is */ }
   TAP_EVENTS.forEach(type => browser.addEventListener(type, () => { lastTapAt = now(); }, true));
