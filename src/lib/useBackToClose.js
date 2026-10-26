@@ -78,8 +78,13 @@ function onPopState() {
 // { replace: <its result> }, so the window's Back step becomes the new page's instead
 // of being undone (which would go straight back) once the window closes.
 export function handOverBackStep() {
-  if (!armed) return false;
+  if (!armed || !window.history.state?.sellioOverlay) return false;
   armed = false;
+  // react-router numbers a replacing page from the entry it replaces. Our entry carries
+  // the number of the page below it, so move it up one first: the new page then counts
+  // the page behind it, and the header's back arrow knows there is a page to go back to.
+  const state = window.history.state;
+  window.history.replaceState({ ...state, idx: (typeof state.idx === 'number' ? state.idx : 0) + 1 }, '');
   return true;
 }
 
