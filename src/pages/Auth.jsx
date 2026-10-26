@@ -31,6 +31,10 @@ const getBaseUrl = () => {
   return 'https://sellio.apptelier.sg';
 };
 
+// Phone sign-in (the phone-auth server function) runs in Sydney, next to the database and
+// Supabase Auth, so its steps don't cross regions on the way.
+const PHONE_AUTH_REGION = 'ap-southeast-2';
+
 // "1 minute" / "15 minutes", for the phone sign-in and reset limits.
 const waitText = (minutes) => {
   const n = Math.max(1, Math.round(Number(minutes) || 1));
@@ -420,6 +424,7 @@ export default function Auth() {
       // masked one (al•••@gmail.com) comes back to show.
       const { data: result, error: resetError } = await supabase.functions.invoke('phone-auth', {
         body: { action: 'reset', phone: fullPhone, redirect_to: `${getBaseUrl()}/Auth?type=recovery` },
+        region: PHONE_AUTH_REGION,
       });
       if (resetError || !result) throw new Error('Something went wrong. Please try again.');
 
@@ -529,6 +534,7 @@ export default function Auth() {
         // Supabase Auth still validates the password. app_users is profile data only.
         const { data: result, error: signInError } = await supabase.functions.invoke('phone-auth', {
           body: { action: 'sign_in', phone: fullPhone, password: formData.password },
+          region: PHONE_AUTH_REGION,
         });
         if (signInError || !result) throw new Error('Could not sign in right now. Please try again.');
         if (!result.ok || !result.session?.access_token || !result.session?.refresh_token) {
