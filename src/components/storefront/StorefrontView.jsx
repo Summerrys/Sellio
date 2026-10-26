@@ -461,6 +461,8 @@ export default function StorefrontView({
   // The shop's rating (3+ buyers) under its name, and what tapping it does.
   rating = null,
   onRatingClick,
+  // A home shop (no saved layout yet) shows a Grid; a business, Split.
+  homeShop = false,
 }) {
   const { t } = useLanguage();
   const tenant = tenantProp;
@@ -471,7 +473,7 @@ export default function StorefrontView({
 
   const primaryColor = storefrontConfig?.banner_bg_color || theme?.primary_color || '#6366f1';
   const currency = tenant?.currency || 'SGD';
-  const productLayout = storefrontConfig?.product_layout || 'split';
+  const productLayout = storefrontLayout(storefrontConfig, homeShop);
   const menuDensity = storefrontConfig?.menu_density === 'compact' ? 'compact' : 'comfortable';
   const typographyScale = getStorefrontTypographyScale(storefrontConfig?.typography_scale);
   const bannerBgImage = storefrontConfig?.banner_bg_image_url || null;
