@@ -837,6 +837,7 @@ function StorefrontInner() {
         <StorefrontView
           tenant={tenant}
           storefrontConfig={storefrontConfig}
+          homeShop={!!shopSelling}
           theme={theme}
           products={products}
           categories={categories}

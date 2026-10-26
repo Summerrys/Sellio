@@ -23,6 +23,7 @@ import { RatingPill } from '@/components/ratings/RatingParts';
 import { useLanguage, useTranslatedTexts } from '@/lib/LanguageContext';
 import { extractBannerEdgeAssets, isValidBannerEdgeColor } from '@/lib/bannerEdgeColors';
 import { getStorefrontFontStack, getStorefrontTypographyScale } from '@/lib/storefrontTypography';
+import { storefrontLayout } from '@/lib/storefrontDefaults';
 
 const sfType = pixels => `calc(${pixels}px * var(--sf-type-scale, 1))`;
 

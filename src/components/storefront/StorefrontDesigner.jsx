@@ -26,6 +26,8 @@ import StorefrontView, {
 import ImageEditModal from '@/components/onboarding/ImageEditModal';
 import { LanguageProvider } from '@/lib/LanguageContext';
 import { fetchStorefrontCatalog } from '@/lib/storefrontCatalog';
+import { storefrontLayout, DEFAULT_BANNER_COLOR } from '@/lib/storefrontDefaults';
+import { isShopTenant } from '@/lib/shopSelling';
 import { extractBannerEdgeColors, isValidBannerEdgeColor } from '@/lib/bannerEdgeColors';
 import {
   STOREFRONT_TYPOGRAPHY_PERSONALITIES,
@@ -1610,17 +1612,20 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
       const [configRes, catalog, tenantRes, themeRes] = await Promise.all([
         supabase.from('storefront_configs').select('*').eq('tenant_id', tenantId).maybeSingle(),
         fetchStorefrontCatalog(supabase, tenantId),
-        supabase.from('tenants').select('name, logo_url, currency, address, settings').eq('id', tenantId).maybeSingle(),
+        supabase.from('tenants').select('name, logo_url, currency, address, settings, seller_type').eq('id', tenantId).maybeSingle(),
         supabase.from('theme_configs').select('primary_color').eq('tenant_id', tenantId).maybeSingle(),
       ]);
 
       const tenantPrimaryColor = themeRes.data?.primary_color || null;
-      setForm(draftForm
-        ? { ...DEFAULTS, ...draftForm }
-        : configRes.data
-          ? { ...DEFAULTS, ...configRes.data }
-          : { ...DEFAULTS, ...(tenantPrimaryColor ? { banner_bg_color: tenantPrimaryColor } : {}) }
-      );
+      const saved = draftForm || configRes.data || {};
+      setForm({
+        ...DEFAULTS,
+        ...saved,
+        // Anything not chosen yet shows what the live store shows (lib/storefrontDefaults.js):
+        // a Grid for a home shop, Split for a business; the shop's colour for the banner.
+        product_layout: storefrontLayout(saved, isShopTenant(tenantRes.data)),
+        banner_bg_color: saved.banner_bg_color || tenantPrimaryColor || DEFAULT_BANNER_COLOR,
+      });
       setPreviewProducts(catalog.products);
       setPreviewCategories(catalog.categories);
       setPreviewTenant(tenantRes.data);
