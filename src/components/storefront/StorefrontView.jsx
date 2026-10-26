@@ -32,7 +32,8 @@ const sfType = pixels => `calc(${pixels}px * var(--sf-type-scale, 1))`;
 function leaveStore() {
   if ((window.history.state?.idx ?? 0) > 0) { window.history.back(); return; }
   const staff = new URLSearchParams(window.location.search).get('staff') === 'true';
-  window.location.assign(staff ? '/Dashboard' : '/explore');
+  // Replaces the menu, so Back from there doesn't bring the menu straight back.
+  window.location.replace(staff ? '/Dashboard' : '/explore');
 }
 
 export const STOREFRONT_BANNER_MIN_HEIGHT = 120;
