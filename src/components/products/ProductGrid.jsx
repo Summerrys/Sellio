@@ -116,7 +116,7 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <p style={{ fontWeight: 600, fontSize: 14, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</p>
+                <p style={{ fontWeight: 600, fontSize: 14, margin: 0, minWidth: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</p>
                 {product.is_featured && <Badge className="bg-amber-500 text-white border-0 text-[10px] px-1.5 py-0">Featured</Badge>}
                 {product.is_active === false && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Inactive</Badge>}
               </div>

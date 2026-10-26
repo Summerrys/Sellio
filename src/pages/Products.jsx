@@ -724,7 +724,28 @@ export default function Products({ embedded = false } = {}) {
               className="pl-9 h-11"
             />
           </div>
+            {/* View Toggle */}
+            <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', borderRadius: 8, padding: 3, flexShrink: 0 }}>
+              <button
+                onClick={() => handleViewToggle('grid')}
+                aria-label="Show as a grid"
+                aria-pressed={viewMode === 'grid'}
+                style={{ width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer', background: viewMode === 'grid' ? 'white' : 'transparent', boxShadow: viewMode === 'grid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: viewMode === 'grid' ? '#6366f1' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <LayoutGrid size={16} />
+              </button>
+              <button
+                onClick={() => handleViewToggle('list')}
+                aria-label="Show as a list"
+                aria-pressed={viewMode === 'list'}
+                style={{ width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer', background: viewMode === 'list' ? 'white' : 'transparent', boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: viewMode === 'list' ? '#6366f1' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <List size={16} />
+              </button>
+            </div>
+          </div>
 
+          <div className="flex gap-2 items-center">
             {/* Category Filter */}
             {!(embedded && categories.length === 0) && (
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -753,25 +774,6 @@ export default function Products({ embedded = false } = {}) {
               </SelectContent>
             </Select>
 
-            {/* View Toggle */}
-            <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', borderRadius: 8, padding: 3, marginLeft: 'auto', flexShrink: 0 }}>
-              <button
-                onClick={() => handleViewToggle('grid')}
-                aria-label="Show as a grid"
-                aria-pressed={viewMode === 'grid'}
-                style={{ width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer', background: viewMode === 'grid' ? 'white' : 'transparent', boxShadow: viewMode === 'grid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: viewMode === 'grid' ? '#6366f1' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <LayoutGrid size={16} />
-              </button>
-              <button
-                onClick={() => handleViewToggle('list')}
-                aria-label="Show as a list"
-                aria-pressed={viewMode === 'list'}
-                style={{ width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer', background: viewMode === 'list' ? 'white' : 'transparent', boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: viewMode === 'list' ? '#6366f1' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <List size={16} />
-              </button>
-            </div>
           </div>
         </div>
 
