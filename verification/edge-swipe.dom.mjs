@@ -25,7 +25,7 @@ win.history.back = () => backs.push(now);
 // One finger: start, moves, end. Each step is `ms` later.
 function swipe(points, { target = $('page'), ms = 16 } = {}) {
   const fire = (type, point, list) => {
-    const event = new win.Event(type, { bubbles: true, cancelable: true });
+    const event = new target.ownerDocument.defaultView.Event(type, { bubbles: true, cancelable: true });
     const touch = { clientX: point[0], clientY: point[1] };
     Object.defineProperty(event, 'touches', { value: list ? [touch] : [] });
     Object.defineProperty(event, 'changedTouches', { value: [touch] });
