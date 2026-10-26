@@ -396,7 +396,6 @@ function ExploreHeader({ query, onQuery, kind, onKind, signedIn, hasShop }) {
           </div>
         </div>
       </header>
-      <div aria-hidden="true" style={{ height: height ?? 'calc(132px + env(safe-area-inset-top, 0px))' }} />
     </>
   );
 }
