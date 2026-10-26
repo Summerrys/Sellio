@@ -2087,6 +2087,20 @@ function useLegalMetadata({ title, description, path, dateModified }) {
     };
   }, [dateModified, description, path, title]);
 }
+function backToSellio(event) {
+  var _a;
+  if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const fromApp = (((_a = window.history.state) == null ? void 0 : _a.idx) ?? 0) > 0;
+  let fromSellio = false;
+  try {
+    fromSellio = !!document.referrer && new URL(document.referrer).origin === window.location.origin;
+  } catch {
+  }
+  if ((fromApp || fromSellio) && window.history.length > 1) {
+    event.preventDefault();
+    window.history.back();
+  }
+}
 function LegalPage({
   title,
   eyebrow,
@@ -2124,7 +2138,7 @@ function LegalPage({
         /* @__PURE__ */ jsx("span", { children: "Sellio" })
       ] }),
       /* @__PURE__ */ jsxs("nav", { className: "sellio-legal-header__actions", "aria-label": "Policy navigation", children: [
-        /* @__PURE__ */ jsxs("a", { href: "/", className: "sellio-legal-back", children: [
+        /* @__PURE__ */ jsxs("a", { href: "/", className: "sellio-legal-back", onClick: backToSellio, children: [
           /* @__PURE__ */ jsx(ArrowLeft, { "aria-hidden": "true" }),
           " Back to Sellio"
         ] }),
