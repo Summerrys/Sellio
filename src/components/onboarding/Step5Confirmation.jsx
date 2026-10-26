@@ -122,8 +122,9 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
 
       setTimeout(() => {
         onComplete();
-        // Force full page reload so TenantContext re-fetches fresh data
-        setTimeout(() => { window.location.href = '/Dashboard'; }, 500);
+        // Force full page reload so TenantContext re-fetches fresh data. It replaces the
+        // setup page, so Back from the Dashboard doesn't land on a finished setup.
+        setTimeout(() => { window.location.replace('/Dashboard'); }, 500);
       }, 1500);
 
     } catch (error) {
