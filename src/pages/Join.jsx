@@ -3,6 +3,7 @@ import { Mail, User, Phone, Lock, ChevronDown, AlertCircle, Check } from 'lucide
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { isNativeApp } from '@/lib/nativeApp';
+import { useBackToClose } from '@/lib/useBackToClose';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { completeAuthNavigation } from '@/lib/authNavigation';
@@ -48,6 +49,9 @@ function Notice({ tone = 'amber', children }) {
 export default function Join() {
   const { setAppUser } = useAppUser();
   const [stage, setStage] = useState('loading'); // loading | start | sent | finish | staff
+  // Phone / browser Back from "check your email" returns to the email form, like
+  // "Use a different email".
+  useBackToClose(stage === 'sent', () => { setStage('start'); setNotice(''); });
   const [email, setEmail] = useState('');
   const [notice, setNotice] = useState('');
   const [sending, setSending] = useState(false);

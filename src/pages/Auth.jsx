@@ -13,6 +13,7 @@ import { COMPLETE_KEY, clearMobileAuth, hasMobileGoogleCompletion, isNativeAndro
 import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
 import { SELLIO_WEB_ORIGINS } from '@/lib/accountFlow';
 import { callPhoneAuth } from '@/lib/phoneAuth';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 const BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
 
@@ -74,6 +75,10 @@ export default function Auth() {
 
   const [forgotMode, setForgotMode] = useState(false);
   const [forgotStep, setForgotStep] = useState(1); // 1=phone, 2=otp, 3=new password, 4=email sent
+  // Phone / browser Back in forgot password returns to sign-in, like its back arrow. Not
+  // on the new-password screen, which is opened from the reset email.
+  const leaveForgotPassword = () => { setForgotMode(false); setForgotStep(1); setForgotPhone(''); setForgotStaffEmail(''); setForgotNewPassword(''); setForgotConfirmPassword(''); };
+  useBackToClose(forgotMode && forgotStep !== 3, leaveForgotPassword);
   const [forgotPhone, setForgotPhone] = useState('');
   const [forgotCountry, setForgotCountry] = useState(COUNTRY_CODES[0]);
   const [forgotStaffEmail, setForgotStaffEmail] = useState('');
@@ -699,7 +704,7 @@ export default function Auth() {
                 <div className="flex items-center gap-3 mb-6">
                   <button
                     type="button"
-                    onClick={() => { setForgotMode(false); setForgotStep(1); setForgotPhone(''); setForgotStaffEmail(''); setForgotNewPassword(''); setForgotConfirmPassword(''); }}
+                    onClick={leaveForgotPassword}
                     className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 transition-colors border-none cursor-pointer"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
