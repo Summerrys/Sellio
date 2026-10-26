@@ -63,14 +63,13 @@ import { isShopTenant } from '@/lib/shopSelling';
 import { SellProvider, useSell } from '@/lib/sell';
 import { inAppFiles, clearExpiredFiles } from '@/lib/appFiles';
 import { useBackToClose, handOverBackStep } from '@/lib/useBackToClose';
+import { headerBack } from '@/lib/headerBack';
+import { goBack } from '@/lib/goBack';
 
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth', 'Join', 'Account', 'World', 'Explore'];
 // A business's workspace pages on its bottom bar (Home and Me are on Explore).
 const BUSINESS_TAB_PAGES = ['Products', 'Counter', 'Orders'];
-// Where the header's back arrow goes on a page that was opened directly (nothing to go
-// back to in the app). Pages not listed go to the Dashboard.
-const HEADER_PARENT_PAGES = { Categories: 'Products', Inventory: 'Products' };
 
 function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription, onOpenProfile, onToggleCollapse, onClose }) {
   const navigate = useNavigate();
@@ -363,20 +362,13 @@ function AppLayout({ children, currentPageName }) {
   const freeShopNav = isShopTenant(tenant) && !hasPermission('orders.create');
   const shopTabPages = freeShopNav ? ['Dashboard', 'Listings', 'Chats', 'Me'] : ['Dashboard', ...BUSINESS_TAB_PAGES];
 
-  // The header's back arrow, shown beside the menu button (never instead of it):
-  //  - back to the previous Sellio page whenever there is one (react-router's history
-  //    index, which counts only this app's pages, unlike window.history.length);
-  //  - on a sub-page opened directly, up to its parent page;
-  //  - none on the main (tab) pages when there is nothing to go back to.
-  // useLocation re-renders the header on every navigation, so this stays current.
-  const location = useLocation();
+  // The header's back arrow, shown beside the menu button (never instead of it); the
+  // rules are in lib/headerBack.js. useLocation re-renders the header on every
+  // navigation, so it stays current.
+  useLocation();
   const navigate = useNavigate();
-  const hasEarlierPage = (window.history.state?.idx ?? 0) > 0;
-  const showHeaderBack = hasEarlierPage || !shopTabPages.includes(currentPageName);
-  const goBackInApp = () => {
-    if ((window.history.state?.idx ?? 0) > 0) navigate(-1);
-    else navigate(createPageUrl(HEADER_PARENT_PAGES[currentPageName] || 'Dashboard'), { replace: true });
-  };
+  const { show: showHeaderBack, fallbackPage: headerParentPage } = headerBack(currentPageName, shopTabPages);
+  const goBackInApp = () => goBack(navigate, createPageUrl(headerParentPage));
   // Phone / browser Back closes the phone menu first.
   useBackToClose(mobileOpen, () => setMobileOpen(false));
   // …and the trial reminder, when it can be dismissed.
