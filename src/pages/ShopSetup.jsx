@@ -95,6 +95,9 @@ function LogoStep({ tenant, tenantId }) {
 
 function ListingsStep({ tenantId }) {
   const [open, setOpen] = useState(false);
+  const closeOrOpenForm = (v) => { setOpen(v); if (!v) refetch(); };
+  // Phone / browser Back closes the listing form, as on the Products page.
+  useBackToClose(open, () => closeOrOpenForm(false));
   const { data: listings = [], refetch, isLoading } = useQuery({
     queryKey: ['shop-setup-listings', tenantId],
     queryFn: async () => {
@@ -130,7 +133,7 @@ function ListingsStep({ tenantId }) {
       </Button>
       <ProductFormDialog
         open={open}
-        onOpenChange={(v) => { setOpen(v); if (!v) refetch(); }}
+        onOpenChange={closeOrOpenForm}
         product={null}
         tenantId={tenantId}
       />
