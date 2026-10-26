@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Store, Briefcase, Compass, ArrowLeft, ArrowRight, AlertCircle, Sparkles, LogOut, Loader2 } from 'lucide-react';
+import { Store, Briefcase, Compass, ArrowRight, AlertCircle, Sparkles, LogOut, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Link, useNavigate } from 'react-router-dom';
-import { goBack } from '@/lib/goBack';
+import { Link } from 'react-router-dom';
 import { isNativeApp } from '@/lib/nativeApp';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
@@ -37,7 +36,6 @@ function Card({ icon: Icon, iconClass, title, badge, children, highlight }) {
 // The account home for someone without a store yet: open a free personal shop,
 // choose a business plan, or (later) explore and buy.
 export default function Account() {
-  const navigate = useNavigate();
   const { setAppUser, clearAppUser } = useAppUser();
   const [status, setStatus] = useState(null);
   const [loadError, setLoadError] = useState('');
@@ -167,9 +165,6 @@ export default function Account() {
     <div className="min-h-[100dvh] w-full" style={{ background: 'radial-gradient(ellipse at top left, #faeee6 0%, #fdf6f2 30%, #ffffff 60%, #fdf4f0 100%)' }}>
       <header className="max-w-2xl mx-auto px-4 pt-5 flex items-center justify-between gap-3">
         <div className="flex items-center gap-1 min-w-0">
-          <button type="button" aria-label="Back" onClick={() => goBack(navigate, '/explore')} className="h-11 w-11 -ml-2 flex-shrink-0 rounded-full flex items-center justify-center text-slate-600 hover:bg-white/70 transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
           {isNativeApp() ? (
             <Link to="/explore" aria-label="Sellio home"><img src={LOGO_URL} alt="Sellio" className="h-12 w-auto object-contain" /></Link>
           ) : (
