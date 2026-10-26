@@ -17,7 +17,7 @@ import { Loader2, ImagePlus, Plus, Check, ArrowLeft, ArrowRight, Palette, Truck,
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 import { isShopTenant } from '@/lib/shopSelling';
-import { useBackToClose } from '@/lib/useBackToClose';
+import { useBackToClose, handOverBackStep, removeBackStep } from '@/lib/useBackToClose';
 
 // Setup steps for a new free shop (after "Sell from home"), in the same look as a
 // business's onboarding: the progress header, a card per step and the gradient
@@ -148,6 +148,13 @@ export default function ShopSetup() {
   const [step, setStep] = useState(0);
   const [visited, setVisited] = useState([]); // step numbers (1-based) moved past
   const [finishing, setFinishing] = useState(false);
+  // Phone / browser Back goes to the previous step, like the Back button (and waits
+  // while the shop is being finished).
+  useBackToClose(step > 0, () => {
+    if (finishing) return false;
+    setStep(s => Math.max(s - 1, 0));
+    if (step > 1) return false; // still steps to go back through
+  });
 
   useEffect(() => {
     if (isLoading || !tenant) return;
@@ -175,6 +182,7 @@ export default function ShopSetup() {
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['shop-setup-status', tenantId] });
       toast.success('Your shop is ready');
+      await removeBackStep(); // so Back from the Dashboard doesn't return to the finished setup
       navigate(createPageUrl('Dashboard'), { replace: true });
     } catch (err) {
       toast.error(err.message || 'Could not finish setup.');
@@ -245,7 +253,7 @@ export default function ShopSetup() {
           </AnimatePresence>
 
           <div className="text-center pt-4">
-            <button type="button" onClick={() => navigate(createPageUrl('Dashboard'))} className="text-sm text-slate-500 underline underline-offset-2">
+            <button type="button" onClick={() => navigate(createPageUrl('Dashboard'), { replace: handOverBackStep() })} className="text-sm text-slate-500 underline underline-offset-2">
               I&apos;ll finish this later
             </button>
           </div>

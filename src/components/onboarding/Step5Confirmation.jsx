@@ -120,8 +120,8 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
       confetti({ particleCount: 150, spread: 70, origin: { x: 0.2, y: 0.8 }, gravity: 0.8 });
       confetti({ particleCount: 150, spread: 70, origin: { x: 0.8, y: 0.8 }, gravity: 0.8 });
 
-      setTimeout(() => {
-        onComplete();
+      setTimeout(async () => {
+        try { await onComplete(); } catch { /* still go to the Dashboard */ }
         // Force full page reload so TenantContext re-fetches fresh data. It replaces the
         // setup page, so Back from the Dashboard doesn't land on a finished setup.
         setTimeout(() => { window.location.replace('/Dashboard'); }, 500);

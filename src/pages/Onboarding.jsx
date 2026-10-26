@@ -12,6 +12,7 @@ import OnboardingProgress from '../components/onboarding/OnboardingProgress';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import { getSupabase } from '@/lib/supabaseClient';
 import { decideOnboardingAccess } from '@/lib/accountFlow';
+import { useBackToClose, removeBackStep } from '@/lib/useBackToClose';
 
 const STORAGE_KEY = 'apptelier_onboarding_state';
 
@@ -19,6 +20,11 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState([]);
+  // Phone / browser Back goes to the previous step, like the step's own Back button.
+  useBackToClose(currentStep > 1, () => {
+    setCurrentStep(s => Math.max(s - 1, 1));
+    if (currentStep > 2) return false; // still steps to go back through
+  });
   // Business setup is for an account with a paid plan waiting. A store already →
   // Dashboard; neither → the account page. (complete-onboarding checks again.)
   const [access, setAccess] = useState('checking');
@@ -140,10 +146,13 @@ export default function Onboarding() {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem('pending_tenant_id');
-    navigate(createPageUrl('Dashboard'));
+    // Replaces the finished setup (its Back step taken off first), so Back from the
+    // Dashboard doesn't return to it.
+    await removeBackStep();
+    navigate(createPageUrl('Dashboard'), { replace: true });
   };
 
   if (access !== 'allowed') return <AppLoader visible={true} />;
