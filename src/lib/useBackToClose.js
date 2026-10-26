@@ -39,8 +39,10 @@ let lastTraversalAt = 0;     // last Back / Forward (anyone's)
 let waitingForTap = false;
 
 const now = () => Date.now();
-const onOurStep = () => !!browser.history.state?.sellioOverlay;
-const pageKey = () => browser.history.state?.key ?? null;
+// (Read safely: a page being torn down can have no history left to read.)
+const historyState = () => { try { return browser.history.state; } catch { return null; } };
+const onOurStep = () => !!historyState()?.sellioOverlay;
+const pageKey = () => historyState()?.key ?? null;
 
 // A Back step may be added only right after a tap: one in the last few seconds, and
 // since the last Back / Forward (after those the browser stops counting earlier taps).
