@@ -12,6 +12,7 @@ import { startGoogleSignIn } from '@/lib/googleSignIn';
 import { COMPLETE_KEY, clearMobileAuth, hasMobileGoogleCompletion, isNativeAndroid } from '@/lib/mobileOAuth';
 import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
 import { SELLIO_WEB_ORIGINS } from '@/lib/accountFlow';
+import { callPhoneAuth } from '@/lib/phoneAuth';
 
 const BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
 
@@ -30,10 +31,6 @@ const getBaseUrl = () => {
   }
   return 'https://sellio.apptelier.sg';
 };
-
-// Phone sign-in (the phone-auth server function) runs in Sydney, next to the database and
-// Supabase Auth, so its steps don't cross regions on the way.
-const PHONE_AUTH_REGION = 'ap-southeast-2';
 
 // "1 minute" / "15 minutes", for the phone sign-in and reset limits.
 const waitText = (minutes) => {
@@ -414,7 +411,6 @@ export default function Auth() {
     if (!forgotPhone.trim()) return;
     setForgotLoading(true);
     try {
-      const supabase = await getSupabase();
       const cleanPhone = forgotPhone.replace(/^0+/, '');
       const fullPhone = forgotCountry.code + cleanPhone;
       setForgotFullPhone(fullPhone);
@@ -422,11 +418,8 @@ export default function Auth() {
       // Sellio's server (phone-auth) finds the account and sends the reset email in the
       // background, so the account's email address never reaches the browser: only a
       // masked one (al•••@gmail.com) comes back to show.
-      const { data: result, error: resetError } = await supabase.functions.invoke('phone-auth', {
-        body: { action: 'reset', phone: fullPhone, redirect_to: `${getBaseUrl()}/Auth?type=recovery` },
-        region: PHONE_AUTH_REGION,
-      });
-      if (resetError || !result) throw new Error('Something went wrong. Please try again.');
+      const result = await callPhoneAuth({ action: 'reset', phone: fullPhone, redirect_to: `${getBaseUrl()}/Auth?type=recovery` });
+      if (!result) throw new Error('Something went wrong. Please try again.');
 
       if (!result.ok) {
         toast.error(result.code === 'not_found'
@@ -532,11 +525,8 @@ export default function Auth() {
         // Sellio's server (phone-auth) checks the phone number and password and hands back
         // this browser's session, so the account's email address never reaches the browser.
         // Supabase Auth still validates the password. app_users is profile data only.
-        const { data: result, error: signInError } = await supabase.functions.invoke('phone-auth', {
-          body: { action: 'sign_in', phone: fullPhone, password: formData.password },
-          region: PHONE_AUTH_REGION,
-        });
-        if (signInError || !result) throw new Error('Could not sign in right now. Please try again.');
+        const result = await callPhoneAuth({ action: 'sign_in', phone: fullPhone, password: formData.password });
+        if (!result) throw new Error('Could not sign in right now. Please try again.');
         if (!result.ok || !result.session?.access_token || !result.session?.refresh_token) {
           throw new Error(phoneSignInMessage(result));
         }
@@ -571,9 +561,8 @@ export default function Auth() {
         const userForCookie = { ...appUserRow, tenant_id: tenantId };
         setAppUser(userForCookie);
         showSuccess('Welcome back!');
-        setTimeout(() => {
-          completeAuthNavigation(accountDeletionDestination(createPageUrl(appUserRow.onboarding_completed ? 'Dashboard' : 'Onboarding')));
-        }, 500);
+        // Straight on to the app (it loads its first page in full), no extra pause.
+        completeAuthNavigation(accountDeletionDestination(createPageUrl(appUserRow.onboarding_completed ? 'Dashboard' : 'Onboarding')));
 
       } else {
         // SIGNUP: check bypass list
