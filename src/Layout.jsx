@@ -256,7 +256,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
               className="h-11 w-11 text-slate-400 hover:text-slate-600 flex-shrink-0"
               onClick={async () => {
                 const supabase = await getSupabase();
-                await supabase.auth.signOut();
+                await supabase.auth.signOut({ scope: 'local' }); // this device only
                 clearAppUser();
                 window.location.href = createPageUrl('Auth');
               }}
@@ -271,7 +271,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
             className="h-11 w-11 text-slate-400 hover:text-slate-600"
             onClick={async () => {
               const supabase = await getSupabase();
-              await supabase.auth.signOut();
+              await supabase.auth.signOut({ scope: 'local' }); // this device only
               clearAppUser();
               window.location.href = createPageUrl('Auth');
             }}

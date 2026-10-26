@@ -118,7 +118,7 @@ export default function Account() {
 
   const signOut = async (next = '/Auth') => {
     const supabase = await getSupabase();
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' }); // this device only
     clearAppUser();
     window.location.href = next;
   };

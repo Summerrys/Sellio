@@ -98,7 +98,7 @@ export default function ExploreMe() {
     setSigningOut(true);
     try {
       const supabase = await getSupabase();
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' }); // this device only
     } catch { /* signed out locally below */ }
     clearAppUser?.();
     window.location.href = '/explore';

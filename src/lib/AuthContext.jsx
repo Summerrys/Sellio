@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     const supabase = await getSupabase();
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' }); // this device only
     localStorage.removeItem('app_user');
     window.location.href = '/Auth';
   };

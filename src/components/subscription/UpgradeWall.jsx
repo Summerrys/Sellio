@@ -66,7 +66,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
   const handleSignOut = async () => {
     try {
       const supabase = await getSupabase();
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' }); // this device only
     } catch (e) {
       console.warn('Sign out error:', e);
     }

@@ -25,7 +25,7 @@ export default function BillingRecoveryWall({ subscription, tenantId, isOwner })
   const handleSignOut = async () => {
     try {
       const supabase = await getSupabase();
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' }); // this device only
     } finally {
       window.location.href = '/Auth';
     }
