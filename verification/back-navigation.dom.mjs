@@ -49,7 +49,7 @@ const mod = await import(pathToFileURL(local));
 
 const h = React.createElement;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-const settle = () => sleep(40);
+const settle = () => sleep(120);
 const pressBack = async () => { win.history.back(); await sleep(60); };   // a later task, as in a browser
 // A tap (the browser's user activation): what opens a window in real use.
 const tap = () => win.dispatchEvent(new win.Event('pointerup'));
