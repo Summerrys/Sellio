@@ -268,24 +268,12 @@ function ExploreHeader({ query, onQuery, kind, onKind, signedIn, hasShop }) {
     }
   };
 
-  // Room for the fixed header at the top of the page (its height never changes).
-  const headerRef = useRef(null);
-  const [height, setHeight] = useState(null);
-  useEffect(() => {
-    const node = headerRef.current;
-    if (!node) return undefined;
-    const measure = () => setHeight(node.offsetHeight);
-    measure();
-    if (typeof ResizeObserver === 'undefined') return undefined;
-    const observer = new ResizeObserver(measure);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-
   const pickedLabel = KINDS.find((k) => k.key === kind)?.label;
   return (
     <>
-      <header ref={headerRef} className="fixed top-0 inset-x-0 z-30 pointer-events-none">
+      {/* Sticky, and its height never changes: the categories only slide (transform), so
+          the page under it never moves. Where they were, the feed shows through. */}
+      <header className="sticky top-0 z-30 pointer-events-none">
         <div
           className={`relative z-[2] bg-white pointer-events-auto border-b transition-colors duration-200 ${folded ? 'border-slate-100' : 'border-transparent'}`}
           style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
