@@ -10,6 +10,7 @@ import { useBackToClose } from '@/lib/useBackToClose';
 export default function StockTakeOverlay({ open, onClose }) {
   const { tenant } = useTenant();
   const [activeTab, setActiveTab] = useState('outlet');
+  useBackToClose(open, onClose); // phone / browser Back closes stock take
 
   if (!open) return null;
 
