@@ -80,6 +80,8 @@ try {
   assert.equal(mod.homeFor(null, { is_owner: false }), '/Dashboard', 'no role yet: membership decides');
   assert.equal(mod.homeFor(null, { is_owner: true }), '/explore');
   assert.equal(mod.homeFor(null, null), '/explore');
+  assert.equal(mod.homeFor({ role: 'cashier' }), '/Dashboard', 'a shop role name: staff');
+  assert.equal(mod.homeFor({ role: 'admin' }, { is_owner: false }), '/explore', 'an owner role wins over another shop membership');
   passed('Signed in: owners and buyers start on Explore; staff logins on their shop Dashboard');
 
   // Explore page.

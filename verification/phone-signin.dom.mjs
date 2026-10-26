@@ -115,10 +115,10 @@ try {
   assert.deepEqual(calls.find(c => c[0] === 'setSession'), ['setSession', { access_token: 'access-fixture', refresh_token: 'refresh-fixture' }]);
   assert.deepEqual(calls.find(c => c[0] === 'from' && c[1] === 'app_users'), ['from', 'app_users', [['phone', '+6591234567']]]);
   assert.equal(globalThis.profile?.tenant_id, 'tenant-fixture');
-  assert.equal(globalThis.authDestination, '/Dashboard');
+  assert.equal(globalThis.authDestination, '/explore', 'an owner starts on Explore (staff logins: their Dashboard)');
   assert.deepEqual(globalThis.toastErrors, []);
   assert.ok(!calls.some(c => c[0] === 'forbidden'));
-  passed('Phone sign-in: one plain request to Sydney, sets the returned session, loads only the own profile, opens the Dashboard with no pause');
+  passed('Phone sign-in: one plain request to Sydney, sets the returned session, loads only the own profile, opens Explore with no pause');
 
   const refusals = [
     [{ ok: false, code: 'invalid' }, 'Phone number or password is incorrect.'],
