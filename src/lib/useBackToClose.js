@@ -1,66 +1,102 @@
-// Phone / browser Back (including the Android back button and back swipe) closes the
+// The phone's own Back (Android back button or gesture, iPhone swipe) closes the
 // top-most open window — a storefront overlay (product details, cart, checkout,
-// order-placed screen, …), a workspace sheet or dialog, the phone menu — instead of
-// leaving the page. The shared Dialog, Sheet and AlertDialog components use it, so
-// every dialog built on them closes on Back.
+// order-placed screen, …), a workspace sheet or dialog, the phone menu — or steps back
+// through a step-by-step screen, instead of leaving the page. The shared Dialog, Sheet
+// and AlertDialog components use it, so every dialog built on them closes on Back.
 //
-// Customers open the menu straight from their camera's QR scanner, so the menu
-// is the first page in that tab's history and a plain Back exits to the camera.
-// While any overlay is open we keep ONE extra history entry on top; Back pops it
-// and we close the most recently opened overlay (re-arming if others remain).
-// When overlays are closed with their own ✕/buttons we remove that entry again,
-// so Back on the bare menu behaves exactly as before.
+// While any window is open we keep ONE extra history entry (our "Back step") on top;
+// Back takes it and we close the most recently opened window. A window closed with its
+// own ✕ or button takes its step away again, so Back on a bare page works as before.
+//
+// Android (Chrome and the app's WebView) guards Back against pages that pile up
+// history: an entry a page adds WITHOUT a fresh tap makes the browser skip ALL of that
+// page's entries, and the app's Back then finds nothing to go back to — Back looks dead
+// until the next tap. So a Back step is only ever ADDED straight after a tap. When Back
+// closes one window and another stays open (or a step-by-step screen steps back), we
+// move forward onto the step Back just left — it is still there — instead of adding one.
 import { useEffect, useRef } from 'react';
-
-const stack = [];        // open overlays, oldest → newest (by seq)
-let armed = false;       // our extra history entry is currently on top
-let ignorePops = 0;      // pops caused by our own history.back()
-let listening = false;
-let settleTimer = null;
-let nextSeq = 0;
 
 // How long after Back to check whether a window really closed. Longer than the
 // windows' closing animations (the storefront designer takes 300ms).
 export const STILL_OPEN_CHECK_MS = 500;
+// How long to wait for the browser to report our own Back / Forward.
+const OWN_TRAVERSAL_MS = 1500;
+// What lets a page add history: a tap or a key press (the browser's user activation).
+const TAP_EVENTS = ['pointerup', 'touchend', 'mousedown', 'keydown', 'click'];
 
-// Android (Chrome and the app's WebView) skips a Back step that a page adds before the
-// person has tapped anything on it, so Back would jump past the page instead of closing
-// the window. A window that opens by itself (the cart reopening after signing in, a
-// setup step restored on reload) gets its Back step at the first tap instead.
-const TAP_EVENTS = ['pointerup', 'touchend', 'click', 'keydown'];
+const browser = typeof window !== 'undefined' ? window : null;
+const stack = [];            // open windows, oldest → newest (by seq)
+let armed = false;           // our Back step is the current history entry
+let settleTimer = null;
+let nextSeq = 0;
+let holdUntilEmpty = false;  // a finished flow took its step off: don't add it back
+let ownTraversal = null;     // our own history.back()/forward() on its way: { direction, until }
+let stepAhead = null;        // after Back took our step: { key, epoch } of the page it sat on
+let historyEpoch = 0;        // up by one whenever an entry is added (forward entries are gone)
+let lastTapAt = 0;           // last tap or key press
+let lastTraversalAt = 0;     // last Back / Forward (anyone's)
 let waitingForTap = false;
-function hasBeenTapped() {
-  const activation = window.navigator?.userActivation;
-  return !activation || activation.hasBeenActive;
+
+const now = () => Date.now();
+const onOurStep = () => !!browser.history.state?.sellioOverlay;
+const pageKey = () => browser.history.state?.key ?? null;
+
+// A Back step may be added only right after a tap: one in the last few seconds, and
+// since the last Back / Forward (after those the browser stops counting earlier taps).
+function canAddStep() {
+  const activation = browser.navigator?.userActivation;
+  if (activation && !activation.isActive) return false;
+  return lastTapAt >= lastTraversalAt;
 }
-function armAtFirstTap() {
+
+function addStep() {
+  // Keep react-router's own state (idx/key) so it sees no navigation.
+  browser.history.pushState({ ...(browser.history.state || {}), sellioOverlay: true }, '');
+  armed = true;
+}
+
+function traverse(direction) {
+  ownTraversal = { direction, until: now() + OWN_TRAVERSAL_MS };
+  setTimeout(() => {
+    // The browser never reported it (nothing there): stop waiting for it.
+    if (ownTraversal && now() >= ownTraversal.until) { ownTraversal = null; scheduleSettle(); }
+  }, OWN_TRAVERSAL_MS + 20);
+  if (direction < 0) browser.history.back();
+  else browser.history.forward();
+}
+
+// A window that opened with no tap to go on (it opened by itself, or after a Back):
+// its Back step is added at the next tap.
+function armAtNextTap() {
   if (waitingForTap) return;
   waitingForTap = true;
   const onTap = () => {
-    TAP_EVENTS.forEach(type => window.removeEventListener(type, onTap, true));
+    TAP_EVENTS.forEach(type => browser.removeEventListener(type, onTap, true));
     waitingForTap = false;
     scheduleSettle();
   };
-  TAP_EVENTS.forEach(type => window.addEventListener(type, onTap, true));
+  TAP_EVENTS.forEach(type => browser.addEventListener(type, onTap, true));
 }
 
 function settle() {
   settleTimer = null;
-  if (stack.length > 0 && !armed) {
-    if (!hasBeenTapped()) { armAtFirstTap(); return; }
-    // Keep react-router's own state (idx/key) so it sees no navigation.
-    window.history.pushState({ ...(window.history.state || {}), sellioOverlay: true }, '');
-    armed = true;
-  } else if (stack.length === 0 && armed) {
-    armed = false;
-    // Only step back over our own entry. If the page has moved on since (something in
-    // the window opened another page), that entry is no longer on top: stepping back
-    // would undo the new page, so leave history alone.
-    if (window.history.state?.sellioOverlay) {
-      ignorePops += 1;
-      window.history.back();
+  if (ownTraversal) return; // its popstate settles again
+  if (stack.length > 0) {
+    if (armed || holdUntilEmpty) return;
+    if (onOurStep()) { armed = true; return; } // already on a Back step of ours
+    if (stepAhead && stepAhead.key === pageKey() && stepAhead.epoch === historyEpoch) {
+      traverse(1); // back onto the step Back just left: nothing new added
+      return;
     }
+    if (canAddStep()) addStep();
+    else armAtNextTap();
+    return;
   }
+  holdUntilEmpty = false;
+  armed = false;
+  // No window open: never sit on a Back step (Back from it would seem to do nothing).
+  // This also steps off one left behind when a window opened another page.
+  if (onOurStep()) traverse(-1);
 }
 
 // Back into the stack in its original place, below any window opened after it.
@@ -71,50 +107,75 @@ function putBack(entry) {
 }
 
 // Deferred so an overlay swap in one click (cart → checkout, checkout →
-// order-placed) keeps the same history entry instead of popping and re-pushing.
+// order-placed) keeps the same history entry instead of removing and re-adding it.
 function scheduleSettle() {
+  if (!browser) return;
   if (settleTimer) clearTimeout(settleTimer);
   settleTimer = setTimeout(settle, 0);
 }
 
 function onPopState() {
-  if (ignorePops > 0) { ignorePops -= 1; return; }
-  if (!armed) return;
-  armed = false;                    // the browser consumed our entry
-  const top = stack.pop();          // remove now so settle() sees the truth
-  if (top) {
-    const result = top.close();
-    if (!top.isOpen()) {
-      // Already gone (closed straight away): nothing to keep.
-    } else if (result === false) {
-      putBack(top);                   // A save/print in progress keeps Back armed.
-    } else if (stack.length > 0) {
-      // Other windows are still open, so Back is armed again straight away anyway. Keep
-      // this one in its place on top until it has really gone (its cleanup removes it),
-      // so a quick second Back reaches it rather than the window underneath.
-      putBack(top);
-    } else {
-      // A window can also stay open after being asked to close (it asks "Discard
-      // changes?" first, or ignores closing while busy): Back stays armed for it.
-      setTimeout(() => {
-        if (top.isOpen() && !stack.includes(top)) { putBack(top); scheduleSettle(); }
-      }, STILL_OPEN_CHECK_MS);
+  lastTraversalAt = now();
+  if (ownTraversal && now() < ownTraversal.until) {
+    const { direction } = ownTraversal;
+    ownTraversal = null;
+    if (direction > 0) armed = onOurStep();
+    scheduleSettle();
+    return;
+  }
+  ownTraversal = null;
+  if (armed && !onOurStep()) {
+    // Back took our step: close the top-most window.
+    armed = false;
+    stepAhead = { key: pageKey(), epoch: historyEpoch };
+    const top = stack.pop(); // removed now so settle() sees the truth
+    if (top) {
+      const result = top.close();
+      if (!top.isOpen()) {
+        // Already gone (closed straight away): nothing to keep.
+      } else if (result === false || stack.length > 0) {
+        // Busy (saving, printing), still steps to go back through, or other windows still
+        // open: it keeps its place on top until it has really gone (its cleanup removes it).
+        putBack(top);
+      } else {
+        // A window can also stay open after being asked to close (it asks "Discard
+        // changes?" first, or ignores closing while busy): Back stays armed for it.
+        setTimeout(() => {
+          if (top.isOpen() && !stack.includes(top)) { putBack(top); scheduleSettle(); }
+        }, STILL_OPEN_CHECK_MS);
+      }
     }
   }
-  scheduleSettle();                 // re-arm if more overlays are still open
+  scheduleSettle(); // re-arm if windows are still open; step off a leftover step
+}
+
+if (browser) {
+  // Count added history entries (react-router's too): forward entries end there.
+  try {
+    const push = browser.history.pushState;
+    if (!push.sellioCounted) {
+      const counted = function pushState(...args) { historyEpoch += 1; return push.apply(this, args); };
+      counted.sellioCounted = true;
+      browser.history.pushState = counted;
+    }
+  } catch { /* history left as it is */ }
+  TAP_EVENTS.forEach(type => browser.addEventListener(type, () => { lastTapAt = now(); }, true));
+  browser.addEventListener('popstate', onPopState);
+  // Opened or reloaded on a Back step with nothing open: step off it.
+  setTimeout(scheduleSettle, 400);
 }
 
 // A link inside an open window that leaves the page: call this first and navigate with
 // { replace: <its result> }, so the window's Back step becomes the new page's instead
 // of being undone (which would go straight back) once the window closes.
 export function handOverBackStep() {
-  if (!armed || !window.history.state?.sellioOverlay) return false;
+  if (!armed || !onOurStep()) return false;
   armed = false;
   // react-router numbers a replacing page from the entry it replaces. Our entry carries
   // the number of the page below it, so move it up one first: the new page then counts
-  // the page behind it, and the header's back arrow knows there is a page to go back to.
-  const state = window.history.state;
-  window.history.replaceState({ ...state, idx: (typeof state.idx === 'number' ? state.idx : 0) + 1 }, '');
+  // the page behind it (in-page back buttons use this).
+  const state = browser.history.state;
+  browser.history.replaceState({ ...state, idx: (typeof state.idx === 'number' ? state.idx : 0) + 1 }, '');
   return true;
 }
 
@@ -122,19 +183,19 @@ export function handOverBackStep() {
 // Back step off first, so the replacement lands on the page's own history entry and
 // Back from the next page doesn't return to the finished flow. Resolves once done.
 export function removeBackStep() {
-  if (!armed || !window.history.state?.sellioOverlay) return Promise.resolve();
+  holdUntilEmpty = true;
   armed = false;
+  if (!browser || !onOurStep()) return Promise.resolve();
   return new Promise(resolve => {
     let timer = null;
     const done = () => {
-      window.removeEventListener('popstate', done);
+      browser.removeEventListener('popstate', done);
       clearTimeout(timer);
       resolve();
     };
     timer = setTimeout(done, 1000); // never hold the flow up if the browser stays quiet
-    window.addEventListener('popstate', done);
-    ignorePops += 1;
-    window.history.back();
+    browser.addEventListener('popstate', done);
+    traverse(-1);
   });
 }
 
@@ -143,11 +204,7 @@ export function useBackToClose(isOpen, onClose) {
   closeRef.current = onClose;
 
   useEffect(() => {
-    if (!isOpen || typeof window === 'undefined') return undefined;
-    if (!listening) {
-      window.addEventListener('popstate', onPopState);
-      listening = true;
-    }
+    if (!isOpen || !browser) return undefined;
     let open = true;
     const entry = { seq: ++nextSeq, close: () => closeRef.current?.(), isOpen: () => open };
     stack.push(entry);
