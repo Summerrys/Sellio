@@ -408,7 +408,7 @@ function TenantSettingsContent() {
                   const res = await base44.functions.invoke('deleteTenantWithCascade', { tenant_id: tenantId });
                   if (res.data?.success) {
                     toast.success('Account deleted. Redirecting...');
-                    setTimeout(() => { window.location.href = '/'; }, 1500);
+                    setTimeout(() => { window.location.replace('/'); }, 1500); // no Back into a deleted shop
                   } else {
                     throw new Error(res.data?.error || 'Deletion failed');
                   }
