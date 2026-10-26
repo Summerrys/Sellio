@@ -106,14 +106,13 @@ try {
   const isFolded = () => foldBox().style.transform.includes('-100%');
   const buttonShown = () => foldButton().style.opacity === '1' && foldButton().style.pointerEvents === 'auto';
   assert.ok(header.contains(tablist()), 'categories sit in the header');
-  assert.match(header.className, /fixed top-0/, 'the header sits over the page (folding never moves the page)');
-  assert.ok(header.nextElementSibling?.getAttribute('aria-hidden') === 'true', 'room is kept for it at the top of the page');
+  assert.match(header.className, /sticky top-0/, 'the header stays at the top while scrolling');
   assert.match(header.querySelector('.h-14')?.className || '', /h-14/, 'logo row stays 56px');
   assert.match(container.querySelector('input[type="search"]').className, /h-\[38px\]/);
   assert.match(tablist().querySelector('button').className, /h-\[30px\]/);
   assert.ok(!isFolded());
   assert.ok(!buttonShown());
-  passed('Top: 56px logo row, 38px search, 30px category pills; the header sits over the page');
+  passed('Top: 56px logo row, 38px search, 30px category pills; the header stays at the top');
 
   for (const style of [foldBox().style, foldButton().style]) {
     assert.match(style.transition, /transform/);
