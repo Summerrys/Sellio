@@ -59,7 +59,8 @@ try {
   passed('Only on an iPhone / iPad running Sellio from the Home Screen (not Safari, Android or desktop)');
 
   const remove = installEdgeSwipeBack({ win, force: true });
-  win.history.replaceState({ idx: 2, key: 'k' }, '');
+  win.history.pushState({ idx: 1, key: 'j' }, '', '/Products');
+  win.history.pushState({ idx: 2, key: 'k' }, '', '/Orders');
 
   const moves = swipe([[8, 300], [30, 302], [60, 305], [90, 306], [110, 306]]);
   assert.equal(backs.length, 1);
@@ -94,13 +95,22 @@ try {
   assert.equal(backs.length, 2);
   passed('Not on a text field, or a row of items scrolled sideways (that swipe scrolls it back)');
 
-  win.history.replaceState({ idx: 0, key: 'first' }, '');
+  // The very first page (nothing behind it in the browser's history, even after an app
+  // update or reload reset the app's own page count): nothing to go back to.
+  const first = new JSDOM('<html><body><main id="p"></main></body></html>', { url: 'https://sellio.apptelier.sg/explore' });
+  const firstBacks = [];
+  first.window.history.back = () => firstBacks.push(1);
+  const removeFirst = installEdgeSwipeBack({ win: first.window, force: true });
+  swipe([[8, 300], [40, 300], [80, 300], [120, 300]], { target: first.window.document.getElementById('p') });
+  assert.equal(firstBacks.length, 0);
+  first.window.history.replaceState({ idx: 0, key: 'first', sellioOverlay: true }, '');
+  swipe([[8, 300], [40, 300], [80, 300], [120, 300]], { target: first.window.document.getElementById('p') });
+  assert.equal(firstBacks.length, 1);
+  removeFirst();
+  win.history.replaceState({ idx: 0, key: 'reset-by-update' }, '');
   swipe([[8, 300], [40, 300], [80, 300], [120, 300]]);
-  assert.equal(backs.length, 2);
-  win.history.replaceState({ idx: 0, key: 'first', sellioOverlay: true }, '');
-  swipe([[8, 300], [40, 300], [80, 300], [120, 300]]);
-  assert.equal(backs.length, 3);
-  passed('On the first page it does nothing; with a window or step open there, it closes / steps back');
+  assert.equal(backs.length, 3, 'pages behind it count even when the app\'s page count was reset');
+  passed('On the very first page it does nothing; with a window or step open, or pages behind (even after an update), it goes back');
 
   remove();
   swipe([[8, 300], [40, 300], [80, 300], [120, 300]]);
