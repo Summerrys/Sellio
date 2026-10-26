@@ -139,8 +139,8 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
   const [receiptBillState, setReceiptBillState] = useState('idle');
   const [chitPrinting, setChitPrinting] = useState(false);
   const [showChit, setShowChit] = useState(false);
-  // Phone / browser Back closes these sheets first; while paying or printing it waits,
-  // as tapping outside does.
+  // Phone / browser Back closes these sheets first; while a payment or print is still
+  // going through, Back waits rather than closing it.
   useBackToClose(showEditOrder, () => setShowEditOrder(false));
   useBackToClose(showReceipt, () => { if (receiptPrinting) return false; setShowReceipt(false); });
   useBackToClose(showChit, () => { if (chitPrinting) return false; setShowChit(false); });
