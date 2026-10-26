@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppRefreshHandler } from '@/lib/AppRefreshContext';
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { TenantProvider, useTenant } from './components/tenant/TenantContext';
 import { toast } from 'sonner';
@@ -23,7 +23,6 @@ import {
   LogOut,
   X,
   QrCode,
-  ArrowLeft,
   Clock,
   Copy,
   Check,
