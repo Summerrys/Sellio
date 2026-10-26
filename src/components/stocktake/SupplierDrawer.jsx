@@ -35,6 +35,13 @@ export default function SupplierDrawer({ open, onClose, tenantId }) {
   const [form, setForm] = useState(EMPTY_SUPPLIER);
   const [saving, setSaving] = useState(false);
   const fileRef = useRef();
+  // Phone / browser Back: out of a supplier being edited first, then closes the drawer;
+  // it waits while saving.
+  useBackToClose(open, () => {
+    if (saving) return false;
+    if (editing) { setEditing(null); return false; }
+    onClose();
+  });
 
   const handleDownloadTemplate = () => {
     downloadCSV('suppliers_template.csv', CSV_TEMPLATE_HEADER + '\n', { tenantId, label: 'Template' });
