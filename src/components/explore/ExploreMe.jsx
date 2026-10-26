@@ -101,7 +101,7 @@ export default function ExploreMe() {
       await supabase.auth.signOut({ scope: 'local' }); // this device only
     } catch { /* signed out locally below */ }
     clearAppUser?.();
-    window.location.href = '/explore';
+    window.location.replace('/explore'); // no Back into the signed-in page
   };
 
   const name = appUser?.full_name || appUser?.email?.split('@')[0] || 'Sellio user';
