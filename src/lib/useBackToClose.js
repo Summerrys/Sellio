@@ -23,9 +23,31 @@ let nextSeq = 0;
 // windows' closing animations (the storefront designer takes 300ms).
 export const STILL_OPEN_CHECK_MS = 500;
 
+// Android (Chrome and the app's WebView) skips a Back step that a page adds before the
+// person has tapped anything on it, so Back would jump past the page instead of closing
+// the window. A window that opens by itself (the cart reopening after signing in, a
+// setup step restored on reload) gets its Back step at the first tap instead.
+const TAP_EVENTS = ['pointerup', 'touchend', 'click', 'keydown'];
+let waitingForTap = false;
+function hasBeenTapped() {
+  const activation = window.navigator?.userActivation;
+  return !activation || activation.hasBeenActive;
+}
+function armAtFirstTap() {
+  if (waitingForTap) return;
+  waitingForTap = true;
+  const onTap = () => {
+    TAP_EVENTS.forEach(type => window.removeEventListener(type, onTap, true));
+    waitingForTap = false;
+    scheduleSettle();
+  };
+  TAP_EVENTS.forEach(type => window.addEventListener(type, onTap, true));
+}
+
 function settle() {
   settleTimer = null;
   if (stack.length > 0 && !armed) {
+    if (!hasBeenTapped()) { armAtFirstTap(); return; }
     // Keep react-router's own state (idx/key) so it sees no navigation.
     window.history.pushState({ ...(window.history.state || {}), sellioOverlay: true }, '');
     armed = true;
@@ -94,6 +116,26 @@ export function handOverBackStep() {
   const state = window.history.state;
   window.history.replaceState({ ...state, idx: (typeof state.idx === 'number' ? state.idx : 0) + 1 }, '');
   return true;
+}
+
+// A flow that is finished replaces its page for good (setup done -> Dashboard): take our
+// Back step off first, so the replacement lands on the page's own history entry and
+// Back from the next page doesn't return to the finished flow. Resolves once done.
+export function removeBackStep() {
+  if (!armed || !window.history.state?.sellioOverlay) return Promise.resolve();
+  armed = false;
+  return new Promise(resolve => {
+    let timer = null;
+    const done = () => {
+      window.removeEventListener('popstate', done);
+      clearTimeout(timer);
+      resolve();
+    };
+    timer = setTimeout(done, 1000); // never hold the flow up if the browser stays quiet
+    window.addEventListener('popstate', done);
+    ignorePops += 1;
+    window.history.back();
+  });
 }
 
 export function useBackToClose(isOpen, onClose) {
