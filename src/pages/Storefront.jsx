@@ -125,7 +125,8 @@ function StorefrontInner() {
   // Phone/browser Back closes these screens instead of leaving the menu
   // (customers arrive straight from their camera's QR scanner).
   useBackToClose(showCart, () => setShowCart(false));
-  useBackToClose(showCheckout, () => setShowCheckout(false));
+  // Like its ✕: not while the order is being placed.
+  useBackToClose(showCheckout, () => { if (isSubmitting) return false; setShowCheckout(false); });
   useBackToClose(showOrderHistory, () => setShowOrderHistory(false));
   useBackToClose(orderSuccess, () => { setOrderSuccess(false); setLastCart([]); setLastCartTotal(0); });
   useBackToClose(showLimitReachedModal, () => setShowLimitReachedModal(false));
