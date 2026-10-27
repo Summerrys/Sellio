@@ -14,6 +14,11 @@
 // until the next tap. So a Back step is only ever ADDED straight after a tap. When Back
 // closes one window and another stays open (or a step-by-step screen steps back), we
 // move forward onto the step Back just left — it is still there — instead of adding one.
+//
+// The same goes for the rest of the app: any page or link that adds history with no tap
+// since the person's last Back (a page that navigates by itself, or once something it
+// was waiting for arrives) takes the current entry's place instead (see the pushState
+// guard below), so nothing in Sellio can leave Android's Back with nothing to go to.
 import { useEffect, useRef } from 'react';
 
 // How long after Back to check whether a window really closed. Longer than the
@@ -36,6 +41,9 @@ let historyEpoch = 0;        // up by one when an entry is added (forward entrie
                              // Back step is turned into a page
 let lastTapAt = 0;           // last tap or key press
 let lastTraversalAt = 0;     // last Back / Forward (anyone's)
+let lastUserTraversalAt = 0; // last Back / Forward by the person (the browser's or phone's Back)
+let scriptTraversals = 0;    // the page's own history.back()/forward()/go() still on their way…
+let scriptTraversalsUntil = 0; // …until about then
 let waitingForTap = false;
 
 const now = () => Date.now();
@@ -49,7 +57,14 @@ const pageKey = () => historyState()?.key ?? null;
 function canAddStep() {
   const activation = browser.navigator?.userActivation;
   if (activation && !activation.isActive) return false;
-  return lastTapAt >= lastTraversalAt;
+  return lastTapAt > 0 && lastTapAt >= lastTraversalAt;
+}
+
+// Whether the browser would let this page add a history entry now: a tap or key press
+// since the page loaded and since the person's last Back / Forward. (The page's own
+// history.back()/forward() don't count: the browser keeps honouring the earlier tap.)
+function tappedSincePersonsBack() {
+  return lastTapAt > 0 && lastTapAt >= lastUserTraversalAt;
 }
 
 function addStep() {
@@ -123,6 +138,8 @@ function scheduleSettle() {
 
 function onPopState() {
   lastTraversalAt = now();
+  if (scriptTraversals > 0 && now() < scriptTraversalsUntil) scriptTraversals -= 1; // the page's own
+  else { scriptTraversals = 0; lastUserTraversalAt = now(); } // the person's Back / Forward
   if (ownTraversal && now() < ownTraversal.until) {
     const { direction } = ownTraversal;
     ownTraversal = null;
@@ -162,20 +179,49 @@ function onPopState() {
 if (browser) {
   // Count changes to history (react-router's too) that end the step just ahead: an added
   // entry (forward entries are gone), or a Back step replaced by a page (a hand-over).
+  //
+  // And guard Back for the whole app: an entry added with no tap since the person's last
+  // Back / Forward makes Android skip every entry of the page, so Back finds nothing (it
+  // seems dead). Such an entry takes the current one's place instead: Back keeps working,
+  // it just won't return to the screen that was replaced.
   try {
-    const push = browser.history.pushState;
-    const replace = browser.history.replaceState;
+    const { history } = browser;
+    const push = history.pushState;
+    const replace = history.replaceState;
     if (!push.sellioCounted) {
-      const countedPush = function pushState(...args) { historyEpoch += 1; return push.apply(this, args); };
+      const countedPush = function pushState(state, ...rest) {
+        historyEpoch += 1;
+        if (!tappedSincePersonsBack()) {
+          if (onOurStep()) armed = false; // our Back step becomes the new page (a hand-over)
+          return replace.call(this, state, ...rest);
+        }
+        return push.call(this, state, ...rest);
+      };
       countedPush.sellioCounted = true;
-      browser.history.pushState = countedPush;
-      browser.history.replaceState = function replaceState(state, ...rest) {
+      history.pushState = countedPush;
+      history.replaceState = function replaceState(state, ...rest) {
         if (browser.history.state?.sellioOverlay && !state?.sellioOverlay) historyEpoch += 1;
         return replace.call(this, state, ...rest);
       };
+      // The page's own Back / Forward (ours, react-router's navigate(-1), in-page back
+      // buttons): told apart from the person's, which the browser treats differently.
+      for (const name of ['back', 'forward', 'go']) {
+        const original = history[name];
+        history[name] = function traverseHistory(...args) {
+          if (name !== 'go' || (args[0] && args[0] !== 0)) {
+            scriptTraversals += 1;
+            scriptTraversalsUntil = now() + OWN_TRAVERSAL_MS;
+          }
+          return original.apply(this, args);
+        };
+      }
     }
   } catch { /* history left as it is */ }
-  TAP_EVENTS.forEach(type => browser.addEventListener(type, () => { lastTapAt = now(); }, true));
+  // Escape doesn't count: the browser doesn't treat it as a tap either.
+  TAP_EVENTS.forEach(type => browser.addEventListener(type, (event) => {
+    if (event?.type === 'keydown' && event.key === 'Escape') return;
+    lastTapAt = now();
+  }, true));
   browser.addEventListener('popstate', onPopState);
   // Opened or reloaded on a Back step with nothing open: step off it.
   try { if (onOurStep()) setTimeout(scheduleSettle, 400); } catch { /* no history to read */ }
