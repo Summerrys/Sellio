@@ -363,11 +363,7 @@ function AppLayout({ children, currentPageName }) {
   const freeShopNav = isShopTenant(tenant) && !hasPermission('orders.create');
   const shopTabPages = freeShopNav ? ['Dashboard', 'Listings', 'Chats', 'Me'] : ['Dashboard', ...BUSINESS_TAB_PAGES];
 
-  // Phone / browser Back closes the phone menu first.
-  useBackToClose(mobileOpen, () => setMobileOpen(false));
-  // …and the trial reminder, when it can be dismissed.
   const dismissTrialModal = () => { sessionStorage.setItem('trial_modal_dismissed', 'true'); setShowTrialModal(false); };
-  useBackToClose(showTrialModal && canDismissTrialModal, dismissTrialModal);
   // The same count as Explore's Chat tab: chats about things you buy and you sell.
   const shopChats = useChatUnread(freeShopNav);
   const { openSell } = useSell();
@@ -525,6 +521,16 @@ function AppLayout({ children, currentPageName }) {
   // Setting up a store fills the screen, with no menu or bottom bar: a business's
   // onboarding, and a home seller's shop setup (the same look).
   const setupScreen = currentPageName === 'Onboarding' || currentPageName === 'ShopSetup';
+
+  // Phone / browser Back closes the phone menu first, and the trial reminder when it can
+  // be dismissed — only while the workspace that shows them is on screen. On Explore or a
+  // loading or locked screen they aren't shown, and Back "closing" an unseen window would
+  // look like Back doing nothing.
+  const workspaceShown = !(currentPageName === 'Explore' && staffAccount) &&
+    !publicPages.includes(currentPageName) && !isLoading &&
+    !(noStore && currentPageName !== 'Onboarding') && !isLocked;
+  useBackToClose(mobileOpen && workspaceShown, () => setMobileOpen(false));
+  useBackToClose(showTrialModal && canDismissTrialModal && workspaceShown, dismissTrialModal);
 
   // Staff logins have no Explore (its pages, listings, chats and Me): their shop instead.
   if (currentPageName === 'Explore' && staffAccount) {
