@@ -23,6 +23,11 @@ globalThis.window = win;
 globalThis.requestAnimationFrame = cb => win.requestAnimationFrame(cb);
 globalThis.cancelAnimationFrame = id => win.cancelAnimationFrame(id);
 globalThis.IS_REACT_ACT_ENVIRONMENT = false;
+// What the pickers (Select, menus, popovers) use that jsdom leaves out.
+win.Element.prototype.scrollIntoView ||= function scrollIntoView() {};
+win.Element.prototype.hasPointerCapture ||= function hasPointerCapture() { return false; };
+win.Element.prototype.releasePointerCapture ||= function releasePointerCapture() {};
+globalThis.ResizeObserver = win.ResizeObserver ||= class ResizeObserver { observe() {} unobserve() {} disconnect() {} };
 
 const React = await import('react');
 const { createRoot } = await import('react-dom/client');
