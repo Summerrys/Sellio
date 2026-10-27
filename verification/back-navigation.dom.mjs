@@ -541,6 +541,89 @@ try {
   }
   passed('Layout (no header arrow), the shared dialogs, the step-by-step screens, Kitchen full screen and Privacy/Terms are wired to these rules');
 
+  // ---- Base44's Android app: the page tells the app about its history again ----
+  {
+    // A report is the current entry replaced by itself (same state, same address).
+    const reports = [];
+    const replaceNow = win.history.replaceState;
+    win.history.replaceState = function replaceState(state, title, url) {
+      if (state === win.history.state && url === undefined) reports.push(Date.now());
+      return replaceNow.call(this, state, title, url);
+    };
+    const asApp = (on) => {
+      if (on) {
+        win.ReactNativeWebView = { postMessage() {} };
+        Object.defineProperty(win.navigator, 'userAgent', { configurable: true,
+          value: 'Mozilla/5.0 (Linux; Android 16; CPH2671 Build/AP3A.240617.008; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/155.0.8059.43 Mobile Safari/537.36' });
+      } else {
+        delete win.ReactNativeWebView;
+        delete win.navigator.userAgent;   // jsdom's own again
+      }
+    };
+    const fileInput = win.document.createElement('input');
+    fileInput.type = 'file';
+    win.document.body.appendChild(fileInput);
+    const comeBack = () => win.document.dispatchEvent(new win.Event('visibilitychange'));
+    const allSoon = () => sleep(2200);
+    let popstates = 0;
+    const countPops = () => { popstates += 1; };
+    win.addEventListener('popstate', countPops);
+
+    // In a browser: nothing extra.
+    comeBack(); win.dispatchEvent(new win.Event('focus'));
+    fileInput.dispatchEvent(new win.Event('change', { bubbles: true })); tap();
+    await allSoon();
+    assert.equal(reports.length, 0, 'browsers decide Back themselves: no reports');
+
+    asApp(true);
+    const length1 = win.history.length;
+    // Back from the background / a picker / a native dialog: reported now and twice more.
+    for (const [what, fire] of [
+      ['coming back from the background', comeBack],
+      ['choosing a photo', () => fileInput.dispatchEvent(new win.Event('change', { bubbles: true }))],
+      ['cancelling the picker', () => fileInput.dispatchEvent(new win.Event('cancel', { bubbles: true }))],
+      ['the app window getting focus back', () => win.dispatchEvent(new win.Event('focus'))],
+    ]) {
+      reports.length = 0;
+      fire(); await allSoon();
+      assert.equal(reports.length, 3, what);
+      assert.ok(atHome(), 'nothing moves: ' + what);
+    }
+    assert.equal(win.history.length, length1, 'reports add no history');
+    assert.equal(popstates, 0, 'reports are not Back or Forward');
+    // At taps, at most every 1.5 s.
+    reports.length = 0;
+    tap(); tap(); await sleep(300); tap(); tap(); await settle();
+    assert.equal(reports.length, 1, 'one report for a burst of taps');
+    await sleep(1600); tap(); await settle();
+    assert.equal(reports.length, 2, 'and another after 1.5 s');
+
+    // With a window open, a report keeps its Back step, and Back still closes it.
+    tap(); overlays.A.setOpen(true); await settle();
+    assert.ok(onOverlayEntry());
+    reports.length = 0;
+    comeBack(); await allSoon();
+    assert.equal(reports.length, 3);
+    assert.ok(onOverlayEntry(), 'still on the Back step');
+    await pressBack();
+    assert.equal(overlays.A.open, false);
+    assert.ok(atHome());
+
+    // A window closed by its own button while reports are due: its Back step still goes.
+    await sleep(1600);
+    tap(); overlays.A.setOpen(true); await settle();
+    overlays.A.setOpen(false); comeBack();
+    await allSoon();
+    assert.ok(atHome(), 'the Back step was taken away as usual');
+    assert.equal(win.history.length, length1 + 1, 'no extra history');
+
+    win.removeEventListener('popstate', countPops);
+    fileInput.remove();
+    asApp(false);
+    win.history.replaceState = replaceNow;
+    passed('Android app: coming back from the background, a photo picker or a native dialog (and taps) tells the app about the page\'s history again, changing nothing; browsers are left alone');
+  }
+
   console.log(`\nAll ${passes} back-navigation checks passed.`);
 } catch (err) {
   console.error('FAIL', err);
