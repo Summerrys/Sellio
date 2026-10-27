@@ -612,6 +612,7 @@ try {
     await pressBack();
     assert.equal(overlays.A.open, false);
     assert.equal(where(), here, 'Back closed it and stayed on the page');
+    const length2 = win.history.length;
 
     // A window closed by its own button while reports are due: its Back step still goes.
     await sleep(1600);
@@ -619,7 +620,7 @@ try {
     overlays.A.setOpen(false); comeBack();
     await allSoon();
     assert.equal(where(), here, 'the Back step was taken away as usual');
-    assert.equal(win.history.length, length1 + 1, 'no extra history');
+    assert.equal(win.history.length, length2, 'no extra history');
 
     win.removeEventListener('popstate', countPops);
     fileInput.remove();
