@@ -12,6 +12,7 @@ import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 import QR from 'qrcode';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
 import { zipFiles } from '@/lib/xlsxWriter';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 // Inside Sellio's Android app the QR codes are saved through the phone's browser
 // (lib/appFiles); all tables' codes go as one .zip there.
@@ -39,6 +40,8 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const [qrCodes, setQrCodes] = useState({});
   const [selectedQR, setSelectedQR] = useState(null);
   const [qrModalOpen, setQRModalOpen] = useState(false);
+  // Phone / browser Back closes the QR code window, like its ✕.
+  useBackToClose(!!selectedQR && qrModalOpen, () => { setQRModalOpen(false); setSelectedQR(null); });
   const [singleQrLabel, setSingleQrLabel] = useState(formData.singleQrLabel || 'Online Menu');
   const [singleQrGenerated, setSingleQrGenerated] = useState(!!formData.singleQrCode);
 
