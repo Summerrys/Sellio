@@ -37,6 +37,9 @@ await build({
     export { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
     export { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
     export { AlertDialog, AlertDialogContent, AlertDialogTitle } from '@/components/ui/alert-dialog';
+    export { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+    export { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+    export { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
     export { goBack } from '@/lib/goBack';
     export { backToSellio } from '@/components/legal/LegalPage';
   ` },
@@ -274,6 +277,92 @@ try {
   await settle(); assert.ok(atHome());
   passed('Dialogs that manage their own open state are left as they were (no Back step added)');
 
+  // 12b: lists, menus and popovers (Select, DropdownMenu, Popover), whether a parent
+  // controls them or not: Back closes the open one and stays on the page.
+  {
+    const pickers = win.document.createElement('div');
+    win.document.body.appendChild(pickers);
+    const pickersRoot = createRoot(pickers);
+    const state = {};
+    function Pickers() {
+      const [popOpen, setPopOpen] = React.useState(false);
+      const [value, setValue] = React.useState('a');
+      const [dialogOpen, setDialogOpen] = React.useState(false);
+      Object.assign(state, { popOpen, setPopOpen, value, dialogOpen, setDialogOpen });
+      const select = (id) => h(mod.Select, { value, onValueChange: setValue },
+        h(mod.SelectTrigger, { 'data-testid': id }, h(mod.SelectValue)),
+        h(mod.SelectContent, null, h(mod.SelectItem, { value: 'a' }, 'Option A'), h(mod.SelectItem, { value: 'b' }, 'Option B')));
+      return h('div', null,
+        select('select'),
+        h(mod.DropdownMenu, null, h(mod.DropdownMenuTrigger, { 'data-testid': 'menu' }, 'More'),
+          h(mod.DropdownMenuContent, null, h(mod.DropdownMenuItem, null, 'MENU-ITEM'))),
+        h(mod.Popover, null, h(mod.PopoverTrigger, { 'data-testid': 'pop' }, 'Filter'), h(mod.PopoverContent, null, 'POP-BODY')),
+        h(mod.Popover, { open: popOpen, onOpenChange: setPopOpen }, h(mod.PopoverTrigger, null, 'Bell'), h(mod.PopoverContent, null, 'BELL-BODY')),
+        h(mod.Popover, { open: true }, h(mod.PopoverTrigger, null, 'Fixed'), h(mod.PopoverContent, null, 'FIXED-BODY')),
+        h(mod.Dialog, { open: dialogOpen, onOpenChange: setDialogOpen },
+          h(mod.DialogContent, { 'aria-describedby': undefined }, h(mod.DialogTitle, null, 'Edit'), select('select-in-dialog'))));
+    }
+    pickersRoot.render(h(Pickers));
+    await settle();
+    assert.ok(text().includes('FIXED-BODY'));
+    assert.ok(!onOverlayEntry(), 'held open by its parent with no way to close it: no Back step');
+    const el = id => win.document.querySelector(`[data-testid="${id}"]`);
+    const press = (node, type) => node.dispatchEvent(new win.MouseEvent(type, { bubbles: true, cancelable: true, button: 0 }));
+    const listOpen = () => !!win.document.querySelector('[role="listbox"]');
+    // A list (Select), opened and closed with Back: nothing chosen.
+    tap(); press(el('select'), 'click'); await settle();
+    assert.ok(listOpen(), 'the list opened');
+    assert.ok(onOverlayEntry(), 'a Back step while the list is open');
+    await pressBack(); await settle();
+    assert.ok(!listOpen(), 'Back closed the list');
+    assert.equal(state.value, 'a', 'nothing was chosen');
+    assert.ok(atHome());
+    // Choosing an option closes it and takes its Back step away.
+    tap(); press(el('select'), 'click'); await settle();
+    assert.ok(onOverlayEntry());
+    const optionB = [...win.document.querySelectorAll('[role="option"]')].find(o => o.textContent.includes('Option B'));
+    tap(); press(optionB, 'click'); await sleep(200);
+    assert.equal(state.value, 'b');
+    assert.ok(!listOpen());
+    assert.ok(atHome(), 'choosing an option removes the Back step');
+    // A menu (DropdownMenu opens as the finger goes down).
+    tap(); press(el('menu'), 'pointerdown'); await settle();
+    assert.ok(text().includes('MENU-ITEM'), 'the menu opened');
+    assert.ok(onOverlayEntry());
+    await pressBack(); await settle();
+    assert.ok(!text().includes('MENU-ITEM'), 'Back closed the menu');
+    assert.ok(atHome());
+    // A popover no parent controls.
+    tap(); press(el('pop'), 'click'); await settle();
+    assert.ok(text().includes('POP-BODY'));
+    assert.ok(onOverlayEntry());
+    await pressBack(); await settle();
+    assert.ok(!text().includes('POP-BODY'), 'Back closed the popover');
+    assert.ok(atHome());
+    // A popover its parent controls (the notification bell): closes through onOpenChange.
+    tap(); state.setPopOpen(true); await settle();
+    assert.ok(text().includes('BELL-BODY'));
+    assert.ok(onOverlayEntry());
+    await pressBack(); await settle();
+    assert.equal(state.popOpen, false);
+    assert.ok(!text().includes('BELL-BODY'));
+    assert.ok(atHome());
+    // A list inside a dialog: Back closes the list, then the dialog.
+    tap(); state.setDialogOpen(true); await settle();
+    tap(); press(el('select-in-dialog'), 'click'); await settle();
+    assert.ok(listOpen());
+    await pressBack(); await settle();
+    assert.ok(!listOpen(), 'the list closed first');
+    assert.equal(state.dialogOpen, true, 'the dialog stays open');
+    assert.ok(onOverlayEntry(), 'Back is armed again for the dialog');
+    await pressBack(); await settle();
+    assert.equal(state.dialogOpen, false);
+    assert.ok(atHome());
+    pickersRoot.unmount(); pickers.remove();
+    await settle(); assert.ok(atHome());
+    passed('Lists, menus and popovers (with or without a parent controlling them) close on Back; choosing an option takes the Back step away; in a dialog, the list closes first');
+  }
+
   // ---- Phase 2 ----
   // 13
   const lengthBeforeSteps = win.history.length;
@@ -424,6 +513,9 @@ try {
   }
   for (const file of ['dialog', 'sheet', 'alert-dialog']) {
     assert.match(await readFile(`src/components/ui/${file}.jsx`, 'utf8'), /useBackToClose\(open !== undefined && !!open && typeof onOpenChange === "function"/);
+  }
+  for (const file of ['select', 'dropdown-menu', 'popover']) {
+    assert.match(await readFile(`src/components/ui/${file}.jsx`, 'utf8'), /useOpenWithBack\(open, defaultOpen, onOpenChange\)/);
   }
   passed('Layout (no header arrow), the shared dialogs, the step-by-step screens, Kitchen full screen and Privacy/Terms are wired to these rules');
 
