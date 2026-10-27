@@ -3,8 +3,13 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { Check, ChevronRight, Circle } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { useOpenWithBack } from "@/lib/useBackToClose"
 
-const DropdownMenu = DropdownMenuPrimitive.Root
+// Phone / browser Back closes an open menu instead of leaving the page.
+function DropdownMenu({ open, defaultOpen, onOpenChange, ...props }) {
+  const [isOpen, setOpen] = useOpenWithBack(open, defaultOpen, onOpenChange)
+  return <DropdownMenuPrimitive.Root open={isOpen} onOpenChange={setOpen} {...props} />
+}
 
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
 
