@@ -5,6 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Bluetooth, Wifi, CheckCircle, Loader2, AlertCircle, Printer, X, Signal } from 'lucide-react';
+import { useBackToClose } from '@/lib/useBackToClose';
 import {
   loadPrinterConfig, savePrinterConfig, clearPrinterConfig,
   testNetworkPrinter, buildTestReceipt, buildTSPLTestReceipt,
@@ -79,6 +80,9 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
     }
     setScanning(false);
   };
+
+  // Phone / browser Back closes the printer list, like its ✕ (and stops the scan).
+  useBackToClose(showScanSheet, () => { stopScan(); setShowScanSheet(false); });
 
   const handleScanBluetooth = async () => {
     if (!BT_SUPPORTED) return;
