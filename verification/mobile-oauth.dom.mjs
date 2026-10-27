@@ -21,6 +21,8 @@ const location = { origin: 'https://sellio.apptelier.sg', href: 'https://sellio.
 const browser = new Proxy(win, { get(target, key) {
   if (key === 'location') return location;
   if (key === 'crypto') return webcrypto;
+  // Listeners are added at start-up (the phone's Back handling); jsdom needs the real window as `this`.
+  if (key === 'addEventListener' || key === 'removeEventListener' || key === 'dispatchEvent') return target[key].bind(target);
   return Reflect.get(target, key);
 } });
 for (const key of ['document','Element','HTMLElement','HTMLInputElement','DocumentFragment','Node','Event',
