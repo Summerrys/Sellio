@@ -21,7 +21,8 @@ function Home() {
   useBackToClose(b, () => setB(false));
   useBackToClose(steps > 0, () => { setSteps(s => Math.max(s - 1, 0)); if (steps > 1) return false; });
   useBackToClose(auto, () => setAuto(false));
-  window.__home = { setAuto, setBusy };
+  // setAuto: a window opens by itself; go: the page navigates by itself (no tap).
+  window.__home = { setAuto, setBusy, go: (to) => navigate(to) };
   return (
     <div>
       <h1 id="page">home</h1>
