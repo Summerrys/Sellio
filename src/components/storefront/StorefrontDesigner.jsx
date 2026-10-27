@@ -1152,6 +1152,9 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
     setIsDraggingDrawer(false);
     setDrawerHeight(nextHeight);
   };
+  // Phone / browser Back folds the open design controls away first (like any sheet);
+  // the next Back leaves the designer.
+  useBackToClose(drawerExpanded, () => snapDrawer(DRAWER_HANDLE_ONLY));
 
   const startDrawerDrag = (e) => {
     if (!e.isPrimary || e.button !== 0 || gestureRef.current) return;
