@@ -3,6 +3,7 @@ import { X, Check } from 'lucide-react';
 import { paymentLinkFor } from '@/lib/accountFlow';
 import { BUSINESS_PLANS } from '@/lib/plans';
 import PlanFootnotes from '@/components/subscription/PlanFootnotes';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 // Presentation only: prices, Stripe links and features come from lib/plans.js.
 const PLAN_STYLE = {
@@ -16,6 +17,7 @@ const PLANS = BUSINESS_PLANS.map((plan) => ({ ...plan, ...PLAN_STYLE[plan.key] }
 // business plan it pays for belongs to this account.
 export default function AuthPricingModal({ onClose, prefilledEmail = '' }) {
   const [annual, setAnnual] = useState(false);
+  useBackToClose(true, onClose); // phone / browser Back closes the plans (shown only while open)
 
   return (
     <div
