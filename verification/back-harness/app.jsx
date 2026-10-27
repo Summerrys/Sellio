@@ -1,29 +1,10 @@
 // A small app for verification/back-navigation.browser.mjs: windows, nested windows, a
 // step-by-step screen and links, all on Sellio's useBackToClose, in a real browser.
+import './monitor.js'; // first: it records the entries the page really adds
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { useBackToClose, handOverBackStep } from '../../src/lib/useBackToClose.js';
-
-// Every history entry added, with whether the browser would count it as made by the
-// person: a tap in the last few seconds AND one since the last Back / Forward.
-window.__pushes = [];
-let lastTap = 0;
-let lastTraversal = 0;
-for (const type of ['pointerup', 'touchend', 'mousedown', 'keydown', 'click']) {
-  window.addEventListener(type, () => { lastTap = performance.now(); }, true);
-}
-window.addEventListener('popstate', () => { lastTraversal = performance.now(); }, true);
-const push = history.pushState;
-history.pushState = function pushState(state, ...rest) {
-  window.__pushes.push({
-    ours: !!state?.sellioOverlay,
-    path: rest[1] ?? location.pathname,
-    active: navigator.userActivation.isActive,
-    tapSinceTraversal: lastTap > lastTraversal,
-  });
-  return push.call(this, state, ...rest);
-};
 
 function Start() {
   return <div><h1 id="page">start</h1><Link id="toHome" to="/home">home</Link></div>;
