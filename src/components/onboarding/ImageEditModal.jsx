@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, RotateCw, Crop, Undo2, ImagePlus, Save, Trash2 } from 'lucide-react';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 const TOOLS = { NONE: 'none', CROP: 'crop' };
 // preserveResolution: save from the photo itself (up to this many px on the long side),
@@ -20,6 +21,8 @@ export default function ImageEditModal({
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const replaceInputRef = useRef(null);
+  // Phone / browser Back closes the editor (like its ✕), not the window it was opened from.
+  useBackToClose(true, onClose);
 
   const [history, setHistory] = useState([{ imageSrc: src, rotation: 0 }]);
   const [current, setCurrent] = useState({ imageSrc: src, rotation: 0 });
