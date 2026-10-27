@@ -365,11 +365,49 @@ try {
   assert.deepEqual(stepPushes.filter(p => !p.afterTap), [], 'every Back step was added straight after a tap');
   passed(`All ${stepPushes.length} Back steps were added straight after a tap (none after a Back without one)`);
 
+  // 17b: the guard for the whole app. The person's Back (the browser's, not the page's own
+  // history.back()) makes the browser stop honouring earlier taps; an entry added after it
+  // without a new tap would make Android skip the page's whole history. It takes the
+  // current entry's place instead. A finger scroll (touchend) or Escape is not a tap.
+  const personsBack = async () => { win.History.prototype.back.call(win.history); await sleep(120); };
+  const go = async (to, withTap) => { if (withTap) tap(); router.navigate(to); await settle(); };
+  const path = () => win.location.pathname;
+  for (const [label, notATap] of [['nothing', null], ['a finger scroll', 'touchend'], ['Escape', 'Escape']]) {
+    const start = path();
+    await go('/guard-1', true);
+    await go('/guard-2', true);
+    await personsBack();
+    assert.equal(path(), '/guard-1');
+    if (notATap === 'touchend') win.dispatchEvent(new win.Event('touchend'));
+    if (notATap === 'Escape') win.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape' }));
+    await go('/guard-3', false); // the page navigates with no tap since the Back
+    assert.equal(path(), '/guard-3');
+    await personsBack();
+    assert.equal(path(), start, `after ${label}: the new page took /guard-1's place, so Back goes to the page before it`);
+  }
+  await go('/guard-4', true);
+  await go('/guard-5', true);
+  await pressBack(); // the page's own Back (an in-page back button): earlier taps still count
+  assert.equal(path(), '/guard-4');
+  await go('/guard-6', false);
+  await personsBack();
+  assert.equal(path(), '/guard-4', 'added normally after the page\'s own Back');
+  await go('/guard-7', true);
+  await go('/guard-8', true);
+  await personsBack();
+  await go('/guard-9', true); // a tap after the Back: added normally
+  await personsBack();
+  assert.equal(path(), '/guard-7');
+  passed('No entry is ever added without a tap since the person\'s Back (it takes the current one\'s place); a finger scroll or Escape is not a tap; the page\'s own Back keeps earlier taps');
+
   // 18: the app's code uses these pieces as tested here
   const layout = await readFile('src/Layout.jsx', 'utf8');
   assert.doesNotMatch(layout, /aria-label="Back"/, 'no on-screen back arrow in the header');
   assert.match(layout, /navigate\(createPageUrl\(item\.page\), \{ replace: handOverBackStep\(\) \}\)/);
-  assert.match(layout, /useBackToClose\(mobileOpen, \(\) => setMobileOpen\(false\)\)/);
+  // The phone menu and trial reminder only count as open while the workspace shows them.
+  assert.match(layout, /useBackToClose\(mobileOpen && workspaceShown, \(\) => setMobileOpen\(false\)\)/);
+  assert.match(layout, /useBackToClose\(showTrialModal && canDismissTrialModal && workspaceShown, dismissTrialModal\)/);
+  assert.match(layout, /!publicPages\.includes\(currentPageName\)/);
   const wiring = {
     'src/pages/ShopSetup.jsx': [/useBackToClose\(step > 0,/, /if \(finishing\) return false;/, /await removeBackStep\(\);[^\n]*\n\s*navigate\(createPageUrl\('Dashboard'\), \{ replace: true \}\)/, /replace: handOverBackStep\(\)/],
     'src/pages/Onboarding.jsx': [/useBackToClose\(currentStep > 1,/, /await removeBackStep\(\);\s*navigate\(createPageUrl\('Dashboard'\), \{ replace: true \}\)/],
