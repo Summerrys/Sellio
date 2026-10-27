@@ -8,8 +8,10 @@ import ImageEditModal from './ImageEditModal';
 import { getSupabase } from '@/lib/supabaseClient';
 import { shrinkImage, withExt, PHOTO_MAX_SIDE } from '@/lib/imageShrink';
 import { toast } from 'sonner';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 export default function EditItemModal({ item, categories, themeColor, primaryColor, onSave, onClose }) {
+  useBackToClose(true, onClose); // phone / browser Back closes it, like its ✕ (shown only while open)
    const [name, setName] = useState(item.name);
    const [price, setPrice] = useState(String(item.price));
    const [description, setDescription] = useState(item.description || '');
