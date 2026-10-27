@@ -1776,28 +1776,8 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
     setSaving(true);
     const supabase = await getSupabase();
 
-    const ALLOWED = [
-      'banner_headline', 'banner_tagline', 'banner_bg_color', 'banner_bg_image_url',
-      'banner_edge_left_color', 'banner_edge_right_color',
-      'banner_height', 'banner_height_px', 'banner_position_x', 'banner_position_y', 'banner_zoom',
-      'show_promo_ticker', 'product_layout', 'menu_density',
-      'show_featured', 'featured_section_title', 'show_category_tabs',
-      'show_product_description', 'show_stock_badge', 'font_family', 'typography_scale',
-    ];
-
-    const payload = {};
-    for (const key of ALLOWED) {
-      const val = form[key];
-      if (key === 'banner_position_x' || key === 'banner_position_y') {
-        payload[key] = Number.isFinite(Number(val)) ? Math.round(Number(val)) : 50;
-      } else if (key === 'banner_height_px') {
-        payload[key] = getStorefrontBannerHeight(val);
-      } else if (key === 'banner_zoom') {
-        payload[key] = getStorefrontBannerZoom(val);
-      } else {
-        payload[key] = val ?? null;
-      }
-    }
+    const savingForm = form;
+    const payload = designPayload(savingForm);
 
     const { data: existing } = await supabase
       .from('storefront_configs').select('id').eq('tenant_id', tenantId).maybeSingle();
@@ -1813,7 +1793,8 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
     if (error) {
       toast.error('Save failed: ' + error.message);
     } else {
-      sessionStorage.removeItem(`storefront_draft_${tenantId}`);
+      // Saved: nothing is unsaved any more (changes made while it saved still are).
+      setSavedForm(savingForm);
       toast.success('Storefront saved ✓');
     }
   };
