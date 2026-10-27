@@ -51,9 +51,14 @@ let scriptTraversals = 0;    // the page's own history.back()/forward()/go() sti
 let scriptTraversalsUntil = 0; // …until about then
 let waitingForTap = false;
 let leavingUntil = 0;        // the page is going to another page (a new document): until then
+let leavingSince = 0;
 
 const now = () => Date.now();
 const leaving = () => now() < leavingUntil;
+function stopLeaving() {
+  leavingUntil = 0;
+  scheduleSettle();
+}
 // (Read safely: a page being torn down can have no history left to read.)
 const historyState = () => { try { return browser.history.state; } catch { return null; } };
 const onOurStep = () => !!historyState()?.sellioOverlay;
@@ -235,26 +240,30 @@ if (browser) {
     if (event?.type === 'keydown' && event.key === 'Escape') return;
     if (event?.isTrusted === false && browser.navigator?.userActivation) return;
     lastTapAt = now();
+    // Still using this page a moment after it started to go elsewhere: it isn't going
+    // (a download, or a link another app opened).
+    if (leaving() && lastTapAt - leavingSince > 500) stopLeaving();
   }, true));
   browser.addEventListener('popstate', onPopState);
   // The page starting to go to another page (location.assign / href, a link or form to
   // another document). Not a download, not a move within this page.
   const startLeaving = () => {
-    leavingUntil = now() + LEAVING_MS;
+    leavingSince = now();
+    leavingUntil = leavingSince + LEAVING_MS;
     setTimeout(scheduleSettle, LEAVING_MS + 50);
   };
   try {
     browser.navigation?.addEventListener('navigate', (event) => {
       if (event.destination?.sameDocument || event.hashChange || event.downloadRequest || event.navigationType === 'traverse') return;
+      if (!/^https?:/i.test(event.destination?.url || '')) return; // tel:, mailto:, an app's link
       startLeaving();
     });
   } catch { /* no Navigation API: beforeunload below */ }
   browser.addEventListener('beforeunload', startLeaving);
-  // Shown again (Back to a page kept in memory): carry on from where it was.
-  browser.addEventListener('pageshow', (event) => {
-    if (!event.persisted) return;
-    leavingUntil = 0;
-    scheduleSettle();
+  // Shown again (Back to a page kept in memory), or back from another app: carry on.
+  browser.addEventListener('pageshow', (event) => { if (event.persisted) stopLeaving(); });
+  browser.document?.addEventListener('visibilitychange', () => {
+    if (browser.document.visibilityState === 'visible' && leaving()) stopLeaving();
   });
   // Opened or reloaded on a Back step with nothing open: step off it.
   try { if (onOurStep()) setTimeout(scheduleSettle, 400); } catch { /* no history to read */ }
