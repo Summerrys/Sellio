@@ -220,9 +220,11 @@ if (browser) {
       }
     }
   } catch { /* history left as it is */ }
-  // Escape doesn't count: the browser doesn't treat it as a tap either.
+  // Escape doesn't count: the browser doesn't treat it as a tap either. Nor does a click
+  // the page makes itself (element.click()): only the person's own taps.
   TAP_EVENTS.forEach(type => browser.addEventListener(type, (event) => {
     if (event?.type === 'keydown' && event.key === 'Escape') return;
+    if (event?.isTrusted === false && browser.navigator?.userActivation) return;
     lastTapAt = now();
   }, true));
   browser.addEventListener('popstate', onPopState);
