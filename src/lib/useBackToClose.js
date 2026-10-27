@@ -19,6 +19,11 @@
 // since the person's last Back (a page that navigates by itself, or once something it
 // was waiting for arrives) takes the current entry's place instead (see the pushState
 // guard below), so nothing in Sellio can leave Android's Back with nothing to go to.
+//
+// In the Android app, Back is decided by Base44's app shell from what the page last told it
+// about its history. After the app has been in the background, or a native picker (photos,
+// files) has been over it, that can be out of date, so the page tells it again then (see
+// reportHistory below).
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 // How long after Back to check whether a window really closed. Longer than the
@@ -33,6 +38,10 @@ const LEAVING_MS = 15000;
 // Not touchend: a finger that scrolls ends with one too, and that isn't a tap — on a
 // phone a tap is a pointerup (a scroll cancels the pointer instead) and then a click.
 const TAP_EVENTS = ['pointerup', 'mousedown', 'keydown', 'click'];
+// When to tell the Android app about the page's history again after it comes back from the
+// background or a picker (it may only catch up a moment later), and at most how often at taps.
+const REPORT_AGAIN_MS = [50, 700, 2000];
+const TAP_REPORT_GAP_MS = 1500;
 
 const browser = typeof window !== 'undefined' ? window : null;
 const stack = [];            // open windows, oldest → newest (by seq)
@@ -51,6 +60,7 @@ let scriptTraversals = 0;    // the page's own history.back()/forward()/go() sti
 let scriptTraversalsUntil = 0; // …until about then
 let waitingForTap = false;
 let leavingUntil = 0;        // the page is going to another page (a new document): until then
+let lastReportAt = 0;        // last time the page told the Android app about its history again
 
 const now = () => Date.now();
 const leaving = () => now() < leavingUntil;
@@ -93,6 +103,25 @@ function traverse(direction) {
   }, OWN_TRAVERSAL_MS + 20);
   if (direction < 0) browser.history.back();
   else browser.history.forward();
+}
+
+// Only in Base44's Android app (browsers decide Back themselves).
+const inAndroidApp = () => /Android/i.test(browser?.navigator?.userAgent || '') && (
+  typeof browser.ReactNativeWebView?.postMessage === 'function' ||
+  typeof browser.__hybrid_bridge?.sendMessage === 'function');
+
+// Tells the Android app about the page's history again: the current history entry replaced by
+// itself, which changes nothing here but makes the app's Back read where the page is now. Not
+// while the page is moving through history or going to another page.
+function reportHistory() {
+  if (ownTraversal || leaving() || (scriptTraversals > 0 && now() < scriptTraversalsUntil)) return;
+  try { browser.history.replaceState(browser.history.state, ''); } catch { /* nothing to report */ }
+}
+
+function reportHistorySoon() {
+  if (!inAndroidApp()) return;
+  lastReportAt = now();
+  REPORT_AGAIN_MS.forEach(ms => setTimeout(reportHistory, ms));
 }
 
 // A window that opened with no tap to go on (it opened by itself, or after a Back):
@@ -239,6 +268,12 @@ if (browser) {
     if (event?.type === 'keydown' && event.key === 'Escape') return;
     if (event?.isTrusted === false && browser.navigator?.userActivation) return;
     lastTapAt = now();
+    // In the Android app, also at taps (at most every 1.5 s), in case its record went out of
+    // date some other way.
+    if (event?.type === 'pointerup' && now() - lastReportAt > TAP_REPORT_GAP_MS && inAndroidApp()) {
+      lastReportAt = now();
+      setTimeout(reportHistory, 0);
+    }
   }, true));
   browser.addEventListener('popstate', onPopState);
   // The page starting to go to another page (location.assign / href, a link or form to
@@ -262,6 +297,17 @@ if (browser) {
   browser.document?.addEventListener('visibilitychange', () => {
     if (browser.document.visibilityState === 'visible' && leaving()) stopLeaving();
   });
+  // Back in the Android app from the background, a native picker (choosing a photo or file,
+  // or cancelling) or a native dialog: tell it about the page's history again.
+  browser.document?.addEventListener('visibilitychange', () => {
+    if (browser.document.visibilityState === 'visible') reportHistorySoon();
+  });
+  browser.addEventListener('focus', reportHistorySoon);
+  for (const type of ['change', 'cancel']) {
+    browser.document?.addEventListener(type, (event) => {
+      if (event.target?.type === 'file') reportHistorySoon();
+    }, true);
+  }
   // Opened or reloaded on a Back step with nothing open: step off it.
   try { if (onOurStep()) setTimeout(scheduleSettle, 400); } catch { /* no history to read */ }
 }
