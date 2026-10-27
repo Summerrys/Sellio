@@ -283,6 +283,21 @@ try {
   passed('After a tap whose moment is over (5 s, full screen, a picker) a window still gets its Back step and Back works; a click the page makes itself is not a tap');
   pushes = pushes.concat(await p.read('window.__pushes'));
 
+  // A window that closes as the page goes to another page (a store's checkout sending a
+  // visitor to sign in): that page stays, nothing pulls the person back; Back from it
+  // returns to the page, and then on.
+  p = await newPhone();
+  await p.tap('toHome');
+  await p.tap('openA');
+  await p.tap('leaveFromA');
+  await sleep(2500);
+  assert.equal((await p.state()).path, '/signin', 'went to the other page and stayed there');
+  assert.equal(await p.back(1500), 'went back');
+  assert.deepEqual([(await p.state()).path, (await p.state()).onStep], ['/home', false], 'Back returns to the page, window closed');
+  assert.equal(await p.back(800), 'went back');
+  assert.equal((await p.state()).path, '/', 'and then to the page before it');
+  passed('A window that closes as the page goes to another page (sign in from a checkout): that page stays; Back returns, then goes on');
+
   assert.deepEqual(pushes.filter((x) => !x.honoured), [], 'every history entry was added after a tap the browser honours');
   passed(`All ${pushes.length} history entries (${pushes.filter((x) => x.ours).length} Back steps) were added after a real tap since the last Back`);
 
