@@ -512,7 +512,18 @@ try {
     'src/pages/KitchenDisplay.jsx': [/useBackToClose\(isFullscreen, handleExit\)/],
     'src/components/explore/ExploreMe.jsx': [/<Link to="\/privacy"/, /<Link to="\/terms"/],
     'src/components/legal/LegalPage.jsx': [/className="sellio-legal-back" onClick=\{backToSellio\}/],
+    // Windows built without the shared dialogs: each closes on Back, like its own ✕.
+    'src/components/auth/AuthPricingModal.jsx': [/useBackToClose\(true, onClose\)/],
+    'src/components/onboarding/ImageEditModal.jsx': [/useBackToClose\(true, onClose\)/],
+    'src/components/onboarding/EditItemModal.jsx': [/useBackToClose\(true, onClose\)/],
+    'src/components/stocktake/SupplierPickerModal.jsx': [/useBackToClose\(!!open, onClose\);[^\n]*\n\s*if \(!open\) return null;/],
+    'src/components/onboarding/Step1Combined.jsx': [/useBackToClose\(showColorPicker, \(\) => setShowColorPicker\(false\)\)/],
+    'src/components/onboarding/Step4TablesQR.jsx': [/useBackToClose\(!!selectedQR && qrModalOpen,/],
+    'src/components/settings/PrinterSettings.jsx': [/useBackToClose\(showScanSheet, \(\) => \{ stopScan\(\); setShowScanSheet\(false\); \}\)/],
+    'src/components/profile/AccountProfileModal.jsx': [/useBackToClose\(!!open, onClose\);\s*if \(!open\) return null;/],
   };
+  // The Kitchen Display's chit preview, per order card.
+  assert.match(await readFile('src/pages/KitchenDisplay.jsx', 'utf8'), /useBackToClose\(showChit, \(\) => \{ if \(chitPrinting\) return false; setShowChit\(false\); \}\)/);
   for (const [file, patterns] of Object.entries(wiring)) {
     const source = await readFile(file, 'utf8');
     for (const pattern of patterns) assert.match(source, pattern, file);
