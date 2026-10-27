@@ -521,6 +521,9 @@ try {
     'src/components/onboarding/Step4TablesQR.jsx': [/useBackToClose\(!!selectedQR && qrModalOpen,/],
     'src/components/settings/PrinterSettings.jsx': [/useBackToClose\(showScanSheet, \(\) => \{ stopScan\(\); setShowScanSheet\(false\); \}\)/],
     'src/components/profile/AccountProfileModal.jsx': [/useBackToClose\(!!open, onClose\);\s*if \(!open\) return null;/],
+    // The store designer: Back folds its open design controls first, then leaves (asking
+    // only when there are real unsaved changes).
+    'src/components/storefront/StorefrontDesigner.jsx': [/useBackToClose\(drawerExpanded, \(\) => snapDrawer\(DRAWER_HANDLE_ONLY\)\)/, /const dirty = !!savedForm && !sameDesign\(form, savedForm\);/],
   };
   // The Kitchen Display's chit preview, per order card.
   assert.match(await readFile('src/pages/KitchenDisplay.jsx', 'utf8'), /useBackToClose\(showChit, \(\) => \{ if \(chitPrinting\) return false; setShowChit\(false\); \}\)/);
