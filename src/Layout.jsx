@@ -216,7 +216,10 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
                 // Back from it returns to the page the menu was opened on.
                 if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
                 event.preventDefault();
-                navigate(createPageUrl(item.page), { replace: handOverBackStep() });
+                // The page already open: just close the menu (opening it again would add
+                // a second copy of the page, and the next Back would seem to do nothing).
+                const to = createPageUrl(item.page);
+                if (to !== window.location.pathname + window.location.search) navigate(to, { replace: handOverBackStep() });
                 onNavigate();
               } : undefined}
               className={cn(
