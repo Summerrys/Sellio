@@ -5,8 +5,13 @@ import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { useOpenWithBack } from "@/lib/useBackToClose"
 
-const Select = SelectPrimitive.Root
+// Phone / browser Back closes an open list instead of leaving the page.
+function Select({ open, defaultOpen, onOpenChange, ...props }) {
+  const [isOpen, setOpen] = useOpenWithBack(open, defaultOpen, onOpenChange)
+  return <SelectPrimitive.Root open={isOpen} onOpenChange={setOpen} {...props} />
+}
 
 const SelectGroup = SelectPrimitive.Group
 
