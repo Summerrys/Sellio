@@ -42,6 +42,8 @@ function KDSOrderCard({ order, onBump }) {
   const canPrintChit = hasPermission('orders.print_chit');
   const [chitPrinting, setChitPrinting] = useState(false);
   const [showChit, setShowChit] = useState(false);
+  // Phone / browser Back closes the chit preview (not while it is printing).
+  useBackToClose(showChit, () => { if (chitPrinting) return false; setShowChit(false); });
   const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.preparing;
   const elapsed = Math.floor((Date.now() - new Date(order.created_date)) / 60000);
   const isUrgent = elapsed > 10;
