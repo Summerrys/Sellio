@@ -249,6 +249,40 @@ try {
   passed('A page that navigates by itself after a Back (no tap) replaces its entry, so Back never goes dead; with a tap it adds one');
   pushes = pushes.concat(await p.read('window.__pushes'));
 
+  // A tap's moment can be over or used up (going full screen or opening a picker uses it;
+  // after 5 seconds it ends): the browser still honours an entry added after it, as long
+  // as no Back came since. A window that opens then gets its Back step at once.
+  p = await newPhone();
+  await p.tap('toHome');
+  await p.tap('page');
+  await sleep(5600);
+  assert.equal(await p.read('navigator.userActivation.isActive'), false, "the tap's moment is over");
+  await p.read('window.__home.setAuto(true)');
+  await sleep(300);
+  assert.ok(await p.visible('AUTO'));
+  assert.ok((await p.state()).onStep, 'its Back step is added at once');
+  assert.equal(await p.back(), 'went back');
+  assert.ok(!(await p.visible('AUTO')), 'Back closed it');
+  assert.equal((await p.state()).path, '/home', 'and stayed on the page: the browser honoured the step');
+  assert.equal(await p.back(), 'went back');
+  assert.equal((await p.state()).path, '/', 'then Back goes to the page before, nothing skipped');
+  // A click the page makes itself is not a tap: after a Back, it must not let a step in.
+  await p.tap('toHome');
+  await p.tap('toOther');
+  await p.back();
+  await p.read('document.getElementById("page").click()');
+  await p.read('window.__home.setAuto(true)');
+  await sleep(300);
+  assert.ok(await p.visible('AUTO'));
+  assert.ok(!(await p.state()).onStep, 'no Back step on a click the page made itself');
+  await p.tap('page');
+  assert.ok((await p.state()).onStep, 'added at the real tap');
+  await p.back();
+  assert.ok(!(await p.visible('AUTO')));
+  assert.equal((await p.state()).path, '/home');
+  passed('After a tap whose moment is over (5 s, full screen, a picker) a window still gets its Back step and Back works; a click the page makes itself is not a tap');
+  pushes = pushes.concat(await p.read('window.__pushes'));
+
   assert.deepEqual(pushes.filter((x) => !x.honoured), [], 'every history entry was added after a tap the browser honours');
   passed(`All ${pushes.length} history entries (${pushes.filter((x) => x.ours).length} Back steps) were added after a real tap since the last Back`);
 
