@@ -1,7 +1,9 @@
 import React from 'react';
 import { X, MessageCircle } from 'lucide-react';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 export default function SupplierPickerModal({ open, onClose, suppliers, onSelect }) {
+  useBackToClose(!!open, onClose); // phone / browser Back closes the picker
   if (!open) return null;
   return (
     <>
