@@ -1,0 +1,1 @@
+{ "manifest_version": 3, "name": "phone-back", "version": "1", "description": "Test helper for verification/back-navigation.browser.mjs: the browser's own Back.", "permissions": ["tabs"], "background": { "service_worker": "sw.js" } }
