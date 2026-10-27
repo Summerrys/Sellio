@@ -54,11 +54,12 @@ const historyState = () => { try { return browser.history.state; } catch { retur
 const onOurStep = () => !!historyState()?.sellioOverlay;
 const pageKey = () => historyState()?.key ?? null;
 
-// A Back step may be added only right after a tap: one in the last few seconds, and
-// since the last Back / Forward (after those the browser stops counting earlier taps).
+// A Back step may be added only after a tap since the last Back / Forward (after those
+// the browser stops counting earlier taps). The tap's moment itself may be over or used
+// up (going full screen, opening a picker): the browser still honours the step.
 function canAddStep() {
   const activation = browser.navigator?.userActivation;
-  if (activation && !activation.isActive) return false;
+  if (activation && !activation.hasBeenActive) return false;
   return lastTapAt > 0 && lastTapAt >= lastTraversalAt;
 }
 
