@@ -2,8 +2,13 @@ import * as React from "react"
 import * as PopoverPrimitive from "@radix-ui/react-popover"
 
 import { cn } from "@/lib/utils"
+import { useOpenWithBack } from "@/lib/useBackToClose"
 
-const Popover = PopoverPrimitive.Root
+// Phone / browser Back closes an open popover instead of leaving the page.
+function Popover({ open, defaultOpen, onOpenChange, ...props }) {
+  const [isOpen, setOpen] = useOpenWithBack(open, defaultOpen, onOpenChange)
+  return <PopoverPrimitive.Root open={isOpen} onOpenChange={setOpen} {...props} />
+}
 
 const PopoverTrigger = PopoverPrimitive.Trigger
 
