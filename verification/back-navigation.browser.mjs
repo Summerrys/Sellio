@@ -1,10 +1,17 @@
-// Real Chromium (Android phone settings): the phone's Back with Sellio's useBackToClose.
-// Android skips ALL of a page's history once the page adds an entry without a fresh tap
-// (Back then looks dead in the app), so this also checks every entry came after a tap.
-// Needs Playwright with its Chromium. Run from the app root: node verification/back-navigation.browser.mjs
+// Real Chromium (Android phone settings) with the phone's real Back: Sellio's
+// useBackToClose in a small app (back-harness/app.jsx).
+//
+// Back here is the browser's own Back (a test extension, verification/phone-back), the
+// same call Android's Back makes in the app: it SKIPS every history entry the browser
+// marked as added without a tap, and with nothing left it does nothing — exactly how
+// Back went dead in the app. Reads go through DevTools without counting as a tap, and
+// finger scrolls are raw touches (a scroll is not a tap), so nothing here fakes a tap.
+//
+// Needs Playwright with its full Chromium (extensions). Run from the app root:
+//   node verification/back-navigation.browser.mjs
 import { build } from 'esbuild';
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, mkdtemp } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -18,38 +25,68 @@ const { chromium, devices } = require('playwright');
 const bundle = path.join(os.tmpdir(), 'sellio-back-harness.js');
 await build({ entryPoints: [path.join(dir, 'back-harness/app.jsx')], bundle: true, outfile: bundle,
   jsx: 'automatic', define: { 'process.env.NODE_ENV': '"production"' }, logLevel: 'error' });
-const html = '<!doctype html><html><head><meta name="viewport" content="width=device-width"></head><body><div id="root"></div><script src="/app.js"></script></body></html>';
+const html = '<!doctype html><html><head><meta name="viewport" content="width=device-width"><style>body{min-height:3000px}</style></head><body><div id="root"></div><script src="/app.js"></script></body></html>';
 const js = await readFile(bundle);
 const server = createServer((req, res) => {
   if (req.url === '/app.js') { res.writeHead(200, { 'content-type': 'text/javascript' }); res.end(js); return; }
   res.writeHead(200, { 'content-type': 'text/html' }); res.end(html);
 }).listen(0);
-const port = server.address().port;
-
-const browser = await chromium.launch();
-const context = await browser.newContext({ ...devices['Pixel 7'] });
-const page = await context.newPage();
-const errors = [];
-page.on('pageerror', (e) => errors.push(e.message));
+const origin = `http://127.0.0.1:${server.address().port}`;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const state = () => page.evaluate(() => ({ path: location.pathname, onStep: !!history.state?.sellioOverlay, length: history.length }));
-const visible = (id) => page.evaluate((i) => !!document.getElementById(i), id);
-const pushCount = () => page.evaluate(() => window.__pushes.length);
-const back = async () => { await page.goBack({ waitUntil: 'commit' }).catch(() => {}); await sleep(250); };
-const tap = async (id) => { await page.tap('#' + id); await sleep(150); };
+let context;
 let passes = 0;
 const passed = (name) => { passes++; console.log('PASS ' + name); };
 
+async function newPhone() {
+  if (context) await context.close();
+  const ext = path.join(dir, 'phone-back');
+  const { defaultBrowserType, ...pixel } = devices['Pixel 7'];
+  context = await chromium.launchPersistentContext(await mkdtemp(path.join(os.tmpdir(), 'sellio-phone-')), {
+    channel: 'chromium', headless: true, ...pixel,
+    args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`],
+  });
+  let [worker] = context.serviceWorkers();
+  if (!worker) worker = await context.waitForEvent('serviceworker');
+  const page = context.pages()[0] || await context.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const cdp = await context.newCDPSession(page);
+  // Reads the page without counting as a tap (Playwright's own evaluate counts as one).
+  const read = async (expression) => {
+    const { result, exceptionDetails } = await cdp.send('Runtime.evaluate', { expression, returnByValue: true, userGesture: false, awaitPromise: true });
+    if (exceptionDetails) throw new Error(exceptionDetails.exception?.description || exceptionDetails.text);
+    return result.value;
+  };
+  const state = () => read('({ path: location.pathname, onStep: !!history.state?.sellioOverlay })');
+  const visible = (id) => read(`!!document.getElementById(${JSON.stringify(id)})`);
+  // The phone's Back. 'went back', or 'NOTHING…' when the browser finds nowhere to go.
+  const back = async (wait = 250) => { const r = await worker.evaluate(() => self.phoneBack()); await sleep(wait); return r; };
+  const tap = async (id) => { await page.tap('#' + id); await sleep(150); };
+  // A finger scroll, as a phone sends it (the browser cancels the pointer: no tap).
+  const scroll = async (dy = 300) => {
+    const touch = (type, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: 200, y }] });
+    await touch('touchStart', 600);
+    for (let i = 1; i <= 14; i++) { await touch('touchMove', 600 - (dy * i) / 14); await sleep(12); }
+    await touch('touchEnd');
+    await sleep(250);
+  };
+  await page.goto(origin + '/');
+  await sleep(300);
+  return { page, read, state, visible, back, tap, scroll, errors };
+}
+
 try {
-  await page.goto(`http://127.0.0.1:${port}/`);
+  let p = await newPhone();
+  const { tap, back, state, visible, read } = p;
+  const pushCount = () => read('window.__pushes.length');
   await tap('toHome');
   assert.equal((await state()).path, '/home');
 
   await tap('openA');
   assert.ok(await visible('A'));
   assert.ok((await state()).onStep);
-  await back();
+  assert.equal(await back(), 'went back');
   assert.ok(!(await visible('A')));
   assert.deepEqual([(await state()).path, (await state()).onStep], ['/home', false]);
   passed('Back closes an open window and stays on the page');
@@ -64,7 +101,7 @@ try {
   assert.ok(!(await visible('A')));
   assert.equal((await state()).path, '/home');
   assert.equal(await pushCount(), pushesBefore, 'no history added after a Back');
-  await back();
+  assert.equal(await back(), 'went back');
   assert.equal((await state()).path, '/', 'then Back leaves the page');
   passed('Two windows: Back, Back closes them in turn, then leaves the page; nothing added after a Back');
 
@@ -73,7 +110,7 @@ try {
   const pushesAtStep3 = await pushCount();
   for (const expected of ['2', '1', '0']) {
     await back();
-    assert.equal(await page.textContent('#steps'), expected);
+    assert.equal(await read('document.getElementById("steps").textContent'), expected);
   }
   assert.equal((await state()).path, '/home');
   assert.ok(!(await state()).onStep);
@@ -81,11 +118,11 @@ try {
   passed('Step-by-step screen: Back steps back one at a time with nothing added');
 
   await tap('openA');
-  await page.evaluate(() => window.__home.setBusy(true));
+  await read('window.__home.setBusy(true)');
   await back();
   assert.ok(await visible('A'), 'busy: stays open');
   assert.ok((await state()).onStep, 'and Back is ready again');
-  await page.evaluate(() => window.__home.setBusy(false));
+  await read('window.__home.setBusy(false)');
   await sleep(100);
   await back();
   assert.ok(!(await visible('A')));
@@ -115,7 +152,7 @@ try {
   await tap('openA');
   await back();
   let before = await pushCount();
-  await page.evaluate(() => window.__home.setAuto(true));
+  await read('window.__home.setAuto(true)');
   await sleep(300);
   assert.ok(await visible('AUTO'));
   assert.ok((await state()).onStep, 'moved forward onto the step Back left');
@@ -128,7 +165,7 @@ try {
   await back();
   assert.equal((await state()).path, '/home');
   before = await pushCount();
-  await page.evaluate(() => window.__home.setAuto(true));
+  await read('window.__home.setAuto(true)');
   await sleep(300);
   assert.ok(await visible('AUTO'));
   assert.equal(await pushCount(), before, 'nothing added without a tap');
@@ -149,38 +186,78 @@ try {
   assert.equal(await pushCount(), before, 'reopening moves back onto the same step');
   await back();
   assert.ok(!(await visible('A')));
-  await back();
+  assert.equal(await back(), 'went back');
   assert.equal((await state()).path, '/', 'history did not grow: Back leaves the page');
   passed('Opening and closing windows repeatedly reuses one step; history does not grow');
 
-  const earlierPushes = await page.evaluate(() => window.__pushes);
-  await page.goto(`http://127.0.0.1:${port}/`);
-  await tap('toHome');
-  await tap('openA');
-  await tap('openB');
-  await page.goBack({ waitUntil: 'commit' }).catch(() => {});
-  await sleep(60);
-  await page.goBack({ waitUntil: 'commit' }).catch(() => {});
+  let pushes = await read('window.__pushes');
+  // Quick Back presses (a fresh phone, so earlier entries don't matter).
+  p = await newPhone();
+  await p.tap('toHome');
+  await p.tap('openA');
+  await p.tap('openB');
+  await p.back(60);
+  await p.back(400);
+  assert.ok(!(await p.visible('B')) && !(await p.visible('A')), 'both closed');
+  assert.equal((await p.state()).path, '/home', 'still on the page');
+  await p.tap('next'); await p.tap('next'); await p.tap('next');
+  for (let i = 0; i < 3; i++) await p.back(60);
   await sleep(400);
-  assert.ok(!(await visible('B')) && !(await visible('A')), 'both closed');
-  assert.equal((await state()).path, '/home', 'still on the page');
-  await tap('next'); await tap('next'); await tap('next');
-  for (let i = 0; i < 3; i++) { await page.goBack({ waitUntil: 'commit' }).catch(() => {}); await sleep(60); }
-  await sleep(400);
-  assert.equal(await page.textContent('#steps'), '0');
-  assert.equal((await state()).path, '/home');
+  assert.equal(await p.read('document.getElementById("steps").textContent'), '0');
+  assert.equal((await p.state()).path, '/home');
+  assert.equal(await p.back(), 'went back');
+  assert.equal((await p.state()).path, '/');
   passed('Quick Back presses (60ms apart) close windows / step back one at a time without leaving the page');
+  pushes = pushes.concat(await p.read('window.__pushes'));
 
-  const pushes = [...earlierPushes, ...(await page.evaluate(() => window.__pushes))];
-  assert.deepEqual(pushes.filter((p) => !(p.active && p.tapSinceTraversal)), [], 'every history entry was added straight after a tap');
-  passed(`All ${pushes.length} history entries (${pushes.filter((p) => p.ours).length} Back steps) were added straight after a tap`);
+  // A finger scroll is not a tap. Just after a Back a window opens by itself and the
+  // person scrolls: no Back step may be added for it (the browser would skip the whole
+  // history), and Back keeps working.
+  p = await newPhone();
+  await p.tap('toHome');
+  await p.tap('toOther');
+  await p.back();
+  await p.read('window.__home.setAuto(true)');
+  await sleep(300);
+  before = await p.read('window.__pushes.length');
+  await p.scroll(300);
+  await p.scroll(-200);
+  assert.equal(await p.read('window.__pushes.length'), before, 'scrolling added nothing');
+  assert.ok(!(await p.state()).onStep);
+  assert.equal(await p.back(), 'went back', 'Back still has somewhere to go');
+  assert.equal((await p.state()).path, '/', 'and goes to the page before, nothing skipped');
+  passed('A finger scroll is never taken for a tap: after Back + a window opening by itself + scrolling, Back still goes back');
+  pushes = pushes.concat(await p.read('window.__pushes'));
 
-  assert.deepEqual(errors, []);
+  // The whole app is guarded: a page that navigates by itself just after a Back (no tap)
+  // takes the current entry's place instead of adding one, so Back still works.
+  p = await newPhone();
+  await p.tap('toHome');
+  await p.tap('toOther');
+  await p.back();
+  assert.equal((await p.state()).path, '/home');
+  await p.read('window.__home.go("/other")');
+  await sleep(300);
+  assert.equal((await p.state()).path, '/other');
+  assert.equal(await p.back(), 'went back', 'Back still has somewhere to go');
+  assert.equal((await p.state()).path, '/', 'to the page before the replaced one');
+  // With a tap, a page still adds its entry normally.
+  await p.tap('toHome');
+  await p.tap('toOther');
+  assert.equal(await p.back(), 'went back');
+  assert.equal((await p.state()).path, '/home');
+  passed('A page that navigates by itself after a Back (no tap) replaces its entry, so Back never goes dead; with a tap it adds one');
+  pushes = pushes.concat(await p.read('window.__pushes'));
+
+  assert.deepEqual(pushes.filter((x) => !x.honoured), [], 'every history entry was added after a tap the browser honours');
+  passed(`All ${pushes.length} history entries (${pushes.filter((x) => x.ours).length} Back steps) were added after a real tap since the last Back`);
+
+  assert.deepEqual(p.errors, []);
   console.log(`\nAll ${passes} real-Chrome Back checks passed.`);
 } catch (err) {
   console.error('FAIL', err);
   process.exitCode = 1;
 } finally {
-  await browser.close();
+  await context?.close();
   server.close();
 }
