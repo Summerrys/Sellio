@@ -51,7 +51,6 @@ let scriptTraversals = 0;    // the page's own history.back()/forward()/go() sti
 let scriptTraversalsUntil = 0; // …until about then
 let waitingForTap = false;
 let leavingUntil = 0;        // the page is going to another page (a new document): until then
-let leavingSince = 0;
 
 const now = () => Date.now();
 const leaving = () => now() < leavingUntil;
@@ -240,16 +239,14 @@ if (browser) {
     if (event?.type === 'keydown' && event.key === 'Escape') return;
     if (event?.isTrusted === false && browser.navigator?.userActivation) return;
     lastTapAt = now();
-    // Still using this page a moment after it started to go elsewhere: it isn't going
-    // (a download, or a link another app opened).
-    if (leaving() && lastTapAt - leavingSince > 500) stopLeaving();
   }, true));
   browser.addEventListener('popstate', onPopState);
   // The page starting to go to another page (location.assign / href, a link or form to
   // another document). Not a download, not a move within this page.
+  // (Even a slow page on its way is not undone by a tap meanwhile: only the page being
+  // shown again, coming back from another app, or the time running out ends this.)
   const startLeaving = () => {
-    leavingSince = now();
-    leavingUntil = leavingSince + LEAVING_MS;
+    leavingUntil = now() + LEAVING_MS;
     setTimeout(scheduleSettle, LEAVING_MS + 50);
   };
   try {
