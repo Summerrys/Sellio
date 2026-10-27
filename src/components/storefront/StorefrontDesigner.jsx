@@ -1568,8 +1568,46 @@ function DesktopPreviewWorkspace({ form, onChange, tenantId, previewData }) {
   );
 }
 
+// What Save stores, from the designer's form (also what decides "unsaved changes").
+const SAVED_FIELDS = [
+  'banner_headline', 'banner_tagline', 'banner_bg_color', 'banner_bg_image_url',
+  'banner_edge_left_color', 'banner_edge_right_color',
+  'banner_height', 'banner_height_px', 'banner_position_x', 'banner_position_y', 'banner_zoom',
+  'show_promo_ticker', 'product_layout', 'menu_density',
+  'show_featured', 'featured_section_title', 'show_category_tabs',
+  'show_product_description', 'show_stock_badge', 'font_family', 'typography_scale',
+];
+function designPayload(form) {
+  const payload = {};
+  for (const key of SAVED_FIELDS) {
+    const val = form[key];
+    if (key === 'banner_position_x' || key === 'banner_position_y') {
+      payload[key] = Number.isFinite(Number(val)) ? Math.round(Number(val)) : 50;
+    } else if (key === 'banner_height_px') {
+      payload[key] = getStorefrontBannerHeight(val);
+    } else if (key === 'banner_zoom') {
+      payload[key] = getStorefrontBannerZoom(val);
+    } else {
+      payload[key] = val ?? null;
+    }
+  }
+  return payload;
+}
+// Changes the person made. The banner's edge colours aren't one: the designer works
+// them out from the photo by itself (also for an older banner, as it opens).
+function sameDesign(a, b) {
+  const strip = (form) => {
+    const { banner_edge_left_color: _l, banner_edge_right_color: _r, ...rest } = designPayload(form);
+    return JSON.stringify(rest);
+  };
+  return strip(a) === strip(b);
+}
+
 function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
   const [form, setForm] = useState({ ...DEFAULTS });
+  // The design as last loaded or saved: the form differs from it = unsaved changes.
+  const [savedForm, setSavedForm] = useState(null);
+  const dirty = !!savedForm && !sameDesign(form, savedForm);
   const [saving, setSaving] = useState(false);
   const [visible, setVisible] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
@@ -1578,7 +1616,7 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
   const [previewTenant, setPreviewTenant] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const storeUrl = `https://sellio.apptelier.sg/store/${tenantSlug}?preview=true`;
-  useAppReloadGuard(() => ({ dirty: open && !!sessionStorage.getItem(`storefront_draft_${tenantId}`), busy: open && saving }));
+  useAppReloadGuard(() => ({ dirty: open && dirty, busy: open && saving }));
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 1024);
@@ -1589,6 +1627,7 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
   useEffect(() => {
     setLeaveDialogOpen(false);
     if (open) {
+      setSavedForm(null); // nothing counts as unsaved until the store's design has loaded
       setTimeout(() => setVisible(true), 10);
       loadConfig();
     } else {
@@ -1617,15 +1656,19 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
       ]);
 
       const tenantPrimaryColor = themeRes.data?.primary_color || null;
-      const saved = draftForm || configRes.data || {};
-      setForm({
+      // Anything not chosen yet shows what the live store shows (lib/storefrontDefaults.js):
+      // a Grid for a home shop, Split for a business; the shop's colour for the banner.
+      const asForm = (saved) => ({
         ...DEFAULTS,
         ...saved,
-        // Anything not chosen yet shows what the live store shows (lib/storefrontDefaults.js):
-        // a Grid for a home shop, Split for a business; the shop's colour for the banner.
         product_layout: storefrontLayout(saved, isShopTenant(tenantRes.data)),
         banner_bg_color: saved.banner_bg_color || tenantPrimaryColor || DEFAULT_BANNER_COLOR,
       });
+      const stored = asForm(configRes.data || {});
+      // Unsaved changes from earlier in this visit come back; the stored design is what
+      // they are measured against.
+      setForm(draftForm ? asForm(draftForm) : stored);
+      setSavedForm(stored);
       setPreviewProducts(catalog.products);
       setPreviewCategories(catalog.categories);
       setPreviewTenant(tenantRes.data);
@@ -1691,8 +1734,7 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
   };
 
   const handleClose = () => {
-    const draft = sessionStorage.getItem(`storefront_draft_${tenantId}`);
-    if (draft) {
+    if (dirty) {
       setLeaveDialogOpen(true);
       return;
     }
@@ -1706,10 +1748,11 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
   };
 
   // Phone / browser Back works like tapping ✕: with unsaved changes it asks first (and
-  // waits while saving), so Back never throws design work away.
+  // waits while saving), so Back never throws design work away. With nothing unsaved
+  // (just opened, or saved) it simply closes.
   useBackToClose(open, () => {
     if (saving) return false;
-    if (sessionStorage.getItem(`storefront_draft_${tenantId}`)) {
+    if (dirty) {
       setLeaveDialogOpen(true);
       return false;
     }
@@ -1720,10 +1763,14 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
     setForm(prev => ({ ...prev, [key]: value }));
   }, []);
 
+  // Keeps unsaved changes for this visit (a reload, or the app reopening, brings them
+  // back) — and only unsaved ones.
   useEffect(() => {
-    if (!open || !tenantId) return;
-    sessionStorage.setItem(`storefront_draft_${tenantId}`, JSON.stringify(form));
-  }, [form]);
+    if (!open || !tenantId || !savedForm) return;
+    const key = `storefront_draft_${tenantId}`;
+    if (dirty) sessionStorage.setItem(key, JSON.stringify(form));
+    else sessionStorage.removeItem(key);
+  }, [form, savedForm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = async () => {
     setSaving(true);
