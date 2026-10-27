@@ -27,7 +27,9 @@ export const STILL_OPEN_CHECK_MS = 500;
 // How long to wait for the browser to report our own Back / Forward.
 const OWN_TRAVERSAL_MS = 1500;
 // What lets a page add history: a tap or a key press (the browser's user activation).
-const TAP_EVENTS = ['pointerup', 'touchend', 'mousedown', 'keydown', 'click'];
+// Not touchend: a finger that scrolls ends with one too, and that isn't a tap — on a
+// phone a tap is a pointerup (a scroll cancels the pointer instead) and then a click.
+const TAP_EVENTS = ['pointerup', 'mousedown', 'keydown', 'click'];
 
 const browser = typeof window !== 'undefined' ? window : null;
 const stack = [];            // open windows, oldest → newest (by seq)
