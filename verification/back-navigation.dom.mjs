@@ -577,6 +577,10 @@ try {
 
     asApp(true);
     const length1 = win.history.length;
+    // Where the page is: its address, its history entry and react-router's page.
+    const where = () => JSON.stringify([win.location.href, win.history.state, router.location.pathname]);
+    const here = where();
+    assert.ok(!onOverlayEntry());
     // Back from the background / a picker / a native dialog: reported now and twice more.
     for (const [what, fire] of [
       ['coming back from the background', comeBack],
@@ -587,7 +591,7 @@ try {
       reports.length = 0;
       fire(); await allSoon();
       assert.equal(reports.length, 3, what);
-      assert.ok(atHome(), 'nothing moves: ' + what);
+      assert.equal(where(), here, 'nothing moves: ' + what);
     }
     assert.equal(win.history.length, length1, 'reports add no history');
     assert.equal(popstates, 0, 'reports are not Back or Forward');
@@ -607,14 +611,14 @@ try {
     assert.ok(onOverlayEntry(), 'still on the Back step');
     await pressBack();
     assert.equal(overlays.A.open, false);
-    assert.ok(atHome());
+    assert.equal(where(), here, 'Back closed it and stayed on the page');
 
     // A window closed by its own button while reports are due: its Back step still goes.
     await sleep(1600);
     tap(); overlays.A.setOpen(true); await settle();
     overlays.A.setOpen(false); comeBack();
     await allSoon();
-    assert.ok(atHome(), 'the Back step was taken away as usual');
+    assert.equal(where(), here, 'the Back step was taken away as usual');
     assert.equal(win.history.length, length1 + 1, 'no extra history');
 
     win.removeEventListener('popstate', countPops);
