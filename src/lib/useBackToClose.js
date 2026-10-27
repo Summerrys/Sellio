@@ -19,7 +19,7 @@
 // since the person's last Back (a page that navigates by itself, or once something it
 // was waiting for arrives) takes the current entry's place instead (see the pushState
 // guard below), so nothing in Sellio can leave Android's Back with nothing to go to.
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // How long after Back to check whether a window really closed. Longer than the
 // windows' closing animations (the storefront designer takes 300ms).
@@ -261,6 +261,23 @@ export function removeBackStep() {
     browser.addEventListener('popstate', done);
     traverse(-1);
   });
+}
+
+// For pickers and menus (Select, DropdownMenu, Popover) that are often open without a
+// parent controlling them: their open state, with the phone's Back closing them too.
+// Controlled ones keep their parent's state (and close through its onOpenChange).
+export function useOpenWithBack(open, defaultOpen, onOpenChange) {
+  const controlled = open !== undefined;
+  const [own, setOwn] = useState(!!defaultOpen);
+  const isOpen = controlled ? !!open : own;
+  const changeRef = useRef(onOpenChange);
+  changeRef.current = onOpenChange;
+  const setOpen = useCallback((next) => {
+    if (!controlled) setOwn(next);
+    changeRef.current?.(next);
+  }, [controlled]);
+  useBackToClose(isOpen && (!controlled || typeof onOpenChange === 'function'), () => setOpen(false));
+  return [isOpen, setOpen];
 }
 
 export function useBackToClose(isOpen, onClose) {
