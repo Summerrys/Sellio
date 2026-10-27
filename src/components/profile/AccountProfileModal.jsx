@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import { openBillingPortal, formatBillingAmount } from '@/lib/billing';
+import { useBackToClose } from '@/lib/useBackToClose';
 
 function SectionHeader({ title }) {
   return (
@@ -86,6 +87,9 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
       })();
     }
   }, [open, user]);
+
+  // Phone / browser Back closes the account panel, like its ✕.
+  useBackToClose(!!open, onClose);
 
   if (!open) return null;
 
