@@ -26,6 +26,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 export const STILL_OPEN_CHECK_MS = 500;
 // How long to wait for the browser to report our own Back / Forward.
 const OWN_TRAVERSAL_MS = 1500;
+// How long another page may take to arrive once the page starts going to it (a sign-in
+// or payment page) before we take it that it isn't coming after all.
+const LEAVING_MS = 15000;
 // What lets a page add history: a tap or a key press (the browser's user activation).
 // Not touchend: a finger that scrolls ends with one too, and that isn't a tap — on a
 // phone a tap is a pointerup (a scroll cancels the pointer instead) and then a click.
@@ -47,8 +50,10 @@ let lastUserTraversalAt = 0; // last Back / Forward by the person (the browser's
 let scriptTraversals = 0;    // the page's own history.back()/forward()/go() still on their way…
 let scriptTraversalsUntil = 0; // …until about then
 let waitingForTap = false;
+let leavingUntil = 0;        // the page is going to another page (a new document): until then
 
 const now = () => Date.now();
+const leaving = () => now() < leavingUntil;
 // (Read safely: a page being torn down can have no history left to read.)
 const historyState = () => { try { return browser.history.state; } catch { return null; } };
 const onOurStep = () => !!historyState()?.sellioOverlay;
@@ -102,6 +107,10 @@ function armAtNextTap() {
 function settle() {
   settleTimer = null;
   if (ownTraversal) return; // its popstate settles again
+  // Going to another page (say, the sign-in page from a checkout): moving through history
+  // now would cancel that and bring the person straight back here. Leave it be; this runs
+  // again if the page is still here later (or is shown again from Back).
+  if (leaving()) return;
   if (stack.length > 0) {
     if (armed || holdUntilEmpty) return;
     if (onOurStep()) { armed = true; return; } // already on a Back step of ours
@@ -228,6 +237,25 @@ if (browser) {
     lastTapAt = now();
   }, true));
   browser.addEventListener('popstate', onPopState);
+  // The page starting to go to another page (location.assign / href, a link or form to
+  // another document). Not a download, not a move within this page.
+  const startLeaving = () => {
+    leavingUntil = now() + LEAVING_MS;
+    setTimeout(scheduleSettle, LEAVING_MS + 50);
+  };
+  try {
+    browser.navigation?.addEventListener('navigate', (event) => {
+      if (event.destination?.sameDocument || event.hashChange || event.downloadRequest || event.navigationType === 'traverse') return;
+      startLeaving();
+    });
+  } catch { /* no Navigation API: beforeunload below */ }
+  browser.addEventListener('beforeunload', startLeaving);
+  // Shown again (Back to a page kept in memory): carry on from where it was.
+  browser.addEventListener('pageshow', (event) => {
+    if (!event.persisted) return;
+    leavingUntil = 0;
+    scheduleSettle();
+  });
   // Opened or reloaded on a Back step with nothing open: step off it.
   try { if (onOurStep()) setTimeout(scheduleSettle, 400); } catch { /* no history to read */ }
 }
