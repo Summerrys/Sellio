@@ -37,6 +37,9 @@ function Home() {
           <button id="closeA" onClick={() => setA(false)}>close A</button>
           <button id="linkInA" onClick={() => navigate('/other')}>other, no hand-over</button>
           <button id="handOverInA" onClick={() => { navigate('/other', { replace: handOverBackStep() }); setA(false); }}>other, hand-over</button>
+          {/* Like a store's checkout sending a visitor to sign in: the window closes and the
+              page goes to another document. */}
+          <button id="leaveFromA" onClick={() => { setA(false); window.location.assign('/signin'); }}>sign in (another page)</button>
         </div>
       )}
       {b && <div id="B">B</div>}
@@ -49,12 +52,17 @@ function Other() {
   return <div><h1 id="page">other</h1></div>;
 }
 
+function SignIn() {
+  return <div><h1 id="page">signin</h1></div>;
+}
+
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <Routes>
       <Route path="/" element={<Start />} />
       <Route path="/home" element={<Home />} />
       <Route path="/other" element={<Other />} />
+      <Route path="/signin" element={<SignIn />} />
     </Routes>
   </BrowserRouter>,
 );
