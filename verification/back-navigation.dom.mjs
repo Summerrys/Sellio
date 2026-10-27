@@ -497,7 +497,8 @@ try {
   // 18: the app's code uses these pieces as tested here
   const layout = await readFile('src/Layout.jsx', 'utf8');
   assert.doesNotMatch(layout, /aria-label="Back"/, 'no on-screen back arrow in the header');
-  assert.match(layout, /navigate\(createPageUrl\(item\.page\), \{ replace: handOverBackStep\(\) \}\)/);
+  assert.match(layout, /const to = createPageUrl\(item\.page\);\s*if \(to !== window\.location\.pathname \+ window\.location\.search\) navigate\(to, \{ replace: handOverBackStep\(\) \}\);\s*onNavigate\(\);/,
+    'a menu link hands over its Back step; the page already open just closes the menu');
   // The phone menu and trial reminder only count as open while the workspace shows them.
   assert.match(layout, /useBackToClose\(mobileOpen && workspaceShown, \(\) => setMobileOpen\(false\)\)/);
   assert.match(layout, /useBackToClose\(showTrialModal && canDismissTrialModal && workspaceShown, dismissTrialModal\)/);
