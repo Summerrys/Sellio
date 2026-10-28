@@ -306,6 +306,16 @@ export const INDUSTRY_ROLES = {
   service: ['owner', 'admin', 'manager', 'staff'],
 };
 
+// The database client for the signed-in person's own records (memberships, shop, role). It
+// first renews an expired sign-in; when that fails just then (no connection yet, e.g. just back
+// from the background), a read would go out as nobody and find nothing, so it throws instead.
+async function signedInClient() {
+  const supabase = await getSupabase();
+  const { error } = await supabase.auth.getSession();
+  if (error) throw error;
+  return supabase;
+}
+
 export function TenantProvider({ children }) {
   const [currentTenantId, setCurrentTenantId] = useState(null);
   const [devRoleOverride, setDevRoleOverride] = useState(null);
@@ -348,16 +358,21 @@ export function TenantProvider({ children }) {
     setDevRoleOverride(override || null);
   }, [user?.email, user?.role]);
 
+  // These reads throw when they fail (no connection for a moment, e.g. just back from the
+  // background) rather than answering "none": a failed read keeps what was last loaded.
+  // An empty membership list means "no store" and sends the person to Account (Layout), so
+  // it must only ever come from a read that worked, as the signed-in person.
   const { data: tenantUser, isLoading: tenantUserLoading } = useQuery({
     queryKey: ['tenantUser', user?.email],
     queryFn: async () => {
-      const supabase = await getSupabase();
-      const { data } = await supabase
+      const supabase = await signedInClient();
+      const { data, error } = await supabase
         .from('tenant_users')
         .select('*')
         .eq('user_email', user.email)
         .eq('status', 'active')
         .limit(10);
+      if (error) throw error;
       return data || [];
     },
     enabled: !!user?.email,
@@ -366,12 +381,13 @@ export function TenantProvider({ children }) {
   const { data: tenant, isLoading: tenantLoading } = useQuery({
     queryKey: ['currentTenant', currentTenantId],
     queryFn: async () => {
-      const supabase = await getSupabase();
-      const { data } = await supabase
+      const supabase = await signedInClient();
+      const { data, error } = await supabase
         .from('tenants')
         .select('*')
         .eq('id', currentTenantId)
         .limit(1);
+      if (error) throw error;
       return data || [];
     },
     enabled: !!currentTenantId,
@@ -380,12 +396,13 @@ export function TenantProvider({ children }) {
   const { data: role } = useQuery({
     queryKey: ['userRole', tenantUser?.[0]?.role_id],
     queryFn: async () => {
-      const supabase = await getSupabase();
-      const { data } = await supabase
+      const supabase = await signedInClient();
+      const { data, error } = await supabase
         .from('roles')
         .select('*')
         .eq('id', tenantUser[0].role_id)
         .limit(1);
+      if (error) throw error;
       return data || [];
     },
     enabled: !!tenantUser?.[0]?.role_id,
