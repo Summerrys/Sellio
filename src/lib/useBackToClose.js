@@ -177,10 +177,11 @@ function settle() {
 }
 
 // The Android wrapper may call this directly when its Back button cannot safely
-// rely on WebView history. Unlike a browser Back, this does NOT traverse history;
-// the existing overlay entry is disarmed by settle() once the last overlay closes.
-// It returns true only when Sellio consumed the press, so a native wrapper can
-// otherwise use its normal WebView Back / app-exit behaviour.
+// rely on WebView.canGoBack (notably after backgrounding). Overlays are closed
+// without traversing, while ordinary React Router pages navigate using the page's
+// own history. That avoids a separate native canGoBack decision for either case.
+// Return false only when there is nothing Sellio can handle, leaving root exit / 
+// native navigation to the wrapper.
 export function handleAndroidBack() {
   if (!browser) return false;
   // An overlay may have unmounted between native dispatch and React effect cleanup.
@@ -188,7 +189,17 @@ export function handleAndroidBack() {
     if (!stack[i].isOpen()) stack.splice(i, 1);
   }
   const top = stack[stack.length - 1];
-  if (!top) return false;
+  if (!top) {
+    // React Router's idx identifies app-owned page history. Native WebView.canGoBack
+    // may lag after returning from another app; let JS perform this traversal
+    // rather than asking the wrapper to decide from its potentially stale cache.
+    const idx = historyState()?.idx;
+    if (!onOurStep() && !ownTraversal && !leaving() && Number.isInteger(idx) && idx > 0) {
+      browser.history.back();
+      return true;
+    }
+    return false;
+  }
   try { top.close(); }
   catch (error) { console.error('Sellio native Back failed:', error); }
   scheduleSettle();
