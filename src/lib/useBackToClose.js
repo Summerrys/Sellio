@@ -24,7 +24,19 @@
 // about its history. After the app has been in the background, or a native picker (photos,
 // files) has been over it, that can be out of date, so the page tells it again then (see
 // reportHistory below).
+//
+// And in Base44's Android app, Back reaches the page only while the app's Back handler for the
+// page is the newest one the app has. Each time the app comes back on screen (from the
+// background, a photo or file picker, a permission prompt, the screen turning off), the app
+// signs up its Back handler for bottom tabs again, newer than the page's. That one takes every
+// Back from then on and switches to the first tab, the one already showing, so Back does
+// nothing. The page's handler signs up again only when the page goes from "can't go back" to
+// "can go back". So when the app comes back on screen, we step to the first entry of the page's
+// history and straight back (see rearmAppBack below): the app signs the page's handler up again,
+// newest, and Back reaches the page. (A fault in Base44's app; this keeps Back working until
+// they fix it.)
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { backLog } from './backLog';
 
 // How long after Back to check whether a window really closed. Longer than the
 // windows' closing animations (the storefront designer takes 300ms).
@@ -42,6 +54,15 @@ const TAP_EVENTS = ['pointerup', 'mousedown', 'keydown', 'click'];
 // background or a picker (it may only catch up a moment later), and at most how often at taps.
 const REPORT_AGAIN_MS = [50, 700, 2000];
 const TAP_REPORT_GAP_MS = 1500;
+// Re-arming the Android app's Back once it is back on screen (rearmAppBack below).
+const REARM_DELAY_MS = 500;     // after the app is back on screen (it signs its tab handler up then)
+const REARM_QUIET_MS = 600;     // no tap and no history change for this long first
+const REARM_HOLD_MS = 300;      // time on the first entry, for the app to take in "can't go back"
+const REARM_STEP_MS = 1500;     // how long each step may take to arrive
+const REARM_GIVE_UP_MS = 10000; // stop waiting for a quiet moment after this
+// Taps held off while we're away from the page's own entry (a fraction of a second): a link or
+// button acting then would add or change history at the wrong entry.
+const HELD_EVENTS = ['click', 'auxclick', 'dblclick', 'contextmenu', 'submit'];
 
 const browser = typeof window !== 'undefined' ? window : null;
 const stack = [];            // open windows, oldest → newest (by seq)
@@ -61,6 +82,11 @@ let scriptTraversalsUntil = 0; // …until about then
 let waitingForTap = false;
 let leavingUntil = 0;        // the page is going to another page (a new document): until then
 let lastReportAt = 0;        // last time the page told the Android app about its history again
+let reporting = false;       // our own report (reportHistory) is replacing the entry
+let lastHistoryChangeAt = 0; // last entry added or replaced (not counting our own reports)
+let rearm = null;            // stepping to the first entry and back: { phase, expect, home, timer }
+let rearmTimer = null;       // a re-arm waiting for a quiet moment…
+let rearmUntil = 0;          // …until about then
 
 const now = () => Date.now();
 const leaving = () => now() < leavingUntil;
@@ -93,9 +119,11 @@ function addStep() {
   // Keep react-router's own state (idx/key) so it sees no navigation.
   browser.history.pushState({ ...(browser.history.state || {}), sellioOverlay: true }, '');
   armed = true;
+  backLog('step added');
 }
 
 function traverse(direction) {
+  backLog(`step ${direction < 0 ? 'back' : 'forward'} (ours)`);
   ownTraversal = { direction, until: now() + OWN_TRAVERSAL_MS };
   setTimeout(() => {
     // The browser never reported it (nothing there): stop waiting for it.
@@ -114,8 +142,10 @@ const inAndroidApp = () => /Android/i.test(browser?.navigator?.userAgent || '') 
 // itself, which changes nothing here but makes the app's Back read where the page is now. Not
 // while the page is moving through history or going to another page.
 function reportHistory() {
-  if (ownTraversal || leaving() || (scriptTraversals > 0 && now() < scriptTraversalsUntil)) return;
+  if (rearm || ownTraversal || leaving() || (scriptTraversals > 0 && now() < scriptTraversalsUntil)) return;
+  reporting = true;
   try { browser.history.replaceState(browser.history.state, ''); } catch { /* nothing to report */ }
+  finally { reporting = false; }
 }
 
 function reportHistorySoon() {
@@ -125,6 +155,108 @@ function reportHistorySoon() {
   // overlay stack remembers. Repair that mismatch before reporting its history.
   scheduleSettle();
   REPORT_AGAIN_MS.forEach(ms => setTimeout(reportHistory, ms));
+}
+
+// The Android app is back on screen: once the page is quiet, step to the first entry of its
+// history (the app then reads "can't go back") and straight back ("can go back"), so the app
+// signs its Back handler for the page up again, newest. Only when that first entry is this very
+// page (an entry of another page would load that page) and the page isn't on it already (there's
+// nothing to go back to from there anyway). Both steps are hidden from the rest of the page:
+// react-router and the window stack never see them, and nothing scrolls.
+function rearmAppBack() {
+  if (!inAndroidApp() || typeof browser.navigation?.traverseTo !== 'function') return;
+  rearmUntil = now() + REARM_GIVE_UP_MS;
+  if (rearm) return;
+  clearTimeout(rearmTimer);
+  rearmTimer = setTimeout(tryRearm, REARM_DELAY_MS);
+}
+
+function tryRearm() {
+  rearmTimer = null;
+  if (rearm || now() > rearmUntil) return;
+  if (browser.document?.visibilityState !== 'visible') return; // off screen again: its return re-arms
+  const quietFor = now() - Math.max(lastTapAt, lastTraversalAt, lastHistoryChangeAt);
+  const busy = !!ownTraversal || !!settleTimer || leaving() || (scriptTraversals > 0 && now() < scriptTraversalsUntil);
+  if (busy || quietFor < REARM_QUIET_MS) {
+    rearmTimer = setTimeout(tryRearm, Math.max(100, REARM_QUIET_MS - quietFor));
+    return;
+  }
+  let entries;
+  let current;
+  try { entries = browser.navigation.entries(); current = browser.navigation.currentEntry; } catch { return; }
+  if (!current || !(current.index > 0)) { backLog('re-arm: not needed (on the first entry)'); return; }
+  if (entries.length !== browser.history.length || !entries[0]?.sameDocument) {
+    backLog(`re-arm: not possible (entries ${entries.length} of ${browser.history.length}, first is ${entries[0]?.sameDocument ? 'this page' : 'another page'})`);
+    return;
+  }
+  rearm = { phase: 'out', expect: entries[0].key, home: current.key, timer: null };
+  backLog(`re-arm: to the first entry and back, from #${current.index}`);
+  rearmStep();
+}
+
+function rearmStep() {
+  clearTimeout(rearm.timer);
+  rearm.timer = setTimeout(rearmTimedOut, REARM_STEP_MS);
+  try {
+    const result = browser.navigation.traverseTo(rearm.expect);
+    result?.committed?.catch(() => {});
+    result?.finished?.catch(() => {});
+  } catch {
+    backLog('re-arm: step refused');
+    endRearm();
+  }
+}
+
+function rearmTimedOut() {
+  if (!rearm) return;
+  let at = null;
+  try { at = browser.navigation.currentEntry?.key; } catch { /* unknown */ }
+  if (at !== rearm.home && rearm.phase !== 'retry') {
+    backLog('re-arm: a step never arrived, going back to the page');
+    rearm.phase = 'retry';
+    rearm.expect = rearm.home;
+    rearmStep();
+    return;
+  }
+  endRearm();
+}
+
+function endRearm() {
+  if (!rearm) return;
+  clearTimeout(rearm.timer);
+  rearm = null;
+  scheduleSettle(); // whatever waited (a window's Back step) goes ahead now
+}
+
+// Our steps arriving: hidden from the rest of the page (true: this was one of them). Called first
+// thing by our popstate listener, which is added before react-router's, so stopping the event
+// here keeps it from react-router too. Anything else arriving meanwhile (the person's own Back)
+// ends the re-arm and goes on to the window stack and react-router as usual.
+function onRearmPopState(event) {
+  if (!rearm) return false;
+  let at = null;
+  try { at = browser.navigation.currentEntry?.key; } catch { /* unknown */ }
+  if (rearm.phase === 'out' && at === rearm.expect) {
+    event.stopImmediatePropagation();
+    rearm.phase = 'hold';
+    clearTimeout(rearm.timer);
+    rearm.timer = setTimeout(() => {
+      if (!rearm) return;
+      rearm.phase = 'back';
+      rearm.expect = rearm.home;
+      rearmStep();
+    }, REARM_HOLD_MS);
+    return true;
+  }
+  if ((rearm.phase === 'back' || rearm.phase === 'retry') && at === rearm.expect) {
+    event.stopImmediatePropagation();
+    backLog('re-arm: done');
+    endRearm();
+    return true;
+  }
+  backLog('re-arm: interrupted');
+  endRearm();
+  return false;
 }
 
 // A window that opened with no tap to go on (it opened by itself, or after a Back):
@@ -143,6 +275,7 @@ function armAtNextTap() {
 function settle() {
   settleTimer = null;
   if (ownTraversal) return; // its popstate settles again
+  if (rearm) return; // away from the page's entry for a moment: settles again once back
   // The Android WebView can restore/traverse its current entry while the JS context
   // stays alive (backgrounding, native picker, process/activity restore). Never
   // assume that an old `armed` flag still describes the browser's current entry.
@@ -221,13 +354,16 @@ function scheduleSettle() {
   settleTimer = setTimeout(settle, 0);
 }
 
-function onPopState() {
+function onPopState(event) {
+  if (onRearmPopState(event)) return; // our own step to the first entry and back: not a Back
   lastTraversalAt = now();
-  if (scriptTraversals > 0 && now() < scriptTraversalsUntil) scriptTraversals -= 1; // the page's own
+  const byPage = scriptTraversals > 0 && now() < scriptTraversalsUntil;
+  if (byPage) scriptTraversals -= 1; // the page's own
   else { scriptTraversals = 0; lastUserTraversalAt = now(); } // the person's Back / Forward
   if (ownTraversal && now() < ownTraversal.until) {
     const { direction } = ownTraversal;
     ownTraversal = null;
+    backLog(`arrived (our step ${direction < 0 ? 'back' : 'forward'})`);
     if (direction > 0) {
       armed = onOurStep();
       if (!armed) { stepAhead = null; traverse(-1); return; } // not our step after all: undo
@@ -236,6 +372,7 @@ function onPopState() {
     return;
   }
   ownTraversal = null;
+  backLog(`${byPage ? "page's own back/forward" : 'Back/Forward'} arrived, ${stack.length} open, ${armed ? 'armed' : 'not armed'}`);
   if (armed && !onOurStep()) {
     // Back took our step: close the top-most window.
     armed = false;
@@ -243,6 +380,7 @@ function onPopState() {
     const top = stack.pop(); // removed now so settle() sees the truth
     if (top) {
       const result = top.close();
+      backLog(`Back closes the top window: ${!top.isOpen() ? 'closed' : result === false ? 'refused (busy)' : 'closing'}, ${stack.length} left`);
       if (!top.isOpen()) {
         // Already gone (closed straight away): nothing to keep.
       } else if (result === false || stack.length > 0) {
@@ -276,8 +414,11 @@ if (browser) {
     if (!push.sellioCounted) {
       const countedPush = function pushState(state, ...rest) {
         historyEpoch += 1;
+        lastHistoryChangeAt = now();
+        if (rearm) { backLog('re-arm: the page added history meanwhile'); endRearm(); }
         if (!tappedSincePersonsBack()) {
           if (onOurStep()) armed = false; // our Back step becomes the new page (a hand-over)
+          backLog('page added history with no tap: replacing instead');
           return replace.call(this, state, ...rest);
         }
         return push.call(this, state, ...rest);
@@ -285,6 +426,10 @@ if (browser) {
       countedPush.sellioCounted = true;
       history.pushState = countedPush;
       history.replaceState = function replaceState(state, ...rest) {
+        if (!reporting) {
+          lastHistoryChangeAt = now();
+          if (rearm) { backLog('re-arm: the page replaced history meanwhile'); endRearm(); }
+        }
         if (browser.history.state?.sellioOverlay && !state?.sellioOverlay) historyEpoch += 1;
         return replace.call(this, state, ...rest);
       };
@@ -315,6 +460,7 @@ if (browser) {
       setTimeout(reportHistory, 0);
     }
   }, true));
+  // (Added before react-router's own, which it can then keep from seeing our re-arm steps.)
   browser.addEventListener('popstate', onPopState);
   // Native entry point: wrappers can evaluate `window.__sellioHandleAndroidBack()`
   // on a hardware Back press, and use their ordinary goBack/exit when it returns false.
@@ -329,6 +475,22 @@ if (browser) {
   };
   browser.document?.addEventListener('backbutton', nativeBackEvent);
   browser.addEventListener('sellio:android-back', nativeBackEvent);
+  // Re-arming the Android app's Back (rearmAppBack): our two steps are hidden from the rest of the
+  // page (onPopState above), taps are held off meanwhile (added after the tap listener above,
+  // which still counts them), and no step scrolls the page or moves the focus.
+  browser.addEventListener('hashchange', (event) => { if (rearm) event.stopImmediatePropagation(); });
+  HELD_EVENTS.forEach(type => browser.addEventListener(type, (event) => {
+    if (!rearm) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true));
+  try {
+    browser.navigation?.addEventListener('navigate', (event) => {
+      if (rearm && event.navigationType === 'traverse' && event.canIntercept && event.destination?.key === rearm.expect) {
+        event.intercept({ scroll: 'manual', focusReset: 'manual' });
+      }
+    });
+  } catch { /* no Navigation API: no re-arming either */ }
   // The page starting to go to another page (location.assign / href, a link or form to
   // another document). Not a download, not a move within this page.
   // (Even a slow page on its way is not undone by a tap meanwhile: only the page being
@@ -355,14 +517,16 @@ if (browser) {
     if (browser.document.visibilityState === 'visible' && leaving()) stopLeaving();
   });
   // Back in the Android app from the background, a native picker (choosing a photo or file,
-  // or cancelling) or a native dialog: tell it about the page's history again.
+  // or cancelling) or a native dialog: tell it about the page's history again, and re-arm its
+  // Back for the page.
+  const backOnScreen = () => { reportHistorySoon(); rearmAppBack(); };
   browser.document?.addEventListener('visibilitychange', () => {
-    if (browser.document.visibilityState === 'visible') reportHistorySoon();
+    if (browser.document.visibilityState === 'visible') backOnScreen();
   });
-  browser.addEventListener('focus', reportHistorySoon);
+  browser.addEventListener('focus', backOnScreen);
   for (const type of ['change', 'cancel']) {
     browser.document?.addEventListener(type, (event) => {
-      if (event.target?.type === 'file') reportHistorySoon();
+      if (event.target?.type === 'file') backOnScreen();
     }, true);
   }
   // Opened or reloaded on a Back step with nothing open: step off it.
