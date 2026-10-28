@@ -84,7 +84,8 @@ let leavingUntil = 0;        // the page is going to another page (a new documen
 let lastReportAt = 0;        // last time the page told the Android app about its history again
 let reporting = false;       // our own report (reportHistory) is replacing the entry
 let lastHistoryChangeAt = 0; // last entry added or replaced (not counting our own reports)
-let rearm = null;            // stepping to the first entry and back: { phase, expect, home, timer }
+let rearm = null;            // stepping to the first entry and back (or, before a reload, just to
+                             // it): { phase, expect, home, timer, done }
 let rearmTimer = null;       // a re-arm waiting for a quiet moment…
 let rearmUntil = 0;          // …until about then
 
@@ -224,7 +225,9 @@ function rearmTimedOut() {
 function endRearm() {
   if (!rearm) return;
   clearTimeout(rearm.timer);
+  const { done } = rearm;
   rearm = null;
+  done?.(); // a reload waiting to start from the first entry goes ahead from wherever we are
   scheduleSettle(); // whatever waited (a window's Back step) goes ahead now
 }
 
@@ -254,9 +257,63 @@ function onRearmPopState(event) {
     endRearm();
     return true;
   }
+  if (rearm.phase === 'leave' && at === rearm.expect) {
+    // On the first entry, ready for the reload (stepToFirstEntry). Taps stay held off until the
+    // reload takes the page away; if it never does, go back to the page and carry on.
+    event.stopImmediatePropagation();
+    backLog('reload: on the first entry');
+    rearm.phase = 'left';
+    clearTimeout(rearm.timer);
+    const { done } = rearm;
+    rearm.done = null;
+    rearm.timer = setTimeout(() => {
+      if (rearm?.phase !== 'left') return;
+      backLog('reload: never happened, back to the page');
+      const { home } = rearm;
+      endRearm();
+      try { browser.navigation.traverseTo(home); } catch { /* stay here */ }
+    }, LEAVING_MS);
+    done?.();
+    return true;
+  }
   backLog('re-arm: interrupted');
   endRearm();
   return false;
+}
+
+// Before Sellio reloads itself in the Android app (to update): step to the first entry of the
+// page's history when that is this very page, hidden from the rest of the page like a re-arm, so
+// the reload puts the new copy there. Then nothing of the old copy is left behind it (Back from
+// its first page would load that old page), and the new copy can keep re-arming the app's Back.
+// Resolves once there, or straight away when that isn't possible or needed (the reload then
+// replaces the current page, as it always did).
+export function stepToFirstEntry() {
+  return new Promise((resolve) => {
+    if (!browser || !inAndroidApp() || typeof browser.navigation?.traverseTo !== 'function' || rearm) { resolve(); return; }
+    let entries;
+    let current;
+    try { entries = browser.navigation.entries(); current = browser.navigation.currentEntry; } catch { resolve(); return; }
+    if (!current || !(current.index > 0) || entries.length !== browser.history.length || !entries[0]?.sameDocument) {
+      resolve();
+      return;
+    }
+    clearTimeout(rearmTimer);
+    rearmTimer = null;
+    rearm = { phase: 'leave', expect: entries[0].key, home: current.key, timer: null, done: resolve };
+    backLog(`reload: to the first entry first, from #${current.index}`);
+    rearm.timer = setTimeout(() => {
+      if (rearm?.phase !== 'leave') return;
+      backLog('reload: the first entry never arrived');
+      endRearm();
+    }, REARM_STEP_MS);
+    try {
+      const result = browser.navigation.traverseTo(rearm.expect);
+      result?.committed?.catch(() => {});
+      result?.finished?.catch(() => {});
+    } catch {
+      endRearm();
+    }
+  });
 }
 
 // A window that opened with no tap to go on (it opened by itself, or after a Back):
