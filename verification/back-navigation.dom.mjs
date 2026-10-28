@@ -368,6 +368,60 @@ try {
     passed('Lists, menus and popovers (with or without a parent controlling them) close on Back; choosing an option takes the Back step away; in a dialog, the list closes first');
   }
 
+  // ---- Direct Android wrapper Back (does not depend on a WebView history traversal) ----
+  assert.equal(typeof win.__sellioHandleAndroidBack, 'function');
+  assert.equal(mod.handleAndroidBack(), false, 'without overlays, native handles page Back/exit');
+  tap(); overlays.A.setOpen(true); await settle();
+  tap(); overlays.B.setOpen(true); await settle();
+  assert.equal(win.__sellioHandleAndroidBack(), true);
+  await settle();
+  assert.equal(overlays.B.open, false, 'direct native Back closes only the newest overlay');
+  assert.equal(overlays.A.open, true);
+  assert.ok(onOverlayEntry(), 'the existing history entry remains for the other overlay');
+  const hardwareEvent = new win.Event('backbutton', { bubbles: true, cancelable: true });
+  win.document.dispatchEvent(hardwareEvent);
+  await settle();
+  assert.ok(hardwareEvent.defaultPrevented, 'Cordova-style native event is consumed');
+  assert.equal(overlays.A.open, false);
+  assert.ok(atHome());
+  const unusedBack = new win.Event('backbutton', { cancelable: true });
+  win.document.dispatchEvent(unusedBack);
+  assert.equal(unusedBack.defaultPrevented, false, 'native retains ordinary Back/exit');
+  passed('Android native Back closes nested overlays directly and falls back on a bare page');
+
+  overlays.A.onBack = () => false; // Busy, or an unsaved editor requiring confirmation.
+  tap(); overlays.A.setOpen(true); await settle();
+  assert.equal(mod.handleAndroidBack(), true);
+  await settle();
+  assert.equal(overlays.A.open, true, 'busy editor does not disappear on native Back');
+  overlays.A.onBack = null;
+  const customBack = new win.Event('sellio:android-back', { cancelable: true });
+  win.dispatchEvent(customBack);
+  await settle();
+  assert.equal(customBack.defaultPrevented, true);
+  assert.equal(overlays.A.open, false);
+  assert.ok(atHome());
+  passed('Android native Back respects busy/unsaved windows and accepts explicit bridge events');
+
+  // Simulate the WebView restoring a different current entry while JS stays mounted.
+  // The browser history guard must notice and recover instead of leaving armed=true
+  // for a no-longer-existent Back step.
+  tap(); overlays.A.setOpen(true); await settle();
+  assert.ok(onOverlayEntry());
+  win.history.replaceState({ ...win.history.state, sellioOverlay: false }, '');
+  assert.ok(!onOverlayEntry());
+  win.ReactNativeWebView = { postMessage() {} };
+  Object.defineProperty(win.navigator, 'userAgent', { configurable: true, value: 'Android WebView' });
+  win.document.dispatchEvent(new win.Event('visibilitychange'));
+  await settle();
+  assert.ok(onOverlayEntry(), 'resume reconciled stale armed flag and restored Back step');
+  await pressBack();
+  assert.equal(overlays.A.open, false);
+  assert.ok(atHome() || !onOverlayEntry());
+  delete win.ReactNativeWebView;
+  delete win.navigator.userAgent;
+  passed('Android resume repairs a stale history entry while the editor remains mounted');
+
   // ---- Phase 2 ----
   // 13
   const lengthBeforeSteps = win.history.length;
