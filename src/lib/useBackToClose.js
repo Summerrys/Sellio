@@ -121,6 +121,9 @@ function reportHistory() {
 function reportHistorySoon() {
   if (!inAndroidApp()) return;
   lastReportAt = now();
+  // A suspended WebView can resume on a different entry from the one our in-memory
+  // overlay stack remembers. Repair that mismatch before reporting its history.
+  scheduleSettle();
   REPORT_AGAIN_MS.forEach(ms => setTimeout(reportHistory, ms));
 }
 
@@ -140,6 +143,13 @@ function armAtNextTap() {
 function settle() {
   settleTimer = null;
   if (ownTraversal) return; // its popstate settles again
+  // The Android WebView can restore/traverse its current entry while the JS context
+  // stays alive (backgrounding, native picker, process/activity restore). Never
+  // assume that an old `armed` flag still describes the browser's current entry.
+  if (armed && !onOurStep()) {
+    armed = false;
+    stepAhead = null;
+  }
   // Going to another page (say, the sign-in page from a checkout): moving through history
   // now would cancel that and bring the person straight back here. Leave it be; this runs
   // again if the page is still here later (or is shown again from Back).
@@ -164,6 +174,25 @@ function settle() {
     stepAhead = { key: pageKey(), epoch: historyEpoch };
     traverse(-1);
   }
+}
+
+// The Android wrapper may call this directly when its Back button cannot safely
+// rely on WebView history. Unlike a browser Back, this does NOT traverse history;
+// the existing overlay entry is disarmed by settle() once the last overlay closes.
+// It returns true only when Sellio consumed the press, so a native wrapper can
+// otherwise use its normal WebView Back / app-exit behaviour.
+export function handleAndroidBack() {
+  if (!browser) return false;
+  // An overlay may have unmounted between native dispatch and React effect cleanup.
+  for (let i = stack.length - 1; i >= 0; i -= 1) {
+    if (!stack[i].isOpen()) stack.splice(i, 1);
+  }
+  const top = stack[stack.length - 1];
+  if (!top) return false;
+  try { top.close(); }
+  catch (error) { console.error('Sellio native Back failed:', error); }
+  scheduleSettle();
+  return true;
 }
 
 // Back into the stack in its original place, below any window opened after it.
@@ -276,6 +305,19 @@ if (browser) {
     }
   }, true));
   browser.addEventListener('popstate', onPopState);
+  // Native entry point: wrappers can evaluate `window.__sellioHandleAndroidBack()`
+  // on a hardware Back press, and use their ordinary goBack/exit when it returns false.
+  // Cordova-style backbutton and an explicit Sellio event also work without touching
+  // page history. Do not listen to arbitrary window message payloads.
+  browser.__sellioHandleAndroidBack = handleAndroidBack;
+  const nativeBackEvent = (event) => {
+    if (handleAndroidBack()) {
+      event.preventDefault?.();
+      event.stopPropagation?.();
+    }
+  };
+  browser.document?.addEventListener('backbutton', nativeBackEvent);
+  browser.addEventListener('sellio:android-back', nativeBackEvent);
   // The page starting to go to another page (location.assign / href, a link or form to
   // another document). Not a download, not a move within this page.
   // (Even a slow page on its way is not undone by a tap meanwhile: only the page being
@@ -293,7 +335,11 @@ if (browser) {
   } catch { /* no Navigation API: beforeunload below */ }
   browser.addEventListener('beforeunload', startLeaving);
   // Shown again (Back to a page kept in memory), or back from another app: carry on.
-  browser.addEventListener('pageshow', (event) => { if (event.persisted) stopLeaving(); });
+  browser.addEventListener('pageshow', (event) => {
+    if (event.persisted) stopLeaving();
+    // Also catches bfcache restores that do not cause a new visibilitychange.
+    reportHistorySoon();
+  });
   browser.document?.addEventListener('visibilitychange', () => {
     if (browser.document.visibilityState === 'visible' && leaving()) stopLeaving();
   });
