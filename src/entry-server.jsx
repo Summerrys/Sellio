@@ -6,7 +6,13 @@ import Terms from '@/pages/Terms';
 
 export const PRERENDER_ROUTES = ['/', '/privacy', '/terms'];
 
-const IMAGE = 'https://assets.apptelier.sg/sellio/Logo_Sellio_Transparent.png';
+// Link-preview card (public/og/sellio-share.jpg): 1200x630 JPEG, about 50 KB. WhatsApp
+// shows no image when the file is over 600 KB, so keep any replacement well under that
+// (scripts/check-prerender.mjs checks the size).
+const IMAGE = 'https://sellio.apptelier.sg/og/sellio-share.jpg';
+const IMAGE_WIDTH = 1200;
+const IMAGE_HEIGHT = 630;
+const IMAGE_ALT = 'Sellio: your business, beautifully online.';
 const ROBOTS = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
 
 const ROUTES = {
@@ -16,6 +22,11 @@ const ROUTES = {
     description: 'Sellio connects branded storefronts, F&B ordering and merchant operations with an evolving sector-based marketplace world.',
     socialDescription: 'Open your storefront, run daily operations and grow into a sector-based marketplace world with Sellio.',
     canonical: 'https://sellio.apptelier.sg/',
+    // The host serves this page at every address (store pages, Explore, the app), so its
+    // HTML must not name a canonical or og:url, or every page would claim to be the
+    // homepage. LandingPage, Storefront and the legal pages set their own canonical
+    // in the browser.
+    servedAtEveryAddress: true,
   },
   '/privacy': {
     Component: Privacy,
@@ -46,22 +57,29 @@ function headFor(route) {
   const description = escapeAttr(route.description);
   const socialDescription = escapeAttr(route.socialDescription);
   const canonical = escapeAttr(route.canonical);
+  const ownAddress = !route.servedAtEveryAddress;
+  const imageAlt = escapeAttr(IMAGE_ALT);
 
   return [
     `<title>${title}</title>`,
     `<meta name="description" content="${description}" />`,
     `<meta name="robots" content="${ROBOTS}" />`,
-    `<link rel="canonical" href="${canonical}" />`,
+    ...(ownAddress ? [`<link rel="canonical" href="${canonical}" />`] : []),
     '<meta property="og:type" content="website" />',
-    `<meta property="og:url" content="${canonical}" />`,
+    ...(ownAddress ? [`<meta property="og:url" content="${canonical}" />`] : []),
     '<meta property="og:site_name" content="Sellio" />',
     `<meta property="og:title" content="${title}" />`,
     `<meta property="og:description" content="${socialDescription}" />`,
     `<meta property="og:image" content="${IMAGE}" />`,
+    '<meta property="og:image:type" content="image/jpeg" />',
+    `<meta property="og:image:width" content="${IMAGE_WIDTH}" />`,
+    `<meta property="og:image:height" content="${IMAGE_HEIGHT}" />`,
+    `<meta property="og:image:alt" content="${imageAlt}" />`,
     '<meta name="twitter:card" content="summary_large_image" />',
     `<meta name="twitter:title" content="${title}" />`,
     `<meta name="twitter:description" content="${socialDescription}" />`,
     `<meta name="twitter:image" content="${IMAGE}" />`,
+    `<meta name="twitter:image:alt" content="${imageAlt}" />`,
   ].join('\n');
 }
 
