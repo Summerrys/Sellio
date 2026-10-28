@@ -403,6 +403,21 @@ try {
   assert.ok(atHome());
   passed('Android native Back respects busy/unsaved windows and accepts explicit bridge events');
 
+  // Native Back also navigates app-owned routes rather than relying on the
+  // wrapper's potentially stale canGoBack flag after an app switch.
+  tap(); router.navigate('/Products'); await settle();
+  tap(); router.navigate('/Orders'); await settle();
+  assert.equal(router.location.pathname, '/Orders');
+  win.document.dispatchEvent(new win.Event('visibilitychange'));
+  assert.equal(mod.handleAndroidBack(), true, 'Sellio handles route Back after app resume');
+  await settle();
+  assert.equal(router.location.pathname, '/Products');
+  assert.equal(mod.handleAndroidBack(), true, 'Sellio handles another page Back');
+  await settle();
+  assert.ok(atHome());
+  assert.equal(mod.handleAndroidBack(), false, 'the root route is left to native exit handling');
+  passed('Native Back navigates across app routes after resume without checking WebView.canGoBack');
+
   // Simulate the WebView restoring a different current entry while JS stays mounted.
   // The browser history guard must notice and recover instead of leaving armed=true
   // for a no-longer-existent Back step.
