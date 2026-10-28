@@ -2,7 +2,8 @@
 // A short record of what happens around Back in Base44's Android app, for Alvin's account only:
 // kept on the phone (never sent anywhere), with a small "Back log" tab on the left edge that
 // copies it to paste to Claude. Nothing is recorded or shown anywhere else.
-const OWNER = 'summerriez@gmail.com';
+// Alvin's account, by a hash of its email: this code is public, the email needn't be.
+const OWNER_HASH = 'ff948dec1bdf0';
 const STORE_KEY = 'sellio-back-log';
 const MAX_LINES = 400;
 
@@ -10,6 +11,20 @@ const browser = typeof window !== 'undefined' ? window : null;
 const inAndroidApp = () => !!browser && /Android/i.test(browser.navigator?.userAgent || '') && (
   typeof browser.ReactNativeWebView?.postMessage === 'function' ||
   typeof browser.__hybrid_bridge?.sendMessage === 'function');
+
+// A short, stable hash of a text (cyrb53): enough to recognise one email without writing it here.
+function hashText(text) {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
+}
 
 // The app's own record of who is signed in on this device (see AppUserContext).
 let ownerCheckedAt = 0;
@@ -20,7 +35,7 @@ function isOwner() {
   try {
     const match = browser.document.cookie.match(/(?:^|;\s*)app_session=([^;]+)/);
     const user = match ? JSON.parse(decodeURIComponent(match[1])) : null;
-    ownerSignedIn = String(user?.email || '').toLowerCase() === OWNER;
+    ownerSignedIn = !!user?.email && hashText(String(user.email).toLowerCase()) === OWNER_HASH;
   } catch { ownerSignedIn = false; }
   return ownerSignedIn;
 }
