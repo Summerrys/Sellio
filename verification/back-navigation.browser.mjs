@@ -325,6 +325,8 @@ try {
   await p.tap('toHome');
   await p.tap('openA');
   await p.scroll(300);
+  // Let the finger scroll's glide finish first.
+  for (let last = -1, i = 0; i < 40; i++) { const y = await p.read('scrollY'); if (y === last) break; last = y; await sleep(150); }
   const shownBefore = await p.read('({ y: scrollY, length: history.length, at: navigation.currentEntry.index })');
   assert.equal(shownBefore.at, 2);
   const moves = [];
@@ -357,6 +359,25 @@ try {
   assert.equal((await p.state()).path, '/', 'and Back still goes back');
   passed('Android app: coming back on screen steps to the first entry and straight back, unseen by the page (windows, scroll, history unchanged; a tap meanwhile held off); Back works after');
   pushes = pushes.concat(await p.read('window.__pushes'));
+
+  // An update reload in the app (AppRefreshProvider) first steps to the first entry, unseen by
+  // the page, so the new copy starts there with nothing of the old copy behind it: Back from
+  // it doesn't load an old page, and the new copy can re-arm the app's Back.
+  await p.tap('toHome');
+  await p.tap('openA');
+  await p.tap('closeA');
+  await sleep(200);
+  await p.tap('toOther');
+  assert.equal(await p.read('navigation.currentEntry.index'), 2);
+  const beforeReload = await p.read('({ length: history.length, starts: Number(sessionStorage.getItem("starts")) })');
+  await p.read('void window.__stepToFirstEntry().then(() => location.replace("/other?reloaded=1")), 1');
+  await sleep(1500);
+  const afterReload = await p.read(`({ path: location.pathname + location.search, at: navigation.currentEntry.index,
+    length: history.length, firstIsThisPage: navigation.entries()[0].sameDocument, starts: Number(sessionStorage.getItem("starts")) })`);
+  assert.deepEqual(afterReload, { path: '/other?reloaded=1', at: 0, length: beforeReload.length, firstIsThisPage: true, starts: beforeReload.starts },
+    'the new copy is on the first entry, react-router never showed it before the reload');
+  assert.match(await p.back(), /^NOTHING/, 'nothing of the old copy behind it');
+  passed('Android app: an update reload starts the new copy on the first entry, with nothing of the old copy behind it');
 
   assert.deepEqual(pushes.filter((x) => !x.honoured), [], 'every history entry was added after a tap the browser honours');
   passed(`All ${pushes.length} history entries (${pushes.filter((x) => x.ours).length} Back steps) were added after a real tap since the last Back`);
