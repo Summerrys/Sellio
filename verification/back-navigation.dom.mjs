@@ -432,7 +432,7 @@ try {
   // If a fresh tap preceded resume, the manager may safely restore its history
   // entry. Otherwise it waits for another tap. Either way the native callback
   // must close the editor immediately without consulting WebView.canGoBack.
-  assert.ok(win.history.state?.key, 'react-router page identity survives resume');
+  assert.equal(win.location.pathname, '/Dashboard', 'resume keeps the current page');
   assert.equal(mod.handleAndroidBack(), true, 'native Back closes the editor immediately after resume');
   await settle();
   assert.equal(overlays.A.open, false);
