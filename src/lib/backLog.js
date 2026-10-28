@@ -1,7 +1,8 @@
 // TEMPORARY — remove once Back in the Android app is confirmed working.
 // A short record of what happens around Back in Base44's Android app, for Alvin's account only:
-// kept on the phone (never sent anywhere), with a small "Back log" tab on the left edge that
-// copies it to paste to Claude. Nothing is recorded or shown anywhere else.
+// kept on the phone (never sent anywhere), with a small "Back log" button at the top centre that
+// copies it to paste to Claude (away from the screen's side edges, where the Back swipe starts).
+// Nothing is recorded or shown anywhere else.
 // Alvin's account, by a hash of its email: this code is public, the email needn't be.
 const OWNER_HASH = 'ff948dec1bdf0';
 const STORE_KEY = 'sellio-back-log';
@@ -49,12 +50,15 @@ function stored() {
   return lines;
 }
 let saveTimer = null;
+function saveNow() {
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  if (!lines) return; // nothing recorded on this page
+  try { browser.localStorage.setItem(STORE_KEY, JSON.stringify(lines)); } catch { /* full or blocked */ }
+}
 function saveSoon() {
   if (saveTimer) return;
-  saveTimer = setTimeout(() => {
-    saveTimer = null;
-    try { browser.localStorage.setItem(STORE_KEY, JSON.stringify(stored())); } catch { /* full or blocked */ }
-  }, 400);
+  saveTimer = setTimeout(saveNow, 400);
 }
 
 // Where the page is in its history: entry number / entries, our Back step, the page.
@@ -113,10 +117,15 @@ function showTab() {
   const tab = browser.document.createElement('button');
   tab.id = 'sellio-back-log-tab';
   tab.type = 'button';
-  tab.textContent = 'Back log';
   tab.setAttribute('aria-label', 'Copy the Back log');
-  tab.style.cssText = 'position:fixed;left:0;top:42%;z-index:2147483000;writing-mode:vertical-rl;padding:10px 5px;'
-    + 'font:600 11px/1 system-ui,sans-serif;color:#fff;background:rgba(15,23,42,0.55);border:0;border-radius:0 8px 8px 0;';
+  // A small pill at the top centre, inside a larger see-through area that is easy to hit.
+  tab.style.cssText = 'position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 2px);transform:translateX(-50%);'
+    + 'z-index:2147483000;padding:8px 10px;background:transparent;border:0;';
+  const pill = browser.document.createElement('span');
+  pill.textContent = 'Back log';
+  pill.style.cssText = 'display:block;padding:6px 14px;font:600 12px/1 system-ui,sans-serif;color:#fff;'
+    + 'background:rgba(15,23,42,0.6);border-radius:999px;';
+  tab.appendChild(pill);
   tab.addEventListener('click', () => { void copyLog(); });
   browser.document.body.appendChild(tab);
   return true;
@@ -130,11 +139,16 @@ if (browser && inAndroidApp()) {
     backLog(`page loaded: ${entries.length} entries in this page's run of history, first is ${entries[0]?.sameDocument ? 'this page' : 'another page'}, ${ua}`);
   } catch { /* nothing to note */ }
   // Registered before Sellio's own listeners (this file loads first), so these see every event.
-  browser.document.addEventListener('visibilitychange', () => backLog(`screen: ${browser.document.visibilityState}`), true);
+  // Saved at once when the app goes off screen (it may be closed there) and when the page goes
+  // (a reload), so the last lines before either aren't lost.
+  browser.document.addEventListener('visibilitychange', () => {
+    backLog(`screen: ${browser.document.visibilityState}`);
+    if (browser.document.visibilityState === 'hidden') saveNow();
+  }, true);
   browser.addEventListener('focus', (event) => { if (event.target === browser) backLog('app window focused'); }, true);
   browser.addEventListener('blur', (event) => { if (event.target === browser) backLog('app window lost focus'); }, true);
   browser.addEventListener('pageshow', (event) => backLog(`pageshow${event.persisted ? ' (from memory)' : ''}`), true);
-  browser.addEventListener('pagehide', () => backLog('pagehide'), true);
+  browser.addEventListener('pagehide', () => { backLog('pagehide'); saveNow(); }, true);
   browser.addEventListener('popstate', (event) => backLog(`popstate${event.state?.sellioOverlay ? ' (onto a step)' : ''}`), true);
   browser.addEventListener('pointerup', (event) => backLog(`tap ${label(event.target)}`), true);
   // The tab for Alvin's account: checked now and then (signing in can come later).
