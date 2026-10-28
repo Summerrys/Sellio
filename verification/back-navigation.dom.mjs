@@ -414,7 +414,15 @@ try {
   Object.defineProperty(win.navigator, 'userAgent', { configurable: true, value: 'Android WebView' });
   win.document.dispatchEvent(new win.Event('visibilitychange'));
   await settle();
-  assert.ok(onOverlayEntry(), 'resume reconciled stale armed flag and restored Back step');
+  // There is no new user activation after a script-driven history traversal;
+  // do not add a synthetic entry that Android would skip. Native Back still works
+  // immediately, and the next real tap may safely restore a history entry.
+  assert.ok(!onOverlayEntry(), 'resume waits for genuine activation rather than adding unsafe history');
+  assert.equal(mod.handleAndroidBack(), true, 'native Back closes the editor immediately after resume');
+  await settle();
+  assert.equal(overlays.A.open, false);
+  tap(); overlays.A.setOpen(true); await settle();
+  assert.ok(onOverlayEntry(), 'next tap re-enables ordinary history-backed Back');
   await pressBack();
   assert.equal(overlays.A.open, false);
   assert.ok(atHome() || !onOverlayEntry());
