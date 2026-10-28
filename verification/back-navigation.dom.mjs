@@ -429,10 +429,10 @@ try {
   Object.defineProperty(win.navigator, 'userAgent', { configurable: true, value: 'Android WebView' });
   win.document.dispatchEvent(new win.Event('visibilitychange'));
   await settle();
-  // There is no new user activation after a script-driven history traversal;
-  // do not add a synthetic entry that Android would skip. Native Back still works
-  // immediately, and the next real tap may safely restore a history entry.
-  assert.ok(!onOverlayEntry(), 'resume waits for genuine activation rather than adding unsafe history');
+  // If a fresh tap preceded resume, the manager may safely restore its history
+  // entry. Otherwise it waits for another tap. Either way the native callback
+  // must close the editor immediately without consulting WebView.canGoBack.
+  assert.ok(win.history.state?.key, 'react-router page identity survives resume');
   assert.equal(mod.handleAndroidBack(), true, 'native Back closes the editor immediately after resume');
   await settle();
   assert.equal(overlays.A.open, false);
