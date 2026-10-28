@@ -1,11 +1,14 @@
-import { access, readFile } from 'node:fs/promises';
+import { access, readFile, stat } from 'node:fs/promises';
 
+// '/' is the page the host serves at every address, so it must not name a canonical or
+// og:url (null below): LandingPage sets the homepage canonical in the browser.
 const routes = {
-  '/': ['Commerce has a place to grow.', 'https://sellio.apptelier.sg/'],
+  '/': ['Commerce has a place to grow.', null],
   '/privacy': ['Privacy Policy', 'https://sellio.apptelier.sg/privacy'],
   '/terms': ['Terms and Conditions', 'https://sellio.apptelier.sg/terms'],
 };
 
+const SHARE_IMAGE = 'https://sellio.apptelier.sg/og/sellio-share.jpg';
 const failures = [];
 
 for (const [path, [signature, canonical]] of Object.entries(routes)) {
@@ -21,13 +24,28 @@ for (const [path, [signature, canonical]] of Object.entries(routes)) {
   if (!html.includes('id="sellio-prerender" data-prerendered="true"')) failures.push(`${path}: prerender marker missing`);
   if (!html.includes('<div id="root"></div>')) failures.push(`${path}: SPA root should remain empty`);
   if (!html.includes(signature)) failures.push(`${path}: visible route content missing`);
-  if (!html.includes(`rel="canonical" href="${canonical}"`) && !html.includes(`href="${canonical}" rel="canonical"`)) {
+  if (canonical === null) {
+    if (/rel="canonical"/i.test(html)) failures.push(`${path}: served at every address, so it must not name a canonical`);
+    if (/property="og:url"/i.test(html)) failures.push(`${path}: served at every address, so it must not name an og:url`);
+  } else if (!html.includes(`rel="canonical" href="${canonical}"`) && !html.includes(`href="${canonical}" rel="canonical"`)) {
     failures.push(`${path}: canonical missing or incorrect`);
+  }
+  if (!html.includes(`property="og:image" content="${SHARE_IMAGE}"`)) failures.push(`${path}: og:image is not the share card`);
+  if (!html.includes('property="og:image:width" content="1200"') || !html.includes('property="og:image:height" content="630"')) {
+    failures.push(`${path}: og:image size tags missing`);
   }
   if (!/<h1[\s>]/i.test(html)) failures.push(`${path}: H1 missing`);
   if (!/<a[\s>]/i.test(html)) failures.push(`${path}: outgoing/internal links missing`);
   if (/name="robots"[^>]*content="[^"]*noindex/i.test(html)) failures.push(`${path}: public route is noindex`);
   if (!/<script[^>]+type="module"[^>]+src="\/assets\//i.test(html)) failures.push(`${path}: client bundle missing`);
+}
+
+// WhatsApp shows no preview image when the file is over 600 KB.
+try {
+  const { size } = await stat('dist/og/sellio-share.jpg');
+  if (size > 600 * 1024) failures.push(`og/sellio-share.jpg: ${size} bytes, over WhatsApp's 600 KB limit`);
+} catch {
+  failures.push('og/sellio-share.jpg: missing from the build');
 }
 
 const appShell = await readFile('dist/app.html', 'utf8');
