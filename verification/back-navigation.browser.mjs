@@ -38,7 +38,10 @@ let context;
 let passes = 0;
 const passed = (name) => { passes++; console.log('PASS ' + name); };
 
-async function newPhone() {
+// inApp: as in Sellio's Android app — the app's bridge is there, the page can be shown again
+// (window.__show(): hidden, then visible again, as when the app comes back on screen), and the
+// page is the first entry of its history (the app's web view starts on it).
+async function newPhone({ inApp = false } = {}) {
   if (context) await context.close();
   const ext = path.join(dir, 'phone-back');
   const { defaultBrowserType, ...pixel } = devices['Pixel 7'];
@@ -48,7 +51,22 @@ async function newPhone() {
   });
   let [worker] = context.serviceWorkers();
   if (!worker) worker = await context.waitForEvent('serviceworker');
-  const page = context.pages()[0] || await context.newPage();
+  let page = context.pages()[0] || await context.newPage();
+  if (inApp) {
+    await context.addInitScript(() => {
+      window.ReactNativeWebView = { postMessage() {} };
+      let shown = 'visible';
+      Object.defineProperty(Document.prototype, 'visibilityState', { configurable: true, get: () => shown });
+      window.__show = () => {
+        shown = 'hidden'; document.dispatchEvent(new Event('visibilitychange'));
+        shown = 'visible'; document.dispatchEvent(new Event('visibilitychange')); window.dispatchEvent(new Event('focus'));
+      };
+    });
+    const opener = page;
+    [page] = await Promise.all([context.waitForEvent('page'), opener.evaluate((url) => window.open(url, '_blank', 'noopener'), origin + '/')]);
+    await opener.close();
+    await page.bringToFront();
+  }
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   const cdp = await context.newCDPSession(page);
@@ -71,9 +89,9 @@ async function newPhone() {
     await touch('touchEnd');
     await sleep(250);
   };
-  await page.goto(origin + '/');
-  await sleep(300);
-  return { page, read, state, visible, back, tap, scroll, errors };
+  if (!inApp) await page.goto(origin + '/');
+  await sleep(inApp ? 800 : 300);
+  return { page, cdp, read, state, visible, back, tap, scroll, errors };
 }
 
 try {
@@ -297,6 +315,48 @@ try {
   assert.equal(await p.back(800), 'went back');
   assert.equal((await p.state()).path, '/', 'and then to the page before it');
   passed('A window that closes as the page goes to another page (sign in from a checkout): that page stays; Back returns, then goes on');
+
+  // In Sellio's Android app: each time the app comes back on screen, Base44's app puts its
+  // bottom-tab Back handler in front of the page's, and the page's handler only gets back in
+  // front when "can go back" changes. So the page steps to its first entry and straight back.
+  // Nothing else on the page sees it (react-router stays put, windows stay open, nothing
+  // scrolls), a tap meanwhile is held off, and Back works as before afterwards.
+  p = await newPhone({ inApp: true });
+  await p.tap('toHome');
+  await p.tap('openA');
+  await p.scroll(300);
+  const shownBefore = await p.read('({ y: scrollY, length: history.length, at: navigation.currentEntry.index })');
+  assert.equal(shownBefore.at, 2);
+  const moves = [];
+  p.cdp.on('Page.navigatedWithinDocument', (e) => moves.push(new URL(e.url).pathname));
+  await p.cdp.send('Page.enable');
+  await p.read('window.__show()');
+  const pagesSeen = new Set();
+  for (let i = 0; i < 90; i++) { pagesSeen.add(await p.read('document.getElementById("page").textContent')); await sleep(20); }
+  await sleep(400);
+  const out = moves.indexOf('/');
+  assert.ok(out >= 0 && moves[out + 1] === '/home' && moves.lastIndexOf('/') === out, `stepped to the first entry and straight back (${moves.join(' ')})`);
+  assert.deepEqual([...pagesSeen], ['home'], 'react-router never showed the first page');
+  assert.ok(await p.visible('A'), 'the window stays open');
+  assert.deepEqual(await p.read('({ y: scrollY, length: history.length, at: navigation.currentEntry.index })'), shownBefore, 'same entry, nothing scrolled, nothing added');
+  assert.ok((await p.state()).onStep, 'Back is ready');
+  assert.equal(await p.back(), 'went back');
+  assert.ok(!(await p.visible('A')));
+  assert.deepEqual([(await p.state()).path, (await p.state()).onStep], ['/home', false]);
+  // A tap while on the first entry (a fraction of a second) is held off: nothing navigates.
+  const pushesBeforeTap = await p.read('window.__pushes.length');
+  await p.read('window.__show()');
+  let onFirst = false;
+  for (let i = 0; i < 150 && !onFirst; i++) { onFirst = await p.read('navigation.currentEntry.index === 0'); if (!onFirst) await sleep(10); }
+  assert.ok(onFirst, 'stepped to the first entry');
+  await p.page.tap('#toOther');
+  await sleep(1000);
+  assert.equal((await p.state()).path, '/home', 'the tap was held off');
+  assert.equal(await p.read('window.__pushes.length'), pushesBeforeTap);
+  assert.equal(await p.back(), 'went back');
+  assert.equal((await p.state()).path, '/', 'and Back still goes back');
+  passed('Android app: coming back on screen steps to the first entry and straight back, unseen by the page (windows, scroll, history unchanged; a tap meanwhile held off); Back works after');
+  pushes = pushes.concat(await p.read('window.__pushes'));
 
   assert.deepEqual(pushes.filter((x) => !x.honoured), [], 'every history entry was added after a tap the browser honours');
   passed(`All ${pushes.length} history entries (${pushes.filter((x) => x.ours).length} Back steps) were added after a real tap since the last Back`);
