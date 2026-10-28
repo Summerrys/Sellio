@@ -1,5 +1,36 @@
 # Sellio Android hardware Back contract (2026-10-28)
 
+## Why Back went dead in Base44's Android app (found in the app's .aab, build android-2_133512_13)
+
+Base44's app is Wix's app engine (React Native + react-native-navigation) around a web view.
+
+- The engine registers `BottomTabsBackHandler` with the app's tabs. Sellio's only tab is
+  `{ id: 'brandedLiteMainTab', screen: 'brandedLite.MainScreen' }`, and `isVerticalRootScreen()`
+  treats every tab id except `home`, `dashboard`, `fitnessHome`, `BrandedAppsTab`,
+  `portalHomeScreen`, `eventsOverview`, `timeHome` and `HomeTab` as a non-home tab.
+- react-native-navigation sends `componentDidDisappear` when the app is paused and
+  `componentDidAppear` when it resumes (switching apps, a photo or file picker, a permission
+  prompt, the screen turning off). On each `componentDidAppear` the tab handler adds a
+  `hardwareBackPress` listener that calls `Navigation.mergeOptions(componentId,
+  { bottomTabs: { currentTabIndex: 0 } })` and always returns true.
+- React Native asks Back listeners newest first. The web view's own listener
+  (`useWebViewAndroidBackNavigation`: `goBack()` when its cached `canGoBack` is true) is added
+  again only when `canGoBack` changes. So after any resume the tab handler is first and takes
+  every Back: it re-selects the tab already showing (the web view blinks hidden/visible) and
+  nothing happens, until `canGoBack` changes or the app restarts.
+
+**Sellio's workaround (`rearmAppBack` in `src/lib/useBackToClose.js`):** in the Android app, when
+the page is back on screen (visible / window focus / a file picker returning), once it is quiet
+it steps to the first entry of its history (`canGoBack` false) and straight back (`canGoBack`
+true), so the web view's listener is added again, newest. The steps are hidden from the page
+(popstate stopped before react-router, `intercept({ scroll: 'manual', focusReset: 'manual' })`),
+and clicks are held off for that fraction of a second. It runs only when the first history entry
+is this same page (not after an in-app reload or a sign-in that loaded a new page; then only a
+full restart of the app helps). Base44 can fix it properly by adding `brandedLiteMainTab` to the
+home-tab ids (or skipping `BottomTabsBackHandler` for a single tab), or by re-adding the web
+view's Back listener on `componentDidAppear`. `verification/back-navigation.browser.mjs` checks
+the workaround in real Chrome.
+
 ## Web app (implemented)
 
 `src/lib/useBackToClose.js` owns the registered overlay stack and now exposes:
