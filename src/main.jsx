@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from '@/App.jsx'
+import AppErrorBoundary from '@/components/ui-custom/AppErrorBoundary'
 import '@/index.css'
 import { removeAppReloadParam } from '@/lib/appUpdates'
 import { installEdgeSwipeBack } from '@/lib/edgeSwipeBack'
@@ -32,6 +33,7 @@ if ('serviceWorker' in navigator) {
 // (LandingPage removes it); everywhere else it goes now.
 if (window.location.pathname !== '/') document.getElementById('sellio-prerender')?.remove()
 
+// A screen that fails to load or crashes shows a Reload screen, never a blank app.
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <App />
+  <AppErrorBoundary><App /></AppErrorBoundary>
 )
