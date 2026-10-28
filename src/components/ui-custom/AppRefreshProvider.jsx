@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import PullToRefresh from './PullToRefresh';
 import { AppRefreshContext } from '@/lib/AppRefreshContext';
 import { fetchPublishedAppVersion, getAppAssetVersion, getAppReloadUrl, isNewAppVersion } from '@/lib/appUpdates';
+import { stepToFirstEntry } from '@/lib/useBackToClose';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -100,7 +101,11 @@ export default function AppRefreshProvider({ children }) {
         return;
       }
     }
-    window.location.replace(getAppReloadUrl(window.location.href));
+    // In the Android app the updated Sellio starts on the first entry of the page's history
+    // (when that is this page), so nothing of the old copy is left behind it to go Back to.
+    const url = getAppReloadUrl(window.location.href);
+    const go = () => window.location.replace(url);
+    void stepToFirstEntry().then(go, go);
   }, [getReloadState]);
 
   return (
