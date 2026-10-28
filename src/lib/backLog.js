@@ -1,5 +1,5 @@
 // TEMPORARY — remove once Back in the Android app is confirmed working.
-// A short record of what happens around Back in Base44's Android app, for Alvin's account only:
+// A short record of what happens around Back (and of errors) in Base44's Android app, for Alvin's account only:
 // kept on the phone (never sent anywhere), with a small "Back log" button at the top centre that
 // copies it to paste to Claude (away from the screen's side edges, where the Back swipe starts).
 // Nothing is recorded or shown anywhere else.
@@ -7,6 +7,9 @@
 const OWNER_HASH = 'ff948dec1bdf0';
 const STORE_KEY = 'sellio-back-log';
 const MAX_LINES = 400;
+// The chat keeps only the first 20,000 characters of a paste: the copy takes the newest lines
+// that fit.
+const MAX_COPY_CHARS = 18000;
 
 const browser = typeof window !== 'undefined' ? window : null;
 const inAndroidApp = () => !!browser && /Android/i.test(browser.navigator?.userAgent || '') && (
@@ -88,7 +91,17 @@ function label(target) {
 }
 
 async function copyLog() {
-  const text = [`Sellio Back log, copied ${new Date().toString()}`, browser.navigator.userAgent, ...stored()].join('\n');
+  const head = [`Sellio Back log, copied ${new Date().toString()}`, browser.navigator.userAgent];
+  const all = stored();
+  const kept = [];
+  let size = head.join('\n').length + 60;
+  for (let i = all.length - 1; i >= 0; i -= 1) {
+    size += all[i].length + 1;
+    if (size > MAX_COPY_CHARS) break;
+    kept.unshift(all[i]);
+  }
+  if (kept.length < all.length) head.push(`(the oldest ${all.length - kept.length} lines left out)`);
+  const text = [...head, ...kept].join('\n');
   let copied = false;
   try { await browser.navigator.clipboard.writeText(text); copied = true; } catch { /* try the older way */ }
   if (!copied) {
@@ -151,6 +164,32 @@ if (browser && inAndroidApp()) {
   browser.addEventListener('pagehide', () => { backLog('pagehide'); saveNow(); }, true);
   browser.addEventListener('popstate', (event) => backLog(`popstate${event.state?.sellioOverlay ? ' (onto a step)' : ''}`), true);
   browser.addEventListener('pointerup', (event) => backLog(`tap ${label(event.target)}`), true);
+  // Errors: the page's own (uncaught), and Sellio's own code or styles failing to download (not
+  // photos, fonts or the extra files a page fetches ahead). The same one again within 5 seconds
+  // is noted once.
+  let lastError = '';
+  let lastErrorAt = 0;
+  const logError = (message) => {
+    if (message === lastError && Date.now() - lastErrorAt < 5000) return;
+    lastError = message;
+    lastErrorAt = Date.now();
+    backLog(message);
+  };
+  browser.addEventListener('error', (event) => {
+    const el = event.target;
+    if (el && el !== browser && el.tagName) {
+      const url = String(el.src || el.href || '');
+      const own = url.startsWith(`${browser.location.origin}/`);
+      if (own && (el.tagName === 'SCRIPT' || (el.tagName === 'LINK' && el.rel === 'stylesheet'))) {
+        logError(`not downloaded: ${url.split('/').pop()}`);
+      }
+      return;
+    }
+    logError(`error: ${String(event.message || event.error?.message || '?').slice(0, 200)}`);
+  }, true);
+  browser.addEventListener('unhandledrejection', (event) => {
+    logError(`failed: ${String(event.reason?.message || event.reason || '?').slice(0, 200)}`);
+  });
   // The tab for Alvin's account: checked now and then (signing in can come later).
   const timer = setInterval(() => {
     if (!isOwner()) return;
