@@ -25,11 +25,15 @@ it steps to the first entry of its history (`canGoBack` false) and straight back
 true), so the web view's listener is added again, newest. The steps are hidden from the page
 (popstate stopped before react-router, `intercept({ scroll: 'manual', focusReset: 'manual' })`),
 and clicks are held off for that fraction of a second. It runs only when the first history entry
-is this same page (not after an in-app reload or a sign-in that loaded a new page; then only a
-full restart of the app helps). Base44 can fix it properly by adding `brandedLiteMainTab` to the
-home-tab ids (or skipping `BottomTabsBackHandler` for a single tab), or by re-adding the web
-view's Back listener on `componentDidAppear`. `verification/back-navigation.browser.mjs` checks
-the workaround in real Chrome.
+is this same page (not after a sign-in or another reload that loaded a new page; then only a
+full restart of the app helps). So Sellio's own update reload ("Update available → Reload" in
+`AppRefreshProvider`) first steps to the first entry the same hidden way (`stepToFirstEntry`), when
+that entry is this page, and reloads there: the new copy starts on the first entry with nothing of
+the old copy behind it (Back into it would load old pages) and keeps re-arming. Back on the
+reloaded page then does nothing, as after a fresh start. Base44 can fix it properly by adding
+`brandedLiteMainTab` to the home-tab ids (or skipping `BottomTabsBackHandler` for a single tab),
+or by re-adding the web view's Back listener on `componentDidAppear`.
+`verification/back-navigation.browser.mjs` checks the workaround and the reload in real Chrome.
 
 ## Web app (implemented)
 
