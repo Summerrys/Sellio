@@ -1613,6 +1613,7 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
   const dirty = !!savedForm && !sameDesign(form, savedForm);
   const [saving, setSaving] = useState(false);
   const [visible, setVisible] = useState(false);
+  const closeTimerRef = useRef(null);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [previewProducts, setPreviewProducts] = useState([]);
   const [previewCategories, setPreviewCategories] = useState([]);
@@ -1627,7 +1628,15 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  useEffect(() => () => {
+    if (closeTimerRef.current !== null) clearTimeout(closeTimerRef.current);
+  }, []);
+
   useEffect(() => {
+    if (closeTimerRef.current !== null) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
     setLeaveDialogOpen(false);
     if (open) {
       setSavedForm(null); // nothing counts as unsaved until the store's design has loaded
@@ -1732,8 +1741,14 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
   }, [open, tenantId]);
 
   const closeDesigner = () => {
+    // Repeated hardware Back presses during the slide-out must not queue multiple
+    // closes, especially when Android is restoring focus after another app.
+    if (closeTimerRef.current !== null) return;
     setVisible(false);
-    setTimeout(onClose, 300);
+    closeTimerRef.current = setTimeout(() => {
+      closeTimerRef.current = null;
+      onClose();
+    }, 300);
   };
 
   const handleClose = () => {
