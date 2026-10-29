@@ -1386,9 +1386,41 @@ function GridCard({ product, currency, primaryColor, storefrontConfig, showStock
   );
 }
 
+// ── A home seller's item: the bar at the foot of its screen ──────────────────
+const LIKE_RED = '#e11d48';
+
+function CartPlusIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="8" cy="21" r="1" />
+      <circle cx="19" cy="21" r="1" />
+      <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+      <path d="M13.6 8.8v5" />
+      <path d="M11.1 11.3h5" />
+    </svg>
+  );
+}
+
+// Like and Chat: an icon with its word under it (as on Explore listings).
+function BarIconButton({ label, pressed, onClick, caption, captionColor = '#334155', testId, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={pressed}
+      data-testid={testId}
+      style={{ width: 52, height: 52, flexShrink: 0, borderRadius: 12, border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3 }}
+    >
+      {children}
+      <span style={{ fontSize: sfType(11), fontWeight: 600, lineHeight: 1, color: captionColor }}>{caption}</span>
+    </button>
+  );
+}
+
 // ── Product detail modal ─────────────────────────────────────────────────────
-function ProductDetailModal({ product, currency, primaryColor, storefrontConfig, selectedVariants, setSelectedVariants, itemNotes, setItemNotes, activeImageIndex, setActiveImageIndex, onAddToCart, onClose, contentMap = {} }) {
-  const { t } = useLanguage();
+function ProductDetailModal({ product, currency, primaryColor, storefrontConfig, selectedVariants, setSelectedVariants, itemNotes, setItemNotes, activeImageIndex, setActiveImageIndex, onAddToCart, onClose, contentMap = {}, buyerBar = null }) {
+  const { t, lang } = useLanguage();
   const name = contentMap[product.name] || product.name;
   const description = contentMap[product.description] || product.description;
   const allImages = [product.image_url, ...(product.images || [])].filter(Boolean);
@@ -1398,6 +1430,37 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
   const touchStartX = useRef(null);
   const optionGroups = normaliseVariants(product.variants, product.price);
   const missingOptions = missingChoices(optionGroups, selectedVariants);
+  // A home seller's item: its likes (known once Explore has it; none on the seller's own
+  // shop, and none for an item that isn't on Explore, which can't be liked or chatted about).
+  const like = useKnownLike(buyerBar ? product.id : null);
+  const social = !!buyerBar && !!like && !like.own;
+  const soldOut = !!product.track_inventory && product.stock_quantity === 0;
+  const chooseText = () => {
+    const groupName = String(missingOptions[0]?.name || '').trim();
+    if (!groupName) return t('selectOption');
+    return lang === 'en' ? chooseLabel(missingOptions[0]) : t('chooseNamed').replace('{name}', groupName);
+  };
+  // "Choose a size" with the sizes out of view (below the bar): a tap scrolls this screen
+  // (only this screen, not the shop behind it) to them.
+  const scrollBoxRef = useRef(null);
+  const groupRefs = useRef([]);
+  const showMissingChoice = () => {
+    const box = scrollBoxRef.current;
+    const group = groupRefs.current[optionGroups.indexOf(missingOptions[0])];
+    if (!box || !group) return;
+    const top = group.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
+    box.scrollTo({ top: Math.max(0, top - 16), behavior: 'smooth' });
+  };
+  const addItem = () => {
+    if (missingOptions.length > 0) { showMissingChoice(); return; }
+    onAddToCart(product, combineChoices(selectedVariants), itemNotes.trim() || null);
+    onClose();
+  };
+  // Straight to checkout: the screen closes as the checkout opens (onClose passed along).
+  const buyItem = () => {
+    if (missingOptions.length > 0) { showMissingChoice(); return; }
+    buyerBar.onBuyNow(product, combineChoices(selectedVariants), itemNotes.trim() || null, onClose);
+  };
 
   const handleTouchStart = (e) => {
     touchStartX.current = e.touches[0].clientX;
@@ -1440,7 +1503,7 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
 
       <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', overflow: 'auto' }}>
         <div onClick={onClose} style={{ position: 'absolute', inset: 0, pointerEvents: 'auto' }} />
-        <div style={{ position: 'relative', width: '90%', maxWidth: 420, maxHeight: '85vh', overflowY: 'auto', borderRadius: 20, background: '#fff' }}>
+        <div ref={scrollBoxRef} style={{ position: 'relative', width: '90%', maxWidth: 420, maxHeight: '85vh', overflowY: 'auto', borderRadius: 20, background: '#fff' }}>
           <button type="button" aria-label="Close" onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, width: 36, height: 36, borderRadius: '50%', background: 'white', border: 'none', cursor: 'pointer', fontSize: sfType(18), boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}>✕</button>
 
           {/* Main image with swipe and tap-to-lightbox */}
@@ -1483,6 +1546,12 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
               )}
               <span style={{ fontSize: sfType(20), fontWeight: 700, color: primaryColor }}>{getCurrencySymbol(currency)}{parseFloat(product.price).toFixed(2)}</span>
             </div>
+            {buyerBar && like?.likes > 0 && (
+              <div data-testid="item-like-count" style={{ display: 'flex', alignItems: 'center', gap: 5, margin: '-4px 0 12px', fontSize: sfType(12), fontWeight: 600, color: '#334155' }}>
+                <Heart size={14} fill={LIKE_RED} color={LIKE_RED} aria-hidden="true" />
+                {like.likes === 1 ? t('likesOne') : t('likesMany').replace('{n}', like.likes)}
+              </div>
+            )}
             {product.description && <p style={{ fontSize: sfType(14), color: '#64748b', lineHeight: 1.6, margin: '0 0 16px' }}>{description}</p>}
             {(() => {
               // The option rules (shared with Explore listings, see itemOptions.js):
@@ -1497,7 +1566,7 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                     const isMultiSelect = isMultiChoice(group);
                     const required = isRequiredChoice(group);
                     return (
-                    <div key={gi} style={{ marginBottom: 14 }}>
+                    <div key={gi} ref={(el) => { groupRefs.current[gi] = el; }} style={{ marginBottom: 14 }}>
                       <p style={{ fontWeight: 600, fontSize: sfType(13), margin: '0 0 8px', color: '#0f172a' }}>
                         {group.name || (isMultiSelect ? 'Add-ons' : 'Options')}
                         {required && <span style={{ fontWeight: 500, fontSize: sfType(12), color: '#64748b' }}> · {t('required')}</span>}
@@ -1532,6 +1601,8 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                 style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: sfType(13), resize: 'none', fontFamily: 'inherit' }}
               />
             </div>
+            {/* A business's item: one Add button (a home seller's: the bar below). */}
+            {!buyerBar && (
             <button
               disabled={missingOptions.length > 0}
               onClick={() => {
@@ -1555,7 +1626,65 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                 ? t('selectOption')
                 : <>{t('addToOrder')} · {getCurrencySymbol(currency)}{(parseFloat(product.price) + (combineChoices(selectedVariants)?.price_modifier || 0)).toFixed(2)}</>}
             </button>
+            )}
           </div>
+          {/* A home seller's item: Like and Chat (once it's on Explore, not your own),
+              Add to cart and Buy now, kept in view at the foot of the screen. */}
+          {buyerBar && (
+            <div data-testid="item-buyer-bar" style={{ position: 'sticky', bottom: 0, zIndex: 5, background: '#ffffff', borderTop: '1px solid #e2e8f0', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 4 }}>
+              {social && (
+                <BarIconButton
+                  label={like.liked ? t('unlikeItem') : t('likeItem')}
+                  pressed={!!like.liked}
+                  onClick={() => buyerBar.onLike(product)}
+                  caption={like.liked ? t('liked') : t('like')}
+                  captionColor={like.liked ? '#be123c' : '#334155'}
+                  testId="item-like"
+                >
+                  <Heart size={23} fill={like.liked ? LIKE_RED : 'none'} color={like.liked ? LIKE_RED : '#334155'} aria-hidden="true" />
+                </BarIconButton>
+              )}
+              {social && (
+                <BarIconButton label={t('chatSeller')} onClick={() => buyerBar.onChat(product)} caption={t('chat')} testId="item-chat">
+                  <MessageCircle size={23} color="#334155" aria-hidden="true" />
+                </BarIconButton>
+              )}
+              {soldOut ? (
+                <span data-testid="item-sold-out" style={{ marginLeft: 4, flex: 1, height: 48, borderRadius: 14, background: '#f1f5f9', color: '#64748b', fontSize: sfType(15), fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {t('soldOut')}
+                </span>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={addItem}
+                    aria-disabled={missingOptions.length > 0 || undefined}
+                    aria-label={t('addToCart')}
+                    data-testid="item-add-to-cart"
+                    style={{ marginLeft: 4, width: 60, height: 48, flexShrink: 0, borderRadius: 14, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: missingOptions.length > 0 ? 'default' : 'pointer', background: missingOptions.length > 0 ? '#f1f5f9' : hexToRgba(primaryColor, 0.14), color: missingOptions.length > 0 ? '#94a3b8' : primaryColor }}
+                  >
+                    <CartPlusIcon />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={buyItem}
+                    aria-disabled={missingOptions.length > 0 || undefined}
+                    data-testid="item-buy-now"
+                    style={{ marginLeft: 4, flex: 1, minWidth: 0, height: 48, borderRadius: 14, border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.25, cursor: missingOptions.length > 0 ? 'default' : 'pointer', background: missingOptions.length > 0 ? '#e2e8f0' : primaryColor, color: missingOptions.length > 0 ? '#475569' : '#ffffff' }}
+                  >
+                    {missingOptions.length > 0 ? (
+                      <span style={{ fontSize: sfType(15), fontWeight: 700 }}>{chooseText()}</span>
+                    ) : (
+                      <>
+                        <span style={{ fontSize: sfType(15), fontWeight: 700 }}>{t('buyNow')}</span>
+                        <span style={{ fontSize: sfType(11), fontWeight: 500 }}>{getCurrencySymbol(currency)}{(parseFloat(product.price) + (combineChoices(selectedVariants)?.price_modifier || 0)).toFixed(2)}</span>
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>
