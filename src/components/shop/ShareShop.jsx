@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Copy, Check, Download, ExternalLink, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { publicSiteUrl } from '@/lib/accountFlow';
-import { isNativeApp } from '@/lib/nativeApp';
+import { isNativeApp, outsideLinkProps } from '@/lib/nativeApp';
 import { getSupabase } from '@/lib/supabaseClient';
 
 // The free shop's store page link: copy it, share it on WhatsApp, or save a QR code.
@@ -76,9 +76,7 @@ export default function ShareShop({ slug, shopName, tenantId }) {
           {copied ? <><Check className="w-4 h-4 mr-1.5" /> Copied</> : <><Copy className="w-4 h-4 mr-1.5" /> Copy link</>}
         </Button>
         <a
-          href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
-          target="_blank"
-          rel="noreferrer"
+          {...outsideLinkProps(`https://wa.me/?text=${encodeURIComponent(shareText)}`)}
           className="h-11 inline-flex items-center justify-center rounded-md text-sm font-medium text-white"
           style={{ background: '#16a34a' }}
         >
