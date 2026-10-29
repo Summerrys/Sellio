@@ -18,6 +18,7 @@ import { useAppReloadGuard } from '@/lib/AppRefreshContext';
 import ImageEditModal from '@/components/onboarding/ImageEditModal';
 import { INDUSTRY_OPTIONS, normalizeIndustry } from '@/lib/industry';
 import { cn } from '@/lib/utils';
+import AddressMap from '@/components/ui-custom/AddressMap';
 
 // FIX: previously had its own local INDUSTRIES + normaliseIndustry copy, separate
 // from onboarding's — the two lists could (and did) drift. Both now import from
@@ -444,6 +445,15 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
               <Input className="h-10" value={form.address} onChange={e => set('address', e.target.value)} placeholder="123 Street, City" />
             </div>
           </GatedFields>
+          {/* The address on a map, the same place the store page's 📍 opens. Outside the
+              gated fields: looking at it or opening Maps changes nothing. */}
+          <AddressMap
+            address={form.address}
+            country={form.country}
+            title="Map of your store address"
+            hint="Shown on your store page. Check the pin; wrong spot? Add the postal code."
+            testId="business-address-map"
+          />
           </div>
         )}
       </Card>
