@@ -9,7 +9,7 @@ import { exploreItem, getChatUser } from '@/lib/chat';
 import { rememberReturnPath } from '@/lib/authNavigation';
 import { handOverBackStep, useBackToClose } from '@/lib/useBackToClose';
 import { useRatingSummaries } from '@/lib/ratings';
-import { likeErrorMessage, likesText, needsSignIn, setListingLike } from '@/lib/likes';
+import { likeErrorMessage, likesText, needsSignIn, noteLikes, setListingLike } from '@/lib/likes';
 import { addToShopCart, ensureInShopCart, useCartCount } from '@/lib/shopCart';
 import { normaliseVariants } from '@/lib/itemOptions';
 import { RatingPill, RatingSheet } from '@/components/ratings/RatingParts';
@@ -327,6 +327,8 @@ function Listing({ productId }) {
     const loaded = { liked: !!state.data.viewer?.liked, likes: Number(state.data.product?.likes) || 0 };
     likeRef.current = loaded; // a like on coming back from signing in (below) starts from this, in this same commit
     setLike(loaded);
+    // Explore's card for it shows the same (going Back there, say).
+    noteLikes(state.data.product?.id, { ...loaded, own: !!state.data.viewer?.is_own });
   }, [state]);
 
   const signInToLike = useCallback(() => {
