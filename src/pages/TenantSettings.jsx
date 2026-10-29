@@ -338,7 +338,7 @@ function TenantSettingsContent() {
         )}
         {settingsTab === 'selling' && showSellingTab && (
           <div className="max-w-2xl mx-auto">
-            <SellingSettingsForm tenantId={tenantId} currencySymbol={tenant?.currency === 'MYR' ? 'RM ' : '$'} />
+            <SellingSettingsForm tenantId={tenantId} currencySymbol={tenant?.currency === 'MYR' ? 'RM ' : '$'} country={tenant?.country || ''} />
           </div>
         )}
         {settingsTab === 'payment_qr' && (
