@@ -1,11 +1,17 @@
 import React from 'react';
 import { X, MessageCircle, Send, Link2, Mail, MoreHorizontal } from 'lucide-react';
+import { isNativeApp } from '@/lib/nativeApp';
 import BottomSheet from './BottomSheet';
 import { ItemImage } from './shared';
 
 // "Share to": a listing's link straight into WhatsApp, Telegram, Messenger (phones only),
 // Facebook or an email, copied, or (where the phone offers it) any other app.
 // Links to apps open the app (or its website); this page stays where it is.
+// In Sellio's Android app (Base44's web view, version 13) a link that opens a new tab does
+// nothing, and web pages get no share menu (so no More). There a website link loads in
+// place and the app hands it to the phone, asking "Open External Link?" first: WhatsApp,
+// Telegram or Facebook opens. Email links go to the mail app. The app blocks any other
+// kind of link (fb-messenger:), so Messenger isn't offered there.
 
 const PHONE = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
 
@@ -50,10 +56,11 @@ export default function ShareSheet({ open, onClose, url, title, priceText, shopN
   const enc = encodeURIComponent;
   const text = `${title}${priceText ? ` · ${priceText}` : ''} on Sellio`;
   const canShareMore = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  const inApp = isNativeApp();
 
-  // A link to another app (mail, Messenger) loads in this window, which the page takes as
-  // leaving and then holds its history still. So the sheet closes first, its Back step
-  // goes, and then the link opens.
+  // A link to another app (mail, Messenger; in the app every link) loads in this window,
+  // which the page takes as leaving and then holds its history still. So the sheet closes
+  // first, its Back step goes, and then the link opens.
   const openAfterClosing = (event) => {
     event.preventDefault();
     const url = event.currentTarget.href;
@@ -92,6 +99,8 @@ export default function ShareSheet({ open, onClose, url, title, priceText, shopN
     onClose();
     onCopied?.(done);
   };
+  // WhatsApp, Telegram, Facebook: a new tab in a browser; in place in the app (see above).
+  const site = inApp ? { onClick: openAfterClosing } : { newTab: true, onClick: onClose };
 
   const more = async () => {
     try {
@@ -117,12 +126,12 @@ export default function ShareSheet({ open, onClose, url, title, priceText, shopN
         </div>
       </div>
       <div className="mt-4 grid grid-cols-4 gap-x-2 gap-y-4">
-        <Target href={`https://wa.me/?text=${enc(`${text}\n${url}`)}`} newTab onClick={onClose} label="WhatsApp" background="#16a34a" color="#fff" icon={MessageCircle} />
-        <Target href={`https://t.me/share/url?url=${enc(url)}&text=${enc(text)}`} newTab onClick={onClose} label="Telegram" background="#0284c7" color="#fff" icon={Send} />
-        {PHONE && (
+        <Target href={`https://wa.me/?text=${enc(`${text}\n${url}`)}`} {...site} label="WhatsApp" background="#16a34a" color="#fff" icon={MessageCircle} />
+        <Target href={`https://t.me/share/url?url=${enc(url)}&text=${enc(text)}`} {...site} label="Telegram" background="#0284c7" color="#fff" icon={Send} />
+        {PHONE && !inApp && (
           <Target href={`fb-messenger://share/?link=${enc(url)}`} onClick={openAfterClosing} label="Messenger" background="#7c3aed" color="#fff" icon={MessengerIcon} />
         )}
-        <Target href={`https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`} newTab onClick={onClose} label="Facebook" background="#1d4ed8" color="#fff" icon={FacebookIcon} />
+        <Target href={`https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`} {...site} label="Facebook" background="#1d4ed8" color="#fff" icon={FacebookIcon} />
         <Target onClick={copy} label="Copy link" background="#f1f5f9" color="#334155" icon={Link2} />
         <Target href={`mailto:?subject=${enc(`${title} on Sellio`)}&body=${enc(`${text}\n${url}`)}`} onClick={openAfterClosing} label="Email" background="#f1f5f9" color="#334155" icon={Mail} />
         {canShareMore && <Target onClick={more} label="More" background="#f1f5f9" color="#334155" icon={MoreHorizontal} />}
