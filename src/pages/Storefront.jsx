@@ -135,8 +135,9 @@ function StorefrontInner() {
   const [checkoutFromLink, setCheckoutFromLink] = useState(false);
   useEffect(() => { if (!showCart && !showCheckout) setCheckoutFromLink(false); }, [showCart, showCheckout]);
   useBackToClose(showCart && !checkoutFromLink, () => setShowCart(false));
-  // Like its ✕: not while the order is being placed.
-  useBackToClose(showCheckout && !checkoutFromLink, () => { if (isSubmitting) return false; setShowCheckout(false); });
+  // Like its ✕: not while the order is being placed. One from Explore takes a Back step for
+  // that time too (from the Place order tap), so Back can't leave the page mid-order.
+  useBackToClose(showCheckout && (!checkoutFromLink || isSubmitting), () => { if (isSubmitting) return false; setShowCheckout(false); });
   useBackToClose(showOrderHistory, () => setShowOrderHistory(false));
   useBackToClose(orderSuccess, () => { setOrderSuccess(false); setLastCart([]); setLastCartTotal(0); });
   useBackToClose(showLimitReachedModal, () => setShowLimitReachedModal(false));
