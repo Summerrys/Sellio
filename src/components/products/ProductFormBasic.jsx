@@ -3,10 +3,9 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PackagePlus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import TagInput from './TagInput';
+import CategoryPicker from './CategoryPicker';
 
 export default function ProductFormBasic({ 
   formData, 
@@ -21,10 +20,13 @@ export default function ProductFormBasic({
   trackInventory,
   onTrackInventoryChange,
   listing = false, // a home seller's listing: listing words
+  tagDraftRef = null, // a tag still being typed (ProductFormDialog adds it on Save)
+  // The category: an existing one (formData.category_id) or a new name, saved with the listing.
+  newCategory = '',
+  onCategoryPick = (id) => onChange({ category_id: id }),
+  onCategoryNew = () => {},
+  canCreateCategory = false,
 }) {
-
-  const navigate = useNavigate();
-
   return (
     <div className="space-y-4">
       {/* Featured toggle */}
@@ -52,7 +54,16 @@ export default function ProductFormBasic({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <CategoryPicker
+        categories={categories}
+        value={formData.category_id || ''}
+        newName={newCategory}
+        onPick={onCategoryPick}
+        onNew={onCategoryNew}
+        canCreate={canCreateCategory}
+        listingName={formData.name || ''}
+        error={errors?.category || null}
+        skuColumn={
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Label className="text-sm font-medium text-slate-700">SKU</Label>
@@ -90,37 +101,8 @@ export default function ProductFormBasic({
             )}
           </div>
         </div>
-
-        <div>
-          <Label className="text-sm font-medium text-slate-700 mb-1 block">Category</Label>
-          <Select
-            key={formData.category_id || 'no-cat'}
-            value={formData.category_id || ''}
-            onValueChange={(v) => onChange({ category_id: v })}
-          >
-            <SelectTrigger className="w-full h-10">
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>
-                  {cat.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-[11px] text-slate-400 mt-1">
-            Can't find your category?{' '}
-            <span
-              className="cursor-pointer underline"
-              style={{ color: 'rgb(var(--color-primary))' }}
-              onClick={() => navigate(createPageUrl('Categories'))}
-            >
-              Manage categories
-            </span>
-          </p>
-        </div>
-      </div>
+        }
+      />
 
       {/* Track Inventory toggle */}
       <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
@@ -145,15 +127,10 @@ export default function ProductFormBasic({
       </div>
 
       <div>
-        <Label>Tags</Label>
-        <Input
-          value={formData.tags?.join(', ') || ''}
-          onChange={(e) => onChange({ 
-            tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) 
-          })}
-          placeholder="e.g., popular, vegan, bestseller (comma-separated)"
-          className="mt-1.5"
-        />
+        <Label htmlFor="product-tags">Tags</Label>
+        <div className="mt-1.5">
+          <TagInput id="product-tags" value={formData.tags} onChange={(tags) => onChange({ tags })} draftRef={tagDraftRef} />
+        </div>
       </div>
     </div>
   );
