@@ -472,6 +472,8 @@ export default function StorefrontView({
   // A home seller's public page: the item screen gets Like, Chat, Add to cart and Buy now
   // ({ onBuyNow, onLike, onChat } from Storefront.jsx). Null elsewhere: one Add button.
   buyerBar = null,
+  // A line at the top of the menu (Storefront.jsx: "This is your shop…" for its owner).
+  notice = null,
 }) {
   const { t } = useLanguage();
   const tenant = tenantProp;
@@ -870,6 +872,8 @@ export default function StorefrontView({
         position: 'relative',
         zIndex: 2,
       }}>
+
+        {notice && <div style={{ padding: '14px 16px 2px' }}>{notice}</div>}
 
         {productLayout === 'split' ? (
           <>
