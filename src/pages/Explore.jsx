@@ -6,6 +6,7 @@ import { useAppUser } from '@/lib/AppUserContext';
 import { isNativeApp } from '@/lib/nativeApp';
 import ExploreTabBar, { markExploreHome } from '@/components/explore/ExploreTabBar';
 import ShopBell from '@/components/explore/ShopBell';
+import CartLink from '@/components/explore/CartButton';
 import { useRatingSummaries } from '@/lib/ratings';
 import { RatingPill } from '@/components/ratings/RatingParts';
 import { useSell } from '@/lib/sell';
@@ -319,8 +320,10 @@ function ExploreHeader({ query, onQuery, kind, onKind, signedIn, hasShop }) {
                 )}
               </div>
             </div>
-          <div className="max-w-6xl mx-auto px-3 sm:px-4 pb-2">
-            <label className="relative block">
+          {/* The cart sits beside the search (the row above has no room for it on phones);
+              its 44px tap area overhangs the row's padding, so the row keeps its height. */}
+          <div className="max-w-6xl mx-auto px-3 sm:px-4 pb-2 flex items-center gap-1">
+            <label className="relative block flex-1 min-w-0">
               <span className="sr-only">Search Sellio Explore</span>
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
@@ -360,6 +363,7 @@ function ExploreHeader({ query, onQuery, kind, onKind, signedIn, hasShop }) {
                 {kind !== 'all' && <span className="absolute top-1 right-1 w-[7px] h-[7px] rounded-full" style={{ background: 'rgb(var(--color-primary, 37 99 235))' }} />}
               </button>
             </label>
+            <CartLink className="flex-shrink-0 -my-[3px] -mr-1" />
           </div>
         </div>
         <div
