@@ -5,7 +5,8 @@ const RETURN_TTL_MS = 30 * 60 * 1000;
 const DEFAULT_LANDINGS = ['/explore', '/Dashboard', '/Account', '/Onboarding', '/Join'];
 
 // A store page sends a signed-out buyer to sign in (checkout in the Android app);
-// so do a listing's Chat and Like buttons, Explore's tabs and My likes.
+// so do a listing's Chat and Like buttons, Explore's tabs and hearts, My likes and
+// My purchases (an order's page, and rating it).
 export function rememberReturnPath(path, storage = window.localStorage, now = Date.now()) {
   try { storage.setItem(RETURN_KEY, JSON.stringify({ path, at: now })); } catch { /* storage unavailable */ }
 }
@@ -16,7 +17,7 @@ export function takeReturnPath(storage = window.localStorage, now = Date.now()) 
     const saved = JSON.parse(storage.getItem(RETURN_KEY) || 'null');
     storage.removeItem(RETURN_KEY);
     if (!saved || typeof saved.path !== 'string' || !(now - saved.at < RETURN_TTL_MS)) return null;
-    return /^\/(store\/[^/?#]+|order\/[^/?#]+\/[^/?#]+|listing\/[^/?#]+|explore(\/(listings|me|likes|chats(\/[^/?#]+)?))?)(\?[^#]*)?$/.test(saved.path) ? saved.path : null;
+    return /^\/(store\/[^/?#]+|order\/[^/?#]+\/[^/?#]+|listing\/[^/?#]+|explore(\/(listings|me|likes|purchases(\/[^/?#]+)?|chats(\/[^/?#]+)?))?)(\?[^#]*)?$/.test(saved.path) ? saved.path : null;
   } catch { return null; }
 }
 
