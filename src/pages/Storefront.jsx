@@ -96,9 +96,13 @@ function StorefrontInner() {
   const [shopSelling, setShopSelling] = useState(null);
   const [lastOrder, setLastOrder] = useState(null);
 
-  const CART_KEY = `sf_cart_${tenantSlug}`;
+  // This phone's cart for the shop: "sf_cart_<shop>", the buyer's own, which Explore's Cart
+  // also shows (and checks out here). A table's order, staff taking an order and the owner's
+  // preview each keep a cart of their own, so none of them mixes with it.
+  const cartScope = isPreview ? 'preview' : isStaffMode ? 'staff' : tableId ? 'table' : null;
+  const CART_KEY = cartScope ? `sf_${cartScope}_cart_${tenantSlug}${tableId ? `_${tableId}` : ''}` : `sf_cart_${tenantSlug}`;
   const [cart, setCart] = useState(() => {
-    try { const s = localStorage.getItem(`sf_cart_${tenantSlug}`); return s ? JSON.parse(s) : []; } catch { return []; }
+    try { const s = localStorage.getItem(CART_KEY); return s ? JSON.parse(s) : []; } catch { return []; }
   });
   const [showCart, setShowCart] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
@@ -124,9 +128,15 @@ function StorefrontInner() {
   const [promptOrder, setPromptOrder] = useState(null);
   // Phone/browser Back closes these screens instead of leaving the menu
   // (customers arrive straight from their camera's QR scanner).
-  useBackToClose(showCart, () => setShowCart(false));
+  // A checkout (or cart) that opened from Explore's Buy now / Checkout is where that tap
+  // landed, so it adds no Back step of its own: Back returns to the listing or the cart,
+  // like an item that opened from a link (it opens without a tap here, and Android's app
+  // can skip a Back step added without one). Its ✕ still closes it onto the menu.
+  const [checkoutFromLink, setCheckoutFromLink] = useState(false);
+  useEffect(() => { if (!showCart && !showCheckout) setCheckoutFromLink(false); }, [showCart, showCheckout]);
+  useBackToClose(showCart && !checkoutFromLink, () => setShowCart(false));
   // Like its ✕: not while the order is being placed.
-  useBackToClose(showCheckout, () => { if (isSubmitting) return false; setShowCheckout(false); });
+  useBackToClose(showCheckout && !checkoutFromLink, () => { if (isSubmitting) return false; setShowCheckout(false); });
   useBackToClose(showOrderHistory, () => setShowOrderHistory(false));
   useBackToClose(orderSuccess, () => { setOrderSuccess(false); setLastCart([]); setLastCartTotal(0); });
   useBackToClose(showLimitReachedModal, () => setShowLimitReachedModal(false));
@@ -134,7 +144,7 @@ function StorefrontInner() {
   // In the Android app, buying from a store page needs a Sellio sign-in. Table QR
   // orders, staff taking orders and previews stay as they are; the cart is kept and
   // signing in comes back here.
-  const startCheckout = async () => {
+  const beginCheckout = async (fromLink) => {
     if (!isDineIn && !isStaffMode && !isPreview && isNativeApp()) {
       try {
         const supabase = await getSupabase();
@@ -148,9 +158,11 @@ function StorefrontInner() {
         }
       } catch { /* session unknown: let them check out */ }
     }
+    setCheckoutFromLink(fromLink);
     setShowCart(false);
     setShowCheckout(true);
   };
+  const startCheckout = () => beginCheckout(false);
 
   // Back from signing in: reopen the cart.
   useEffect(() => {
@@ -262,6 +274,22 @@ function StorefrontInner() {
     }
     loadData();
   }, [tenantSlug, tableId]);
+
+  // From Explore (Buy now on a listing, or Checkout in the cart): the item is already in
+  // this shop's cart, so go straight to checkout once the shop has loaded (with the app's
+  // sign-in step, as from the cart). While the shop is closed, its cart shows that instead.
+  useEffect(() => {
+    if (loading || !tenant) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('buy') !== '1') return;
+    params.delete('buy');
+    const query = params.toString();
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+    if (!cart.length) return;
+    if (isStoreOpen) { beginCheckout(true); return; }
+    setCheckoutFromLink(true);
+    setShowCart(true);
+  }, [loading, tenant]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep every open public storefront aligned with Products and with the
   // Design Store preview. The shared loader guarantees identical fields,
