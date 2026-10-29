@@ -13,17 +13,19 @@
 import { useState, useEffect, useRef, useCallback, useMemo, forwardRef } from 'react';
 import { useBackToClose } from '@/lib/useBackToClose';
 import {
-  combineChoices, isMultiChoice, isPicked, isRequiredChoice, missingChoices, normaliseVariants, pickOption,
+  chooseLabel, combineChoices, isMultiChoice, isPicked, isRequiredChoice, missingChoices, normaliseVariants, pickOption,
 } from '@/lib/itemOptions';
 import {
   Coffee, UtensilsCrossed, IceCream, Salad, Sandwich,
   Drumstick, Tag, Gift, LayoutGrid, ShoppingCart, Clock,
   Cpu, Glasses, Shirt, Trophy, BookOpen, Home, PawPrint,
-  Gem, Wrench, Scissors, Sparkles, Search, X
+  Gem, Wrench, Scissors, Sparkles, Search, X, Heart, MessageCircle
 } from 'lucide-react';
 import LanguageToggle from './LanguageToggle';
 import { RatingPill } from '@/components/ratings/RatingParts';
 import { useLanguage, useTranslatedTexts } from '@/lib/LanguageContext';
+import { useKnownLike } from '@/lib/likes';
+import { mapLinkProps } from '@/lib/nativeApp';
 import { extractBannerEdgeAssets, isValidBannerEdgeColor } from '@/lib/bannerEdgeColors';
 import { getStorefrontFontStack, getStorefrontTypographyScale } from '@/lib/storefrontTypography';
 import { storefrontLayout } from '@/lib/storefrontDefaults';
@@ -129,9 +131,10 @@ const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryC
   const address = (tenant?.address || '').trim();
   const truncatedAddress = address.length > 25 ? address.slice(0, 25) + '…' : address;
   // The line opens Maps: the street address when there is one, else the area the shop
-  // shows (a home seller's, which never includes their collection address).
+  // shows (a home seller's, which never includes their collection address). In the
+  // Android app that's the phone's Maps app (see nativeApp.js).
   const mapPlace = address || (branchName ? [branchName, tenant?.country].filter(Boolean).join(', ') : '');
-  const mapHref = mapPlace ? `https://maps.google.com/?q=${encodeURIComponent(mapPlace)}` : undefined;
+  const mapLink = mapPlace ? mapLinkProps(mapPlace) : {};
 
   let subLine = '';
   if (branchName && truncatedAddress) {
@@ -199,10 +202,8 @@ const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryC
           )}
           {subLine && (
             <a
-              href={mapHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={mapHref ? `${subLine.replace('📍 ', '')}, open in Maps` : undefined}
+              {...mapLink}
+              aria-label={mapPlace ? `${subLine.replace('📍 ', '')}, open in Maps` : undefined}
               onClick={e => e.stopPropagation()}
               style={{ display: 'block', color: '#6b7280', fontSize: sfType(11), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2, textDecoration: 'none', pointerEvents: 'auto' }}
             >
@@ -467,6 +468,9 @@ export default function StorefrontView({
   onRatingClick,
   // A home shop (no saved layout yet) shows a Grid; a business, Split.
   homeShop = false,
+  // A home seller's public page: the item screen gets Like, Chat, Add to cart and Buy now
+  // ({ onBuyNow, onLike, onChat } from Storefront.jsx). Null elsewhere: one Add button.
+  buyerBar = null,
 }) {
   const { t } = useLanguage();
   const tenant = tenantProp;
@@ -1109,6 +1113,7 @@ export default function StorefrontView({
           onAddToCart={handleAddToCart}
           onClose={closeProductModal}
           contentMap={contentMap}
+          buyerBar={buyerBar}
         />
       )}
     </div>
