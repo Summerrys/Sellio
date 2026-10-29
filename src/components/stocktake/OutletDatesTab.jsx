@@ -8,6 +8,7 @@ import { MessageCircle, Users, AlertCircle, Check, X, Loader2 } from 'lucide-rea
 import SupplierDrawer from './SupplierDrawer';
 import SupplierPickerModal from './SupplierPickerModal';
 import { format, parseISO } from 'date-fns';
+import { openOutside } from '@/lib/nativeApp';
 
 export default function OutletDatesTab() {
   const { tenantId, tenant } = useTenant();
@@ -93,7 +94,7 @@ export default function OutletDatesTab() {
     ].join('\n');
     const phone = supplier?.phone?.replace(/\D/g, '') || '';
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
+    openOutside(url);
   };
 
   const onWhatsAppClick = () => {
