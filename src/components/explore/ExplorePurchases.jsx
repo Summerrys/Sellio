@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, ChevronRight, Loader2, MessageCircle, RefreshCw, ShoppingBag, Store, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, Loader2, MapPin, MessageCircle, RefreshCw, ShoppingBag, Store, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppUser } from '@/lib/AppUserContext';
 import { rememberReturnPath } from '@/lib/authNavigation';
@@ -8,6 +8,7 @@ import { exploreItem } from '@/lib/chat';
 import { buyerStatusLabel, formatShopDate, shopMethod } from '@/lib/shopSelling';
 import { myOrderRatings, removeMyComment } from '@/lib/ratings';
 import { cancelMyOrder, claimDeviceOrders, fetchPurchase, fetchPurchases } from '@/lib/purchases';
+import { mapLinkProps } from '@/lib/nativeApp';
 import { OrderRateRow, RateOrderSheet } from '@/components/ratings/RatingParts';
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
 import { BRAND_COLOR, BRAND_GRADIENT, ShopAvatar, chatUrl, formatPrice, goBack, newChatUrl, storeUrl } from './shared';
@@ -331,7 +332,16 @@ function HowYouGetIt({ order }) {
         {f.date && <p><span className="text-slate-500">For</span> {formatShopDate(f.date)}</p>}
         {method === 'delivery' && f.address && <p>{f.address}</p>}
         {method === 'collection' && (f.collection_address
-          ? <p data-testid="purchase-collection-address"><span className="text-slate-500">Collect at</span> {f.collection_address}</p>
+          ? (
+            <p data-testid="purchase-collection-address">
+              <span className="text-slate-500">Collect at</span>{' '}
+              {/* Opens the address in Maps (the phone's Maps app in Sellio's Android app). */}
+              <a {...mapLinkProps(f.collection_address)} aria-label={`${f.collection_address}, open in Maps`} data-testid="purchase-collection-map" className="font-semibold text-blue-600 hover:text-blue-700">
+                <MapPin className="inline-block w-3.5 h-3.5 -mt-0.5 mr-0.5" aria-hidden="true" />
+                {f.collection_address}
+              </a>
+            </p>
+          )
           : <p>{f.area ? `${f.area}. ` : ''}<span className="text-slate-500">The seller shares the exact address once they accept your order.</span></p>)}
         {f.seller_notes && <p className="text-slate-500">{f.seller_notes}</p>}
       </div>
