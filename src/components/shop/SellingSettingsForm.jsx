@@ -5,10 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Loader2, Store, Truck, CalendarDays, ExternalLink } from 'lucide-react';
+import { Loader2, Store, Truck, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
 import { emptySellingForm, sellingFormFrom, sellingPayload } from '@/lib/shopSelling';
-import { mapLinkProps } from '@/lib/nativeApp';
+import AddressMap from '@/components/ui-custom/AddressMap';
 
 // "How you sell" for a free shop: self-collection, delivery (postage & courier
 // included or an extra charge), pre-orders. Used in the setup steps and in
@@ -39,36 +39,6 @@ function Field({ label, hint, children, htmlFor }) {
       <Label htmlFor={htmlFor} className="text-xs font-medium text-slate-600">{label}</Label>
       {children}
       {hint && <p className="text-[11px] text-slate-400">{hint}</p>}
-    </div>
-  );
-}
-
-// The collection address on Google's map, so the seller can check the pin. It follows the
-// address as it's typed (a moment after typing stops), once it's long enough to find; the
-// shop's country is added when the address doesn't say it.
-function AddressMap({ address, country }) {
-  const [query, setQuery] = useState('');
-  useEffect(() => {
-    const text = String(address || '').trim();
-    const timer = setTimeout(() => setQuery(text.length >= 6 ? text : ''), 700);
-    return () => clearTimeout(timer);
-  }, [address]);
-  if (!query) return null;
-  const place = country && !query.toLowerCase().includes(String(country).toLowerCase()) ? `${query}, ${country}` : query;
-  return (
-    <div className="space-y-1.5" data-testid="collection-map">
-      <iframe
-        title="Map of your collection address"
-        src={`https://maps.google.com/maps?q=${encodeURIComponent(place)}&z=16&output=embed`}
-        loading="lazy"
-        className="block w-full h-44 rounded-lg border border-slate-200 bg-slate-100"
-      />
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-[11px] text-slate-500 leading-snug">Check the pin is your collection point. Wrong spot? Add the postal code.</p>
-        <a {...mapLinkProps(place)} className="text-xs font-semibold text-blue-600 hover:text-blue-700 whitespace-nowrap inline-flex items-center gap-1" data-testid="collection-map-open">
-          Open in Maps <ExternalLink className="w-3 h-3" aria-hidden="true" />
-        </a>
-      </div>
     </div>
   );
 }
@@ -137,7 +107,14 @@ export default function SellingSettingsForm({ tenantId, currencySymbol = '$', co
         <Field label="Collection address" hint="Buyers see this only after you accept their order." htmlFor="sell-address">
           <Textarea id="sell-address" value={c.address} maxLength={300} rows={2} onChange={e => set('collection', 'address', e.target.value)} placeholder="Blk 201 Tampines St 21, #01-123, Singapore 520201" />
         </Field>
-        <AddressMap address={c.address} country={country} />
+        {/* So the seller can check the pin (the shop's country is added when missing). */}
+        <AddressMap
+          address={c.address}
+          country={country}
+          title="Map of your collection address"
+          hint="Check the pin is your collection point. Wrong spot? Add the postal code."
+          testId="collection-map"
+        />
         <Field label="Collection notes (optional)" htmlFor="sell-cnotes">
           <Input id="sell-cnotes" value={c.notes} maxLength={200} onChange={e => set('collection', 'notes', e.target.value)} placeholder="Weekdays after 6pm, at the lift lobby" />
         </Field>
