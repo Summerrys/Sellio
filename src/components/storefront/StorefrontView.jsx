@@ -25,7 +25,7 @@ import LanguageToggle from './LanguageToggle';
 import { RatingPill } from '@/components/ratings/RatingParts';
 import { useLanguage, useTranslatedTexts } from '@/lib/LanguageContext';
 import { useKnownLike } from '@/lib/likes';
-import { mapLinkProps } from '@/lib/nativeApp';
+import { mapLinkProps, placeWithCountry } from '@/lib/nativeApp';
 import { extractBannerEdgeAssets, isValidBannerEdgeColor } from '@/lib/bannerEdgeColors';
 import { getStorefrontFontStack, getStorefrontTypographyScale } from '@/lib/storefrontTypography';
 import { storefrontLayout } from '@/lib/storefrontDefaults';
@@ -131,9 +131,10 @@ const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryC
   const address = (tenant?.address || '').trim();
   const truncatedAddress = address.length > 25 ? address.slice(0, 25) + '…' : address;
   // The line opens Maps: the street address when there is one, else the area the shop
-  // shows (a home seller's, which never includes their collection address). In the
-  // Android app that's the phone's Maps app (see nativeApp.js).
-  const mapPlace = address || (branchName ? [branchName, tenant?.country].filter(Boolean).join(', ') : '');
+  // shows (a home seller's, which never includes their collection address), with the
+  // shop's country when it isn't named: the place Settings › Business shows on its map.
+  // In the Android app that's the phone's Maps app (see nativeApp.js).
+  const mapPlace = placeWithCountry(address || branchName, tenant?.country);
   const mapLink = mapPlace ? mapLinkProps(mapPlace) : {};
 
   let subLine = '';
