@@ -1,6 +1,7 @@
 import React from 'react';
 import { Phone, MessageCircle, Truck, Store, CalendarDays, MapPin } from 'lucide-react';
 import { formatShopDate, shopMethod, whatsappLink } from '@/lib/shopSelling';
+import { outsideLinkProps } from '@/lib/nativeApp';
 
 // A free-shop order's details on the owner's order card: how the buyer gets it,
 // the date, the buyer and how to reach them, the address and the delivery charge.
@@ -37,7 +38,7 @@ export default function ShopOrderInfo({ order, currency, shopName }) {
               <a href={`tel:${phone}`} onClick={stop} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 bg-white text-slate-700" aria-label="Call the buyer">
                 <Phone className="w-3 h-3" /> Call
               </a>
-              <a href={whatsappLink(phone, waText)} onClick={stop} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-green-200 bg-green-50 text-green-700" aria-label="WhatsApp the buyer">
+              <a {...outsideLinkProps(whatsappLink(phone, waText))} onClick={stop} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-green-200 bg-green-50 text-green-700" aria-label="WhatsApp the buyer">
                 <MessageCircle className="w-3 h-3" /> WhatsApp
               </a>
             </>
