@@ -1,15 +1,21 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Share2, MessageCircle, ShoppingBag, Store, MapPin, Truck, CalendarClock,
+  ArrowLeft, Share2, MessageCircle, ShoppingCart, Heart, Store, MapPin, Truck, CalendarClock,
   ChevronLeft, ChevronRight, Pencil, X, EyeOff,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { exploreItem, getChatUser } from '@/lib/chat';
 import { rememberReturnPath } from '@/lib/authNavigation';
-import { useBackToClose } from '@/lib/useBackToClose';
+import { handOverBackStep, useBackToClose } from '@/lib/useBackToClose';
 import { useRatingSummaries } from '@/lib/ratings';
+import { likeErrorMessage, likesText, needsSignIn, setListingLike } from '@/lib/likes';
+import { addToShopCart, ensureInShopCart, useCartCount } from '@/lib/shopCart';
+import { normaliseVariants } from '@/lib/itemOptions';
 import { RatingPill, RatingSheet } from '@/components/ratings/RatingParts';
+import ShareSheet from './ShareSheet';
+import ItemOptionsSheet from './ItemOptionsSheet';
+import { CartBadge, cartLabel } from './CartButton';
 import {
   BRAND_COLOR, BRAND_GRADIENT, BOTTOM_INSET, PUBLIC_ORIGIN, hideScrollbar, formatPrice, timeAgo,
   ShopAvatar, ItemImage, storeUrl, listingUrl, chatUrl, newChatUrl, goBack,
@@ -18,6 +24,11 @@ import {
 // One Explore listing. The photo fills the screen from the very top (behind the
 // phone's status bar); scrolling down turns the floating buttons into a solid header
 // that sits below the status bar.
+// Buyers: Like (the heart; its count shows to everyone), Chat, Add to cart and Buy now.
+// The cart is that shop's own cart (shopCart.js); Buy now puts the item in it and opens
+// the shop's checkout. Items with options (sizes, add-ons) are chosen in a sheet first.
+
+const LIKE_RED = '#e11d48';
 
 const clamp = (n) => Math.min(1, Math.max(0, n));
 
@@ -67,7 +78,7 @@ function RoundButton({ label, onClick, solid, children }) {
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="w-10 h-10 rounded-full flex items-center justify-center text-slate-900 active:scale-95 transition-transform"
+      className="relative w-10 h-10 rounded-full flex items-center justify-center text-slate-900 active:scale-95 transition-transform"
       style={{
         background: `rgba(255,255,255,${0.92 * solid})`,
         boxShadow: solid > 0.05 ? `0 1px 6px rgba(15,23,42,${0.18 * solid})` : 'none',
@@ -76,6 +87,48 @@ function RoundButton({ label, onClick, solid, children }) {
       {children}
     </button>
   );
+}
+
+function CartPlusIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <circle cx="8" cy="21" r="1" />
+      <circle cx="19" cy="21" r="1" />
+      <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+      <path d="M13.6 8.8v5" />
+      <path d="M11.1 11.3h5" />
+    </svg>
+  );
+}
+
+// Like and Chat in the bottom bar: an icon with its word under it.
+function BarIconButton({ label, pressed, onClick, caption, captionColor = '#334155', children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={pressed}
+      className="w-[52px] h-[52px] flex-shrink-0 rounded-xl flex flex-col items-center justify-center gap-[3px] text-slate-700 active:scale-95 transition-transform"
+    >
+      {children}
+      <span className="text-[11px] font-semibold leading-none" style={{ color: captionColor }}>{caption}</span>
+    </button>
+  );
+}
+
+// "Added to cart · View cart" and the like, just above the bottom bar.
+function useNotice() {
+  const [notice, setNotice] = useState(null);
+  const timer = useRef(0);
+  const show = useCallback((text, action = null) => {
+    clearTimeout(timer.current);
+    setNotice({ text, action, at: Date.now() });
+    timer.current = setTimeout(() => setNotice(null), action ? 4000 : 2500);
+  }, []);
+  const hide = useCallback(() => { clearTimeout(timer.current); setNotice(null); }, []);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  return [notice, show, hide];
 }
 
 function PhotoViewer({ images, start, name, onClose }) {
@@ -181,8 +234,14 @@ function Skeleton() {
   );
 }
 
+// Each listing starts afresh (its likes, sheets and notices), also when one listing opens
+// another from "More from …": nothing still on its way for the last one can land here.
 export default function ListingPage() {
   const { productId } = useParams();
+  return <Listing key={productId} productId={productId} />;
+}
+
+function Listing({ productId }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [state, setState] = useState({ status: 'loading', data: null });
@@ -257,32 +316,73 @@ export default function ListingPage() {
     navigate(viewer?.conversation_id ? chatUrl(viewer.conversation_id) : newChatUrl(item.id));
   }, [item, viewer, navigate]);
 
-  // Back from signing in to chat: go straight to the chat.
+  // ── Like ──
+  const [notice, showNotice, hideNotice] = useNotice();
+  const [like, setLike] = useState({ liked: false, likes: 0 });
+  const likeRef = useRef(like);
+  likeRef.current = like;
+  const likeBusy = useRef(false);
+  useEffect(() => {
+    if (state.status !== 'ready') return;
+    const loaded = { liked: !!state.data.viewer?.liked, likes: Number(state.data.product?.likes) || 0 };
+    likeRef.current = loaded; // a like on coming back from signing in (below) starts from this, in this same commit
+    setLike(loaded);
+  }, [state]);
+
+  const signInToLike = useCallback(() => {
+    if (!item) return;
+    rememberReturnPath(`${listingUrl(item.id)}?like=1`);
+    toast.info('Sign in to like listings.');
+    navigate('/Auth');
+  }, [item, navigate]);
+
+  const changeLike = useCallback(async (liked) => {
+    if (!item || likeBusy.current) return;
+    likeBusy.current = true;
+    const before = likeRef.current;
+    if (before.liked !== liked) setLike({ liked, likes: Math.max(0, before.likes + (liked ? 1 : -1)) });
+    try {
+      const result = await setListingLike(item.id, liked);
+      setLike({ liked: !!result?.liked, likes: Number(result?.likes) || 0 });
+      if (result?.liked) showNotice('Liked. Find it in Me › My likes.', { label: 'See all', onClick: () => navigate('/explore/likes') });
+      else showNotice('Removed from My likes');
+    } catch (err) {
+      setLike(before);
+      if (needsSignIn(err)) signInToLike();
+      else toast.error(likeErrorMessage(err));
+    } finally {
+      likeBusy.current = false;
+    }
+  }, [item, navigate, showNotice, signInToLike]);
+
+  const toggleLike = () => {
+    if (!viewer) { signInToLike(); return; }
+    changeLike(!like.liked);
+  };
+
+  // Back from signing in: go straight to the chat, or like the listing.
   useEffect(() => {
     if (state.status !== 'ready') return;
     const params = new URLSearchParams(location.search);
-    if (params.get('chat') !== '1') return;
+    const chat = params.get('chat') === '1';
+    const liking = params.get('like') === '1';
+    if (!chat && !liking) return;
     params.delete('chat');
+    params.delete('like');
     const query = params.toString();
     navigate({ search: query ? `?${query}` : '' }, { replace: true });
-    if (!viewer?.is_own) openChat();
+    if (viewer?.is_own) return;
+    if (chat) openChat();
+    else if (viewer && !viewer.liked) changeLike(true);
   }, [state.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const share = async () => {
-    if (!item) return;
-    const url = `${PUBLIC_ORIGIN}${listingUrl(item.id)}`;
-    try {
-      if (navigator.share) { await navigator.share({ title: item.name, text: `${item.name} on Sellio`, url }); return; }
-    } catch (err) {
-      if (err?.name === 'AbortError') return;
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      toast.success('Link copied');
-    } catch {
-      toast.info(url);
-    }
-  };
+  // ── Share, cart and Buy now ──
+  const [shareOpen, setShareOpen] = useState(false);
+  const [optionsMode, setOptionsMode] = useState(null); // 'cart' | 'buy' while choosing options
+  const cartItems = useCartCount();
+  const optionGroups = useMemo(() => normaliseVariants(item?.variants, item?.price), [item]);
+  const closeShare = useCallback(() => setShareOpen(false), []);
+  const closeOptions = useCallback(() => setOptionsMode(null), []);
 
   const back = () => goBack(navigate);
 
@@ -338,6 +438,42 @@ export default function ListingPage() {
   const more = state.data.more || [];
   const buyHref = `${storeUrl(shop.slug)}?item=${encodeURIComponent(item.id)}`;
   const itemCount = Number(shop.item_count) || 0;
+  const shareUrl = `${PUBLIC_ORIGIN}${listingUrl(item.id)}`;
+  const priceText = formatPrice(item.price, currency);
+
+  // The line the shop page itself would add for this item, and the shop for the Cart page.
+  const cartProduct = { id: item.id, name: item.name, price: item.price, image_url: images[0] || null };
+  const cartShop = { name: shop.name, logo_url: shop.logo_url, currency };
+
+  const putInCart = (variant, notes, quantity) => {
+    if (addToShopCart(shop.slug, cartProduct, variant, notes, quantity, cartShop)) {
+      showNotice('Added to cart', { label: 'View cart', onClick: () => navigate('/explore/cart') });
+    } else {
+      // This phone won't keep it (storage blocked or full): order on the shop's page instead.
+      toast.error('Couldn’t add it to the cart on this phone.', { action: { label: 'Open shop', onClick: () => navigate(buyHref) } });
+    }
+  };
+  // Straight to the shop's checkout (its page opens it, or its cart while it's closed).
+  const checkOut = (variant, notes, quantity, fromSheet) => {
+    const kept = ensureInShopCart(shop.slug, cartProduct, variant, notes, quantity, cartShop);
+    const replace = fromSheet ? handOverBackStep() : false;
+    navigate(kept ? `${storeUrl(shop.slug)}?buy=1` : buyHref, { replace });
+  };
+  const addToCart = () => {
+    hideNotice();
+    if (optionGroups.length) setOptionsMode('cart');
+    else putInCart(null, null, 1);
+  };
+  const buyNow = () => {
+    hideNotice();
+    if (optionGroups.length) setOptionsMode('buy');
+    else checkOut(null, null, 1, false);
+  };
+  const confirmOptions = ({ variant, notes, quantity }) => {
+    if (optionsMode === 'buy') { checkOut(variant, notes, quantity, true); return; }
+    setOptionsMode(null);
+    putInCart(variant, notes, quantity);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -355,7 +491,11 @@ export default function ListingPage() {
           <p className="flex-1 min-w-0 truncate text-[15px] font-semibold text-slate-900" style={{ opacity: progress }} aria-hidden={progress < 0.5}>
             {item.name}
           </p>
-          <RoundButton label="Share" onClick={share} solid={1 - progress}><Share2 className="w-5 h-5" /></RoundButton>
+          <RoundButton label="Share" onClick={() => setShareOpen(true)} solid={1 - progress}><Share2 className="w-5 h-5" /></RoundButton>
+          <RoundButton label={cartLabel(cartItems)} onClick={() => navigate('/explore/cart')} solid={1 - progress}>
+            <ShoppingCart className="w-5 h-5" />
+            <CartBadge count={cartItems} />
+          </RoundButton>
         </div>
       </header>
 
@@ -382,10 +522,28 @@ export default function ListingPage() {
             )}
           </div>
           <h1 className="mt-1.5 text-lg font-semibold text-slate-900 leading-snug break-words">{item.name}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
             {item.sold_out && <span className="font-semibold text-red-700 bg-red-50 rounded-full px-2.5 py-1">Sold out</span>}
+            {like.likes > 0 && (
+              <span className="inline-flex items-center gap-1 font-semibold text-slate-700" data-testid="like-count">
+                <Heart className="w-3.5 h-3.5" fill={LIKE_RED} color={LIKE_RED} aria-hidden="true" />
+                {likesText(like.likes)}
+              </span>
+            )}
             <span className="text-slate-500">{listedLabel(item.listed_at)}</span>
           </div>
+          {isOwn && (
+            <div className="mt-3 flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200" data-testid="seller-likes">
+              <span className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center flex-shrink-0">
+                <Heart className="w-4 h-4" fill={LIKE_RED} color={LIKE_RED} aria-hidden="true" />
+              </span>
+              <span className="text-[13px] text-slate-700 leading-snug">
+                {like.likes > 0
+                  ? <><b className="text-slate-900">{like.likes} {like.likes === 1 ? 'person' : 'people'}</b> liked this listing</>
+                  : 'No likes yet. Share it so more buyers see it.'}
+              </span>
+            </div>
+          )}
         </section>
 
         <div className="h-2 bg-slate-50" />
@@ -479,51 +637,107 @@ export default function ListingPage() {
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-40 bg-white border-t border-slate-200" style={{ paddingBottom: BOTTOM_INSET }}>
-        <div className="max-w-2xl mx-auto px-4 py-3 flex gap-3">
-          {isOwn ? (
-            <>
-              <Link
-                to={`/explore/listings?edit=${encodeURIComponent(item.id)}`}
-                className="flex-1 h-12 rounded-xl border-2 text-[15px] font-semibold inline-flex items-center justify-center gap-2"
-                style={{ borderColor: BRAND_COLOR, color: BRAND_COLOR }}
-              >
-                <Pencil className="w-4 h-4" /> Edit listing
-              </Link>
-              <Link
-                to={storeUrl(shop.slug)}
-                className="flex-1 h-12 rounded-xl text-white text-[15px] font-semibold inline-flex items-center justify-center gap-2"
-                style={{ background: BRAND_GRADIENT }}
-              >
-                <Store className="w-4 h-4" /> View in shop
-              </Link>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={openChat}
-                className="flex-1 h-12 rounded-xl border-2 bg-white text-[15px] font-semibold inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                style={{ borderColor: BRAND_COLOR, color: BRAND_COLOR }}
-              >
-                <MessageCircle className="w-5 h-5" /> Chat
-              </button>
-              {item.sold_out ? (
-                <span className="flex-1 h-12 rounded-xl bg-slate-100 text-slate-400 text-[15px] font-semibold inline-flex items-center justify-center">
-                  Sold out
-                </span>
-              ) : (
-                <Link
-                  to={buyHref}
-                  className="flex-1 h-12 rounded-xl text-white text-[15px] font-semibold inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+        {isOwn ? (
+          <div className="max-w-2xl mx-auto px-4 py-3 flex gap-3">
+            <Link
+              to={`/explore/listings?edit=${encodeURIComponent(item.id)}`}
+              className="flex-1 h-12 rounded-xl border-2 text-[15px] font-semibold inline-flex items-center justify-center gap-2"
+              style={{ borderColor: BRAND_COLOR, color: BRAND_COLOR }}
+            >
+              <Pencil className="w-4 h-4" /> Edit listing
+            </Link>
+            <Link
+              to={storeUrl(shop.slug)}
+              className="flex-1 h-12 rounded-xl text-white text-[15px] font-semibold inline-flex items-center justify-center gap-2"
+              style={{ background: BRAND_GRADIENT }}
+            >
+              <Store className="w-4 h-4" /> View in shop
+            </Link>
+          </div>
+        ) : (
+          <div className="max-w-2xl mx-auto px-3 py-2 flex items-center gap-1" data-testid="buyer-bar">
+            <BarIconButton
+              label={like.liked ? 'Unlike this listing' : 'Like this listing'}
+              pressed={like.liked}
+              onClick={toggleLike}
+              caption={like.liked ? 'Liked' : 'Like'}
+              captionColor={like.liked ? '#be123c' : '#334155'}
+            >
+              <Heart className="w-[23px] h-[23px]" fill={like.liked ? LIKE_RED : 'none'} color={like.liked ? LIKE_RED : '#334155'} aria-hidden="true" />
+            </BarIconButton>
+            <BarIconButton label="Chat with the seller" onClick={openChat} caption="Chat">
+              <MessageCircle className="w-[23px] h-[23px]" aria-hidden="true" />
+            </BarIconButton>
+            {item.sold_out ? (
+              <span className="ml-1 flex-1 h-12 rounded-[14px] bg-slate-100 text-slate-500 text-[15px] font-semibold inline-flex items-center justify-center">
+                Sold out
+              </span>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={addToCart}
+                  aria-label="Add to cart"
+                  className="ml-1 w-[60px] h-12 flex-shrink-0 rounded-[14px] flex items-center justify-center active:scale-95 transition-transform"
+                  style={{ background: 'rgb(var(--color-primary, 59 130 246) / 0.14)', color: BRAND_COLOR }}
+                >
+                  <CartPlusIcon className="w-6 h-6" style={{ width: 24, height: 24 }} />
+                </button>
+                <button
+                  type="button"
+                  onClick={buyNow}
+                  className="ml-1 flex-1 min-w-0 h-12 rounded-[14px] text-white flex flex-col items-center justify-center leading-tight active:scale-[0.98] transition-transform"
                   style={{ background: BRAND_GRADIENT }}
                 >
-                  <ShoppingBag className="w-5 h-5" /> Buy
-                </Link>
-              )}
-            </>
-          )}
-        </div>
+                  <span className="text-[15px] font-bold">Buy now</span>
+                  <span className="text-[11px] font-medium">{priceText}</span>
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Just above the bottom bar. */}
+      <div className="fixed inset-x-0 z-40 pointer-events-none" style={{ bottom: `calc(80px + ${BOTTOM_INSET})` }} role="status" aria-live="polite">
+        {notice && (
+          <div className="max-w-2xl mx-auto px-4">
+            <div className="pointer-events-auto rounded-xl bg-slate-900 text-white pl-3.5 pr-1.5 py-1.5 min-h-[44px] flex items-center gap-2 text-[13px] font-semibold leading-snug" style={{ boxShadow: '0 8px 24px rgba(15,23,42,0.28)' }}>
+              <span className="flex-1 py-1">{notice.text}</span>
+              {notice.action && (
+                <button
+                  type="button"
+                  onClick={() => { const { onClick } = notice.action; hideNotice(); onClick(); }}
+                  className="h-9 px-2.5 rounded-lg text-[13px] font-bold whitespace-nowrap hover:bg-white/10"
+                  style={{ color: '#93c5fd' }}
+                >
+                  {notice.action.label}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <ShareSheet
+        open={shareOpen}
+        onClose={closeShare}
+        url={shareUrl}
+        title={item.name}
+        priceText={priceText}
+        shopName={shop.name}
+        image={images[0]}
+        onCopied={(copied) => (copied ? showNotice('Link copied') : toast.info(shareUrl))}
+      />
+      <ItemOptionsSheet
+        open={!!optionsMode}
+        mode={optionsMode}
+        item={item}
+        currency={currency}
+        image={images[0]}
+        onClose={closeOptions}
+        onConfirm={confirmOptions}
+      />
 
       {viewerAt != null && images.length > 0 && (
         <PhotoViewer images={images} start={viewerAt} name={item.name} onClose={() => setViewerAt(null)} />
