@@ -64,6 +64,27 @@ const applyCategory = async (suggestedCategoryName, tenantId, setFormData) => {
 };
 
 import ProductFormBasic from './ProductFormBasic';
+import { addTags } from './TagInput';
+import { cleanCategoryName, sameCategoryName } from './CategoryPicker';
+
+// A category typed in the form, saved with the listing: the shop's own (active) one by that
+// name if it has one, else a new one at the end of its menu (as the Categories page adds it).
+const saveNewCategory = async (supabase, tenantId, typedName) => {
+  const name = cleanCategoryName(typedName);
+  const { data: existing, error: readError } = await supabase
+    .from('categories').select('id, name, sort_order, is_active').eq('tenant_id', tenantId);
+  if (readError) throw new Error(readError.message);
+  const same = (existing || []).find((c) => c.is_active !== false && sameCategoryName(c.name, name));
+  if (same) return same.id;
+  const nextOrder = (existing || []).reduce((m, c) => Math.max(m, c.sort_order || 0), 0) + 1;
+  const { data, error } = await supabase
+    .from('categories')
+    .insert({ tenant_id: tenantId, name, slug: name.toLowerCase().replace(/\s+/g, '-'), is_active: true, sort_order: nextOrder })
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return data.id;
+};
 import PriceDisplay from './PriceDisplay';
 import ProductFormPricing from './ProductFormPricing';
 import ProductFormInventory from './ProductFormInventory';
@@ -196,12 +217,15 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     // product to look at it, but the form renders read-only and Save/Delete hide.
     const canEdit = product?.id ? hasPermission('products.edit') : hasPermission('products.create');
     const canDelete = hasPermission('products.delete');
+    const canCreateCategory = hasPermission('categories.create');
     const queryClient = useQueryClient();
     const navigate = useNavigate();
     const [formData, setFormData] = useState(EMPTY_FORM);
     const [categories, setCategories] = useState([]);
+    const [newCategory, setNewCategory] = useState(''); // typed in the form, saved with the listing
     const aiAssistantRef = useRef(null);
     const uploadedImagesRef = useRef(new Set());
+    const tagDraftRef = useRef(''); // a tag still being typed when Save is tapped
     const [saving, setSaving] = useState(false);
     const [savedSku, setSavedSku] = useState(null); // SKU returned after insert
     const [errors, setErrors] = useState({});
@@ -283,13 +307,18 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
       setSavedSku(null);
     }
     setErrors({});
+    tagDraftRef.current = '';
+    setNewCategory('');
   }, [open, product]);
+
+  // The shop's categories (the active ones, A to Z), when the form opens and after the AI adds one.
+  const loadCategories = () => getSupabase().then(supabase =>
+    supabase.from('categories').select('id, name').eq('tenant_id', tenantId).eq('is_active', true).order('name')
+  ).then(({ data }) => setCategories(data || [])).catch(() => {});
 
   useEffect(() => {
     if (!tenantId || !open) return;
-    getSupabase().then(supabase =>
-      supabase.from('categories').select('id, name').eq('tenant_id', tenantId).eq('is_active', true).order('name')
-    ).then(({ data }) => setCategories(data || [])).catch(() => {});
+    loadCategories();
   }, [tenantId, open]);
 
   useEffect(() => {
@@ -318,6 +347,11 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     const errs = {};
     if (!formData.name?.trim()) errs.name = tenant?.seller_type === 'individual' ? 'Listing name is required' : 'Product name is required';
     if (!formData.price && formData.price !== 0) errs.price = 'Price is required';
+    // A business's new product goes in a category (its menu is by category); a home seller's
+    // listing doesn't need one.
+    if (tenant?.seller_type !== 'individual' && !product?.id && !formData.category_id && !newCategory) {
+      errs.category = 'Choose or type a category';
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -325,17 +359,25 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
   const handleSave = async () => {
     if (!validate()) return;
     setSaving(true);
+    // The tags, with one still being typed (not yet a chip) added.
+    const tags = addTags(formData.tags, [tagDraftRef.current || '']);
     try {
       const supabase = await getSupabase();
+      // A category typed in the form is saved first, then the listing goes in it.
+      let categoryId = formData.category_id || '';
+      if (!categoryId && newCategory) {
+        categoryId = await saveNewCategory(supabase, tenantId, newCategory);
+        queryClient.invalidateQueries({ queryKey: ['categories'] });
+      }
 
       if (product?.id) {
         const payload = {
           name: formData.name,
           slug: toSlug(formData.name),
           description: formData.description,
-          category_id: formData.category_id || null,
+          category_id: categoryId || null,
           sku: formData.sku?.trim() ? formData.sku.trim().toUpperCase() : (product.sku || undefined),
-          tags: formData.tags,
+          tags,
           variants: formData.variants,
           image_url: formData.image_url || null,
           images: formData.images || [],
@@ -364,14 +406,15 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         const { sku, ...rest } = formData;
         const payload = {
           ...rest,
+          tags,
           slug: toSlug(formData.name),
           tenant_id: tenantId,
           price: parseFloat(formData.price) || 0,
           cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
           compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
-          // Free shops (step 15): a listing with no category is saved without one (an
-          // empty category fails the database's category check). Business stores unchanged.
-          ...(tenant?.seller_type === 'individual' && !formData.category_id ? { category_id: null } : {}),
+          // No category: saved without one (a home seller's listing; a business's new product
+          // always has one, see validate).
+          category_id: categoryId || null,
           // Do NOT include sku — let DB trigger generate it
         };
         const { data: inserted, error } = await supabase.from('products').insert(payload).select('id, sku, tenant_id, stock_quantity, low_stock_threshold').single();
@@ -512,6 +555,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
             ref={aiAssistantRef}
             onApply={async (data) => {
               update(data);
+              if (data.category_id) setNewCategory(''); // the AI's category replaces a typed one
               // Track new image URLs
               if (data.image_url) uploadedImagesRef.current.add(data.image_url);
               if (data.images?.length) {
@@ -531,10 +575,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
             onImageDelete={async (url) => {
               if (url) await deleteImageFromStorage(url);
             }}
-            onCategoriesRefresh={async () => {
-              const updated = await db.entities.Category.filter({ tenant_id: tenantId });
-              setCategories(updated);
-            }}
+            onCategoriesRefresh={loadCategories}
             currentProductName={formData.name}
             currentImageUrl={formData.image_url}
             additionalImagesOnOpen={product?.images || []}
@@ -556,6 +597,19 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
               errors={errors}
               isEditMode={!!product?.id}
               listing={tenant?.seller_type === 'individual'}
+              tagDraftRef={tagDraftRef}
+              newCategory={newCategory}
+              onCategoryPick={(id) => {
+                update({ category_id: id });
+                setNewCategory('');
+                setErrors((prev) => ({ ...prev, category: undefined }));
+              }}
+              onCategoryNew={(name) => {
+                update({ category_id: '' });
+                setNewCategory(name);
+                setErrors((prev) => ({ ...prev, category: undefined }));
+              }}
+              canCreateCategory={canCreateCategory}
               savedSku={savedSku}
               currentStock={product?.id ? currentStock : null}
               customPrimary={tenant?.primary_color || '#7c3aed'}
