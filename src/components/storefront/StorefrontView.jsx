@@ -13,6 +13,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo, forwardRef } from 'react';
 import { useBackToClose } from '@/lib/useBackToClose';
 import {
+  combineChoices, isMultiChoice, isPicked, isRequiredChoice, missingChoices, normaliseVariants, pickOption,
+} from '@/lib/itemOptions';
+import {
   Coffee, UtensilsCrossed, IceCream, Salad, Sandwich,
   Drumstick, Tag, Gift, LayoutGrid, ShoppingCart, Clock,
   Cpu, Glasses, Shirt, Trophy, BookOpen, Home, PawPrint,
@@ -1388,6 +1391,8 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
   const [lightboxOpen, setLightboxOpen] = useState(false);
   useBackToClose(lightboxOpen, () => setLightboxOpen(false));
   const touchStartX = useRef(null);
+  const optionGroups = normaliseVariants(product.variants, product.price);
+  const missingOptions = missingChoices(optionGroups, selectedVariants);
 
   const handleTouchStart = (e) => {
     touchStartX.current = e.touches[0].clientX;
@@ -1475,58 +1480,28 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
             </div>
             {product.description && <p style={{ fontSize: sfType(14), color: '#64748b', lineHeight: 1.6, margin: '0 0 16px' }}>{description}</p>}
             {(() => {
-              const normaliseVariants = (rawVariants, basePrice) => {
-                if (!rawVariants?.length) return [];
-                if (rawVariants[0]?.options) return rawVariants;
-                const KNOWN = ['size','color','colour','addon','flavour','flavor','type','option','variant'];
-                const firstItem = rawVariants[0];
-                const keys = Object.keys(firstItem || {});
-                const vKey = keys.find(k => KNOWN.includes(k.toLowerCase())) || keys.find(k => k !== 'price' && k !== 'price_modifier');
-                if (vKey) {
-                  const prices = rawVariants.map(v => parseFloat(v.price) || 0).filter(p => p > 0);
-                  const base = parseFloat(basePrice) > 0 ? parseFloat(basePrice) : (prices.length ? Math.min(...prices) : 0);
-                  const groupName = vKey.charAt(0).toUpperCase() + vKey.slice(1).toLowerCase();
-                  return [{ name: groupName, options: rawVariants.map(v => ({ label: String(v[vKey] || ''), price_modifier: Math.max(0, Math.round((parseFloat(v.price || 0) - base) * 100) / 100) })) }];
-                }
-                return [{ name: 'Options', options: rawVariants.map(v => ({ label: v.name || v.label || '', price_modifier: v.price_modifier || 0 })) }];
-              };
-
-              const normalisedVariants = normaliseVariants(product.variants, product.price);
+              // The option rules (shared with Explore listings, see itemOptions.js):
+              // 'addon' groups pick any, every other group picks exactly one, and a
+              // pick-one group must be answered before the item can be added.
+              const normalisedVariants = optionGroups;
               if (!normalisedVariants.length) return null;
 
               return (
                 <div style={{ marginBottom: 16 }}>
                   {normalisedVariants.map((group, gi) => {
-                    // FIX: selection behavior never actually looked at group.type —
-                    // every group behaved as single-select (clicking replaced the
-                    // previous choice), even for 'addon' groups where a customer
-                    // should be able to pick several (e.g. extra egg + extra pork).
-                    // 'addon' groups now toggle independently; everything else
-                    // (size/color/other) keeps the original single-select behavior
-                    // unchanged, so this doesn't affect any other product's existing
-                    // single-choice options.
-                    const isMultiSelect = group.type === 'addon';
-                    const selectedForGroup = selectedVariants[gi];
-                    const selectedList = isMultiSelect ? (Array.isArray(selectedForGroup) ? selectedForGroup : []) : null;
+                    const isMultiSelect = isMultiChoice(group);
+                    const required = isRequiredChoice(group);
                     return (
                     <div key={gi} style={{ marginBottom: 14 }}>
-                      <p style={{ fontWeight: 600, fontSize: sfType(13), margin: '0 0 8px', color: '#0f172a' }}>{group.name || (isMultiSelect ? 'Add-ons' : 'Options')}</p>
+                      <p style={{ fontWeight: 600, fontSize: sfType(13), margin: '0 0 8px', color: '#0f172a' }}>
+                        {group.name || (isMultiSelect ? 'Add-ons' : 'Options')}
+                        {required && <span style={{ fontWeight: 500, fontSize: sfType(12), color: '#64748b' }}> · {t('required')}</span>}
+                      </p>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                         {(group.options || []).map((opt, oi) => {
-                          const isSelected = isMultiSelect
-                            ? selectedList.some(v => v.label === opt.label)
-                            : selectedForGroup?.label === opt.label;
+                          const isSelected = isPicked(selectedVariants, normalisedVariants, gi, opt);
                           const handleClick = () => {
-                            if (isMultiSelect) {
-                              setSelectedVariants(prev => {
-                                const current = Array.isArray(prev[gi]) ? prev[gi] : [];
-                                const exists = current.some(v => v.label === opt.label);
-                                const next = exists ? current.filter(v => v.label !== opt.label) : [...current, opt];
-                                return { ...prev, [gi]: next };
-                              });
-                            } else {
-                              setSelectedVariants(prev => ({ ...prev, [gi]: opt }));
-                            }
+                            setSelectedVariants(prev => pickOption(prev, normalisedVariants, gi, opt));
                           };
                           return (
                             <button key={oi} onClick={handleClick}
@@ -1553,15 +1528,14 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
               />
             </div>
             <button
+              disabled={missingOptions.length > 0}
               onClick={() => {
+                if (missingOptions.length > 0) return;
                 // Flattens both single-select picks (plain objects) and multi-select
                 // picks (arrays) into one combined label/price, so everything
                 // downstream (cart, order storage, Kitchen Display, receipts) still
                 // just sees one string — none of that needs to change.
-                const allSelected = Object.values(selectedVariants).flatMap(v => Array.isArray(v) ? v : (v ? [v] : []));
-                const combinedVariant = allSelected.length > 0
-                  ? { label: allSelected.map(v => v.label).join(', '), price_modifier: allSelected.reduce((sum, v) => sum + (v.price_modifier || 0), 0) }
-                  : null;
+                const combinedVariant = combineChoices(selectedVariants);
                 // FIX: notes used to only exist as one order-wide field collected at
                 // checkout — there was no way to attach a note to a specific item, so
                 // adding a second item later (e.g. via Edit Order) had nowhere for its
@@ -1569,8 +1543,12 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                 onAddToCart(product, combinedVariant, itemNotes.trim() || null);
                 onClose();
               }}
-              style={{ width: '100%', padding: 14, background: primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: sfType(15), fontWeight: 700, cursor: 'pointer' }}>
-              {t('addToOrder')} · {getCurrencySymbol(currency)}{(parseFloat(product.price) + Object.values(selectedVariants).flatMap(v => Array.isArray(v) ? v : (v ? [v] : [])).reduce((sum, v) => sum + (v.price_modifier || 0), 0)).toFixed(2)}
+              style={missingOptions.length > 0
+                ? { width: '100%', padding: 14, background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 12, fontSize: sfType(15), fontWeight: 700, cursor: 'default' }
+                : { width: '100%', padding: 14, background: primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: sfType(15), fontWeight: 700, cursor: 'pointer' }}>
+              {missingOptions.length > 0
+                ? t('selectOption')
+                : <>{t('addToOrder')} · {getCurrencySymbol(currency)}{(parseFloat(product.price) + (combineChoices(selectedVariants)?.price_modifier || 0)).toFixed(2)}</>}
             </button>
           </div>
         </div>
