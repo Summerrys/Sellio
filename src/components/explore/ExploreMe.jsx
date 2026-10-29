@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Store, LayoutDashboard, Settings, UserRound, LogOut, ChevronRight, Loader2, Copy, Check, Star, ShoppingBag, Flag } from 'lucide-react';
+import { Store, LayoutDashboard, Settings, UserRound, LogOut, ChevronRight, Loader2, Copy, Check, Star, ShoppingBag, Flag, Heart } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { useTenant } from '@/components/tenant/TenantContext';
@@ -169,6 +169,9 @@ export default function ExploreMe() {
 
             <section className="mt-4 bg-white rounded-2xl border border-slate-100 overflow-hidden">
               <Row to="/explore/purchases" icon={ShoppingBag} label="My purchases" detail={purchasesLine || 'Orders you’ve placed and where they’re at'} />
+              <div className="border-t border-slate-100">
+                <Row to="/explore/likes" icon={Heart} label="My likes" detail="Listings you’ve liked" />
+              </div>
               {moderation && (
                 <div className="border-t border-slate-100">
                   <Row to="/moderation" icon={Flag} label="Reported comments" detail={moderation} />
