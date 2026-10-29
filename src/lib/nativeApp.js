@@ -29,3 +29,12 @@ export function mapLinkProps(place) {
     ? { href: `geo:0,0?q=${query}` }
     : { href: `https://www.google.com/maps/search/?api=1&query=${query}`, target: '_blank', rel: 'noopener noreferrer' };
 }
+
+// An address as a map should look it up: the shop's country is added when the address
+// doesn't name it already, so "Blk 9 Sample Road" isn't found in another country.
+export function placeWithCountry(address, country) {
+  const place = String(address || '').trim();
+  const land = String(country || '').trim();
+  if (!place || !land || place.toLowerCase().includes(land.toLowerCase())) return place;
+  return `${place}, ${land}`;
+}
