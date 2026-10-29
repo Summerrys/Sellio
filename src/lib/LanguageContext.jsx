@@ -31,6 +31,7 @@ const DICTIONARY = {
     inStock: 'in stock',
     size: 'Size',
     selectOption: 'Please select an option',
+    required: 'Required',
     // Cart
     yourOrder: 'Your order',
     cart: 'Cart',
@@ -96,6 +97,7 @@ const DICTIONARY = {
     inStock: '件有货',
     size: '规格',
     selectOption: '请选择一个选项',
+    required: '必选',
     yourOrder: '您的订单',
     cart: '购物车',
     emptyCart: '购物车是空的',
@@ -156,6 +158,7 @@ const DICTIONARY = {
     inStock: 'lagi',
     size: 'Saiz',
     selectOption: 'Sila pilih satu pilihan',
+    required: 'Wajib',
     yourOrder: 'Pesanan Anda',
     cart: 'Troli',
     emptyCart: 'Troli anda kosong',
