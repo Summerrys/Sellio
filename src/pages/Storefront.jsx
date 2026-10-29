@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ShoppingCart } from 'lucide-react';
+import { Eye, ShoppingCart } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { submitCheckout } from '@/lib/mobileCheckout';
 import StorefrontView from '@/components/storefront/StorefrontView';
@@ -16,6 +16,7 @@ import { shopT } from '@/lib/shopSelling';
 import { isNativeApp } from '@/lib/nativeApp';
 import { rememberReturnPath } from '@/lib/authNavigation';
 import { fetchRatingSummaries, forgetRatingSummary, isSignedIn, myOrderRatings } from '@/lib/ratings';
+import { useChatUser } from '@/lib/chat';
 import { OrderRateRow, RateOrderSheet, RatePrompt, RatingSheet } from '@/components/ratings/RatingParts';
 
 // Orders whose "How was your order?" card was dismissed (shown once per order).
@@ -129,6 +130,12 @@ function StorefrontInner() {
   const [myRatings, setMyRatings] = useState({});
   const [rateTarget, setRateTarget] = useState(null); // { order, stars }
   const [promptOrder, setPromptOrder] = useState(null);
+  // Your own shop (you're its owner or staff): you look around as buyers do, but can't buy.
+  // A buy would be a real order in your own Orders (and you can't rate your own shop).
+  // Taking an order for a customer is unchanged: Take Orders, a table's QR, the staff link.
+  const [ownShop, setOwnShop] = useState(false);
+  const { user: viewer } = useChatUser(); // the signed-in person, following sign-in and out
+  const blockOwnShop = () => toast.info(t('ownShopNoBuy'), { id: 'own-shop' });
   // Phone/browser Back closes these screens instead of leaving the menu
   // (customers arrive straight from their camera's QR scanner).
   // A checkout (or cart) that opened from Explore's Buy now / Checkout is where that tap
@@ -150,6 +157,7 @@ function StorefrontInner() {
   // signing in comes back here. onOpen (Buy now on an item) closes the item's screen in
   // the same moment the checkout opens, so its Back step becomes the checkout's.
   const beginCheckout = async (fromLink, onOpen) => {
+    if (ownShop) { blockOwnShop(); return; }
     if (!isDineIn && !isStaffMode && !isPreview && isNativeApp()) {
       try {
         const supabase = await getSupabase();
@@ -281,6 +289,25 @@ function StorefrontInner() {
     }
     loadData();
   }, [tenantSlug, tableId]);
+
+  // Is it your shop? A shop's active members can be read only by its own owner and staff
+  // (row-level security), so any row back means it's yours: the database's own rule
+  // (app.is_member) for ratings and for a home seller's checkout.
+  useEffect(() => {
+    setOwnShop(false);
+    if (!tenant?.id || !viewer?.id || isStaffMode || isDineIn) return undefined;
+    let cancelled = false;
+    getSupabase()
+      .then((supabase) => supabase.from('tenant_users').select('id').eq('tenant_id', tenant.id).eq('status', 'active').limit(1))
+      .then(({ data, error }) => { if (!cancelled) setOwnShop(!error && Array.isArray(data) && data.length > 0); })
+      .catch(() => { /* not known: buying stays as it is (the database still checks) */ });
+    return () => { cancelled = true; };
+  }, [tenant?.id, viewer?.id, isStaffMode, isDineIn]);
+
+  // A checkout that opened before that was known (from Explore's Cart, say) closes again.
+  useEffect(() => {
+    if (ownShop && showCheckout && !isSubmitting) { setShowCheckout(false); blockOwnShop(); }
+  }, [ownShop]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // From Explore (Buy now on a listing, or Checkout in the cart): the item is already in
   // this shop's cart, so go straight to checkout once the shop has loaded (with the app's
@@ -555,6 +582,7 @@ function StorefrontInner() {
 
   // Into this shop's cart once (the same line Add to cart writes), then straight to checkout.
   const buyNow = (product, variant = null, notes = null, closeItem) => {
+    if (ownShop) { blockOwnShop(); return; }
     if (checkoutGuard.current || !isStoreOpen) return; // closed: as Add to cart (nothing added)
     const key = `${product.id}-${variant?.label || 'default'}${notes ? `-${notes}` : ''}`;
     if (!cart.some((i) => i.key === key)) addToCart(product, variant, notes);
@@ -692,6 +720,7 @@ function StorefrontInner() {
   const checkoutGuard = useRef(false);
   const handleSubmitOrder = async (shopDetails) => {
     if (checkoutGuard.current || isSubmitting || !cart.length) return;
+    if (ownShop) { blockOwnShop(); return; }
     // A free shop's checkout passes how the buyer gets the order (step 15).
     const shopOrder = shopSelling && shopDetails?.method ? shopDetails : null;
     checkoutGuard.current = true;
@@ -937,11 +966,17 @@ function StorefrontInner() {
           setShowOrderHistory={(v) => { setShowOrderHistory(v); if (v) loadOrderHistory(); }}
           rating={showRating ? ratingSummary : null}
           onRatingClick={() => setShowRatingSheet(true)}
-          onAddToCart={!isStoreOpen ? () => {} : addToCart}
+          onAddToCart={ownShop ? blockOwnShop : !isStoreOpen ? () => {} : addToCart}
           buyerBar={homeBuyer ? { onBuyNow: buyNow, onLike: likeItem, onChat: chatAbout } : null}
           cartCount={cartCount}
           cartTotal={cartTotal}
           isDesktop={isDesktop}
+          notice={ownShop ? (
+            <div data-testid="own-shop-note" role="note" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 12, background: `${primaryColor}12`, border: `1px solid ${primaryColor}33`, color: '#334155', fontSize: 13, lineHeight: 1.45 }}>
+              <Eye size={16} color={primaryColor} aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }} />
+              <span>{t('ownShopNote')}</span>
+            </div>
+          ) : null}
         />
       </div>
 
@@ -1356,7 +1391,7 @@ function StorefrontInner() {
           storefront={storefrontConfig}
           hidden={showCart || showCheckout || showOrderHistory || showProductModal || promptVisible}
           onProductSelect={(product) => { setAssistantProductRequest({ product }); setShowProductModal(true); }}
-          onAddToCart={addToCart}
+          onAddToCart={ownShop ? undefined : addToCart}
           cart={cart}
           onUpdateCartQuantity={updateQuantity}
           onOpenCart={() => setShowCart(true)}
