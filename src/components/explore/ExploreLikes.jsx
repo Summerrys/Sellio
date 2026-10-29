@@ -20,7 +20,7 @@ function SignInCard() {
       <Heart className="w-8 h-8 mx-auto text-slate-300" />
       <p className="mt-3 text-base font-bold text-slate-900">Your likes</p>
       <p className="mt-1 text-sm text-slate-500">Log in to keep the listings you like in one place.</p>
-      <Link to="/Auth" onClick={() => rememberReturnPath('/explore/me')} className="mt-4 h-10 px-5 rounded-full text-sm font-semibold text-white inline-flex items-center" style={{ background: BRAND_GRADIENT }}>
+      <Link to="/Auth" onClick={() => rememberReturnPath('/explore/likes')} className="mt-4 h-10 px-5 rounded-full text-sm font-semibold text-white inline-flex items-center" style={{ background: BRAND_GRADIENT }}>
         Log in
       </Link>
     </section>
