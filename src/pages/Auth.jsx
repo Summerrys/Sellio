@@ -494,7 +494,7 @@ export default function Auth() {
       await supabase.auth.signOut();
 
       toast.success('Password updated successfully!');
-      setTimeout(() => { window.location.href = `${getBaseUrl()}/Auth`; }, 800);
+      setTimeout(() => { window.location.replace(`${getBaseUrl()}/Auth`); }, 800);
     } catch (err) {
       toast.error(err.message || 'Failed to update password.');
     } finally {

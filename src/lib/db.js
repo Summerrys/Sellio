@@ -192,7 +192,7 @@ export const db = {
     
     logout(redirectUrl) {
       localStorage.removeItem('app_user');
-      window.location.href = redirectUrl || '/Auth';
+      window.location.replace(redirectUrl || '/Auth');
     },
     
     async isAuthenticated() {

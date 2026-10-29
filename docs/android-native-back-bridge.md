@@ -25,15 +25,31 @@ it steps to the first entry of its history (`canGoBack` false) and straight back
 true), so the web view's listener is added again, newest. The steps are hidden from the page
 (popstate stopped before react-router, `intercept({ scroll: 'manual', focusReset: 'manual' })`),
 and clicks are held off for that fraction of a second. It runs only when the first history entry
-is this same page (not after a sign-in or another reload that loaded a new page; then only a
-full restart of the app helps). So Sellio's own update reload ("Update available → Reload" in
-`AppRefreshProvider`) first steps to the first entry the same hidden way (`stepToFirstEntry`), when
-that entry is this page, and reloads there: the new copy starts on the first entry with nothing of
-the old copy behind it (Back into it would load old pages) and keeps re-arming. Back on the
-reloaded page then does nothing, as after a fresh start. Base44 can fix it properly by adding
+is this same page (an entry of an older page would load that page).
+
+**Pages that replace another start on the first entry (`startFreshInstead` / `goFresh` in the same
+file, 2026-10-29).** In the Android app, the page's own `location.replace` / `location.reload` to a
+Sellio address (finishing a sign-in, signing out, "Update available → Reload", "Try again", a
+finished setup) is cancelled in the `navigate` event and loaded on the first entry instead:
+- the first entry is this page: step there the hidden way (`stepToFirstEntry`) and load it there;
+- the first entry is an older page (after an earlier sign-in, or a page the app loaded on top, such
+  as Google sign-in's return): leave a note (`sessionStorage['sellio-fresh-start']`) and go to that
+  entry; `index.html`'s first script (`<script id="sellio-fresh-start">`) runs on it before anything
+  else, stops it loading and loads the new page in its place (the older page never starts Sellio).
+  If that page never comes, the new page loads where it was, as before.
+
+The new page then has nothing behind it and keeps re-arming; Back on it does nothing, as after a
+fresh start. Going to the first entry also changes `canGoBack`, so the web view's listener is newest
+again even when the app came back on screen before the page loaded (Google sign-in). Sign-out
+buttons replace the page too (no Back into signed-in pages). Left as before: a history holding
+another site's pages, and pages added on top (`location.assign`, like a store's "sign in to check
+out"), which keep Back to the page before them but sit on older pages until the next replace.
+Without this, every sign-in left Back dead after the next app switch (or at once after Google
+sign-in) until the app was closed. Base44 can fix it properly by adding
 `brandedLiteMainTab` to the home-tab ids (or skipping `BottomTabsBackHandler` for a single tab),
 or by re-adding the web view's Back listener on `componentDidAppear`.
-`verification/back-navigation.browser.mjs` checks the workaround and the reload in real Chrome.
+`verification/back-navigation.browser.mjs` checks the workaround, the reload and the pages that
+replace another (with index.html's first script) in real Chrome.
 
 ## Web app (implemented)
 
@@ -66,6 +82,7 @@ The installed Android AAB's native Back handler must invoke the web contract **b
 7. Move between Dashboard → Products → Orders, switch to another Android app, resume, then press Back twice. Expected: Orders → Products → Dashboard. The first press must work without another tap.
 8. Distinguish Home/background from force-stop/cold start. The latter starts with a fresh navigation history unless the native wrapper explicitly restores its WebView state.
 9. Repeat after a web deployment and a cold app restart. Device tests, not jsdom, are needed to certify this.
+10. Sign out, sign in (phone, then Google), switch to another app and back, press Back: it works each time. Same after "Update available → Reload" and after a "Try again".
 
 ## Restore
 

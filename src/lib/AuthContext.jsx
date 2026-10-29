@@ -17,7 +17,7 @@ export const AuthProvider = ({ children }) => {
     const supabase = await getSupabase();
     await supabase.auth.signOut({ scope: 'local' }); // this device only
     localStorage.removeItem('app_user');
-    window.location.href = '/Auth';
+    window.location.replace('/Auth');
   };
 
   const navigateToLogin = () => {

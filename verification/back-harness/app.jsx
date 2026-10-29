@@ -56,7 +56,7 @@ function Home() {
 }
 
 function Other() {
-  return <div><h1 id="page">other</h1></div>;
+  return <div><h1 id="page">other</h1><Link id="otherToHome" to="/home">home</Link></div>;
 }
 
 function SignIn() {

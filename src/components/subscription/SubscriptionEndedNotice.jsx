@@ -13,7 +13,7 @@ export default function SubscriptionEndedNotice({ subscription, storeName }) {
       const supabase = await getSupabase();
       await supabase.auth.signOut({ scope: 'local' }); // this device only
     } finally {
-      window.location.href = '/Auth';
+      window.location.replace('/Auth');
     }
   };
 

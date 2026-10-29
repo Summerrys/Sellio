@@ -27,7 +27,7 @@ export default function BillingRecoveryWall({ subscription, tenantId, isOwner })
       const supabase = await getSupabase();
       await supabase.auth.signOut({ scope: 'local' }); // this device only
     } finally {
-      window.location.href = '/Auth';
+      window.location.replace('/Auth');
     }
   };
 

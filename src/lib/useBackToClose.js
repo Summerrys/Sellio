@@ -35,6 +35,14 @@
 // history and straight back (see rearmAppBack below): the app signs the page's handler up again,
 // newest, and Back reaches the page. (A fault in Base44's app; this keeps Back working until
 // they fix it.)
+//
+// That step only works when the first entry of the history is this very page: going to an entry
+// of an older page would load that page. So when Sellio loads a new page in place of this one in
+// the Android app (finishing a sign-in, signing out, a reload, a finished setup), the new page
+// starts on the FIRST entry of the history instead, with nothing left behind it (see
+// startFreshInstead below). Otherwise each page loaded that way sits on older pages, and Back
+// goes dead at the next app switch until the app is closed (or straight away after Google
+// sign-in, which comes back to the app before the next page loads).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { backLog } from './backLog';
 
@@ -60,6 +68,9 @@ const REARM_QUIET_MS = 600;     // no tap and no history change for this long fi
 const REARM_HOLD_MS = 300;      // time on the first entry, for the app to take in "can't go back"
 const REARM_STEP_MS = 1500;     // how long each step may take to arrive
 const REARM_GIVE_UP_MS = 10000; // stop waiting for a quiet moment after this
+// Starting a new page on the first entry of the history (startFreshInstead below).
+const FRESH_KEY = 'sellio-fresh-start'; // the note index.html reads on the first entry's page
+const FRESH_GIVE_UP_MS = 5000;          // that page never came: load the new page here, as before
 // Taps held off while we're away from the page's own entry (a fraction of a second): a link or
 // button acting then would add or change history at the wrong entry.
 const HELD_EVENTS = ['click', 'auxclick', 'dblclick', 'contextmenu', 'submit'];
@@ -88,6 +99,8 @@ let rearm = null;            // stepping to the first entry and back (or, before
                              // it): { phase, expect, home, timer, done }
 let rearmTimer = null;       // a re-arm waiting for a quiet moment…
 let rearmUntil = 0;          // …until about then
+let freshPass = null;        // our own replace of the page, to go ahead after all: { url, until }
+let freshQueued = null;      // a page asked for while a re-arm was on its way: loads after it
 
 const now = () => Date.now();
 const leaving = () => now() < leavingUntil;
@@ -228,6 +241,13 @@ function endRearm() {
   const { done } = rearm;
   rearm = null;
   done?.(); // a reload waiting to start from the first entry goes ahead from wherever we are
+  if (freshQueued) {
+    // A page asked for while we were away from the page's entry: it loads now (goFresh).
+    const to = freshQueued;
+    freshQueued = null;
+    setTimeout(() => goFresh(to), 0);
+    return;
+  }
   scheduleSettle(); // whatever waited (a window's Back step) goes ahead now
 }
 
@@ -239,12 +259,21 @@ function onRearmPopState(event) {
   if (!rearm) return false;
   let at = null;
   try { at = browser.navigation.currentEntry?.key; } catch { /* unknown */ }
+  if (rearm.phase === 'away') {
+    // On the way to an older page to start the next page there (goFresh): this page is going,
+    // nothing on it reacts meanwhile. (If that page never comes, the next page loads here.)
+    event.stopImmediatePropagation();
+    return true;
+  }
   if (rearm.phase === 'out' && at === rearm.expect) {
     event.stopImmediatePropagation();
     rearm.phase = 'hold';
     clearTimeout(rearm.timer);
     rearm.timer = setTimeout(() => {
       if (!rearm) return;
+      // The page started going to another page from the first entry (not ours): stepping back
+      // now would cancel that. It loads from there; nothing left to re-arm.
+      if (leaving()) { backLog('re-arm: the page is going to another page'); endRearm(); return; }
       rearm.phase = 'back';
       rearm.expect = rearm.home;
       rearmStep();
@@ -261,14 +290,14 @@ function onRearmPopState(event) {
     // On the first entry, ready for the reload (stepToFirstEntry). Taps stay held off until the
     // reload takes the page away; if it never does, go back to the page and carry on.
     event.stopImmediatePropagation();
-    backLog('reload: on the first entry');
+    backLog(`${rearm.why}: on the first entry`);
     rearm.phase = 'left';
     clearTimeout(rearm.timer);
     const { done } = rearm;
     rearm.done = null;
     rearm.timer = setTimeout(() => {
       if (rearm?.phase !== 'left') return;
-      backLog('reload: never happened, back to the page');
+      backLog(`${rearm.why}: never happened, back to the page`);
       const { home } = rearm;
       endRearm();
       try { browser.navigation.traverseTo(home); } catch { /* stay here */ }
@@ -286,8 +315,9 @@ function onRearmPopState(event) {
 // the reload puts the new copy there. Then nothing of the old copy is left behind it (Back from
 // its first page would load that old page), and the new copy can keep re-arming the app's Back.
 // Resolves once there, or straight away when that isn't possible or needed (the reload then
-// replaces the current page, as it always did).
-export function stepToFirstEntry() {
+// replaces the current page, as it always did). (A replace or reload that can't start from here
+// is then taken on by startFreshInstead below.) `why` names it in the Back log.
+export function stepToFirstEntry(why = 'reload') {
   return new Promise((resolve) => {
     if (!browser || !inAndroidApp() || typeof browser.navigation?.traverseTo !== 'function' || rearm) { resolve(); return; }
     let entries;
@@ -299,11 +329,11 @@ export function stepToFirstEntry() {
     }
     clearTimeout(rearmTimer);
     rearmTimer = null;
-    rearm = { phase: 'leave', expect: entries[0].key, home: current.key, timer: null, done: resolve };
-    backLog(`reload: to the first entry first, from #${current.index}`);
+    rearm = { phase: 'leave', expect: entries[0].key, home: current.key, timer: null, done: resolve, why };
+    backLog(`${why}: to the first entry first, from #${current.index}`);
     rearm.timer = setTimeout(() => {
       if (rearm?.phase !== 'leave') return;
-      backLog('reload: the first entry never arrived');
+      backLog(`${why}: the first entry never arrived`);
       endRearm();
     }, REARM_STEP_MS);
     try {
@@ -314,6 +344,102 @@ export function stepToFirstEntry() {
       endRearm();
     }
   });
+}
+
+// The page's own replace or reload to a Sellio address in the Android app (location.replace,
+// location.reload: finishing a sign-in, signing out, Reload, Try again, a finished setup), from
+// anywhere but the first entry: cancelled here (the navigate listener below calls this first)
+// and loaded on the first entry instead (goFresh), so nothing is left behind the new page.
+// True when it was taken on. Left as it is: other sites, form posts, websites and iPhone, a
+// history that holds another site's pages (its first entry isn't one of ours to go to), and
+// our own replace that goFresh lets through.
+function startFreshInstead(event) {
+  if (!inAndroidApp() || !event.cancelable || event.formData) return false;
+  const type = event.navigationType;
+  if (type !== 'replace' && type !== 'reload') return false;
+  let url;
+  try { url = new URL(event.destination.url); } catch { return false; }
+  if (url.origin !== browser.location.origin) return false;
+  if (freshPass && freshPass.url === url.href && now() < freshPass.until) { freshPass = null; return false; }
+  let entries;
+  let current;
+  try { entries = browser.navigation.entries(); current = browser.navigation.currentEntry; } catch { return false; }
+  if (!current) return false;
+  let to = url.pathname + url.search + url.hash;
+  if (rearm) {
+    if (rearm.phase === 'left') return false; // a reload waiting on the first entry: this is it
+    if (rearm.phase === 'hold' && type === 'replace') return false; // on the first entry: loads there
+    event.preventDefault();
+    if (rearm.phase === 'leave' || rearm.phase === 'away') {
+      backLog(`fresh start: a page is already on its way (this ${type} not needed)`);
+      return true;
+    }
+    // A re-arm on its way: the new page loads once it's over. (A reload is of the page itself,
+    // not of the first entry the re-arm may be standing on for a moment.)
+    if (type === 'reload') {
+      const home = entries.find((entry) => entry.key === rearm.home);
+      try { if (home?.url) { const at = new URL(home.url); to = at.pathname + at.search + at.hash; } } catch { /* as asked */ }
+    }
+    freshQueued = to;
+    backLog(`fresh start: after the re-arm (${type})`);
+    return true;
+  }
+  if (!(current.index > 0) || entries.length !== browser.history.length) return false;
+  event.preventDefault();
+  goFresh(to);
+  return true;
+}
+
+// Loads `to` in place of this page on the first entry of the history:
+// - the first entry is this page: step there unseen (as before an update reload), load it there;
+// - the first entry is an older Sellio page: leave it a note and go there. index.html, on that
+//   page, reads the note before anything else runs and loads `to` in its place (one quick load
+//   more). If that page never comes, `to` loads here, as before.
+// Anything that stops either (history changed meanwhile, the step refused): `to` loads here.
+function goFresh(to) {
+  if (rearm) { freshQueued = to; return; }
+  let entries;
+  let current;
+  try { entries = browser.navigation.entries(); current = browser.navigation.currentEntry; } catch { passReplace(to); return; }
+  if (!current || !(current.index > 0) || entries.length !== browser.history.length ||
+      typeof browser.navigation.traverseTo !== 'function') {
+    passReplace(to);
+    return;
+  }
+  if (entries[0].sameDocument) {
+    void stepToFirstEntry('fresh start').then(() => passReplace(to), () => passReplace(to));
+    return;
+  }
+  try {
+    browser.sessionStorage.setItem(FRESH_KEY, JSON.stringify({ to, key: entries[0].key, at: Date.now() }));
+  } catch { passReplace(to); return; }
+  clearTimeout(rearmTimer);
+  rearmTimer = null;
+  rearm = { phase: 'away', expect: entries[0].key, home: current.key, timer: null };
+  backLog(`fresh start: to the first entry first (an older page), from #${current.index}`);
+  const loadHere = (why) => {
+    if (rearm?.phase !== 'away') return;
+    backLog(`fresh start: ${why}, loading the page here`);
+    try { browser.sessionStorage.removeItem(FRESH_KEY); } catch { /* it expires anyway */ }
+    endRearm();
+    passReplace(to);
+  };
+  rearm.timer = setTimeout(() => loadHere('the first entry never came'), FRESH_GIVE_UP_MS);
+  try {
+    const result = browser.navigation.traverseTo(entries[0].key);
+    result?.committed?.catch(() => {});
+    result?.finished?.catch(() => {});
+  } catch {
+    loadHere('the step was refused');
+  }
+}
+
+// Our own replace of the page, let through by startFreshInstead.
+function passReplace(to) {
+  let url = to;
+  try { url = new URL(to, browser.location.href).href; } catch { /* as given */ }
+  freshPass = { url, until: now() + 2000 };
+  browser.location.replace(to);
 }
 
 // A window that opened with no tap to go on (it opened by itself, or after a Back):
@@ -472,7 +598,7 @@ if (browser) {
       const countedPush = function pushState(state, ...rest) {
         historyEpoch += 1;
         lastHistoryChangeAt = now();
-        if (rearm) { backLog('re-arm: the page added history meanwhile'); endRearm(); }
+        if (rearm && rearm.phase !== 'away') { backLog('re-arm: the page added history meanwhile'); endRearm(); }
         if (!tappedSincePersonsBack()) {
           if (onOurStep()) armed = false; // our Back step becomes the new page (a hand-over)
           backLog('page added history with no tap: replacing instead');
@@ -485,7 +611,7 @@ if (browser) {
       history.replaceState = function replaceState(state, ...rest) {
         if (!reporting) {
           lastHistoryChangeAt = now();
-          if (rearm) { backLog('re-arm: the page replaced history meanwhile'); endRearm(); }
+          if (rearm && rearm.phase !== 'away') { backLog('re-arm: the page replaced history meanwhile'); endRearm(); }
         }
         if (browser.history.state?.sellioOverlay && !state?.sellioOverlay) historyEpoch += 1;
         return replace.call(this, state, ...rest);
@@ -552,6 +678,8 @@ if (browser) {
   // another document). Not a download, not a move within this page.
   // (Even a slow page on its way is not undone by a tap meanwhile: only the page being
   // shown again, coming back from another app, or the time running out ends this.)
+  // In the Android app the page's own replace or reload starts the new page on the first entry
+  // of the history instead (startFreshInstead).
   const startLeaving = () => {
     leavingUntil = now() + LEAVING_MS;
     setTimeout(scheduleSettle, LEAVING_MS + 50);
@@ -560,6 +688,13 @@ if (browser) {
     browser.navigation?.addEventListener('navigate', (event) => {
       if (event.destination?.sameDocument || event.hashChange || event.downloadRequest || event.navigationType === 'traverse') return;
       if (!/^https?:/i.test(event.destination?.url || '')) return; // tel:, mailto:, an app's link
+      let taken = false;
+      try { taken = startFreshInstead(event); } catch (error) {
+        backLog(`fresh start: failed (${String(error?.message || error).slice(0, 80)})`);
+        // Never lose the page asked for: load it here, as before.
+        if (event.defaultPrevented) { try { passReplace(event.destination.url); } catch { /* nothing more to try */ } return; }
+      }
+      if (taken) return;
       startLeaving();
     });
   } catch { /* no Navigation API: beforeunload below */ }

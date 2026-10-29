@@ -25,7 +25,12 @@ const { chromium, devices } = require('playwright');
 const bundle = path.join(os.tmpdir(), 'sellio-back-harness.js');
 await build({ entryPoints: [path.join(dir, 'back-harness/app.jsx')], bundle: true, outfile: bundle,
   jsx: 'automatic', define: { 'process.env.NODE_ENV': '"production"' }, logLevel: 'error' });
-const html = '<!doctype html><html><head><meta name="viewport" content="width=device-width"><style>body{min-height:3000px}</style></head><body><div id="root"></div><script src="/app.js"></script></body></html>';
+// Every page also runs index.html's first script as it is: in the app, a page that replaces
+// another starts on the first history entry, by way of an older page there (goFresh), and
+// that script is what moves the older page on.
+const freshScript = (await readFile(path.join(dir, '../index.html'), 'utf8')).match(/<script id="sellio-fresh-start">[\s\S]*?<\/script>/)?.[0];
+assert.ok(freshScript, "index.html's fresh-start script");
+const html = `<!doctype html><html><head>${freshScript}<meta name="viewport" content="width=device-width"><style>body{min-height:3000px}</style></head><body><div id="root"></div><script src="/app.js"></script></body></html>`;
 const js = await readFile(bundle);
 const server = createServer((req, res) => {
   if (req.url === '/app.js') { res.writeHead(200, { 'content-type': 'text/javascript' }); res.end(js); return; }
@@ -378,6 +383,176 @@ try {
     'the new copy is on the first entry, react-router never showed it before the reload');
   assert.match(await p.back(), /^NOTHING/, 'nothing of the old copy behind it');
   passed('Android app: an update reload starts the new copy on the first entry, with nothing of the old copy behind it');
+  pushes = pushes.concat(await p.read('window.__pushes'));
+
+  // ---- In the app, a page that replaces another (sign-in done, sign-out, a reload) starts on the
+  // first entry of the history (goFresh in useBackToClose.js + index.html's first script). ----
+  const where = (q) => q.read(`({ path: location.pathname + location.search, at: navigation.currentEntry.index,
+    length: history.length, firstIsThisPage: navigation.entries()[0].sameDocument,
+    starts: Number(sessionStorage.getItem('starts') || 0), note: sessionStorage.getItem('sellio-fresh-start'),
+    arrived: sessionStorage.getItem('sellio-fresh-arrived') })`);
+  const settled = async (q, test, ms = 6000) => {
+    const until = Date.now() + ms;
+    for (;;) {
+      try { const now = await where(q); if (test(now)) return now; } catch { /* between pages */ }
+      if (Date.now() > until) return where(q);
+      await sleep(100);
+    }
+  };
+
+  // Signing in over older pages (the sign-in page is another page than the first entry's): the
+  // page after it starts on the first entry by way of the older page there, which never starts
+  // Sellio (react-router never shows it); nothing is behind the new page; Back works from it and
+  // the app's Back re-arms on it.
+  p = await newPhone({ inApp: true });
+  await p.tap('toHome');
+  await p.tap('openA');
+  await p.tap('leaveFromA');
+  let now = await settled(p, (x) => x.path === '/signin');
+  assert.deepEqual([now.path, now.at, now.firstIsThisPage, now.starts], ['/signin', 3, false, 1], 'the sign-in page sits on older pages');
+  const length = now.length;
+  await p.read('location.replace("/other?signedIn=1"), 1'); // no tap: a sign-in finishing by itself
+  now = await settled(p, (x) => x.path === '/other?signedIn=1');
+  assert.deepEqual(now, { path: '/other?signedIn=1', at: 0, length, firstIsThisPage: true, starts: 1, note: null, arrived: null },
+    'on the first entry, nothing added, the older page never started Sellio, the note used up');
+  assert.match(await p.back(), /^NOTHING/, 'nothing behind the new page');
+  await p.tap('otherToHome');
+  assert.equal(await p.back(), 'went back', 'Back works from a page opened after it');
+  assert.equal((await p.state()).path, '/other');
+  await p.tap('otherToHome');
+  const movesAfter = [];
+  p.cdp.on('Page.navigatedWithinDocument', (e) => movesAfter.push(new URL(e.url).pathname));
+  await p.cdp.send('Page.enable');
+  await p.read('window.__show()');
+  await sleep(2200);
+  const outAt = movesAfter.indexOf('/other');
+  assert.ok(outAt >= 0 && movesAfter[outAt + 1] === '/home' && movesAfter.lastIndexOf('/other') === outAt,
+    `the app's Back re-arms on it: to the first entry and straight back (${movesAfter.join(' ')})`);
+  assert.equal(await p.back(), 'went back');
+  assert.equal((await p.state()).path, '/other');
+  assert.deepEqual(p.errors, []);
+  passed('Android app: a page that replaces another over older pages (sign-in) starts on the first entry by way of the older page, which never starts; nothing behind it, Back and the re-arm work');
+  pushes = pushes.concat(await p.read('window.__pushes'));
+
+  // Signing out from a page whose first entry is itself: stepped there unseen, the new page loads there.
+  p = await newPhone({ inApp: true });
+  await p.tap('toHome');
+  await p.tap('toOther');
+  before = await where(p);
+  assert.deepEqual([before.at, before.firstIsThisPage], [2, true]);
+  await p.read('location.replace("/signin?out=1"), 1');
+  now = await settled(p, (x) => x.path === '/signin?out=1');
+  assert.deepEqual(now, { path: '/signin?out=1', at: 0, length: before.length, firstIsThisPage: true, starts: before.starts, note: null, arrived: null },
+    'on the first entry, react-router never showed the first page, nothing added');
+  assert.match(await p.back(), /^NOTHING/, 'nothing behind it');
+  assert.deepEqual(p.errors, []);
+  passed('Android app: a page that replaces this one (sign-out) loads on the first entry when that is this page, unseen');
+
+  // A reload (Try again) from deeper in: the same page again, on the first entry.
+  p = await newPhone({ inApp: true });
+  await p.tap('toHome');
+  await p.tap('toOther');
+  before = await where(p);
+  await p.read('location.reload(), 1');
+  now = await settled(p, (x) => x.at === 0 && x.path === '/other');
+  assert.deepEqual([now.path, now.at, now.length, now.firstIsThisPage, now.starts], ['/other', 0, before.length, true, before.starts]);
+  assert.match(await p.back(), /^NOTHING/);
+  assert.deepEqual(p.errors, []);
+  passed('Android app: a reload from deeper in loads the same page again on the first entry');
+
+  // A reload, or a page asked for, while the app's Back re-arm stands on the first entry for a
+  // moment: the reload is of the page itself (not of the first entry), once the re-arm is back;
+  // a page asked for then loads right there.
+  p = await newPhone({ inApp: true });
+  await p.tap('toHome');
+  await p.tap('toOther');
+  before = await where(p);
+  await p.read('window.__show()');
+  onFirst = false;
+  for (let i = 0; i < 200 && !onFirst; i++) { onFirst = await p.read('navigation.currentEntry.index === 0'); if (!onFirst) await sleep(10); }
+  assert.ok(onFirst, 're-arm on the first entry');
+  await p.read('location.reload(), 1');
+  now = await settled(p, (x) => x.at === 0 && x.path === '/other' && x.starts === before.starts);
+  assert.deepEqual([now.path, now.at, now.length, now.starts], ['/other', 0, before.length, before.starts], 'reloaded the page itself, on the first entry');
+  await p.tap('otherToHome');
+  await p.read('window.__show()');
+  onFirst = false;
+  for (let i = 0; i < 200 && !onFirst; i++) { onFirst = await p.read('navigation.currentEntry.index === 0'); if (!onFirst) await sleep(10); }
+  assert.ok(onFirst, 're-arm on the first entry again');
+  await p.read('location.replace("/signin?during=1"), 1');
+  now = await settled(p, (x) => x.path === '/signin?during=1');
+  assert.deepEqual([now.at, now.firstIsThisPage], [0, true], 'the page asked for loads on the first entry');
+  assert.deepEqual(p.errors, []);
+  passed('Android app: a reload or a new page while the re-arm stands on the first entry: the reload is of the page itself, after; the new page loads there');
+
+  // When the older first page can't be gone to (the step refused), the page loads here, as before.
+  p = await newPhone({ inApp: true });
+  await p.tap('toHome');
+  await p.tap('openA');
+  await p.tap('leaveFromA');
+  now = await settled(p, (x) => x.path === '/signin');
+  await p.read('navigation.traverseTo = () => { throw new Error("refused"); }, 1');
+  await p.read('location.replace("/other?here=1"), 1');
+  now = await settled(p, (x) => x.path === '/other?here=1');
+  assert.deepEqual([now.at, now.note], [3, null], 'loaded where it was, no note left');
+  assert.deepEqual(p.errors, []);
+  passed('Android app: when the older first page cannot be gone to, the page loads where it was (as before)');
+
+  // On the first entry already: left as it is. A note that isn't for this entry, or is old, is
+  // dropped without going anywhere.
+  p = await newPhone({ inApp: true });
+  await p.read('location.replace("/home?first=1"), 1');
+  now = await settled(p, (x) => x.path === '/home?first=1');
+  assert.deepEqual([now.at, now.length], [0, 1]);
+  for (const note of ['{ to: "/other?wrong=1", key: "not-this-entry", at: Date.now() }',
+    '{ to: "/other?old=1", key: navigation.currentEntry.key, at: Date.now() - 20000 }',
+    '{ to: "//elsewhere.example/", key: navigation.currentEntry.key, at: Date.now() }']) {
+    await p.read(`sessionStorage.setItem('sellio-fresh-start', JSON.stringify(${note})), location.reload(), 1`);
+    await sleep(1200);
+    now = await settled(p, (x) => x.note === null);
+    assert.deepEqual([now.path, now.at, now.note], ['/home?first=1', 0, null], `note ${note} dropped`);
+  }
+  assert.deepEqual(p.errors, []);
+  passed('Android app: on the first entry a replace is left as it is; a note for another entry, an old one, or another site is dropped');
+
+  // A page the app itself loads on top (as the app does with Google sign-in's return), which then
+  // finishes signing in: the page after it starts on the first entry too.
+  p = await newPhone({ inApp: true });
+  await p.tap('toHome');
+  await p.page.goto(origin + '/signin?sellio_mobile_oauth=1');
+  now = await settled(p, (x) => x.path.startsWith('/signin'));
+  assert.deepEqual([now.at, now.firstIsThisPage], [2, false]);
+  await p.read('location.replace("/home?google=1"), 1');
+  now = await settled(p, (x) => x.path === '/home?google=1');
+  assert.deepEqual([now.at, now.firstIsThisPage, now.note], [0, true, null]);
+  assert.match(await p.back(), /^NOTHING/);
+  assert.deepEqual(p.errors, []);
+  passed('Android app: a page the app loads on top (Google sign-in coming back) and its sign-in finishing: the next page starts on the first entry');
+
+  // A history that holds another site's page: its first entry isn't ours to go to, so a replace
+  // is left as it is.
+  p = await newPhone({ inApp: true });
+  const otherSite = origin.replace('127.0.0.1', 'localhost');
+  await p.page.goto(otherSite + '/');
+  await p.page.goto(origin + '/signin');
+  now = await settled(p, (x) => x.path === '/signin');
+  assert.ok(await p.read('navigation.entries().length < history.length'), "the other site's page is in the history");
+  const at = now.at;
+  await p.read('location.replace("/other?mixed=1"), 1');
+  now = await settled(p, (x) => x.path === '/other?mixed=1');
+  assert.deepEqual([now.at, now.note], [at, null], 'loaded where it was');
+  assert.deepEqual(p.errors, []);
+  passed("Android app: with another site's page in the history, a replace is left as it is");
+
+  // Websites (no app): a replace is left as it is.
+  p = await newPhone();
+  await p.tap('toHome');
+  await p.tap('toOther');
+  await p.read('location.replace("/signin?web=1"), 1');
+  now = await settled(p, (x) => x.path === '/signin?web=1');
+  assert.deepEqual([now.at, now.note], [2, null]);
+  assert.deepEqual(p.errors, []);
+  passed('Websites: a replace stays where it was (only the Android app starts pages on the first entry)');
 
   assert.deepEqual(pushes.filter((x) => !x.honoured), [], 'every history entry was added after a tap the browser honours');
   passed(`All ${pushes.length} history entries (${pushes.filter((x) => x.ours).length} Back steps) were added after a real tap since the last Back`);

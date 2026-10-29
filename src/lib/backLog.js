@@ -2,10 +2,13 @@
 // A short record of what happens around Back (and of errors) in Base44's Android app, for Alvin's account only:
 // kept on the phone (never sent anywhere), with a small "Back log" button at the top centre that
 // copies it to paste to Claude (away from the screen's side edges, where the Back swipe starts).
+// Also while signed out on a phone where Alvin's account has been signed in (so a sign-out and
+// the next sign-in show up); never while another account is signed in.
 // Nothing is recorded or shown anywhere else.
 // Alvin's account, by a hash of its email: this code is public, the email needn't be.
 const OWNER_HASH = 'ff948dec1bdf0';
 const STORE_KEY = 'sellio-back-log';
+const OWNER_PHONE_KEY = 'sellio-back-log-phone'; // Alvin's account has been signed in on this phone
 const MAX_LINES = 400;
 // The chat keeps only the first 20,000 characters of a paste: the copy takes the newest lines
 // that fit.
@@ -36,11 +39,19 @@ let ownerSignedIn = false;
 function isOwner() {
   if (Date.now() - ownerCheckedAt < 3000) return ownerSignedIn;
   ownerCheckedAt = Date.now();
+  let email = '';
   try {
     const match = browser.document.cookie.match(/(?:^|;\s*)app_session=([^;]+)/);
     const user = match ? JSON.parse(decodeURIComponent(match[1])) : null;
-    ownerSignedIn = !!user?.email && hashText(String(user.email).toLowerCase()) === OWNER_HASH;
-  } catch { ownerSignedIn = false; }
+    email = user?.email ? String(user.email).toLowerCase() : '';
+  } catch { email = ''; }
+  if (email) {
+    ownerSignedIn = hashText(email) === OWNER_HASH;
+    if (ownerSignedIn) { try { browser.localStorage.setItem(OWNER_PHONE_KEY, '1'); } catch { /* not remembered */ } }
+  } else {
+    // Signed out: still Alvin's phone if his account has been signed in on it.
+    try { ownerSignedIn = browser.localStorage.getItem(OWNER_PHONE_KEY) === '1'; } catch { ownerSignedIn = false; }
+  }
   return ownerSignedIn;
 }
 const recording = () => inAndroidApp() && isOwner();
@@ -149,7 +160,21 @@ if (browser && inAndroidApp()) {
     const nav = browser.navigation;
     const entries = nav?.entries?.() || [];
     const ua = (browser.navigator.userAgent.match(/Chrome\/[\d.]+/) || ['?'])[0];
-    backLog(`page loaded: ${entries.length} entries in this page's run of history, first is ${entries[0]?.sameDocument ? 'this page' : 'another page'}, ${ua}`);
+    // How the page came (a new entry, a replace, a reload, Back/Forward) and from which page.
+    let how = '';
+    try {
+      const type = nav?.activation?.navigationType;
+      const from = nav?.activation?.from?.url;
+      how = type ? ` by ${type}${from ? ` from ${new URL(from).pathname}` : ''}` : '';
+    } catch { how = ''; }
+    backLog(`page loaded${how}: ${entries.length} entries in this page's run of history, first is ${entries[0]?.sameDocument ? 'this page' : 'another page'}, ${ua}`);
+  } catch { /* nothing to note */ }
+  // Started on the first entry by way of an older page there (index.html, goFresh in
+  // useBackToClose.js).
+  try {
+    const arrived = JSON.parse(browser.sessionStorage.getItem('sellio-fresh-arrived') || 'null');
+    browser.sessionStorage.removeItem('sellio-fresh-arrived');
+    if (arrived && Date.now() - arrived.at < 15000) backLog(`fresh start: arrived on the first entry (by way of ${arrived.via})`);
   } catch { /* nothing to note */ }
   // Registered before Sellio's own listeners (this file loads first), so these see every event.
   // Saved at once when the app goes off screen (it may be closed there) and when the page goes

@@ -70,7 +70,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
     } catch (e) {
       console.warn('Sign out error:', e);
     }
-    window.location.href = '/Auth';
+    window.location.replace('/Auth');
   };
 
   return (

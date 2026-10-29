@@ -272,7 +272,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
                 const supabase = await getSupabase();
                 await supabase.auth.signOut({ scope: 'local' }); // this device only
                 clearAppUser();
-                window.location.href = createPageUrl('Auth');
+                window.location.replace(createPageUrl('Auth'));
               }}
             >
               <LogOut className="w-4 h-4" />
@@ -287,7 +287,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
               const supabase = await getSupabase();
               await supabase.auth.signOut({ scope: 'local' }); // this device only
               clearAppUser();
-              window.location.href = createPageUrl('Auth');
+              window.location.replace(createPageUrl('Auth'));
             }}
           >
             <LogOut className="w-4 h-4" />

@@ -215,7 +215,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
 
   const handleSignOut = () => {
     clearAppUser?.();
-    window.location.href = createPageUrl('Auth');
+    window.location.replace(createPageUrl('Auth'));
   };
 
   const handleManageBilling = async () => {

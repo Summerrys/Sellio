@@ -12,7 +12,7 @@ export async function signInForAccountDeletion() {
   const { error } = await supabase.auth.signOut({ scope: 'local' });
   if (error) throw error;
   cookieUtils.clear();
-  window.location.assign('/Auth');
+  window.location.replace('/Auth');
 }
 
 export function accountDeletionDestination(fallback) {

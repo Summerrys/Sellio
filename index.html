@@ -2,6 +2,35 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script id="sellio-fresh-start">
+      /* Runs first of all (keep in step with goFresh in src/lib/useBackToClose.js;
+         verification/back-navigation.browser.mjs runs this script as it is).
+         In the Android app, Sellio loads a page that replaces another (finishing a sign-in,
+         signing out, a reload) on the FIRST entry of the history, so no older pages are left
+         behind it (with them there, Base44's app takes every Back after an app switch). When that
+         first entry is an older page, Sellio leaves a note and goes to it: this is that older
+         page, and it loads the new page in its place at once, before anything else here runs. */
+      (function () {
+        var w = window, l = w.location, KEY = 'sellio-fresh-start';
+        var goOn = function () {
+          var note = null, entry = null;
+          try { note = JSON.parse(w.sessionStorage.getItem(KEY) || 'null'); } catch (e) { return false; }
+          if (!note) return false;
+          try { w.sessionStorage.removeItem(KEY); } catch (e) { /* read once anyway */ }
+          try { entry = w.navigation && w.navigation.currentEntry; } catch (e) { entry = null; }
+          var age = Date.now() - note.at;
+          if (!entry || entry.index !== 0 || entry.key !== note.key || !(age >= 0 && age < 15000) ||
+              typeof note.to !== 'string' || !/^\/(?![\/\\])/.test(note.to)) return false;
+          try { w.sessionStorage.setItem('sellio-fresh-arrived', JSON.stringify({ at: Date.now(), via: l.pathname })); } catch (e) { /* only for the Back log */ }
+          w.__sellioFreshStart = true;
+          try { w.stop(); } catch (e) { /* keep going */ }
+          l.replace(note.to);
+          return true;
+        };
+        // Also when that page comes back from memory instead of loading again.
+        if (!goOn()) w.addEventListener('pageshow', function (event) { if (event.persisted) goOn(); });
+      })();
+    </script>
     <script>
       /* Runs before Sellio's code loads (keep in step with src/lib/googleRelay.js and
          src/lib/appLaunch.js; tests/20 checks both):

@@ -121,7 +121,7 @@ export default function Account() {
     const supabase = await getSupabase();
     await supabase.auth.signOut({ scope: 'local' }); // this device only
     clearAppUser();
-    window.location.href = next;
+    window.location.replace(next);
   };
 
   const openFreeShop = async (e) => {

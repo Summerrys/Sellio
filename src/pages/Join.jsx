@@ -229,7 +229,7 @@ export default function Join() {
   const signOut = async () => {
     const supabase = await getSupabase();
     await supabase.auth.signOut({ scope: 'local' }); // this device only
-    window.location.href = '/Auth';
+    window.location.replace('/Auth');
   };
 
   if (stage === 'loading') return <AppLoader visible={true} />;
