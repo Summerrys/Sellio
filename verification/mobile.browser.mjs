@@ -93,12 +93,15 @@ try {
     await page.waitForFunction(()=>document.activeElement?.textContent?.includes('Test product'));
     await page.keyboard.press('Enter');
     assert.match(await product.textContent(),/Test product/);
+    // Sellio is light-only: with the device in dark mode it looks exactly as in light.
+    const look=()=>product.evaluate(el=>({background:getComputedStyle(el).backgroundColor,color:getComputedStyle(el).color,scheme:getComputedStyle(document.documentElement).colorScheme}));
+    const light=await look();
+    assert.match(light.scheme,/^(only light|light only)$/,'The page asks for light only');
     await page.emulateMedia({colorScheme:'dark'});
-    await page.waitForFunction(()=>document.documentElement.classList.contains('dark'));
-    const colors=await product.evaluate(el=>({background:getComputedStyle(el).backgroundColor,color:getComputedStyle(el).color}));
-    assert.notEqual(colors.background,'rgb(255, 255, 255)');
+    await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
+    assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('dark')),false,'Device dark mode must not switch Sellio to dark');
+    assert.deepEqual(await look(),light,'Sellio looks the same with the device in dark mode');
     await page.emulateMedia({colorScheme:'light'});
-    await page.waitForFunction(()=>!document.documentElement.classList.contains('dark'));
     await page.evaluate(()=>window.switchView('stock'));
     await page.getByRole('group',{name:'Stock adjustment',exact:true}).waitFor();
     assert.ok(await page.getByRole('button',{name:'No changes made',exact:true}).isDisabled());
@@ -109,7 +112,7 @@ try {
     await page.getByText('Your account has not been deleted yet.',{exact:true}).waitFor();
     assert.equal(errors.length,0,errors.join('\n'));
     checks++;
-    console.log('PASS browser layout, dropdown mouse/keyboard/clear, appearance switching and protected deletion at '+viewport.width+'x'+viewport.height);
+    console.log('PASS browser layout, dropdown mouse/keyboard/clear, light-only appearance and protected deletion at '+viewport.width+'x'+viewport.height);
     await page.close();
   }
   console.log(checks+' browser viewport checks passed using isolated fixtures; no real account or order touched.');
