@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ShoppingCart } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { submitCheckout } from '@/lib/mobileCheckout';
 import StorefrontView from '@/components/storefront/StorefrontView';
@@ -7,7 +8,8 @@ import MenuAssistantWidget from '@/components/storefront/MenuAssistantWidget';
 import { LanguageProvider, useLanguage, prewarmTranslations } from '@/lib/LanguageContext';
 import { isFnBIndustry } from '@/lib/industry';
 import { fetchStorefrontCatalog } from '@/lib/storefrontCatalog';
-import { useBackToClose } from '@/lib/useBackToClose';
+import { handOverBackStep, useBackToClose } from '@/lib/useBackToClose';
+import { likeErrorMessage, needsSignIn, setListingLike, toggleKnownLike, useLikesFor } from '@/lib/likes';
 import { toast } from 'sonner';
 import { ShopCheckout, ShopOrderDetails, ShopOrderHistory } from '@/components/shop/ShopStorefront';
 import { shopT } from '@/lib/shopSelling';
@@ -60,6 +62,7 @@ const STATUS_COLORS = {
 
 function StorefrontInner() {
   const { tenantSlug, tableId } = useParams();
+  const navigate = useNavigate();
   const { t, lang } = useLanguage();
   const isDineIn = !!tableId;
   const isPreview = new URLSearchParams(window.location.search).get('preview') === 'true';
@@ -144,13 +147,15 @@ function StorefrontInner() {
 
   // In the Android app, buying from a store page needs a Sellio sign-in. Table QR
   // orders, staff taking orders and previews stay as they are; the cart is kept and
-  // signing in comes back here.
-  const beginCheckout = async (fromLink) => {
+  // signing in comes back here. onOpen (Buy now on an item) closes the item's screen in
+  // the same moment the checkout opens, so its Back step becomes the checkout's.
+  const beginCheckout = async (fromLink, onOpen) => {
     if (!isDineIn && !isStaffMode && !isPreview && isNativeApp()) {
       try {
         const supabase = await getSupabase();
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) {
+          onOpen?.();
           setShowCart(false);
           rememberReturnPath(`${window.location.pathname}?checkout=1`);
           toast.info('Please sign in to place your order.');
@@ -159,6 +164,7 @@ function StorefrontInner() {
         }
       } catch { /* session unknown: let them check out */ }
     }
+    onOpen?.();
     setCheckoutFromLink(fromLink);
     setShowCart(false);
     setShowCheckout(true);
@@ -540,6 +546,55 @@ function StorefrontInner() {
     else setCart(prev => prev.map(i => i.key === key ? { ...i, quantity: qty } : i));
   };
 
+  // ── A home seller's item: Like, Chat and Buy now (its Add to cart is addToCart) ──
+  // Only on a home seller's public page: not a table's order, staff taking an order or
+  // the owner's preview.
+  const homeBuyer = !!shopSelling && !isPreview && !isStaffMode && !isDineIn;
+  // The likes of the shop's items, as on Explore (none for an item that isn't on Explore).
+  useLikesFor(homeBuyer ? products.map((p) => p.id) : [], null);
+
+  // Into this shop's cart once (the same line Add to cart writes), then straight to checkout.
+  const buyNow = (product, variant = null, notes = null, closeItem) => {
+    if (checkoutGuard.current || !isStoreOpen) return; // closed: as Add to cart (nothing added)
+    const key = `${product.id}-${variant?.label || 'default'}${notes ? `-${notes}` : ''}`;
+    if (!cart.some((i) => i.key === key)) addToCart(product, variant, notes);
+    beginCheckout(false, closeItem);
+  };
+
+  // Signed out: log in, then back on this shop with the item liked (below).
+  const signInToLike = (product) => {
+    rememberReturnPath(`${window.location.pathname}?like=${encodeURIComponent(product.id)}`);
+    toast.info(t('logInToLike'));
+    navigate('/Auth', { replace: handOverBackStep() });
+  };
+  const likeItem = async (product) => {
+    if (!(await isSignedIn())) { signInToLike(product); return; }
+    toggleKnownLike(product.id).catch((e) => {
+      if (needsSignIn(e)) signInToLike(product);
+      else toast.error(likeErrorMessage(e));
+    });
+  };
+  // A chat with the seller about the item. The chat page asks a signed-out buyer to log in,
+  // and opens the chat already started about it.
+  const chatAbout = (product) => {
+    navigate(`/explore/chats/new?listing=${encodeURIComponent(product.id)}`, { replace: handOverBackStep() });
+  };
+
+  // Back from logging in to like an item: like it (the database checks it can be liked).
+  useEffect(() => {
+    if (loading || !tenant) return;
+    const params = new URLSearchParams(window.location.search);
+    const likeId = params.get('like');
+    if (!likeId) return;
+    params.delete('like');
+    const query = params.toString();
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+    if (!homeBuyer || !products.some((p) => String(p.id) === likeId)) return;
+    setListingLike(likeId, true)
+      .then(() => toast.success(t('likedFound')))
+      .catch((e) => { if (!needsSignIn(e)) toast.error(likeErrorMessage(e)); });
+  }, [loading, tenant]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!tenant?.id) return;
     const deviceId = getOrCreateDeviceId();
@@ -883,6 +938,7 @@ function StorefrontInner() {
           rating={showRating ? ratingSummary : null}
           onRatingClick={() => setShowRatingSheet(true)}
           onAddToCart={!isStoreOpen ? () => {} : addToCart}
+          buyerBar={homeBuyer ? { onBuyNow: buyNow, onLike: likeItem, onChat: chatAbout } : null}
           cartCount={cartCount}
           cartTotal={cartTotal}
           isDesktop={isDesktop}
@@ -925,9 +981,12 @@ function StorefrontInner() {
               </div>
             )}
             {cart.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0' }}>
-                <p style={{ fontSize: 32, margin: '0 0 8px' }}>🛒</p>
-                <p style={{ color: '#94a3b8', fontSize: 14 }}>{t('emptyCart')}</p>
+              // The same empty cart as Explore's Cart page, in the shop's colour.
+              <div data-testid="store-cart-empty" style={{ padding: '24px 0 28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                <span style={{ width: 56, height: 56, borderRadius: '50%', background: `${primaryColor}1A`, color: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ShoppingCart size={26} aria-hidden="true" />
+                </span>
+                <p style={{ margin: '14px 0 0', fontSize: 16, fontWeight: 700, color: '#0f172a' }}>{t('emptyCart')}</p>
               </div>
             ) : (
               <>
