@@ -222,7 +222,7 @@ export default function ShopSetup() {
 
                 {current.key === 'look' && <LogoStep tenant={tenant} tenantId={tenantId} />}
                 {current.key === 'selling' && (
-                  <SellingSettingsForm tenantId={tenantId} currencySymbol={sym} saveLabel="Save and continue" onSaved={next} />
+                  <SellingSettingsForm tenantId={tenantId} currencySymbol={sym} country={tenant.country || ''} saveLabel="Save and continue" onSaved={next} />
                 )}
                 {current.key === 'payment' && <PaymentQRTab tenant={tenant} tenantId={tenantId} />}
                 {current.key === 'listings' && <ListingsStep tenantId={tenantId} />}
