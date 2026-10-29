@@ -24,7 +24,8 @@ const { chromium, devices } = require('playwright');
 
 const bundle = path.join(os.tmpdir(), 'sellio-back-harness.js');
 await build({ entryPoints: [path.join(dir, 'back-harness/app.jsx')], bundle: true, outfile: bundle,
-  jsx: 'automatic', define: { 'process.env.NODE_ENV': '"production"' }, logLevel: 'error' });
+  jsx: 'automatic', define: { 'process.env.NODE_ENV': '"production"' }, logLevel: 'error',
+  alias: { '@': path.join(dir, '../src') } });
 // Every page also runs index.html's first script as it is: in the app, a page that replaces
 // another starts on the first history entry, by way of an older page there (goFresh), and
 // that script is what moves the older page on.
@@ -34,6 +35,7 @@ const html = `<!doctype html><html><head>${freshScript}<meta name="viewport" con
 const js = await readFile(bundle);
 const server = createServer((req, res) => {
   if (req.url === '/app.js') { res.writeHead(200, { 'content-type': 'text/javascript' }); res.end(js); return; }
+  if (req.url.startsWith('/frame')) { res.writeHead(200, { 'content-type': 'text/html' }); res.end('<!doctype html><p>an embedded page</p>'); return; }
   res.writeHead(200, { 'content-type': 'text/html' }); res.end(html);
 }).listen(0);
 const origin = `http://127.0.0.1:${server.address().port}`;
@@ -54,6 +56,8 @@ async function newPhone({ inApp = false } = {}) {
     channel: 'chromium', headless: true, ...pixel,
     args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`],
   });
+  // Google's map (AddressMap): a stand-in page, so nothing goes to the network.
+  await context.route('https://maps.google.com/**', (route) => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>map</title><p>map</p>' }));
   let [worker] = context.serviceWorkers();
   if (!worker) worker = await context.waitForEvent('serviceworker');
   let page = context.pages()[0] || await context.newPage();
@@ -529,20 +533,52 @@ try {
   assert.deepEqual(p.errors, []);
   passed('Android app: a page the app loads on top (Google sign-in coming back) and its sign-in finishing: the next page starts on the first entry');
 
-  // A history that holds another site's page: its first entry isn't ours to go to, so a replace
-  // is left as it is.
+  // With another site's page before Sellio's in the history: a replace from deeper in still
+  // starts on Sellio's first entry (the other site's page stays behind it, as it was).
   p = await newPhone({ inApp: true });
   const otherSite = origin.replace('127.0.0.1', 'localhost');
-  await p.page.goto(otherSite + '/');
-  await p.page.goto(origin + '/signin');
-  now = await settled(p, (x) => x.path === '/signin');
+  await p.page.goto(otherSite + '/frame');
+  await p.page.goto(origin + '/');
+  await sleep(500);
+  await p.tap('toHome');
+  before = await where(p);
   assert.ok(await p.read('navigation.entries().length < history.length'), "the other site's page is in the history");
-  const at = now.at;
+  assert.equal(before.at, 1);
   await p.read('location.replace("/other?mixed=1"), 1');
   now = await settled(p, (x) => x.path === '/other?mixed=1');
-  assert.deepEqual([now.at, now.note], [at, null], 'loaded where it was');
+  assert.deepEqual([now.at, now.length, now.firstIsThisPage, now.note], [0, before.length, true, null], "on Sellio's first entry");
+  assert.ok(await p.read('navigation.entries().length < history.length'), "the other site's page still behind it");
   assert.deepEqual(p.errors, []);
-  passed("Android app: with another site's page in the history, a replace is left as it is");
+  passed("Android app: with another site's page before Sellio's, a replace from deeper in starts on Sellio's first entry");
+
+  // Settings' address map (AddressMap) follows the address as it's typed. Each new map must not
+  // add a history entry (a map's own entries made Back step through old maps on the same screen,
+  // and stopped the app's Back re-arm); and if any embedded page ever adds some, the re-arm still
+  // runs (it needs only the first entry to be this page).
+  p = await newPhone({ inApp: true });
+  await p.tap('toMap');
+  before = await where(p);
+  for (const text of ['178 Yishun', ' Ring Road', ' 760178']) {
+    await p.page.type('#address', text, { delay: 20 });
+    await sleep(1300);
+  }
+  assert.equal(await p.read('document.querySelector("iframe")?.src || ""'), 'https://maps.google.com/maps?q=178%20Yishun%20Ring%20Road%20760178%2C%20Singapore&z=16&output=embed', 'the map follows the address');
+  now = await where(p);
+  assert.deepEqual([now.length, now.at], [before.length, before.at], `no history added by the maps (${before.length} → ${now.length})`);
+  await p.read(`(() => { const f = document.createElement('iframe'); f.id = 'stray'; f.src = '/frame?1'; document.body.appendChild(f); })(), 1`);
+  await sleep(600);
+  await p.read('document.getElementById("stray").src = "/frame?2", 1');
+  await sleep(600);
+  assert.ok(await p.read('navigation.entries().length < history.length'), 'an embedded page added an entry');
+  const mapMoves = [];
+  p.cdp.on('Page.navigatedWithinDocument', (e) => mapMoves.push(new URL(e.url).pathname));
+  await p.cdp.send('Page.enable');
+  await p.read('window.__show()');
+  await sleep(2200);
+  const mapOut = mapMoves.indexOf('/');
+  assert.ok(mapOut >= 0 && mapMoves[mapOut + 1] === '/map', `re-armed despite the embedded page's entry (${mapMoves.join(' ')})`);
+  assert.deepEqual(p.errors, []);
+  passed("Android app: the address map adds no history as it follows the address; an embedded page's entry doesn't stop the re-arm");
 
   // Websites (no app): a replace is left as it is.
   p = await newPhone();

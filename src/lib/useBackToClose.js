@@ -199,8 +199,10 @@ function tryRearm() {
   let current;
   try { entries = browser.navigation.entries(); current = browser.navigation.currentEntry; } catch { return; }
   if (!current || !(current.index > 0)) { backLog('re-arm: not needed (on the first entry)'); return; }
-  if (entries.length !== browser.history.length || !entries[0]?.sameDocument) {
-    backLog(`re-arm: not possible (entries ${entries.length} of ${browser.history.length}, first is ${entries[0]?.sameDocument ? 'this page' : 'another page'})`);
+  // Only the first entry has to be this page. The history can hold more entries than the page's
+  // own (an embedded page's, like a map's; another site's before ours): they don't stop it.
+  if (!entries[0]?.sameDocument) {
+    backLog(`re-arm: not possible (entries ${entries.length} of ${browser.history.length}, first is another page)`);
     return;
   }
   rearm = { phase: 'out', expect: entries[0].key, home: current.key, timer: null };
@@ -323,7 +325,7 @@ export function stepToFirstEntry(why = 'reload') {
     let entries;
     let current;
     try { entries = browser.navigation.entries(); current = browser.navigation.currentEntry; } catch { resolve(); return; }
-    if (!current || !(current.index > 0) || entries.length !== browser.history.length || !entries[0]?.sameDocument) {
+    if (!current || !(current.index > 0) || !entries[0]?.sameDocument) {
       resolve();
       return;
     }
@@ -350,9 +352,8 @@ export function stepToFirstEntry(why = 'reload') {
 // location.reload: finishing a sign-in, signing out, Reload, Try again, a finished setup), from
 // anywhere but the first entry: cancelled here (the navigate listener below calls this first)
 // and loaded on the first entry instead (goFresh), so nothing is left behind the new page.
-// True when it was taken on. Left as it is: other sites, form posts, websites and iPhone, a
-// history that holds another site's pages (its first entry isn't one of ours to go to), and
-// our own replace that goFresh lets through.
+// True when it was taken on. Left as it is: other sites, form posts, websites and iPhone, the
+// first of the page's entries, and our own replace that goFresh lets through.
 function startFreshInstead(event) {
   if (!inAndroidApp() || !event.cancelable || event.formData) return false;
   const type = event.navigationType;
@@ -384,7 +385,7 @@ function startFreshInstead(event) {
     backLog(`fresh start: after the re-arm (${type})`);
     return true;
   }
-  if (!(current.index > 0) || entries.length !== browser.history.length) return false;
+  if (!(current.index > 0)) return false;
   event.preventDefault();
   goFresh(to);
   return true;
@@ -401,8 +402,7 @@ function goFresh(to) {
   let entries;
   let current;
   try { entries = browser.navigation.entries(); current = browser.navigation.currentEntry; } catch { passReplace(to); return; }
-  if (!current || !(current.index > 0) || entries.length !== browser.history.length ||
-      typeof browser.navigation.traverseTo !== 'function') {
+  if (!current || !(current.index > 0) || typeof browser.navigation.traverseTo !== 'function') {
     passReplace(to);
     return;
   }

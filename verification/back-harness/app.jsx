@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { useBackToClose, handOverBackStep, stepToFirstEntry } from '../../src/lib/useBackToClose.js';
+import AddressMap from '../../src/components/ui-custom/AddressMap.jsx';
 
 // What Sellio's update reload calls first (AppRefreshProvider).
 window.__stepToFirstEntry = stepToFirstEntry;
@@ -14,7 +15,7 @@ function Start() {
   useEffect(() => {
     try { sessionStorage.setItem('starts', String(Number(sessionStorage.getItem('starts') || 0) + 1)); } catch { /* no storage */ }
   }, []);
-  return <div><h1 id="page">start</h1><Link id="toHome" to="/home">home</Link></div>;
+  return <div><h1 id="page">start</h1><Link id="toHome" to="/home">home</Link> <Link id="toMap" to="/map">map</Link></div>;
 }
 
 function Home() {
@@ -63,6 +64,18 @@ function SignIn() {
   return <div><h1 id="page">signin</h1></div>;
 }
 
+// Settings' address with its map (AddressMap follows the address as it's typed).
+function MapPage() {
+  const [address, setAddress] = useState('');
+  return (
+    <div>
+      <h1 id="page">map</h1>
+      <input id="address" value={address} onChange={(e) => setAddress(e.target.value)} />
+      <AddressMap address={address} country="Singapore" title="Address on the map" hint="Check the pin" testId="map" />
+    </div>
+  );
+}
+
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <Routes>
@@ -70,6 +83,7 @@ createRoot(document.getElementById('root')).render(
       <Route path="/home" element={<Home />} />
       <Route path="/other" element={<Other />} />
       <Route path="/signin" element={<SignIn />} />
+      <Route path="/map" element={<MapPage />} />
     </Routes>
   </BrowserRouter>,
 );

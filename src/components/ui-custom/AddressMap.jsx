@@ -18,7 +18,11 @@ export default function AddressMap({ address, country, title, hint, testId }) {
   const place = placeWithCountry(query, country);
   return (
     <div className="space-y-1.5" data-testid={testId}>
+      {/* A new frame for each place (key): changing a frame's address adds a history entry, so
+          Back would step through old maps on this screen, and the Android app's Back couldn't be
+          re-armed; a new frame's first page adds none. */}
       <iframe
+        key={place}
         title={title}
         src={`https://maps.google.com/maps?q=${encodeURIComponent(place)}&z=16&output=embed`}
         loading="lazy"

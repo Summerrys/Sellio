@@ -97,6 +97,8 @@ export function backLog(message) {
 function label(target) {
   const el = target?.closest?.('button, a, [role="button"], [role="tab"], input, label') || target;
   if (!el?.tagName) return '?';
+  // The page's background: its text would be the whole page (scripts included).
+  if (el === browser.document.documentElement || el === browser.document.body) return el.tagName.toLowerCase();
   const text = (el.getAttribute?.('aria-label') || el.textContent || el.value || '').replace(/\s+/g, ' ').trim().slice(0, 24);
   return `${el.tagName.toLowerCase()}${text ? ` "${text}"` : ''}`;
 }
