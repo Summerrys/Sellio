@@ -19,3 +19,13 @@ export function openOutside(href) {
   if (isNativeApp()) window.location.href = href;
   else window.open(href, '_blank');
 }
+
+// A place to open in a map (an address, or an area like "Tampines"). Sellio's Android app
+// hands geo: links straight to the phone, which opens its Maps app (no "Open External
+// Link?" box); a browser opens Google Maps in a new tab.
+export function mapLinkProps(place) {
+  const query = encodeURIComponent(String(place || '').trim());
+  return isNativeApp()
+    ? { href: `geo:0,0?q=${query}` }
+    : { href: `https://www.google.com/maps/search/?api=1&query=${query}`, target: '_blank', rel: 'noopener noreferrer' };
+}
