@@ -35,6 +35,8 @@ const ExploreChatThread = lazy(() => import('@/components/explore/ExploreChats')
 const ExplorePurchases = lazy(() => import('@/components/explore/ExplorePurchases'));
 const PurchaseDetail = lazy(() => import('@/components/explore/ExplorePurchases').then((m) => ({ default: m.PurchaseDetail })));
 const ExploreModeration = lazy(() => import('@/components/explore/ExploreModeration'));
+const ExploreCart = lazy(() => import('@/components/explore/ExploreCart'));
+const ExploreLikes = lazy(() => import('@/components/explore/ExploreLikes'));
 const ShopRatings = lazy(() => import('@/components/ratings/ShopRatingsPage'));
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -171,6 +173,8 @@ const AuthenticatedApp = () => {
         <Route path="/explore/chats/:conversationId" element={<LayoutWrapper currentPageName="Explore"><ExploreChatThread /></LayoutWrapper>} />
         <Route path="/explore/purchases" element={<LayoutWrapper currentPageName="Explore"><ExplorePurchases /></LayoutWrapper>} />
         <Route path="/explore/purchases/:orderId" element={<LayoutWrapper currentPageName="Explore"><PurchaseDetail /></LayoutWrapper>} />
+        <Route path="/explore/cart" element={<LayoutWrapper currentPageName="Explore"><ExploreCart /></LayoutWrapper>} />
+        <Route path="/explore/likes" element={<LayoutWrapper currentPageName="Explore"><ExploreLikes /></LayoutWrapper>} />
         <Route path="/moderation" element={<LayoutWrapper currentPageName="Explore"><ExploreModeration /></LayoutWrapper>} />
         <Route path="/store/:tenantSlug" element={<Storefront />} />
         <Route path="/order/:tenantSlug/:tableId" element={<Storefront />} />
