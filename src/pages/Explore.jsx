@@ -1,9 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, Plus, X, Loader2, RefreshCw, Store, ChevronRight, SlidersHorizontal } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Search, Plus, X, Loader2, RefreshCw, Store, ChevronRight, SlidersHorizontal, Heart } from 'lucide-react';
+import { toast } from 'sonner';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { isNativeApp } from '@/lib/nativeApp';
+import { rememberReturnPath } from '@/lib/authNavigation';
+import { likeErrorMessage, likesText, needsSignIn, setListingLike, toggleKnownLike, useKnownLike, useLikesFor } from '@/lib/likes';
 import ExploreTabBar, { markExploreHome } from '@/components/explore/ExploreTabBar';
 import ShopBell from '@/components/explore/ShopBell';
 import CartLink from '@/components/explore/CartButton';
@@ -95,7 +98,51 @@ function ShopAvatar({ name, logo, size = 24 }) {
   );
 }
 
-function ItemCard({ item, rating = null }) {
+const LIKE_RED = '#e11d48';
+
+// A card's heart, on its price row: everyone sees how many likes it has; tapping it likes
+// or unlikes at once (signed out: log in first, then it's liked). A seller's own listing
+// shows its count with a plain heart and no button (they can't like their own). Nothing
+// shows until its likes are known.
+function CardHeart({ item, signedIn, onNeedSignIn }) {
+  const state = useKnownLike(item.product_id);
+  if (!state) return null;
+  const { likes, liked, own } = state;
+  if (own) {
+    if (!likes) return null;
+    return (
+      <span className="flex-shrink-0 self-start mt-[5px] mr-2.5 inline-flex items-center gap-1 text-xs font-semibold text-slate-500" data-testid="card-likes" aria-label={`${likesText(likes)} on your listing`}>
+        <Heart className="w-[18px] h-[18px]" fill="none" color="#94a3b8" aria-hidden="true" />
+        {likes}
+      </span>
+    );
+  }
+  const tap = () => {
+    if (!signedIn) { onNeedSignIn(item.product_id); return; }
+    toggleKnownLike(item.product_id).catch((e) => {
+      if (needsSignIn(e)) onNeedSignIn(item.product_id);
+      else toast.error(likeErrorMessage(e));
+    });
+  };
+  return (
+    <button
+      type="button"
+      onClick={tap}
+      aria-pressed={liked}
+      aria-label={`${liked ? 'Unlike' : 'Like'} ${item.product_name}${likes ? ` (${likesText(likes)})` : ''}`}
+      data-testid="card-heart"
+      className="flex-shrink-0 self-start -mt-1.5 mr-0.5 h-10 min-w-[40px] px-2 rounded-full inline-flex items-center justify-center gap-1 text-xs font-semibold active:scale-90 transition-transform"
+      style={{ color: liked ? '#be123c' : '#64748b' }}
+    >
+      <Heart className="w-[18px] h-[18px]" fill={liked ? LIKE_RED : 'none'} color={liked ? LIKE_RED : '#94a3b8'} aria-hidden="true" />
+      {likes > 0 && <span>{likes}</span>}
+    </button>
+  );
+}
+
+// The card opens the listing anywhere but its heart (a button can't sit inside a link,
+// so the price row is a second link to the same listing, left out of the Tab order).
+function ItemCard({ item, rating = null, signedIn = false, onNeedSignIn }) {
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = item.image_url && !imageFailed;
   const hasDiscount = item.compare_at_price != null && Number(item.compare_at_price) > Number(item.price);
