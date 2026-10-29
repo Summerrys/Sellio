@@ -80,7 +80,7 @@ try {
   // handlers and recover after a read or upload failure.
   const Reader = globalThis.FileReader;
   const originalFetch = globalThis.fetch;
-  const uploadCalls = []; const analysisCalls = []; const appliedPhotos = [];
+  const uploadCalls = []; const analysisCalls = []; const allowanceCalls = []; const appliedPhotos = [];
   let readFails = false; let uploadFails = false;
   globalThis.FileReader = class {
     readAsDataURL() {
@@ -95,11 +95,19 @@ try {
       upload: async (storagePath, file) => { uploadCalls.push({ bucket, storagePath, file }); return { error: uploadFails ? { message: 'Upload unavailable' } : null }; },
       getPublicUrl: storagePath => ({ data: { publicUrl: 'https://images.example.invalid/' + storagePath } }),
     }) },
+    // The monthly AI allowance of the shop (here a business plan: no monthly limit).
+    rpc: async (name, args) => {
+      allowanceCalls.push({ name, args });
+      return { data: { ai_analysis: { limit: null, used: 0 }, photo_search: { limit: null, used: 0 } }, error: null };
+    },
+    // AI photo analysis runs on the server (the analyzeProductImage function).
+    functions: { invoke: async (name, options) => {
+      analysisCalls.push({ name, body: options.body });
+      return { data: { confidence: 0.9, name: 'Test drink', description: 'Fixture', price: 4, category: 'Drinks' }, error: null };
+    } },
   };
-  globalThis.fetch = async (url, options) => {
-    analysisCalls.push({ url, body: JSON.parse(options.body) });
-    return { ok: true, json: async () => ({ confidence: 0.9, name: 'Test drink', description: 'Fixture', price: 4, category: 'Drinks' }) };
-  };
+  // Nothing in this check may reach the network.
+  globalThis.fetch = async url => { throw new Error('Unexpected network request: ' + url); };
   const { default: AIProductAssistant } = await loadComponent('src/components/products/AIProductAssistant.jsx');
   const assistantProps = { tenantId: 'photo-fixture', currency: 'SGD', categories: [], onApply: () => {}, onImageChange: value => appliedPhotos.push(value) };
   const plain = mount(AIProductAssistant, assistantProps);
@@ -118,7 +126,9 @@ try {
   await ai.render();
   await selectPhoto(ai.container.querySelector('input[aria-label="Choose photo for AI analysis"]'), fixturePhoto);
   assert.equal(analysisCalls.length, 1);
-  assert.equal(analysisCalls[0].body.imageBase64, 'data:image/jpeg;base64,cGhvdG8=');
+  assert.equal(analysisCalls[0].name, 'analyzeProductImage');
+  assert.deepEqual(analysisCalls[0].body, { tenantId: 'photo-fixture', imageBase64: 'data:image/jpeg;base64,cGhvdG8=' });
+  assert.ok(allowanceCalls.some(call => call.name === 'my_ai_allowance' && call.args?.p_tenant_id === 'photo-fixture'), 'Reads the monthly AI allowance of this shop');
   assert.match(ai.container.textContent, /AI suggestions ready/);
   const unreadable = mount(AIProductAssistant, assistantProps);
   await unreadable.render(); readFails = true;
@@ -615,20 +625,17 @@ try {
   assert.equal(settingsView.container.querySelector('.sellio-pull-refresh').getAttribute('aria-busy'), 'false');
   passed('Settings page refresh reads tenant data, updates clean controls and keeps a typed business-name draft');
 
-  let mode = false; let listener; let removed;
-  window.matchMedia = () => ({ get matches() { return mode; }, addEventListener: (_event, callback) => { listener = callback; }, removeEventListener: (_event, callback) => { removed = callback; } });
+  // Sellio is light-only: the theme ignores the device appearance setting.
+  let listener;
+  window.matchMedia = () => ({ matches: true, addEventListener: (_event, callback) => { listener = callback; }, removeEventListener: () => {} });
   const { ThemeProvider } = await loadComponent('src/components/theme/ThemeProvider.jsx');
   const theme = mount(ThemeProvider, { children: React.createElement('p', null, 'Brand') });
   await theme.render();
-  assert.equal(document.documentElement.classList.contains('dark'), false);
-  await act(async () => { mode = true; listener(); });
-  assert.equal(document.documentElement.classList.contains('dark'), true);
-  assert.equal(document.documentElement.style.colorScheme, 'dark');
-  await act(async () => { mode = false; listener(); });
-  assert.equal(document.documentElement.classList.contains('dark'), false);
+  assert.equal(document.documentElement.classList.contains('dark'), false, 'Device dark mode must not switch Sellio to dark');
+  assert.notEqual(document.documentElement.style.colorScheme, 'dark');
+  assert.equal(listener, undefined, 'Nothing follows the device appearance setting');
   await act(async () => theme.root.unmount());
-  assert.equal(removed, listener);
-  passed('system appearance changes dynamically and its listener is removed');
+  passed('Sellio stays light whatever the device appearance setting');
 
   let respond;
   globalThis.__sellioTestClient = { rpc: () => new Promise(resolve => { respond = resolve; }) };
@@ -669,40 +676,20 @@ try {
   assert.doesNotMatch(deletion.container.textContent, /account has been deleted/);
   passed('deletion requires typed confirmation and preserves reauthentication failure');
 
-  // Mock the edge runtime; no real user or network call is made.
+  // Accounts are deleted on request (email sellio@apptelier.sg) since 3 Oct 2026: the
+  // delete-account server function deletes nothing and answers every request with that.
+  // The edge runtime is mocked; no real user or network call is made.
   let handler;
   globalThis.Deno = { env: { get: () => 'isolated-test-value' }, serve: callback => { handler = callback; } };
-  const edge = await loadComponent('supabase/functions/delete-account/index.ts', [{
-    name: 'edge-client', setup(builder) {
-      builder.onResolve({ filter: /^npm:/ }, () => ({ path: 'edge-client', namespace: 'edge-mock' }));
-      builder.onLoad({ filter: /.*/, namespace: 'edge-mock' }, () => ({ contents: 'export const createClient = () => globalThis.__edgeClient;', loader: 'js' }));
-    },
-  }]);
-  const now = 2000;
-  const token = payload => 'header.' + Buffer.from(JSON.stringify(payload)).toString('base64url') + '.signature';
-  assert.equal(edge.hasRecentVerification(token({ amr: [{ method: 'password', timestamp: now - 1 }] }), now), true);
-  assert.equal(edge.hasRecentVerification(token({ iat: now, amr: [{ method: 'password', timestamp: now - 601 }] }), now), false);
-  assert.equal(edge.hasRecentVerification(token({ amr: [{ method: 'oauth', timestamp: now + 61 }] }), now), false);
-  assert.equal(edge.hasRecentVerification('invalid', now), false);
-  passed('deletion freshness uses authentication time rather than token refresh time');
-  let rpcCalls = 0;
-  globalThis.__edgeClient = { auth: { getUser: async () => ({ error: new Error('Unverified token'), data: {} }) }, rpc: () => { rpcCalls++; } };
-  const invalid = await handler(new Request('https://example.invalid/delete-account', { method: 'POST', headers: { Authorization: 'Bearer ' + token({ amr: [{ method: 'password', timestamp: Date.now() / 1000 }] }) }, body: JSON.stringify({ confirmation: 'DELETE' }) }));
-  assert.equal(invalid.status, 401); assert.equal(rpcCalls, 0);
-  passed('unverified tokens cannot reach account deletion preparation');
-
-  const rpcNames = [];
-  globalThis.__edgeClient = {
-    auth: {
-      getUser: async () => ({ data: { user: { id: 'fixture-user' } }, error: null }),
-      admin: { signOut: async () => ({ error: null }), deleteUser: async () => ({ error: { status: 500 } }), getUserById: async () => ({ data: { user: { id: 'fixture-user' } } }) },
-    },
-    rpc: async name => { rpcNames.push(name); return { data: { requestId: 'fixture-request', status: 'processing' }, error: null }; },
-  };
-  const failedDeletion = await handler(new Request('https://example.invalid/delete-account', { method: 'POST', headers: { Authorization: 'Bearer ' + token({ amr: [{ method: 'password', timestamp: Date.now() / 1000 }] }) }, body: JSON.stringify({ confirmation: 'DELETE' }) }));
-  assert.equal(failedDeletion.status, 500);
-  assert.deepEqual(rpcNames, ['account_deletion_prepare', 'account_deletion_restore']);
-  passed('Auth deletion failure restores access and cannot return completed');
+  await loadComponent('supabase/functions/delete-account/index.ts', []);
+  const refused = await handler(new Request('https://example.invalid/delete-account', { method: 'POST', headers: { Authorization: 'Bearer fixture' }, body: JSON.stringify({ confirmation: 'DELETE' }) }));
+  assert.equal(refused.status, 410);
+  const refusal = await refused.json();
+  assert.equal(refusal.code, 'DELETION_BY_REQUEST');
+  assert.match(refusal.error, /sellio@apptelier\.sg/);
+  const preflight = await handler(new Request('https://example.invalid/delete-account', { method: 'OPTIONS' }));
+  assert.equal(preflight.status, 200);
+  passed('Self-service account deletion is off: the server deletes nothing and points to sellio@apptelier.sg');
   console.log(passes + ' interaction and failure checks passed.');
 } finally {
   for (const item of roots) {
