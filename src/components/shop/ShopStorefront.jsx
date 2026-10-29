@@ -3,6 +3,7 @@ import {
   availableMethods, deliveryChargeFor, formatShopDate, normaliseBuyerPhone, shopT, buyerStatusLabel,
   shopMethod, whatsappLink,
 } from '@/lib/shopSelling';
+import { outsideLinkProps } from '@/lib/nativeApp';
 
 // Free-shop parts of the store page: checkout (how to get the order, name, mobile,
 // address, date), the details shown after ordering, and the buyer's order history.
@@ -181,7 +182,7 @@ export function ShopOrderDetails({ order, sym, lang, food, sellerPhone }) {
         <div style={{ color: '#64748b' }}>{buyerStatusLabel(lang, order.status, method, food)}</div>
       )}
       {sellerPhone && (
-        <a href={whatsappLink(sellerPhone, `Order #${order?.order_number || ''}`)} target="_blank" rel="noreferrer" style={{ color: '#16a34a', fontWeight: 600 }}>
+        <a {...outsideLinkProps(whatsappLink(sellerPhone, `Order #${order?.order_number || ''}`))} style={{ color: '#16a34a', fontWeight: 600 }}>
           {T('contactSeller')}
         </a>
       )}
