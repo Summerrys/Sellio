@@ -146,59 +146,64 @@ function ItemCard({ item, rating = null, signedIn = false, onNeedSignIn }) {
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = item.image_url && !imageFailed;
   const hasDiscount = item.compare_at_price != null && Number(item.compare_at_price) > Number(item.price);
+  const href = listingUrl(item.product_id);
   return (
-    <Link
-      to={listingUrl(item.product_id)}
-      className="group block bg-white rounded-xl sm:rounded-2xl overflow-hidden border border-slate-100 hover:shadow-md transition-shadow"
-    >
-      <div className="flex items-center gap-2 px-2.5 py-2">
-        <ShopAvatar name={item.shop_name} logo={item.shop_logo_url} size={26} />
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-slate-800 truncate">{item.shop_name}</p>
-          <p className="text-[11px] text-slate-400 leading-tight flex items-center gap-1 whitespace-nowrap">
-            {rating && <><RatingPill summary={rating} size={11} variant="bare" /><span aria-hidden="true">·</span></>}
-            <span className="truncate">{timeAgo(item.listed_at)}</span>
-          </p>
-        </div>
-      </div>
-      <div className="relative aspect-square bg-slate-100 overflow-hidden">
-        {showImage ? (
-          <img
-            src={item.image_url}
-            alt={item.product_name}
-            loading="lazy"
-            decoding="async"
-            onError={() => setImageFailed(true)}
-            className="sellio-photo w-full h-full object-cover group-hover:scale-[1.03] transition-[transform,opacity] duration-300"
-          />
-        ) : (
-          <div
-            className="w-full h-full flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, rgba(251,146,60,0.18), rgba(224,68,154,0.16), rgba(139,47,201,0.18))' }}
-          >
-            <span className="text-4xl font-bold text-white/90" style={{ textShadow: '0 2px 12px rgba(139,47,201,0.35)' }}>
-              {(item.product_name || '?').trim().charAt(0).toUpperCase()}
-            </span>
+    <div className="group bg-white rounded-xl sm:rounded-2xl overflow-hidden border border-slate-100 hover:shadow-md transition-shadow" data-testid="item-card">
+      <Link to={href} className="block">
+        <div className="flex items-center gap-2 px-2.5 py-2">
+          <ShopAvatar name={item.shop_name} logo={item.shop_logo_url} size={26} />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-slate-800 truncate">{item.shop_name}</p>
+            <p className="text-[11px] text-slate-400 leading-tight flex items-center gap-1 whitespace-nowrap">
+              {rating && <><RatingPill summary={rating} size={11} variant="bare" /><span aria-hidden="true">·</span></>}
+              <span className="truncate">{timeAgo(item.listed_at)}</span>
+            </p>
           </div>
-        )}
-        {item.shop_type === 'individual' && (
-          <span className="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/90 text-slate-700 shadow-sm">
-            Home seller
-          </span>
-        )}
-      </div>
-      <div className="px-2.5 pt-2 pb-3">
-        <p className="text-sm text-slate-800 leading-snug line-clamp-2 min-h-[2.5rem]">{item.product_name}</p>
-        <p className="mt-1 text-sm font-bold text-slate-900">
-          {formatPrice(item.price, item.currency)}
-          {hasDiscount && (
-            <span className="ml-1.5 text-xs font-normal text-slate-400 line-through">
-              {formatPrice(item.compare_at_price, item.currency)}
+        </div>
+        <div className="relative aspect-square bg-slate-100 overflow-hidden">
+          {showImage ? (
+            <img
+              src={item.image_url}
+              alt={item.product_name}
+              loading="lazy"
+              decoding="async"
+              onError={() => setImageFailed(true)}
+              className="sellio-photo w-full h-full object-cover group-hover:scale-[1.03] transition-[transform,opacity] duration-300"
+            />
+          ) : (
+            <div
+              className="w-full h-full flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, rgba(251,146,60,0.18), rgba(224,68,154,0.16), rgba(139,47,201,0.18))' }}
+            >
+              <span className="text-4xl font-bold text-white/90" style={{ textShadow: '0 2px 12px rgba(139,47,201,0.35)' }}>
+                {(item.product_name || '?').trim().charAt(0).toUpperCase()}
+              </span>
+            </div>
+          )}
+          {item.shop_type === 'individual' && (
+            <span className="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/90 text-slate-700 shadow-sm">
+              Home seller
             </span>
           )}
-        </p>
+        </div>
+        <div className="px-2.5 pt-2">
+          <p className="text-sm text-slate-800 leading-snug line-clamp-2 min-h-[2.5rem]">{item.product_name}</p>
+        </div>
+      </Link>
+      <div className="flex items-center">
+        <Link to={href} tabIndex={-1} className="block flex-1 min-w-0 pl-2.5 pt-1 pb-3">
+          <p className="text-sm font-bold text-slate-900">
+            {formatPrice(item.price, item.currency)}
+            {hasDiscount && (
+              <span className="ml-1.5 text-xs font-normal text-slate-400 line-through">
+                {formatPrice(item.compare_at_price, item.currency)}
+              </span>
+            )}
+          </p>
+        </Link>
+        <CardHeart item={item} signedIn={signedIn} onNeedSignIn={onNeedSignIn} />
       </div>
-    </Link>
+    </div>
   );
 }
 
@@ -471,6 +476,28 @@ export default function Explore() {
   const [reloadKey, setReloadKey] = useState(0);
   const requestId = useRef(0);
   const sentinelRef = useRef(null);
+  const navigate = useNavigate();
+
+  // The hearts on the cards: their likes, asked for as cards appear.
+  useLikesFor(itemsKind === 'merchants' ? [] : items.map((i) => i.product_id), appUser?.id || null);
+  const signInToLike = useCallback((productId) => {
+    rememberReturnPath(`/explore?like=${encodeURIComponent(productId)}`);
+    toast.info('Log in to like listings.');
+    navigate('/Auth');
+  }, [navigate]);
+
+  // Back from signing in to like a card: like it (the database checks it can be liked).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const productId = params.get('like');
+    if (!productId) return;
+    params.delete('like');
+    const rest = params.toString();
+    navigate({ search: rest ? `?${rest}` : '' }, { replace: true });
+    setListingLike(productId, true)
+      .then(() => toast.success('Liked. Find it in Me › My likes.'))
+      .catch((e) => { if (!needsSignIn(e)) toast.error(likeErrorMessage(e)); });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const previous = document.title;
@@ -648,7 +675,7 @@ export default function Explore() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
-                  {items.map((item) => <ItemCard key={item.product_id} item={item} rating={ratings[item.shop_id]} />)}
+                  {items.map((item) => <ItemCard key={item.product_id} item={item} rating={ratings[item.shop_id]} signedIn={signedIn} onNeedSignIn={signInToLike} />)}
                 </div>
               )}
               <div ref={sentinelRef} className="h-px" />
