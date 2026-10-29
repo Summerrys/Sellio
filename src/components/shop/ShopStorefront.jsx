@@ -3,7 +3,7 @@ import {
   availableMethods, deliveryChargeFor, formatShopDate, normaliseBuyerPhone, shopT, buyerStatusLabel,
   shopMethod, whatsappLink,
 } from '@/lib/shopSelling';
-import { outsideLinkProps } from '@/lib/nativeApp';
+import { mapLinkProps, outsideLinkProps } from '@/lib/nativeApp';
 
 // Free-shop parts of the store page: checkout (how to get the order, name, mobile,
 // address, date), the details shown after ordering, and the buyer's order history.
@@ -171,7 +171,15 @@ export function ShopOrderDetails({ order, sym, lang, food, sellerPhone }) {
       {method === 'delivery' && f.address && <div>{f.address}</div>}
       {method === 'collection' && (
         f.collection_address
-          ? <div data-testid="shop-collection-address">{T('collectionAt')}: {f.collection_address}</div>
+          ? (
+            <div data-testid="shop-collection-address">
+              {T('collectionAt')}:{' '}
+              {/* Opens the address in Maps (the phone's Maps app in Sellio's Android app). */}
+              <a {...mapLinkProps(f.collection_address)} aria-label={`${f.collection_address} · ${T('openMap')}`} data-testid="shop-collection-map" style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none' }}>
+                📍 {f.collection_address}
+              </a>
+            </div>
+          )
           : <div>{f.area ? `${T('collectionAt')}: ${f.area}. ` : ''}{T('addressAfterAccept')}</div>
       )}
       {f.seller_notes && <div style={{ color: '#64748b' }}>{f.seller_notes}</div>}
