@@ -138,7 +138,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
       updateFormData({ logoUrl: publicUrl, logoTempPath: storagePath });
     } catch (error) {
       console.error('Logo upload failed:', error);
-      setLogoError('Upload failed, please try again');
+      setLogoError(error?.friendly ? error.message : 'Upload failed, please try again');
     } finally {
       setLogoUploading(false);
     }

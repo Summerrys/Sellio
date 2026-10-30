@@ -433,6 +433,8 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       }
     } catch (err) {
       console.error('Image upload failed:', err);
+      // A photo that didn't come through whole (see imageShrink.js) is left out, and said so.
+      if (err?.friendly) toast.error(err.message);
     }
 
     const validIndices = finalUrls.reduce((acc, u, i) => { if (u?.startsWith('http')) acc.push(i); return acc; }, []);

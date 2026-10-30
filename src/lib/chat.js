@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
+import { checkDrawn, UNREADABLE_PHOTO_MESSAGE } from '@/lib/imageShrink';
 
 export const CHAT_PHOTO_BUCKET = 'chat-images';
 const NO_UNREAD = { buying: 0, selling: 0, by_tenant: {} };
@@ -144,9 +145,15 @@ export async function prepareChatPhoto(file) {
   canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
   const context = canvas.getContext('2d');
   if (!context) throw friendly("That photo couldn't be prepared. Try again.");
+  context.drawImage(img, 0, 0, canvas.width, canvas.height);
+  // A photo that didn't come through whole draws as nothing, and would send as a white
+  // square (see imageShrink.js).
+  const drawn = await checkDrawn(context, canvas.width, canvas.height, file);
+  if (drawn === 'cut-off') throw friendly(UNREADABLE_PHOTO_MESSAGE);
+  if (drawn === 'not-drawn') throw friendly("That photo couldn't be prepared. Try again.");
+  context.globalCompositeOperation = 'destination-over'; // white behind see-through parts
   context.fillStyle = '#fff';
   context.fillRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(img, 0, 0, canvas.width, canvas.height);
   let blob = await toBlob(canvas, 'image/webp', 0.82);
   if (!blob || blob.type !== 'image/webp') blob = await toBlob(canvas, 'image/jpeg', 0.85);
   if (!blob) throw friendly("That photo couldn't be prepared. Try again.");

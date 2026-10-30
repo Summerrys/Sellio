@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, RotateCw, Crop, Undo2, ImagePlus, Save, Trash2 } from 'lucide-react';
 import { useBackToClose } from '@/lib/useBackToClose';
+import { toast } from 'sonner';
+import { checkPhoto, UnreadablePhotoError } from '@/lib/imageShrink';
 
 const TOOLS = { NONE: 'none', CROP: 'crop' };
 // preserveResolution: save from the photo itself (up to this many px on the long side),
@@ -23,6 +25,26 @@ export default function ImageEditModal({
   const replaceInputRef = useRef(null);
   // Phone / browser Back closes the editor (like its ✕), not the window it was opened from.
   useBackToClose(true, onClose);
+
+  // A photo from the phone that didn't come through whole (see imageShrink.js) shows blank
+  // or cut off here, and Save would keep it that way (black, once saved as a JPEG). So it
+  // isn't edited: the editor closes and says why.
+  useEffect(() => {
+    if (!/^(data|blob):/i.test(src || '')) return undefined;
+    let alive = true;
+    (async () => {
+      try {
+        await checkPhoto(await (await fetch(src)).blob());
+      } catch (err) {
+        if (alive && err instanceof UnreadablePhotoError) {
+          toast.error(err.message);
+          onClose();
+        }
+      }
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src]);
 
   const [history, setHistory] = useState([{ imageSrc: src, rotation: 0 }]);
   const [current, setCurrent] = useState({ imageSrc: src, rotation: 0 });
@@ -80,13 +102,19 @@ export default function ImageEditModal({
     setTool(TOOLS.NONE); setCropStart(null); setCropEnd(null);
   };
 
-  const handleReplace = (e) => {
+  const handleReplace = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
+    // A replacement that didn't come through whole is refused (see above).
+    try {
+      await checkPhoto(file);
+    } catch (err) {
+      if (err instanceof UnreadablePhotoError) { toast.error(err.message); return; }
+    }
     const reader = new FileReader();
     reader.onloadend = () => pushHistory({ imageSrc: reader.result, rotation: 0 });
     reader.readAsDataURL(file);
-    e.target.value = '';
   };
 
   const getPos = (e, canvas) => {

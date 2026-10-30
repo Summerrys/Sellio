@@ -644,7 +644,16 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
 
     setUploading(true);
     const supabase = await getSupabase();
-    const banner = await shrinkImage(file, { maxSide: BANNER_MAX_SIDE });
+    let banner;
+    try {
+      banner = await shrinkImage(file, { maxSide: BANNER_MAX_SIDE });
+    } catch (err) {
+      // A photo that didn't come through whole (see imageShrink.js): nothing is uploaded.
+      toast.error(err?.friendly ? err.message : 'Upload failed. Please try again.');
+      setUploading(false);
+      if (e.target) e.target.value = '';
+      return;
+    }
     const path = `${tenantId}/storefront/banner-bg.${banner.ext}`;
     const { error } = await supabase.storage.from('product-images').upload(path, banner.blob, { upsert: true, contentType: banner.type });
     if (error) { toast.error('Upload failed: ' + error.message); setUploading(false); return; }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTenant } from '@/components/tenant/TenantContext';
 import { getSupabase } from '@/lib/supabaseClient';
-import { shrinkImage, LOGO_MAX_SIDE, LONG_CACHE } from '@/lib/imageShrink';
+import { shrinkImage, checkPhoto, LOGO_MAX_SIDE, LONG_CACHE } from '@/lib/imageShrink';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -186,9 +186,19 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
     setForm(prev => ({ ...prev, currency, country }));
   };
 
-  const handleLogoSelect = (e) => {
+  const handleLogoSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // A photo that didn't come through whole is refused here (see imageShrink.js).
+    try {
+      await checkPhoto(file);
+    } catch (err) {
+      if (err?.friendly) {
+        toast.error(err.message);
+        e.target.value = '';
+        return;
+      }
+    }
     setLogoFile(file);
     setLogoPreview(URL.createObjectURL(file));
   };
@@ -203,14 +213,17 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
   const uploadLogo = async () => {
     if (!logoFile) return form.logo_url;
     setIsUploadingLogo(true);
-    const supabase = await getSupabase();
-    const logo = await shrinkImage(logoFile, { maxSide: LOGO_MAX_SIDE });
-    const path = `${tenantId}/logo/${Date.now()}.${logo.ext}`;
-    const { error } = await supabase.storage.from('product-images').upload(path, logo.blob, { upsert: true, contentType: logo.type, cacheControl: LONG_CACHE });
-    if (error) throw error;
-    const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
-    setIsUploadingLogo(false);
-    return publicUrl;
+    try {
+      const supabase = await getSupabase();
+      const logo = await shrinkImage(logoFile, { maxSide: LOGO_MAX_SIDE });
+      const path = `${tenantId}/logo/${Date.now()}.${logo.ext}`;
+      const { error } = await supabase.storage.from('product-images').upload(path, logo.blob, { upsert: true, contentType: logo.type, cacheControl: LONG_CACHE });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
+      return publicUrl;
+    } finally {
+      setIsUploadingLogo(false);
+    }
   };
 
   const handleLogoEditSave = async (imageData) => {
