@@ -4,7 +4,8 @@ import PhotoPickerControl from './PhotoPickerControl';
 
 // capture=environment delegates photography to the phone's camera app.
 // Only Android wrappers with a declared CAMERA permission need a grant first.
-export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen, children, disabled, ...props }) {
+// `action` is the button's name in its hints ("tap Scan again").
+export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen, children, disabled, action = 'Scan', ...props }) {
   const nativeAndroid = typeof window !== 'undefined' && /Android/i.test(navigator.userAgent) && (
     typeof window.ReactNativeWebView?.postMessage === 'function' ||
     typeof window.__hybrid_bridge?.sendMessage === 'function'
@@ -27,7 +28,7 @@ export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen,
     if (granted.current) { granted.current = false; return; }
     if (!navigator.mediaDevices?.getUserMedia) {
       event.preventDefault();
-      onError?.('Allow Camera in your phone’s Sellio permissions, then try Scan again.');
+      onError?.(`Allow Camera in your phone’s Sellio permissions, then try ${action} again.`);
       return;
     }
     event.preventDefault();
@@ -53,7 +54,7 @@ export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen,
         if (typeof input.showPicker === 'function') { input.showPicker(); granted.current = false; }
         else input.click();
       } catch {
-        onError?.('Camera access enabled. Tap Scan again to open your camera.');
+        onError?.(`Camera access enabled. Tap ${action} again to open your camera.`);
       }
     }).catch(error => {
       if (!mounted.current || id !== request.current) return;
@@ -61,8 +62,8 @@ export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen,
       setPreparing(false);
       granted.current = false;
       onError?.(error.name === 'NotAllowedError' || error.name === 'SecurityError'
-        ? 'Camera access is off. Allow Camera in your phone’s Sellio permissions, then tap Scan again.'
-        : 'Could not open the camera. Close other camera apps and try Scan again.');
+        ? `Camera access is off. Allow Camera in your phone’s Sellio permissions, then tap ${action} again.`
+        : `Could not open the camera. Close other camera apps and try ${action} again.`);
     });
   };
 
