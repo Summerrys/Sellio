@@ -7,12 +7,25 @@ import ImageEditModal from '../onboarding/ImageEditModal';
 import { getSupabase } from '@/lib/supabaseClient';
 import { shrinkImage, withExt, PHOTO_MAX_SIDE, LONG_CACHE } from '@/lib/imageShrink';
 import { deleteImageFromStorage } from '@/lib/imageStorage';
-import PhotoPickerControl from '../ui-custom/PhotoPickerControl';
+import PhotoSourceControl from '../ui-custom/PhotoSourceControl';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { allowanceLine, allowanceSpent, lastSuggestion, functionErrorMessage } from '@/lib/aiAllowance';
 
 // An error whose message is meant for the person (from our own functions).
 const friendlyError = (message) => Object.assign(new Error(message), { friendly: true });
+
+// A failed photo upload, for a toast. A photo that didn't come through whole explains
+// itself (see imageShrink.js).
+const uploadErrorText = (err) => (err?.friendly ? err.message : 'Upload failed: ' + err?.message);
+
+// A photo as a data: URL (what the AI function takes).
+const readAsDataUrl = (blob) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = () => reject(new Error('Could not read this photo. Please choose another image.'));
+  reader.onabort = () => reject(new Error('Photo reading was interrupted. Please try again.'));
+  reader.readAsDataURL(blob);
+});
 
 // Expose cleanup for parent to call
 export const cleanupDeletedImages = async (componentRef) => {
@@ -265,6 +278,8 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
    const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingImageIndex, setEditingImageIndex] = useState(null); // null = cover, number = additional index
    const [addingImage, setAddingImage] = useState(false);
+  // What the uploading step is for: 'ai' (AI Analyse, a last suggestion) or 'photo'.
+  const [uploadKind, setUploadKind] = useState('ai');
 
    const fileInputRef = useRef(null);       // AI analysis upload
    const plainImageInputRef = useRef(null); // "Add photo without AI"
@@ -319,10 +334,10 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
   };
   // Path: product-images/{tenantId}/products/{filename} ✓
 
-  const uploadToStorage = async (file) => {
+  // Uploads a photo shrinkImage has already shrunk (and checked); returns its public URL.
+  const uploadShrunk = async (photo, name) => {
     const supabase = await getSupabase();
-    const photo = await shrinkImage(file, { maxSide: PHOTO_MAX_SIDE });
-    const storagePath = buildPermanentPath(tenantId, withExt(file.name, photo.ext));
+    const storagePath = buildPermanentPath(tenantId, withExt(name, photo.ext));
     const { error } = await supabase.storage.from('product-images').upload(storagePath, photo.blob, { upsert: true, contentType: photo.type, cacheControl: LONG_CACHE });
     if (error) throw new Error(error.message);
     // Track this path for cancel cleanup
@@ -330,6 +345,9 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     const { data } = supabase.storage.from('product-images').getPublicUrl(storagePath);
     return data.publicUrl;
   };
+
+  // Throws UnreadablePhotoError for a photo that didn't come through whole (nothing uploaded).
+  const uploadToStorage = async (file) => uploadShrunk(await shrinkImage(file, { maxSide: PHOTO_MAX_SIDE }), file.name);
 
   const uploadBase64ToStorage = async (dataUrl) => {
     const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
@@ -353,25 +371,24 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     if (!file) return;
     if (fileInputRef.current) fileInputRef.current.value = '';
 
+    setUploadKind('ai');
     setStep('uploading');
     setErrorMsg('');
 
     try {
-      // Read base64 for AI analysis + upload to storage in parallel
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error('Could not read this photo. Please choose another image.'));
-        reader.onabort = () => reject(new Error('Photo reading was interrupted. Please try again.'));
-        reader.readAsDataURL(file);
-      });
+      // Shrink first: a photo that didn't come through whole stops here, before it uses one
+      // of the month's analyses. The AI gets the shrunk copy too (at most 1600px, about what
+      // it looks at anyway), so even a big photo goes up quickly.
+      const photo = await shrinkImage(file, { maxSide: PHOTO_MAX_SIDE });
+      const base64 = await readAsDataUrl(photo.blob);
 
       setPreview(base64); // temp preview while uploading
       setStep('analyzing');
 
+      // Upload to storage and analyse in parallel
       const supabase = await getSupabase();
       const [publicUrl, analysis] = await Promise.all([
-        uploadToStorage(file),
+        uploadShrunk(photo, file.name),
         supabase.functions.invoke('analyzeProductImage', { body: { tenantId, imageBase64: base64 } }),
       ]);
 
@@ -402,14 +419,17 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
   };
 
   // Show the last AI suggestion again (kept after the monthly analyses are spent).
-  // Its photo is copied into this store's product photos, like any new photo.
+  // Its photo is copied into this store's product photos, like any new photo. When that
+  // photo can't be used (gone, or it never came through whole), the suggestion still fills
+  // in the details and the person adds a photo.
   const applyLastSuggestion = async () => {
     if (!lastAi) return;
+    setUploadKind('ai');
     setStep('uploading');
     setErrorMsg('');
-    try {
-      let imageUrl = '';
-      if (lastAi.imagePath) {
+    let imageUrl = '';
+    if (lastAi.imagePath) {
+      try {
         const supabase = await getSupabase();
         const { data: pub } = supabase.storage.from('product-images').getPublicUrl(lastAi.imagePath);
         const res = await fetch(pub.publicUrl);
@@ -417,14 +437,15 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
         const blob = await res.blob();
         const ext = (lastAi.imagePath.split('.').pop() || 'jpg').toLowerCase();
         imageUrl = await uploadToStorage(new File([blob], `ai-suggestion.${ext}`, { type: blob.type || 'image/jpeg' }));
+      } catch (err) {
+        console.error('Last AI suggestion photo:', err?.message);
+        imageUrl = '';
+        toast.message("The photo from your last suggestion couldn't be used. Please add a photo.");
       }
-      setPreview(imageUrl || null);
-      setResult({ ...lastAi, _imageUrl: imageUrl });
-      setStep('done');
-    } catch (err) {
-      setErrorMsg(err.message || 'Could not load your last suggestion');
-      setStep('error');
     }
+    setPreview(imageUrl || null);
+    setResult({ ...lastAi, _imageUrl: imageUrl });
+    setStep('done');
   };
 
   const handleApply = async () => {
@@ -484,12 +505,14 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     onApply(patch);
     onImageChange?.(preview || '');
     toast.success('AI suggestions applied!');
-    setStep('applied');
+    // No photo (a last suggestion whose photo couldn't be used): back to adding one.
+    setStep(preview ? 'applied' : 'idle');
     setResult(null);
   };
 
   const handlePlainImageSelect = async (file) => {
     if (!file) return;
+    setUploadKind('photo');
     setStep('uploading');
     try {
       const publicUrl = await uploadToStorage(file);
@@ -497,7 +520,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
       setPreview(publicUrl);
       setStep('image_only');
     } catch (err) {
-      toast.error('Upload failed: ' + err.message);
+      toast.error(uploadErrorText(err));
       setStep('idle');
     }
   };
@@ -553,7 +576,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
         }
         setEditModalOpen(false);
       } catch (err) {
-        toast.error('Upload failed: ' + err.message);
+        toast.error(uploadErrorText(err));
       }
     } else {
       // Direct URL from replace — delete old image
@@ -576,10 +599,8 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     setEditingImageIndex(null);
   };
 
-  const handleAddImage = async (e) => {
-    const file = e.target.files?.[0];
+  const handleAddImage = async (file) => {
     if (!file) return;
-    e.target.value = '';
     setAddingImage(true);
     try {
       const publicUrl = await uploadToStorage(file);
@@ -589,7 +610,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
         return updated;
       });
     } catch (err) {
-      toast.error('Upload failed: ' + err.message);
+      toast.error(uploadErrorText(err));
     } finally {
       setAddingImage(false);
     }
@@ -652,11 +673,11 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                 <p className="text-xs text-slate-500 mt-0.5">Upload a photo — AI generates name, price & category</p>
               </div>
               <div className="flex gap-2 w-full">
-                <PhotoPickerControl label="Choose photo for AI analysis" inputRef={fileInputRef} onFile={handleFileSelect} disabled={analysesSpent} className={cn('flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-white text-sm font-medium rounded-lg', analysesSpent ? 'cursor-not-allowed' : 'cursor-pointer')} style={{ background: analysesSpent ? '#cbd5e1' : themeColor }}>
+                <PhotoSourceControl label="Choose photo for AI analysis" inputRef={fileInputRef} onFile={handleFileSelect} disabled={analysesSpent} className={cn('flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-white text-sm font-medium rounded-lg', analysesSpent ? 'cursor-not-allowed' : 'cursor-pointer')} style={{ background: analysesSpent ? '#cbd5e1' : themeColor }}>
                   <Upload className="w-4 h-4 flex-shrink-0" />
                   <span>AI Analyse</span>
-                </PhotoPickerControl>
-                <PhotoPickerControl
+                </PhotoSourceControl>
+                <PhotoSourceControl
                   label="Upload product photo"
                   inputRef={plainImageInputRef}
                   onFile={handlePlainImageSelect}
@@ -664,7 +685,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                 >
                   <ImagePlus className="w-4 h-4 flex-shrink-0" />
                   <span>Upload Photo</span>
-                </PhotoPickerControl>
+                </PhotoSourceControl>
               </div>
               <p className="text-xs text-slate-400">PNG, JPG up to 5MB</p>
               {analysisLine && (
@@ -715,11 +736,11 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
               <div className="flex items-center gap-2 mb-1">
                 <Loader2 className="w-4 h-4 animate-spin text-[rgb(var(--color-primary))]" />
                 <p className="text-sm font-semibold text-slate-800">
-                  {step === 'uploading' ? 'Uploading image...' : 'AI is analyzing your product...'}
+                  {step === 'uploading' ? (uploadKind === 'photo' ? 'Uploading photo...' : 'Uploading image...') : 'AI is analyzing your product...'}
                 </p>
               </div>
               <p className="text-xs text-slate-500">
-                {step === 'uploading' ? 'Preparing image for analysis' : 'Generating name, description & suggestions'}
+                {step === 'uploading' ? (uploadKind === 'photo' ? 'Making it quick to load' : 'Preparing image for analysis') : 'Generating name, description & suggestions'}
               </p>
               <div className="mt-2 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                 <div
@@ -822,10 +843,15 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
 
               {/* "+" add more slot for additional images */}
               {additionalImages.length < 4 && (
-                <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center hover:border-slate-400 transition-colors col-span-1 cursor-pointer">
+                <PhotoSourceControl
+                  label="Add another photo"
+                  inputRef={addImageInputRef}
+                  onFile={handleAddImage}
+                  disabled={addingImage}
+                  className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center hover:border-slate-400 transition-colors col-span-1 cursor-pointer"
+                >
                   {addingImage ? <Loader2 className="w-5 h-5 text-slate-400 animate-spin" /> : <Plus className="w-5 h-5 text-slate-400" />}
-                  <input ref={addImageInputRef} type="file" accept="image/*" onChange={handleAddImage} className="hidden" disabled={addingImage} />
-                </label>
+                </PhotoSourceControl>
               )}
             </div>
           </div>
