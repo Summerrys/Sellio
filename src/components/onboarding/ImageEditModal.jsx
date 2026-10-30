@@ -43,7 +43,6 @@ export default function ImageEditModal({
       }
     })();
     return () => { alive = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src]);
 
   const [history, setHistory] = useState([{ imageSrc: src, rotation: 0 }]);
