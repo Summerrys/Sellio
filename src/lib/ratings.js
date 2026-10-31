@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
+import { deviceKey } from '@/lib/deviceKey';
 
 // Shop ratings (Supabase: shop_ratings and its functions). Buyers rate a shop after a
 // completed order: 1–5 stars and an optional comment, shown on the shop's page as
@@ -7,6 +8,8 @@ import { getSupabase } from '@/lib/supabaseClient';
 // addresses, ID numbers or rude words), or kept for the shop only. Everyone sees a shop's
 // average, count and public comments once 3 buyers have rated it (each buyer counts once).
 // Anyone logged in can report a public comment; Sellio's moderators keep or remove it.
+// A shop can't be rated from a phone its owner or staff use (lib/deviceKey), and a rating
+// that looks suspicious waits, not counted, until a moderator keeps or removes it.
 
 export const STAR_WORDS = ['', 'Terrible', 'Not good', 'Okay', 'Good', 'Great'];
 export const STAR_COLOR = '#f59e0b';
@@ -84,7 +87,9 @@ export class RatingError extends Error {
 // notePublic: show the comment on the shop's page (with the buyer's first name and initial).
 export async function rateOrder(orderId, stars, note, notePublic = false) {
   const supabase = await getSupabase();
-  const { data, error } = await supabase.rpc('rate_order_v2', { p_order_id: orderId, p_stars: stars, p_note: note || null, p_note_public: !!(note && notePublic) });
+  const { data, error } = await supabase.rpc('rate_order_v3', {
+    p_order_id: orderId, p_stars: stars, p_note: note || null, p_note_public: !!(note && notePublic), p_device_key: deviceKey(),
+  });
   if (error) {
     const signIn = error.hint === 'sign_in' || (error.code === '42501' && /permission denied/i.test(error.message || ''));
     throw new RatingError(signIn ? 'Log in to rate your order.' : (error.message || 'Your rating couldn\'t be saved. Please try again.'), signIn ? 'sign_in' : error.hint);
@@ -190,6 +195,30 @@ export async function moderateComment(ratingId, action) {
   if (error) throw error;
   return data;
 }
+
+// Ratings on hold: each with its reasons (HOLD_REASONS) and what was found — the shop's
+// people who use one of the rater's phones (shop_people), other raters of the shop on the
+// same phone (phone_mates), five-star ratings from new accounts within a day (burst_count).
+export async function ratingReviewQueue(offset = 0, limit = 30) {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase.rpc('rating_review_queue', { p_limit: limit, p_offset: offset });
+  if (error) throw error;
+  return data || [];
+}
+
+// action: 'keep' (it counts, and the shop is told) | 'remove' (it doesn't count).
+export async function reviewRating(ratingId, action) {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase.rpc('review_rating', { p_rating_id: ratingId, p_action: action });
+  if (error) throw error;
+  return data;
+}
+
+export const HOLD_REASONS = {
+  shop_phone: 'Signed in on a phone the shop’s owner or staff use',
+  shared_phone: 'Another account that rated this shop uses the same phone',
+  new_account_burst: 'Part of a burst of five-star ratings from new accounts',
+};
 
 // "4.8" for a rating number.
 export const ratingText = (value) => (value == null || Number.isNaN(Number(value)) ? '' : Number(value).toFixed(1));
