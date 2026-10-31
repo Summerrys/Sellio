@@ -17,6 +17,7 @@ import { isNativeApp } from '@/lib/nativeApp';
 import { rememberReturnPath } from '@/lib/authNavigation';
 import { fetchRatingSummaries, forgetRatingSummary, isSignedIn, myOrderRatings } from '@/lib/ratings';
 import { useChatUser } from '@/lib/chat';
+import { rememberThisPhone } from '@/lib/deviceKey';
 import { OrderRateRow, RateOrderSheet, RatePrompt, RatingSheet } from '@/components/ratings/RatingParts';
 
 // Orders whose "How was your order?" card was dismissed (shown once per order).
@@ -308,6 +309,12 @@ function StorefrontInner() {
   useEffect(() => {
     if (ownShop && showCheckout && !isSubmitting) { setShowCheckout(false); blockOwnShop(); }
   }, [ownShop]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // This phone, for rating checks (lib/deviceKey): noted for whoever is signed in, so a
+  // shop can't be rated from the phones its owner and staff use.
+  useEffect(() => {
+    if (viewer?.email) rememberThisPhone(viewer.email);
+  }, [viewer?.email]);
 
   // From Explore (Buy now on a listing, or Checkout in the cart): the item is already in
   // this shop's cart, so go straight to checkout once the shop has loaded (with the app's
