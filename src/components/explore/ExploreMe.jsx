@@ -5,7 +5,7 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { useTenant } from '@/components/tenant/TenantContext';
 import { rememberReturnPath } from '@/lib/authNavigation';
-import { amIModerator, moderationQueue, ratingText, shopRatingOverview } from '@/lib/ratings';
+import { amIModerator, moderationQueue, ratingReviewQueue, ratingText, shopRatingOverview } from '@/lib/ratings';
 import { itemWords } from '@/lib/planFeatures';
 import { purchaseSummary } from '@/lib/purchases';
 import AccountProfileModal from '@/components/profile/AccountProfileModal';
@@ -75,15 +75,18 @@ export default function ExploreMe() {
     return () => { cancelled = true; };
   }, [appUser]);
 
-  // Sellio's moderators: reported comments waiting for review.
+  // Sellio's moderators: ratings on hold and reported comments waiting for them.
   const [moderation, setModeration] = useState(null);
   useEffect(() => {
     if (!appUser) return undefined;
     let cancelled = false;
     amIModerator().then(async (yes) => {
       if (!yes || cancelled) return;
-      const waiting = await moderationQueue(0, 100).then((list) => list.length).catch(() => null);
-      if (!cancelled) setModeration(waiting == null ? 'Reported comments' : waiting ? `${waiting} to review` : 'Nothing to review');
+      const count = (load) => load(0, 100).then((list) => list.length).catch(() => null);
+      const [held, reported] = await Promise.all([count(ratingReviewQueue), count(moderationQueue)]);
+      if (cancelled) return;
+      const parts = [held ? `${held} on hold` : '', reported ? `${reported} reported comment${reported === 1 ? '' : 's'}` : ''].filter(Boolean);
+      setModeration(held == null && reported == null ? 'Ratings on hold and reported comments' : parts.length ? parts.join(' · ') : 'Nothing to check');
     });
     return () => { cancelled = true; };
   }, [appUser]);
@@ -174,7 +177,7 @@ export default function ExploreMe() {
               </div>
               {moderation && (
                 <div className="border-t border-slate-100">
-                  <Row to="/moderation" icon={Flag} label="Reported comments" detail={moderation} />
+                  <Row to="/moderation" icon={Flag} label="Ratings to check" detail={moderation} />
                 </div>
               )}
             </section>
