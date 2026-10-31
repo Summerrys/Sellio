@@ -63,6 +63,7 @@ import { SellProvider, useSell } from '@/lib/sell';
 import { inAppFiles, clearExpiredFiles } from '@/lib/appFiles';
 import { useBackToClose, handOverBackStep } from '@/lib/useBackToClose';
 import { isStaffAccount } from '@/lib/staffAccess';
+import { rememberThisPhone } from '@/lib/deviceKey';
 
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth', 'Join', 'Account', 'World', 'Explore'];
@@ -337,6 +338,11 @@ function AppLayout({ children, currentPageName }) {
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [queryClient]);
+  // This phone, for rating checks (lib/deviceKey): noted for whoever is signed in, so a
+  // shop can't be rated from the phones its owner and staff use.
+  useEffect(() => {
+    if (user?.email) rememberThisPhone(user.email);
+  }, [user?.email]);
   // Sellio's Android app: remove this person's saved files whose link has expired
   // (lib/appFiles), each time the app opens a shop.
   useEffect(() => {
