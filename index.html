@@ -39,7 +39,9 @@
             Supabase Google sign-in; anything else stays on the page with an error.
          2. During the app's start, show the Sellio splash at once: from the first paint
             when the app opens or comes back from Google sign-in, and across the reloads
-            on the way to the first screen (Dashboard, Join, …).
+            on the way to the first screen (Dashboard, Join, …). Sellio added to a home
+            screen gets the same splash when it opens (the first page of each of its
+            sessions, from the home screen or Open in app).
          3. The app opening at "/" goes straight to Explore (Auth for invite or recovery
             links) in this same page load, and the landing markup stays hidden and idle
             everywhere except the website's start page. */
@@ -66,6 +68,9 @@
         // Same bridge test as App.jsx's RootRoute: only the Android app has it.
         var bridge = (w.ReactNativeWebView && typeof w.ReactNativeWebView.postMessage === 'function') ||
           (w.__hybrid_bridge && typeof w.__hybrid_bridge.sendMessage === 'function');
+        // Sellio added to a home screen (installed from a browser), not the Android app.
+        var homeScreen = false;
+        try { homeScreen = !bridge && (w.matchMedia('(display-mode: standalone)').matches || w.navigator.standalone === true); } catch (e) { /* no matchMedia */ }
         try {
           var store = w.sessionStorage, now = Date.now();
           var launch = JSON.parse(store.getItem('sellio-launch') || 'null');
@@ -74,7 +79,11 @@
           // The app opening at its start page, or coming back from Google sign-in: start
           // the launch here, so the splash is there from the first paint.
           var googleReturn = l.pathname === '/Auth' && new URLSearchParams(l.search).get('sellio_mobile_oauth') === '1';
-          if (!active && bridge && (l.pathname === '/' || googleReturn)) {
+          // Sellio on a home screen opening: the first page of this session of it (reloads
+          // inside it keep the launch already running, as for the app).
+          var homeScreenOpens = homeScreen && !store.getItem('sellio-home-screen-session');
+          if (homeScreen) store.setItem('sellio-home-screen-session', '1');
+          if (!active && ((bridge && (l.pathname === '/' || googleReturn)) || homeScreenOpens)) {
             store.setItem('sellio-launch', JSON.stringify({ start: now, done: false }));
             active = true;
             age = 0;
