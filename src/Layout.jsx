@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppRefreshHandler } from '@/lib/AppRefreshContext';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { TenantProvider, useTenant } from './components/tenant/TenantContext';
 import { toast } from 'sonner';
@@ -54,8 +54,8 @@ import { reconcileBilling } from '@/lib/billing';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import TrialReminderModal from './components/subscription/TrialReminderModal';
 import AccountProfileModal from './components/profile/AccountProfileModal';
-import InstallPWAModal from './components/onboarding/InstallPWAModal';
-import { canShowInstallPrompt, isStandalone } from '@/lib/pwaInstall';
+import InstallBanner from './components/onboarding/InstallBanner';
+import { installPromptSeen, offerInstall, OFFER_INSTALL_EVENT } from '@/lib/pwaInstall';
 import PlanFeatureNotice from './components/subscription/PlanFeatureNotice';
 import { PAGE_FEATURES, itemWords } from '@/lib/planFeatures';
 import { isShopTenant } from '@/lib/shopSelling';
@@ -378,18 +378,36 @@ function AppLayout({ children, currentPageName }) {
   const { openSell } = useSell();
   const shopChatsWaiting = (Number(shopChats.buying) || 0) + (Number(shopChats.selling) || 0);
 
-  // Prompt to install as an app whenever a merchant or staff logs in via browser.
-  // Skipped entirely if already running as an installed PWA, or already shown
-  // this browser session (so it doesn't nag on every page navigation).
+  // "Install Sellio" (the banner at the top, InstallBanner), offered once per browser session
+  // (offerInstall): on the sign-in page, when someone opens Sellio signed in (Explore, or a
+  // shop's workspace), and in a business's setup (Step1Combined). Never in Sellio's Android
+  // app, another app's built-in browser or the installed app; not on a sign-in link (an
+  // invite, a password reset, finishing Google sign-in); and not while the person is
+  // typing: then it's offered after they sign in. When the browser says Sellio is installed
+  // already, the banner offers "Open in app" instead.
+  const [installKind, setInstallKind] = useState('install');
   useEffect(() => {
-    if (!customUser) return;
-    if (isStandalone()) return;
-    if (sessionStorage.getItem('sellio_install_prompt_login_shown')) return;
-    if (!canShowInstallPrompt()) return;
-    sessionStorage.setItem('sellio_install_prompt_login_shown', '1');
-    const timer = setTimeout(() => setShowInstallPrompt(true), 600);
+    const show = (event) => {
+      setInstallKind(event?.detail?.open ? 'open' : 'install');
+      setShowInstallPrompt(true);
+    };
+    window.addEventListener(OFFER_INSTALL_EVENT, show);
+    return () => window.removeEventListener(OFFER_INSTALL_EVENT, show);
+  }, []);
+  const location = useLocation();
+  const plainSignIn = currentPageName === 'Auth' && !customUser && !location.search && !location.hash;
+  const installHere = plainSignIn ||
+    (!!customUser && currentPageName !== 'Auth' && (currentPageName === 'Explore' || !publicPages.includes(currentPageName)));
+  useEffect(() => {
+    if (!installHere || installPromptSeen()) return undefined;
+    const timer = setTimeout(() => {
+      if (document.activeElement?.matches?.('input, textarea, select, [contenteditable="true"]')) return;
+      // Checked when it's due (offerInstall): Sellio's Android app can connect a moment
+      // after the page starts.
+      offerInstall();
+    }, plainSignIn ? 1200 : 600);
     return () => clearTimeout(timer);
-  }, [customUser]);
+  }, [installHere, plainSignIn, currentPageName]);
 
   const tenantId = tenant?.id;
   const refreshSubscriptionRef = useRef(null);
@@ -547,7 +565,12 @@ function AppLayout({ children, currentPageName }) {
   }
 
   if (publicPages.includes(currentPageName)) {
-    return <>{children}</>;
+    return (
+      <>
+        {children}
+        <InstallBanner open={showInstallPrompt} kind={installKind} onClose={() => setShowInstallPrompt(false)} />
+      </>
+    );
   }
 
   if (isLoading) {
@@ -720,7 +743,7 @@ function AppLayout({ children, currentPageName }) {
         onOpenPricing={() => setShowPricingModal(true)}
         clearAppUser={clearAppUser}
       />
-      <InstallPWAModal open={showInstallPrompt} onClose={() => setShowInstallPrompt(false)} />
+      <InstallBanner open={showInstallPrompt} kind={installKind} onClose={() => setShowInstallPrompt(false)} />
       <RoleSwitcher />
       <PricingModal open={showPricingModal} onOpenChange={setShowPricingModal} tenantId={tenantId} currentTier={subscription?.tier ?? null} hasUsedTrial={!!tenant?.has_used_trial} />
       {showTrialModal && (

@@ -1,51 +1,51 @@
-import React, { useState } from 'react';
-import { promptInstall, hasNativePrompt, isIOS, isAndroid } from '@/lib/pwaInstall';
+import React from 'react';
+import { isIOS, isAndroid, isChromeOnIOS } from '@/lib/pwaInstall';
 import { useBackToClose } from '@/lib/useBackToClose';
 
 const IOS_STEPS = [
-  'Tap the Share icon in Safari\u2019s toolbar',
+  'Tap the Share icon in Safari’s toolbar',
   'Scroll down and tap "Add to Home Screen"',
   'Tap "Add" in the top right corner',
 ];
 
+// Chrome on an iPhone or iPad: its Share icon sits in the address bar.
+const IOS_CHROME_STEPS = [
+  'Tap the Share icon in the address bar',
+  'Scroll down and tap "Add to Home Screen"',
+  'Tap "Add"',
+];
+
 const ANDROID_STEPS = [
-  'Tap the \u22ee menu in the top right of your browser',
+  'Tap the ⋮ menu in the top right of your browser',
   'Tap "Install app" or "Add to Home screen"',
   'Confirm by tapping "Install"',
 ];
 
 const DESKTOP_STEPS = [
-  'Look for the install icon in your browser\u2019s address bar',
+  'Look for the install icon in your browser’s address bar',
   'Or open the browser menu and choose "Install Sellio"',
   'Confirm to add it as an app on your device',
 ];
 
+// How to add Sellio to the home screen, for a browser that can't install it with one tap
+// (Safari or Chrome on an iPhone or iPad, or a browser that hasn't offered it): opened by
+// Install on the "Install Sellio" banner (InstallBanner).
 export default function InstallPWAModal({ open, onClose }) {
-  const [installing, setInstalling] = useState(false);
-  const [showManualSteps, setShowManualSteps] = useState(false);
-  useBackToClose(open, onClose); // phone / browser Back closes the install prompt
+  useBackToClose(open, onClose); // phone / browser Back closes it
 
   if (!open) return null;
 
-  const manualSteps = isIOS() ? IOS_STEPS : isAndroid() ? ANDROID_STEPS : DESKTOP_STEPS;
-
-  const handleInstall = async () => {
-    // Re-check at click time — the native prompt may have arrived after this
-    // modal first opened, since beforeinstallprompt can fire with a delay.
-    if (hasNativePrompt()) {
-      setInstalling(true);
-      const result = await promptInstall();
-      setInstalling(false);
-      onClose();
-      return;
-    }
-    // No native prompt available (yet, or ever, e.g. iOS) — show manual steps
-    // for whichever platform the visitor is on instead of doing nothing.
-    setShowManualSteps(true);
-  };
+  const phone = isIOS() || isAndroid();
+  const steps = isIOS() ? (isChromeOnIOS() ? IOS_CHROME_STEPS : IOS_STEPS) : isAndroid() ? ANDROID_STEPS : DESKTOP_STEPS;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 500, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(15,23,42,0.55)' }} onClick={onClose}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sellio-install-steps-title"
+      style={{ position: 'fixed', inset: 0, zIndex: 500, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(15,23,42,0.55)' }}
+      onClick={onClose}
+    >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
@@ -56,63 +56,31 @@ export default function InstallPWAModal({ open, onClose }) {
       >
         <style>{`@keyframes slideUpInstall { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
 
-        {!showManualSteps ? (
-          <>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: 20 }}>
-              <img
-                src="/branding/sellio-logo.webp"
-                alt="Sellio"
-                style={{ width: 64, height: 64, objectFit: 'contain', borderRadius: 16, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', marginBottom: 14 }}
-              />
-              <p style={{ fontSize: 17, fontWeight: 800, color: '#0f172a', margin: '0 0 4px' }}>Install Sellio</p>
-              <p style={{ fontSize: 13, color: '#64748b', margin: 0, lineHeight: 1.5 }}>
-                Get quick access from your home screen — no App Store needed. Launch it like a real app, even offline-friendly for quick glances.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleInstall}
-              disabled={installing}
-              style={{
-                width: '100%', padding: '13px', borderRadius: 12, border: 'none',
-                background: 'linear-gradient(135deg, #fb923c, #e0449a, #8b2fc9)',
-                color: 'white', fontSize: 14, fontWeight: 700, cursor: installing ? 'not-allowed' : 'pointer',
-                marginBottom: 10,
-              }}
-            >
-              {installing ? 'Installing…' : 'Install Sellio'}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{ width: '100%', padding: '13px', borderRadius: 12, border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
-            >
-              Not now
-            </button>
-          </>
-        ) : (
-          <>
-            <p style={{ fontSize: 16, fontWeight: 800, color: '#0f172a', margin: '0 0 14px', textAlign: 'center' }}>Add Sellio to your Home Screen</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
-              {manualSteps.map((step, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: 'white' }}>{i + 1}</span>
-                  </div>
-                  <p style={{ margin: 0, fontSize: 13.5, color: '#334155', lineHeight: 1.5 }}>{step}</p>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{ width: '100%', padding: '13px', borderRadius: 12, border: 'none', background: '#0f172a', color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
-            >
-              Got it
-            </button>
-          </>
+        <p id="sellio-install-steps-title" style={{ fontSize: 16, fontWeight: 800, color: '#0f172a', margin: '0 0 6px', textAlign: 'center' }}>
+          {phone ? 'Add Sellio to your Home Screen' : 'Install Sellio on this computer'}
+        </p>
+        {phone && (
+          <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 18px', lineHeight: 1.5, textAlign: 'center' }}>
+            Get quick access from your home screen — no app store needed. It opens like a real app.
+          </p>
         )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, margin: phone ? '0 0 20px' : '12px 0 20px' }}>
+          {steps.map((step, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: 'white' }}>{i + 1}</span>
+              </div>
+              <p style={{ margin: 0, fontSize: 13.5, color: '#334155', lineHeight: 1.5 }}>{step}</p>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{ width: '100%', padding: '13px', borderRadius: 12, border: 'none', background: '#0f172a', color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+        >
+          Got it
+        </button>
       </div>
     </div>
   );

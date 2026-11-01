@@ -8,6 +8,10 @@
   "orientation": "portrait-primary",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
+  "related_applications": [
+    { "platform": "webapp", "url": "/manifest.json", "id": "https://sellio.sg/Splash" },
+    { "platform": "webapp", "url": "/manifest.json", "id": "https://sellio.apptelier.sg/Splash" }
+  ],
   "icons": [
     {
       "src": "/icons/sellio-pwa-192.png",

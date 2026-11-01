@@ -14,8 +14,7 @@ import { shrinkImage, withExt, LOGO_MAX_SIDE } from '@/lib/imageShrink';
 import { generateThemeVariables, COLOR_SETS as POPULAR_PALETTES, DEFAULT_GRADIENT, DEFAULT_PRIMARY, DEFAULT_ACCENT } from '../theme/themeUtils';
 import { cn } from '@/lib/utils';
 import { INDUSTRY_OPTIONS } from '@/lib/industry';
-import InstallPWAModal from './InstallPWAModal';
-import { canShowInstallPrompt } from '@/lib/pwaInstall';
+import { offerInstall } from '@/lib/pwaInstall';
 import { useBackToClose } from '@/lib/useBackToClose';
 
 const schema = z.object({
@@ -42,7 +41,6 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
   const [logoPreview, setLogoPreview] = React.useState(null);
   const [logoError, setLogoError] = React.useState('');
   const [logoUploading, setLogoUploading] = React.useState(false);
-  const [showInstallPrompt, setShowInstallPrompt] = React.useState(false);
   const fileInputRef = React.useRef(null);
 
   // Restore logo preview from stored temp path on mount — validate URL before showing
@@ -198,15 +196,10 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
     
     updateFormData({ ...data, ...themeData });
 
-    // Show the install prompt once, right after the merchant commits to filling in
-    // real business details — the natural "I'm serious about this" moment, before
-    // moving on to the rest of onboarding.
-    if (!sessionStorage.getItem('sellio_install_prompt_shown') && canShowInstallPrompt()) {
-      sessionStorage.setItem('sellio_install_prompt_shown', '1');
-      setShowInstallPrompt(true);
-      return;
-    }
-
+    // Offer "Install Sellio" right after the merchant commits to filling in real business
+    // details (the natural "I'm serious about this" moment): the banner at the top of the
+    // screen, once per browser session (Layout), while setup moves straight on.
+    offerInstall();
     nextStep();
   };
 
@@ -535,11 +528,6 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
         })()}
       </form>
     </Card>
-
-    <InstallPWAModal
-      open={showInstallPrompt}
-      onClose={() => { setShowInstallPrompt(false); nextStep(); }}
-    />
     </>
   );
 }
