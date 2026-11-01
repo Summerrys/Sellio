@@ -5,24 +5,25 @@ import PhotoPickerControl from './PhotoPickerControl';
 import NativeCameraScanControl from './NativeCameraScanControl';
 import BottomSheet from '../explore/BottomSheet';
 import { BRAND_GRADIENT } from '../explore/shared';
-import { isNativeApp } from '@/lib/nativeApp';
+import { isAndroid, isIOS } from '@/lib/pwaInstall';
 
-// A button that adds a photo. A browser's own picker offers the camera and the gallery,
-// so in a browser this is the plain picker. Sellio's Android app (Base44's web view) adds
-// the camera to its picker only once Sellio may use the camera, and never asks, so there
-// the picker went straight to the gallery. In the app a tap opens "Add a photo" instead:
-// Take photo (asks for the camera the first time, as Scan does, then opens the phone's
-// camera) or Choose from gallery. The sheet stays open while the camera or gallery is up,
-// since the photo arrives at the option that opened it; then the sheet closes.
+// A button that adds a photo. On a phone or tablet (Sellio's Android app, Sellio added to a
+// home screen, or a phone's browser, Android or iPhone) a tap opens "Add a photo": Take
+// photo (the phone's camera; in the Android app it asks for the camera the first time, as
+// Scan does) or Choose from gallery. The phones' own pickers differ: Android's goes straight
+// to the gallery, and Sellio's Android app (Base44's web view) adds the camera only once
+// Sellio may use it. On a computer it's the browser's own file picker. The sheet stays open
+// while the camera or gallery is up, since the photo arrives at the option that opened it;
+// then the sheet closes.
 const OPTION = 'w-full flex items-center gap-3 rounded-[14px] border border-slate-200 bg-white p-3 text-left cursor-pointer active:bg-slate-50';
 
 export default function PhotoSourceControl({ label, children, className = '', style, disabled = false, inputRef, onFile, title = 'Add a photo' }) {
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   const titleId = useId();
-  const nativeAndroid = typeof window !== 'undefined' && /Android/i.test(window.navigator.userAgent) && isNativeApp();
+  const phone = typeof window !== 'undefined' && (isAndroid() || isIOS());
 
-  if (!nativeAndroid) {
+  if (!phone) {
     return (
       <PhotoPickerControl label={label} className={className} style={style} disabled={disabled} inputRef={inputRef} onFile={onFile}>
         {children}
