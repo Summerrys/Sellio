@@ -2,22 +2,22 @@
 
 > Sellio is a connected commerce platform by Apptelier for branded storefronts, ordering, merchant operations and an evolving sector-based marketplace world.
 
-Canonical website: https://sellio.apptelier.sg/
+Canonical website: https://sellio.sg/
 Creator: Apptelier, Singapore
 Contact: sellio@apptelier.sg
 
 ## Public pages
 
-- Homepage: https://sellio.apptelier.sg/
-- Explore: https://sellio.apptelier.sg/explore
-- Privacy Policy: https://sellio.apptelier.sg/privacy
-- Terms and Conditions: https://sellio.apptelier.sg/terms
+- Homepage: https://sellio.sg/
+- Explore: https://sellio.sg/explore
+- Privacy Policy: https://sellio.sg/privacy
+- Terms and Conditions: https://sellio.sg/terms
 
 ## What Sellio does
 
 Sellio gives merchants tools for branded online storefronts, QR and table ordering, order workflows, kitchen display, products and inventory, reporting, staff roles and permissions, and AI-assisted business workflows.
 
-Sellio Explore (https://sellio.apptelier.sg/explore) is a public feed of items from participating Sellio shops. Anyone can browse it without an account.
+Sellio Explore (https://sellio.sg/explore) is a public feed of items from participating Sellio shops. Anyone can browse it without an account.
 
 Sellio World, a marketplace map where merchants get a storefront presence in business districts, is coming soon.
 
@@ -34,7 +34,7 @@ Eligible new merchants receive a seven-day trial. Current plan details and limit
 ## Public storefronts
 
 Public merchant storefronts use URLs under:
-https://sellio.apptelier.sg/store/
+https://sellio.sg/store/
 
 Preview URLs, merchant administration pages, dashboards, order-management interfaces and authenticated application routes are not public reference pages and should not be treated as canonical product documentation.
 

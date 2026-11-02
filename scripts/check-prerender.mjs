@@ -4,11 +4,11 @@ import { access, readFile, stat } from 'node:fs/promises';
 // og:url (null below): LandingPage sets the homepage canonical in the browser.
 const routes = {
   '/': ['Commerce has a place to grow.', null],
-  '/privacy': ['Privacy Policy', 'https://sellio.apptelier.sg/privacy'],
-  '/terms': ['Terms and Conditions', 'https://sellio.apptelier.sg/terms'],
+  '/privacy': ['Privacy Policy', 'https://sellio.sg/privacy'],
+  '/terms': ['Terms and Conditions', 'https://sellio.sg/terms'],
 };
 
-const SHARE_IMAGE = 'https://sellio.apptelier.sg/og/sellio-share.jpg';
+const SHARE_IMAGE = 'https://sellio.sg/og/sellio-share.jpg';
 const failures = [];
 
 for (const [path, [signature, canonical]] of Object.entries(routes)) {

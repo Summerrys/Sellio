@@ -26,10 +26,11 @@ export function isStaffLoginEmail(value) {
   return typeof value === 'string' && value.trim().toLowerCase().endsWith('@sellio.app');
 }
 
-// Sellio's own web addresses. Both serve the same app. sellio.apptelier.sg stays the
-// main address: shared links, QR codes and search engines use it.
-export const SELLIO_SITE = 'https://sellio.apptelier.sg';
-export const SELLIO_WEB_ORIGINS = [SELLIO_SITE, 'https://sellio.sg'];
+// Sellio's own web addresses. Both serve the same app. sellio.sg is the main address:
+// shared links, QR codes and search engines use it. sellio.apptelier.sg still works
+// (printed QR codes, older links), so it stays on this list and sign-in there works.
+export const SELLIO_SITE = 'https://sellio.sg';
+export const SELLIO_WEB_ORIGINS = [SELLIO_SITE, 'https://sellio.apptelier.sg'];
 
 // Where emailed links and Google send people back to: the Sellio address they started
 // on, so sign-in finishes in the same browser storage. Same rule as Auth.jsx.

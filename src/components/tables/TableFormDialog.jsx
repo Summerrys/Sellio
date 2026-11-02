@@ -75,7 +75,7 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
     try {
       const db = await getSupabase();
       const tableId = table?.id || crypto.randomUUID();
-      const qrCodeUrl = `https://sellio.apptelier.sg/order/${tenant.slug}/${tableId}`;
+      const qrCodeUrl = `https://sellio.sg/order/${tenant.slug}/${tableId}`;
 
       const resolvedZone = formData.zone === '__new__' ? newZoneName.trim() || null : formData.zone?.trim() || null;
 

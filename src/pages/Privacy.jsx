@@ -8,7 +8,7 @@ const sections = [
     content: (
       <>
         <p>Sellio is a commerce platform operated by Apptélier in Singapore. It helps merchants create public storefronts, manage products, inventory, tables, staff and orders, review reports, and participate in Sellio World.</p>
-        <p>This policy applies when you visit <a href="https://sellio.apptelier.sg">sellio.apptelier.sg</a>, create or use a Sellio account, use a merchant workspace, browse or order from a Sellio-powered storefront, contact us, or otherwise interact with Sellio.</p>
+        <p>This policy applies when you visit <a href="https://sellio.sg">sellio.sg</a>, create or use a Sellio account, use a merchant workspace, browse or order from a Sellio-powered storefront, contact us, or otherwise interact with Sellio.</p>
         <p>A merchant may have its own privacy notice for its customers and staff. Where a merchant decides what customer or staff information to collect through its storefront or operations, that merchant is responsible for its own privacy obligations and Sellio processes the relevant information to provide the platform.</p>
       </>
     ),

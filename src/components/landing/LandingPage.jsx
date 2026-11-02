@@ -35,11 +35,11 @@ import './mobile-native.css';
 import './ux-corrections.css';
 import './motion-refinement.css';
 
-const SITE_URL = 'https://sellio.apptelier.sg/';
+const SITE_URL = 'https://sellio.sg/';
 const LOGO_URL = '/branding/sellio-logo.webp';
 // Layout effect in the browser (no flash between prerender and page); plain effect in the prerender build.
 const useBrowserLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
-const DEMO_STORE_URL = 'https://sellio.apptelier.sg/store/cafetelier';
+const DEMO_STORE_URL = 'https://sellio.sg/store/cafetelier';
 const LANDING_TITLE = 'Sellio — Storefronts, Operations & Marketplace for Modern Commerce';
 const LANDING_DESCRIPTION = 'Sellio connects branded storefronts, F&B ordering and merchant operations with an evolving sector-based marketplace world.';
 

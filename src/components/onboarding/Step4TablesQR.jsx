@@ -88,7 +88,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
       if (setupQr && !setupTables) {
         const businessName = formData.businessName || '';
         const tenantSlug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-        const storeUrl = `https://sellio.apptelier.sg/store/${tenantSlug}`;
+        const storeUrl = `https://sellio.sg/store/${tenantSlug}`;
         try {
           const qrData = await QR.toDataURL(storeUrl, {
             width: 300,
@@ -130,7 +130,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
         capacity: parseInt(generateForm.pax) || 2,
         zone: generateForm.zone.trim(),
         status: 'available',
-        qr_code_url: `https://sellio.apptelier.sg/order/${tenantSlug}/${tableId}`,
+        qr_code_url: `https://sellio.sg/order/${tenantSlug}/${tableId}`,
       };
     });
     setLocalTables(prev => [...prev, ...newTables]);

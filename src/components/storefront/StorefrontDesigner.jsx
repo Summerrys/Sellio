@@ -1534,7 +1534,7 @@ function DesktopPreviewWorkspace({ form, onChange, tenantId, previewData }) {
                 textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 border: '1px solid #e2e8f0', borderRadius: 999, background: 'white',
               }}>
-                sellio.apptelier.sg/store
+                sellio.sg/store
               </span>
               <span style={{ minWidth: 72, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                 {device.width} × {device.height}
@@ -1628,7 +1628,7 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
   const [previewCategories, setPreviewCategories] = useState([]);
   const [previewTenant, setPreviewTenant] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-  const storeUrl = `https://sellio.apptelier.sg/store/${tenantSlug}?preview=true`;
+  const storeUrl = `https://sellio.sg/store/${tenantSlug}?preview=true`;
   useAppReloadGuard(() => ({ dirty: open && dirty, busy: open && saving }));
 
   useEffect(() => {

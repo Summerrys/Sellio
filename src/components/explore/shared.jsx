@@ -13,7 +13,7 @@ export const BRAND_COLOR = 'rgb(var(--color-primary, 59 130 246))';
 export const NATIVE_ANDROID = typeof window !== 'undefined' && /Android/i.test(window.navigator.userAgent) && isNativeApp();
 export const BOTTOM_INSET = NATIVE_ANDROID ? '0px' : 'env(safe-area-inset-bottom, 0px)';
 // Shared links always use the public site address.
-export const PUBLIC_ORIGIN = 'https://sellio.apptelier.sg';
+export const PUBLIC_ORIGIN = 'https://sellio.sg';
 
 export const hideScrollbar = { scrollbarWidth: 'none', msOverflowStyle: 'none' };
 

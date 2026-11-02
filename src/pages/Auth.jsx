@@ -37,14 +37,14 @@ const COUNTRY_CODES = [
 ];
 
 // Same rule as appBaseUrl in src/lib/accountFlow.js: back to the Sellio address the
-// person started on (sellio.apptelier.sg or sellio.sg).
+// person started on (sellio.sg or sellio.apptelier.sg).
 const getBaseUrl = () => {
   const host = window.location.hostname;
   if (host === 'localhost' || host.includes('base44.app') || host.includes('base44.com') ||
       SELLIO_WEB_ORIGINS.includes(window.location.origin)) {
     return window.location.origin;
   }
-  return 'https://sellio.apptelier.sg';
+  return 'https://sellio.sg';
 };
 
 // "1 minute" / "15 minutes", for the phone sign-in and reset limits.

@@ -6,7 +6,7 @@ import './legal.css';
 import { loadExtraFonts } from '@/lib/extraFonts';
 
 const LOGO_URL = '/branding/sellio-logo.webp';
-const SITE_URL = 'https://sellio.apptelier.sg';
+const SITE_URL = 'https://sellio.sg';
 
 function useLegalMetadata({ title, description, path, dateModified }) {
   useEffect(() => {

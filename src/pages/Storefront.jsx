@@ -451,7 +451,7 @@ function StorefrontInner() {
     const primaryColor = storefrontConfig?.banner_bg_color || theme?.primary_color || '#6366f1';
     document.documentElement.style.setProperty('--sf-primary', primaryColor);
 
-    const canonicalUrl = `https://sellio.apptelier.sg/store/${encodeURIComponent(tenantSlug)}`;
+    const canonicalUrl = `https://sellio.sg/store/${encodeURIComponent(tenantSlug)}`;
     const title = `${tenant.name} | Sellio Storefront`;
     const description = `${tenant.name} on Sellio. Browse this merchant's storefront and available products or services.`;
     const imageUrl = tenant.logo_url || null;
@@ -513,7 +513,7 @@ function StorefrontInner() {
       isPartOf: {
         '@type': 'WebSite',
         name: 'Sellio',
-        url: 'https://sellio.apptelier.sg/',
+        url: 'https://sellio.sg/',
       },
       about: {
         '@type': 'Organization',

@@ -9,7 +9,7 @@ export const PRERENDER_ROUTES = ['/', '/privacy', '/terms'];
 // Link-preview card (public/og/sellio-share.jpg): 1200x630 JPEG, about 50 KB. WhatsApp
 // shows no image when the file is over 600 KB, so keep any replacement well under that
 // (scripts/check-prerender.mjs checks the size).
-const IMAGE = 'https://sellio.apptelier.sg/og/sellio-share.jpg';
+const IMAGE = 'https://sellio.sg/og/sellio-share.jpg';
 const IMAGE_WIDTH = 1200;
 const IMAGE_HEIGHT = 630;
 const IMAGE_ALT = 'Sellio: your business, beautifully online.';
@@ -21,7 +21,7 @@ const ROUTES = {
     title: 'Sellio — Storefronts, Operations & Marketplace for Modern Commerce',
     description: 'Sellio connects branded storefronts, F&B ordering and merchant operations with an evolving sector-based marketplace world.',
     socialDescription: 'Open your storefront, run daily operations and grow into a sector-based marketplace world with Sellio.',
-    canonical: 'https://sellio.apptelier.sg/',
+    canonical: 'https://sellio.sg/',
     // The host serves this page at every address (store pages, Explore, the app), so its
     // HTML must not name a canonical or og:url, or every page would claim to be the
     // homepage. LandingPage, Storefront and the legal pages set their own canonical
@@ -33,14 +33,14 @@ const ROUTES = {
     title: 'Privacy Policy | Sellio',
     description: "Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and Singapore PDPA rights.",
     socialDescription: "Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and Singapore PDPA rights.",
-    canonical: 'https://sellio.apptelier.sg/privacy',
+    canonical: 'https://sellio.sg/privacy',
   },
   '/terms': {
     Component: Terms,
     title: 'Terms and Conditions | Sellio',
     description: "Read Sellio's Terms and Conditions for merchant accounts, storefront orders, Stripe subscriptions, AI features, Sellio Coins and platform use.",
     socialDescription: "Read Sellio's Terms and Conditions for merchant accounts, storefront orders, Stripe subscriptions, AI features, Sellio Coins and platform use.",
-    canonical: 'https://sellio.apptelier.sg/terms',
+    canonical: 'https://sellio.sg/terms',
   },
 };
 

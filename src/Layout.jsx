@@ -73,7 +73,7 @@ const BUSINESS_TAB_PAGES = ['Products', 'Counter', 'Orders'];
 function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription, onOpenProfile, onToggleCollapse, onClose, staff = false }) {
   const navigate = useNavigate();
   const [linkCopied, setLinkCopied] = useState(false);
-  const storefrontUrl = tenant?.slug ? `https://sellio.apptelier.sg/store/${tenant.slug}` : null;
+  const storefrontUrl = tenant?.slug ? `https://sellio.sg/store/${tenant.slug}` : null;
   const copyStorefrontLink = () => {
     if (!storefrontUrl) return;
     navigator.clipboard.writeText(storefrontUrl).then(() => {

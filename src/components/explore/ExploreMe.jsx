@@ -109,7 +109,7 @@ export default function ExploreMe() {
 
   const name = appUser?.full_name || appUser?.email?.split('@')[0] || 'Sellio user';
   const contact = appUser?.email && !/@sellio\.app$/i.test(appUser.email) ? appUser.email : appUser?.phone || '';
-  const storeUrl = hasShop && tenant?.slug ? `https://sellio.apptelier.sg/store/${tenant.slug}` : null;
+  const storeUrl = hasShop && tenant?.slug ? `https://sellio.sg/store/${tenant.slug}` : null;
   // The onboarding tour's last stop (Settings) is here.
   const tourProgress = user?.tour_progress || {};
   const settingsPulse = hasShop && isOwner && !user?.has_seen_tour && !!tourProgress.dashboard && !tourProgress.settings;
