@@ -53,7 +53,7 @@ const SCENES = [
     poster: "01-world.jpg",
     accent: "#e0449a",
     primary: { label: "Start your 7-day free trial", href: "#pricing" },
-    secondary: { label: "Explore Cafetelier", href: "https://sellio.apptelier.sg/store/cafetelier", external: true }
+    secondary: { label: "Explore Cafetelier", href: "https://sellio.sg/store/cafetelier", external: true }
   },
   {
     id: "storefront",
@@ -1346,10 +1346,10 @@ function ChapterTransition({ children, className = "", label }) {
     }
   );
 }
-const SITE_URL$1 = "https://sellio.apptelier.sg/";
+const SITE_URL$1 = "https://sellio.sg/";
 const LOGO_URL$1 = "/branding/sellio-logo.webp";
 const useBrowserLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
-const DEMO_STORE_URL = "https://sellio.apptelier.sg/store/cafetelier";
+const DEMO_STORE_URL = "https://sellio.sg/store/cafetelier";
 const LANDING_TITLE = "Sellio — Storefronts, Operations & Marketplace for Modern Commerce";
 const LANDING_DESCRIPTION = "Sellio connects branded storefronts, F&B ordering and merchant operations with an evolving sector-based marketplace world.";
 const NAV_ITEMS = [
@@ -2006,7 +2006,7 @@ function loadExtraFonts() {
   document.head.appendChild(link);
 }
 const LOGO_URL = "/branding/sellio-logo.webp";
-const SITE_URL = "https://sellio.apptelier.sg";
+const SITE_URL = "https://sellio.sg";
 function useLegalMetadata({ title, description, path, dateModified }) {
   useEffect(() => {
     const previousTitle = document.title;
@@ -2233,7 +2233,7 @@ const sections$1 = [
       /* @__PURE__ */ jsx("p", { children: "Sellio is a commerce platform operated by Apptélier in Singapore. It helps merchants create public storefronts, manage products, inventory, tables, staff and orders, review reports, and participate in Sellio World." }),
       /* @__PURE__ */ jsxs("p", { children: [
         "This policy applies when you visit ",
-        /* @__PURE__ */ jsx("a", { href: "https://sellio.apptelier.sg", children: "sellio.apptelier.sg" }),
+        /* @__PURE__ */ jsx("a", { href: "https://sellio.sg", children: "sellio.sg" }),
         ", create or use a Sellio account, use a merchant workspace, browse or order from a Sellio-powered storefront, contact us, or otherwise interact with Sellio."
       ] }),
       /* @__PURE__ */ jsx("p", { children: "A merchant may have its own privacy notice for its customers and staff. Where a merchant decides what customer or staff information to collect through its storefront or operations, that merchant is responsible for its own privacy obligations and Sellio processes the relevant information to provide the platform." })
@@ -2715,7 +2715,7 @@ function Terms() {
   );
 }
 const PRERENDER_ROUTES = ["/", "/privacy", "/terms"];
-const IMAGE = "https://sellio.apptelier.sg/og/sellio-share.jpg";
+const IMAGE = "https://sellio.sg/og/sellio-share.jpg";
 const IMAGE_WIDTH = 1200;
 const IMAGE_HEIGHT = 630;
 const IMAGE_ALT = "Sellio: your business, beautifully online.";
@@ -2726,7 +2726,7 @@ const ROUTES = {
     title: "Sellio — Storefronts, Operations & Marketplace for Modern Commerce",
     description: "Sellio connects branded storefronts, F&B ordering and merchant operations with an evolving sector-based marketplace world.",
     socialDescription: "Open your storefront, run daily operations and grow into a sector-based marketplace world with Sellio.",
-    canonical: "https://sellio.apptelier.sg/",
+    canonical: "https://sellio.sg/",
     // The host serves this page at every address (store pages, Explore, the app), so its
     // HTML must not name a canonical or og:url, or every page would claim to be the
     // homepage. LandingPage, Storefront and the legal pages set their own canonical
@@ -2738,14 +2738,14 @@ const ROUTES = {
     title: "Privacy Policy | Sellio",
     description: "Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and Singapore PDPA rights.",
     socialDescription: "Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and Singapore PDPA rights.",
-    canonical: "https://sellio.apptelier.sg/privacy"
+    canonical: "https://sellio.sg/privacy"
   },
   "/terms": {
     Component: Terms,
     title: "Terms and Conditions | Sellio",
     description: "Read Sellio's Terms and Conditions for merchant accounts, storefront orders, Stripe subscriptions, AI features, Sellio Coins and platform use.",
     socialDescription: "Read Sellio's Terms and Conditions for merchant accounts, storefront orders, Stripe subscriptions, AI features, Sellio Coins and platform use.",
-    canonical: "https://sellio.apptelier.sg/terms"
+    canonical: "https://sellio.sg/terms"
   }
 };
 function escapeAttr(value) {
