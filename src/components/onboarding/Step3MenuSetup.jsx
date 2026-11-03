@@ -17,6 +17,7 @@ import { deleteImageFromStorage } from '@/lib/imageStorage';
 import { useAppUser, cookieUtils } from '@/lib/AppUserContext';
 import PricingModal from '../subscription/PricingModal';
 import { normalizeIndustry } from '@/lib/industry';
+import { functionErrorMessage } from '@/lib/aiAllowance';
 
 // Mirrors PLAN_LIMITS in the complete-onboarding edge function — keep in sync.
 // Used here only to warn the merchant *before* they submit; the edge function
@@ -229,14 +230,21 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     setAiResult(null);
 
     try {
-      // Upload to temp/ and run AI in parallel
-      const [uploadResult, aiRes] = await Promise.all([
+      // Upload to temp/ and run AI in parallel. The AI gets a shrunk copy (the function refuses photos over ~5 MB).
+      const analyse = async () => {
+        const photo = await shrinkImage(firstFile, { maxSide: PHOTO_MAX_SIDE });
+        const imageBase64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('Could not read this photo. Please choose another image.'));
+          reader.readAsDataURL(photo.blob);
+        });
+        const currency = /^[A-Z]{3}$/.test(formData.currency || '') ? formData.currency : undefined;
+        return (await getSupabase()).functions.invoke('analyzeProductImage', { body: { onboarding: true, imageBase64, currency } });
+      };
+      const [uploadResult, analysis] = await Promise.all([
         uploadToStorage(firstFile),
-        fetch('https://selliosg.base44.app/api/functions/analyzeProductImage', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64: firstPreview }),
-        }),
+        analyse(),
       ]);
 
       // Store the uploaded URL and path
@@ -245,8 +253,8 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       setImagePreviews([uploadResult.publicUrl]);
       setImageFiles([null]); // already uploaded
 
-      const data = await aiRes.json();
-      if (!aiRes.ok) throw new Error(data?.error || `Server error ${aiRes.status}`);
+      if (analysis.error) throw new Error(await functionErrorMessage(analysis.error, 'AI analysis failed'));
+      const data = analysis.data || {};
       if (!data.confidence || data.confidence < 0.3) {
         setAiStep('idle');
         return;

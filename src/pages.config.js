@@ -54,8 +54,6 @@ const Auth = lazy(() => import('./pages/Auth'));
 const Categories = lazy(() => import('./pages/Categories'));
 const Chats = lazy(() => import('./pages/Chats'));
 const CoinShop = lazy(() => import('./pages/CoinShop'));
-const CustomerMenu = lazy(() => import('./pages/CustomerMenu'));
-const CustomerOrder = lazy(() => import('./pages/CustomerOrder'));
 const Explore = lazy(() => import('./pages/Explore'));
 const Counter = lazy(() => import('./pages/Counter'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -68,7 +66,6 @@ const Notifications = lazy(() => import('./pages/Notifications'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const ShopSetup = lazy(() => import('./pages/ShopSetup'));
 const World = lazy(() => import('./pages/World'));
-const OrderTracking = lazy(() => import('./pages/OrderTracking'));
 const Orders = lazy(() => import('./pages/Orders'));
 const Products = lazy(() => import('./pages/Products'));
 const Reports = lazy(() => import('./pages/Reports'));
@@ -84,8 +81,6 @@ export const PAGES = {
     "Categories": Categories,
     "Chats": Chats,
     "CoinShop": CoinShop,
-    "CustomerMenu": CustomerMenu,
-    "CustomerOrder": CustomerOrder,
     "Counter": Counter,
     "Dashboard": Dashboard,
     "Explore": Explore,
@@ -97,7 +92,6 @@ export const PAGES = {
     "Notifications": Notifications,
     "Onboarding": Onboarding,
     "ShopSetup": ShopSetup,
-    "OrderTracking": OrderTracking,
     "Orders": Orders,
     "Products": Products,
     "Reports": Reports,

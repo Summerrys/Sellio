@@ -229,8 +229,8 @@ export default function Tables() {
 
   const deleteMutation = useMutation({
     // FIX: this was the one remaining call in the whole Tables page still going
-    // through the old pre-migration Base44 SDK function runtime (base44.functions.
-    // invoke) instead of a direct Supabase call — create/update in TableFormDialog
+    // through the old pre-migration Base44 SDK function runtime (the old Base44
+    // SDK) instead of a direct Supabase call — create/update in TableFormDialog
     // already moved off it. That endpoint is no longer reachable, which is what
     // surfaced as "Network Error" whenever someone tried to delete a table.
     mutationFn: async (tableId) => {

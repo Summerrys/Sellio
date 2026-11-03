@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
-import { base44 } from '@/api/base44Client';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PermissionGate from '../components/tenant/PermissionGate';
@@ -11,12 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ThemeSelector from '../components/theme/ThemeSelector';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useProductTour } from '@/hooks/useProductTour';
 import TourGuide from '@/components/tour/TourGuide';
 import { getSettingsSteps } from '@/components/tour/tourSteps';
 import {
-  Building2, Save, Palette, AlertTriangle,
+  Building2, Save, Palette,
   Loader2, QrCode, X, RefreshCw, Users, Truck
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -251,13 +249,9 @@ function TenantSettingsContent() {
   // Free shops (step 15): how they sell, for the owner.
   const { isOwner } = useTenant();
   const showSellingTab = tenant?.seller_type === 'individual' && isOwner;
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPricingModal, setShowPricingModal] = useState(false);
-  const [deleteConfirmText, setDeleteConfirmText] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
   useAppRefreshHandler(() => setRefreshVersion(version => version + 1));
-  useAppReloadGuard(() => ({ busy: isDeleting }));
 
   return (
     <PermissionGate permission="settings.view">
@@ -364,65 +358,6 @@ function TenantSettingsContent() {
           tour={settingsTour}
         />
       )}
-
-      {/* Account Deletion Dialog */}
-      <Dialog open={showDeleteConfirm} onOpenChange={(open) => { if (!isDeleting) setShowDeleteConfirm(open); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="w-5 h-5" /> Delete Account
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <p className="text-sm text-slate-600">
-              This will <strong>permanently delete</strong> your business account, all products, orders, staff, and settings. This cannot be undone.
-            </p>
-            <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-xs text-red-700 space-y-1">
-              <p>• All products and categories will be removed</p>
-              <p>• All order history will be erased</p>
-              <p>• All staff accounts will be revoked</p>
-            </div>
-            <div>
-              <Label className="text-xs text-slate-500">
-                Type <span className="font-mono font-semibold text-slate-800">DELETE</span> to confirm
-              </Label>
-              <Input
-                className="mt-1 h-11"
-                value={deleteConfirmText}
-                onChange={e => setDeleteConfirmText(e.target.value)}
-                placeholder="Type DELETE"
-                disabled={isDeleting}
-              />
-            </div>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" className="h-11" onClick={() => setShowDeleteConfirm(false)} disabled={isDeleting}>
-              Cancel
-            </Button>
-            <Button
-              disabled={deleteConfirmText !== 'DELETE' || isDeleting}
-              className="h-11 bg-red-600 hover:bg-red-700 text-white gap-2"
-              onClick={async () => {
-                setIsDeleting(true);
-                try {
-                  const res = await base44.functions.invoke('deleteTenantWithCascade', { tenant_id: tenantId });
-                  if (res.data?.success) {
-                    toast.success('Account deleted. Redirecting...');
-                    setTimeout(() => { window.location.replace('/'); }, 1500); // no Back into a deleted shop
-                  } else {
-                    throw new Error(res.data?.error || 'Deletion failed');
-                  }
-                } catch (err) {
-                  toast.error(err.message || 'Failed to delete account. Please contact support.');
-                  setIsDeleting(false);
-                }
-              }}
-            >
-              {isDeleting ? <><Loader2 className="w-4 h-4 animate-spin" /> Deleting...</> : 'Delete Permanently'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <PricingModal open={showPricingModal} onOpenChange={setShowPricingModal} tenantId={tenantId} currentTier={subscription?.tier ?? null} />
       </>
