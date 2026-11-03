@@ -5,10 +5,15 @@ set -uo pipefail
 PKG=com.base6985959ce9aaceadb8b7cc41.app
 OUT=android-emulator-check
 mkdir -p "$OUT"
-shot() { adb exec-out screencap -p > "$OUT/$1.png"; }
+# A cold emulator's launcher sometimes shows "isn't responding"; close such boxes first.
+calm() { adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS > /dev/null 2>&1 || true; }
+shot() { calm; sleep 1; adb exec-out screencap -p > "$OUT/$1.png"; }
 focus() { adb shell dumpsys window | grep -m1 -E "mCurrentFocus" > "$OUT/$1-focus.txt"; cat "$OUT/$1-focus.txt"; }
 
 adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+adb shell input keyevent KEYCODE_HOME
+sleep 20
+calm
 adb logcat -c
 
 # 1. Opens from its home-screen entry (com.wix.MainActivity, the name Base44's build used).
@@ -18,6 +23,7 @@ shot 1-opened
 focus 1-opened
 
 # 2. Back on the app's first page leaves the app.
+calm
 adb shell input keyevent KEYCODE_BACK
 sleep 3
 shot 2-after-back
