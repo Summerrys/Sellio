@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && vite build --ssr src/entry-server.jsx --outDir .prerender && node scripts/prerender-routes.mjs && node scripts/check-prerender.mjs",
+    "build": "vite build && vite build --ssr src/entry-server.jsx --outDir .prerender && node scripts/prerender-routes.mjs && node scripts/check-prerender.mjs && node scripts/pages-output.mjs",
     "build:app": "npm run build && node scripts/build-app.mjs && npx cap sync",
     "check:prerender": "node scripts/check-prerender.mjs",
     "lint": "eslint . --quiet",

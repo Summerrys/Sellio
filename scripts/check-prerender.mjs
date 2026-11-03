@@ -61,5 +61,23 @@ for (const line of ['/ /index.html 200', '/privacy /privacy/index.html 200', '/t
   if (!redirects.includes(line)) failures.push(`_redirects: missing ${line}`);
 }
 
+// Cloudflare Pages (HOSTING.md): the worker that routes the pages, the files it leaves to
+// Pages, their caching, and the page for a missing file.
+for (const file of ['_worker.js', '_routes.json', '_headers', '404.html']) {
+  await stat(`dist/${file}`).catch(() => failures.push(`${file}: missing from the build (Cloudflare Pages needs it)`));
+}
+try {
+  const routes = JSON.parse(await readFile('dist/_routes.json', 'utf8'));
+  if (routes.version !== 1 || !routes.include?.includes('/*') || !routes.exclude?.includes('/assets/*')) {
+    failures.push('_routes.json: should send pages to _worker.js and leave /assets/* to Pages');
+  }
+} catch (error) {
+  failures.push(`_routes.json: ${error.message}`);
+}
+const worker = await readFile('dist/_worker.js', 'utf8').catch(() => '');
+for (const route of ["'/store'", "'/app'", "'/Privacy': '/privacy'"]) {
+  if (!worker.includes(route)) failures.push(`_worker.js: ${route} routing missing`);
+}
+
 if (failures.length) throw new Error('Sellio prerender validation failed:\n' + failures.join('\n'));
 console.log('Sellio prerender validation passed for 3 public routes.');

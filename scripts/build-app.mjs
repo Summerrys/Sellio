@@ -3,10 +3,11 @@
 // first and runs `npx cap sync` after.
 //
 // The apps never show the landing page and aren't a website, so dist-app/ leaves out:
-// - the landing page's media (assets/immersive*, assets/scroll-world: over 240 MB);
-// - the files only a web host or a search engine reads (_redirects, robots.txt, sitemap.xml,
-//   llms.txt, the share image), the prerendered /privacy and /terms copies and store.html
-//   (the app shows those pages itself), and sw.js (the app registers no service worker).
+// - the landing page's media (assets/immersive*);
+// - the files only a web host or a search engine reads (_redirects, .htaccess, Cloudflare
+//   Pages' _worker.js, _routes.json, _headers and 404.html, robots.txt, sitemap.xml, llms.txt,
+//   the share image), the prerendered /privacy and /terms copies and store.html (the app shows
+//   those pages itself), and sw.js (the app registers no service worker).
 // Its index.html is dist/app.html: the same page and scripts without the landing page's
 // prerendered markup, which the app would only hide.
 import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
@@ -18,8 +19,12 @@ const LEFT_OUT = new Set([
   'assets/immersive',
   'assets/immersive-16x9',
   'assets/immersive-hd',
-  'assets/scroll-world',
   '_redirects',
+  '.htaccess',
+  '_worker.js',
+  '_routes.json',
+  '_headers',
+  '404.html',
   'robots.txt',
   'sitemap.xml',
   'llms.txt',
