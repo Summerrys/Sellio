@@ -39,4 +39,8 @@ print('home-screen entry com.wix.MainActivity:', 'ok' if launcher else 'MISSING'
 print('sellio.sg /Auth and /Join app links:', 'ok' if links else 'MISSING')
 sys.exit(0 if launcher and links else 1)
 PY
-"$BUILD_TOOLS/apksigner" verify --print-certs "$APK" | grep -E "^Signer #1 certificate (DN|SHA-256 digest|SHA-1 digest)"
+SIGNING="$RUNNER_TEMP/signing.txt"
+if ! "$BUILD_TOOLS/apksigner" verify --print-certs "$APK" > "$SIGNING" 2>&1; then
+  cat "$SIGNING"; echo "::error::apksigner could not verify $APK"; exit 1
+fi
+grep -E "certificate (DN|SHA-256 digest|SHA-1 digest)" "$SIGNING" || cat "$SIGNING"
