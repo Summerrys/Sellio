@@ -1,6 +1,7 @@
 // Swipe back from the left edge on an iPhone / iPad where Sellio was added to the Home
-// Screen. iOS gives Home Screen web apps no back gesture (Safari has its own; Android's
-// back button and gesture already go through the browser), so there we add one: a swipe
+// Screen, and in Sellio's iPhone app. iOS gives Home Screen web apps and an app's web view
+// no back gesture (Safari has its own; Android's back button and gesture already go through
+// the browser or, in Sellio's Android app, src/lib/capacitorApp.js), so there we add one: a swipe
 // that starts at the very left edge and moves right does exactly what the phone's Back
 // does elsewhere (close the open window, step back, then the previous page).
 // An arrow follows the finger so the person can see it will go back, and can drag back
@@ -53,8 +54,17 @@ function makeArrow(doc) {
 
 // Installs the gesture when running from the Home Screen on an iPhone / iPad (force: on
 // anyway, for tests). Returns a function that removes it, or null when not installed.
+// Sellio's iPhone and iPad app (Capacitor). A global read, so this file needs no imports.
+function isAppleApp(win) {
+  try {
+    return win.Capacitor?.isNativePlatform?.() === true && win.Capacitor.getPlatform?.() === 'ios';
+  } catch {
+    return false;
+  }
+}
+
 export function installEdgeSwipeBack({ win = window, force = false } = {}) {
-  if (!win || (!force && !isHomeScreenApple(win))) return null;
+  if (!win || (!force && !isHomeScreenApple(win) && !isAppleApp(win))) return null;
   const doc = win.document;
   let arrow = null;
   let swipe = null; // { x, y, t, sideways }
