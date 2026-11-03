@@ -3,7 +3,8 @@ name: iOS app
 # Sellio's iPhone app (Capacitor) for the iOS Simulator, run by hand only (Actions → iOS app →
 # Run workflow): macOS minutes cost more. No signing, TestFlight or App Store steps until
 # there is an Apple Developer account. The "sellio-ios-simulator" download has the app and
-# a screenshot of it running on an iPhone simulator.
+# a screenshot of it running on an iPhone simulator. The app is built for both kinds of Mac
+# (Intel and Apple silicon) and tried on an Intel Mac, the kind Sellio is tested on.
 
 on:
   workflow_dispatch:
@@ -13,7 +14,7 @@ permissions:
 
 jobs:
   ios:
-    runs-on: macos-26
+    runs-on: macos-26-intel
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
@@ -34,7 +35,8 @@ jobs:
           xcodebuild -version
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO build
+            -derivedDataPath build/ios ARCHS="x86_64 arm64" ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build
+          for f in App App.debug.dylib; do lipo -info "build/ios/Build/Products/Debug-iphonesimulator/App.app/$f"; done
 
       - name: Try it on an iPhone simulator
         continue-on-error: true
