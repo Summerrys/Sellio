@@ -195,7 +195,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
     const bytes = buildOrderChit(order, merchantName, tenant?.receipt_paper_size);
     try {
       if (cfg.mode === 'bluetooth' && cfg.deviceName) {
-        await sendViaBluetooth(cfg.deviceName, bytes);
+        await sendViaBluetooth(cfg.deviceName, bytes, cfg.deviceId);
       } else if (cfg.mode === 'network') {
         await sendViaEpsonEPos(cfg.ip, bytes, merchantName);
       } else {
@@ -226,7 +226,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
       : buildOrderReceipt(order, currency, merchantName, tenant?.receipt_paper_size);
     try {
       if (cfg.mode === 'bluetooth' && cfg.deviceName) {
-        await sendViaBluetooth(cfg.deviceName, bytes);
+        await sendViaBluetooth(cfg.deviceName, bytes, cfg.deviceId);
       } else if (cfg.mode === 'network') {
         await sendViaEpsonEPos(cfg.ip, bytes, merchantName);
       } else {

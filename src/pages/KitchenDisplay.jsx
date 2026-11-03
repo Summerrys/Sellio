@@ -59,7 +59,7 @@ function KDSOrderCard({ order, onBump }) {
     const bytes = buildOrderChit(order, tenant?.name, tenant?.receipt_paper_size);
     try {
       if (printerCfg.mode === 'bluetooth' && printerCfg.deviceName) {
-        await sendViaBluetooth(printerCfg.deviceName, bytes);
+        await sendViaBluetooth(printerCfg.deviceName, bytes, printerCfg.deviceId);
       } else if (printerCfg.mode === 'network') {
         await sendViaEpsonEPos(printerCfg.ip, bytes, tenant?.name);
       } else {

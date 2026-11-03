@@ -20,7 +20,7 @@ async function sendOrder(order, tenant, config, kind) {
   const bytes = kind === 'chit'
     ? buildOrderChit(order, tenant?.name, tenant?.receipt_paper_size)
     : buildOrderReceipt(order, tenant?.currency || 'SGD', tenant?.name, tenant?.receipt_paper_size);
-  if (config.mode === 'bluetooth') await sendViaBluetooth(config.deviceName, bytes);
+  if (config.mode === 'bluetooth') await sendViaBluetooth(config.deviceName, bytes, config.deviceId);
   else await sendViaEpsonEPos(config.ip, bytes, tenant?.name);
 }
 
@@ -34,7 +34,7 @@ export function printTableBill(bill, tenantId, tenant) {
     const config = loadPrinterConfig(tenantId);
     if (!hasKitchenPrinter(config)) throw new Error('Connect a compatible receipt printer in Settings → Business → Receipt Printer.');
     const bytes = buildTableReceipt(bill, tenant?.currency || 'SGD', tenant?.name, tenant?.receipt_paper_size);
-    if (config.mode === 'bluetooth') await sendViaBluetooth(config.deviceName, bytes);
+    if (config.mode === 'bluetooth') await sendViaBluetooth(config.deviceName, bytes, config.deviceId);
     else await sendViaEpsonEPos(config.ip, bytes, tenant?.name);
   });
 }

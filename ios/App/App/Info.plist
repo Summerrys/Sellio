@@ -8,6 +8,8 @@
 	<string>Sellio uses the camera to take photos of items you sell.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Sellio uses your photos so you can add them to your listings.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Sellio uses Bluetooth to print receipts and order chits on your printer.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>

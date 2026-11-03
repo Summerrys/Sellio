@@ -38,7 +38,31 @@ links = [b for b in blocks('intent-filter')
          if 'android.intent.action.VIEW' in b and '"sellio.sg"' in b and '"/Auth"' in b and '"/Join"' in b and 'autoVerify' in b]
 print('home-screen entry com.wix.MainActivity:', 'ok' if launcher else 'MISSING')
 print('sellio.sg /Auth and /Join app links:', 'ok' if links else 'MISSING')
-sys.exit(0 if launcher and links else 1)
+
+# Permissions as AndroidManifest.xml sets them over the plugins' own: Bluetooth scanning never
+# for location (neverForLocation is 0x10000), location only up to Android 11 (API 30).
+perms = {}
+for b in blocks('uses-permission'):
+    name = re.search(r'android:name\([^)]*\)="([^"]+)"', b)
+    if name:
+        perms[name.group(1)] = b
+def has(name, *patterns):
+    # aapt2 shows numbers in decimal or hex depending on its version: patterns allow both.
+    block = perms.get('android.permission.' + name)
+    return bool(block) and all(re.search(p, block) for p in patterns)
+checks = {
+    'notifications (POST_NOTIFICATIONS)': has('POST_NOTIFICATIONS'),
+    'Bluetooth scan, never for location': has('BLUETOOTH_SCAN', r'usesPermissionFlags\([^)]*\)=(?:\(type 0x11\))?(?:0x10000|65536)\b'),
+    'Bluetooth connect': has('BLUETOOTH_CONNECT'),
+    'fine location only up to Android 11': has('ACCESS_FINE_LOCATION', r'maxSdkVersion\([^)]*\)=(?:\(type 0x10\))?(?:0x1e|30)\b'),
+    'coarse location only up to Android 11': has('ACCESS_COARSE_LOCATION', r'maxSdkVersion\([^)]*\)=(?:\(type 0x10\))?(?:0x1e|30)\b'),
+}
+if not all(checks.values()):
+    for name in ('BLUETOOTH_SCAN', 'ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION'):
+        print(perms.get('android.permission.' + name, f'(no {name})'))
+for label, ok in checks.items():
+    print(f'{label}:', 'ok' if ok else 'WRONG')
+sys.exit(0 if launcher and links and all(checks.values()) else 1)
 PY
 SIGNING="$RUNNER_TEMP/signing.txt"
 if ! "$BUILD_TOOLS/apksigner" verify --print-certs "$APK" > "$SIGNING" 2>&1; then

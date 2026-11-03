@@ -12,9 +12,14 @@ import {
   sendViaBluetooth, sendViaEpsonEPos,
   ALL_BT_SERVICES, setBtDeviceCache,
 } from '@/lib/printerUtils';
+import { isCapacitorApp, appPlatform } from '@/lib/nativeApp';
 
-const BT_SUPPORTED = typeof navigator !== 'undefined' && !!navigator.bluetooth;
-const LE_SCAN_SUPPORTED = BT_SUPPORTED && typeof navigator !== 'undefined' && !!navigator.bluetooth?.requestLEScan;
+// Sellio's apps use the phone's own Bluetooth (src/lib/nativePrinter.js): their web views have
+// no Web Bluetooth. A browser uses Web Bluetooth, where it has it (Chrome).
+const NATIVE_BT = isCapacitorApp();
+const BT_SUPPORTED = NATIVE_BT || (typeof navigator !== 'undefined' && !!navigator.bluetooth);
+const LE_SCAN_SUPPORTED = !NATIVE_BT && BT_SUPPORTED && typeof navigator !== 'undefined' && !!navigator.bluetooth?.requestLEScan;
+const loadNative = () => import('@/lib/nativePrinter');
 
 const getRSSILabel = (rssi) => {
   if (!rssi) return '';
@@ -40,6 +45,8 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
   const scanRef = useRef(null);
   const adHandlerRef = useRef(null);
   const seenRef = useRef(new Set());
+  const scanTimerRef = useRef(null);
+  const [connecting, setConnecting] = useState(null); // the printer's name, while the app connects
 
   const [ip, setIp] = useState('');
   const [port, setPort] = useState('9100');
@@ -73,6 +80,8 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
   }, []);
 
   const stopScan = () => {
+    clearTimeout(scanTimerRef.current);
+    if (NATIVE_BT) loadNative().then((native) => native.stopPrinterScan()).catch(() => {});
     try { scanRef.current?.stop(); } catch {}
     if (adHandlerRef.current) {
       try { navigator.bluetooth.removeEventListener('advertisementreceived', adHandlerRef.current); } catch {}
@@ -91,6 +100,23 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
     seenRef.current = new Set();
     setShowScanSheet(true);
     setScanning(true);
+
+    // The apps: nearby devices appear in the list as the phone finds them (Bluetooth
+    // permission is asked here, the first time).
+    if (NATIVE_BT) {
+      try {
+        const native = await loadNative();
+        await native.startPrinterScan((device) => {
+          setDiscoveredDevices((prev) => (prev.some((d) => d.id === device.id) ? prev : [...prev, device]));
+        });
+        scanTimerRef.current = setTimeout(() => stopScan(), 12000);
+      } catch (err) {
+        setShowScanSheet(false);
+        setScanning(false);
+        toast.error(err.message || 'Bluetooth scan failed');
+      }
+      return;
+    }
 
     if (LE_SCAN_SUPPORTED) {
       // Parallel streaming scan — devices appear as discovered
@@ -146,9 +172,33 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
     }
   };
 
-  const handleSelectDevice = async (deviceName) => {
+  const handleSelectDevice = async (picked) => {
+    const deviceName = picked.name;
     stopScan();
     setShowScanSheet(false);
+    // The apps: connect now, check it takes prints, and remember it on this phone.
+    if (NATIVE_BT) {
+      setConnecting(deviceName);
+      try {
+        const native = await loadNative();
+        await native.choosePrinter(picked.id, deviceName);
+        const detectedProtocol = /label|tspl|tsc/i.test(deviceName) ? 'tspl' : 'escpos';
+        setProtocol(detectedProtocol);
+        setBtDevice({ name: deviceName, deviceId: picked.id });
+        savePrinterConfig(tenantId, {
+          mode: 'bluetooth',
+          deviceName,
+          deviceId: picked.id,
+          protocol: detectedProtocol,
+        });
+        toast.success(`Connected: ${deviceName}`);
+      } catch (err) {
+        toast.error(err.message || `Failed to connect to ${deviceName}`);
+      } finally {
+        setConnecting(null);
+      }
+      return;
+    }
     try {
       const device = await navigator.bluetooth.requestDevice({
         filters: [{ name: deviceName }],
@@ -172,6 +222,10 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
   };
 
   const handleDisconnectBt = () => {
+    if (NATIVE_BT && btDevice?.deviceId) {
+      const { deviceId } = btDevice;
+      loadNative().then((native) => native.forgetPrinter(deviceId)).catch(() => {});
+    }
     setBtDeviceCache(null);
     setBtDevice(null);
     clearPrinterConfig(tenantId);
@@ -219,7 +273,7 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
       : buildTestReceipt(merchantName, paperSize);
     try {
       if (cfg?.mode === 'bluetooth' && cfg.deviceName) {
-        await sendViaBluetooth(cfg.deviceName, bytes);
+        await sendViaBluetooth(cfg.deviceName, bytes, cfg.deviceId);
       } else if (cfg?.mode === 'network') {
         await sendViaEpsonEPos(cfg.ip, bytes, merchantName);
       }
@@ -298,15 +352,18 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
               <button
                 type="button"
                 onClick={handleScanBluetooth}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-all"
+                disabled={!!connecting}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-all disabled:opacity-80"
                 style={{ background: 'var(--color-primary-gradient, #6366f1)' }}
               >
-                <Bluetooth className="w-4 h-4" />
-                Scan for Printers
+                {connecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bluetooth className="w-4 h-4" />}
+                {connecting ? `Connecting to ${connecting}…` : 'Scan for Printers'}
               </button>
             )}
             <p className="text-xs text-slate-400">
-              Note: Bluetooth device pairing resets per browser session — you'll need to re-scan each time.
+              {NATIVE_BT
+                ? 'Sellio remembers this printer on this phone and connects to it when it prints.'
+                : "Note: Bluetooth device pairing resets per browser session — you'll need to re-scan each time."}
             </p>
           </div>
         )}
@@ -429,7 +486,7 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
               {discoveredDevices.map(device => (
                 <button
                   key={device.id}
-                  onClick={() => handleSelectDevice(device.name)}
+                  onClick={() => handleSelectDevice(device)}
                   style={{
                     width: '100%', display: 'flex', alignItems: 'center', gap: 14,
                     padding: '14px 20px', background: 'none', border: 'none',
@@ -455,6 +512,11 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
               {!scanning && discoveredDevices.length === 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', gap: 12 }}>
                   <p style={{ fontSize: 14, color: '#64748b', margin: 0 }}>No devices found</p>
+                  {NATIVE_BT && appPlatform() === 'android' && (
+                    <p style={{ fontSize: 12, color: '#94a3b8', margin: 0, textAlign: 'center' }}>
+                      Check the printer is on. On Android 11 or older, Location must be on too.
+                    </p>
+                  )}
                   <button
                     onClick={handleScanBluetooth}
                     style={{ fontSize: 13, fontWeight: 600, color: 'rgb(var(--color-primary))', background: 'none', border: 'none', cursor: 'pointer' }}

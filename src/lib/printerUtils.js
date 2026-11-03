@@ -1,9 +1,11 @@
 // ESC/POS receipt builder utility
 import { paymentText } from './tableBill';
+import { isCapacitorApp } from './nativeApp.js';
 
 // Known BLE thermal/label printer GATT service+characteristic UUID pairs.
 // Different chipsets use different UUIDs — we try each in order until one works.
-const BLE_PRINTER_PROFILES = [
+// (Also used by nativePrinter.js, the apps' Bluetooth.)
+export const BLE_PRINTER_PROFILES = [
   // Profile A: XPrinter, GOOJPRT, most Chinese thermal receipt printers
   { service: '000018f0-0000-1000-8000-00805f9b34fb', char: '00002af1-0000-1000-8000-00805f9b34fb' },
   // Profile B: Peripage, NIIMBOT, some label printers
@@ -422,7 +424,15 @@ export function buildTSPLTestReceipt(merchantName) {
 
 // Send bytes via Bluetooth GATT — NEVER calls requestDevice() (no pairing dialog)
 // Call setBtDeviceCache(device) from PrinterSettings after initial pairing
-export async function sendViaBluetooth(deviceName, bytes) {
+// In Sellio's apps (no Web Bluetooth in their web views): through the phone's Bluetooth
+// (nativePrinter.js), to the printer chosen on this phone (deviceId, from the saved printer).
+export async function sendViaBluetooth(deviceName, bytes, deviceId = null) {
+  if (isCapacitorApp()) {
+    const { printNative, savedPrinterId } = await import('./nativePrinter');
+    const id = deviceId || savedPrinterId(deviceName);
+    if (!id) throw new Error('Printer not connected. Please go to Settings → Receipt → Printer and reconnect.');
+    return printNative(id, bytes);
+  }
   if (!navigator.bluetooth) throw new Error('Web Bluetooth not supported');
 
   let device = window.__sellioBtDevice;
