@@ -19,4 +19,13 @@ xcrun simctl launch "$DEVICE" sg.sellio.app
 sleep 30
 xcrun simctl io "$DEVICE" screenshot "$OUT/1-opened.png"
 xcrun simctl spawn "$DEVICE" log show --last 3m --style compact --predicate 'process == "App"' > "$OUT/app-log.txt" 2>&1 || true
+# The screenshot, small, also in the log (base64 JPEG between the markers).
+sips -s format jpeg -s formatOptions 70 --resampleWidth 390 "$OUT/1-opened.png" --out "$OUT/small.jpg" > /dev/null 2>&1 || true
+if [ -f "$OUT/small.jpg" ]; then
+  echo "SCREENSHOTS-BASE64-BEGIN"
+  base64 -i "$OUT/small.jpg" | fold -w 4000
+  echo
+  echo "SCREENSHOTS-BASE64-END"
+  rm -f "$OUT/small.jpg"
+fi
 exit 0
