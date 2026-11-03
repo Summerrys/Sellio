@@ -52,10 +52,10 @@ def has(name, *patterns):
     return bool(block) and all(re.search(p, block) for p in patterns)
 checks = {
     'notifications (POST_NOTIFICATIONS)': has('POST_NOTIFICATIONS'),
-    'Bluetooth scan, never for location': has('BLUETOOTH_SCAN', r'usesPermissionFlags\([^)]*\)=(?:\(type 0x11\))?(?:0x10000|65536)\b'),
+    'Bluetooth scan, never for location': has('BLUETOOTH_SCAN', r'usesPermissionFlags\([^)]*\)=(?:\(type 0x11\))?(?:0x0*10000|65536)\b'),
     'Bluetooth connect': has('BLUETOOTH_CONNECT'),
-    'fine location only up to Android 11': has('ACCESS_FINE_LOCATION', r'maxSdkVersion\([^)]*\)=(?:\(type 0x10\))?(?:0x1e|30)\b'),
-    'coarse location only up to Android 11': has('ACCESS_COARSE_LOCATION', r'maxSdkVersion\([^)]*\)=(?:\(type 0x10\))?(?:0x1e|30)\b'),
+    'fine location only up to Android 11': has('ACCESS_FINE_LOCATION', r'maxSdkVersion\([^)]*\)=(?:\(type 0x10\))?(?:0x0*1e|30)\b'),
+    'coarse location only up to Android 11': has('ACCESS_COARSE_LOCATION', r'maxSdkVersion\([^)]*\)=(?:\(type 0x10\))?(?:0x0*1e|30)\b'),
 }
 if not all(checks.values()):
     for name in ('BLUETOOTH_SCAN', 'ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION'):
