@@ -36,9 +36,32 @@ sleep 15
 shot 3-sign-in-link
 focus 3-sign-in-link
 
+# 4. Tapping a push alert while the app is open opens the alert's page (Firebase hands the
+#    alert's data to the app as these extras; pushNotifications.js openAlert).
+adb shell am start -W -n "$PKG/com.wix.MainActivity" \
+  --es google.message_id 0:sellio-check-1 --es type new_order --es link /Notifications \
+  --es notification_id 00000000-0000-0000-0000-000000000000
+sleep 12
+shot 4-alert-tapped
+focus 4-alert-tapped
+
+# 5. The same with the app closed: it starts and opens the alert's page.
+adb shell am force-stop "$PKG"
+sleep 2
+adb shell am start -W -n "$PKG/com.wix.MainActivity" \
+  --es google.message_id 0:sellio-check-2 --es type new_order --es link /Notifications \
+  --es notification_id 00000000-0000-0000-0000-000000000000
+sleep 25
+shot 5-alert-tapped-closed
+focus 5-alert-tapped-closed
+
 adb shell pm get-app-links "$PKG" > "$OUT/app-links.txt" 2>&1
+adb shell dumpsys notification > "$OUT/notification-dump.txt" 2>&1 || true
 adb logcat -d > "$OUT/logcat-full.txt"
 grep -E "Capacitor|chromium|AndroidRuntime|SystemBars" "$OUT/logcat-full.txt" > "$OUT/logcat-app.txt" || true
+echo "--- push alerts: the app's channels, Firebase, and the two tapped alerts (expect: 3 channels, ready, 2 openings)"
+grep -oE "NotificationChannel\{mId='(orders|messages|updates)', mName=[^,]*" "$OUT/notification-dump.txt" | sort -u || echo "(no Sellio channels found)"
+grep -E "Sellio push:" "$OUT/logcat-full.txt" | sed -E 's/.*(Sellio push:[^"]*).*/\1/' || echo "(no push lines)"
 echo "--- app console and crashes"
 grep -E "Capacitor/Console|Uncaught|FATAL|AndroidRuntime" "$OUT/logcat-full.txt" | tail -60 || true
 

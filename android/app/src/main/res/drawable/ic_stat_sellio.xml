@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sellio's alerts in the status bar and the notification shade: the shopfront from the
+     logo (scalloped awning over a shop with a door), white on clear, as Android requires;
+     Android colours it (sellio_purple in the shade). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M5,3H19L22,8.5A2.5,2.5 0,0 1,17 8.5A2.5,2.5 0,0 1,12 8.5A2.5,2.5 0,0 1,7 8.5A2.5,2.5 0,0 1,2 8.5Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M4,12H20V21H4ZM10,15.5H14V21H10Z" />
+</vector>

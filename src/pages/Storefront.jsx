@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Eye, ShoppingCart } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { submitCheckout } from '@/lib/mobileCheckout';
+import { offerPushAlerts } from '@/lib/pushOffer';
 import StorefrontView from '@/components/storefront/StorefrontView';
 import MenuAssistantWidget from '@/components/storefront/MenuAssistantWidget';
 import { LanguageProvider, useLanguage, prewarmTranslations } from '@/lib/LanguageContext';
@@ -787,6 +788,9 @@ function StorefrontInner() {
       setSessionOrderIds(updatedSessionOrders);
       try { localStorage.setItem(SESSION_ORDERS_KEY, JSON.stringify(updatedSessionOrders)); } catch {}
       setShowCheckout(false); setIsSubmitting(false); setOrderSuccess(true);
+      // A signed-in buyer hears as the shop accepts and readies it: in Sellio's Android app,
+      // they're offered those alerts on their phone.
+      if (order.buyer_id) offerPushAlerts('order');
     } else if (error?.message?.startsWith('Store unavailable')) {
       // The store stopped taking orders while this customer was browsing.
       setIsSubmitting(false);

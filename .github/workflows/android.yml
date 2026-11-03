@@ -7,6 +7,8 @@ name: Android app
 # - With the four upload-key secrets (ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
 #   ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD): also the signed AAB for Google Play and a
 #   signed APK.
+# - With GOOGLE_SERVICES_JSON_BASE64 (google-services.json from the Firebase project, in
+#   base64): push alerts (src/lib/pushNotifications.js); without it the app builds without them.
 # The version code is 99 + this workflow's run number, so it goes up with every build
 # (Google Play needs a higher one for every upload; Base44's builds went up to 13). The signed
 # builds must be signed with the upload key Google has on file (UPLOAD_KEY_SHA1, from Play's
@@ -30,6 +32,9 @@ jobs:
     timeout-minutes: 60
     env:
       UPLOAD_KEY_SHA1: "16:86:DC:54:FD:46:D4:BF:0D:FC:AD:C4:F4:1D:17:E8:71:51:5A:6B"
+      PKG: com.base6985959ce9aaceadb8b7cc41.app
+      # The Firebase project the send-push edge function sends alerts through.
+      FIREBASE_PROJECT_ID: sellio-notif
     steps:
       - uses: actions/checkout@v7
 
@@ -51,6 +56,11 @@ jobs:
         run: |
           echo "SELLIO_VERSION_CODE=$((GITHUB_RUN_NUMBER + 99))" >> "$GITHUB_ENV"
           echo "Version code $((GITHUB_RUN_NUMBER + 99)), version name 2.0"
+
+      - name: Firebase config for push alerts
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: bash .github/scripts/android-google-services.sh
 
       - name: Build the web app into the Android project
         run: npm run build:app
@@ -121,7 +131,8 @@ jobs:
         run: rm -f "$RUNNER_TEMP/upload.jks"
 
       # A short run of the debug APK on an Android 15 emulator: it installs, opens from the
-      # home-screen entry, Back on the first page leaves it, and a sign-in link opens it.
+      # home-screen entry, Back on the first page leaves it, a sign-in link opens it, and a
+      # tapped push alert opens its page (with the app open, and closed).
       # Screenshots and the app's console log go to the "android-emulator-check" download.
       - name: Enable the emulator's hardware acceleration
         run: |

@@ -12,6 +12,9 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // @capacitor-firebase/messaging's web version imports Firebase's web SDK, which
+      // Sellio doesn't use (push alerts are in the Android app only): see the stub.
+      "firebase/messaging": path.resolve(__dirname, "./src/lib/firebaseMessagingWebStub.js"),
     },
   },
 }));

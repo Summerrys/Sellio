@@ -2,4 +2,6 @@
 <resources>
     <color name="ic_launcher_background">#FFFFFF</color>
     <color name="sellio_white">#FFFFFF</color>
+    <!-- The logo's purple: the alert icon's colour in the notification shade. -->
+    <color name="sellio_purple">#6D02BD</color>
 </resources>

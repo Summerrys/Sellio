@@ -56,6 +56,7 @@ import TrialReminderModal from './components/subscription/TrialReminderModal';
 import AccountProfileModal from './components/profile/AccountProfileModal';
 import InstallBanner from './components/onboarding/InstallBanner';
 import { installPromptSeen, offerInstall, OFFER_INSTALL_EVENT } from '@/lib/pwaInstall';
+import { offerPushAlerts } from '@/lib/pushOffer';
 import PlanFeatureNotice from './components/subscription/PlanFeatureNotice';
 import { PAGE_FEATURES, itemWords } from '@/lib/planFeatures';
 import { isShopTenant } from '@/lib/shopSelling';
@@ -409,6 +410,15 @@ function AppLayout({ children, currentPageName }) {
     }, plainSignIn ? 1200 : 600);
     return () => clearTimeout(timer);
   }, [installHere, plainSignIn, currentPageName]);
+
+  // Sellio's Android app: a shop's people who can see orders are offered alerts for new
+  // orders on their phone (PushPrompt asks, once Sellio has settled on the page).
+  const offersOrderAlerts = !!user && !!tenant?.id && hasPermission('orders.view');
+  useEffect(() => {
+    if (!offersOrderAlerts) return undefined;
+    const timer = setTimeout(() => offerPushAlerts('shop'), 1500);
+    return () => clearTimeout(timer);
+  }, [offersOrderAlerts]);
 
   const tenantId = tenant?.id;
   const refreshSubscriptionRef = useRef(null);

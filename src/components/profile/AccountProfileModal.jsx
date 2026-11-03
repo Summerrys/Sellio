@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
 import AccountDeletionRequest from './AccountDeletionRequest';
 import { useTenant } from '@/components/tenant/TenantContext';
@@ -13,8 +13,62 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import { openBillingPortal, formatBillingAmount } from '@/lib/billing';
-import { sellsPlans, PLANS_ON_WEBSITE } from '@/lib/nativeApp';
+import { sellsPlans, PLANS_ON_WEBSITE, appPlatform } from '@/lib/nativeApp';
 import { useBackToClose } from '@/lib/useBackToClose';
+
+// Sellio's Android app: whether this phone gets push alerts (src/lib/pushNotifications.js),
+// with Turn on while Sellio can still ask. Android's own settings for Sellio turn them off, or
+// back on once Android has been told no. Checked again when Sellio comes back from them.
+function PhoneAlertsRow() {
+  const [status, setStatus] = useState(null); // 'on' | 'off' | 'blocked' | 'unavailable'
+  const [asking, setAsking] = useState(false);
+  const push = useRef(null);
+  const refresh = useCallback(async () => {
+    try {
+      push.current = push.current || await import('@/lib/pushNotifications');
+      setStatus(await push.current.pushStatus());
+    } catch {
+      setStatus('unavailable');
+    }
+  }, []);
+  useEffect(() => {
+    refresh();
+    const again = () => { if (document.visibilityState === 'visible') refresh(); };
+    window.addEventListener('sellio:push-changed', refresh);
+    document.addEventListener('visibilitychange', again);
+    return () => {
+      window.removeEventListener('sellio:push-changed', refresh);
+      document.removeEventListener('visibilitychange', again);
+    };
+  }, [refresh]);
+
+  if (!status || status === 'unavailable') return null;
+  const turnOn = async () => {
+    setAsking(true);
+    const allowed = await push.current.askAndroid().catch(() => false);
+    setAsking(false);
+    if (allowed) toast.success('Alerts are on for this phone');
+    refresh();
+  };
+  const detail = {
+    on: "On for this phone. Change them in your phone's settings for Sellio.",
+    off: 'Off on this phone',
+    blocked: "Off. Turn them on in your phone's Settings: Apps → Sellio → Notifications.",
+  }[status];
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-sm text-slate-700">Phone alerts</p>
+        <p className="text-[11px] text-slate-400">{detail}</p>
+      </div>
+      {status === 'off' && (
+        <Button size="sm" variant="outline" className="shrink-0" disabled={asking} onClick={turnOn}>
+          {asking ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Turn on'}
+        </Button>
+      )}
+    </div>
+  );
+}
 
 function SectionHeader({ title }) {
   return (
@@ -453,6 +507,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
               </div>
               <Switch checked={orderAlerts} disabled={savingPrefs} onCheckedChange={handleOrderAlertsToggle} />
             </div>
+            {appPlatform() === 'android' && <PhoneAlertsRow />}
           </SectionCard>
 
           {/* Danger Zone */}

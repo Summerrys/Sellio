@@ -46,6 +46,12 @@ export function startCapacitorApp() {
       App.minimizeApp().catch(() => {});
     }).catch(() => {});
 
+    // Push alerts (pushNotifications.js): channels, tapped alerts, and this phone registered
+    // for the signed-in account once notifications are allowed.
+    import('./pushNotifications')
+      .then(({ startPushNotifications }) => startPushNotifications())
+      .catch(() => {});
+
     // Signing out of Sellio also forgets the Google account picked in Android's account
     // picker, so the next Google sign-in asks which account.
     getSupabase()

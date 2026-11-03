@@ -43,6 +43,19 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- Push alerts (Firebase Cloud Messaging, src/lib/pushNotifications.js): Sellio's
+             shopfront icon in its purple. Alerts name their channel (orders, messages or
+             updates); one that doesn't goes to "updates". -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_sellio" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/sellio_purple" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="updates" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

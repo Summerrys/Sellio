@@ -19,7 +19,8 @@ import LaunchSplash from '@/components/ui-custom/LaunchSplash';
 import GoogleSignInRelay from '@/components/auth/GoogleSignInRelay';
 import { startLaunch } from '@/lib/appLaunch';
 import { GOOGLE_RELAY_PATH } from '@/lib/googleRelay';
-import { isNativeApp as inSellioApp, isBase44Shell } from '@/lib/nativeApp';
+import { isNativeApp as inSellioApp, isBase44Shell, appPlatform } from '@/lib/nativeApp';
+import PushPrompt from '@/components/notifications/PushPrompt';
 
 // Pages the app never starts on load on demand, so its first download stays small.
 const LandingPage = lazy(() => import('@/components/landing/LandingPage'));
@@ -206,6 +207,8 @@ function App() {
           </Suspense>
         </Router>
         <SonnerToaster />
+        {/* Sellio's question before Android's about push alerts (the Android app only). */}
+        {appPlatform() === 'android' && <PushPrompt />}
         <LaunchSplash />
         </AppRefreshProvider>
       </QueryClientProvider>
