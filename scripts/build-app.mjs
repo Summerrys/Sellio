@@ -1,0 +1,68 @@
+// The web files Sellio's Android and iOS apps carry (Capacitor's webDir), made from the
+// normal website build in dist/. Run through `npm run build:app`, which builds the website
+// first and runs `npx cap sync` after.
+//
+// The apps never show the landing page and aren't a website, so dist-app/ leaves out:
+// - the landing page's media (assets/immersive*, assets/scroll-world: over 240 MB);
+// - the files only a web host or a search engine reads (_redirects, robots.txt, sitemap.xml,
+//   llms.txt, the share image), the prerendered /privacy and /terms copies and store.html
+//   (the app shows those pages itself), and sw.js (the app registers no service worker).
+// Its index.html is dist/app.html: the same page and scripts without the landing page's
+// prerendered markup, which the app would only hide.
+import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+
+const SRC = 'dist';
+const OUT = 'dist-app';
+const LEFT_OUT = new Set([
+  'assets/immersive',
+  'assets/immersive-16x9',
+  'assets/immersive-hd',
+  'assets/scroll-world',
+  '_redirects',
+  'robots.txt',
+  'sitemap.xml',
+  'llms.txt',
+  'og',
+  'privacy',
+  'terms',
+  'store.html',
+  'sw.js',
+  'index.html', // replaced by app.html below
+  'app.html',
+]);
+
+const appShell = await readFile(path.join(SRC, 'app.html'), 'utf8');
+if (!/<script[^>]+type="module"[^>]+src="\/assets\/index-[^"]+\.js"/.test(appShell)) {
+  throw new Error('dist/app.html has no entry script. Run the website build first.');
+}
+if (appShell.includes('id="sellio-prerender"')) {
+  throw new Error('dist/app.html unexpectedly contains the landing prerender.');
+}
+
+await rm(OUT, { recursive: true, force: true });
+await mkdir(OUT, { recursive: true });
+await cp(SRC, OUT, {
+  recursive: true,
+  filter: (source) => {
+    const rel = path.relative(SRC, source).split(path.sep).join('/');
+    return rel === '' || !LEFT_OUT.has(rel);
+  },
+});
+await writeFile(path.join(OUT, 'index.html'), appShell);
+
+// A last look: every script and style the page names is in dist-app/.
+const named = [...appShell.matchAll(/(?:src|href)="\/(assets\/[^"]+\.(?:js|css))"/g)].map((m) => m[1]);
+for (const file of named) {
+  await stat(path.join(OUT, file)).catch(() => { throw new Error(`dist-app is missing ${file}`); });
+}
+
+async function size(dir) {
+  let total = 0;
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    total += entry.isDirectory() ? await size(full) : (await stat(full)).size;
+  }
+  return total;
+}
+console.log(`dist-app ready: ${(await size(OUT) / 1048576).toFixed(1)} MB (${named.length} entry files checked).`);

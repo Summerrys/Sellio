@@ -1,10 +1,13 @@
 // TEMPORARY — remove once Back in the Android app is confirmed working.
-// A short record of what happens around Back (and of errors) in Base44's Android app, for Alvin's account only:
+// A short record of what happens around Back (and of errors) in Sellio's Android apps (Base44's old one and
+// the Capacitor one), for Alvin's account only:
 // kept on the phone (never sent anywhere), with a small "Back log" button at the top centre that
 // copies it to paste to Claude (away from the screen's side edges, where the Back swipe starts).
 // Also while signed out on a phone where Alvin's account has been signed in (so a sign-out and
 // the next sign-in show up); never while another account is signed in.
 // Nothing is recorded or shown anywhere else.
+import { isNativeApp } from './nativeApp.js';
+
 // Alvin's account, by a hash of its email: this code is public, the email needn't be.
 const OWNER_HASH = 'ff948dec1bdf0';
 const STORE_KEY = 'sellio-back-log';
@@ -15,9 +18,8 @@ const MAX_LINES = 400;
 const MAX_COPY_CHARS = 18000;
 
 const browser = typeof window !== 'undefined' ? window : null;
-const inAndroidApp = () => !!browser && /Android/i.test(browser.navigator?.userAgent || '') && (
-  typeof browser.ReactNativeWebView?.postMessage === 'function' ||
-  typeof browser.__hybrid_bridge?.sendMessage === 'function');
+// Sellio's Android apps: the Capacitor app, and Base44's old one.
+const inAndroidApp = () => !!browser && /Android/i.test(browser.navigator?.userAgent || '') && isNativeApp(browser);
 
 // A short, stable hash of a text (cyrb53): enough to recognise one email without writing it here.
 function hashText(text) {

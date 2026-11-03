@@ -3,6 +3,7 @@ import { AlertTriangle, CreditCard, ExternalLink, Loader2, LogOut, ShieldCheck }
 import { getSupabase } from '@/lib/supabaseClient';
 import { openBillingPortal, formatBillingAmount, formatBillingDate } from '@/lib/billing';
 import { toast } from 'sonner';
+import { sellsPlans, PLANS_ON_WEBSITE } from '@/lib/nativeApp';
 
 export default function BillingRecoveryWall({ subscription, tenantId, isOwner }) {
   const [openingPortal, setOpeningPortal] = useState(false);
@@ -65,7 +66,12 @@ export default function BillingRecoveryWall({ subscription, tenantId, isOwner })
             </div>
           )}
 
-          {isOwner ? (
+          {isOwner && !sellsPlans() ? (
+            // Sellio's apps don't take payments for plans.
+            <p className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 text-xs text-slate-700">
+              {PLANS_ON_WEBSITE}
+            </p>
+          ) : isOwner ? (
             <div className="space-y-2 pt-1">
               {subscription?.invoice_hosted_url && (
                 <a

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { isNativeApp } from '@/lib/nativeApp';
+import { isBase44Shell } from '@/lib/nativeApp';
 
 // Shared by Explore, its listing pages and chats.
 
@@ -10,7 +10,9 @@ export const BRAND_GRADIENT = 'var(--color-primary-gradient, linear-gradient(135
 // The theme's main colour (outlines, active tabs, links).
 export const BRAND_COLOR = 'rgb(var(--color-primary, 59 130 246))';
 // Base44's Android app already keeps pages clear of the system navigation bar.
-export const NATIVE_ANDROID = typeof window !== 'undefined' && /Android/i.test(window.navigator.userAgent) && isNativeApp();
+// Base44's old Android app gives the page no bottom inset of its own (its wrapper keeps the page
+// clear of the gesture bar). In Sellio's Capacitor app, Capacitor does that and the inset is 0.
+export const NATIVE_ANDROID = typeof window !== 'undefined' && /Android/i.test(window.navigator.userAgent) && isBase44Shell();
 export const BOTTOM_INSET = NATIVE_ANDROID ? '0px' : 'env(safe-area-inset-bottom, 0px)';
 // Shared links always use the public site address.
 export const PUBLIC_ORIGIN = 'https://sellio.sg';

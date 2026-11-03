@@ -18,6 +18,7 @@ import { BarChart3, Lock, Package, Users, Sparkles } from 'lucide-react';
 import { subDays } from 'date-fns';
 import { toast } from 'sonner';
 import { periodOf, inPeriod, dayKey, buildReport } from '@/lib/reportData';
+import { sellsPlans, PLANS_ON_WEBSITE } from '@/lib/nativeApp';
 
 const TIER_LABELS = { starter: 'Basic', growth: 'Advanced', pro: 'Custom' };
 
@@ -64,14 +65,18 @@ function UpgradePanel({ icon: Icon, title, description, onUpgrade }) {
         <p className="text-sm font-semibold text-slate-700">{title}</p>
       </div>
       <p className="text-xs sm:text-sm text-slate-500 max-w-xs mb-5">{description}</p>
-      <Button
-        onClick={onUpgrade}
-        size="sm"
-        className="text-white gap-1.5"
-        style={{ background: 'var(--color-primary-gradient)' }}
-      >
-        <Sparkles className="w-3.5 h-3.5" /> Upgrade Plan
-      </Button>
+      {sellsPlans() ? (
+        <Button
+          onClick={onUpgrade}
+          size="sm"
+          className="text-white gap-1.5"
+          style={{ background: 'var(--color-primary-gradient)' }}
+        >
+          <Sparkles className="w-3.5 h-3.5" /> Upgrade Plan
+        </Button>
+      ) : (
+        <p className="text-xs text-slate-400">{PLANS_ON_WEBSITE}</p>
+      )}
     </div>
   );
 }

@@ -1,0 +1,53 @@
+name: iOS app
+
+# Sellio's iPhone app (Capacitor) for the iOS Simulator, run by hand only (Actions → iOS app →
+# Run workflow): macOS minutes cost more. No signing, TestFlight or App Store steps until
+# there is an Apple Developer account. The "sellio-ios-simulator" download has the app and
+# a screenshot of it running on an iPhone simulator.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ios:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build the web app into the iOS project
+        run: npm run build:app
+
+      - name: Simulator build
+        run: |
+          xcodebuild -version
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO build
+
+      - name: Try it on an iPhone simulator
+        continue-on-error: true
+        run: bash .github/scripts/ios-simulator-check.sh build/ios/Build/Products/Debug-iphonesimulator/App.app
+
+      - name: Package
+        run: |
+          mkdir -p ios-out
+          ditto -c -k --keepParent build/ios/Build/Products/Debug-iphonesimulator/App.app ios-out/Sellio-simulator.app.zip
+          cp -R ios-simulator-check/. ios-out/ 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sellio-ios-simulator
+          path: ios-out/
+          if-no-files-found: error

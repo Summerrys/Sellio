@@ -1,3 +1,5 @@
+import { isBase44Shell } from './nativeApp.js';
+
 // Supabase PKCE state belongs to the originating Android WebView. Browser
 // callbacks may carry a one-use code, but never access/refresh tokens or a verifier.
 export const ANDROID_PACKAGE = 'com.base6985959ce9aaceadb8b7cc41.app';
@@ -11,11 +13,10 @@ const ATTEMPT_TTL = 10 * 60 * 1000;
 const NONCE = /^[a-f0-9]{64}$/;
 const CODE = /^[A-Za-z0-9._~-]{1,512}$/;
 
+// Base44's old Android app (its Google sign-in goes through the browser relay below).
+// Sellio's Capacitor app signs in with Google natively (src/lib/nativeGoogle.js).
 export function isNativeAndroid(browser = window) {
-  return /Android/i.test(browser.navigator.userAgent) && (
-    typeof browser.ReactNativeWebView?.postMessage === 'function' ||
-    typeof browser.__hybrid_bridge?.sendMessage === 'function'
-  );
+  return /Android/i.test(browser.navigator.userAgent) && isBase44Shell(browser);
 }
 
 // Persist only the verifier. The temporary client's session stays in memory;

@@ -19,6 +19,7 @@ import LaunchSplash from '@/components/ui-custom/LaunchSplash';
 import GoogleSignInRelay from '@/components/auth/GoogleSignInRelay';
 import { startLaunch } from '@/lib/appLaunch';
 import { GOOGLE_RELAY_PATH } from '@/lib/googleRelay';
+import { isNativeApp as inSellioApp, isBase44Shell } from '@/lib/nativeApp';
 
 // Pages the app never starts on load on demand, so its first download stays small.
 const LandingPage = lazy(() => import('@/components/landing/LandingPage'));
@@ -75,28 +76,23 @@ function RouteIndexingGuard() {
   return null;
 }
 
-// Base44's native wrapper opens the root URL and exposes these bridges.
+// Sellio's apps (the Capacitor app, and Base44's old wrapper) open the root URL.
 // The app opens on Explore under the Sellio launch splash (LaunchSplash,
 // lib/appLaunch.js), signed in or not; an opening link with a query or hash
 // (invites, recovery) still goes to Auth. Ordinary browser visits keep the public
 // landing page. Only the root route changes, so storefront, password recovery and
 // other deep links keep their routes.
-const hasNativeBridge = () => typeof window !== 'undefined' && (
-  typeof window.ReactNativeWebView?.postMessage === 'function' ||
-  typeof window.__hybrid_bridge?.sendMessage === 'function'
-);
-
 const RootRoute = () => {
   const { appUser } = useAppUser();
   const location = useLocation();
-  const [isNativeApp, setIsNativeApp] = useState(hasNativeBridge);
+  const [isNativeApp, setIsNativeApp] = useState(() => inSellioApp());
 
   useEffect(() => {
     if (isNativeApp) return;
 
-    // Also handle wrappers that inject their bridge after React mounts.
+    // Base44's wrapper can inject its bridge after React mounts.
     const timer = window.setInterval(() => {
-      if (hasNativeBridge()) setIsNativeApp(true);
+      if (isBase44Shell()) setIsNativeApp(true);
     }, 100);
     const timeout = window.setTimeout(() => window.clearInterval(timer), 5000);
     return () => {

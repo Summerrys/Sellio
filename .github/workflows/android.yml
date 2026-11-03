@@ -1,0 +1,138 @@
+name: Android app
+
+# Sellio's Android app (Capacitor), built from main on every push and by hand (Actions →
+# Android app → Run workflow).
+# - Always: a debug APK to install and try, and a short run of it on an Android 15 emulator
+#   (screenshots in the "android-emulator-check" download).
+# - With the four upload-key secrets (ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
+#   ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD): also the signed AAB for Google Play and a
+#   signed APK.
+# The version code is 99 + this workflow's run number (the first build is 100); Google Play
+# needs a higher one for every upload. Google sign-in in the app needs the repository
+# variable GOOGLE_WEB_CLIENT_ID (Supabase's Google provider's Web client ID).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      VITE_GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Install
+        run: npm ci
+
+      - name: Version
+        run: |
+          echo "SELLIO_VERSION_CODE=$((GITHUB_RUN_NUMBER + 99))" >> "$GITHUB_ENV"
+          echo "Version code $((GITHUB_RUN_NUMBER + 99)), version name 2.0"
+
+      - name: Build the web app into the Android project
+        run: npm run build:app
+
+      - name: Debug APK
+        working-directory: android
+        run: ./gradlew --no-daemon --stacktrace assembleDebug
+
+      - name: Check the debug APK
+        run: bash .github/scripts/android-check-apk.sh android/app/build/outputs/apk/debug/app-debug.apk
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sellio-android-debug-${{ env.SELLIO_VERSION_CODE }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Upload key
+        id: key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "The upload-key secrets aren't all set: debug APK only."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Signed AAB and APK
+        if: steps.key.outputs.signed == 'true'
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon --stacktrace bundleRelease assembleRelease
+
+      - name: Check the signed APK
+        if: steps.key.outputs.signed == 'true'
+        run: bash .github/scripts/android-check-apk.sh android/app/build/outputs/apk/release/app-release.apk
+
+      - uses: actions/upload-artifact@v7
+        if: steps.key.outputs.signed == 'true'
+        with:
+          name: sellio-android-release-${{ env.SELLIO_VERSION_CODE }}
+          path: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+
+      - name: Remove the key file
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks"
+
+      # A short run of the debug APK on an Android 15 emulator: it installs, opens from the
+      # home-screen entry, Back on the first page leaves it, and a sign-in link opens it.
+      # Screenshots and the app's console log go to the "android-emulator-check" download.
+      - name: Enable the emulator's hardware acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Try the app on an Android 15 emulator
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          script: bash .github/scripts/android-emulator-check.sh
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: android-emulator-check
+          path: android-emulator-check/
+          if-no-files-found: ignore

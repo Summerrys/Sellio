@@ -27,6 +27,7 @@ import { SkeletonList } from '@/components/ui-custom/AppLoader';
 import { applyCanonicalProductOrder } from '@/lib/storefrontCatalog';
 import { useSubscription } from '@/hooks/useSubscription';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
+import { sellsPlans } from '@/lib/nativeApp';
 
 const CSV_HEADERS = ['Name', 'SKU', 'Description', 'Category', 'Price', 'Cost Price', 'Compare At Price', 'Stock Quantity', 'Low Stock Threshold', 'Track Inventory', 'Active', 'Featured', 'Tags', 'Variants', 'Image URL', 'Additional Images'];
 
@@ -271,7 +272,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
               {error && (
                 <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#dc2626', display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <span>{error}</span>
-                  {maxProducts != null && (currentProductCount + selectedCount) > maxProducts && (
+                  {maxProducts != null && (currentProductCount + selectedCount) > maxProducts && sellsPlans() && (
                     <button
                       onClick={() => { handleClose(); onLimitExceeded?.(); }}
                       style={{ alignSelf: 'flex-start', padding: '6px 12px', borderRadius: 8, border: 'none', background: '#dc2626', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}

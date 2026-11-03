@@ -45,6 +45,7 @@
 // sign-in, which comes back to the app before the next page loads).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { backLog } from './backLog';
+import { isBase44Shell, isCapacitorApp } from './nativeApp.js';
 
 // How long after Back to check whether a window really closed. Longer than the
 // windows' closing animations (the storefront designer takes 300ms).
@@ -147,10 +148,9 @@ function traverse(direction) {
   else browser.history.forward();
 }
 
-// Only in Base44's Android app (browsers decide Back themselves).
-const inAndroidApp = () => /Android/i.test(browser?.navigator?.userAgent || '') && (
-  typeof browser.ReactNativeWebView?.postMessage === 'function' ||
-  typeof browser.__hybrid_bridge?.sendMessage === 'function');
+// Only in Base44's Android app (browsers decide Back themselves; so does Sellio's Capacitor
+// app, which hands each Back press to handleAndroidBack, see src/lib/capacitorApp.js).
+const inAndroidApp = () => /Android/i.test(browser?.navigator?.userAgent || '') && isBase44Shell(browser);
 
 // Tells the Android app about the page's history again: the current history entry replaced by
 // itself, which changes nothing here but makes the app's Back read where the page is now. Not
@@ -656,7 +656,9 @@ if (browser) {
       event.stopPropagation?.();
     }
   };
-  browser.document?.addEventListener('backbutton', nativeBackEvent);
+  // (Not in Sellio's Capacitor app: its Back listener calls handleAndroidBack itself, and
+  // Capacitor also fires 'backbutton', which would take a second step back.)
+  if (!isCapacitorApp(browser)) browser.document?.addEventListener('backbutton', nativeBackEvent);
   browser.addEventListener('sellio:android-back', nativeBackEvent);
   // Re-arming the Android app's Back (rearmAppBack): our two steps are hidden from the rest of the
   // page (onPopState above), taps are held off meanwhile (added after the tap listener above,

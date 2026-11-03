@@ -61,6 +61,7 @@ import { PAGE_FEATURES, itemWords } from '@/lib/planFeatures';
 import { isShopTenant } from '@/lib/shopSelling';
 import { SellProvider, useSell } from '@/lib/sell';
 import { inAppFiles, clearExpiredFiles } from '@/lib/appFiles';
+import { isBase44Shell } from '@/lib/nativeApp';
 import { useBackToClose, handOverBackStep } from '@/lib/useBackToClose';
 import { isStaffAccount } from '@/lib/staffAccess';
 import { rememberThisPhone } from '@/lib/deviceKey';
@@ -539,10 +540,7 @@ function AppLayout({ children, currentPageName }) {
   // The wrapper owns the native system navigation area; browser/PWA and iOS
   // viewports continue using their CSS safe-area padding.
   const isNativeAndroid = typeof window !== 'undefined' &&
-    /Android/i.test(window.navigator.userAgent) && (
-      typeof window.ReactNativeWebView?.postMessage === 'function' ||
-      typeof window.__hybrid_bridge?.sendMessage === 'function'
-    );
+    /Android/i.test(window.navigator.userAgent) && isBase44Shell();
   const bottomSafeAreaInset = isNativeAndroid ? '0px' : 'env(safe-area-inset-bottom, 0px)';
 
   // Setting up a store fills the screen, with no menu or bottom bar: a business's

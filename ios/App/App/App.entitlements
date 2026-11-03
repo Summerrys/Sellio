@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Sign-in and invite links on sellio.sg open in the app. Inactive until the app is signed
+	     with an Apple Developer account whose App ID has Associated Domains, and sellio.sg
+	     serves /.well-known/apple-app-site-association. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:sellio.sg</string>
+	</array>
+</dict>
+</plist>

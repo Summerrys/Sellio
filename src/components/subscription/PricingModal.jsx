@@ -4,6 +4,8 @@ import { Check } from 'lucide-react';
 import TenantContext from '@/components/tenant/TenantContext';
 import { BUSINESS_PLANS, NO_TRIAL_LINKS } from '@/lib/plans';
 import PlanFootnotes from './PlanFootnotes';
+import PlansOnWebsite from './PlansOnWebsite';
+import { sellsPlans } from '@/lib/nativeApp';
 
 // Presentation only: prices, Stripe links and features come from lib/plans.js.
 const PLAN_STYLE = {
@@ -66,6 +68,23 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
   };
 
   const isCurrentPlan = (plan) => currentTier !== null && plan.key === currentTier;
+
+  // Sellio's apps sell no plans: the plan, and that plans are managed on the website.
+  if (!sellsPlans()) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-center">Your plan</DialogTitle>
+          </DialogHeader>
+          <PlansOnWebsite
+            tier={isPersonalShop ? null : currentTier}
+            note={isPersonalShop ? 'Your personal shop is on the free plan: up to 10 listings and 100 orders a month.' : ''}
+          />
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   if (isPersonalShop) {
     return (

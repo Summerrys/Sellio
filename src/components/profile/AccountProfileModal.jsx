@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import { openBillingPortal, formatBillingAmount } from '@/lib/billing';
+import { sellsPlans, PLANS_ON_WEBSITE } from '@/lib/nativeApp';
 import { useBackToClose } from '@/lib/useBackToClose';
 
 function SectionHeader({ title }) {
@@ -393,7 +394,10 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
               </div>
             )}
 
-            {isOwner ? (
+            {isOwner && !sellsPlans() ? (
+              // Sellio's apps sell no plans and take no plan payments.
+              <p className="text-xs text-slate-500">{PLANS_ON_WEBSITE}</p>
+            ) : isOwner ? (
               <div className="space-y-2">
                 {activeSub?.status === 'past_due' && activeSub?.invoice_hosted_url && (
                   <a

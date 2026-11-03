@@ -5,6 +5,7 @@ import AppErrorBoundary from '@/components/ui-custom/AppErrorBoundary'
 import '@/index.css'
 import { removeAppReloadParam } from '@/lib/appUpdates'
 import { installEdgeSwipeBack } from '@/lib/edgeSwipeBack'
+import { isCapacitorApp } from '@/lib/nativeApp'
 
 removeAppReloadParam()
 
@@ -20,9 +21,17 @@ document.addEventListener('error', markPhoto, true)
 // iPhone / iPad from the Home Screen: swipe back from the left edge (iOS has none there).
 installEdgeSwipeBack()
 
+// Sellio's Capacitor app (Android and iPhone): Back, links that open the app, the splash and
+// Google sign-out. Loaded only inside the app, as its own file.
+if (isCapacitorApp()) {
+  import('@/lib/capacitorApp')
+    .then(({ startCapacitorApp }) => startCapacitorApp())
+    .catch((error) => console.error('Sellio app start failed:', error))
+}
+
 // Register our minimal PWA service worker (required for install prompts on Chrome/Android).
-// It intentionally does no caching — see public/sw.js.
-if ('serviceWorker' in navigator) {
+// It intentionally does no caching — see public/sw.js. Sellio's app has no use for one.
+if ('serviceWorker' in navigator && !isCapacitorApp()) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   });

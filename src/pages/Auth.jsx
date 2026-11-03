@@ -8,14 +8,14 @@ import AuthPricingModal from '@/components/auth/AuthPricingModal';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import { accountDeletionDestination } from '@/components/profile/AccountDeletionForm';
 import { completeAuthNavigation } from '@/lib/authNavigation';
-import { startGoogleSignIn } from '@/lib/googleSignIn';
+import { googleSignInAvailable, startGoogleSignIn } from '@/lib/googleSignIn';
 import { COMPLETE_KEY, clearMobileAuth, hasMobileGoogleCompletion, isNativeAndroid } from '@/lib/mobileOAuth';
 import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
-import { SELLIO_WEB_ORIGINS, decideOnboardingAccess } from '@/lib/accountFlow';
+import { SELLIO_SITE, SELLIO_WEB_ORIGINS, decideOnboardingAccess } from '@/lib/accountFlow';
 import { homeFor, isStaffAccount } from '@/lib/staffAccess';
 import { callPhoneAuth } from '@/lib/phoneAuth';
 import { useBackToClose } from '@/lib/useBackToClose';
-import { outsideLinkProps } from '@/lib/nativeApp';
+import { isCapacitorApp, outsideLinkProps, sellsPlans, PLANS_ON_WEBSITE } from '@/lib/nativeApp';
 
 const BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
 
@@ -37,8 +37,10 @@ const COUNTRY_CODES = [
 ];
 
 // Same rule as appBaseUrl in src/lib/accountFlow.js: back to the Sellio address the
-// person started on (sellio.sg or sellio.apptelier.sg).
+// person started on (sellio.sg or sellio.apptelier.sg). In Sellio's app: sellio.sg, whose
+// /Auth and /Join links open in the app.
 const getBaseUrl = () => {
+  if (isCapacitorApp()) return SELLIO_SITE;
   const host = window.location.hostname;
   if (host === 'localhost' || host.includes('base44.app') || host.includes('base44.com') ||
       SELLIO_WEB_ORIGINS.includes(window.location.origin)) {
@@ -417,9 +419,10 @@ export default function Auth() {
     setGoogleLoading(true);
     try {
       // Sign Up tab: creating a free account with Google is allowed (join=1).
-      await startGoogleSignIn({
+      const started = await startGoogleSignIn({
         redirectTo: isLogin ? `${getBaseUrl()}/Auth` : `${getBaseUrl()}/Auth?join=1`,
       });
+      if (started?.cancelled) setGoogleLoading(false); // Google's picker closed in the app
     } catch (err) {
       toast.error(err.message || 'Google Sign-In failed. Please try again.');
       setGoogleLoading(false);
@@ -509,10 +512,11 @@ export default function Auth() {
       const redirectTo = urlToken
         ? `${getBaseUrl()}/Auth?token=${encodeURIComponent(urlToken)}`
         : `${getBaseUrl()}/Auth`;
-      await startGoogleSignIn({
+      const started = await startGoogleSignIn({
         redirectTo,
         ...(inviteEmail ? { queryParams: { login_hint: inviteEmail } } : {}),
       });
+      if (started?.cancelled) setGoogleLoading(false); // Google's picker closed in the app
     } catch (err) {
       toast.error(err.message || 'Google Sign-Up failed. Please try again.');
       setGoogleLoading(false);
@@ -673,6 +677,9 @@ export default function Auth() {
 
   // Determine if we should show the pricing wall (signup tab, no token, not bypass)
   const showPricingWall = !isLogin && signupMode === 'pricing_wall';
+  // Sellio's apps don't sell plans (sellsPlans) and the iPhone app has no Google sign-in yet.
+  const plansSold = sellsPlans();
+  const googleOffered = googleSignInAvailable();
   const showInvalidToken = !isLogin && signupMode === 'invalid_token';
   // Show the form if: login tab, OR (signup tab AND allowed), OR (signup tab AND bypass email typed)
   const showForm = isLogin || signupMode === 'allowed' || (signupMode === 'pricing_wall' && BYPASS_EMAILS.includes(formData.email.trim().toLowerCase()));
@@ -946,16 +953,20 @@ export default function Auth() {
                 <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl mb-4">
                   <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-red-700">
-                    This invite link is invalid or has expired. Please purchase a plan to get started.
+                    This invite link is invalid or has expired.{plansSold ? ' Please purchase a plan to get started.' : ''}
                   </p>
                 </div>
-                <button
-                  onClick={() => { setSignupMode('pricing_wall'); setShowPricingModal(true); }}
-                  className="w-full py-2.5 rounded-xl text-white text-sm font-semibold"
-                  style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
-                >
-                  View Plans
-                </button>
+                {plansSold ? (
+                  <button
+                    onClick={() => { setSignupMode('pricing_wall'); setShowPricingModal(true); }}
+                    className="w-full py-2.5 rounded-xl text-white text-sm font-semibold"
+                    style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
+                  >
+                    View Plans
+                  </button>
+                ) : (
+                  <p className="text-center text-sm text-slate-500">{PLANS_ON_WEBSITE}</p>
+                )}
               </div>
             )}
 
@@ -1106,7 +1117,7 @@ export default function Auth() {
             )}
 
             {/* Google signup option — shown on signup tab when token is valid */}
-            {!isLogin && signupMode === 'allowed' && !checkingToken && (
+            {!isLogin && signupMode === 'allowed' && !checkingToken && googleOffered && (
               <>
                 <div className="auth-gap-y flex items-center gap-3">
                   <div className="flex-1 h-px bg-slate-200" />
@@ -1145,7 +1156,9 @@ export default function Auth() {
             {showPricingWall && !checkingToken && (
               <div className="text-center py-4">
                 <p className="text-sm text-slate-500 mb-4">
-                  Create a free Sellio account: sell from home for free, or choose a business plan.
+                  {plansSold
+                    ? 'Create a free Sellio account: sell from home for free, or choose a business plan.'
+                    : 'Create a free Sellio account to sell from home for free.'}
                 </p>
                 <a
                   href="/Join"
@@ -1154,12 +1167,16 @@ export default function Auth() {
                 >
                   Create my free account
                 </a>
-                <button
-                  onClick={() => setShowPricingModal(true)}
-                  className="w-full mt-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
-                >
-                  Business plans (7-day free trial)
-                </button>
+                {plansSold ? (
+                  <button
+                    onClick={() => setShowPricingModal(true)}
+                    className="w-full mt-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
+                  >
+                    Business plans (7-day free trial)
+                  </button>
+                ) : (
+                  <p className="mt-3 text-sm text-slate-500">{PLANS_ON_WEBSITE}</p>
+                )}
               </div>
             )}
 
@@ -1172,7 +1189,7 @@ export default function Auth() {
             )}
 
             {/* Divider + Google — login tab always, signup tab only when no token (pricing wall) */}
-            {!checkingToken && (isLogin || showPricingWall) && (
+            {!checkingToken && googleOffered && (isLogin || showPricingWall) && (
               <>
                 <div className="auth-gap-y flex items-center gap-3">
                   <div className="flex-1 h-px bg-slate-200" />
@@ -1206,8 +1223,12 @@ export default function Auth() {
                     <p className="text-xs text-amber-800">
                       There’s no Sellio account for this Google email yet.{' '}
                       <a href="/Join" style={{ fontWeight: 600, color: '#d97706', textDecoration: 'underline' }}>Create a free account</a>
-                      {' '}or{' '}
-                      <span onClick={() => setShowPricingModal(true)} style={{ fontWeight: 600, color: '#d97706', textDecoration: 'underline', cursor: 'pointer' }}>see business plans</span>.
+                      {plansSold && (
+                        <>
+                          {' '}or{' '}
+                          <span onClick={() => setShowPricingModal(true)} style={{ fontWeight: 600, color: '#d97706', textDecoration: 'underline', cursor: 'pointer' }}>see business plans</span>
+                        </>
+                      )}.
                     </p>
                   </div>
                 )}

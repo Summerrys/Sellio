@@ -4,7 +4,7 @@ import { Search, Plus, X, Loader2, RefreshCw, Store, ChevronRight, SlidersHorizo
 import { toast } from 'sonner';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
-import { isNativeApp } from '@/lib/nativeApp';
+import { isNativeApp, isBase44Shell } from '@/lib/nativeApp';
 import { rememberReturnPath } from '@/lib/authNavigation';
 import { likeErrorMessage, likesText, needsSignIn, setListingLike, toggleKnownLike, useKnownLike, useLikesFor } from '@/lib/likes';
 import ExploreTabBar, { markExploreHome } from '@/components/explore/ExploreTabBar';
@@ -23,7 +23,7 @@ const LOGO_URL = '/branding/sellio-logo.webp';
 // The visitor's colour: the default gradient, or a seller's own theme once chosen.
 const BRAND_GRADIENT = 'var(--color-primary-gradient, linear-gradient(135deg, #3b82f6 0%, #9333ea 100%))';
 // Base44's Android app already keeps pages clear of the system navigation bar.
-const NATIVE_ANDROID = typeof window !== 'undefined' && /Android/i.test(window.navigator.userAgent) && isNativeApp();
+const NATIVE_ANDROID = typeof window !== 'undefined' && /Android/i.test(window.navigator.userAgent) && isBase44Shell();
 const PAGE_SIZE = 24;
 
 const KINDS = [

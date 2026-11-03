@@ -32,9 +32,18 @@ export function isStaffLoginEmail(value) {
 export const SELLIO_SITE = 'https://sellio.sg';
 export const SELLIO_WEB_ORIGINS = [SELLIO_SITE, 'https://sellio.apptelier.sg'];
 
+// Inside Sellio's Capacitor app (the page runs at https://localhost or capacitor://localhost,
+// which no email can link to). A global read, so this file still needs no imports.
+const inCapacitorApp = () => {
+  try { return typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.() === true; }
+  catch { return false; }
+};
+
 // Where emailed links and Google send people back to: the Sellio address they started
-// on, so sign-in finishes in the same browser storage. Same rule as Auth.jsx.
-export function appBaseUrl(location) {
+// on, so sign-in finishes in the same browser storage. Same rule as Auth.jsx. In Sellio's
+// app it is Sellio's main address, whose sign-in links (/Auth, /Join) open in the app.
+export function appBaseUrl(location, inApp = inCapacitorApp()) {
+  if (inApp) return SELLIO_SITE;
   const host = location.hostname;
   if (host === 'localhost' || host.includes('base44.app') || host.includes('base44.com') ||
       SELLIO_WEB_ORIGINS.includes(location.origin)) {

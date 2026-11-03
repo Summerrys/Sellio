@@ -4,6 +4,8 @@ import { useTenant } from '../tenant/TenantContext';
 import { getSupabase } from '@/lib/supabaseClient';
 import { BUSINESS_PLANS, NO_TRIAL_LINKS } from '@/lib/plans';
 import PlanFootnotes from './PlanFootnotes';
+import PlansOnWebsite from './PlansOnWebsite';
+import { sellsPlans } from '@/lib/nativeApp';
 
 // Presentation only: prices, Stripe links and features come from lib/plans.js.
 const PLAN_STYLE = {
@@ -86,6 +88,11 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
           <Lock className="w-6 h-6 text-red-500" />
         </div>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', textAlign: 'center', marginBottom: 4 }}>{heading}</h1>
+        {!sellsPlans() ? (
+          // Sellio's apps sell no plans.
+          <PlansOnWebsite className="text-center" note="Your data is safe and comes back as soon as your plan is active again." />
+        ) : (
+        <>
         <p style={{ fontSize: 13, color: '#64748b', textAlign: 'center', marginBottom: 20, maxWidth: 460, marginLeft: 'auto', marginRight: 'auto' }}>
           {previousPlanName
             ? `Resubscribe to ${previousPlanName} or choose another plan to continue. Your data is safe and returns as soon as you subscribe.`
@@ -168,6 +175,8 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
           })}
         </div>
         <PlanFootnotes showSetup={false} />
+        </>
+        )}
       </div>
 
       <p className="mt-8 text-sm text-slate-500">

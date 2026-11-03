@@ -4,6 +4,8 @@ import { paymentLinkFor } from '@/lib/accountFlow';
 import { BUSINESS_PLANS } from '@/lib/plans';
 import PlanFootnotes from '@/components/subscription/PlanFootnotes';
 import { useBackToClose } from '@/lib/useBackToClose';
+import { sellsPlans } from '@/lib/nativeApp';
+import PlansOnWebsite from '@/components/subscription/PlansOnWebsite';
 
 // Presentation only: prices, Stripe links and features come from lib/plans.js.
 const PLAN_STYLE = {
@@ -35,6 +37,14 @@ export default function AuthPricingModal({ onClose, prefilledEmail = '' }) {
           <X style={{ width: 16, height: 16, color: '#64748b' }} />
         </button>
 
+        {!sellsPlans() ? (
+          // Sellio's apps sell no plans.
+          <div style={{ padding: '8px 8px 0' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', textAlign: 'center', marginBottom: 12 }}>Business plans</h2>
+            <PlansOnWebsite className="text-center" />
+          </div>
+        ) : (
+        <>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', textAlign: 'center', marginBottom: 4 }}>Choose a plan to get started</h2>
         <p style={{ fontSize: 13, color: '#64748b', textAlign: 'center', marginBottom: 20 }}>Start your 7-day free trial. No charge until trial ends.</p>
 
@@ -102,6 +112,8 @@ export default function AuthPricingModal({ onClose, prefilledEmail = '' }) {
           })}
         </div>
         <PlanFootnotes />
+        </>
+        )}
       </div>
     </div>
   );

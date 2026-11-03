@@ -65,9 +65,12 @@
           } catch (e) { /* stays 'invalid' */ }
           return;
         }
-        // Same bridge test as App.jsx's RootRoute: only the Android app has it.
+        // Sellio's apps, as App.jsx's RootRoute checks (src/lib/nativeApp.js): Base44's old
+        // Android app (one of its bridges) and the Capacitor app (Android and iPhone).
+        var capacitorApp = false;
+        try { capacitorApp = !!(w.Capacitor && w.Capacitor.isNativePlatform && w.Capacitor.isNativePlatform()); } catch (e) { /* not the app */ }
         var bridge = (w.ReactNativeWebView && typeof w.ReactNativeWebView.postMessage === 'function') ||
-          (w.__hybrid_bridge && typeof w.__hybrid_bridge.sendMessage === 'function');
+          (w.__hybrid_bridge && typeof w.__hybrid_bridge.sendMessage === 'function') || capacitorApp;
         // Sellio added to a home screen (installed from a browser), not the Android app.
         var homeScreen = false;
         try { homeScreen = !bridge && (w.matchMedia('(display-mode: standalone)').matches || w.navigator.standalone === true); } catch (e) { /* no matchMedia */ }
@@ -125,18 +128,23 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/sellio-apple-touch-180.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
-      /* Sellio's app, and Sellio added to a home screen, work like an app: no pinch or
-         double-tap zoom on any page. Sellio in a browser tab keeps zoom. The bridge test
-         is the same as the script above (only the Android app has it). */
+      /* Sellio's apps, and Sellio added to a home screen, work like an app: no pinch or
+         double-tap zoom on any page. Sellio in a browser tab keeps zoom. The app test is the
+         same as the script above. Sellio's iPhone app also draws under the status bar and
+         the home indicator (viewport-fit=cover), and its pages keep clear of them with
+         env(safe-area-inset-*); on Android, Capacitor keeps the page clear of the bars. */
       (function () {
         var w = window, d = document;
+        var capacitorPlatform = '';
+        try { if (w.Capacitor && w.Capacitor.isNativePlatform && w.Capacitor.isNativePlatform()) capacitorPlatform = w.Capacitor.getPlatform(); } catch (e) { /* not the app */ }
         var app = (w.ReactNativeWebView && typeof w.ReactNativeWebView.postMessage === 'function') ||
-          (w.__hybrid_bridge && typeof w.__hybrid_bridge.sendMessage === 'function');
+          (w.__hybrid_bridge && typeof w.__hybrid_bridge.sendMessage === 'function') || !!capacitorPlatform;
         var installed = false;
         try { installed = w.matchMedia('(display-mode: standalone)').matches || w.navigator.standalone === true; } catch (e) { /* no matchMedia */ }
         if (!app && !installed) return;
         var meta = d.querySelector('meta[name="viewport"]');
-        if (meta) meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+        if (meta) meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' +
+          (capacitorPlatform === 'ios' ? ', viewport-fit=cover' : ''));
         d.documentElement.setAttribute('data-sellio-no-zoom', '');
         // iPhone home-screen apps ignore user-scalable=no, so the pinch itself is stopped.
         d.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });

@@ -18,6 +18,7 @@ import { useAppUser, cookieUtils } from '@/lib/AppUserContext';
 import PricingModal from '../subscription/PricingModal';
 import { normalizeIndustry } from '@/lib/industry';
 import { functionErrorMessage } from '@/lib/aiAllowance';
+import { sellsPlans } from '@/lib/nativeApp';
 
 // Mirrors PLAN_LIMITS in the complete-onboarding edge function — keep in sync.
 // Used here only to warn the merchant *before* they submit; the edge function
@@ -812,14 +813,16 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-slate-900">Added Items ({formData.products.length}{planMaxProducts != null ? ` / ${planMaxProducts}` : ''})</h3>
-              {planMaxProducts != null && formData.products.length >= planMaxProducts && (
+              {planMaxProducts != null && formData.products.length >= planMaxProducts && (sellsPlans() ? (
                 <button
                   onClick={() => setUpgradeModalOpen(true)}
                   className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200"
                 >
                   Limit reached — Upgrade
                 </button>
-              )}
+              ) : (
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">Limit reached</span>
+              ))}
             </div>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {(formData.products || []).map((item, idx) => (

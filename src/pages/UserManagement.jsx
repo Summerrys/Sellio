@@ -29,6 +29,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { Link } from 'react-router-dom';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
 import { useBackToClose } from '@/lib/useBackToClose';
+import { sellsPlans } from '@/lib/nativeApp';
 
 // Visual identity per permission group in the toggle-based Roles editor — reuses
 // the exact same color language as Dashboard's Quick Access cards (Orders=blue,
@@ -294,7 +295,7 @@ function StaffContent({ onUpgrade }) {
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-500">
             <Info className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
             <span>You've reached the {staffCap}-staff limit on your current plan.</span>
-            {onUpgrade ? (
+            {!sellsPlans() ? null : onUpgrade ? (
               <button onClick={onUpgrade} className="ml-auto font-medium text-slate-700 underline underline-offset-2 whitespace-nowrap">Upgrade</button>
             ) : (
               <Link to="/TenantSettings" className="ml-auto font-medium text-slate-700 underline underline-offset-2 whitespace-nowrap">Upgrade</Link>
@@ -572,7 +573,7 @@ function RolesContent({ onUpgrade }) {
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-500">
             <Info className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
             <span>{roleBannerText}</span>
-            {onUpgrade ? (
+            {!sellsPlans() ? null : onUpgrade ? (
               <button onClick={onUpgrade} className="ml-auto font-medium text-slate-700 underline underline-offset-2 whitespace-nowrap">Upgrade</button>
             ) : (
               <Link to="/TenantSettings" className="ml-auto font-medium text-slate-700 underline underline-offset-2 whitespace-nowrap">Upgrade</Link>

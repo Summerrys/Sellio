@@ -7,7 +7,7 @@ import { useBackToClose } from '@/lib/useBackToClose';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { completeAuthNavigation } from '@/lib/authNavigation';
-import { startGoogleSignIn } from '@/lib/googleSignIn';
+import { googleSignInAvailable, startGoogleSignIn } from '@/lib/googleSignIn';
 import { clearMobileAuth, isNativeAndroid } from '@/lib/mobileOAuth';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
@@ -193,9 +193,10 @@ export default function Join() {
     setGoogleLoading(true);
     try {
       // Preserve the existing free-account onboarding after the Google return.
-      await startGoogleSignIn({
+      const started = await startGoogleSignIn({
         redirectTo: `${appBaseUrl(window.location)}/Auth?join=1`,
       });
+      if (started?.cancelled) setGoogleLoading(false); // Google's picker closed in the app
     } catch (err) {
       toast.error(accountErrorMessage(err));
       setGoogleLoading(false);
@@ -290,17 +291,21 @@ export default function Join() {
                   {sending ? 'Sending…' : 'Email me a sign-in link'}
                 </button>
               </form>
-              <div className="flex items-center gap-3 my-4">
-                <div className="flex-1 h-px bg-slate-200" />
-                <span className="text-xs text-slate-400 font-medium">or</span>
-                <div className="flex-1 h-px bg-slate-200" />
-              </div>
-              <button type="button" onClick={continueWithGoogle} disabled={googleLoading}
-                className="w-full flex items-center justify-center gap-3 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-70">
-                {googleLoading ? <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" /> : <GoogleIcon />}
-                {googleLoading ? 'Redirecting…' : 'Continue with Google'}
-              </button>
-              <GoogleBrowserHint />
+              {googleSignInAvailable() && (
+                <>
+                  <div className="flex items-center gap-3 my-4">
+                    <div className="flex-1 h-px bg-slate-200" />
+                    <span className="text-xs text-slate-400 font-medium">or</span>
+                    <div className="flex-1 h-px bg-slate-200" />
+                  </div>
+                  <button type="button" onClick={continueWithGoogle} disabled={googleLoading}
+                    className="w-full flex items-center justify-center gap-3 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-70">
+                    {googleLoading ? <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" /> : <GoogleIcon />}
+                    {googleLoading ? 'Redirecting…' : 'Continue with Google'}
+                  </button>
+                  <GoogleBrowserHint />
+                </>
+              )}
               {googleLoading && isNativeAndroid() && (
                 <button type="button" className="w-full min-h-11 mt-2 text-sm text-orange-700 underline"
                   onClick={() => { clearMobileAuth(window.localStorage); setGoogleLoading(false); }}>

@@ -1,15 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import PhotoPickerControl from './PhotoPickerControl';
+import { isBase44Shell } from '@/lib/nativeApp';
 
 // capture=environment delegates photography to the phone's camera app.
-// Only Android wrappers with a declared CAMERA permission need a grant first.
+// Only Base44's Android wrapper needs a grant first. (Sellio's Capacitor app asks for the
+// camera itself when the camera opens.)
 // `action` is the button's name in its hints ("tap Scan again").
 export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen, children, disabled, action = 'Scan', ...props }) {
-  const nativeAndroid = typeof window !== 'undefined' && /Android/i.test(navigator.userAgent) && (
-    typeof window.ReactNativeWebView?.postMessage === 'function' ||
-    typeof window.__hybrid_bridge?.sendMessage === 'function'
-  );
+  const nativeAndroid = typeof window !== 'undefined' && /Android/i.test(navigator.userAgent) && isBase44Shell();
   const granted = useRef(!nativeAndroid);
   const mounted = useRef(false);
   const pending = useRef(false);
