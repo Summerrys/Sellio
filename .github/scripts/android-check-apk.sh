@@ -6,6 +6,7 @@
 # aren't set to open the app.
 set -euo pipefail
 APK="$1"
+EXPECTED_SHA1="${2:-}" # signed builds: the upload key's SHA-1 as Play shows it (AB:CD:…)
 BUILD_TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
 BADGING="$RUNNER_TEMP/badging.txt"
 MANIFEST="$RUNNER_TEMP/manifest.txt"
@@ -44,3 +45,9 @@ if ! "$BUILD_TOOLS/apksigner" verify --print-certs "$APK" > "$SIGNING" 2>&1; the
   cat "$SIGNING"; echo "::error::apksigner could not verify $APK"; exit 1
 fi
 grep -E "certificate (DN|SHA-256 digest|SHA-1 digest)" "$SIGNING" || cat "$SIGNING"
+if [ -n "$EXPECTED_SHA1" ]; then
+  WANT=$(printf '%s' "$EXPECTED_SHA1" | tr -d ':' | tr 'A-F' 'a-f')
+  GOT=$(grep -m1 -E "certificate SHA-1 digest" "$SIGNING" | awk '{print $NF}')
+  [ "$GOT" = "$WANT" ] || { echo "::error::Signed with SHA-1 $GOT, not the upload key Google has on file ($EXPECTED_SHA1)"; exit 1; }
+  echo "Signed with the upload key Google has on file."
+fi

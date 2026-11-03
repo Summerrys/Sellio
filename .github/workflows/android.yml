@@ -8,8 +8,9 @@ name: Android app
 #   ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD): also the signed AAB for Google Play and a
 #   signed APK.
 # The version code is 99 + this workflow's run number, so it goes up with every build
-# (Google Play needs a higher one for every upload; Base44's builds went up to 13). Google sign-in in the app needs the repository
-# variable GOOGLE_WEB_CLIENT_ID (Supabase's Google provider's Web client ID).
+# (Google Play needs a higher one for every upload; Base44's builds went up to 13). The signed
+# builds must be signed with the upload key Google has on file (UPLOAD_KEY_SHA1, from Play's
+# upload key reset email of 3 Nov 2026); the build stops if they aren't.
 
 on:
   push:
@@ -28,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      VITE_GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
+      UPLOAD_KEY_SHA1: "16:86:DC:54:FD:46:D4:BF:0D:FC:AD:C4:F4:1D:17:E8:71:51:5A:6B"
     steps:
       - uses: actions/checkout@v7
 
@@ -95,7 +96,16 @@ jobs:
 
       - name: Check the signed APK
         if: steps.key.outputs.signed == 'true'
-        run: bash .github/scripts/android-check-apk.sh android/app/build/outputs/apk/release/app-release.apk
+        run: bash .github/scripts/android-check-apk.sh android/app/build/outputs/apk/release/app-release.apk "$UPLOAD_KEY_SHA1"
+
+      - name: Check the AAB is signed with the upload key
+        if: steps.key.outputs.signed == 'true'
+        run: |
+          keytool -printcert -jarfile android/app/build/outputs/bundle/release/app-release.aab > "$RUNNER_TEMP/aab-cert.txt" 2>&1 || true
+          grep -E "Owner:|SHA1:|SHA256:" "$RUNNER_TEMP/aab-cert.txt" || cat "$RUNNER_TEMP/aab-cert.txt"
+          grep -q "SHA1: $UPLOAD_KEY_SHA1" "$RUNNER_TEMP/aab-cert.txt" \
+            || { echo "::error::The AAB isn't signed with the upload key Google has on file ($UPLOAD_KEY_SHA1)"; exit 1; }
+          echo "The AAB is signed with the upload key Google has on file."
 
       - uses: actions/upload-artifact@v7
         if: steps.key.outputs.signed == 'true'

@@ -4,9 +4,11 @@ import { googleRelayUrl } from './googleRelay';
 import { appPlatform } from './nativeApp';
 
 // The Web client ID of the Google Cloud project behind Supabase's Google provider
-// (Supabase → Authentication → Sign In / Providers → Google). Not a secret: the app build
-// takes it from the GitHub Actions variable GOOGLE_WEB_CLIENT_ID.
-export const GOOGLE_WEB_CLIENT_ID = import.meta.env?.VITE_GOOGLE_WEB_CLIENT_ID || '';
+// (Supabase → Authentication → Sign In / Providers → Google). Not a secret: Google shows it
+// to everyone who signs in with Google on the website. A build can override it with
+// VITE_GOOGLE_WEB_CLIENT_ID.
+export const GOOGLE_WEB_CLIENT_ID = import.meta.env?.VITE_GOOGLE_WEB_CLIENT_ID ||
+  '390618701573-0n3emgl2e2v8redsf2d5dl28fikknl1h.apps.googleusercontent.com';
 
 // Whether to offer "Continue with Google": on the website and in Base44's old app; in
 // Sellio's Android app once its Web client ID is set; not yet in the iPhone app.
