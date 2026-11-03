@@ -7,8 +7,8 @@ name: Android app
 # - With the four upload-key secrets (ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
 #   ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD): also the signed AAB for Google Play and a
 #   signed APK.
-# The version code is 99 + this workflow's run number (the first build is 100); Google Play
-# needs a higher one for every upload. Google sign-in in the app needs the repository
+# The version code is 99 + this workflow's run number, so it goes up with every build
+# (Google Play needs a higher one for every upload; Base44's builds went up to 13). Google sign-in in the app needs the repository
 # variable GOOGLE_WEB_CLIENT_ID (Supabase's Google provider's Web client ID).
 
 on:

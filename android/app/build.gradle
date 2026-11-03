@@ -1,8 +1,8 @@
 apply plugin: 'com.android.application'
 
 // Version: Google Play needs a higher versionCode for every upload. The GitHub Actions build
-// passes SELLIO_VERSION_CODE (99 + the workflow's run number, so its first build is 100 and
-// every later one is higher). Base44's builds of this app went up to 13.
+// passes SELLIO_VERSION_CODE (99 + the workflow's run number, so every build is higher than
+// the last). Base44's builds of this app went up to 13; a local build is 100.
 def sellioVersionCode = (System.getenv('SELLIO_VERSION_CODE') ?: '100') as Integer
 def sellioVersionName = System.getenv('SELLIO_VERSION_NAME') ?: '2.0'
 
