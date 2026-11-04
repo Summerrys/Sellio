@@ -62,7 +62,7 @@ import { PAGE_FEATURES, itemWords } from '@/lib/planFeatures';
 import { isShopTenant } from '@/lib/shopSelling';
 import { SellProvider, useSell } from '@/lib/sell';
 import { inAppFiles, clearExpiredFiles } from '@/lib/appFiles';
-import { isBase44Shell } from '@/lib/nativeApp';
+import { isBase44Shell, sellsPlans } from '@/lib/nativeApp';
 import { useBackToClose, handOverBackStep } from '@/lib/useBackToClose';
 import { isStaffAccount } from '@/lib/staffAccess';
 import { rememberThisPhone } from '@/lib/deviceKey';
@@ -449,12 +449,25 @@ function AppLayout({ children, currentPageName }) {
     refreshSubscriptionRef.current = refreshSubscription;
     refreshSubscription();
     const timer = window.setInterval(refreshSubscription, 30 * 1000);
+    // Back in front (the app, or the browser tab): the plan is read again at once, so a plan
+    // bought or renewed on the website shows straight away (at most every 10 seconds).
+    let lastFront = Date.now();
+    const onFront = () => {
+      if (document.visibilityState !== 'visible' || Date.now() - lastFront < 10 * 1000) return;
+      lastFront = Date.now();
+      refreshSubscription();
+      queryClient.invalidateQueries({ queryKey: ['tenantSubscription', tenantId] }, { cancelRefetch: false });
+      queryClient.invalidateQueries({ queryKey: ['subscription', tenantId] }, { cancelRefetch: false });
+      queryClient.invalidateQueries({ queryKey: ['entitlements', tenantId] }, { cancelRefetch: false });
+    };
+    document.addEventListener('visibilitychange', onFront);
     return () => {
       cancelled = true;
       refreshSubscriptionRef.current = null;
       window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onFront);
     };
-  }, [tenantId]);
+  }, [tenantId, queryClient]);
 
   useEffect(() => {
     if (!tenantId || !isOwner) return;
@@ -475,6 +488,9 @@ function AppLayout({ children, currentPageName }) {
   }, [tenantId, isOwner]);
 
   useEffect(() => {
+    // The trial reminder sells a plan: the website only (sellsPlans). In Sellio's apps the
+    // trial simply ends, and the wall says the plan isn't active.
+    if (!sellsPlans()) return;
     if (!isOwner || !subscription || subscription.status !== 'trial') return;
     if (sessionStorage.getItem('trial_modal_dismissed')) return;
     const trialEnd = subscription.current_period_end;

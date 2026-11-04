@@ -2108,13 +2108,14 @@ function LegalPage({
   description,
   path,
   lastUpdated,
+  dateModified = "2026-09-22",
   sections: sections2
 }) {
   useLegalMetadata({
     title,
     description,
     path,
-    dateModified: "2026-09-22"
+    dateModified
   });
   useEffect(() => {
     loadExtraFonts();
@@ -2380,12 +2381,13 @@ const sections$1 = [
       /* @__PURE__ */ jsx("p", { children: "Subject to the PDPA and its exceptions, you may ask to access personal data we hold about you, learn how it has been used or disclosed, correct an error or omission, or withdraw consent for future collection, use or disclosure. You may also ask us to close your account, delete information that is no longer needed, or stop optional processing." }),
       /* @__PURE__ */ jsx("p", { children: "Some requests may be limited where we must retain information, protect another person's rights, preserve security or transaction records, or comply with law. Withdrawing consent may affect our ability to continue providing features that depend on that information." }),
       /* @__PURE__ */ jsxs("p", { children: [
-        "To delete your Sellio account, email ",
+        "To delete your Sellio account, sign in and use Delete account in the Sellio app (under Me) or on our ",
+        /* @__PURE__ */ jsx("a", { href: "/delete-account", rel: "nofollow", children: "account deletion page" }),
+        ". If you cannot sign in, email ",
         /* @__PURE__ */ jsx("a", { href: "mailto:sellio@apptelier.sg", children: "sellio@apptelier.sg" }),
-        " from the email address you sign in with, tell us it is a deletion request and why (see ",
-        /* @__PURE__ */ jsx("a", { href: "/delete-account", rel: "nofollow", children: "how to request account deletion" }),
-        "). We will confirm with you before anything is deleted. If your account owns a store, we will also agree with you what happens to the store and its records so shared business data is protected."
+        " from the email address on the account and tell us it is a deletion request."
       ] }),
+      /* @__PURE__ */ jsx("p", { children: "When you ask, the account is signed out on every device and can no longer sign in. A store it owns closes at once: it takes no new orders, is no longer listed, and its staff can no longer sign in to it. The store's paid plan stops renewing, and time already paid for is not refunded. We keep the account for six months if it owns a store, or 30 days if it does not, so you can ask us to restore it. After that it is permanently deleted, together with any store it owns and that store's staff logins. Orders you placed with other stores remain part of those stores' records, and billing and other records are kept as described in “How long we keep information”." }),
       /* @__PURE__ */ jsxs("p", { children: [
         "To make another privacy request, email ",
         /* @__PURE__ */ jsx("a", { href: "mailto:sellio@apptelier.sg", children: "sellio@apptelier.sg" }),
@@ -2436,7 +2438,8 @@ function Privacy() {
       intro: "This policy explains what Sellio collects, why we use it, when it may be shared and the choices available to merchants, staff and storefront customers.",
       description: "Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and Singapore PDPA rights.",
       path: "/privacy",
-      lastUpdated: "22 September 2026",
+      lastUpdated: "5 November 2026",
+      dateModified: "2026-11-05",
       sections: sections$1
     }
   );

@@ -116,13 +116,14 @@ export default function LegalPage({
   description,
   path,
   lastUpdated,
+  dateModified = '2026-09-22',
   sections,
 }) {
   useLegalMetadata({
     title,
     description,
     path,
-    dateModified: '2026-09-22',
+    dateModified,
   });
   useEffect(() => { loadExtraFonts(); }, []);
 

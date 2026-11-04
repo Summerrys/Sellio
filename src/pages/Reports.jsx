@@ -18,7 +18,7 @@ import { BarChart3, Lock, Package, Users, Sparkles } from 'lucide-react';
 import { subDays } from 'date-fns';
 import { toast } from 'sonner';
 import { periodOf, inPeriod, dayKey, buildReport } from '@/lib/reportData';
-import { sellsPlans, PLANS_ON_WEBSITE } from '@/lib/nativeApp';
+import { sellsPlans, NO_PLANS_IN_APP } from '@/lib/nativeApp';
 
 const TIER_LABELS = { starter: 'Basic', growth: 'Advanced', pro: 'Custom' };
 
@@ -75,7 +75,7 @@ function UpgradePanel({ icon: Icon, title, description, onUpgrade }) {
           <Sparkles className="w-3.5 h-3.5" /> Upgrade Plan
         </Button>
       ) : (
-        <p className="text-xs text-slate-400">{PLANS_ON_WEBSITE}</p>
+        <p className="text-xs text-slate-400">{NO_PLANS_IN_APP}.</p>
       )}
     </div>
   );

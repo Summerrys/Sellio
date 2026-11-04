@@ -146,7 +146,8 @@ const sections = [
       <>
         <p>Subject to the PDPA and its exceptions, you may ask to access personal data we hold about you, learn how it has been used or disclosed, correct an error or omission, or withdraw consent for future collection, use or disclosure. You may also ask us to close your account, delete information that is no longer needed, or stop optional processing.</p>
         <p>Some requests may be limited where we must retain information, protect another person's rights, preserve security or transaction records, or comply with law. Withdrawing consent may affect our ability to continue providing features that depend on that information.</p>
-        <p>To delete your Sellio account, email <a href="mailto:sellio@apptelier.sg">sellio@apptelier.sg</a> from the email address you sign in with, tell us it is a deletion request and why (see <a href="/delete-account" rel="nofollow">how to request account deletion</a>). We will confirm with you before anything is deleted. If your account owns a store, we will also agree with you what happens to the store and its records so shared business data is protected.</p>
+        <p>To delete your Sellio account, sign in and use Delete account in the Sellio app (under Me) or on our <a href="/delete-account" rel="nofollow">account deletion page</a>. If you cannot sign in, email <a href="mailto:sellio@apptelier.sg">sellio@apptelier.sg</a> from the email address on the account and tell us it is a deletion request.</p>
+        <p>When you ask, the account is signed out on every device and can no longer sign in. A store it owns closes at once: it takes no new orders, is no longer listed, and its staff can no longer sign in to it. The store&apos;s paid plan stops renewing, and time already paid for is not refunded. We keep the account for six months if it owns a store, or 30 days if it does not, so you can ask us to restore it. After that it is permanently deleted, together with any store it owns and that store&apos;s staff logins. Orders you placed with other stores remain part of those stores&apos; records, and billing and other records are kept as described in &ldquo;How long we keep information&rdquo;.</p>
         <p>To make another privacy request, email <a href="mailto:sellio@apptelier.sg">sellio@apptelier.sg</a> with enough detail for us to identify you and understand the request. We may take reasonable steps to verify your identity. If the information is controlled by a merchant, we may direct the request to that merchant or assist it in responding.</p>
       </>
     ),
@@ -200,7 +201,8 @@ export default function Privacy() {
       intro="This policy explains what Sellio collects, why we use it, when it may be shared and the choices available to merchants, staff and storefront customers."
       description="Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and Singapore PDPA rights."
       path="/privacy"
-      lastUpdated="22 September 2026"
+      lastUpdated="5 November 2026"
+      dateModified="2026-11-05"
       sections={sections}
     />
   );

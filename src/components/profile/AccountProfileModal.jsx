@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import { openBillingPortal, formatBillingAmount } from '@/lib/billing';
-import { sellsPlans, PLANS_ON_WEBSITE, appPlatform } from '@/lib/nativeApp';
+import { sellsPlans, NO_PLANS_IN_APP, appPlatform } from '@/lib/nativeApp';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { ORDER_ALERTS_EVENT } from '@/lib/useOrderAlerts';
 
@@ -111,6 +111,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
   const [confirmToggle, setConfirmToggle] = useState(null); // 'email' | 'orders' | null
 
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [deletionRequested, setDeletionRequested] = useState(false);
   const [isOpeningBilling, setIsOpeningBilling] = useState(false);
 
   // Detect if user is email/password (not OAuth)
@@ -445,15 +446,17 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
                 <p className="text-xs font-semibold text-red-800">
                   {invoiceAmount ? `${invoiceAmount} is outstanding` : 'An invoice is outstanding'}
                 </p>
-                <p className="text-[11px] text-red-600 mt-0.5">
-                  Update the payment method or pay the Stripe invoice to restore active status.
-                </p>
+                {sellsPlans() && (
+                  <p className="text-[11px] text-red-600 mt-0.5">
+                    Update the payment method or pay the Stripe invoice to restore active status.
+                  </p>
+                )}
               </div>
             )}
 
             {isOwner && !sellsPlans() ? (
               // Sellio's apps sell no plans and take no plan payments.
-              <p className="text-xs text-slate-500">{PLANS_ON_WEBSITE}</p>
+              <p className="text-xs text-slate-500">{NO_PLANS_IN_APP}.</p>
             ) : isOwner ? (
               <div className="space-y-2">
                 {activeSub?.status === 'past_due' && activeSub?.invoice_hosted_url && (
@@ -533,16 +536,25 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
         </div>
       </div>
 
-      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+      {/* Once asked, this phone is signed out: closing goes to Explore, as Continue does. */}
+      <AlertDialog
+        open={showDeleteAlert}
+        onOpenChange={(next) => {
+          if (deletionRequested) { if (!next) window.location.replace('/explore'); return; }
+          setShowDeleteAlert(next);
+        }}
+      >
         <AlertDialogContent className="max-h-[90dvh] overflow-y-auto">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete your Sellio account</AlertDialogTitle>
-            <AlertDialogDescription>Account deletion is done on request.</AlertDialogDescription>
+            <AlertDialogDescription>{deletionRequested ? 'Your request is in.' : 'What happens when you ask:'}</AlertDialogDescription>
           </AlertDialogHeader>
-          <AccountDeletionRequest email={user?.email} shopName={tenant?.name?.trim() || ''} />
-          <AlertDialogFooter>
-            <AlertDialogCancel>Close</AlertDialogCancel>
-          </AlertDialogFooter>
+          <AccountDeletionRequest email={user?.email} shopName={tenant?.name?.trim() || ''} onRequested={() => setDeletionRequested(true)} />
+          {!deletionRequested && (
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+            </AlertDialogFooter>
+          )}
         </AlertDialogContent>
       </AlertDialog>
 

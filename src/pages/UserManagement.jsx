@@ -250,6 +250,8 @@ function StaffContent({ onUpgrade }) {
   };
 
   const staffCapReached = !isPro && staff.length >= staffCap;
+  // Sellio's apps sell no plans, so they don't suggest a bigger one (sellsPlans).
+  const staffCapNote = sellsPlans() ? 'Upgrade your plan to add more staff' : "Your plan's staff limit is reached";
 
   const handleDelete = async (member) => {
     if (!window.confirm(`Remove ${member.user_name || member.user_email} from your team?`)) return;
@@ -276,13 +278,13 @@ function StaffContent({ onUpgrade }) {
                 <DropdownMenuItem onClick={handleExport}><FileSpreadsheet className="w-4 h-4 mr-2" />Export All Staff</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <div title={staffCapReached ? 'Upgrade your plan to add more staff' : undefined}>
+            <div title={staffCapReached ? staffCapNote : undefined}>
               <Button onClick={() => setImportOpen(true)} variant="outline" size="sm" disabled={staffCapReached}>
                 <Upload className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Import</span>
               </Button>
             </div>
-            <div title={staffCapReached ? 'Upgrade your plan to add more staff' : undefined}>
+            <div title={staffCapReached ? staffCapNote : undefined}>
               <Button onClick={() => setCreateOpen(true)} size="sm" className="text-white gap-1.5" style={{ background: 'var(--color-primary-gradient)' }} disabled={staffCapReached}>
                 <UserPlus className="w-4 h-4" />Add Staff
               </Button>
@@ -559,10 +561,9 @@ function RolesContent({ onUpgrade }) {
     }
   };
 
-  const roleBannerText = tier === 'starter'
-    ? `Your plan includes up to ${roleCap} roles. Upgrade to Pro for unlimited roles.`
-    : tier === 'growth'
-    ? `Your plan includes up to ${roleCap} roles. Upgrade to Pro for unlimited roles.`
+  // Sellio's apps sell no plans, so they don't suggest a bigger one (sellsPlans).
+  const roleBannerText = tier === 'starter' || tier === 'growth'
+    ? `Your plan includes up to ${roleCap} roles.${sellsPlans() ? ' Upgrade to Pro for unlimited roles.' : ''}`
     : null;
 
   return (

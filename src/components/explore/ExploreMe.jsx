@@ -222,6 +222,11 @@ export default function ExploreMe() {
             {signingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />} Sign out
           </button>
         )}
+        {appUser && (
+          <p className="mt-2 text-center">
+            <Link to="/delete-account" className="inline-block py-2 text-xs text-slate-400 underline underline-offset-2 hover:text-rose-600">Delete account</Link>
+          </p>
+        )}
 
         {/* Opened inside the app (no reload); "Back to Sellio" there returns here. */}
         <p className="mt-5 text-center text-xs text-slate-500">

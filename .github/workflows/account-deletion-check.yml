@@ -5,17 +5,20 @@ name: Account deletion check
 #
 # Before running it, the test shop's rows are made in Supabase for the run's tag (letters and
 # digits): a shop with the address /store/e2e-del-<tag> (off Explore and the World), owned by
-# e2e-del-owner-<tag>@<domain>, with e2e-del-staff-<tag>@<domain> on its staff and a trial
-# whose Stripe subscription id doesn't exist (sub_e2e_<tag>). The domain is example.com unless
-# Supabase refuses it for sign-up; then another (an input).
+# e2e-del-owner-<tag>@<domain>, with e2e-del-staff-<tag>@<domain> on its staff, on a trial.
+# Giving the trial a Stripe subscription id that doesn't exist (sub_e2e_<tag>) also tries the
+# Stripe step: Stripe answers "No such subscription" and the admins are told to stop it by hand.
+# example.com works for the accounts (5 Nov 2026); another domain can be given (an input).
 #
 # The run signs both accounts up (random passwords, never shown), asks to delete the owner's
 # account through the delete-account function as the app does, and checks: the shop page says
 # "Store unavailable", neither account can sign in, their sessions are over, and the request
 # can't be repeated with the old session. Then it waits (up to 25 minutes) for Sellio to
 # reinstate the account (public.account_deletion_reinstate) and checks the shop and both
-# sign-ins are back. Sellio's admins get the "Account deletion requested" alert, and "Stop a
-# Stripe subscription by hand" for the made-up subscription. The rows are removed by hand after.
+# sign-ins are back. Sellio's admins get the "Account deletion requested" alert (and "Stop a
+# Stripe subscription by hand" with a made-up subscription). The rows are removed by hand after.
+# First run, 5 Nov 2026 03:00 SGT (run 41892665029): every check passed but the shop page one,
+# which misread "false" as missing (jq's // treats false as empty; fixed).
 
 on:
   workflow_dispatch:
@@ -82,7 +85,7 @@ jobs:
           available() {
             curl -sS -X POST "$SUPABASE_URL/rest/v1/rpc/get_storefront_tenant" \
               -H "apikey: $ANON" -H "Authorization: Bearer $ANON" -H 'content-type: application/json' \
-              -d "$(jq -n --arg s "$SLUG" '{p_slug: $s}')" | jq -r '.[0].is_available // "missing"'
+              -d "$(jq -n --arg s "$SLUG" '{p_slug: $s}')" | jq -r 'if type == "array" and length > 0 then (.[0].is_available | tostring) else "missing" end'
           }
           signin() { # email password -> http code; answer in /tmp/signin.json
             curl -sS -o /tmp/signin.json -w '%{http_code}' -X POST "$SUPABASE_URL/auth/v1/token?grant_type=password" \
@@ -141,7 +144,7 @@ jobs:
           for i in $(seq 1 150); do
             open=$(curl -sS -X POST "$SUPABASE_URL/rest/v1/rpc/get_storefront_tenant" \
               -H "apikey: $ANON" -H "Authorization: Bearer $ANON" -H 'content-type: application/json' \
-              -d "$(jq -n --arg s "$SLUG" '{p_slug: $s}')" | jq -r '.[0].is_available // "missing"')
+              -d "$(jq -n --arg s "$SLUG" '{p_slug: $s}')" | jq -r 'if type == "array" and length > 0 then (.[0].is_available | tostring) else "missing" end')
             if [ "$open" = true ]; then echo "The shop page is open again after $((i * 10)) seconds."; exit 0; fi
             sleep 10
           done

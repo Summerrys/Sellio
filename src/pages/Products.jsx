@@ -134,7 +134,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
     // Enforce the plan's product limit — don't let a scan push the merchant over their cap.
     if (maxProducts != null && (currentProductCount + selected.length) > maxProducts) {
       const remaining = Math.max(maxProducts - currentProductCount, 0);
-      setError(`Your plan allows up to ${maxProducts} products (${remaining} slot${remaining === 1 ? '' : 's'} left). Deselect some items or upgrade your plan to add all ${selected.length}.`);
+      setError(`Your plan allows up to ${maxProducts} products (${remaining} slot${remaining === 1 ? '' : 's'} left). ${sellsPlans() ? `Deselect some items or upgrade your plan to add all ${selected.length}.` : 'Deselect some items.'}`);
       return;
     }
     setSaving(true); setError(null);
