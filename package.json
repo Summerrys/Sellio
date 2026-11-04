@@ -14,8 +14,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@base44/sdk": "^0.8.58",
-    "@base44/vite-plugin": "^1.0.50",
+    "@base44/sdk": "^0.8.59",
+    "@base44/vite-plugin": "^1.0.52",
     "@capacitor-community/bluetooth-le": "8.3.0",
     "@capacitor-firebase/messaging": "8.5.2",
     "@capacitor/android": "8.5.3",
