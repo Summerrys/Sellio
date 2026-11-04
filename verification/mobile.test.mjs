@@ -697,20 +697,8 @@ try {
   assert.doesNotMatch(deletion.container.textContent, /account has been deleted/);
   passed('deletion requires typed confirmation and preserves reauthentication failure');
 
-  // Accounts are deleted on request (email sellio@apptelier.sg) since 3 Oct 2026: the
-  // delete-account server function deletes nothing and answers every request with that.
-  // The edge runtime is mocked; no real user or network call is made.
-  let handler;
-  globalThis.Deno = { env: { get: () => 'isolated-test-value' }, serve: callback => { handler = callback; } };
-  await loadComponent('supabase/functions/delete-account/index.ts', []);
-  const refused = await handler(new Request('https://example.invalid/delete-account', { method: 'POST', headers: { Authorization: 'Bearer fixture' }, body: JSON.stringify({ confirmation: 'DELETE' }) }));
-  assert.equal(refused.status, 410);
-  const refusal = await refused.json();
-  assert.equal(refusal.code, 'DELETION_BY_REQUEST');
-  assert.match(refusal.error, /sellio@apptelier\.sg/);
-  const preflight = await handler(new Request('https://example.invalid/delete-account', { method: 'OPTIONS' }));
-  assert.equal(preflight.status, 200);
-  passed('Self-service account deletion is off: the server deletes nothing and points to sellio@apptelier.sg');
+  // The delete-account server function (v5, 5 Nov 2026: deletion on request, in the app and
+  // at sellio.sg/delete-account) and its form: verification/account-deletion.test.mjs.
   console.log(passes + ' interaction and failure checks passed.');
 } finally {
   for (const item of roots) {

@@ -1,0 +1,174 @@
+name: Account deletion check
+
+# Account deletion tried for real on the live system (5 Nov 2026), with a throwaway shop and two
+# throwaway accounts, before the in-app "Request deletion" ships. Run by hand only.
+#
+# Before running it, the test shop's rows are made in Supabase for the run's tag (letters and
+# digits): a shop with the address /store/e2e-del-<tag> (off Explore and the World), owned by
+# e2e-del-owner-<tag>@<domain>, with e2e-del-staff-<tag>@<domain> on its staff and a trial
+# whose Stripe subscription id doesn't exist (sub_e2e_<tag>). The domain is example.com unless
+# Supabase refuses it for sign-up; then another (an input).
+#
+# The run signs both accounts up (random passwords, never shown), asks to delete the owner's
+# account through the delete-account function as the app does, and checks: the shop page says
+# "Store unavailable", neither account can sign in, their sessions are over, and the request
+# can't be repeated with the old session. Then it waits (up to 25 minutes) for Sellio to
+# reinstate the account (public.account_deletion_reinstate) and checks the shop and both
+# sign-ins are back. Sellio's admins get the "Account deletion requested" alert, and "Stop a
+# Stripe subscription by hand" for the made-up subscription. The rows are removed by hand after.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The test shop's tag (letters and digits, as the rows were made with)
+        required: true
+      domain:
+        description: The test accounts' email domain (as the rows were made with)
+        default: example.com
+
+permissions:
+  contents: read
+
+jobs:
+  deletion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SUPABASE_URL: https://gzktuteedbtnaxfdylyu.supabase.co
+      TAG: ${{ inputs.tag }}
+      DOMAIN: ${{ inputs.domain }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Sign up the owner and the staff member
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^[a-z0-9]{6,16}$ ]] || { echo "The tag must be 6 to 16 lower-case letters and digits."; exit 1; }
+          [[ "$DOMAIN" =~ ^[a-z0-9.-]+\.[a-z]{2,}$ ]] || { echo "The domain doesn't look like one."; exit 1; }
+          ANON=$(grep -o 'eyJ[A-Za-z0-9._-]*' src/lib/supabaseClient.js | head -1)
+          [ -n "$ANON" ] || { echo "No public key in src/lib/supabaseClient.js"; exit 1; }
+          {
+            echo "ANON=$ANON"
+            echo "OWNER_EMAIL=e2e-del-owner-$TAG@$DOMAIN"
+            echo "STAFF_EMAIL=e2e-del-staff-$TAG@$DOMAIN"
+            echo "SLUG=e2e-del-$TAG"
+          } >> "$GITHUB_ENV"
+          for who in OWNER STAFF; do
+            email="e2e-del-$(echo "$who" | tr 'A-Z' 'a-z')-$TAG@$DOMAIN"
+            pw="$(openssl rand -hex 18)Aa1!"
+            echo "::add-mask::$pw"
+            code=$(curl -sS -o /tmp/signup.json -w '%{http_code}' -X POST "$SUPABASE_URL/auth/v1/signup" \
+              -H "apikey: $ANON" -H 'content-type: application/json' \
+              -d "$(jq -n --arg e "$email" --arg p "$pw" '{email: $e, password: $p}')")
+            at=$(jq -r '.access_token // empty' /tmp/signup.json)
+            rt=$(jq -r '.refresh_token // empty' /tmp/signup.json)
+            id=$(jq -r '.user.id // .id // empty' /tmp/signup.json)
+            if [ "$code" != 200 ] || [ -z "$at" ]; then
+              echo "Sign-up of $email answered $code:"; jq -c 'del(.access_token, .refresh_token)' /tmp/signup.json || cat /tmp/signup.json
+              exit 1
+            fi
+            echo "::add-mask::$at"; echo "::add-mask::$rt"
+            { echo "${who}_PW=$pw"; echo "${who}_AT=$at"; echo "${who}_RT=$rt"; echo "${who}_ID=$id"; } >> "$GITHUB_ENV"
+            echo "Signed up $email (user $id)"
+          done
+
+      - name: Request deletion of the owner's account, and check the lockout
+        run: |
+          set -uo pipefail
+          fails=0
+          pass() { echo "PASS $*"; }
+          fail() { echo "FAIL $*"; fails=$((fails + 1)); }
+          available() {
+            curl -sS -X POST "$SUPABASE_URL/rest/v1/rpc/get_storefront_tenant" \
+              -H "apikey: $ANON" -H "Authorization: Bearer $ANON" -H 'content-type: application/json' \
+              -d "$(jq -n --arg s "$SLUG" '{p_slug: $s}')" | jq -r '.[0].is_available // "missing"'
+          }
+          signin() { # email password -> http code; answer in /tmp/signin.json
+            curl -sS -o /tmp/signin.json -w '%{http_code}' -X POST "$SUPABASE_URL/auth/v1/token?grant_type=password" \
+              -H "apikey: $ANON" -H 'content-type: application/json' \
+              -d "$(jq -n --arg e "$1" --arg p "$2" '{email: $e, password: $p}')"
+          }
+          refresh() { # refresh token -> http code
+            curl -sS -o /tmp/refresh.json -w '%{http_code}' -X POST "$SUPABASE_URL/auth/v1/token?grant_type=refresh_token" \
+              -H "apikey: $ANON" -H 'content-type: application/json' \
+              -d "$(jq -n --arg r "$1" '{refresh_token: $r}')"
+          }
+          delete_account() { # access token -> http code; answer in /tmp/delete.json
+            curl -sS -o /tmp/delete.json -w '%{http_code}' -X POST "$SUPABASE_URL/functions/v1/delete-account" \
+              -H "apikey: $ANON" -H "Authorization: Bearer $1" -H 'content-type: application/json' \
+              -d "$(jq -n --arg r "Account deletion check, run $GITHUB_RUN_ID" '{confirmation: "DELETE", reason: $r}')"
+          }
+
+          before=$(available)
+          [ "$before" = true ] && pass "before: the shop page is open" || fail "before: the shop page answered is_available=$before (are the test rows made for tag $TAG?)"
+          [ "$before" = true ] || exit 1
+
+          code=$(delete_account "$OWNER_AT"); echo "delete-account answered $code: $(cat /tmp/delete.json)"
+          [ "$code" = 200 ] && pass "the request is taken (200)" || fail "the request answered $code"
+          request=$(jq -r '.requestId // empty' /tmp/delete.json)
+          echo "REQUEST_ID=$request" >> "$GITHUB_ENV"
+          [ "$(jq -r '.status' /tmp/delete.json)" = requested ] && pass "status: requested" || fail "status is not requested"
+          [ "$(jq -r '.alreadyRequested' /tmp/delete.json)" = false ] && pass "a new request" || fail "alreadyRequested is not false"
+          [ "$(jq -r '.shops | length' /tmp/delete.json)" = 1 ] && pass "one shop closed: $(jq -r '.shops[0]' /tmp/delete.json)" || fail "shops: $(jq -c '.shops' /tmp/delete.json)"
+          after=$(jq -r '.deleteAfter // empty' /tmp/delete.json)
+          days=$(( ( $(date -d "$(echo "$after" | sed -E 's/\.[0-9]+//')" +%s) - $(date +%s) ) / 86400 ))
+          [ "$days" -ge 179 ] && [ "$days" -le 185 ] && pass "deleted after about 6 months ($after, $days days)" || fail "deleteAfter $after is $days days away"
+
+          now=$(available)
+          [ "$now" = false ] && pass "the shop page says Store unavailable (is_available=false)" || fail "the shop page answered is_available=$now"
+
+          code=$(signin "$OWNER_EMAIL" "$OWNER_PW")
+          [ "$code" != 200 ] && grep -q user_banned /tmp/signin.json && pass "the owner can't sign in ($code user_banned)" || fail "owner sign-in answered $code: $(jq -c 'del(.access_token, .refresh_token)' /tmp/signin.json)"
+          code=$(signin "$STAFF_EMAIL" "$STAFF_PW")
+          [ "$code" != 200 ] && grep -q user_banned /tmp/signin.json && pass "the staff member can't sign in ($code user_banned)" || fail "staff sign-in answered $code: $(jq -c 'del(.access_token, .refresh_token)' /tmp/signin.json)"
+
+          code=$(refresh "$OWNER_RT")
+          [ "$code" != 200 ] && pass "the owner's session is over (refresh answered $code: $(jq -r '.error_code // .msg // empty' /tmp/refresh.json))" || fail "the owner's session still refreshes"
+          code=$(refresh "$STAFF_RT")
+          [ "$code" != 200 ] && pass "the staff member's session is over (refresh answered $code: $(jq -r '.error_code // .msg // empty' /tmp/refresh.json))" || fail "the staff member's session still refreshes"
+
+          code=$(delete_account "$OWNER_AT")
+          [ "$code" = 401 ] && pass "the old session can't ask again (401 $(jq -r '.code' /tmp/delete.json))" || fail "asking again with the old session answered $code: $(cat /tmp/delete.json)"
+
+          echo "$fails" > /tmp/fails
+          echo "Request $request. Waiting for it to be reinstated (public.account_deletion_reinstate)."
+          [ "$fails" = 0 ] || exit 1
+
+      - name: Wait for the reinstatement
+        run: |
+          set -uo pipefail
+          for i in $(seq 1 150); do
+            open=$(curl -sS -X POST "$SUPABASE_URL/rest/v1/rpc/get_storefront_tenant" \
+              -H "apikey: $ANON" -H "Authorization: Bearer $ANON" -H 'content-type: application/json' \
+              -d "$(jq -n --arg s "$SLUG" '{p_slug: $s}')" | jq -r '.[0].is_available // "missing"')
+            if [ "$open" = true ]; then echo "The shop page is open again after $((i * 10)) seconds."; exit 0; fi
+            sleep 10
+          done
+          echo "Not reinstated within 25 minutes."; exit 1
+
+      - name: Check the reinstated account
+        run: |
+          set -uo pipefail
+          fails=0
+          pass() { echo "PASS $*"; }
+          fail() { echo "FAIL $*"; fails=$((fails + 1)); }
+          signin() {
+            curl -sS -o /tmp/signin.json -w '%{http_code}' -X POST "$SUPABASE_URL/auth/v1/token?grant_type=password" \
+              -H "apikey: $ANON" -H 'content-type: application/json' \
+              -d "$(jq -n --arg e "$1" --arg p "$2" '{email: $e, password: $p}')"
+          }
+          pass "the shop page is open again"
+          code=$(signin "$OWNER_EMAIL" "$OWNER_PW")
+          [ "$code" = 200 ] && pass "the owner can sign in again" || fail "owner sign-in answered $code: $(jq -c 'del(.access_token, .refresh_token)' /tmp/signin.json)"
+          token=$(jq -r '.access_token // empty' /tmp/signin.json)
+          [ -n "$token" ] && echo "::add-mask::$token"
+          if [ -n "$token" ]; then
+            shops=$(curl -sS "$SUPABASE_URL/rest/v1/tenant_users?select=status&user_email=eq.$OWNER_EMAIL" \
+              -H "apikey: $ANON" -H "Authorization: Bearer $token")
+            [ "$(echo "$shops" | jq -r '[.[].status] | unique | join(",")')" = active ] && pass "the owner is back in the shop (membership active)" || fail "memberships: $shops"
+          fi
+          code=$(signin "$STAFF_EMAIL" "$STAFF_PW")
+          [ "$code" = 200 ] && pass "the staff member can sign in again" || fail "staff sign-in answered $code: $(jq -c 'del(.access_token, .refresh_token)' /tmp/signin.json)"
+          echo "Done: request $REQUEST_ID. Remove the test rows for tag $TAG now."
+          [ "$fails" = 0 ] || exit 1
