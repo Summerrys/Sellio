@@ -5,8 +5,9 @@ website's app icon (public/icons/sellio-pwa-512.png) so both show the same logo.
 Android draws an adaptive icon from two 108dp layers (a white background,
 values/ic_launcher_background.xml, and this logo on a transparent layer) and shows the
 middle 72dp through the phone's mask: a circle, a rounded square or another shape. The logo
-is made as large as it can be while every part of it stays inside a 34.4dp radius of the
-middle, so a round mask (36dp radius) never cuts into the lettering.
+is 15% larger than in Base44's build of the app (Alvin's choice, 4 Nov 2026): every part of
+it stays within 32.7dp of the middle, inside the 33dp circle Android keeps clear on every
+mask shape, so no mask cuts into the lettering.
 
 Run from the repository: python3 scripts/android-launcher-icon.py
 (needs Pillow, NumPy and SciPy). It writes ic_launcher_foreground.png at each density.
@@ -22,7 +23,7 @@ SOURCE = 'public/icons/sellio-pwa-512.png'
 RES = 'android/app/src/main/res'
 DENSITIES = {'mdpi': 1, 'hdpi': 1.5, 'xhdpi': 2, 'xxhdpi': 3, 'xxxhdpi': 4}
 LAYER_DP = 108
-FARTHEST_DP = 34.4  # where the farthest bit of the logo may reach, from the middle
+FARTHEST_DP = 32.7  # where the farthest bit of the logo reaches, from the middle (15% over Base44's)
 
 
 def cut_out(rgb):

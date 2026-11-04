@@ -1,0 +1,59 @@
+name: Website check
+
+# Checks sellio.sg from the outside, as a visitor's browser sees it: where the domain points,
+# and what each kind of address answers (HOSTING.md has the table). Run by hand: Actions →
+# Website check → Run workflow. Changes nothing.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Where the domains point (DNS)
+        run: |
+          for name in sellio.sg www.sellio.sg; do
+            for type in NS A AAAA CNAME; do
+              echo "$name $type: $(dig +short "$name" "$type" | tr '\n' ' ')"
+            done
+          done
+          echo "sellio.sg TXT:"; dig +short sellio.sg TXT
+          echo "_dmarc.sellio.sg TXT: $(dig +short _dmarc.sellio.sg TXT)"
+
+      - name: What each address answers
+        run: |
+          show() { # address, what is expected
+            local out
+            out=$(curl -sS -o /tmp/body -D /tmp/head -w '%{http_code} %{content_type}' --max-time 20 -H 'Cache-Control: no-cache' "$1" 2>&1) || true
+            local loc server render
+            loc=$(grep -i '^location:' /tmp/head | head -1 | tr -d '\r' | cut -d' ' -f2-)
+            server=$(grep -i '^server:' /tmp/head | head -1 | tr -d '\r' | cut -d' ' -f2-)
+            render=$(grep -ciE '^(rndr-id|x-render-origin-server):' /tmp/head || true)
+            printf '%-55s %-40s server=%s%s%s\n   expected: %s\n' "$1" "$out" "${server:-?}" \
+              "${loc:+  → $loc}" "$([ "$render" != 0 ] && echo '  (Render/Base44)')" "$2"
+          }
+          show https://sellio.pages.dev/ "200, the landing page (Cloudflare Pages)"
+          show https://sellio.sg/ "200, the landing page"
+          show https://sellio.sg/cdn-cgi/trace "200 text/plain when the domain goes through Cloudflare"
+          show "https://www.sellio.sg/Auth?check=1" "301 → https://sellio.sg/Auth?check=1"
+          show https://sellio.sg/Privacy "301 → /privacy"
+          show https://sellio.sg/privacy "200"
+          show https://sellio.sg/Auth "200, the app"
+          show https://sellio.sg/store/check "200, the storefront page"
+          show https://sellio.sg/.well-known/assetlinks.json "200 application/json"
+          show https://sellio.sg/no-such-file.js "404"
+          show https://summerrys.github.io/Sellio/ "GitHub Pages (not used by Sellio)"
+          echo
+          echo "--- which build answers: the landing page's own script and the app's sign-in links"
+          curl -sS --max-time 20 https://sellio.sg/ | grep -oE '/assets/index-[A-Za-z0-9_-]+\.js' | head -1 || true
+          curl -sS --max-time 20 https://sellio.pages.dev/ | grep -oE '/assets/index-[A-Za-z0-9_-]+\.js' | head -1 || true
+          echo "--- assetlinks.json (the Android app's sign-in links need it on sellio.sg)"
+          curl -sS --max-time 20 https://sellio.sg/.well-known/assetlinks.json | head -c 600; echo
+          echo "--- a build file's caching"
+          asset=$(curl -sS --max-time 20 https://sellio.sg/ | grep -oE '/assets/[A-Za-z0-9_.-]+\.js' | head -1)
+          [ -n "$asset" ] && curl -sSI --max-time 20 "https://sellio.sg$asset" | grep -iE '^(HTTP|cache-control|content-type|server)' || echo "(no build file found)"
