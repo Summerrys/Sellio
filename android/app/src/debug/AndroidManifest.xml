@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only (the emulator check, .github/scripts/android-emulator-check.sh): the app
+     may fetch a test live update over plain http from the computer running the emulator
+     (adb reverse makes it localhost). Release builds keep Android's default: https only. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:networkSecurityConfig="@xml/debug_network_security" />
+</manifest>

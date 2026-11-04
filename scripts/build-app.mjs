@@ -1,13 +1,15 @@
 // The web files Sellio's Android and iOS apps carry (Capacitor's webDir), made from the
-// normal website build in dist/. Run through `npm run build:app`, which builds the website
-// first and runs `npx cap sync` after.
+// normal website build in dist/. The second-last step of `npm run build` (scripts/app-update.mjs
+// then stamps and publishes them); `npm run build:app` adds `npx cap sync`, which copies them
+// into the Android and iOS projects.
 //
 // The apps never show the landing page and aren't a website, so dist-app/ leaves out:
 // - the landing page's media (assets/immersive*);
 // - the files only a web host or a search engine reads (_redirects, .htaccess, Cloudflare
 //   Pages' _worker.js, _routes.json, _headers and 404.html, robots.txt, sitemap.xml, llms.txt,
 //   the share image), the prerendered /privacy and /terms copies and store.html (the app shows
-//   those pages itself), and sw.js (the app registers no service worker).
+//   those pages itself), sw.js (the app registers no service worker), and app-updates/ (these
+//   files themselves, published for the apps by scripts/app-update.mjs).
 // Its index.html is dist/app.html: the same page and scripts without the landing page's
 // prerendered markup, which the app would only hide.
 import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
@@ -33,6 +35,7 @@ const LEFT_OUT = new Set([
   'terms',
   'store.html',
   'sw.js',
+  'app-updates',
   'index.html', // replaced by app.html below
   'app.html',
 ]);

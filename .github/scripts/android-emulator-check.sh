@@ -14,6 +14,7 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 adb shell input keyevent KEYCODE_HOME
 sleep 20
 calm
+adb logcat -G 16M > /dev/null 2>&1 || true # room for the whole run's lines
 adb logcat -c
 
 # 1. Opens from its home-screen entry (com.wix.MainActivity, the name Base44's build used).
@@ -67,6 +68,45 @@ adb exec-out screencap -p > "$OUT/6-pulling.png"
 wait
 sleep 4
 
+# 7. Live updates (src/lib/liveUpdates.js), end to end on this debug build. This computer serves
+#    a test manifest and zip (made with scripts/app-update.mjs's own zip writer), reached from
+#    the emulator as localhost:8099 (adb reverse; debug builds allow plain http to localhost).
+#    A debug build takes ?sellio_update_manifest=<address> to test with it.
+#    a. A good update downloads, and the next start switches to it ("running <version>").
+#    b. A broken one (its page never starts) is switched to, and the updater goes back by itself.
+#    c. Checked again, the broken one isn't downloaded again.
+LU="$RUNNER_TEMP/live-update"
+rm -rf "$LU" && mkdir -p "$LU/www"
+GOOD="e2egood${GITHUB_RUN_ID:-0}"
+BROKEN="e2ebroken${GITHUB_RUN_ID:-0}"
+cp -R dist-app "$LU/good"
+cp -R dist-app "$LU/broken"
+printf '<!doctype html><title>broken</title><p>This test update never starts.</p>\n' > "$LU/broken/index.html"
+node .github/scripts/live-update-test-bundles.mjs "$LU" "$GOOD" "$BROKEN"
+cp "$LU/good.json" "$LU/www/manifest.json"
+python3 .github/scripts/live-update-test-server.py "$LU/www" 8099 2> "$OUT/live-update-server.txt" &
+LU_SERVER=$!
+adb reverse tcp:8099 tcp:8099
+TEST_LINK="https://sellio.sg/Auth?sellio_update_manifest=http%3A%2F%2Flocalhost%3A8099%2Fmanifest.json"
+adb shell am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d "$TEST_LINK" "$PKG"
+sleep 30
+adb shell am force-stop "$PKG"
+sleep 2
+adb shell am start -W -n "$PKG/com.wix.MainActivity"
+sleep 25
+shot 7-live-update
+cp "$LU/broken.json" "$LU/www/manifest.json"
+adb shell am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d "$TEST_LINK" "$PKG"
+sleep 30
+adb shell am force-stop "$PKG"
+sleep 2
+adb shell am start -W -n "$PKG/com.wix.MainActivity"
+sleep 45
+shot 8-after-broken-update
+adb shell am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d "$TEST_LINK" "$PKG"
+sleep 20
+kill "$LU_SERVER" 2> /dev/null || true
+
 adb shell pm get-app-links "$PKG" > "$OUT/app-links.txt" 2>&1
 adb shell dumpsys notification > "$OUT/notification-dump.txt" 2>&1 || true
 adb logcat -d > "$OUT/logcat-full.txt"
@@ -76,6 +116,19 @@ grep -oE "NotificationChannel\{mId='(orders|messages|updates)', mName=[^,]*" "$O
 grep -E "Sellio push:" "$OUT/logcat-full.txt" | sed -E 's/.*(Sellio push:[^"]*).*/\1/' || echo "(no push lines)"
 echo "--- pull to refresh (expect: refreshing, and no 'could not be held')"
 grep -E "Sellio refresh:" "$OUT/logcat-full.txt" | sed -E 's/.*(Sellio refresh:[^"]*).*/\1/' || echo "(no refresh lines)"
+echo "--- live updates"
+seen() { if grep -qF "Sellio update: $1" "$OUT/logcat-full.txt"; then echo "PASS $2"; else echo "FAIL $2 (no \"Sellio update: $1\")"; fi; }
+seen "$GOOD is ready" "a. the good update downloaded"
+seen "switching to $GOOD" "a. the next start switched to it"
+seen "running $GOOD" "a. it started and was confirmed"
+seen "switching to $BROKEN" "b. the broken update was switched to"
+seen "$BROKEN did not start: back in $GOOD" "b. the updater went back to the good one"
+seen "$BROKEN did not start on this phone before" "c. the broken one isn't downloaded again"
+grep -E "Sellio update:" "$OUT/logcat-full.txt" | sed -E 's/.*(Sellio update:[^"]*).*/\1/' || echo "(no update lines)"
+echo "--- the updater's own lines about loading and going back"
+grep -iE "CapacitorUpdater|Capgo" "$OUT/logcat-full.txt" | grep -iE "success|fail|rollback|reset|timeout|ready" | tail -25 || true
+echo "--- the test server (expect the manifest and both zips fetched)"
+cat "$OUT/live-update-server.txt" 2> /dev/null | tail -12 || true
 echo "--- app console and crashes"
 grep -E "Capacitor/Console|Uncaught|FATAL|AndroidRuntime" "$OUT/logcat-full.txt" | tail -60 || true
 

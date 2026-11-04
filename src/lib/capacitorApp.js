@@ -11,10 +11,19 @@ const SELLIO_HOST = new URL(SELLIO_SITE).hostname; // sellio.sg
 
 let started = false;
 
-export function startCapacitorApp() {
+export async function startCapacitorApp() {
   if (started) return;
   started = true;
   const platform = appPlatform();
+
+  // Live updates (liveUpdates.js) first: an update downloaded earlier is switched to before
+  // anything else starts in these files. Never more than a few seconds' wait.
+  await Promise.race([
+    import('./liveUpdates')
+      .then(({ startLiveUpdates }) => startLiveUpdates())
+      .catch((error) => console.warn('Sellio update: not available', error)),
+    new Promise((resolve) => setTimeout(resolve, 4000)),
+  ]);
 
   // The native splash hands over to the page's own Sellio splash (index.html, LaunchSplash)
   // once the page has painted. If this never runs, it still goes after 3 seconds

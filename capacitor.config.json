@@ -25,6 +25,17 @@
         "apple": false,
         "twitter": false
       }
+    },
+    "CapacitorUpdater": {
+      "autoUpdate": false,
+      "updateUrl": "",
+      "channelUrl": "",
+      "statsUrl": "",
+      "appReadyTimeout": 15000,
+      "resetWhenUpdate": true,
+      "autoDeleteFailed": true,
+      "autoDeletePrevious": true,
+      "keepUrlPathAfterReload": true
     }
   }
 }

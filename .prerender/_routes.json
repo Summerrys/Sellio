@@ -1,8 +1,11 @@
 {
   "version": 1,
-  "include": ["/*"],
+  "include": [
+    "/*"
+  ],
   "exclude": [
     "/assets/*",
+    "/app-updates/*",
     "/branding/*",
     "/icons/*",
     "/og/*",

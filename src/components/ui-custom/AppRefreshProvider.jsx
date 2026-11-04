@@ -6,10 +6,18 @@ import PullToRefresh from './PullToRefresh';
 import { AppRefreshContext } from '@/lib/AppRefreshContext';
 import { fetchPublishedAppVersion, getAppAssetVersion, getAppReloadUrl, isNewAppVersion } from '@/lib/appUpdates';
 import { stepToFirstEntry } from '@/lib/useBackToClose';
+import { isCapacitorApp } from '@/lib/nativeApp';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+
+// Sellio's apps carry their own files: their "Update available" is a live update downloaded in
+// the background (lib/liveUpdates.js, loaded in the apps only), and Reload switches to it.
+const IN_APP = isCapacitorApp();
+const LIVE_UPDATE_EVENT = 'sellio:live-update'; // lib/liveUpdates.js
+let liveUpdates = null;
+const loadLiveUpdates = () => (liveUpdates ||= import('@/lib/liveUpdates'));
 
 export default function AppRefreshProvider({ children }) {
   const queryClient = useQueryClient();
@@ -32,6 +40,13 @@ export default function AppRefreshProvider({ children }) {
   const context = useMemo(() => ({ registerRefresh, registerReloadGuard }), [registerRefresh, registerReloadGuard]);
 
   const checkVersion = useCallback(async (showAgain = false) => {
+    if (IN_APP) {
+      const live = await loadLiveUpdates();
+      const waiting = await live.checkForUpdate(showAgain ? { minAgeMs: live.CHECK_ON_PULL } : undefined);
+      setNewVersion(waiting?.version || null);
+      if (showAgain) setDismissed(false);
+      return;
+    }
     // Development previews use /src/main.jsx rather than published assets.
     if (!runningVersion.current) return;
     if (!checking.current) {
@@ -82,6 +97,17 @@ export default function AppRefreshProvider({ children }) {
     };
   }, [checkVersion]);
 
+  // In the apps: a live update finished downloading in the background.
+  useEffect(() => {
+    if (!IN_APP) return undefined;
+    const ready = event => {
+      setNewVersion(event.detail?.version || null);
+      setDismissed(false);
+    };
+    window.addEventListener(LIVE_UPDATE_EVENT, ready);
+    return () => window.removeEventListener(LIVE_UPDATE_EVENT, ready);
+  }, []);
+
   const reload = useCallback((discard = false) => {
     if (getReloadState().busy) {
       toast.info('Please wait for the current action to finish.');
@@ -105,8 +131,15 @@ export default function AppRefreshProvider({ children }) {
     // (when that is this page), so nothing of the old copy is left behind it to go Back to.
     const url = getAppReloadUrl(window.location.href);
     const go = () => window.location.replace(url);
+    // In the apps: switch to the downloaded update, on this same page (keepUrlPathAfterReload).
+    if (IN_APP && newVersion) {
+      void loadLiveUpdates()
+        .then(live => live.applyUpdateNow())
+        .then(switched => { if (!switched) void stepToFirstEntry().then(go, go); }, () => { void stepToFirstEntry().then(go, go); });
+      return;
+    }
     void stepToFirstEntry().then(go, go);
-  }, [getReloadState]);
+  }, [getReloadState, newVersion]);
 
   return (
     <AppRefreshContext.Provider value={context}>

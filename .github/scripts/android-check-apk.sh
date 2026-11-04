@@ -13,6 +13,10 @@ MANIFEST="$RUNNER_TEMP/manifest.txt"
 "$BUILD_TOOLS/aapt2" dump badging "$APK" > "$BADGING"
 "$BUILD_TOOLS/aapt2" dump xmltree --file AndroidManifest.xml "$APK" > "$MANIFEST"
 grep -E "^(package|sdkVersion|targetSdkVersion|application-label|uses-permission):" "$BADGING"
+# Plain http to localhost is for debug builds only (the emulator's live update test).
+if [ -n "$EXPECTED_SHA1" ] && grep -q "networkSecurityConfig" "$MANIFEST"; then
+  echo "::error::The signed build has a network security config: plain http is for debug builds only."; exit 1
+fi
 grep -q "^package: name='com.base6985959ce9aaceadb8b7cc41.app' versionCode='${SELLIO_VERSION_CODE}' versionName='2.0'" "$BADGING" \
   || { echo "::error::Unexpected package name or version (expected com.base6985959ce9aaceadb8b7cc41.app, ${SELLIO_VERSION_CODE}, 2.0)"; exit 1; }
 python3 - "$MANIFEST" <<'PY'

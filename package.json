@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && vite build --ssr src/entry-server.jsx --outDir .prerender && node scripts/prerender-routes.mjs && node scripts/check-prerender.mjs && node scripts/pages-output.mjs",
-    "build:app": "npm run build && node scripts/build-app.mjs && npx cap sync",
+    "build": "vite build && vite build --ssr src/entry-server.jsx --outDir .prerender && node scripts/prerender-routes.mjs && node scripts/check-prerender.mjs && node scripts/pages-output.mjs && node scripts/build-app.mjs && node scripts/app-update.mjs",
+    "build:app": "npm run build && npx cap sync",
     "check:prerender": "node scripts/check-prerender.mjs",
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
@@ -25,6 +25,7 @@
     "@capacitor/ios": "8.5.3",
     "@capacitor/splash-screen": "8.0.2",
     "@capgo/capacitor-social-login": "8.7.4",
+    "@capgo/capacitor-updater": "8.53.1",
     "@hello-pangea/dnd": "^17.0.0",
     "@hookform/resolvers": "^4.1.2",
     "@radix-ui/react-accordion": "^1.2.3",

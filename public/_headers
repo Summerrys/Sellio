@@ -9,3 +9,10 @@
 # The service worker: always checked, so a new version takes over.
 /sw.js
   Cache-Control: no-cache
+
+# Live updates for Sellio's apps (scripts/app-update.mjs, src/lib/liveUpdates.js): the manifest is
+# always checked again, and the apps' pages (https://localhost, capacitor://localhost) may read it.
+# The zips keep Pages' default; an app downloads each version once.
+/app-updates/manifest.json
+  Cache-Control: no-cache
+  Access-Control-Allow-Origin: *
