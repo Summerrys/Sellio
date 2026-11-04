@@ -174,6 +174,25 @@ try {
   cookieNotice.remove();
   passed('The cookie notice (data-reload-ok) holds neither pull to refresh nor reload');
 
+  // A phone can send the first moves of a touch before it lets the page hold them (its own
+  // "touch slop"): those don't end the pull; the first move that can be held starts it.
+  const move = (y, cancelable) => {
+    const event = new Event('touchmove', { bubbles:true, cancelable });
+    Object.defineProperty(event,'touches',{value:[{clientX:0,clientY:y}]});
+    target.dispatchEvent(event);
+    return event;
+  };
+  const slopReads = globalThis.__manualReads;
+  await act(async () => {
+    touch('touchstart',0);
+    assert.equal(move(12, false).defaultPrevented, false);
+    assert.equal(move(160, true).defaultPrevented, true);
+    touch('touchend',160);
+    await flush();
+  });
+  assert.equal(globalThis.__manualReads, slopReads + 1);
+  passed('Moves the phone does not let the page hold yet do not end a pull; the next one starts it');
+
   fetchFails = true;
   const offlineReads = globalThis.__manualReads;
   await act(async () => { click(button('Refresh view')); await flush(); });

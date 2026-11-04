@@ -55,6 +55,18 @@ sleep 25
 shot 5-alert-tapped-closed
 focus 5-alert-tapped-closed
 
+# 6. Pull to refresh: a finger dragged down from near the top of the sign-in page refreshes it
+#    (the page logs "Sellio refresh: refreshing"). A real touch, as on a phone: the web view
+#    decides when the finger lands whether the page may hold its moves (PullToRefresh.jsx).
+adb shell am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d "https://sellio.sg/Auth" "$PKG"
+sleep 15
+read -r W H < <(adb shell wm size | grep -oE '[0-9]+x[0-9]+' | tail -1 | tr 'x' ' ')
+adb shell input swipe $((W / 2)) $((H * 18 / 100)) $((W / 2)) $((H * 60 / 100)) 2500 &
+sleep 1.8
+adb exec-out screencap -p > "$OUT/6-pulling.png"
+wait
+sleep 4
+
 adb shell pm get-app-links "$PKG" > "$OUT/app-links.txt" 2>&1
 adb shell dumpsys notification > "$OUT/notification-dump.txt" 2>&1 || true
 adb logcat -d > "$OUT/logcat-full.txt"
@@ -62,6 +74,8 @@ grep -E "Capacitor|chromium|AndroidRuntime|SystemBars" "$OUT/logcat-full.txt" > 
 echo "--- push alerts: the app's channels, Firebase, and the two tapped alerts (expect: 3 channels, ready, 2 openings)"
 grep -oE "NotificationChannel\{mId='(orders|messages|updates)', mName=[^,]*" "$OUT/notification-dump.txt" | sort -u || echo "(no Sellio channels found)"
 grep -E "Sellio push:" "$OUT/logcat-full.txt" | sed -E 's/.*(Sellio push:[^"]*).*/\1/' || echo "(no push lines)"
+echo "--- pull to refresh (expect: refreshing, and no 'could not be held')"
+grep -E "Sellio refresh:" "$OUT/logcat-full.txt" | sed -E 's/.*(Sellio refresh:[^"]*).*/\1/' || echo "(no refresh lines)"
 echo "--- app console and crashes"
 grep -E "Capacitor/Console|Uncaught|FATAL|AndroidRuntime" "$OUT/logcat-full.txt" | tail -60 || true
 

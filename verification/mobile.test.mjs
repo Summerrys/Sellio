@@ -417,6 +417,23 @@ try {
   globalThis.requestAnimationFrame = callback => { frames.set(++frameId, callback); return frameId; };
   globalThis.cancelAnimationFrame = id => frames.delete(id);
   const ProfiledPull = props => React.createElement(React.Profiler, { id: 'refresh', onRender: () => { refreshCommits++; } }, React.createElement(PullToRefresh, props));
+  // Blocking (non-passive) move listeners per element, counted from before the pull mounts.
+  const blockingMoves = new Map();
+  const realAdd = HTMLElement.prototype.addEventListener;
+  const realRemove = HTMLElement.prototype.removeEventListener;
+  HTMLElement.prototype.addEventListener = function (type, listener, options) {
+    if (type === 'touchmove' && options?.passive === false) {
+      if (!blockingMoves.has(this)) blockingMoves.set(this, new Set());
+      blockingMoves.get(this).add(listener);
+    }
+    return realAdd.call(this, type, listener, options);
+  };
+  HTMLElement.prototype.removeEventListener = function (type, listener, options) {
+    if (type === 'touchmove') blockingMoves.get(this)?.delete(listener);
+    return realRemove.call(this, type, listener, options);
+  };
+  const blocking = element => blockingMoves.get(element)?.size || 0;
+  const scrollPage = top => { document.documentElement.scrollTop = top; window.dispatchEvent(new Event('scroll')); };
   const view = mount(ProfiledPull, { onRefresh: () => { refreshCalls++; return new Promise(resolve => { finishRefresh = resolve; }); }, children: React.createElement('p', { id: 'feed-text' }, 'Feed') });
   await view.render();
   const root = view.container.firstElementChild; const target = view.container.querySelector('p');
@@ -431,16 +448,14 @@ try {
     targetElement.dispatchEvent(event);
     return event;
   }
-  const activeMoveListeners = new Set();
-  const addListener = root.addEventListener.bind(root);
-  const removeListener = root.removeEventListener.bind(root);
-  root.addEventListener = (type, listener, options) => { if (type === 'touchmove') activeMoveListeners.add(listener); addListener(type, listener, options); };
-  root.removeEventListener = (type, listener, options) => { if (type === 'touchmove') activeMoveListeners.delete(listener); removeListener(type, listener, options); };
   const indicator = root.querySelector('.sellio-pull-refresh-indicator');
   const initialCommits = refreshCommits;
+  // Chrome and Android's web view decide when a finger lands whether its moves can be held:
+  // at the top the blocking listener must already be there, not be added by the touch.
+  assert.equal(blocking(root), 1, 'At the top a pull can be followed from the first touch');
   await act(async () => {
     touch('touchstart');
-    assert.equal(activeMoveListeners.size, 1);
+    assert.equal(blocking(root), 1);
     assert.equal(touch('touchmove', 0, 12).defaultPrevented, true);
     for (const callback of frames.values()) callback(); frames.clear();
   });
@@ -456,7 +471,11 @@ try {
   assert.equal(indicator.style.transition, 'none', 'Tracking must not chase the finger with a transition');
   await act(async () => touch('touchend'));
   assert.equal(refreshCalls, 0, 'A short pull should settle without loading');
-  assert.equal(activeMoveListeners.size, 0, 'Normal scrolling must not retain a blocking listener');
+  assert.equal(blocking(root), 1, 'Still at the top: ready for the next pull');
+  scrollPage(120);
+  assert.equal(blocking(root), 0, 'Scrolled down, normal scrolling has no blocking listener');
+  scrollPage(0);
+  assert.equal(blocking(root), 1, 'Back at the top, a pull can start again');
   assert.notEqual(indicator.style.transform, dragPosition);
   assert.match(indicator.style.transition, /transform/, 'Release should animate back');
   passed('drag frames are coalesced without React commits; short pulls animate back');
@@ -482,7 +501,7 @@ try {
   await act(async () => { touch('touchstart', 0, 0, editable); assert.equal(touch('touchmove', 0, 180, editable).defaultPrevented, false); touch('touchend', 0, 0, editable); });
   editable.remove();
   assert.equal(refreshCalls, 1, 'Multi-touch, native scrolling and input editing must not refresh');
-  assert.equal(activeMoveListeners.size, 0);
+  assert.equal(blocking(root), 1, 'Only the one move listener, kept while at the top');
   passed('multi-touch, uncancelable scroll and inputs do not trigger refresh');
   const nested = document.createElement('div'); nested.style.overflowY = 'auto'; root.appendChild(nested); nested.appendChild(target);
   Object.defineProperty(nested, 'scrollHeight', { value: 300 }); Object.defineProperty(nested, 'clientHeight', { value: 100 });
@@ -522,7 +541,9 @@ try {
   assert.equal(frames.size, 1);
   await act(async () => view.root.unmount());
   assert.equal(frames.size, 0, 'Unmount must cancel pending drag frames');
-  assert.equal(activeMoveListeners.size, 0, 'Unmount must detach blocking gesture listeners');
+  assert.equal(blocking(root), 0, 'Unmount must detach blocking gesture listeners');
+  HTMLElement.prototype.addEventListener = realAdd;
+  HTMLElement.prototype.removeEventListener = realRemove;
   globalThis.requestAnimationFrame = originalFrame;
   globalThis.cancelAnimationFrame = originalCancelFrame;
   passed('unmount cancels pending visual work');

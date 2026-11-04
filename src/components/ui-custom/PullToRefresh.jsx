@@ -84,6 +84,7 @@ export default function PullToRefresh({ onRefresh, children, disabled = false, a
   const refresh = useCallback(async () => {
     if (refreshingRef.current || optionsRef.current.disabled || !mountedRef.current) return;
     refreshingRef.current = true;
+    console.info('Sellio refresh: refreshing');
     clearGesture();
     settle(REFRESH_HOLD);
     setRefreshing(true);
@@ -103,6 +104,21 @@ export default function PullToRefresh({ onRefresh, children, disabled = false, a
   useEffect(() => {
     mountedRef.current = true;
     const root = containerRef.current;
+    // Chrome, and the Android app's web view, decide when a finger touches down whether its
+    // moves can be stopped from scrolling the page: only if a listener that can stop them is
+    // already in place. One added as the touch starts comes too late for that touch, so a
+    // pull would never be followed. The blocking move listener is therefore in place while
+    // the page is at its top, where a pull can start; scrolled down, the page scrolls without
+    // waiting for it.
+    let listeningForMoves = false;
+    const listenForMoves = on => {
+      if (on === listeningForMoves) return;
+      listeningForMoves = on;
+      if (on) root.addEventListener('touchmove', move, { passive: false, capture: true });
+      else root.removeEventListener('touchmove', move, true);
+    };
+    const pageAtTop = () => (document.scrollingElement || document.documentElement).scrollTop <= 1;
+    const onScroll = () => listenForMoves(pageAtTop() || !!gestureRef.current);
     const start = event => {
       // A new finger contact is a new tap, not the previous drag's click.
       clickBlockRef.current = null;
@@ -117,15 +133,13 @@ export default function PullToRefresh({ onRefresh, children, disabled = false, a
         x: event.touches[0].clientX, y: event.touches[0].clientY,
         distance: 0, dragging: false, scrollTargets, target,
       };
-      // Normal scrolling has no blocking move listener. Add it only while a
-      // single-finger pull can start at the top of this page.
-      root.addEventListener('touchmove', move, { passive: false, capture: true });
+      listenForMoves(true); // normally already there (see listenForMoves)
       root.addEventListener('touchend', end, { passive: true, capture: true });
       root.addEventListener('touchcancel', reset, { passive: true, capture: true });
       gestureCleanupRef.current = () => {
-        root.removeEventListener('touchmove', move, true);
         root.removeEventListener('touchend', end, true);
         root.removeEventListener('touchcancel', reset, true);
+        listenForMoves(pageAtTop());
       };
     };
     const move = event => {
@@ -139,7 +153,17 @@ export default function PullToRefresh({ onRefresh, children, disabled = false, a
         if (deltaY < 0 || (deltaX > DRAG_SLOP && deltaX > Math.abs(deltaY))) { reset(); return; }
         if (deltaY < DRAG_SLOP || deltaY <= deltaX * 1.15) return;
       }
-      if (!event.cancelable) { reset(); return; }
+      if (!event.cancelable) {
+        // The browser is scrolling with this touch (or hasn't let the page hold it yet: a
+        // phone's own small "touch slop" can be wider than DRAG_SLOP). Before the pull has
+        // started, wait for a move that can be held; once pulling, the browser took over.
+        if (!gesture.warned) {
+          gesture.warned = true;
+          console.info('Sellio refresh: the page scrolled instead (this touch could not be held)');
+        }
+        if (gesture.dragging) reset();
+        return;
+      }
       event.preventDefault();
       gesture.dragging = true;
       clickBlockRef.current = { target: gesture.target, until: Infinity };
@@ -170,6 +194,8 @@ export default function PullToRefresh({ onRefresh, children, disabled = false, a
     };
     root.addEventListener('touchstart', start, { passive: true });
     root.addEventListener('click', click, true);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    listenForMoves(pageAtTop());
     return () => {
       mountedRef.current = false;
       clearGesture();
@@ -177,6 +203,8 @@ export default function PullToRefresh({ onRefresh, children, disabled = false, a
       frameRef.current = null;
       root.removeEventListener('touchstart', start);
       root.removeEventListener('click', click, true);
+      window.removeEventListener('scroll', onScroll);
+      listenForMoves(false);
     };
   }, [clearGesture, refresh, reset, settle, track]);
 

@@ -6,7 +6,7 @@ import { useAppUser } from '@/lib/AppUserContext';
 import { Clock, AlertCircle, ChefHat, ArrowLeft, Maximize2, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { NEW_ORDER_TONE_URL, URGENT_ORDER_TONE_URL } from '@/lib/kdsSounds';
+import { useOrderAlerts, REMIND_EVERY } from '@/lib/useOrderAlerts';
 import { loadPrinterConfig, buildOrderChit, sendViaBluetooth, sendViaEpsonEPos } from '@/lib/printerUtils';
 import ChitPreviewSheet from '@/components/orders/ChitPreviewSheet';
 import RequirePermission from '../components/auth/RequirePermission';
@@ -235,183 +235,17 @@ function KitchenDisplayScreen() {
   const { tenantId, tenant } = useTenant();
   const { appUser } = useAppUser();
   const [orders, setOrders] = useState([]);
-  // FIX: the realtime subscription below is set up once (useEffect deps: just
-  // [tenantId]) and its callback closure captured `orders` from that one moment
-  // — permanently. The repeat-alert interval was checking that frozen snapshot
-  // forever after, not the actual current list, so it almost always found no
-  // pending order and cancelled itself after a single silent tick. This ref
-  // always holds the latest value for that closure to read instead.
-  const ordersRef = useRef([]);
-  useEffect(() => { ordersRef.current = orders; }, [orders]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [expandedOrder, setExpandedOrder] = useState(null);
   useBackToClose(!!expandedOrder, () => setExpandedOrder(null)); // phone / browser Back closes the enlarged order
-  const [soundEnabled, setSoundEnabled] = useState(false);
   const fallbackPollRef = useRef(null);
-  const audioCtxRef = useRef(null);
-  const soundEnabledRef = useRef(false);
-  const repeatIntervalRef = useRef(null);
-  const newOrderAudioRef = useRef(null);
-  const urgentAudioRef = useRef(null);
 
-  useEffect(() => {
-    const unlockAudio = () => {
-      try {
-        if (!newOrderAudioRef.current) newOrderAudioRef.current = new Audio(NEW_ORDER_TONE_URL);
-        if (!urgentAudioRef.current) urgentAudioRef.current = new Audio(URGENT_ORDER_TONE_URL);
-        [newOrderAudioRef.current, urgentAudioRef.current].forEach(el => {
-          el.volume = 0;
-          el.play().then(() => {
-            el.pause();
-            el.currentTime = 0;
-            el.volume = 1;
-          }).catch(() => { el.volume = 1; });
-        });
-      } catch (e) { /* best effort */ }
-    };
-    window.addEventListener('pointerdown', unlockAudio);
-    window.addEventListener('touchstart', unlockAudio);
-    return () => {
-      window.removeEventListener('pointerdown', unlockAudio);
-      window.removeEventListener('touchstart', unlockAudio);
-    };
-  }, []);
-  const alertIntervalRef = useRef(60);
-  const [alertInterval, setAlertInterval] = useState(60);
-
-  // Restore sound preference — app_users.order_alerts (synced with Profile modal & Orders page)
-  // takes priority; localStorage is a fast fallback for the very first render.
-  useEffect(() => {
-    if (!tenantId) return;
-    const stored = localStorage.getItem(`sellio_sound_alerts_${tenantId}`);
-    if (stored === 'true') { setSoundEnabled(true); soundEnabledRef.current = true; }
-    if (appUser?.order_alerts !== undefined) {
-      const dbValue = appUser.order_alerts !== false;
-      setSoundEnabled(dbValue);
-      soundEnabledRef.current = dbValue;
-      localStorage.setItem(`sellio_sound_alerts_${tenantId}`, String(dbValue));
-    }
-  }, [tenantId, appUser?.order_alerts]);
-
-  // Ring counts per the merchant spec: new order rings ONCE, urgent (an
-  // order sitting unacknowledged past the merchant's configured threshold)
-  // rings TWICE — the two remain audibly distinguishable, and each type
-  // also has its own distinct tone file.
-  const playSound = (type, times) => {
-    if (!soundEnabledRef.current) return;
-    try {
-      const isUrgent = type === 'urgent';
-      const playCount = times ?? (isUrgent ? 2 : 1);
-      if (!newOrderAudioRef.current) newOrderAudioRef.current = new Audio(NEW_ORDER_TONE_URL);
-      if (!urgentAudioRef.current) urgentAudioRef.current = new Audio(URGENT_ORDER_TONE_URL);
-      const el = isUrgent ? urgentAudioRef.current : newOrderAudioRef.current;
-      let playsLeft = playCount;
-      el.onended = null;
-      const playOnce = () => {
-        playsLeft -= 1;
-        el.onended = playsLeft > 0 ? playOnce : null;
-        el.currentTime = 0;
-        el.play().catch(() => {});
-      };
-      playOnce();
-    } catch (e) {
-      console.warn('playSound error:', e);
-    }
-  };
-
-  const stopRepeatAlerts = () => {
-    if (repeatIntervalRef.current) {
-      clearInterval(repeatIntervalRef.current);
-      repeatIntervalRef.current = null;
-    }
-  };
-
-  const startRepeatAlerts = (checkFn, soundType) => {
-    stopRepeatAlerts();
-    const secs = alertIntervalRef.current || 60;
-    repeatIntervalRef.current = setInterval(() => {
-      if (!soundEnabledRef.current) { stopRepeatAlerts(); return; }
-      if (checkFn()) playSound('urgent');
-      else stopRepeatAlerts();
-    }, secs * 1000);
-  };
-
-  // iPadOS/iOS Safari can silently suspend an AudioContext when the tab or app
-  // is backgrounded (screen lock, app-switch, even briefly), and won't resume
-  // it again just because a setInterval callback asks it to — that resume only
-  // reliably takes effect right after a fresh user gesture. This re-primes the
-  // context whenever the page becomes visible again, so a kitchen tablet that's
-  // been sitting idle (screen dimmed, user stepped away) doesn't end up with
-  // alerts that silently stopped working. This is a mitigation for a real
-  // WebKit quirk, not a guaranteed fix — worth re-testing on the actual iPad
-  // after this change.
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && newOrderAudioRef.current && urgentAudioRef.current) {
-        [newOrderAudioRef.current, urgentAudioRef.current].forEach(el => {
-          el.volume = 0;
-          el.play().then(() => { el.pause(); el.currentTime = 0; el.volume = 1; }).catch(() => { el.volume = 1; });
-        });
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, []);
-
-  useEffect(() => {
-    soundEnabledRef.current = soundEnabled;
-  }, [soundEnabled]);
-
-  // Same idea as the tap-based unlock, but on a timer instead of a gesture -
-  // keeps the <audio> element continuously "recently played" for as long as
-  // sound is turned on, so a long idle stretch on a tablet nobody's touched
-  // can't let it go stale before the next real alert needs to fire.
-  useEffect(() => {
-    if (!soundEnabled) return;
-    const keepAlive = () => {
-      if (document.visibilityState !== 'visible') return;
-      try {
-        if (!newOrderAudioRef.current) newOrderAudioRef.current = new Audio(NEW_ORDER_TONE_URL);
-        if (!urgentAudioRef.current) urgentAudioRef.current = new Audio(URGENT_ORDER_TONE_URL);
-        [newOrderAudioRef.current, urgentAudioRef.current].forEach(el => {
-          el.volume = 0;
-          el.play().then(() => {
-            el.pause();
-            el.currentTime = 0;
-            el.volume = 1;
-          }).catch(() => { el.volume = 1; });
-        });
-      } catch (e) { /* best effort */ }
-    };
-    keepAlive();
-    const id = setInterval(keepAlive, 20000);
-    return () => clearInterval(id);
-  }, [soundEnabled]);
-
-  useEffect(() => {
-    if (!tenantId) return;
-    const stored = localStorage.getItem(`sellio_sound_alerts_${tenantId}`);
-    if (stored === 'true') {
-      setSoundEnabled(true);
-      soundEnabledRef.current = true;
-    }
-    const storedInterval = parseInt(localStorage.getItem(`sellio_alert_interval_${tenantId}`) || '60', 10);
-    setAlertInterval(storedInterval);
-    alertIntervalRef.current = storedInterval;
-  }, [tenantId]);
-
-  useEffect(() => {
-    soundEnabledRef.current = soundEnabled;
-  }, [soundEnabled]);
-
-  useEffect(() => {
-    alertIntervalRef.current = alertInterval;
-  }, [alertInterval]);
-
-  useEffect(() => {
-    return () => { if (repeatIntervalRef.current) clearInterval(repeatIntervalRef.current); };
-  }, []);
+  // Sound alerts and their reminders (src/lib/useOrderAlerts.js). Here every new order rings,
+  // and one waiting to be accepted is reminded about; an order becoming ready rings and is
+  // reminded about until it's served.
+  const alerts = useOrderAlerts({ tenantId, userId: appUser?.id, orders });
+  const { ring: ringAlert, seen: seenOrder } = alerts;
 
   // Listen for native fullscreen exit (Escape key)
   useEffect(() => {
@@ -490,23 +324,10 @@ function KitchenDisplayScreen() {
 
             // Kitchen printing is handled once by the workspace listener.
 
-            if (payload.eventType === 'INSERT' && soundEnabledRef.current) {
-              playSound('new');
-              startRepeatAlerts(() => ordersRef.current.some(o => o.status === 'pending'), 'new');
-            }
-            if (payload.eventType === 'UPDATE' &&
-                payload.new?.status === 'ready' &&
-                payload.old?.status !== 'ready' &&
-                soundEnabledRef.current) {
-              playSound('ready');
-              startRepeatAlerts(() => ordersRef.current.some(o => o.status === 'ready'), 'ready');
-            }
-            if (payload.eventType === 'UPDATE' &&
-                (payload.new?.status === 'confirmed' || payload.new?.status === 'completed')) {
-              const stillHasPending = ordersRef.current.some(o => o.status === 'pending' && o.id !== payload.new?.id);
-              const stillHasReady = ordersRef.current.some(o => o.status === 'ready' && o.id !== payload.new?.id);
-              if (!stillHasPending && !stillHasReady) stopRepeatAlerts();
-            }
+            // Sound alerts. For a deleted order realtime sends only its id.
+            const before = seenOrder(payload.eventType === 'DELETE' ? { ...payload.old, status: undefined } : payload.new);
+            if (payload.eventType === 'INSERT') ringAlert(payload.new, { remind: payload.new?.status === 'pending' });
+            if (payload.eventType === 'UPDATE' && payload.new?.status === 'ready' && before !== 'ready') ringAlert(payload.new);
           }
         )
         .subscribe((status) => {
@@ -525,15 +346,9 @@ function KitchenDisplayScreen() {
       clearInterval(fallbackPollRef.current);
       if (supabaseClient && channel) supabaseClient.removeChannel(channel);
     };
-  }, [tenantId]);
+  }, [tenantId, ringAlert, seenOrder]);
 
   const handleBump = async (orderId, currentStatus) => {
-    if (newOrderAudioRef.current && urgentAudioRef.current) {
-      [newOrderAudioRef.current, urgentAudioRef.current].forEach(el => {
-        el.volume = 0;
-        el.play().then(() => { el.pause(); el.currentTime = 0; el.volume = 1; }).catch(() => { el.volume = 1; });
-      });
-    }
     const nextStatus = NEXT_STATUS[currentStatus];
     if (!nextStatus) return;
     const supabase = await getSupabase();
@@ -592,13 +407,15 @@ function KitchenDisplayScreen() {
           )}
           <h1 className="text-xl sm:text-3xl font-black truncate flex-1">{tenant?.name || 'Kitchen'} — Kitchen Display</h1>
           <div className="flex items-center gap-2">
-            {soundEnabled && (
+            {alerts.on && (
               <div className="flex items-center gap-1">
-                {[30, 60, 120].map(s => (
+                {REMIND_EVERY.map(s => (
                   <button
                     key={s}
-                    onClick={() => { setAlertInterval(s); alertIntervalRef.current = s; if (tenantId) localStorage.setItem(`sellio_alert_interval_${tenantId}`, String(s)); }}
-                    className={`text-[10px] px-1.5 py-0.5 rounded font-medium transition-colors ${alertInterval === s ? 'bg-white text-slate-900' : 'border border-white/40 text-white/70'}`}
+                    onClick={() => alerts.setEvery(s)}
+                    aria-pressed={alerts.every === s}
+                    aria-label={`Remind every ${s === 30 ? '30 seconds' : s === 60 ? 'minute' : '2 minutes'}`}
+                    className={`text-[10px] px-1.5 py-0.5 rounded font-medium transition-colors ${alerts.every === s ? 'bg-white text-slate-900' : 'border border-white/40 text-white/70'}`}
                   >
                     {s === 30 ? '30s' : s === 60 ? '1m' : '2m'}
                   </button>
@@ -606,29 +423,12 @@ function KitchenDisplayScreen() {
               </div>
             )}
             <button
-              onClick={() => {
-                const newVal = !soundEnabled;
-                setSoundEnabled(newVal);
-                soundEnabledRef.current = newVal;
-                if (tenantId) localStorage.setItem(`sellio_sound_alerts_${tenantId}`, String(newVal));
-                // Keep app_users.order_alerts in sync so Profile modal & Orders page reflect this too
-                if (appUser?.id) {
-                  getSupabase().then(supabase =>
-                    supabase.from('app_users').update({ order_alerts: newVal }).eq('id', appUser.id)
-                  ).catch(() => {});
-                }
-                // Playing directly here is fine now - playSound is <audio>-element
-                // based and this click is itself a genuine gesture (also already
-                // caught by the pointerdown/touchstart unlock listener above it).
-                if (newVal) {
-                  playSound('new');
-                } else {
-                  stopRepeatAlerts();
-                }
-              }}
+              onClick={() => alerts.setOn(!alerts.on)}
+              aria-pressed={alerts.on}
+              aria-label={alerts.on ? 'Sound alerts on' : 'Sound alerts off'}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-white/40 text-white bg-transparent hover:bg-white/10 transition-colors flex-shrink-0"
             >
-              {soundEnabled ? '🔔' : '🔕'}
+              {alerts.on ? '🔔' : '🔕'}
             </button>
           </div>
           {!isFullscreen && (

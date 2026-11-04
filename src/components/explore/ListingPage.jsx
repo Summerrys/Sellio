@@ -20,6 +20,7 @@ import {
   BRAND_COLOR, BRAND_GRADIENT, BOTTOM_INSET, PUBLIC_ORIGIN, hideScrollbar, formatPrice, timeAgo,
   ShopAvatar, ItemImage, storeUrl, listingUrl, chatUrl, newChatUrl, goBack,
 } from './shared';
+import ZoomableImage from '@/components/ui-custom/ZoomableImage';
 
 // One Explore listing. The photo fills the screen from the very top (behind the
 // phone's status bar); scrolling down turns the floating buttons into a solid header
@@ -134,6 +135,7 @@ function useNotice() {
 function PhotoViewer({ images, start, name, onClose }) {
   const scroller = useRef(null);
   const [index, setIndex] = useState(start);
+  const [zoomed, setZoomed] = useState(false); // a zoomed photo is dragged around, not swiped past
   useBackToClose(true, onClose);
   useLayoutEffect(() => {
     const el = scroller.current;
@@ -149,13 +151,13 @@ function PhotoViewer({ images, start, name, onClose }) {
       </div>
       <div
         ref={scroller}
-        className="flex-1 flex overflow-x-auto snap-x snap-mandatory"
+        className={`flex-1 flex snap-x snap-mandatory ${zoomed ? 'overflow-hidden' : 'overflow-x-auto'}`}
         style={hideScrollbar}
         onScroll={(e) => setIndex(Math.round(e.currentTarget.scrollLeft / Math.max(1, e.currentTarget.clientWidth)))}
       >
         {images.map((src) => (
-          <div key={src} className="w-full h-full flex-shrink-0 snap-center flex items-center justify-center">
-            <img src={src} alt="" className="max-w-full max-h-full object-contain" />
+          <div key={src} className="w-full h-full flex-shrink-0 snap-center">
+            <ZoomableImage src={src} className="w-full h-full" imgClassName="max-w-full max-h-full object-contain" onZoomChange={setZoomed} />
           </div>
         ))}
       </div>

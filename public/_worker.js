@@ -1,5 +1,6 @@
 // Sellio's website on Cloudflare Pages ("advanced mode": Pages runs this for each page
 // address). Which page each address gets, as the earlier host's _redirects had it:
+//   www.<domain>/…        →  301 to the same address without www
 //   /Privacy, /privacy/, /Terms, /terms/, /index.html  →  301 to /privacy, /terms, /
 //   /                     → index.html (the landing page, prerendered)
 //   /privacy, /terms      → privacy/index.html, terms/index.html
@@ -40,10 +41,16 @@ async function page(env, request, url, path) {
 
 export default {
   async fetch(request, env) {
+    // www.sellio.sg → sellio.sg, same address: one address to sign in on (Google and emailed
+    // sign-in links return to sellio.sg). Files on www (not run through here) are served as is.
+    const url = new URL(request.url);
+    if (url.hostname.startsWith('www.')) {
+      url.hostname = url.hostname.slice(4);
+      return Response.redirect(url.toString(), 301);
+    }
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, HEAD' } });
     }
-    const url = new URL(request.url);
     const { pathname } = url;
 
     const to = REDIRECTS[pathname];

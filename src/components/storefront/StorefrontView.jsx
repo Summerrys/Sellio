@@ -29,6 +29,7 @@ import { mapLinkProps, placeWithCountry } from '@/lib/nativeApp';
 import { extractBannerEdgeAssets, isValidBannerEdgeColor } from '@/lib/bannerEdgeColors';
 import { getStorefrontFontStack, getStorefrontTypographyScale } from '@/lib/storefrontTypography';
 import { storefrontLayout } from '@/lib/storefrontDefaults';
+import ZoomableImage from '@/components/ui-custom/ZoomableImage';
 
 const sfType = pixels => `calc(${pixels}px * var(--sf-type-scale, 1))`;
 
@@ -1492,12 +1493,20 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onClick={() => setLightboxOpen(false)}
+          data-pull-refresh-block
           style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          <button onClick={(e) => { e.stopPropagation(); setLightboxOpen(false); }} style={{ position: 'absolute', top: 16, right: 16, width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: sfType(20), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-          <img src={activeImage} style={{ maxWidth: '95vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: 8 }} />
+          {/* Pinch or double-tap to zoom; a tap closes, a swipe at normal size changes photo. */}
+          <ZoomableImage
+            key={activeImage}
+            src={activeImage}
+            onTap={() => setLightboxOpen(false)}
+            style={{ position: 'absolute', inset: 0 }}
+            imgStyle={{ maxWidth: '95vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: 8 }}
+          />
+          <button aria-label="Close photo" onClick={(e) => { e.stopPropagation(); setLightboxOpen(false); }} style={{ position: 'absolute', zIndex: 1, top: 16, right: 16, width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: sfType(20), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
           {allImages.length > 1 && (
-            <div style={{ position: 'absolute', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6 }}>
+            <div style={{ position: 'absolute', zIndex: 1, pointerEvents: 'none', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6 }}>
               {allImages.map((_, idx) => (
                 <div key={idx} style={{ width: idx === activeImageIndex ? 20 : 7, height: 7, borderRadius: 4, background: idx === activeImageIndex ? 'white' : 'rgba(255,255,255,0.4)', transition: 'all 0.2s' }} />
               ))}

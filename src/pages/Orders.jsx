@@ -10,7 +10,7 @@ import { useAppRefreshHandler } from '@/lib/AppRefreshContext';
 import { useSyncExternalStore } from 'react';
 import { getPendingCheckouts, subscribePendingCheckouts } from '@/lib/mobileCheckout';
 import TableCallAlerts from '../components/orders/TableCallAlerts';
-import { NEW_ORDER_TONE_URL, URGENT_ORDER_TONE_URL } from '@/lib/kdsSounds';
+import { useOrderAlerts, REMIND_EVERY } from '@/lib/useOrderAlerts';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { ClipboardList, Bell, BellOff, Monitor, Search, Download, Printer, Loader2, QrCode } from 'lucide-react';
@@ -636,59 +636,9 @@ export default function Orders() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
-  const [soundEnabled, setSoundEnabled] = useState(() => {
-    // Will be updated once tenantId is known
-    return false;
-  });
   const [searchQuery, setSearchQuery] = useState('');
   const lastSeenDateRef = useRef(null);
   const fallbackPollRef = useRef(null);
-  const audioCtxRef = useRef(null);
-  const soundEnabledRef = useRef(false);
-  const repeatIntervalRef = useRef(null);
-  const newOrderAudioRef = useRef(null);
-  const urgentAudioRef = useRef(null);
-  useEffect(() => {
-    const unlockAudio = () => {
-      try {
-        if (!newOrderAudioRef.current) newOrderAudioRef.current = new Audio(NEW_ORDER_TONE_URL);
-        if (!urgentAudioRef.current) urgentAudioRef.current = new Audio(URGENT_ORDER_TONE_URL);
-        [newOrderAudioRef.current, urgentAudioRef.current].forEach(el => {
-          el.volume = 0;
-          el.play().then(() => {
-            el.pause();
-            el.currentTime = 0;
-            el.volume = 1;
-          }).catch(() => { el.volume = 1; });
-        });
-      } catch (e) { /* best effort */ }
-    };
-    window.addEventListener('pointerdown', unlockAudio);
-    window.addEventListener('touchstart', unlockAudio);
-    return () => {
-      window.removeEventListener('pointerdown', unlockAudio);
-      window.removeEventListener('touchstart', unlockAudio);
-    };
-  }, []);
-  useEffect(() => {
-    if (!soundEnabled) return;
-    const keepAlive = () => {
-      if (document.visibilityState !== 'visible') return;
-      try {
-        if (!newOrderAudioRef.current) newOrderAudioRef.current = new Audio(NEW_ORDER_TONE_URL);
-        if (!urgentAudioRef.current) urgentAudioRef.current = new Audio(URGENT_ORDER_TONE_URL);
-        [newOrderAudioRef.current, urgentAudioRef.current].forEach(el => {
-          el.volume = 0;
-          el.play().then(() => { el.pause(); el.currentTime = 0; el.volume = 1; }).catch(() => { el.volume = 1; });
-        });
-      } catch (e) { /* best effort */ }
-    };
-    keepAlive();
-    const id = setInterval(keepAlive, 20000);
-    return () => clearInterval(id);
-  }, [soundEnabled]);
-  const [alertInterval, setAlertInterval] = useState(60);
-  const alertIntervalRef = useRef(60);
 
   const isFnB = isFnBIndustry(tenant?.industry);
   const isShop = isShopTenant(tenant);
@@ -696,91 +646,10 @@ export default function Orders() {
   const currency = tenant?.settings?.currency || tenant?.currency || 'SGD';
   const canViewOrders = hasPermission?.('orders.view');
 
-  // Restore sound preference — app_users.order_alerts (synced with Profile modal & Kitchen Display)
-  // takes priority; localStorage is a fast fallback for the very first render.
-  useEffect(() => {
-    if (!tenantId) return;
-    const stored = localStorage.getItem(`sellio_sound_alerts_${tenantId}`);
-    if (stored === 'true') setSoundEnabled(true);
-    const storedInterval = parseInt(localStorage.getItem(`sellio_alert_interval_${tenantId}`) || '60', 10);
-    setAlertInterval(storedInterval);
-    alertIntervalRef.current = storedInterval;
-
-    if (appUser?.order_alerts !== undefined) {
-      const dbValue = appUser.order_alerts !== false;
-      setSoundEnabled(dbValue);
-      localStorage.setItem(`sellio_sound_alerts_${tenantId}`, String(dbValue));
-    }
-  }, [tenantId, appUser?.order_alerts]);
-
-  useEffect(() => {
-    soundEnabledRef.current = soundEnabled;
-  }, [soundEnabled]);
-
-  useEffect(() => {
-    alertIntervalRef.current = alertInterval;
-    if (tenantId) localStorage.setItem(`sellio_alert_interval_${tenantId}`, String(alertInterval));
-  }, [alertInterval, tenantId]);
-
-  useEffect(() => {
-    return () => stopRepeatAlerts();
-  }, []);
-
-  // Ring counts per the merchant spec: new order rings ONCE, urgent rings
-  // TWICE. times can still be passed explicitly, but defaults follow type.
-  const playSound = (type, times) => {
-    if (!soundEnabledRef.current) return;
-    try {
-      const isUrgent = type === 'urgent';
-      const playCount = times ?? (isUrgent ? 2 : 1);
-      if (!newOrderAudioRef.current) newOrderAudioRef.current = new Audio(NEW_ORDER_TONE_URL);
-      if (!urgentAudioRef.current) urgentAudioRef.current = new Audio(URGENT_ORDER_TONE_URL);
-      const el = isUrgent ? urgentAudioRef.current : newOrderAudioRef.current;
-      let playsLeft = playCount;
-      el.onended = null;
-      const playOnce = () => {
-        playsLeft -= 1;
-        el.onended = playsLeft > 0 ? playOnce : null;
-        el.currentTime = 0;
-        el.play().catch(() => {});
-      };
-      playOnce();
-    } catch (e) {
-      console.warn('playSound error:', e);
-    }
-  };
-
-  const stopRepeatAlerts = () => {
-    if (repeatIntervalRef.current) {
-      clearInterval(repeatIntervalRef.current);
-      repeatIntervalRef.current = null;
-    }
-  };
-
-  const startRepeatAlerts = (checkFn, soundType) => {
-    stopRepeatAlerts();
-    const secs = alertIntervalRef.current || 60;
-    repeatIntervalRef.current = setInterval(() => {
-      if (!soundEnabledRef.current) { stopRepeatAlerts(); return; }
-      if (checkFn()) playSound('urgent');
-      else stopRepeatAlerts();
-    }, secs * 1000);
-  };
-
-  const handleSoundToggle = (newVal) => {
-    setSoundEnabled(newVal);
-    soundEnabledRef.current = newVal;
-    if (tenantId) localStorage.setItem(`sellio_sound_alerts_${tenantId}`, String(newVal));
-    // Keep app_users.order_alerts in sync so Profile modal & Kitchen Display reflect this too
-    if (appUser?.id) {
-      getSupabase().then(supabase =>
-        supabase.from('app_users').update({ order_alerts: newVal }).eq('id', appUser.id)
-      ).catch(() => {});
-    }
-    if (newVal) {
-      playSound('new');
-    }
-  };
+  // Sound alerts and their reminders (src/lib/useOrderAlerts.js). Here a new order rings and is
+  // reminded about until someone accepts it; an order becoming ready rings once.
+  const alerts = useOrderAlerts({ tenantId, userId: appUser?.id, orders });
+  const { ring: ringAlert, seen: seenOrder } = alerts;
 
   const fetchOrders = useCallback(async (throwOnError = false) => {
     if (!tenantId) return;
@@ -817,27 +686,11 @@ export default function Orders() {
 
             // Kitchen printing is handled once by the workspace listener.
 
-            // Sound alerts via real-time events
-            if (soundEnabledRef.current && payload.eventType === 'INSERT' && payload.new?.status === 'pending') {
-              playSound('new');
-              startRepeatAlerts(
-                () => orders.some(o => o.status === 'pending') || payload.new?.status === 'pending',
-                'new'
-              );
-            }
-            if (soundEnabledRef.current && payload.eventType === 'UPDATE' &&
-                payload.new?.status === 'ready' && payload.old?.status !== 'ready') {
-              playSound('ready');
-              startRepeatAlerts(
-                () => orders.some(o => o.status === 'ready'),
-                'ready'
-              );
-            }
-            if (payload.eventType === 'UPDATE' &&
-                (payload.new?.status === 'confirmed' || payload.new?.status === 'completed')) {
-              const stillHasPending = orders.some(o => o.status === 'pending' && o.id !== payload.new?.id);
-              const stillHasReady = orders.some(o => o.status === 'ready' && o.id !== payload.new?.id);
-              if (!stillHasPending && !stillHasReady) stopRepeatAlerts();
+            // Sound alerts. For a deleted order realtime sends only its id.
+            const before = seenOrder(payload.eventType === 'DELETE' ? { ...payload.old, status: undefined } : payload.new);
+            if (payload.eventType === 'INSERT' && payload.new?.status === 'pending') ringAlert(payload.new);
+            if (payload.eventType === 'UPDATE' && payload.new?.status === 'ready' && before !== 'ready') {
+              ringAlert(payload.new, { remind: false });
             }
           }
         )
@@ -857,7 +710,7 @@ export default function Orders() {
       clearInterval(fallbackPollRef.current);
       if (supabaseClient && channel) supabaseClient.removeChannel(channel);
     };
-  }, [tenantId, fetchOrders]);
+  }, [tenantId, fetchOrders, ringAlert, seenOrder]);
 
   const handleStatusUpdate = async (orderId, newStatus) => {
     const supabase = await getSupabase();
@@ -1009,21 +862,22 @@ export default function Orders() {
               )}
               <div data-tour="sound-alerts-toggle" className="flex flex-col items-end gap-1.5">
                 <div className="flex items-center gap-1.5">
-                  <Switch id="sound" checked={soundEnabled} onCheckedChange={handleSoundToggle} className="scale-90" />
+                  <Switch id="sound" checked={alerts.on} onCheckedChange={alerts.setOn} className="scale-90" />
                   <Label htmlFor="sound" className="flex items-center gap-1 cursor-pointer text-xs text-slate-600">
-                    {soundEnabled ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
+                    {alerts.on ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
                     Sound Alerts
                   </Label>
                 </div>
-                {soundEnabled && (
+                {alerts.on && (
                   <div className="flex items-center gap-1">
                     <span className="text-[10px] text-slate-400">Repeat:</span>
-                    {[30, 60, 120].map(s => (
+                    {REMIND_EVERY.map(s => (
                       <button
                         key={s}
-                        onClick={() => setAlertInterval(s)}
-                        className={`text-[10px] px-1.5 py-0.5 rounded font-medium transition-colors ${alertInterval === s ? 'text-white' : 'bg-slate-100 text-slate-500'}`}
-                        style={alertInterval === s ? { background: 'var(--color-primary-gradient)' } : {}}
+                        onClick={() => alerts.setEvery(s)}
+                        aria-pressed={alerts.every === s}
+                        className={`text-[10px] px-1.5 py-0.5 rounded font-medium transition-colors ${alerts.every === s ? 'text-white' : 'bg-slate-100 text-slate-500'}`}
+                        style={alerts.every === s ? { background: 'var(--color-primary-gradient)' } : {}}
                       >
                         {s === 30 ? '30s' : s === 60 ? '1m' : '2m'}
                       </button>

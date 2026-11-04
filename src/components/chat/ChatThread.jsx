@@ -13,6 +13,7 @@ import {
 import {
   BRAND_COLOR, BRAND_GRADIENT, BOTTOM_INSET, ShopAvatar, ItemImage, formatPrice, listingUrl, storeUrl,
 } from '@/components/explore/shared';
+import ZoomableImage from '@/components/ui-custom/ZoomableImage';
 
 // One chat about a listing, for its buyer or for the shop.
 // variant 'page': full screen (Explore, phones). 'pane': fills its box (workspace).
@@ -68,8 +69,8 @@ function ImageViewer({ src, onClose }) {
           <X className="w-6 h-6" />
         </button>
       </div>
-      <div className="flex-1 flex items-center justify-center p-2 min-h-0">
-        <img src={src} alt="" className="max-w-full max-h-full object-contain" />
+      <div className="flex-1 relative min-h-0">
+        <ZoomableImage src={src} style={{ position: 'absolute', inset: 8 }} imgClassName="max-w-full max-h-full object-contain" />
       </div>
       <div style={{ height: BOTTOM_INSET }} />
     </div>

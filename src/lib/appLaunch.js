@@ -1,5 +1,5 @@
 // The Android app's start (and its return from Google sign-in): one Sellio splash from
-// the moment Sellio's code decides it is in the app until the first screen is ready. It stays at least MIN_MS, keeps
+// the moment Sellio's code decides it is in the app until the first screen is ready. It stays at least minimumMs(), keeps
 // covering while any loader is up (and across the reload on the way to the
 // Dashboard), and never longer than MAX_MS. A website in a browser tab never starts it.
 // index.html uses the same sessionStorage entry: it starts the launch itself when the
@@ -7,9 +7,15 @@
 // the splash is up from the first paint), and shows the splash before the code loads after a reload. Keep the key,
 // MAX_MS and the bridge test in step with it. Sellio added to a home screen gets the same
 // splash: index.html starts the launch on the first page of each of its sessions.
+import { isCapacitorApp } from './nativeApp';
+
 export const LAUNCH_KEY = 'sellio-launch';
-export const MIN_MS = 0; // no fixed minimum: Base44's own launch screen already shows first
+export const MIN_MS = 0; // websites, and Base44's old app (its own launch screen shows first)
+// Sellio's own app loads its pages from the phone in a fraction of a second, so the splash
+// stays up at least this long: one round of its three dots, instead of a flash.
+export const APP_MIN_MS = 1500;
 export const MAX_MS = 10000;
+export const minimumMs = (browser) => (isCapacitorApp(browser) ? APP_MIN_MS : MIN_MS);
 export const SETTLE_MS = 300; // a page swapping one loader for the next stays covered
 
 const listeners = new Set();
@@ -74,7 +80,7 @@ export function launchCanEnd(launch, now = Date.now()) {
   if (!launch) return true;
   const age = now - launch.start;
   if (age >= MAX_MS) return true;
-  if (age < MIN_MS) return false;
+  if (age < minimumMs()) return false;
   if (loaders > 0) return false;
   return now - Math.max(lastBusy, launch.start) >= SETTLE_MS;
 }

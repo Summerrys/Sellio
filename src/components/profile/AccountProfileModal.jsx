@@ -15,6 +15,7 @@ import { createPageUrl } from '@/utils';
 import { openBillingPortal, formatBillingAmount } from '@/lib/billing';
 import { sellsPlans, PLANS_ON_WEBSITE, appPlatform } from '@/lib/nativeApp';
 import { useBackToClose } from '@/lib/useBackToClose';
+import { ORDER_ALERTS_EVENT } from '@/lib/useOrderAlerts';
 
 // Sellio's Android app: whether this phone gets push alerts (src/lib/pushNotifications.js),
 // with Turn on while Sellio can still ask. Android's own settings for Sellio turn them off, or
@@ -232,6 +233,8 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
       const supabase = await getSupabase();
       const { error } = await supabase.from('app_users').update({ [field]: value }).eq('id', user.id);
       if (error) throw error;
+      // An open Orders page or kitchen screen follows the change straight away.
+      if (field === 'order_alerts') window.dispatchEvent(new CustomEvent(ORDER_ALERTS_EVENT, { detail: { on: value } }));
     } catch (err) {
       toast.error('Failed to save preference');
     } finally {
