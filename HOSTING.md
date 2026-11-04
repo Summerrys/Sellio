@@ -39,9 +39,8 @@ Cloudflare runs it (Cloudflare sets `CF_PAGES=1`; see `scripts/pages-output.mjs`
    `/Auth` and the other app addresses wouldn't load.
 2. Set up builds:
    - Project name: `sellio`. The site is then also at `<project>.pages.dev`, shown at the top
-     of the project. If another Cloudflare account already has `sellio.pages.dev`, Cloudflare
-     adds a few letters to the name; use the address it shows wherever this guide says
-     `sellio.pages.dev`.
+     of the project. Another Cloudflare account already has `sellio.pages.dev`, so Cloudflare
+     added a few letters: Sellio's project is at **`sellio-f1t.pages.dev`**.
    - Production branch: `main`
    - Framework preset: **None**
    - Build command: `npm run build`
@@ -51,7 +50,8 @@ Cloudflare runs it (Cloudflare sets `CF_PAGES=1`; see `scripts/pages-output.mjs`
      and public key are in the code.
 3. **Save and Deploy**. The first build takes a few minutes. Its log ends with
    `Cloudflare Pages: _worker.js routes the pages; _redirects and .htaccess are left out.`
-4. Try it at `https://sellio.pages.dev`:
+4. Try it at `https://sellio-f1t.pages.dev` (or run **Actions → Website check**, which tries
+   every row of the table above there and on sellio.sg):
    - `/` shows the landing page.
    - `/privacy` and `/terms` show their pages, and `/Privacy` lands on `/privacy`.
    - `/Auth` shows sign-in, and signing in works.
@@ -78,7 +78,7 @@ Keep the current host running until Cloudflare answers for the domains.
     people use it.
 - **sellio.apptelier.sg**: in the Pages project, **Custom domains** → `sellio.apptelier.sg`.
   Then, wherever apptelier.sg's DNS is, make (or change) the `sellio` record a CNAME to
-  `sellio.pages.dev`.
+  `sellio-f1t.pages.dev`.
 
 Nothing else changes with the move. The addresses stay the same, so sign-in (Supabase and
 Google), Stripe's return pages, emailed links and the Android app's links keep working. After the
