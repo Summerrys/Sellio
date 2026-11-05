@@ -14,6 +14,18 @@ export class GoogleSignInCancelled extends Error {
   }
 }
 
+// Supabase refused the sign-in because the login is locked: a closed account (its deletion is
+// pending). The Auth page shows the closed-account screen, whose server checks this same ID
+// token and the raw nonce whose SHA-256 is in it (closed-account, google-id-token.ts).
+export class GoogleAccountClosed extends Error {
+  constructor(idToken, nonce) {
+    super('This account is closed.');
+    this.name = 'GoogleAccountClosed';
+    this.idToken = idToken;
+    this.nonce = nonce;
+  }
+}
+
 let ready = null;
 function initialize() {
   if (!ready) {
@@ -51,6 +63,9 @@ export async function signInWithNativeGoogle() {
 
   const supabase = await getSupabase();
   const { data, error } = await supabase.auth.signInWithIdToken({ provider: 'google', token: idToken, nonce: rawNonce });
+  if (error && (error.code === 'user_banned' || /user is banned/i.test(error.message || ''))) {
+    throw new GoogleAccountClosed(idToken, rawNonce);
+  }
   if (error || !data?.session) {
     console.error('Supabase Google sign-in (app) failed:', error);
     throw new Error('Google sign-in could not be completed. Please try again.');

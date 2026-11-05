@@ -61,11 +61,11 @@ async function signOutHere(client) {
 export function WhatHappens() {
   return (
     <ul className="list-disc pl-5 space-y-1.5 text-sm text-slate-600" data-testid="deletion-what-happens">
-      <li>You&apos;re signed out on every device, and the account can&apos;t sign in again.</li>
+      <li>You&apos;re signed out on every device. Signing in again only shows that the account is closed.</li>
       <li>A shop you own closes straight away: its page shows &ldquo;Store unavailable&rdquo;, it takes no new orders and it leaves Explore. Its staff can&apos;t sign in to it any more.</li>
       <li>If the shop has a paid plan, it won&apos;t renew. Time already paid for isn&apos;t refunded.</li>
       <li>If you work in someone else&apos;s shop, you lose access to it. The shop carries on.</li>
-      <li>We keep the account for 6 months if you own a shop, or 30 days if you don&apos;t, in case you change your mind. After that it&apos;s deleted for good, with your shop and its staff logins.</li>
+      <li>We keep the account for 6 months if you own a shop, or 30 days if you don&apos;t, in case you change your mind. After that it&apos;s deleted for good, with your shop and its staff logins. Until then, sign in again to keep it (Keep my account) or to delete it straight away (Start again).</li>
       <li>Orders you placed stay with the shops you bought from, and billing records are kept as the law requires.</li>
     </ul>
   );

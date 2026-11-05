@@ -55,7 +55,7 @@ let calls = [];
 let invokeReply = () => new Error('no reply set');
 globalThis.fetch = async (url, init) => {
   calls.push(['request', url, init]);
-  calls.push(['invoke', 'phone-auth', JSON.parse(init.body)]);
+  calls.push(['invoke', /\/functions\/v1\/([a-z-]+)/.exec(url)?.[1], JSON.parse(init.body)]);
   const reply = invokeReply(JSON.parse(init.body));
   if (reply instanceof Error) throw reply;
   return new Response(typeof reply === 'string' ? reply : JSON.stringify(reply), { status: 200 });
@@ -188,6 +188,102 @@ try {
   assert.match(container.textContent, /Reset link sent!/);
   assert.equal(container.querySelector('a[href^="https://wa.me/6582228103"]'), null);
   passed('Non-Pro accounts get the reset link without the WhatsApp line');
+
+  // A closed account (its deletion is pending) and the right password (5 Nov 2026).
+  await click(buttonText(container, 'Back to Login') || container.querySelector('button'));
+  if (!container.querySelector('form.auth-fields')) await click([...container.querySelectorAll('button')][0]);
+  const signInForm = () => container.querySelector('form.auth-fields');
+  const closedReply = (closed = {}) => ({ ok: false, code: 'closed', closed: { kind: 'owner', deleteAfter: '2027-05-05T09:00:00Z', shops: ['Kopi Corner'], restoreAsked: false, ...closed } });
+  const signInClosed = async (closed) => {
+    reset();
+    await setValue(signInForm().querySelector('input[type="tel"]'), '91234567');
+    await setValue(signInForm().querySelector('input[type="password"]'), 'right-password');
+    invokeReply = () => closedReply(closed);
+    await submit(signInForm());
+    await wait(30);
+  };
+  const closedScreen = () => container.querySelector('[data-testid="closed-account"]');
+
+  await signInClosed();
+  assert.ok(closedScreen(), 'The closed-account screen is shown');
+  assert.match(closedScreen().textContent, /This account is closed/);
+  assert.match(closedScreen().textContent, /It will be deleted for good on 5 May 2027\./);
+  assert.match(closedScreen().textContent, /Kopi Corner is closed too/);
+  assert.ok(!calls.some(c => c[0] === 'setSession'), 'No session for a closed account');
+  assert.deepEqual(globalThis.toastErrors, []);
+  assert.equal(globalThis.authDestination, undefined);
+
+  reset();
+  invokeReply = () => ({ ok: true, kind: 'restore_asked', alreadyAsked: false });
+  await click(buttonText(container, 'Keep my account'));
+  await wait(20);
+  assert.deepEqual(calls.find(c => c[0] === 'invoke'), ['invoke', 'closed-account', { phone: '+6591234567', password: 'right-password', action: 'restore' }]);
+  const [, closedUrl, closedInit] = calls.find(c => c[0] === 'request');
+  assert.equal(closedUrl, 'https://project.example.invalid/functions/v1/closed-account?forceFunctionRegion=ap-southeast-2');
+  assert.deepEqual(closedInit.headers, { 'Content-Type': 'text/plain;charset=UTF-8' });
+  assert.match(closedScreen().textContent, /We've asked Sellio to restore your account/);
+  await click(buttonText(container, 'Back to sign in'));
+  assert.ok(signInForm(), 'Back to the sign-in form');
+  passed('A closed account with the right password: when it will be deleted, its shop, and Keep my account asks Sellio');
+
+  await signInClosed();
+  await click(buttonText(container, 'Start again'));
+  assert.match(closedScreen().textContent, /Your account, Kopi Corner and its staff logins will be deleted now, for good\./);
+  const deleteButton = () => buttonText(container, 'Delete for good');
+  assert.equal(deleteButton().disabled, true, 'Nothing is deleted until DELETE is typed');
+  await setValue(container.querySelector('#closed-account-confirmation'), 'delete');
+  assert.equal(deleteButton().disabled, true);
+  await setValue(container.querySelector('#closed-account-confirmation'), 'DELETE');
+  assert.equal(deleteButton().disabled, false);
+  reset();
+  invokeReply = () => ({ ok: false, code: 'failed' });
+  await click(deleteButton());
+  await wait(20);
+  assert.deepEqual(globalThis.toastErrors, ["We couldn't finish deleting it, and Sellio has been told. Please try again later, or email sellio@apptelier.sg."]);
+  assert.ok(deleteButton(), 'Stays on the confirmation after a failure');
+  reset();
+  invokeReply = () => ({ ok: true, kind: 'deleted' });
+  await click(deleteButton());
+  await wait(20);
+  assert.deepEqual(calls.find(c => c[0] === 'invoke'), ['invoke', 'closed-account', { phone: '+6591234567', password: 'right-password', action: 'delete', confirmation: 'DELETE' }]);
+  assert.match(closedScreen().textContent, /Your account has been deleted/);
+  assert.match(closedScreen().textContent, /Kopi Corner and its staff logins have been deleted too\./);
+  await click(buttonText(container, 'Done'));
+  assert.ok(signInForm());
+  passed('Start again: DELETE must be typed, a failure says so and stays, then the account is deleted for good');
+
+  await signInClosed({ kind: 'staff' });
+  assert.match(closedScreen().textContent, /This staff login is closed/);
+  assert.match(closedScreen().textContent, /Kopi Corner's owner closed their account/);
+  assert.equal(buttonText(container, 'Keep my account'), undefined);
+  assert.equal(buttonText(container, 'Start again'), undefined);
+  await click(buttonText(container, 'Back to sign in'));
+  passed('A staff login closed with its shop only sees that');
+
+  await signInClosed();
+  reset();
+  invokeReply = () => ({ ok: false, code: 'invalid' });
+  await click(buttonText(container, 'Keep my account'));
+  await wait(20);
+  assert.deepEqual(globalThis.toastErrors, ['Phone number or password is incorrect. Please sign in again.']);
+  assert.ok(signInForm(), 'Back to the sign-in form when the password no longer works');
+  passed('A choice the server refuses says why');
+
+  // Google on the website: Supabase sends a locked login back with error_code=user_banned.
+  const second = document.createElement('div'); document.body.appendChild(second);
+  const secondRoot = createRoot(second);
+  win.history.replaceState(null, '', '/Auth#error=access_denied&error_code=user_banned&error_description=User+is+banned&sb=');
+  reset();
+  await act(async () => { secondRoot.render(React.createElement(Auth)); });
+  await wait(30);
+  const webClosed = second.querySelector('[data-testid="closed-account"]');
+  assert.ok(webClosed, 'The website shows the closed account');
+  assert.match(webClosed.textContent, /sign in with your phone number and password, or with Google in the Sellio app/);
+  assert.ok(webClosed.querySelector('a[href="mailto:sellio@apptelier.sg"]'));
+  assert.deepEqual(globalThis.toastErrors, []);
+  assert.equal(win.location.hash, '', 'The error is taken out of the address');
+  await act(async () => secondRoot.unmount());
+  passed('Google on the website: a closed account is told how to keep it or delete it');
 
   console.log(passes + ' phone sign-in checks passed');
 } finally {

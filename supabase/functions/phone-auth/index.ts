@@ -4,6 +4,8 @@
 //   { action: 'sign_in', phone, password }
 //     -> { ok: true, session: { access_token, refresh_token } }
 //     -> { ok: false, code: 'invalid' | 'locked' | 'too_many' | 'busy' | 'unavailable', retry_after_minutes? }
+//     -> { ok: false, code: 'closed', closed: { kind, deleteAfter, shops, restoreAsked } }
+//        (the account is closed and the password is right: see closed-account)
 //   { action: 'reset', phone, redirect_to }
 //     -> { ok: true, kind: 'email', masked_email, priority_support }
 //     -> { ok: true, kind: 'staff' }
@@ -66,6 +68,18 @@ export function recoveryUrl(value: unknown): string {
 }
 
 const minutes = (seconds: unknown) => Math.max(1, Math.ceil((Number(seconds) || 60) / 60));
+
+// What the closed-account screen shows: whose account it is (an owner's, anyone else's, or a
+// staff login closed with its shop), when it will be deleted, and its shops.
+export function closedForScreen(closed: Record<string, unknown>) {
+  const kind = ['owner', 'member', 'staff'].includes(String(closed.kind)) ? String(closed.kind) : 'member';
+  return {
+    kind,
+    deleteAfter: typeof closed.deleteAfter === 'string' ? closed.deleteAfter : null,
+    shops: Array.isArray(closed.shops) ? closed.shops.filter((s) => typeof s === 'string' && s) : [],
+    restoreAsked: Boolean(closed.restoreRequestedAt),
+  };
+}
 
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
 
@@ -152,6 +166,29 @@ Deno.serve(async (req) => {
 
       const code = String(data.code ?? data.error_code ?? data.error ?? '');
       const message = String(data.msg ?? data.message ?? data.error_description ?? '');
+
+      // A closed account (its deletion is pending, so its login is locked). Supabase Auth
+      // refuses a locked login before it checks the password, so the password is checked
+      // here: the right one shows the closed-account screen (Alvin, 5 Nov 2026); a wrong one
+      // is just wrong, as for any account.
+      if (code === 'user_banned') {
+        const check = await rpc('closed_account_check', { p_email: gate.email, p_password: password })
+          .catch((err) => {
+            console.error('closed_account_check failed', (err as Error)?.message);
+            return null;
+          });
+        if (check?.passwordOk === false) {
+          finish('wrong');
+          return respond({ ok: false, code: 'invalid' });
+        }
+        if (check?.passwordOk === true && check.closed) {
+          finish('ok');
+          return respond({ ok: false, code: 'closed', closed: closedForScreen(check.closed) });
+        }
+        finish('error');
+        return respond({ ok: false, code: 'unavailable' });
+      }
+
       const wrongPassword = code === 'invalid_credentials'
         || (status === 400 && (code === 'invalid_grant' || /invalid login credentials/i.test(message)));
       if (wrongPassword) {

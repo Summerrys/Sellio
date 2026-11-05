@@ -14,6 +14,8 @@ import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
 import { SELLIO_SITE, SELLIO_WEB_ORIGINS, decideOnboardingAccess } from '@/lib/accountFlow';
 import { homeFor, isStaffAccount } from '@/lib/staffAccess';
 import { callPhoneAuth } from '@/lib/phoneAuth';
+import { callClosedAccount, closedAccountMessage } from '@/lib/closedAccount';
+import ClosedAccount from '@/components/auth/ClosedAccount';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { isCapacitorApp, outsideLinkProps, sellsPlans, PLANS_ON_WEBSITE } from '@/lib/nativeApp';
 
@@ -100,6 +102,10 @@ export default function Auth() {
   // on the new-password screen, which is opened from the reset email.
   const leaveForgotPassword = () => { setForgotMode(false); setForgotStep(1); setForgotPhone(''); setForgotStaffEmail(''); setForgotNewPassword(''); setForgotConfirmPassword(''); };
   useBackToClose(forgotMode && forgotStep !== 3, leaveForgotPassword);
+  // A closed account that signed in: { proof, closed } (phone, or Google in the app) or
+  // { web: true } (Google on the website). See components/auth/ClosedAccount.
+  const [closedAccount, setClosedAccount] = useState(null);
+  useBackToClose(Boolean(closedAccount), () => setClosedAccount(null));
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMaskedEmail, setForgotMaskedEmail] = useState('');
   const [forgotUserTenantId, setForgotUserTenantId] = useState('');
@@ -262,8 +268,13 @@ export default function Auth() {
 
     if (hash.includes('error=')) {
       const params = new URLSearchParams(hash.substring(1));
-      toast.error(params.get('error_description') || 'Google Sign-In failed');
       window.history.replaceState(window.history.state, '', window.location.pathname);
+      // Supabase refused a locked login: a closed account (its deletion is pending).
+      if (params.get('error_code') === 'user_banned') {
+        setClosedAccount({ web: true });
+        return;
+      }
+      toast.error(params.get('error_description') || 'Google Sign-In failed');
       return;
     }
     if (!hash.includes('access_token') && !mobileGoogleCompleted) return;
@@ -414,6 +425,16 @@ export default function Auth() {
     return () => document.removeEventListener('visibilitychange', resume);
   }, [googleLoading]);
 
+  // Google in the Android app on a closed account: Supabase refused the locked login, so
+  // Sellio's server checks Google's ID token itself and says what happens to the account.
+  const openGoogleClosedAccount = async (err) => {
+    const proof = { googleIdToken: err.idToken, nonce: err.nonce };
+    const reply = await callClosedAccount({ action: 'status', ...proof });
+    setGoogleLoading(false);
+    if (reply?.ok && reply.closed) setClosedAccount({ proof, closed: reply.closed });
+    else toast.error(closedAccountMessage(reply));
+  };
+
   const handleGoogleSignIn = async () => {
     setGoogleGateError('');
     setGoogleLoading(true);
@@ -424,6 +445,10 @@ export default function Auth() {
       });
       if (started?.cancelled) setGoogleLoading(false); // Google's picker closed in the app
     } catch (err) {
+      if (err?.name === 'GoogleAccountClosed') {
+        await openGoogleClosedAccount(err);
+        return;
+      }
       toast.error(err.message || 'Google Sign-In failed. Please try again.');
       setGoogleLoading(false);
     }
@@ -518,6 +543,10 @@ export default function Auth() {
       });
       if (started?.cancelled) setGoogleLoading(false); // Google's picker closed in the app
     } catch (err) {
+      if (err?.name === 'GoogleAccountClosed') {
+        await openGoogleClosedAccount(err);
+        return;
+      }
       toast.error(err.message || 'Google Sign-Up failed. Please try again.');
       setGoogleLoading(false);
     }
@@ -551,6 +580,12 @@ export default function Auth() {
         // Supabase Auth still validates the password. app_users is profile data only.
         const result = await callPhoneAuth({ action: 'sign_in', phone: fullPhone, password: formData.password });
         if (!result) throw new Error('Could not sign in right now. Please try again.');
+        // A closed account (its deletion is pending) and the right password: when it will be
+        // deleted, and the choice to keep it or start again (components/auth/ClosedAccount).
+        if (result.code === 'closed' && result.closed) {
+          setClosedAccount({ proof: { phone: fullPhone, password: formData.password }, closed: result.closed });
+          return;
+        }
         if (!result.ok || !result.session?.access_token || !result.session?.refresh_token) {
           throw new Error(phoneSignInMessage(result));
         }
@@ -719,7 +754,9 @@ export default function Auth() {
         {/* Auth card — always visible */}
         <div className="w-full max-w-sm sm:max-w-md max-h-full overflow-y-auto">
           <div className="auth-card bg-white rounded-2xl shadow-xl px-8">
-            {forgotMode ? (
+            {closedAccount ? (
+              <ClosedAccount {...closedAccount} onBack={() => setClosedAccount(null)} />
+            ) : forgotMode ? (
               <div>
                 {/* Back button + title */}
                 <div className="flex items-center gap-3 mb-6">
