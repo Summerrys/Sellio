@@ -11,6 +11,7 @@ import {
   retrieveSubscription,
   syncBillingState,
 } from "./_shared/billing.ts";
+import { handleShopCheckout } from "./_shared/shop-checkout.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -244,30 +245,17 @@ Deno.serve(async (req: Request) => {
       auditDetails = { tenantId, customerId, subscriptionId };
 
       if (tenantId && subscriptionId) {
-        const { data: existing, error: existingError } = await supabase
-          .from("subscriptions")
-          .select("stripe_subscription_id")
-          .eq("tenant_id", tenantId)
-          .maybeSingle();
-        if (existingError) throw new Error("Existing subscription lookup failed: " + existingError.message);
-
-        const current = await retrieveSubscription(stripe, subscriptionId);
-        const currentStatus = mapStripeStatus(current.status);
-        if (
-          existing?.stripe_subscription_id &&
-          existing.stripe_subscription_id !== subscriptionId &&
-          ["active", "trial"].includes(currentStatus)
-        ) {
-          await stripe.subscriptions.cancel(existing.stripe_subscription_id);
-        }
-
-        await syncFromSubscription({
+        // Only the shop's owner, one free trial per shop, the previous subscription ends:
+        // see _shared/shop-checkout.ts.
+        const outcome = await handleShopCheckout({
           supabase,
           stripe,
-          tenantId,
-          subscription: current,
-          event,
-        });
+          sync: (subscription) => syncFromSubscription({ supabase, stripe, tenantId, subscription, event }),
+        }, { session, tenantId, subscriptionId, customerId });
+        if (!outcome.attached) {
+          await finishEvent(supabase, event.id, "skipped", auditDetails);
+          return json({ received: true, skipped: true, warning: "Checkout held: " + outcome.reason });
+        }
       } else if (tenantId) {
         throw new Error("Checkout completed without a subscription ID");
       } else {

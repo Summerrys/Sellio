@@ -11,7 +11,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { build } from 'esbuild';
 
@@ -158,6 +158,33 @@ try {
   const step3 = await readFile(path.join(app, 'src/components/onboarding/Step3MenuSetup.jsx'), 'utf8');
   assert.doesNotMatch(step3, /PricingModal/, 'Setting up a business opens no plan checkout');
   passed('a shop that exists only ever gets the plans without a free trial; setup opens no checkout');
+
+  // Only the shop's owner pays for the shop (stripe-webhook, 5 Nov 2026), so Stripe's form starts
+  // with the owner's email; not a phone sign-in's placeholder, and not another shop's owner.
+  const together = path.join(temporary, 'pricing-with-shop.jsx');
+  await writeFile(together, [
+    "export { default as PricingModal } from '@/components/subscription/PricingModal.jsx';",
+    "export { default as TenantContext } from '@/components/tenant/TenantContext.jsx';",
+  ].join('\n'));
+  const withShop = await load(path.relative(app, together));
+  const prefilled = async (tenant) => {
+    for (const root of roots.splice(0)) await act(async () => root.unmount());
+    document.body.innerHTML = '';
+    opened.length = 0;
+    await render(React.createElement(withShop.TenantContext.Provider, { value: { tenant } },
+      React.createElement(withShop.PricingModal, { open: true, onOpenChange: () => {}, tenantId: 'shop-1', currentTier: 'starter' })));
+    const button = [...document.body.querySelectorAll('button')].filter((b) => /Upgrade/.test(b.textContent)).pop();
+    await act(async () => { button.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    const params = new URLSearchParams(opened.at(-1).split('?')[1]);
+    assert.equal(params.get('client_reference_id'), 'shop-1');
+    for (const root of roots.splice(0)) await act(async () => root.unmount());
+    document.body.innerHTML = '';
+    return params.get('prefilled_email');
+  };
+  assert.equal(await prefilled({ id: 'shop-1', owner_email: ' Owner@Shop.SG ', seller_type: 'merchant' }), 'Owner@Shop.SG');
+  assert.equal(await prefilled({ id: 'shop-1', owner_email: '6588833442@sellio.app', seller_type: 'merchant' }), null);
+  assert.equal(await prefilled({ id: 'shop-2', owner_email: 'other@shop.sg', seller_type: 'merchant' }), null);
+  passed("the plan checkout starts with the shop owner's email");
 
   for (const root of roots) await act(async () => root.unmount());
   console.log(passes + ' plans-in-app checks passed.');

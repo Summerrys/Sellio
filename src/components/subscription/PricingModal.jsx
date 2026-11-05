@@ -52,15 +52,22 @@ const PLAN_RANK = { starter: 0, growth: 1, pro: 2 };
 // one caller left out (Settings) and onboarding set to false, so those offered a second trial.
 export default function PricingModal({ open, onOpenChange, tenantId, currentTier = null }) {
   const [billing, setBilling] = useState('monthly');
+  const shop = useContext(TenantContext)?.tenant;
   // A free personal shop can't move to a business plan here yet (scorecard step 3):
   // a payment from here would not change its plan.
-  const isPersonalShop = useContext(TenantContext)?.tenant?.seller_type === 'individual';
+  const isPersonalShop = shop?.seller_type === 'individual';
+  // Only the shop's owner pays for the shop: stripe-webhook attaches a payment only when its
+  // email (or phone) is the owner's (5 Nov 2026). So Stripe's form starts with the owner's
+  // email. A phone sign-in's placeholder address (…@sellio.app) isn't one.
+  const ownerEmail = shop?.id === tenantId && typeof shop?.owner_email === 'string'
+    && !/@sellio\.app$/i.test(shop.owner_email.trim()) ? shop.owner_email.trim() : '';
 
   const getLink = (plan) => {
     const linkSet = NO_TRIAL_LINKS[plan.key];
     const base = billing === 'annual' ? linkSet.yearly : linkSet.monthly;
     const params = new URLSearchParams();
     if (tenantId) params.set('client_reference_id', tenantId);
+    if (ownerEmail) params.set('prefilled_email', ownerEmail);
     return `${base}?${params.toString()}`;
   };
 
