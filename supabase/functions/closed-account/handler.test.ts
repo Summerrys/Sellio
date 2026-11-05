@@ -16,6 +16,8 @@ function world(options: {
   link?: any;
   verify?: any;
   restore?: any;
+  restoreError?: string;
+  renewals?: any;
   removal?: any;
 } = {}) {
   const calls: string[] = [];
@@ -28,9 +30,10 @@ function world(options: {
         closed_account_check: options.check ?? { passwordOk: true, locked: true, closed: OWNER_CLOSED },
         closed_account_by_google: options.google ?? { found: true, locked: true, closed: OWNER_CLOSED },
         closed_account_by_email_link: options.link ?? { found: true, locked: true, email: "owner@kopi.sg", userId: "u-1", closed: OWNER_CLOSED },
-        account_restore_request: options.restore ?? { ok: true, alreadyAsked: false },
+        account_restore_now: options.restore ?? { requestId: OWNER_CLOSED.requestId, status: "reinstated", email: "owner@kopi.sg", shops: [], stripe: null },
         alert_sellio_admins: 3,
       };
+      if (fn === "account_restore_now" && options.restoreError) return Promise.resolve({ data: null, error: { message: options.restoreError } });
       return Promise.resolve({ data: data[fn], error: null });
     },
   };
@@ -41,6 +44,10 @@ function world(options: {
     verifyGoogle: (token: string, nonce: string) => {
       calls.push(`verify:${token}:${nonce}`);
       return Promise.resolve(options.verify === undefined ? { sub: "g-1", email: "owner@gmail.com" } : options.verify);
+    },
+    renewAfterRestore: (stripe: any, requestId: string, plans: any) => {
+      calls.push(`renew:${requestId}:${JSON.stringify(plans)}:${Boolean(stripe?.stripe)}`);
+      return Promise.resolve(options.renewals ?? []);
     },
     removeAccount: (_admin: any, stripe: any, requestId: string) => {
       removed.push(requestId);
@@ -58,7 +65,7 @@ Deno.test("status with the right password: what the screen shows, no request id"
   const result = await handleClosedAccount(w.deps, { action: "status", ...phone }, "1.2.3.4");
   assertEquals(result, {
     status: 200,
-    body: { ok: true, closed: { kind: "owner", deleteAfter: "2027-05-05T09:00:00Z", shops: ["Kopi Corner"], restoreAsked: false } },
+    body: { ok: true, closed: { kind: "owner", deleteAfter: "2027-05-05T09:00:00Z", shops: ["Kopi Corner"] } },
   });
   assert(w.calls.includes('phone_auth_begin:{"p_action":"sign_in","p_phone":"+6591234567","p_ip":"1.2.3.4"}'));
   assert(w.calls.includes('closed_account_check:{"p_email":"owner@kopi.sg","p_password":"right-password"}'));
@@ -85,11 +92,36 @@ Deno.test("the right password on an account that isn't closed", async () => {
   assertEquals((await handleClosedAccount(w.deps, { action: "restore", ...phone }, null)).body, { ok: false, code: "not_closed" });
 });
 
-Deno.test("Keep my account asks the admins (through account_restore_request)", async () => {
+Deno.test("Keep my account opens it again now (account_restore_now tells the admins)", async () => {
   const w = world();
   const result = await handleClosedAccount(w.deps, { action: "restore", ...phone }, null);
-  assertEquals(result.body, { ok: true, kind: "restore_asked", alreadyAsked: false });
-  assert(w.calls.includes(`account_restore_request:{"p_request_id":"${OWNER_CLOSED.requestId}"}`));
+  assertEquals(result.body, { ok: true, kind: "restored" });
+  assert(w.calls.includes(`account_restore_now:{"p_request_id":"${OWNER_CLOSED.requestId}"}`));
+  assert(!w.calls.some((c) => c.startsWith("renew:")), "No paid plan: Stripe isn't asked");
+  assert(!w.calls.some((c) => c.startsWith("alert_sellio_admins")), "The one alert is account_restore_now's own");
+});
+
+Deno.test("Keep my account: the shop's paid plan renews again; one that can't is reported", async () => {
+  const plans = [{ id: "sub_a", tenantId: "t1", ok: true, action: "stops_renewing" }];
+  const restored = { requestId: OWNER_CLOSED.requestId, status: "reinstated", email: "owner@kopi.sg", shops: [], stripe: plans };
+  const fine = world({ restore: restored, renewals: [{ id: "sub_a", result: "renews_again" }] });
+  assertEquals((await handleClosedAccount(fine.deps, { action: "restore", ...phone }, null)).body, { ok: true, kind: "restored" });
+  assert(fine.calls.includes(`renew:${OWNER_CLOSED.requestId}:${JSON.stringify(plans)}:true`));
+  assert(!fine.calls.some((c) => c.startsWith("alert_sellio_admins")));
+
+  const ended = world({ restore: restored, renewals: [{ id: "sub_a", result: "ended", detail: "its paid period ran out" }] });
+  assertEquals((await handleClosedAccount(ended.deps, { action: "restore", ...phone }, null)).body, { ok: true, kind: "restored" });
+  const alert = ended.calls.find((c) => c.startsWith("alert_sellio_admins"));
+  assert(alert?.includes("account_restored_billing") && alert.includes("sub_a has ended"), alert);
+});
+
+Deno.test("Keep my account on an account opened or deleted a moment ago", async () => {
+  const w = world({ restoreError: "Only a pending request can be reinstated (this one is reinstated)." });
+  assertEquals((await handleClosedAccount(w.deps, { action: "restore", ...phone }, null)).body, { ok: false, code: "not_closed" });
+  const broken = world({ restoreError: "permission denied" });
+  let failed = false;
+  try { await handleClosedAccount(broken.deps, { action: "restore", ...phone }, null); } catch { failed = true; }
+  assert(failed, "Anything else is an error (index.ts answers 'unavailable')");
 });
 
 Deno.test("Start again needs DELETE typed, then deletes the account", async () => {
@@ -137,7 +169,7 @@ Deno.test("an emailed link: its token is checked under the network limit; the sc
     status: 200,
     body: {
       ok: true,
-      closed: { kind: "owner", deleteAfter: "2027-05-05T09:00:00Z", shops: ["Kopi Corner"], restoreAsked: false },
+      closed: { kind: "owner", deleteAfter: "2027-05-05T09:00:00Z", shops: ["Kopi Corner"] },
       email: "owner@kopi.sg",
     },
   });
@@ -165,7 +197,7 @@ Deno.test("an emailed link: the network limit, an open account, and the choices"
   assertEquals((await handleClosedAccount(open.deps, { action: "status", ...link }, null)).body, { ok: false, code: "not_closed" });
 
   const w = world();
-  assertEquals((await handleClosedAccount(w.deps, { action: "restore", ...link }, null)).body, { ok: true, kind: "restore_asked", alreadyAsked: false });
+  assertEquals((await handleClosedAccount(w.deps, { action: "restore", ...link }, null)).body, { ok: true, kind: "restored" });
   assertEquals((await handleClosedAccount(w.deps, { action: "delete", ...link }, null)).body, { ok: false, code: "confirm" });
   assertEquals((await handleClosedAccount(w.deps, { action: "delete", confirmation: "DELETE", ...link }, null)).body, { ok: true, kind: "deleted" });
   assertEquals(w.removed, [OWNER_CLOSED.requestId]);

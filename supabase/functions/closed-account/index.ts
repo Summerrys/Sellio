@@ -3,8 +3,10 @@
 // and chooses what happens:
 //   { action: 'status' }                           -> { ok: true, closed, email? }
 //     (email: only for an emailed sign-in link, so the screen can sign them up again)
-//   { action: 'restore' }   Keep my account        -> { ok: true, kind: 'restore_asked', alreadyAsked }
-//     Sellio's admins get an alert to restore it (restoring needs Sellio).
+//   { action: 'restore' }   Keep my account        -> { ok: true, kind: 'restored' }
+//     It opens again straight away (account_restore_now: the shop reopens, its staff and the
+//     login are unlocked; Sellio's admins are told), and the shop's paid plan renews again in
+//     Stripe (account-restore.ts); a plan that can't is reported to the admins.
 //   { action: 'delete', confirmation: 'DELETE' }   -> { ok: true, kind: 'deleted' }
 //     Start again: the account, any shop it owns and that shop's staff logins are deleted now,
 //     for good (account-removal.ts), so its phone number or email can sign up again.

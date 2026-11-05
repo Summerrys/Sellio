@@ -1,5 +1,6 @@
 // What closed-account does with a request (index.ts wires it to the server). See index.ts.
 import { removeAccount as removeAccountDefault } from "../_shared/account-removal.ts";
+import { renewAfterRestore as renewAfterRestoreDefault, renewalsNeedingAHand } from "../_shared/account-restore.ts";
 import { verifyGoogleIdToken as verifyGoogleDefault } from "../_shared/google-id-token.ts";
 
 const PHONE_RE = /^\+[0-9]{6,15}$/;
@@ -11,6 +12,7 @@ export type Deps = {
   stripe: () => any;
   verifyGoogle?: typeof verifyGoogleDefault;
   removeAccount?: typeof removeAccountDefault;
+  renewAfterRestore?: typeof renewAfterRestoreDefault;
 };
 export type Reply = { status: number; body: Record<string, unknown> };
 const reply = (body: Record<string, unknown>, status = 200): Reply => ({ status, body });
@@ -22,7 +24,6 @@ export function closedForScreen(closed: Record<string, unknown>) {
     kind,
     deleteAfter: typeof closed.deleteAfter === "string" ? closed.deleteAfter : null,
     shops: Array.isArray(closed.shops) ? closed.shops.filter((s) => typeof s === "string" && s) : [],
-    restoreAsked: Boolean(closed.restoreRequestedAt),
   };
 }
 
@@ -111,10 +112,34 @@ export async function handleClosedAccount(deps: Deps, body: Record<string, unkno
   const requestId = String(proof.closed.requestId ?? "");
   if (!requestId) return reply({ ok: false, code: "unavailable" }, 500);
 
+  // Keep my account: open again now, with the admins told (account_restore_now), then the
+  // shop's paid plan renews again (account-restore.ts); a plan that doesn't is reported too.
   if (action === "restore") {
-    const { data, error } = await admin.rpc("account_restore_request", { p_request_id: requestId });
-    if (error || !data?.ok) throw new Error("account_restore_request failed: " + (error?.message ?? "not pending"));
-    return reply({ ok: true, kind: "restore_asked", alreadyAsked: Boolean(data.alreadyAsked) });
+    const { data, error } = await admin.rpc("account_restore_now", { p_request_id: requestId });
+    if (error) {
+      // Opened or deleted a moment ago (another device): nothing to restore any more.
+      if (/only a pending request|already been deleted|not found/i.test(String(error.message ?? ""))) {
+        return reply({ ok: false, code: "not_closed" });
+      }
+      throw new Error("account_restore_now failed: " + error.message);
+    }
+    const plans = Array.isArray(data?.stripe) ? data.stripe : [];
+    if (plans.length > 0) {
+      let stripe: any = null;
+      try { stripe = deps.stripe(); } catch (err) { console.error("closed-account: no Stripe", (err as Error)?.message); }
+      const renewals = await (deps.renewAfterRestore ?? renewAfterRestoreDefault)(stripe, requestId, plans);
+      const needsAHand = renewalsNeedingAHand(renewals);
+      if (needsAHand) {
+        const { error: alertError } = await admin.rpc("alert_sellio_admins", {
+          p_type: "account_restored_billing",
+          p_title: "Account kept: check its plan",
+          p_message: `${String(data?.email ?? "An account")} chose Keep my account, but its paid plan isn't renewing again: ${needsAHand}.`,
+          p_data: { request_id: requestId, renewals },
+        });
+        if (alertError) console.error("alert_sellio_admins failed", alertError.message);
+      }
+    }
+    return reply({ ok: true, kind: "restored" });
   }
 
   // Start again.

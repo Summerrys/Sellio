@@ -8,7 +8,8 @@ import { callClosedAccount, closedAccountMessage } from '@/lib/closedAccount';
 // What someone sees when they sign in to a closed account (Alvin, 5 Nov 2026): their account
 // is closed (they asked to delete it) and when it will be deleted for good, their shop's page
 // shows "Store unavailable", and two choices:
-//   Keep my account: Sellio's admins are asked to restore it (restoring needs Sellio).
+//   Keep my account: it opens again straight away, with its shop and staff, and Sellio's
+//   admins are told. Afterwards "Continue" signs them in (onRestored), or they sign in again.
 //   Start again: it is deleted now, for good, with any shop it owns and that shop's staff
 //   logins, so the phone number or email can sign up again. DELETE must be typed first.
 //   Afterwards "Sign up again" starts a new account (onStartOver, or the sign-up page).
@@ -18,7 +19,7 @@ import { callClosedAccount, closedAccountMessage } from '@/lib/closedAccount';
 // closed-account server checks it again for each choice. `email`: the account's email, when
 // the proof was an emailed link.
 // `web` (no proof): Google on the website, where Sellio can't check who it is; they're sent
-// to get a sign-in link by email instead, which opens this screen with the choices.
+// to verify their email instead, whose link opens this screen with the choices.
 
 const SUPPORT_EMAIL = 'sellio@apptelier.sg';
 const PRIMARY = { background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' };
@@ -44,11 +45,10 @@ function BackButton({ onBack, children = 'Back to sign in' }) {
 
 const SIGN_UP_LINK = 'w-full inline-flex items-center justify-center py-3 rounded-xl text-white font-semibold text-sm';
 
-export default function ClosedAccount({ proof = null, closed = null, web = false, email = '', onBack, onStartOver }) {
-  const [step, setStep] = useState('closed'); // closed | confirm | restore_asked | deleted
+export default function ClosedAccount({ proof = null, closed = null, web = false, email = '', onBack, onStartOver, onRestored }) {
+  const [step, setStep] = useState('closed'); // closed | confirm | restored | deleted
   const [busy, setBusy] = useState('');
   const [confirmation, setConfirmation] = useState('');
-  const [alreadyAsked, setAlreadyAsked] = useState(Boolean(closed?.restoreAsked));
 
   const kind = closed?.kind || 'member';
   const shops = Array.isArray(closed?.shops) ? closed.shops.filter(Boolean) : [];
@@ -60,8 +60,7 @@ export default function ClosedAccount({ proof = null, closed = null, web = false
     try {
       const reply = await callClosedAccount({ ...proof, action, ...(action === 'delete' ? { confirmation } : {}) });
       if (reply?.ok && action === 'restore') {
-        setAlreadyAsked(true);
-        setStep('restore_asked');
+        setStep('restored');
       } else if (reply?.ok && action === 'delete') {
         setStep('deleted');
       } else {
@@ -84,10 +83,10 @@ export default function ClosedAccount({ proof = null, closed = null, web = false
           </div>
         </div>
         <p className="text-sm text-slate-600">
-          To keep it, or to delete it now and start again, open a sign-in link we email to this Google address.
-          You can also sign in with your phone number and password.
+          To keep it, or to delete it now and start again, verify this Google address by email: the link in that
+          email takes you to your choices. You can also sign in with your phone number and password.
         </p>
-        <Link to="/Join" className={SIGN_UP_LINK} style={PRIMARY}>Email me a sign-in link</Link>
+        <Link to="/Join" className={SIGN_UP_LINK} style={PRIMARY}>Verify my email</Link>
         <p className="text-xs text-slate-500">
           Questions: <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-slate-700 underline">{SUPPORT_EMAIL}</a>
         </p>
@@ -96,20 +95,25 @@ export default function ClosedAccount({ proof = null, closed = null, web = false
     );
   }
 
-  if (step === 'restore_asked') {
+  if (step === 'restored') {
     return (
       <div data-testid="closed-account" className="space-y-4">
         <div className="flex items-start gap-3">
           <Check className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
           <div>
-            <p className="text-base font-semibold text-slate-800">We&apos;ve asked Sellio to restore your account</p>
+            <p className="text-base font-semibold text-slate-800">Your account is open again</p>
             <p className="text-sm text-slate-600 mt-1">
-              You&apos;ll be able to sign in again once it&apos;s restored{shops.length > 0 ? ', and your shop will open again' : ''}.
-              Questions: <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-slate-800 underline">{SUPPORT_EMAIL}</a>
+              {shops.length > 0
+                ? `${listShops(shops)} is open again: its page is back, it takes orders and its staff can sign in.`
+                : 'It won’t be deleted. You can use Sellio as before.'}
             </p>
           </div>
         </div>
-        <BackButton onBack={onBack} />
+        {onRestored ? (
+          <button type="button" onClick={onRestored} className={SIGN_UP_LINK} style={PRIMARY}>Continue</button>
+        ) : (
+          <button type="button" onClick={onBack} className={SIGN_UP_LINK} style={PRIMARY}>Sign in</button>
+        )}
       </div>
     );
   }
@@ -208,9 +212,6 @@ export default function ClosedAccount({ proof = null, closed = null, web = false
           )}
         </div>
       </div>
-      {alreadyAsked && (
-        <p className="text-sm text-slate-600 bg-slate-50 rounded-xl px-3 py-2">You&apos;ve asked Sellio to restore it. You&apos;ll be able to sign in once it&apos;s restored.</p>
-      )}
       <button
         type="button"
         disabled={Boolean(busy)}
@@ -218,7 +219,7 @@ export default function ClosedAccount({ proof = null, closed = null, web = false
         className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70"
         style={PRIMARY}
       >
-        {busy === 'restore' ? 'Please wait…' : 'Keep my account'}
+        {busy === 'restore' ? 'Opening it again…' : 'Keep my account'}
       </button>
       <button
         type="button"
@@ -229,7 +230,7 @@ export default function ClosedAccount({ proof = null, closed = null, web = false
         Start again
       </button>
       <p className="text-xs text-slate-500">
-        Keep my account asks Sellio to restore it{shops.length > 0 ? ' and open your shop again' : ''}.
+        Keep my account opens it again now{shops.length > 0 ? ', with your shop' : ''}.
         Start again deletes it now, for good{shops.length > 0 ? ', with your shop' : ''}, so you can sign up again.
       </p>
       <BackButton onBack={onBack} />

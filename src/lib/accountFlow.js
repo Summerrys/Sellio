@@ -127,7 +127,7 @@ export function paymentLinkFor(link, email) {
 const MESSAGES = {
   not_signed_in: 'Please sign in again.',
   staff_account: 'This is a staff login. Staff sign in with their phone number on the login page.',
-  email_link_required: 'Please open the sign-in link we emailed you, then try again.',
+  email_link_required: 'Please open the verification link we emailed you, then try again.',
   name_invalid: 'Please enter your name.',
   phone_invalid: 'Please enter a valid Singapore or Malaysia mobile number.',
   phone_taken: 'This phone number is already used by another Sellio account (it may be a staff login). Use a different number, or contact sellio@apptelier.sg.',

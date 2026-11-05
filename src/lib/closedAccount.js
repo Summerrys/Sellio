@@ -30,7 +30,7 @@ const waitText = (minutes) => {
 export function closedAccountMessage(reply) {
   switch (reply?.code) {
     case 'invalid': return 'Phone number or password is incorrect. Please sign in again.';
-    case 'link_invalid': return 'This sign-in link has expired or was already used. Send yourself a new one.';
+    case 'link_invalid': return 'This link has expired or was already used. Ask for a new one.';
     case 'locked': return `Too many wrong passwords for this number. Try again in ${waitText(reply.retry_after_minutes)}.`;
     case 'too_many': return `Too many attempts from this network. Try again in ${waitText(reply.retry_after_minutes)}.`;
     case 'not_closed': return 'This account is not closed any more. Please sign in again.';

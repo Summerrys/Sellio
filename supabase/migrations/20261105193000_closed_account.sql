@@ -1,16 +1,16 @@
 -- A closed account signing in again (Alvin, 5 Nov 2026: "both"). Someone whose account is
 -- closed (a deletion request is pending, so the login is locked) and who signs in with the
--- right password, or with Google in the app, sees that it's closed and when it will be
--- deleted, and can choose:
---   Keep my account: Sellio's admins get an alert to restore it (restoring needs Sellio).
+-- right password, with Google in the app, or with an emailed link, sees that it's closed
+-- (its shop shows "Store unavailable") and when it will be deleted, and can choose:
+--   Keep my account: it opens again straight away (public.account_deletion_reinstate, with
+--   the shop's paid plan renewing again), and Sellio's admins are told (Alvin: "restore
+--   instantly with 'keep my account' sends to me").
 --   Start again: the account, any shop it owns and that shop's staff logins are deleted now,
 --   for good, so the phone number or email can sign up again.
 -- The closed-account edge function proves who it is (the password is checked here, since
 -- Supabase Auth refuses a locked login before it checks the password; Google with the ID
--- token; an emailed sign-in link with its token) and runs the choice. A staff login locked
--- because its shop's owner closed their account only sees that.
-
-alter table app.account_deletion_requests add column if not exists restore_requested_at timestamptz;
+-- token; an emailed link with its token) and runs the choice. A staff login locked because
+-- its shop's owner closed their account only sees that.
 
 -- What a closed login sees, or null when it isn't closed.
 create or replace function app.closed_account_info(p_user_id uuid)
@@ -27,8 +27,7 @@ as $$
               'requestedAt', r.created_at,
               'deleteAfter', r.delete_after,
               'shops', (select coalesce(jsonb_agg(btrim(x ->> 'name')), '[]'::jsonb)
-                          from jsonb_array_elements(coalesce(r.shops, '[]'::jsonb)) x),
-              'restoreRequestedAt', r.restore_requested_at)
+                          from jsonb_array_elements(coalesce(r.shops, '[]'::jsonb)) x))
        from app.account_deletion_requests r
       where r.auth_user_id = p_user_id and r.status = 'requested'
       limit 1),
@@ -149,36 +148,31 @@ begin
 end
 $$;
 
--- Keep my account: the admins are told (at most once a day per account).
-create or replace function public.account_restore_request(p_request_id uuid)
+-- Keep my account: the account opens again straight away (public.account_deletion_reinstate:
+-- the shop reopens, its staff and the login are unlocked) and Sellio's admins are told, in the
+-- same transaction. The closed-account edge function then switches the shop's paid plan back
+-- to renewing in Stripe (account-restore.ts), and alerts the admins again only if that needs
+-- a hand.
+create or replace function public.account_restore_now(p_request_id uuid)
 returns jsonb
 language plpgsql
 security definer
 set search_path to ''
 as $$
 declare
-  v_request app.account_deletion_requests%rowtype;
-  v_again boolean;
+  v_result jsonb;
   v_shops text;
 begin
-  select * into v_request from app.account_deletion_requests r where r.id = p_request_id for update;
-  if not found or v_request.status <> 'requested' then
-    return jsonb_build_object('ok', false);
-  end if;
-  v_again := v_request.restore_requested_at is not null and v_request.restore_requested_at > now() - interval '1 day';
-  update app.account_deletion_requests r set restore_requested_at = now(), updated_at = now() where r.id = v_request.id;
-  if not v_again then
-    select string_agg(btrim(x ->> 'name'), ', ') into v_shops from jsonb_array_elements(coalesce(v_request.shops, '[]'::jsonb)) x;
-    perform public.alert_sellio_admins(
-      'account_restore',
-      'Account restore asked for',
-      v_request.email || ' wants to keep their account'
-        || case when v_shops is not null then ' (shop: ' || v_shops || ')' else '' end
-        || '. It is due to be deleted on ' || to_char(v_request.delete_after at time zone 'Asia/Singapore', 'DD Mon YYYY')
-        || '. Restore it to let them sign in again.',
-      jsonb_build_object('request_id', v_request.id, 'email', v_request.email, 'delete_after', v_request.delete_after));
-  end if;
-  return jsonb_build_object('ok', true, 'alreadyAsked', v_again);
+  v_result := public.account_deletion_reinstate(p_request_id);
+  select string_agg(btrim(x ->> 'name'), ', ') into v_shops
+    from jsonb_array_elements(coalesce(v_result -> 'shops', '[]'::jsonb)) x;
+  perform public.alert_sellio_admins(
+    'account_restored',
+    'Account kept',
+    coalesce(v_result ->> 'email', 'An account') || ' chose Keep my account, so it is open again'
+      || case when v_shops is not null then ', with their shop (' || v_shops || ')' else '' end || '.',
+    jsonb_build_object('request_id', p_request_id, 'email', v_result ->> 'email'));
+  return v_result;
 end
 $$;
 
@@ -337,12 +331,12 @@ revoke all on function app.shop_files(text) from public, anon, authenticated;
 revoke all on function public.closed_account_check(text, text) from public, anon, authenticated;
 revoke all on function public.closed_account_by_google(text) from public, anon, authenticated;
 revoke all on function public.closed_account_by_email_link(text, text) from public, anon, authenticated;
-revoke all on function public.account_restore_request(uuid) from public, anon, authenticated;
+revoke all on function public.account_restore_now(uuid) from public, anon, authenticated;
 revoke all on function public.account_removal_plan(uuid) from public, anon, authenticated;
 revoke all on function public.account_removal_complete(uuid) from public, anon, authenticated;
 grant execute on function public.closed_account_check(text, text) to service_role;
 grant execute on function public.closed_account_by_google(text) to service_role;
 grant execute on function public.closed_account_by_email_link(text, text) to service_role;
-grant execute on function public.account_restore_request(uuid) to service_role;
+grant execute on function public.account_restore_now(uuid) to service_role;
 grant execute on function public.account_removal_plan(uuid) to service_role;
 grant execute on function public.account_removal_complete(uuid) to service_role;

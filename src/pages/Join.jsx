@@ -46,10 +46,12 @@ function Notice({ tone = 'amber', children }) {
   );
 }
 
-// Create a Sellio account: email link (or Google), then name, phone and password.
-// Afterwards the account page lets them open a free shop or choose a business plan.
-// A sign-in link to a closed account (its deletion is pending) opens the closed-account
-// screen instead: Keep my account, or Start again and sign up afresh (Alvin, 5 Nov 2026).
+// Create a Sellio account: verify the email (a link in a "verify your email" email) or use
+// Google, then name, phone and password. Afterwards the account page lets them open a free
+// shop or choose a business plan (Alvin, 5 Nov 2026: "verify my email", not a magic link).
+// An email that already has an account is signed in by the same link. One whose account is
+// closed (its deletion is pending) gets the closed-account screen instead: Keep my account
+// (open again and carry on) or Start again (deleted, then sign up afresh).
 export default function Join() {
   const { setAppUser } = useAppUser();
   const [stage, setStage] = useState('loading'); // loading | start | sent | finish | staff | closed
@@ -89,11 +91,11 @@ export default function Join() {
           if (link.errorCode === 'user_banned') {
             // A link that went through Supabase first (older emails) to a closed account:
             // Supabase only says the login is locked. A new link opens the closed screen.
-            setNotice('This account is closed. To keep it, or to delete it and start again, send yourself a new sign-in link and open it.');
+            setNotice('This account is closed. To keep it, or to delete it and start again, send a new verification email and open its link.');
           } else {
             setNotice(link.errorCode === 'otp_expired' || /expired|invalid/i.test(link.errorDescription || '')
-              ? 'This sign-in link has expired or was already used. Send yourself a new one.'
-              : (link.errorDescription || 'That sign-in link didn’t work. Send yourself a new one.'));
+              ? 'This verification link has expired or was already used. Send a new verification email.'
+              : (link.errorDescription || 'That verification link didn’t work. Send a new verification email.'));
           }
           setStage('start');
           return;
@@ -109,7 +111,7 @@ export default function Join() {
             return;
           }
           if (error) {
-            setNotice('This sign-in link has expired or was already used. Send yourself a new one.');
+            setNotice('This verification link has expired or was already used. Send a new verification email.');
             setStage('start');
             return;
           }
@@ -141,6 +143,27 @@ export default function Join() {
     const refusal = reply?.code === 'invalid' ? { code: 'link_invalid' } : reply;
     setNotice(reply ? closedAccountMessage(refusal) : 'Can’t reach Sellio. Check your connection and try again.');
     setStage('start');
+  };
+
+  // Keep my account is done: the account is open again, and the same link (Supabase didn't use
+  // it up while the account was closed) now signs them in.
+  const continueAfterRestore = async () => {
+    const proof = closedAccount?.proof;
+    setClosedAccount(null);
+    setStage('loading');
+    try {
+      const supabase = await getSupabase();
+      const { error } = await supabase.auth.verifyOtp({ token_hash: proof?.emailTokenHash, type: proof?.emailLinkType || 'magiclink' });
+      if (error) {
+        setNotice('Your account is open again. Send a new verification email to sign in.');
+        setStage('start');
+        return;
+      }
+      await continueSignedIn(supabase);
+    } catch (err) {
+      setNotice(accountErrorMessage(err));
+      setStage('start');
+    }
   };
 
   // Start again is done: the same email signs up afresh (a new account, then a new shop).
@@ -183,7 +206,7 @@ export default function Join() {
     // Finishing the account needs a session that proved the email (link or Google).
     if (!status.email_proven) {
       setEmail(status.email);
-      setNotice('To finish your account, confirm your email: we’ll send you a sign-in link.');
+      setNotice('To finish your account, verify your email: we’ll send you a verification email.');
       setStage('start');
       return;
     }
@@ -305,7 +328,7 @@ export default function Join() {
             </>)}
             {stage === 'sent' && (<>
               <h1 className="text-xl font-semibold text-slate-800 mb-1">Check your email</h1>
-              <p className="text-sm text-slate-500">We sent a sign-in link to <span className="font-medium text-slate-700 break-all">{email}</span>.</p>
+              <p className="text-sm text-slate-500">We sent a verification email to <span className="font-medium text-slate-700 break-all">{email}</span>.</p>
             </>)}
             {stage === 'finish' && (<>
               <h1 className="text-xl font-semibold text-slate-800 mb-1">Set up your account</h1>
@@ -324,6 +347,7 @@ export default function Join() {
               email={closedAccount.email}
               onBack={leaveClosedAccount}
               onStartOver={signUpAgain}
+              onRestored={continueAfterRestore}
             />
           )}
 
@@ -337,12 +361,13 @@ export default function Join() {
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input id="join-email" type="email" autoComplete="email" placeholder="you@example.com" value={email}
-                      onChange={(e) => setEmail(e.target.value)} className={INPUT_CLASS} />
+                      onChange={(e) => setEmail(e.target.value)} className={INPUT_CLASS} aria-describedby="join-email-hint" />
                   </div>
+                  <p id="join-email-hint" className="mt-1.5 text-xs text-slate-400">We’ll email you a link to verify it’s yours.</p>
                 </div>
                 <button type="submit" disabled={sending || !email.trim()}
                   className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70" style={BUTTON_STYLE}>
-                  {sending ? 'Sending…' : 'Email me a sign-in link'}
+                  {sending ? 'Sending…' : 'Send verification email'}
                 </button>
               </form>
               {googleSignInAvailable() && (
@@ -380,12 +405,13 @@ export default function Join() {
                   <Check className="w-7 h-7 text-green-500" />
                 </div>
                 <p className="text-xs text-slate-500 text-center leading-relaxed">
-                  Open the link on this device to continue. It can take a minute to arrive; check your spam folder too.
+                  Tap <span className="font-semibold text-slate-700">Verify my email</span> in that email, on this device, to continue.
+                  It can take a minute to arrive; check your spam folder too.
                 </p>
               </div>
               <button type="button" onClick={sendLink} disabled={sending || cooldown > 0}
                 className="w-full py-2.5 rounded-xl text-sm font-medium text-slate-700 border border-slate-200 bg-white hover:bg-slate-50 transition-colors disabled:opacity-60">
-                {cooldown > 0 ? `Send again in ${cooldown}s` : (sending ? 'Sending…' : 'Send the link again')}
+                {cooldown > 0 ? `Resend in ${cooldown}s` : (sending ? 'Sending…' : 'Resend verification email')}
               </button>
               <button type="button" onClick={() => { setStage('start'); setNotice(''); }}
                 className="w-full text-xs text-orange-500 hover:text-orange-600 font-medium bg-transparent border-none cursor-pointer">

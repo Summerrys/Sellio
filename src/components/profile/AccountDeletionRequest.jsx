@@ -10,8 +10,9 @@ import { signInForAccountDeletion } from './AccountDeletionForm';
 // public.account_deletion_request do it at once: the person is signed out everywhere and
 // their sign-in locked, a shop they own closes ("Store unavailable", no new orders, off
 // Explore) with its staff locked out, its paid plan stops renewing, and the account is
-// deleted for good after 6 months for a shop owner (30 days otherwise) unless Sellio is
-// asked to keep it. Afterwards this phone is signed out too and goes to Explore.
+// deleted for good after 6 months for a shop owner (30 days otherwise) unless they sign in
+// again and choose Keep my account (it opens again straight away; components/auth/
+// ClosedAccount). Afterwards this phone is signed out too and goes to Explore.
 // Before 5 Nov 2026 deletion was by email only; the email stays for anyone who can't sign in.
 export const DELETION_EMAIL = 'sellio@apptelier.sg';
 
@@ -65,7 +66,7 @@ export function WhatHappens() {
       <li>A shop you own closes straight away: its page shows &ldquo;Store unavailable&rdquo;, it takes no new orders and it leaves Explore. Its staff can&apos;t sign in to it any more.</li>
       <li>If the shop has a paid plan, it won&apos;t renew. Time already paid for isn&apos;t refunded.</li>
       <li>If you work in someone else&apos;s shop, you lose access to it. The shop carries on.</li>
-      <li>We keep the account for 6 months if you own a shop, or 30 days if you don&apos;t, in case you change your mind. After that it&apos;s deleted for good, with your shop and its staff logins. Until then, sign in again to keep it (Keep my account) or to delete it straight away (Start again).</li>
+      <li>We keep the account for 6 months if you own a shop, or 30 days if you don&apos;t, in case you change your mind. After that it&apos;s deleted for good, with your shop and its staff logins. Until then, sign in again to keep it (Keep my account: it opens again straight away) or to delete it straight away (Start again).</li>
       <li>Orders you placed stay with the shops you bought from, and billing records are kept as the law requires.</li>
     </ul>
   );
@@ -138,8 +139,8 @@ export default function AccountDeletionRequest({ email = '', shopName = '', onRe
         <p className="text-base font-semibold text-slate-900">Deletion requested</p>
         <p>You&apos;re signed out{shops.length ? `, and ${joinNames(shops)} ${shops.length === 1 ? 'is' : 'are'} closed now` : ''}.</p>
         <p>
-          The account will be deleted for good{when ? ` on ${when}` : ''}. Changed your mind? Email{' '}
-          <a className="font-semibold text-slate-900 underline" href={`mailto:${DELETION_EMAIL}`}>{DELETION_EMAIL}</a> before then.
+          The account will be deleted for good{when ? ` on ${when}` : ''}. Changed your mind? Sign in again before then
+          and choose Keep my account: it opens again straight away{shops.length ? ', with your shop' : ''}.
         </p>
         <button
           type="button"

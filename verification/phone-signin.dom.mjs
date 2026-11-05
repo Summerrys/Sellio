@@ -194,7 +194,7 @@ try {
   await click(buttonText(container, 'Back to Login') || container.querySelector('button'));
   if (!container.querySelector('form.auth-fields')) await click([...container.querySelectorAll('button')][0]);
   const signInForm = () => container.querySelector('form.auth-fields');
-  const closedReply = (closed = {}) => ({ ok: false, code: 'closed', closed: { kind: 'owner', deleteAfter: '2027-05-05T09:00:00Z', shops: ['Kopi Corner'], restoreAsked: false, ...closed } });
+  const closedReply = (closed = {}) => ({ ok: false, code: 'closed', closed: { kind: 'owner', deleteAfter: '2027-05-05T09:00:00Z', shops: ['Kopi Corner'], ...closed } });
   const signInClosed = async (closed) => {
     reset();
     await setValue(signInForm().querySelector('input[type="tel"]'), '91234567');
@@ -209,23 +209,25 @@ try {
   assert.ok(closedScreen(), 'The closed-account screen is shown');
   assert.match(closedScreen().textContent, /This account is closed/);
   assert.match(closedScreen().textContent, /It will be deleted for good on 5 May 2027\./);
-  assert.match(closedScreen().textContent, /Kopi Corner is closed too/);
+  assert.match(closedScreen().textContent, /Kopi Corner is closed too: its page shows “Store unavailable”/);
   assert.ok(!calls.some(c => c[0] === 'setSession'), 'No session for a closed account');
   assert.deepEqual(globalThis.toastErrors, []);
   assert.equal(globalThis.authDestination, undefined);
 
   reset();
-  invokeReply = () => ({ ok: true, kind: 'restore_asked', alreadyAsked: false });
+  invokeReply = () => ({ ok: true, kind: 'restored' });
   await click(buttonText(container, 'Keep my account'));
   await wait(20);
   assert.deepEqual(calls.find(c => c[0] === 'invoke'), ['invoke', 'closed-account', { phone: '+6591234567', password: 'right-password', action: 'restore' }]);
   const [, closedUrl, closedInit] = calls.find(c => c[0] === 'request');
   assert.equal(closedUrl, 'https://project.example.invalid/functions/v1/closed-account?forceFunctionRegion=ap-southeast-2');
   assert.deepEqual(closedInit.headers, { 'Content-Type': 'text/plain;charset=UTF-8' });
-  assert.match(closedScreen().textContent, /We've asked Sellio to restore your account/);
-  await click(buttonText(container, 'Back to sign in'));
-  assert.ok(signInForm(), 'Back to the sign-in form');
-  passed('A closed account with the right password: when it will be deleted, its shop, and Keep my account asks Sellio');
+  assert.match(closedScreen().textContent, /Your account is open again/);
+  assert.match(closedScreen().textContent, /Kopi Corner is open again: its page is back, it takes orders and its staff can sign in\./);
+  await click(buttonText(container, 'Sign in'));
+  assert.ok(signInForm(), 'Back to the sign-in form, to sign in now it is open');
+  assert.equal(signInForm().querySelector('input[type="password"]').value, 'right-password', 'Their number and password are still filled in');
+  passed('A closed account with the right password: when it will be deleted, its shop (Store unavailable), and Keep my account opens it again at once');
 
   await signInClosed();
   await click(buttonText(container, 'Start again'));
@@ -280,13 +282,13 @@ try {
   await wait(30);
   const webClosed = second.querySelector('[data-testid="closed-account"]');
   assert.ok(webClosed, 'The website shows the closed account');
-  assert.match(webClosed.textContent, /open a sign-in link we email to this Google address\. You can also sign in with your phone number and password\./);
-  assert.equal(webClosed.querySelector('a[href="/Join"]')?.textContent, 'Email me a sign-in link', 'The way to an email link (which opens the choices)');
+  assert.match(webClosed.textContent, /verify this Google address by email: the link in that email takes you to your choices\. You can also sign in with your phone number and password\./);
+  assert.equal(webClosed.querySelector('a[href="/Join"]')?.textContent, 'Verify my email', 'The way to a verification email (whose link opens the choices)');
   assert.ok(webClosed.querySelector('a[href="mailto:sellio@apptelier.sg"]'));
   assert.deepEqual(globalThis.toastErrors, []);
   assert.equal(win.location.hash, '', 'The error is taken out of the address');
   await act(async () => secondRoot.unmount());
-  passed('Google on the website: a closed account is sent for an email link, which opens the choices');
+  passed('Google on the website: a closed account is sent to verify its email, whose link opens the choices');
 
   console.log(passes + ' phone sign-in checks passed');
 } finally {
