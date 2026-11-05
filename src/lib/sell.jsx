@@ -93,7 +93,6 @@ export function SellProvider({ children }) {
           onOpenChange={setLimitOpen}
           tenantId={tenantId}
           currentTier={subscription?.tier ?? null}
-          hasUsedTrial={tenant?.has_used_trial ?? false}
         />
       )}
     </SellContext.Provider>

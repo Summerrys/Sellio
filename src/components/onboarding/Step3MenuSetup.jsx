@@ -15,10 +15,11 @@ import { getThemeCSSColors, DEFAULT_COLORS } from '@/lib/themeConstants';
 import { toast } from 'sonner';
 import { deleteImageFromStorage } from '@/lib/imageStorage';
 import { useAppUser, cookieUtils } from '@/lib/AppUserContext';
-import PricingModal from '../subscription/PricingModal';
 import { normalizeIndustry } from '@/lib/industry';
 import { functionErrorMessage } from '@/lib/aiAllowance';
-import { sellsPlans } from '@/lib/nativeApp';
+
+// Adding past the plan's limit during setup (5 Nov 2026: no plan checkout here, see addItem).
+const LIMIT_MESSAGE = (max) => `Your plan includes up to ${max} items. You can change your plan once your shop is set up.`;
 
 // Mirrors PLAN_LIMITS in the complete-onboarding edge function — keep in sync.
 // Used here only to warn the merchant *before* they submit; the edge function
@@ -80,8 +81,6 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
   const [itemDescription, setItemDescription] = useState('');
   const { appUser } = useAppUser();
   const [planMaxProducts, setPlanMaxProducts] = useState(null); // null = unknown/unlimited
-  const [planTier, setPlanTier] = useState(null);
-  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 
   const MAX_IMAGES = 10;
 
@@ -107,7 +106,6 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                    : planRaw.includes('pro') ? 'pro'
                    : planRaw.includes('growth') ? 'growth'
                    : 'starter';
-        setPlanTier(tier);
         setPlanMaxProducts(ONBOARDING_PLAN_LIMITS[tier] ?? 10);
         // The plan's product limit from the entitlements table (readable by anyone),
         // so this warning uses the same number the database enforces. The map
@@ -423,8 +421,10 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
 
     // Block adding a NEW item once the resolved plan's product limit is reached.
     // (Editing an existing item doesn't change the count, so it's exempt.)
+    // No plan checkout here: the business's plan (and any free trial) has started already, and
+    // a checkout from setup made a second subscription next to it, with a second free trial.
     if (editingItemId === null && planMaxProducts != null && (formData.products || []).length >= planMaxProducts) {
-      setUpgradeModalOpen(true);
+      toast.error(LIMIT_MESSAGE(planMaxProducts));
       return;
     }
 
@@ -813,16 +813,9 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-slate-900">Added Items ({formData.products.length}{planMaxProducts != null ? ` / ${planMaxProducts}` : ''})</h3>
-              {planMaxProducts != null && formData.products.length >= planMaxProducts && (sellsPlans() ? (
-                <button
-                  onClick={() => setUpgradeModalOpen(true)}
-                  className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200"
-                >
-                  Limit reached — Upgrade
-                </button>
-              ) : (
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">Limit reached</span>
-              ))}
+              {planMaxProducts != null && formData.products.length >= planMaxProducts && (
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700" title={LIMIT_MESSAGE(planMaxProducts)}>Limit reached</span>
+              )}
             </div>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {(formData.products || []).map((item, idx) => (
@@ -881,14 +874,6 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
           onClose={() => setEditingImageIdx(null)}
         />
       )}
-
-      {/* Plan upgrade prompt — shown if a manual or AI-assisted item would exceed the plan's product limit */}
-      <PricingModal
-        open={upgradeModalOpen}
-        onOpenChange={setUpgradeModalOpen}
-        currentTier={planTier}
-        hasUsedTrial={false}
-      />
 
       <div className="flex gap-2 sm:gap-3 pt-3 sm:pt-4">
         <Button

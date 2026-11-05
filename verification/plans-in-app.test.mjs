@@ -19,7 +19,7 @@ const app = process.cwd();
 const require = createRequire(path.join(process.argv[2] || app, 'package.json'));
 const { JSDOM } = require('jsdom');
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://sellio.example.invalid/Dashboard', pretendToBeVisual: true });
-for (const key of ['window', 'document', 'Element', 'HTMLElement', 'DocumentFragment', 'CustomEvent', 'Node', 'Event', 'MouseEvent', 'MutationObserver', 'sessionStorage', 'localStorage', 'getComputedStyle', 'navigator', 'NodeFilter']) {
+for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLInputElement', 'HTMLButtonElement', 'HTMLTextAreaElement', 'HTMLSelectElement', 'DocumentFragment', 'CustomEvent', 'Node', 'Event', 'MouseEvent', 'MutationObserver', 'sessionStorage', 'localStorage', 'getComputedStyle', 'navigator', 'NodeFilter']) {
   Object.defineProperty(globalThis, key, { value: dom.window[key], configurable: true, writable: true });
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -134,6 +134,30 @@ try {
   assert.match(sources['src/pages/Account.jsx'], /\{sellsPlans\(\) \? \(\s*<button type="button" onClick=\{\(\) => setShowPlans\(true\)\}/, 'See plans is the website only');
   assert.match(sources['src/pages/UserManagement.jsx'], /Upgrade to Pro for unlimited roles\./);
   passed('Run my business and Upgrade to Pro show in the apps; See plans stays on the website');
+
+  // No second free trial (Alvin, 5 Nov 2026): a shop that exists gets the plans without a trial,
+  // wherever its plan window opens (the account panel, Settings, Products, Reports, Sell).
+  const plans = await load('src/lib/plans.js');
+  const { default: PricingModal } = await load('src/components/subscription/PricingModal.jsx');
+  inApp(false);
+  const opened = [];
+  window.open = (url) => { opened.push(url); return null; };
+  view = await render(React.createElement(PricingModal, { open: true, onOpenChange: () => {}, tenantId: 'shop-1', currentTier: 'starter' }));
+  const planButtons = [...document.body.querySelectorAll('button')].filter((b) => /Upgrade|Downgrade|Get Started/.test(b.textContent));
+  assert.ok(planButtons.length >= 2, 'The plans have buttons');
+  for (const button of planButtons) await act(async () => { button.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+  const noTrial = new Set(plans.BUSINESS_PLANS.flatMap((p) => [p.noTrialLinks.monthly, p.noTrialLinks.yearly]));
+  const trial = new Set(plans.BUSINESS_PLANS.flatMap((p) => [p.links.monthly, p.links.yearly]));
+  assert.equal(opened.length, planButtons.length);
+  for (const url of opened) {
+    const [base, query] = url.split('?');
+    assert.ok(noTrial.has(base), `${base} is a no-trial checkout`);
+    assert.equal(trial.has(base), false);
+    assert.equal(new URLSearchParams(query).get('client_reference_id'), 'shop-1');
+  }
+  const step3 = await readFile(path.join(app, 'src/components/onboarding/Step3MenuSetup.jsx'), 'utf8');
+  assert.doesNotMatch(step3, /PricingModal/, 'Setting up a business opens no plan checkout');
+  passed('a shop that exists only ever gets the plans without a free trial; setup opens no checkout');
 
   for (const root of roots) await act(async () => root.unmount());
   console.log(passes + ' plans-in-app checks passed.');

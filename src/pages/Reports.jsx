@@ -401,7 +401,6 @@ export default function Reports() {
         onOpenChange={setShowPricing}
         tenantId={tenantId}
         currentTier={tier}
-        hasUsedTrial={tenant?.has_used_trial}
       />
     </RequirePermission>
   );

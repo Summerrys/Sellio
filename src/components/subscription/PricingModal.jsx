@@ -45,14 +45,19 @@ const CURRENT_BORDER_COLOR = '#4ade80';
 
 const PLAN_RANK = { starter: 0, growth: 1, pro: 2 };
 
-export default function PricingModal({ open, onOpenChange, tenantId, currentTier = null, hasUsedTrial = false }) {
+// The plans for a shop that exists already: always without a free trial. Every business shop
+// has had its trial (complete-onboarding sets tenants.has_used_trial when it creates the shop),
+// and a free shop sees "coming soon" here instead of plans. Only new sign-ups (the landing page,
+// AuthPricingModal) offer the trial. Before 5 Nov 2026 this followed a hasUsedTrial prop, which
+// one caller left out (Settings) and onboarding set to false, so those offered a second trial.
+export default function PricingModal({ open, onOpenChange, tenantId, currentTier = null }) {
   const [billing, setBilling] = useState('monthly');
   // A free personal shop can't move to a business plan here yet (scorecard step 3):
   // a payment from here would not change its plan.
   const isPersonalShop = useContext(TenantContext)?.tenant?.seller_type === 'individual';
 
   const getLink = (plan) => {
-    const linkSet = hasUsedTrial ? NO_TRIAL_LINKS[plan.key] : plan.links;
+    const linkSet = NO_TRIAL_LINKS[plan.key];
     const base = billing === 'annual' ? linkSet.yearly : linkSet.monthly;
     const params = new URLSearchParams();
     if (tenantId) params.set('client_reference_id', tenantId);

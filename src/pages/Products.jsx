@@ -900,7 +900,6 @@ export default function Products({ embedded = false } = {}) {
           onOpenChange={setUpgradeModalOpen}
           tenantId={tenantId}
           currentTier={subscription?.tier ?? null}
-          hasUsedTrial={tenant?.has_used_trial ?? false}
         />
       </div>
     </RequirePermission>
