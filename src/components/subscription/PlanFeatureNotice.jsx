@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { FEATURE_LABELS } from '@/lib/planFeatures';
-import { sellsPlans } from '@/lib/nativeApp';
 
 // Shown instead of a page the store's plan doesn't include (for example the
 // Counter or Inventory on a free personal shop).
@@ -16,13 +15,10 @@ export default function PlanFeatureNotice({ feature, personal = true }) {
       </div>
       <h2 className="text-lg font-semibold text-slate-900 mb-2">Not part of your plan</h2>
       <p className="text-sm text-slate-500 mb-5">
-        {label} isn’t included in your plan.
-        {/* Sellio's apps say nothing of where or how to change plans (sellsPlans). */}
-        {!sellsPlans()
-          ? ''
-          : personal
-            ? ' It comes with a business plan; moving a personal shop to a business plan is coming soon.'
-            : ' Email sellio@apptelier.sg to change your plan.'}
+        {label} isn’t included in your plan.{' '}
+        {personal
+          ? 'It comes with a business plan; moving a personal shop to a business plan is coming soon.'
+          : 'Email sellio@apptelier.sg to change your plan.'}
       </p>
       <Link
         to={createPageUrl('Dashboard')}

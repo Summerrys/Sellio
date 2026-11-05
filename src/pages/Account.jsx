@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Store, Briefcase, Compass, ArrowRight, AlertCircle, Sparkles, LogOut, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
-import { isNativeApp, sellsPlans } from '@/lib/nativeApp';
+import { isNativeApp, sellsPlans, PLANS_ON_WEBSITE } from '@/lib/nativeApp';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { completeAuthNavigation } from '@/lib/authNavigation';
@@ -248,14 +248,18 @@ export default function Account() {
           </Card>
         )}
 
-        {/* Paid plans: the website only. Sellio's apps sell no plans (sellsPlans). */}
-        {!businessReady && sellsPlans() && (
+        {!businessReady && (
           <Card icon={Briefcase} iconClass="bg-purple-50 text-purple-600" title="Run my business" badge="Paid plans">
             <p className="text-sm text-slate-500 mt-1">The counter, kitchen display, tables & QR ordering, staff logins, inventory and reports. Starts with a 7-day free trial.</p>
-            <button type="button" onClick={() => setShowPlans(true)}
-              className="mt-3 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 border border-slate-200 bg-white hover:bg-slate-50">
-              See plans <ArrowRight className="w-4 h-4" />
-            </button>
+            {sellsPlans() ? (
+              <button type="button" onClick={() => setShowPlans(true)}
+                className="mt-3 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 border border-slate-200 bg-white hover:bg-slate-50">
+                See plans <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
+              // Sellio's apps sell no plans.
+              <p className="mt-3 text-sm font-medium text-slate-600">{PLANS_ON_WEBSITE}</p>
+            )}
           </Card>
         )}
 

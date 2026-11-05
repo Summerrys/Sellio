@@ -488,9 +488,6 @@ function AppLayout({ children, currentPageName }) {
   }, [tenantId, isOwner]);
 
   useEffect(() => {
-    // The trial reminder sells a plan: the website only (sellsPlans). In Sellio's apps the
-    // trial simply ends, and the wall says the plan isn't active.
-    if (!sellsPlans()) return;
     if (!isOwner || !subscription || subscription.status !== 'trial') return;
     if (sessionStorage.getItem('trial_modal_dismissed')) return;
     const trialEnd = subscription.current_period_end;
@@ -581,7 +578,11 @@ function AppLayout({ children, currentPageName }) {
     !publicPages.includes(currentPageName) && !isLoading &&
     !(noStore && currentPageName !== 'Onboarding') && !isLocked;
   useBackToClose(mobileOpen && workspaceShown, () => setMobileOpen(false));
-  useBackToClose(showTrialModal && canDismissTrialModal && workspaceShown, dismissTrialModal);
+  // In the last 12 hours the reminder stays up until a plan is chosen (Choose a Plan). Sellio's
+  // apps have no Choose a Plan (sellsPlans), so there it can always be closed: it would
+  // otherwise block the shop until the trial ran out.
+  const trialReminderClosable = canDismissTrialModal || !sellsPlans();
+  useBackToClose(showTrialModal && trialReminderClosable && workspaceShown, dismissTrialModal);
 
   // Staff logins have no Explore (its pages, listings, chats and Me): their shop instead.
   if (currentPageName === 'Explore' && staffAccount) {
@@ -774,7 +775,7 @@ function AppLayout({ children, currentPageName }) {
         <TrialReminderModal
           hoursLeft={Math.max(0, Math.floor((new Date(subscription.current_period_end) - new Date()) / (1000 * 60 * 60)))}
           onUpgrade={() => { setShowTrialModal(false); setShowPricingModal(true); }}
-          onDismiss={canDismissTrialModal ? dismissTrialModal : null}
+          onDismiss={trialReminderClosable ? dismissTrialModal : null}
         />
       )}
 

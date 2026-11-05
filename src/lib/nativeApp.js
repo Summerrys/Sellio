@@ -36,19 +36,12 @@ export function isNativeApp(browser = currentWindow()) {
   return isCapacitorApp(browser) || isBase44Shell(browser);
 }
 
-// Google Play and Apple require their own billing for subscriptions sold in an app, and both
-// forbid sending people elsewhere to buy (a link, a button, or words saying where). So the
-// apps don't sell Sellio's plans: no prices, upgrade buttons, trial offers or billing links,
-// and nothing saying where plans are sold. Where the website offers a plan, the apps show the
-// plan as it is and, if something is needed, NO_PLANS_IN_APP. A plan bought on the website
-// shows in the app when it next comes to the front (Layout reads the plan again then).
+// Google Play and Apple require their own billing for subscriptions sold in an app, so the
+// apps don't sell Sellio's plans: they show the plan and PLANS_ON_WEBSITE instead.
 export function sellsPlans(browser = currentWindow()) {
   return !isNativeApp(browser);
 }
-export const NO_PLANS_IN_APP = "Plans can't be bought in the app";
-// The earlier name, still used by the sign-in page (Auth.jsx). Until 5 Nov 2026 it said
-// "Plans are managed on the Sellio website", which points people to the website.
-export const PLANS_ON_WEBSITE = NO_PLANS_IN_APP;
+export const PLANS_ON_WEBSITE = 'Plans are managed on the Sellio website';
 
 // A link to another app or website (WhatsApp, say). A browser opens it in a new tab. In
 // Sellio's apps the page goes to it in place: the app hands any address outside Sellio to

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AlertTriangle, CreditCard, ExternalLink, Loader2 } from 'lucide-react';
 import { openBillingPortal, formatBillingAmount, formatBillingDate } from '@/lib/billing';
 import { toast } from 'sonner';
-import { sellsPlans } from '@/lib/nativeApp';
+import { sellsPlans, PLANS_ON_WEBSITE } from '@/lib/nativeApp';
 
 export default function BillingStatusBanner({ subscription, tenantId, isOwner }) {
   const [openingPortal, setOpeningPortal] = useState(false);
@@ -44,8 +44,8 @@ export default function BillingStatusBanner({ subscription, tenantId, isOwner })
         </div>
 
         {isOwner && !sellsPlans() ? (
-          // Sellio's apps don't take payments for plans, or say where to pay: the status only.
-          null
+          // Sellio's apps don't take payments for plans.
+          <p className="text-xs font-medium text-amber-900">{PLANS_ON_WEBSITE}</p>
         ) : isOwner ? (
           <div className="flex gap-2 flex-shrink-0">
             {subscription.invoice_hosted_url && (

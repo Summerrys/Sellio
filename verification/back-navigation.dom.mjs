@@ -578,7 +578,9 @@ try {
     'a menu link hands over its Back step; the page already open just closes the menu');
   // The phone menu and trial reminder only count as open while the workspace shows them.
   assert.match(layout, /useBackToClose\(mobileOpen && workspaceShown, \(\) => setMobileOpen\(false\)\)/);
-  assert.match(layout, /useBackToClose\(showTrialModal && canDismissTrialModal && workspaceShown, dismissTrialModal\)/);
+  // (The trial reminder can be closed by Back when it can be closed at all: in the last 12 hours
+  // only in Sellio's apps, which have no Choose a Plan.)
+  assert.match(layout, /const trialReminderClosable = canDismissTrialModal \|\| !sellsPlans\(\);\s*useBackToClose\(showTrialModal && trialReminderClosable && workspaceShown, dismissTrialModal\)/);
   assert.match(layout, /!publicPages\.includes\(currentPageName\)/);
   const wiring = {
     'src/pages/ShopSetup.jsx': [/useBackToClose\(step > 0,/, /if \(finishing\) return false;/, /await removeBackStep\(\);[^\n]*\n\s*navigate\(createPageUrl\('Dashboard'\), \{ replace: true \}\)/, /replace: handOverBackStep\(\)/],

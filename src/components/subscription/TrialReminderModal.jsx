@@ -1,16 +1,15 @@
 import React from 'react';
-import { sellsPlans, NO_PLANS_IN_APP } from '@/lib/nativeApp';
+import { sellsPlans, PLANS_ON_WEBSITE } from '@/lib/nativeApp';
 
-// The website only: Sellio's apps sell no plans and don't show this reminder (Layout).
 export default function TrialReminderModal({ hoursLeft, onUpgrade, onDismiss }) {
-  const plansSold = sellsPlans();
+  const plansSold = sellsPlans(); // Sellio's apps sell no plans
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backdropFilter: 'blur(4px)', background: 'rgba(0,0,0,0.35)' }}>
       <div className="bg-white flex flex-col items-center text-center p-8 w-full max-w-[400px]" style={{ borderRadius: 20 }}>
         <div className="text-5xl mb-4">⏰</div>
         <h2 className="text-xl font-bold text-slate-900 mb-2">Your trial ends soon</h2>
         <p className="text-sm text-slate-500 mb-6 leading-relaxed">
-          You have <span className="font-semibold text-slate-700">{hoursLeft} hour{hoursLeft !== 1 ? 's' : ''}</span> left.{plansSold ? ' Upgrade now to keep your data and continue without interruption.' : ` ${NO_PLANS_IN_APP}.`}
+          You have <span className="font-semibold text-slate-700">{hoursLeft} hour{hoursLeft !== 1 ? 's' : ''}</span> left.{plansSold ? ' Upgrade now to keep your data and continue without interruption.' : ` ${PLANS_ON_WEBSITE}.`}
         </p>
         {plansSold && (
           <button

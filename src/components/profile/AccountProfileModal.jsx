@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import { openBillingPortal, formatBillingAmount } from '@/lib/billing';
-import { sellsPlans, NO_PLANS_IN_APP, appPlatform } from '@/lib/nativeApp';
+import { sellsPlans, PLANS_ON_WEBSITE, appPlatform } from '@/lib/nativeApp';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { ORDER_ALERTS_EVENT } from '@/lib/useOrderAlerts';
 
@@ -446,17 +446,15 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
                 <p className="text-xs font-semibold text-red-800">
                   {invoiceAmount ? `${invoiceAmount} is outstanding` : 'An invoice is outstanding'}
                 </p>
-                {sellsPlans() && (
-                  <p className="text-[11px] text-red-600 mt-0.5">
-                    Update the payment method or pay the Stripe invoice to restore active status.
-                  </p>
-                )}
+                <p className="text-[11px] text-red-600 mt-0.5">
+                  Update the payment method or pay the Stripe invoice to restore active status.
+                </p>
               </div>
             )}
 
             {isOwner && !sellsPlans() ? (
               // Sellio's apps sell no plans and take no plan payments.
-              <p className="text-xs text-slate-500">{NO_PLANS_IN_APP}.</p>
+              <p className="text-xs text-slate-500">{PLANS_ON_WEBSITE}</p>
             ) : isOwner ? (
               <div className="space-y-2">
                 {activeSub?.status === 'past_due' && activeSub?.invoice_hosted_url && (

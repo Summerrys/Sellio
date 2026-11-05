@@ -1,5 +1,4 @@
 import React from 'react';
-import { sellsPlans } from '@/lib/nativeApp';
 
 const BRAND_GRADIENT = 'linear-gradient(135deg, #fb923c, #e0449a, #8b5cf6)';
 
@@ -114,22 +113,17 @@ export function getProductsSteps({ tier, listings = false }) {
       content: `Press and hold a ${item} to select several and delete them together.`,
     },
   ];
-  // The bigger plans are named on the website only: Sellio's apps sell no plans (sellsPlans).
   if (tier === 'starter') {
     steps.push({
       target: 'body',
       placement: 'center',
-      content: sellsPlans()
-        ? "Your Starter plan includes up to 10 products. Upgrade to Growth or Professional for more room."
-        : "Your Starter plan includes up to 10 products.",
+      content: "Your Starter plan includes up to 10 products. Upgrade to Growth or Professional for more room.",
     });
   } else if (tier === 'growth') {
     steps.push({
       target: 'body',
       placement: 'center',
-      content: sellsPlans()
-        ? "Your Growth plan includes up to 50 products. Need more? Professional gives you unlimited."
-        : "Your Growth plan includes up to 50 products.",
+      content: "Your Growth plan includes up to 50 products. Need more? Professional gives you unlimited.",
     });
   }
   steps.push({
