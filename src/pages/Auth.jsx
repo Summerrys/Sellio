@@ -11,7 +11,7 @@ import { completeAuthNavigation } from '@/lib/authNavigation';
 import { googleSignInAvailable, startGoogleSignIn } from '@/lib/googleSignIn';
 import { COMPLETE_KEY, clearMobileAuth, hasMobileGoogleCompletion, isNativeAndroid } from '@/lib/mobileOAuth';
 import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
-import { SELLIO_SITE, SELLIO_WEB_ORIGINS, decideOnboardingAccess } from '@/lib/accountFlow';
+import { SELLIO_SITE, SELLIO_WEB_ORIGINS, decideOnboardingAccess, isClosedLoginError } from '@/lib/accountFlow';
 import { homeFor, isStaffAccount } from '@/lib/staffAccess';
 import { callPhoneAuth } from '@/lib/phoneAuth';
 import { callClosedAccount, closedAccountMessage } from '@/lib/closedAccount';
@@ -700,8 +700,19 @@ export default function Auth() {
             if (error) throw error;
             window.history.replaceState(window.history.state, '', `${window.location.pathname}?type=recovery`);
           })
-          .catch(() => {
+          .catch(async (error) => {
             window.history.replaceState(window.history.state, '', window.location.pathname);
+            // A closed account (its deletion is pending): Supabase refused the link without
+            // using it up, so the same link opens the closed-account screen (Alvin, 5 Nov 2026).
+            if (isClosedLoginError(error)) {
+              const proof = { emailTokenHash: tokenHash, emailLinkType: 'recovery' };
+              const reply = await callClosedAccount({ action: 'status', ...proof });
+              if (reply?.ok && reply.closed) {
+                setForgotMode(false);
+                setClosedAccount({ proof, closed: reply.closed, email: typeof reply.email === 'string' ? reply.email : '' });
+                return;
+              }
+            }
             toast.error('This reset link has expired or was already used. Please request a new one.');
             setForgotStep(1);
           })

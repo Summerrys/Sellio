@@ -11,8 +11,10 @@ import { googleSignInAvailable, startGoogleSignIn } from '@/lib/googleSignIn';
 import { clearMobileAuth, isNativeAndroid } from '@/lib/mobileOAuth';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
+import ClosedAccount from '@/components/auth/ClosedAccount';
+import { callClosedAccount, closedAccountMessage } from '@/lib/closedAccount';
 import {
-  PHONE_COUNTRIES, JOIN_LINK_TYPES, accountErrorMessage, appBaseUrl, fullPhone, isEmail,
+  PHONE_COUNTRIES, JOIN_LINK_TYPES, accountErrorMessage, appBaseUrl, fullPhone, isClosedLoginError, isEmail,
   isStaffLoginEmail, nextStepFor, readEmailLink,
 } from '@/lib/accountFlow';
 
@@ -46,12 +48,17 @@ function Notice({ tone = 'amber', children }) {
 
 // Create a Sellio account: email link (or Google), then name, phone and password.
 // Afterwards the account page lets them open a free shop or choose a business plan.
+// A sign-in link to a closed account (its deletion is pending) opens the closed-account
+// screen instead: Keep my account, or Start again and sign up afresh (Alvin, 5 Nov 2026).
 export default function Join() {
   const { setAppUser } = useAppUser();
-  const [stage, setStage] = useState('loading'); // loading | start | sent | finish | staff
+  const [stage, setStage] = useState('loading'); // loading | start | sent | finish | staff | closed
   // Phone / browser Back from "check your email" returns to the email form, like
   // "Use a different email".
   useBackToClose(stage === 'sent', () => { setStage('start'); setNotice(''); });
+  const [closedAccount, setClosedAccount] = useState(null); // { proof, closed, email }
+  const leaveClosedAccount = () => { setClosedAccount(null); setStage('start'); };
+  useBackToClose(stage === 'closed', leaveClosedAccount);
   const [email, setEmail] = useState('');
   const [notice, setNotice] = useState('');
   const [sending, setSending] = useState(false);
@@ -79,9 +86,15 @@ export default function Join() {
         const link = readEmailLink(window.location.search, window.location.hash);
         if (link.error) {
           window.history.replaceState(window.history.state, '', window.location.pathname);
-          setNotice(link.errorCode === 'otp_expired' || /expired|invalid/i.test(link.errorDescription || '')
-            ? 'This sign-in link has expired or was already used. Send yourself a new one.'
-            : (link.errorDescription || 'That sign-in link didn’t work. Send yourself a new one.'));
+          if (link.errorCode === 'user_banned') {
+            // A link that went through Supabase first (older emails) to a closed account:
+            // Supabase only says the login is locked. A new link opens the closed screen.
+            setNotice('This account is closed. To keep it, or to delete it and start again, send yourself a new sign-in link and open it.');
+          } else {
+            setNotice(link.errorCode === 'otp_expired' || /expired|invalid/i.test(link.errorDescription || '')
+              ? 'This sign-in link has expired or was already used. Send yourself a new one.'
+              : (link.errorDescription || 'That sign-in link didn’t work. Send yourself a new one.'));
+          }
           setStage('start');
           return;
         }
@@ -89,6 +102,12 @@ export default function Join() {
           const type = JOIN_LINK_TYPES.includes(link.type) ? link.type : 'magiclink';
           const { error } = await supabase.auth.verifyOtp({ token_hash: link.tokenHash, type });
           window.history.replaceState(window.history.state, '', window.location.pathname);
+          // A closed account: Supabase refused the link without using it up, so the same link
+          // proves who it is to the closed-account screen.
+          if (isClosedLoginError(error)) {
+            await openClosedAccount({ emailTokenHash: link.tokenHash, emailLinkType: type });
+            return;
+          }
           if (error) {
             setNotice('This sign-in link has expired or was already used. Send yourself a new one.');
             setStage('start');
@@ -107,6 +126,31 @@ export default function Join() {
       }
     })();
   }, []);
+
+  const openClosedAccount = async (proof) => {
+    const reply = await callClosedAccount({ action: 'status', ...proof });
+    if (reply?.ok && reply.closed) {
+      const accountEmail = typeof reply.email === 'string' ? reply.email : '';
+      if (accountEmail) setEmail(accountEmail);
+      setClosedAccount({ proof, closed: reply.closed, email: accountEmail });
+      setStage('closed');
+      return;
+    }
+    // 'invalid' is phone sign-in's answer, from a closed-account server older than email links:
+    // for a link it means the link didn't work.
+    const refusal = reply?.code === 'invalid' ? { code: 'link_invalid' } : reply;
+    setNotice(reply ? closedAccountMessage(refusal) : 'Can’t reach Sellio. Check your connection and try again.');
+    setStage('start');
+  };
+
+  // Start again is done: the same email signs up afresh (a new account, then a new shop).
+  const signUpAgain = () => {
+    const address = closedAccount?.email || '';
+    setClosedAccount(null);
+    setNotice('');
+    setStage('start');
+    if (address) sendLink(null, address);
+  };
 
   const rememberProfile = async (supabase, userEmail) => {
     const { data: rows } = await supabase
@@ -154,9 +198,9 @@ export default function Join() {
     setStage('finish');
   };
 
-  const sendLink = async (e) => {
+  const sendLink = async (e, to) => {
     e?.preventDefault();
-    const address = email.trim().toLowerCase();
+    const address = (typeof to === 'string' ? to : email).trim().toLowerCase();
     if (!isEmail(address)) { toast.error('Please enter a valid email address.'); return; }
     if (isStaffLoginEmail(address)) { toast.error('That’s a staff login. Staff sign in with their phone number on the login page.'); return; }
     setSending(true);
@@ -273,7 +317,17 @@ export default function Join() {
             </>)}
           </div>
 
-          {notice && <Notice>{notice}</Notice>}
+          {stage === 'closed' && closedAccount && (
+            <ClosedAccount
+              proof={closedAccount.proof}
+              closed={closedAccount.closed}
+              email={closedAccount.email}
+              onBack={leaveClosedAccount}
+              onStartOver={signUpAgain}
+            />
+          )}
+
+          {notice && stage !== 'closed' && <Notice>{notice}</Notice>}
 
           {stage === 'start' && (
             <>
@@ -411,12 +465,12 @@ export default function Join() {
             </button>
           )}
 
-          <p className="mt-5 text-center text-[11px] leading-relaxed text-slate-400">
+          {stage !== 'closed' && <p className="mt-5 text-center text-[11px] leading-relaxed text-slate-400">
             By continuing, you agree to Sellio’s<br />
             <a href="/terms" className="font-semibold text-orange-500 hover:text-orange-600 underline underline-offset-2">Terms and Conditions</a>
             {' '}and{' '}
             <a href="/privacy" className="font-semibold text-orange-500 hover:text-orange-600 underline underline-offset-2">Privacy Policy</a>.
-          </p>
+          </p>}
         </div>
       </div>
     </div>

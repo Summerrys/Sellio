@@ -1,14 +1,15 @@
 // closed-account: the server behind the closed-account screen (Alvin, 5 Nov 2026). Someone
 // whose account is closed (its deletion is pending, so its login is locked) proves it's them
 // and chooses what happens:
-//   { action: 'status' }                           -> { ok: true, closed }
+//   { action: 'status' }                           -> { ok: true, closed, email? }
+//     (email: only for an emailed sign-in link, so the screen can sign them up again)
 //   { action: 'restore' }   Keep my account        -> { ok: true, kind: 'restore_asked', alreadyAsked }
 //     Sellio's admins get an alert to restore it (restoring needs Sellio).
 //   { action: 'delete', confirmation: 'DELETE' }   -> { ok: true, kind: 'deleted' }
 //     Start again: the account, any shop it owns and that shop's staff logins are deleted now,
 //     for good (account-removal.ts), so its phone number or email can sign up again.
-//   Refusals: { ok: false, code: 'invalid' | 'locked' | 'too_many' | 'not_closed' | 'staff' |
-//               'confirm' | 'failed' | 'unavailable', retry_after_minutes? }
+//   Refusals: { ok: false, code: 'invalid' | 'link_invalid' | 'locked' | 'too_many' |
+//               'not_closed' | 'staff' | 'confirm' | 'failed' | 'unavailable', retry_after_minutes? }
 // Proof, one of:
 //   { phone, password }        as phone sign-in, under its limits (5 wrong passwords per
 //                              number, 20 failed attempts per network); the password is
@@ -16,6 +17,10 @@
 //                              login before it checks the password
 //   { googleIdToken, nonce }   the ID token Google gave the app, and the raw nonce whose
 //                              SHA-256 Google wrote into it (google-id-token.ts)
+//   { emailTokenHash, emailLinkType }  an emailed sign-in link (Join) that Supabase Auth
+//                              refused because the login is locked: its token_hash and type
+//                              ('magiclink'), checked in the database (closed_account_by_email_link)
+//                              under the network limit; a wrong one is 'link_invalid'
 // A staff login closed with its shop only sees that ('staff'): its shop's owner decides.
 // verify_jwt is off: a closed account has no session. The logic is in handler.ts.
 import { createClient } from "npm:@supabase/supabase-js@2.112.3";

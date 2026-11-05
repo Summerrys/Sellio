@@ -23,6 +23,7 @@ globalThis.requestAnimationFrame = win.requestAnimationFrame.bind(win);
 globalThis.cancelAnimationFrame = win.cancelAnimationFrame.bind(win);
 const React = await import('react');
 const { createRoot } = await import('react-dom/client');
+const { MemoryRouter } = await import('react-router-dom');
 const act = React.act;
 
 const tmp = await mkdtemp(path.join(os.tmpdir(), 'sellio-phone-signin-'));
@@ -95,7 +96,7 @@ const container = document.createElement('div'); document.body.appendChild(conta
 const root = createRoot(container);
 try {
   reset();
-  await act(async () => { root.render(React.createElement(Auth)); });
+  await act(async () => { root.render(React.createElement(MemoryRouter, null, React.createElement(Auth))); });
   await wait(20);
   const form = container.querySelector('form.auth-fields');
   assert.ok(form, 'Login form is shown');
@@ -248,6 +249,7 @@ try {
   assert.deepEqual(calls.find(c => c[0] === 'invoke'), ['invoke', 'closed-account', { phone: '+6591234567', password: 'right-password', action: 'delete', confirmation: 'DELETE' }]);
   assert.match(closedScreen().textContent, /Your account has been deleted/);
   assert.match(closedScreen().textContent, /Kopi Corner and its staff logins have been deleted too\./);
+  assert.equal(closedScreen().querySelector('a[href="/Join"]')?.textContent, 'Sign up again', 'Sign up again goes to the sign-up page');
   await click(buttonText(container, 'Done'));
   assert.ok(signInForm());
   passed('Start again: DELETE must be typed, a failure says so and stays, then the account is deleted for good');
@@ -274,16 +276,17 @@ try {
   const secondRoot = createRoot(second);
   win.history.replaceState(null, '', '/Auth#error=access_denied&error_code=user_banned&error_description=User+is+banned&sb=');
   reset();
-  await act(async () => { secondRoot.render(React.createElement(Auth)); });
+  await act(async () => { secondRoot.render(React.createElement(MemoryRouter, null, React.createElement(Auth))); });
   await wait(30);
   const webClosed = second.querySelector('[data-testid="closed-account"]');
   assert.ok(webClosed, 'The website shows the closed account');
-  assert.match(webClosed.textContent, /sign in with your phone number and password, or with Google in the Sellio app/);
+  assert.match(webClosed.textContent, /open a sign-in link we email to this Google address\. You can also sign in with your phone number and password\./);
+  assert.equal(webClosed.querySelector('a[href="/Join"]')?.textContent, 'Email me a sign-in link', 'The way to an email link (which opens the choices)');
   assert.ok(webClosed.querySelector('a[href="mailto:sellio@apptelier.sg"]'));
   assert.deepEqual(globalThis.toastErrors, []);
   assert.equal(win.location.hash, '', 'The error is taken out of the address');
   await act(async () => secondRoot.unmount());
-  passed('Google on the website: a closed account is told how to keep it or delete it');
+  passed('Google on the website: a closed account is sent for an email link, which opens the choices');
 
   console.log(passes + ' phone sign-in checks passed');
 } finally {

@@ -43,11 +43,13 @@ function Row({ to, href, icon: Icon, label, detail, onClick, pulse = false }) {
 
 export default function ExploreMe() {
   const { appUser, clearAppUser } = useAppUser() || {};
-  const { user, tenant, hasPermission, isOwner, subscription } = useTenant();
+  const { user, tenant, hasPermission, isOwner, subscription, noStore } = useTenant();
   const [signingOut, setSigningOut] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const hasShop = !!appUser?.tenant_id;
+  // The saved sign-in can still name a shop this login no longer has (closed or removed, or
+  // its access ended); the memberships just read say so.
+  const hasShop = !!appUser?.tenant_id && !noStore;
   // The shop's ratings (its staff who see orders): "4.8 from 12 buyers".
   const canSeeRatings = hasShop && !!tenant?.id && hasPermission('orders.view');
   const [ratingLine, setRatingLine] = useState(null);

@@ -26,13 +26,16 @@ export function closedForScreen(closed: Record<string, unknown>) {
   };
 }
 
-type Proof = { ok: true; closed: Record<string, unknown> } | { ok: false; reply: Reply };
+// `email`: only for an emailed sign-in link, whose holder has shown they have the email (the
+// screen fills it in to sign up again). Phone sign-in never shows the account's email.
+type Proof = { ok: true; closed: Record<string, unknown>; email?: string } | { ok: false; reply: Reply };
 
 async function prove(deps: Deps, body: Record<string, unknown>, ip: string | null): Promise<Proof> {
   const { admin } = deps;
   const google = typeof body.googleIdToken === "string" && body.googleIdToken.length > 0;
+  const emailLink = !google && typeof body.emailTokenHash === "string" && body.emailTokenHash.length > 0;
   const rawPhone = String(body.phone ?? "").trim();
-  const phone = !google && PHONE_RE.test(rawPhone) ? rawPhone : null;
+  const phone = !google && !emailLink && PHONE_RE.test(rawPhone) ? rawPhone : null;
 
   // Phone sign-in's limits: 5 wrong passwords per number, 20 failed attempts per network.
   const { data: gate, error: gateError } = await admin.rpc("phone_auth_begin", { p_action: "sign_in", p_phone: phone, p_ip: ip });
@@ -56,6 +59,24 @@ async function prove(deps: Deps, body: Record<string, unknown>, ip: string | nul
     await finish("ok");
     if (!found?.locked || !found.closed) return { ok: false, reply: reply({ ok: false, code: "not_closed" }) };
     return { ok: true, closed: found.closed };
+  }
+
+  // An emailed sign-in link (Join): its token, which Supabase Auth didn't use up because the
+  // login is locked. One that matches nothing (expired, used, made up) counts as a failed
+  // attempt for the network, under the same limit as Google and phone sign-in.
+  if (emailLink) {
+    const { data: found, error } = await admin.rpc("closed_account_by_email_link", {
+      p_token_hash: String(body.emailTokenHash).slice(0, 200),
+      p_type: String(body.emailLinkType ?? "magiclink").slice(0, 20),
+    });
+    if (error) throw new Error("closed_account_by_email_link failed: " + error.message);
+    if (!found?.found) {
+      await finish("wrong");
+      return { ok: false, reply: reply({ ok: false, code: "link_invalid" }) };
+    }
+    await finish("ok");
+    if (!found.locked || !found.closed) return { ok: false, reply: reply({ ok: false, code: "not_closed" }) };
+    return { ok: true, closed: found.closed, ...(typeof found.email === "string" && found.email ? { email: found.email } : {}) };
   }
 
   const password = typeof body.password === "string" ? body.password : "";
@@ -83,7 +104,7 @@ export async function handleClosedAccount(deps: Deps, body: Record<string, unkno
   if (!proof.ok) return proof.reply;
   const screen = closedForScreen(proof.closed);
 
-  if (action === "status") return reply({ ok: true, closed: screen });
+  if (action === "status") return reply({ ok: true, closed: screen, ...(proof.email ? { email: proof.email } : {}) });
   // A staff login closed with its shop: its shop's owner decides.
   if (screen.kind === "staff") return reply({ ok: false, code: "staff", closed: screen });
 

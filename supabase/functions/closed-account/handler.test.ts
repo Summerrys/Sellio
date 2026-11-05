@@ -13,6 +13,7 @@ function world(options: {
   gate?: any;
   check?: any;
   google?: any;
+  link?: any;
   verify?: any;
   restore?: any;
   removal?: any;
@@ -26,6 +27,7 @@ function world(options: {
         phone_auth_finish: null,
         closed_account_check: options.check ?? { passwordOk: true, locked: true, closed: OWNER_CLOSED },
         closed_account_by_google: options.google ?? { found: true, locked: true, closed: OWNER_CLOSED },
+        closed_account_by_email_link: options.link ?? { found: true, locked: true, email: "owner@kopi.sg", userId: "u-1", closed: OWNER_CLOSED },
         account_restore_request: options.restore ?? { ok: true, alreadyAsked: false },
         alert_sellio_admins: 3,
       };
@@ -123,6 +125,57 @@ Deno.test("Google: the token and nonce are checked, then the login with that Goo
   assert(w.calls.includes('phone_auth_begin:{"p_action":"sign_in","p_phone":null,"p_ip":"1.2.3.4"}'), "Network limit only");
   const bad = world({ verify: null });
   assertEquals((await handleClosedAccount(bad.deps, { action: "status", googleIdToken: "tok", nonce: "raw" }, null)).body, { ok: false, code: "invalid" });
+});
+
+const HASH = "0a".repeat(28);
+const link = { emailTokenHash: HASH, emailLinkType: "magiclink" };
+
+Deno.test("an emailed link: its token is checked under the network limit; the screen gets the email", async () => {
+  const w = world();
+  const result = await handleClosedAccount(w.deps, { action: "status", ...link }, "1.2.3.4");
+  assertEquals(result, {
+    status: 200,
+    body: {
+      ok: true,
+      closed: { kind: "owner", deleteAfter: "2027-05-05T09:00:00Z", shops: ["Kopi Corner"], restoreAsked: false },
+      email: "owner@kopi.sg",
+    },
+  });
+  assert(w.calls.includes('phone_auth_begin:{"p_action":"sign_in","p_phone":null,"p_ip":"1.2.3.4"}'), "Network limit only");
+  assert(w.calls.includes(`closed_account_by_email_link:{"p_token_hash":"${HASH}","p_type":"magiclink"}`));
+  assert(w.calls.includes('phone_auth_finish:{"p_phone":null,"p_ip":"1.2.3.4","p_outcome":"ok"}'));
+  assert(!w.calls.some((c) => c.startsWith("closed_account_check") || c.startsWith("verify:")));
+});
+
+Deno.test("an emailed link that matches nothing is a failed attempt, and says so", async () => {
+  const w = world({ link: { found: false } });
+  const result = await handleClosedAccount(w.deps, { action: "delete", confirmation: "DELETE", ...link }, "1.2.3.4");
+  assertEquals(result.body, { ok: false, code: "link_invalid" });
+  assert(w.calls.includes('phone_auth_finish:{"p_phone":null,"p_ip":"1.2.3.4","p_outcome":"wrong"}'));
+  assertEquals(w.removed, []);
+});
+
+Deno.test("an emailed link: the network limit, an open account, and the choices", async () => {
+  const limited = world({ gate: { allowed: false, reason: "too_many", retry_after: 600 } });
+  assertEquals((await handleClosedAccount(limited.deps, { action: "status", ...link }, "1.2.3.4")).body,
+    { ok: false, code: "too_many", retry_after_minutes: 10 });
+  assert(!limited.calls.some((c) => c.startsWith("closed_account_by_email_link")));
+
+  const open = world({ link: { found: true, locked: false } });
+  assertEquals((await handleClosedAccount(open.deps, { action: "status", ...link }, null)).body, { ok: false, code: "not_closed" });
+
+  const w = world();
+  assertEquals((await handleClosedAccount(w.deps, { action: "restore", ...link }, null)).body, { ok: true, kind: "restore_asked", alreadyAsked: false });
+  assertEquals((await handleClosedAccount(w.deps, { action: "delete", ...link }, null)).body, { ok: false, code: "confirm" });
+  assertEquals((await handleClosedAccount(w.deps, { action: "delete", confirmation: "DELETE", ...link }, null)).body, { ok: true, kind: "deleted" });
+  assertEquals(w.removed, [OWNER_CLOSED.requestId]);
+});
+
+Deno.test("a phone number sent with a link is ignored: the link is the proof", async () => {
+  const w = world();
+  await handleClosedAccount(w.deps, { action: "status", ...link, ...phone }, null);
+  assert(w.calls.includes('phone_auth_begin:{"p_action":"sign_in","p_phone":null,"p_ip":null}'));
+  assert(!w.calls.some((c) => c.startsWith("closed_account_check")));
 });
 
 Deno.test("an unknown action is refused before anything else", async () => {

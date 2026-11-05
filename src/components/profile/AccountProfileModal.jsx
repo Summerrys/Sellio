@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { getSupabase } from '@/lib/supabaseClient';
 import AccountDeletionRequest from './AccountDeletionRequest';
 import { useTenant } from '@/components/tenant/TenantContext';
@@ -88,10 +89,13 @@ function SectionCard({ children, className = '' }) {
 }
 
 export default function AccountProfileModal({ open, onClose, user, subscription: propSubscription, onOpenPricing, clearAppUser }) {
-  const { tenantId, isOwner, tenant } = useTenant();
+  const { tenantId, isOwner, tenant, noStore, isLoading: shopLoading } = useTenant();
   const { subscription, tier } = useSubscription();
   const isPersonalShop = tenant?.seller_type === 'individual';
   const activeSub = subscription || propSubscription;
+  // No shop on this account (none yet, or it was closed or removed, or this login's access to
+  // it ended): no plan to show. Before 5 Nov 2026 this read "Starter Plan · Unknown".
+  const shopless = Boolean(noStore) || (!tenantId && !shopLoading);
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -152,13 +156,16 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
 
   const initial = fullName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U';
 
-  // Plan name
+  // Plan name. A shop's plan comes from its subscription row; until that has loaded (or if a
+  // shop has none) no plan name is guessed.
   const tierNames = { starter: 'Starter Plan', growth: 'Growth Plan', pro: 'Professional Plan' };
   const tierLabel = isPersonalShop
     ? 'Personal Seller (free)'
-    : (tierNames[tier] ?? (tier ? tier.charAt(0).toUpperCase() + tier.slice(1) + ' Plan' : 'Starter Plan'));
+    : !activeSub
+      ? (subscription === undefined && !shopless ? 'Loading plan…' : 'No plan')
+      : (tierNames[tier] ?? (tier ? tier.charAt(0).toUpperCase() + tier.slice(1) + ' Plan' : 'Starter Plan'));
 
-  // Status badge
+  // Status badge (none without a status)
   const statusConfig = (() => {
     if (isPersonalShop) return { label: 'Free', color: 'bg-green-100 text-green-700' };
     switch (activeSub?.status) {
@@ -167,7 +174,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
       case 'past_due': return { label: 'Past Due', color: 'bg-red-100 text-red-700' };
       case 'suspended':return { label: 'Suspended',color: 'bg-red-100 text-red-700' };
       case 'cancelled':return { label: 'Cancelled',color: 'bg-slate-100 text-slate-500' };
-      default:         return { label: activeSub?.status || 'Unknown', color: 'bg-slate-100 text-slate-500' };
+      default:         return activeSub?.status ? { label: activeSub.status, color: 'bg-slate-100 text-slate-500' } : null;
     }
   })();
 
@@ -190,8 +197,8 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
     activeSub?.invoice_currency || activeSub?.currency,
   );
 
-  // Legacy planBadge for header badge
-  const planBadge = `${tierLabel} · ${statusConfig.label}`;
+  // Legacy planBadge for header badge (none for an account without a shop)
+  const planBadge = shopless ? null : (statusConfig ? `${tierLabel} · ${statusConfig.label}` : tierLabel);
 
   const handleSaveProfile = async () => {
     setIsSavingProfile(true);
@@ -355,12 +362,14 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
             </div>
             <p className="text-lg font-bold text-slate-900">{fullName || user?.full_name || 'User'}</p>
             <p className="text-sm text-slate-400 mt-0.5">{user?.email}</p>
-            <span
-              className="mt-2 text-xs font-semibold px-3 py-1 rounded-full text-white"
-              style={{ background: 'var(--color-primary-gradient, linear-gradient(135deg, #f97316, #ec4899, #8b5cf6))' }}
-            >
-              {planBadge}
-            </span>
+            {planBadge && (
+              <span
+                className="mt-2 text-xs font-semibold px-3 py-1 rounded-full text-white"
+                style={{ background: 'var(--color-primary-gradient, linear-gradient(135deg, #f97316, #ec4899, #8b5cf6))' }}
+              >
+                {planBadge}
+              </span>
+            )}
           </div>
 
           {/* My Profile */}
@@ -428,7 +437,26 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
             </>
           )}
 
-          {/* Subscription */}
+          {/* Subscription, or the way to a shop for an account without one */}
+          {shopless ? (
+            <>
+              <SectionHeader title="Shop" />
+              <SectionCard>
+                <div>
+                  <p className="text-sm font-semibold text-slate-800" data-testid="profile-no-shop">No shop on this account</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Open a shop to sell on Sellio.</p>
+                </div>
+                <Link
+                  to="/Account"
+                  onClick={onClose}
+                  className="w-full h-11 rounded-lg text-white text-sm font-semibold flex items-center justify-center"
+                  style={{ background: 'var(--color-primary-gradient, linear-gradient(135deg, #f97316, #ec4899, #8b5cf6))' }}
+                >
+                  Open a shop
+                </Link>
+              </SectionCard>
+            </>
+          ) : (<>
           <SectionHeader title="Subscription" />
           <SectionCard>
             <div className="flex items-start justify-between gap-3">
@@ -437,9 +465,11 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
                 {billingCycle && <p className="text-xs text-slate-400 mt-0.5">{billingCycle}</p>}
                 {dateLabel && <p className="text-xs text-slate-400 mt-0.5">{dateLabel}</p>}
               </div>
-              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${statusConfig.color}`}>
-                {statusConfig.label}
-              </span>
+              {statusConfig && (
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${statusConfig.color}`}>
+                  {statusConfig.label}
+                </span>
+              )}
             </div>
             {activeSub?.status === 'past_due' && (
               <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2.5">
@@ -493,6 +523,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
               <p className="text-xs text-amber-700">Please ask the store owner to resolve billing.</p>
             ) : null}
           </SectionCard>
+          </>)}
 
           {/* Preferences */}
           <SectionHeader title="Preferences" />

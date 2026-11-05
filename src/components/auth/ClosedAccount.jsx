@@ -1,19 +1,24 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { AlertCircle, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { callClosedAccount, closedAccountMessage } from '@/lib/closedAccount';
 
 // What someone sees when they sign in to a closed account (Alvin, 5 Nov 2026): their account
-// is closed (they asked to delete it) and when it will be deleted for good, and two choices:
+// is closed (they asked to delete it) and when it will be deleted for good, their shop's page
+// shows "Store unavailable", and two choices:
 //   Keep my account: Sellio's admins are asked to restore it (restoring needs Sellio).
 //   Start again: it is deleted now, for good, with any shop it owns and that shop's staff
 //   logins, so the phone number or email can sign up again. DELETE must be typed first.
+//   Afterwards "Sign up again" starts a new account (onStartOver, or the sign-up page).
 // A staff login closed because its shop's owner closed their account only sees that.
-// `proof` is how they signed in: { phone, password } or, in the Android app, Google's
-// { googleIdToken, nonce }; the closed-account server checks it again for each choice.
-// `web` (no proof): Google on the website, where Sellio can't check who it is; they're told
-// how to choose instead.
+// `proof` is how they signed in: { phone, password }, Google's { googleIdToken, nonce } in
+// the Android app, or an emailed link's { emailTokenHash, emailLinkType } (Join); the
+// closed-account server checks it again for each choice. `email`: the account's email, when
+// the proof was an emailed link.
+// `web` (no proof): Google on the website, where Sellio can't check who it is; they're sent
+// to get a sign-in link by email instead, which opens this screen with the choices.
 
 const SUPPORT_EMAIL = 'sellio@apptelier.sg';
 const PRIMARY = { background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' };
@@ -37,7 +42,9 @@ function BackButton({ onBack, children = 'Back to sign in' }) {
   );
 }
 
-export default function ClosedAccount({ proof = null, closed = null, web = false, onBack }) {
+const SIGN_UP_LINK = 'w-full inline-flex items-center justify-center py-3 rounded-xl text-white font-semibold text-sm';
+
+export default function ClosedAccount({ proof = null, closed = null, web = false, email = '', onBack, onStartOver }) {
   const [step, setStep] = useState('closed'); // closed | confirm | restore_asked | deleted
   const [busy, setBusy] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -59,7 +66,7 @@ export default function ClosedAccount({ proof = null, closed = null, web = false
         setStep('deleted');
       } else {
         toast.error(closedAccountMessage(reply));
-        if (['invalid', 'not_closed'].includes(reply?.code)) onBack();
+        if (['invalid', 'link_invalid', 'not_closed'].includes(reply?.code)) onBack();
       }
     } finally {
       setBusy('');
@@ -77,8 +84,12 @@ export default function ClosedAccount({ proof = null, closed = null, web = false
           </div>
         </div>
         <p className="text-sm text-slate-600">
-          To keep it, or to delete it now, sign in with your phone number and password, or with Google in the Sellio app.
-          Or email <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-slate-800 underline">{SUPPORT_EMAIL}</a> from this Google address.
+          To keep it, or to delete it now and start again, open a sign-in link we email to this Google address.
+          You can also sign in with your phone number and password.
+        </p>
+        <Link to="/Join" className={SIGN_UP_LINK} style={PRIMARY}>Email me a sign-in link</Link>
+        <p className="text-xs text-slate-500">
+          Questions: <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-slate-700 underline">{SUPPORT_EMAIL}</a>
         </p>
         <BackButton onBack={onBack} />
       </div>
@@ -112,10 +123,17 @@ export default function ClosedAccount({ proof = null, closed = null, web = false
             <p className="text-base font-semibold text-slate-800">Your account has been deleted</p>
             <p className="text-sm text-slate-600 mt-1">
               {shops.length > 0 ? `${listShops(shops)} and its staff logins have been deleted too. ` : ''}
-              You can sign up again with the same phone number or email whenever you like.
+              {email
+                ? <>You can sign up again with <span className="font-medium text-slate-800 break-all">{email}</span> now, and open a new shop.</>
+                : 'You can sign up again with the same phone number or email now, and open a new shop.'}
             </p>
           </div>
         </div>
+        {onStartOver ? (
+          <button type="button" onClick={onStartOver} className={SIGN_UP_LINK} style={PRIMARY}>Sign up again</button>
+        ) : (
+          <Link to="/Join" className={SIGN_UP_LINK} style={PRIMARY}>Sign up again</Link>
+        )}
         <BackButton onBack={onBack}>Done</BackButton>
       </div>
     );
@@ -185,7 +203,7 @@ export default function ClosedAccount({ proof = null, closed = null, web = false
           </p>
           {shops.length > 0 && (
             <p className="text-sm text-slate-600 mt-1">
-              {listShops(shops)} is closed too: it takes no orders and its staff can&apos;t sign in.
+              {listShops(shops)} is closed too: its page shows &ldquo;Store unavailable&rdquo;, it takes no orders and its staff can&apos;t sign in.
             </p>
           )}
         </div>

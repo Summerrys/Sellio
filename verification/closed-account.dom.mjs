@@ -1,6 +1,8 @@
-// A closed account (its deletion is pending) signing in with Google in Sellio's Android app
-// (Alvin, 5 Nov 2026): Supabase refuses the locked login, so the app hands Google's ID token
-// and the raw nonce to the closed-account screen, whose server checks them itself.
+// A closed account (its deletion is pending) signing in again (Alvin, 5 Nov 2026). Supabase
+// refuses the locked login, so the page hands its proof to the closed-account screen, whose
+// server checks it itself: Google's ID token and nonce in Sellio's Android app, or the emailed
+// link's token (a sign-in link on Join, a reset-password link on Auth). Start again on Join
+// then emails a new sign-up link to the same address.
 // Run: node verification/closed-account.dom.mjs   (jsdom installed in /tmp/sellio-verification)
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -25,6 +27,7 @@ globalThis.requestAnimationFrame = win.requestAnimationFrame.bind(win);
 globalThis.cancelAnimationFrame = win.cancelAnimationFrame.bind(win);
 const React = await import('react');
 const { createRoot } = await import('react-dom/client');
+const { MemoryRouter } = await import('react-router-dom');
 const act = React.act;
 
 const tmp = await mkdtemp(path.join(os.tmpdir(), 'sellio-closed-account-'));
@@ -51,6 +54,19 @@ const passed = name => { passes++; console.log('PASS ' + name); };
 const wait = ms => act(async () => new Promise(resolve => setTimeout(resolve, ms)));
 const click = element => act(async () => { assert.ok(element, 'Control exists'); element.dispatchEvent(new win.MouseEvent('click', { bubbles: true })); });
 const buttonText = (root, text) => [...root.querySelectorAll('button')].find(b => b.textContent.trim() === text);
+const setValue = (input, value) => act(async () => {
+  assert.ok(input, 'Input exists');
+  Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value').set.call(input, value);
+  input.dispatchEvent(new win.Event('input', { bubbles: true }));
+});
+// A page as the app shows it: inside the router (the closed screen links to the sign-up page).
+async function mount(Page) {
+  const host = document.createElement('div'); document.body.appendChild(host);
+  const pageRoot = createRoot(host);
+  await act(async () => { pageRoot.render(React.createElement(MemoryRouter, null, React.createElement(Page))); });
+  await wait(40);
+  return { host, unmount: () => act(async () => pageRoot.unmount()) };
+}
 
 try {
   // 1. nativeGoogle.js: a locked login hands back Google's ID token and the raw nonce.
@@ -128,6 +144,149 @@ try {
   passed('Google in the app: an account that is no longer closed is told to sign in again');
 
   await act(async () => root.unmount());
+
+  // 3. Join: an emailed sign-in link to a closed account (Alvin, 5 Nov 2026). Supabase refuses
+  // it without using it up, so the same link opens the closed-account screen.
+  const HASH = 'ab'.repeat(28);
+  const CLOSED_OWNER = { kind: 'owner', deleteAfter: '2027-05-05T09:00:00Z', shops: ['Kopi Corner'], restoreAsked: false };
+  let authCalls = [];
+  let verifyReply = { data: {}, error: { code: 'user_banned', message: 'User is banned', status: 403 } };
+  let accountStatus = null;
+  globalThis.supabaseMock = {
+    auth: {
+      verifyOtp: async (args) => { authCalls.push(['verifyOtp', args]); return verifyReply; },
+      getSession: async () => ({ data: { session: accountStatus ? { user: { id: 'u-1', email: accountStatus.email } } : null } }),
+      signInWithOtp: async (args) => { authCalls.push(['signInWithOtp', args]); return { data: {}, error: null }; },
+    },
+    rpc: async (name) => { authCalls.push(['rpc', name]); return { data: accountStatus, error: null }; },
+  };
+  globalThis.navigatedTo = null;
+  const { default: Join } = await bundle('src/pages/Join.jsx', 'join', {
+    clients: "export const getSupabase = async () => globalThis.supabaseMock; export const getMobileOAuthClient = () => null; export const SUPABASE_URL = 'https://project.example.invalid';",
+    profile: 'export const useAppUser = () => ({ setAppUser() {} });',
+    navigation: 'export const completeAuthNavigation = (to) => { globalThis.navigatedTo = to; };',
+    toast: 'export const toast = { error: value => { globalThis.toastErrors.push(value); }, success() {}, custom() {} };',
+    google: "export const GOOGLE_WEB_CLIENT_ID = 'client'; export const googleSignInAvailable = () => false; export const startGoogleSignIn = async () => ({});",
+  });
+
+  dom.reconfigure({ url: `https://sellio.sg/Join?token_hash=${HASH}&type=magiclink` });
+  calls = [];
+  globalThis.toastErrors = [];
+  reply = (body) => (body.action === 'status' ? { ok: true, closed: CLOSED_OWNER, email: 'owner@kopi.sg' }
+    : body.action === 'delete' ? { ok: true, kind: 'deleted' } : { ok: false });
+  let page = await mount(Join);
+  assert.deepEqual(authCalls, [['verifyOtp', { token_hash: HASH, type: 'magiclink' }]]);
+  assert.deepEqual(calls, [['closed-account', { action: 'status', emailTokenHash: HASH, emailLinkType: 'magiclink' }]]);
+  assert.equal(window.location.search, '', 'The link is taken out of the address bar');
+  let screen2 = page.host.querySelector('[data-testid="closed-account"]');
+  assert.ok(screen2, 'The closed-account screen is shown');
+  assert.match(screen2.textContent, /This account is closed/);
+  assert.match(screen2.textContent, /It will be deleted for good on 5 May 2027\./);
+  assert.match(screen2.textContent, /Kopi Corner is closed too: its page shows “Store unavailable”, it takes no orders/);
+  assert.ok(buttonText(page.host, 'Keep my account') && buttonText(page.host, 'Start again'));
+  assert.doesNotMatch(page.host.textContent, /By continuing, you agree/);
+  passed('Join: a sign-in link to a closed account opens the closed screen (Store unavailable, Keep my account, Start again)');
+
+  await click(buttonText(page.host, 'Start again'));
+  assert.ok(buttonText(page.host, 'Delete for good').disabled, 'Delete for good waits for DELETE');
+  await setValue(page.host.querySelector('#closed-account-confirmation'), 'DELETE');
+  calls = [];
+  await click(buttonText(page.host, 'Delete for good'));
+  await wait(20);
+  assert.deepEqual(calls, [['closed-account', { emailTokenHash: HASH, emailLinkType: 'magiclink', action: 'delete', confirmation: 'DELETE' }]]);
+  assert.match(page.host.textContent, /Your account has been deleted/);
+  assert.match(page.host.textContent, /Kopi Corner and its staff logins have been deleted too\./);
+  assert.match(page.host.textContent, /You can sign up again with owner@kopi\.sg now, and open a new shop\./);
+  authCalls = [];
+  await click(buttonText(page.host, 'Sign up again'));
+  await wait(20);
+  assert.deepEqual(authCalls, [['signInWithOtp', { email: 'owner@kopi.sg', options: { emailRedirectTo: 'https://sellio.sg/Join', shouldCreateUser: true } }]]);
+  assert.match(page.host.textContent, /Check your email/);
+  assert.match(page.host.textContent, /We sent a sign-in link to owner@kopi\.sg/);
+  assert.deepEqual(globalThis.toastErrors, []);
+  await page.unmount();
+  passed('Join: Start again deletes it with the same link, then Sign up again emails a new sign-up link to the same address');
+
+  // An expired or used link to a closed account, and older links that went through Supabase.
+  dom.reconfigure({ url: `https://sellio.sg/Join?token_hash=${HASH}&type=magiclink` });
+  reply = () => ({ ok: false, code: 'link_invalid' });
+  authCalls = [];
+  page = await mount(Join);
+  assert.equal(page.host.querySelector('[data-testid="closed-account"]'), null);
+  assert.match(page.host.textContent, /This sign-in link has expired or was already used\. Send yourself a new one\./);
+  assert.ok(page.host.querySelector('#join-email'), 'The email form is shown');
+  await page.unmount();
+  // A closed-account server from before email links answers as for phone sign-in ('invalid').
+  dom.reconfigure({ url: `https://sellio.sg/Join?token_hash=${HASH}&type=magiclink` });
+  reply = () => ({ ok: false, code: 'invalid' });
+  page = await mount(Join);
+  assert.match(page.host.textContent, /This sign-in link has expired or was already used\. Send yourself a new one\./);
+  assert.doesNotMatch(page.host.textContent, /Phone number or password/);
+  await page.unmount();
+
+  dom.reconfigure({ url: 'https://sellio.sg/Join#error=access_denied&error_code=user_banned&error_description=User+is+banned' });
+  calls = [];
+  authCalls = [];
+  page = await mount(Join);
+  assert.deepEqual(calls, [], 'No proof to send');
+  assert.deepEqual(authCalls, []);
+  assert.match(page.host.textContent, /This account is closed\. To keep it, or to delete it and start again, send yourself a new sign-in link and open it\./);
+  await page.unmount();
+  passed('Join: an expired link says so; an older link to a closed account asks for a new link');
+
+  // A link to an open account still signs in, as before (no closed-account call).
+  dom.reconfigure({ url: `https://sellio.sg/Join?token_hash=${HASH}&type=magiclink` });
+  verifyReply = { data: {}, error: null };
+  accountStatus = { email: 'new@kopi.sg', placeholder_email: false, email_proven: true, setup_done: false, profile: null, store: null };
+  calls = [];
+  authCalls = [];
+  page = await mount(Join);
+  assert.deepEqual(calls, []);
+  assert.deepEqual(authCalls.map(c => c[0]), ['verifyOtp', 'rpc']);
+  assert.match(page.host.textContent, /Set up your account/);
+  assert.match(page.host.textContent, /new@kopi\.sg/);
+  await page.unmount();
+  accountStatus = { email: 'shop@kopi.sg', placeholder_email: false, email_proven: true, setup_done: true, profile: null, store: null };
+  page = await mount(Join);
+  assert.equal(globalThis.navigatedTo, '/Account', 'A finished account without a shop goes to Account (open a shop)');
+  await page.unmount();
+  passed('Join: a link to an open account signs in as before (new: set up; set up without a shop: Account)');
+
+  // 4. A reset-password link (forgot password) to a closed account opens the same screen.
+  const { default: AuthAgain } = await bundle('src/pages/Auth.jsx', 'auth-recovery', {
+    clients: "export const getSupabase = async () => globalThis.supabaseMock; export const getMobileOAuthClient = () => null; export const SUPABASE_URL = 'https://project.example.invalid';",
+    profile: 'export const useAppUser = () => ({ setAppUser() {} });',
+    navigation: 'export const completeAuthNavigation = () => {};',
+    deletion: 'export const accountDeletionDestination = value => value;',
+    toast: 'export const toast = { error: value => { globalThis.toastErrors.push(value); }, success() {}, custom() {} };',
+    google: "export const GOOGLE_WEB_CLIENT_ID = 'client'; export const googleSignInAvailable = () => true; export const startGoogleSignIn = async () => ({});",
+  });
+  dom.reconfigure({ url: `https://sellio.sg/Auth?type=recovery&token_hash=${HASH}` });
+  verifyReply = { data: {}, error: { code: 'user_banned', message: 'User is banned', status: 403 } };
+  accountStatus = null;
+  calls = [];
+  authCalls = [];
+  globalThis.toastErrors = [];
+  reply = () => ({ ok: true, closed: { kind: 'member', deleteAfter: '2026-12-05T09:00:00Z', shops: [], restoreAsked: false }, email: 'me@kopi.sg' });
+  page = await mount(AuthAgain);
+  assert.deepEqual(authCalls, [['verifyOtp', { token_hash: HASH, type: 'recovery' }]]);
+  assert.deepEqual(calls, [['closed-account', { action: 'status', emailTokenHash: HASH, emailLinkType: 'recovery' }]]);
+  screen2 = page.host.querySelector('[data-testid="closed-account"]');
+  assert.ok(screen2, 'The closed-account screen is shown');
+  assert.match(screen2.textContent, /It will be deleted for good on 5 December 2026\./);
+  assert.deepEqual(globalThis.toastErrors, []);
+  await page.unmount();
+
+  dom.reconfigure({ url: `https://sellio.sg/Auth?type=recovery&token_hash=${HASH}` });
+  verifyReply = { data: {}, error: { code: 'otp_expired', message: 'Email link is invalid or has expired', status: 403 } };
+  calls = [];
+  page = await mount(AuthAgain);
+  assert.deepEqual(calls, [], 'Only a locked login asks the closed-account server');
+  assert.equal(page.host.querySelector('[data-testid="closed-account"]'), null);
+  assert.deepEqual(globalThis.toastErrors, ['This reset link has expired or was already used. Please request a new one.']);
+  await page.unmount();
+  passed('A reset-password link to a closed account opens the closed screen; an expired one says so, as before');
+
   console.log(passes + ' closed-account checks passed');
 } finally {
   for (const local of locals) await rm(local, { force: true });

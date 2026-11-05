@@ -7,8 +7,8 @@
 --   for good, so the phone number or email can sign up again.
 -- The closed-account edge function proves who it is (the password is checked here, since
 -- Supabase Auth refuses a locked login before it checks the password; Google with the ID
--- token) and runs the choice. A staff login locked because its shop's owner closed their
--- account only sees that.
+-- token; an emailed sign-in link with its token) and runs the choice. A staff login locked
+-- because its shop's owner closed their account only sees that.
 
 alter table app.account_deletion_requests add column if not exists restore_requested_at timestamptz;
 
@@ -102,6 +102,50 @@ begin
     return jsonb_build_object('found', true, 'locked', false);
   end if;
   return jsonb_build_object('found', true, 'locked', true, 'userId', v_user.id, 'closed', app.closed_account_info(v_user.id));
+end
+$$;
+
+-- The same for an emailed link (Alvin 5 Nov 2026: an email sign-in to a closed account shows
+-- the closed screen too): a sign-in link (Join) or a reset-password link (Auth). Supabase Auth
+-- refuses a locked login's link before it uses the link up, so the link's token_hash still
+-- proves the person has the account's email: the login whose latest link it is, sent within
+-- the hour (Supabase's default expiry). It is not used up here, so the same link can open the
+-- screen again. The edge function counts a link that matches nothing as a failed attempt for
+-- the network (phone sign-in's limit).
+create or replace function public.closed_account_by_email_link(p_token_hash text, p_type text)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path to ''
+as $$
+declare
+  v_hash text := btrim(coalesce(p_token_hash, ''));
+  v_type text := lower(btrim(coalesce(p_type, '')));
+  v_user auth.users%rowtype;
+begin
+  -- Supabase Auth's token hashes: 56 hex characters (pkce_ in front for the PKCE flow). Never
+  -- an empty string, which every login without a pending link has.
+  if v_hash !~ '^(pkce_)?[0-9a-f]{56}$' or v_type not in ('magiclink', 'recovery', 'signup', 'email') then
+    return jsonb_build_object('found', false);
+  end if;
+  -- Sign-in and reset links both use the login's recovery token; a sign-up link its
+  -- confirmation token.
+  select u.* into v_user
+    from auth.users u
+   where (v_type in ('magiclink', 'recovery', 'email') and u.recovery_token = v_hash
+          and u.recovery_sent_at > now() - interval '1 hour')
+      or (v_type in ('signup', 'email') and u.confirmation_token = v_hash
+          and u.confirmation_sent_at > now() - interval '1 hour')
+   limit 1;
+  if not found then
+    return jsonb_build_object('found', false);
+  end if;
+  if v_user.banned_until is null or v_user.banned_until <= now() then
+    return jsonb_build_object('found', true, 'locked', false);
+  end if;
+  return jsonb_build_object('found', true, 'locked', true, 'userId', v_user.id, 'email', v_user.email,
+    'closed', app.closed_account_info(v_user.id));
 end
 $$;
 
@@ -292,11 +336,13 @@ revoke all on function app.account_files(uuid, text) from public, anon, authenti
 revoke all on function app.shop_files(text) from public, anon, authenticated;
 revoke all on function public.closed_account_check(text, text) from public, anon, authenticated;
 revoke all on function public.closed_account_by_google(text) from public, anon, authenticated;
+revoke all on function public.closed_account_by_email_link(text, text) from public, anon, authenticated;
 revoke all on function public.account_restore_request(uuid) from public, anon, authenticated;
 revoke all on function public.account_removal_plan(uuid) from public, anon, authenticated;
 revoke all on function public.account_removal_complete(uuid) from public, anon, authenticated;
 grant execute on function public.closed_account_check(text, text) to service_role;
 grant execute on function public.closed_account_by_google(text) to service_role;
+grant execute on function public.closed_account_by_email_link(text, text) to service_role;
 grant execute on function public.account_restore_request(uuid) to service_role;
 grant execute on function public.account_removal_plan(uuid) to service_role;
 grant execute on function public.account_removal_complete(uuid) to service_role;

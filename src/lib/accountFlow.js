@@ -85,6 +85,12 @@ export function readEmailLink(search, hash) {
 // belongs to the reset-password screen on /Auth).
 export const JOIN_LINK_TYPES = ['magiclink', 'email', 'signup', 'invite'];
 
+// Supabase Auth refused a sign-in because the login is locked: a closed account (its deletion
+// is pending). The same test as Google sign-in in the Android app (nativeGoogle.js).
+export function isClosedLoginError(error) {
+  return Boolean(error) && (error.code === 'user_banned' || /user is banned/i.test(String(error.message || '')));
+}
+
 // Where a signed-in person goes next, from my_account_status().
 //   dashboard: they already work in a store
 //   staff:     a staff login (made-up email) without an active store
