@@ -36,8 +36,12 @@ Supabase's default links (`{{ .ConfirmationURL }}`) went to Supabase first, then
 sign-in's redirect address. Every link goes to sellio.sg, wherever the sign-in was started
 (the old Base44 app, localhost).
 
-Images, on sellio.sg: `public/branding/sellio-logo-email.png` (144×168, shown 64×75) and the
-icons `email-icon-verify.png`, `email-icon-reset.png` (128×128, shown 64×64).
+Look (Alvin, 6 Nov 2026): the button, colours, warning box and footer of the reset email he
+already had (orange button, orange-pink-purple bar, "Sent by Sellio · Powered by Apptelier");
+the rest is this layout.
+
+Images, on sellio.sg: `public/branding/sellio-logo-email.png` (144×168, shown 55×64) and the
+icons `email-icon-mail.png`, `email-icon-key.png` (128×128, shown 64×64).
 
 Not used by Sellio, so left as Supabase's own: Invite user, Change Email Address,
 Reauthentication.
