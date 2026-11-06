@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, Package } from 'lucide-react';
 import { isSale, productStats, notSold } from '@/lib/reportData';
+import { fitTick } from '@/lib/chartLabels';
 
 function StatCard({ label, value, sublabel, icon: Icon, iconBg, iconColor }) {
   return (
@@ -83,10 +84,10 @@ export default function ProductPerformance({ orders, products, categories = [], 
             </CardHeader>
             <CardContent className="px-1 sm:px-6 pb-3 sm:pb-6">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={bestSellersByRevenue} layout="vertical" margin={{ left: -10, right: 8 }}>
+                <BarChart data={bestSellersByRevenue} layout="vertical" margin={{ left: 0, right: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                  <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={fitTick(100)} />
                   <Tooltip formatter={(value) => [`${currency} ${value}`, 'Revenue']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
                   <Bar dataKey="revenue" fill={themeColors.primary} radius={[0, 6, 6, 0]} barSize={14} />
                 </BarChart>

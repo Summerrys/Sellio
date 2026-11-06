@@ -8,6 +8,7 @@ import { TrendingUp, DollarSign, ShoppingCart } from 'lucide-react';
 import {
   periodOf, summarize, isSale, dailySeries, chartSeries, productStats, categoryStats, paymentStats, fmtMoney,
 } from '@/lib/reportData';
+import { compactTick, fitTick } from '@/lib/chartLabels';
 
 // Compact stat card built for a 3-across mobile grid — icon badge instead of a
 // bare floating icon, tighter type scale so three of these comfortably fit a
@@ -26,11 +27,10 @@ function StatCard({ label, value, icon: Icon, iconBg, iconColor }) {
   );
 }
 
-// Sales Over Time y-axis: compact labels (850, 1.2K, 12.5K) in a 40 px axis. It
-// used to be a 36 px axis pulled 20 px off the card (margin left -20), which cut
-// the labels down to their last digits ("00", "50").
-const compactNumber = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
-const compactTick = (v) => compactNumber.format(v);
+// Sales Over Time y-axis: compact labels (850, 1.2K, 12.5K; compactTick) in a 40 px
+// axis. It used to be a 36 px axis pulled 20 px off the card (margin left -20), which
+// cut the labels down to their last digits ("00", "50"). No chart here pulls an axis
+// off the card any more; category names are shortened to fit theirs (fitTick).
 
 // orders: every order in the selected period (all statuses). Sales count paid
 // orders that are not cancelled (lib/reportData.js, shared with the exports);
@@ -155,10 +155,10 @@ export default function SalesReport({ orders, products = [], categories = [], cu
               </CardHeader>
               <CardContent className="px-1 sm:px-6 pb-3 sm:pb-6">
                 <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={categoryData} layout="vertical" margin={{ left: -10, right: 8 }}>
+                  <BarChart data={categoryData} layout="vertical" margin={{ left: 0, right: 8 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                    <YAxis dataKey="category" type="category" width={80} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                    <YAxis dataKey="category" type="category" width={80} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={fitTick(80)} />
                     <Tooltip formatter={(value) => [`${currency} ${value}`, 'Item sales']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
                     <Bar dataKey="revenue" fill={themeColors.primary} radius={[0, 6, 6, 0]} barSize={16} />
                   </BarChart>

@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { getSupabase } from '@/lib/supabaseClient';
+import { fetchSalesSince } from '@/lib/salesOrders';
+import { orderTotal } from '@/lib/reportData';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import RecentOrders from '../components/dashboard/RecentOrders';
@@ -153,16 +155,10 @@ export default function Dashboard() {
         .eq('is_deleted', false)
         .gte('created_date', today.toISOString());
 
-      // Revenue (paid orders today)
-      const { data: paidOrders } = await supabaseClient
-        .from('orders')
-        .select('total_amount')
-        .eq('tenant_id', tenantId)
-        .eq('payment_status', 'paid')
-        .eq('is_deleted', false)
-        .gte('created_date', today.toISOString());
-
-      const revenue = (paidOrders || []).reduce((sum, o) => sum + (o.total_amount || 0), 0);
+      // Revenue: today's sales, by the Reports rule (paid, not cancelled, not deleted),
+      // the same as the Revenue chart below.
+      const sales = await fetchSalesSince(tenantId, today);
+      const revenue = sales.reduce((sum, o) => sum + orderTotal(o), 0);
 
       // Pending count
       const { count: pending } = await supabaseClient

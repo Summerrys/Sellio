@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { AlertTriangle, PackageX, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { inventoryStatus } from '@/lib/reportData';
+import { compactTick, fitTick } from '@/lib/chartLabels';
 
 function StatCard({ label, value, icon: Icon, iconBg, iconColor }) {
   return (
@@ -127,10 +128,10 @@ export default function InventoryReport({ stockHistory, inventoryItems, products
             </CardHeader>
             <CardContent className="px-1 sm:px-6 pb-3 sm:pb-6">
               <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={adjustmentData} margin={{ left: -20, right: 8 }}>
+                <BarChart data={adjustmentData} margin={{ left: 0, right: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
+                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={30} allowDecimals={false} tickFormatter={compactTick} />
                   <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
                   <Bar dataKey="count" fill={themeColors.primary} radius={[6, 6, 0, 0]} barSize={18} name="Adjustments" />
                 </BarChart>
@@ -144,10 +145,10 @@ export default function InventoryReport({ stockHistory, inventoryItems, products
             </CardHeader>
             <CardContent className="px-1 sm:px-6 pb-3 sm:pb-6">
               <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={mostActive} layout="vertical" margin={{ left: -10, right: 8 }}>
+                <BarChart data={mostActive} layout="vertical" margin={{ left: 0, right: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={fitTick(100)} />
                   <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
                   <Bar dataKey="count" fill={themeColors.accent} radius={[0, 6, 6, 0]} barSize={14} name="Times adjusted" />
                 </BarChart>

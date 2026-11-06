@@ -1,42 +1,16 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getSupabase } from '@/lib/supabaseClient';
+import { fetchSalesSince } from '@/lib/salesOrders';
+import { orderTotal } from '@/lib/reportData';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, subDays, startOfDay } from 'date-fns';
 
-// Paid orders from `since` onwards, 1,000 rows per request (Supabase's per-request
-// cap). This used to be db.entities.Order.filter(), which returns 50 rows in no
-// particular order — once a shop had more than 50 paid orders, the chart was
-// built from old ones and recent days showed $0.
-// Same rule as the Today's Revenue card: paid, not deleted.
-const ORDER_PAGE_SIZE = 1000;
-const MAX_ORDER_PAGES = 20;
-
-async function fetchPaidOrdersSince(tenantId, since) {
-  const supabase = await getSupabase();
-  const seen = new Set();
-  const orders = [];
-  for (let page = 0; page < MAX_ORDER_PAGES; page += 1) {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('id,created_date,total_amount')
-      .eq('tenant_id', tenantId)
-      .eq('payment_status', 'paid')
-      .eq('is_deleted', false)
-      .gte('created_date', since.toISOString())
-      .order('created_date', { ascending: true })
-      .order('id', { ascending: true })
-      .range(page * ORDER_PAGE_SIZE, page * ORDER_PAGE_SIZE + ORDER_PAGE_SIZE - 1);
-    if (error) throw error;
-    for (const o of data || []) {
-      if (!seen.has(o.id)) { seen.add(o.id); orders.push(o); }
-    }
-    if (!data || data.length < ORDER_PAGE_SIZE) break;
-  }
-  return orders;
-}
+// Sales per day: paid, not cancelled, not deleted (the Reports rule), read in pages of
+// 1,000 by lib/salesOrders.js. This used to be db.entities.Order.filter(), which returns
+// 50 rows in no particular order, so once a shop had more than 50 paid orders the chart
+// was built from old ones and recent days showed $0.
 
 export default function RevenueChart({ tenantId }) {
   const [period, setPeriod] = useState('7days');
@@ -45,7 +19,7 @@ export default function RevenueChart({ tenantId }) {
   const since = startOfDay(subDays(new Date(), 29));
   const { data: orders = [] } = useQuery({
     queryKey: ['revenueOrders', tenantId, format(since, 'yyyy-MM-dd')],
-    queryFn: () => fetchPaidOrdersSince(tenantId, since),
+    queryFn: () => fetchSalesSince(tenantId, since),
     enabled: !!tenantId,
   });
 
@@ -59,7 +33,7 @@ export default function RevenueChart({ tenantId }) {
       return orderDate === dateStr;
     });
 
-    const revenue = dayOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+    const revenue = dayOrders.reduce((sum, o) => sum + orderTotal(o), 0);
 
     return {
       date: format(date, 'MMM dd'),

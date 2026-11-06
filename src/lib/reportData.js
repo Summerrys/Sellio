@@ -1,10 +1,10 @@
 // Report rules shared by the Reports screen and its Excel / PDF exports, so the
 // numbers on screen and in the files always agree. Plain functions, no React.
 //
-// Sales = orders that are paid and not cancelled (the Dashboard's revenue also
-// counts paid orders). Unpaid open orders and cancelled orders are reported
-// separately and never counted as sales. Amounts are order totals (after
-// discounts, including tax). Dates use the device's local time.
+// Sales = orders that are paid and not cancelled (the Dashboard's Today's Revenue
+// and Revenue chart use this rule too, via lib/salesOrders.js). Unpaid open orders
+// and cancelled orders are reported separately and never counted as sales. Amounts
+// are order totals (after discounts, including tax). Dates use the device's local time.
 
 export const SALES_RULE_TEXT =
   'Sales count paid orders that are not cancelled. Amounts are order totals (after discounts, including tax).';
