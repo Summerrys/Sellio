@@ -89,7 +89,9 @@ emailed links and the Android app's links keep working. After the move, open
 Since 6 Nov 2026 the worker moves every page on sellio.apptelier.sg and on
 sellio-f1t.pages.dev permanently (301) to the same page on sellio.sg, query included. Old links,
 bookmarks and QR codes land on the right page, and search engines swap the old address for
-sellio.sg. Not moved:
+sellio.sg. For sellio.apptelier.sg this needs that address to point at the Pages project
+(**Moving the domains** above): on 6 Nov 2026 its DNS still pointed at Base44, which served the
+old app there (the landing page at every address, open to search engines). Not moved:
 
 - files (`_routes.json`): Pages serves them on every address as they are;
 - `/google-signin`: Base44's old Android app opens Google sign-in there;
