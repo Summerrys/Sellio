@@ -13,7 +13,6 @@
     "/llms.txt",
     "/manifest.json",
     "/robots.txt",
-    "/sitemap.xml",
     "/sw.js"
   ]
 }

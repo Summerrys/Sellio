@@ -79,11 +79,13 @@ try {
   if (routes.version !== 1 || !routes.include?.includes('/*') || !routes.exclude?.includes('/assets/*')) {
     failures.push('_routes.json: should send pages to _worker.js and leave /assets/* to Pages');
   }
+  // The worker makes /sitemap.xml from the database; listed here, Pages would serve the fixed file.
+  if (routes.exclude?.includes('/sitemap.xml')) failures.push('_routes.json: /sitemap.xml must go through _worker.js');
 } catch (error) {
   failures.push(`_routes.json: ${error.message}`);
 }
 const worker = await readFile('dist/_worker.js', 'utf8').catch(() => '');
-for (const route of ["'/store'", "'/explore'", "'/app'", "'/Privacy': '/privacy'", "'sellio.apptelier.sg'", "const SITE = 'https://sellio.sg'"]) {
+for (const route of ["'/store'", "'/explore'", "'/app'", "'/sitemap.xml'", "/rest/v1/rpc/sitemap_pages", "'/Privacy': '/privacy'", "'sellio.apptelier.sg'", "const SITE = 'https://sellio.sg'"]) {
   if (!worker.includes(route)) failures.push(`_worker.js: ${route} routing missing`);
 }
 
