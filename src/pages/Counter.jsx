@@ -39,6 +39,46 @@ function optionPrice(groups, sel) {
 
 const selKey = sel => JSON.stringify(sel.map(x => `${x.group}|${x.label}`).sort());
 
+// "Most ordered": units ordered per item in the last 90 days. Supabase returns at most
+// 1,000 rows per request (this used to ask for 5,000 in one request and got 1,000, in no
+// particular order), so the order lines are read in pages, newest first.
+const SOLD_PAGE_SIZE = 1000;
+const SOLD_MAX_PAGES = 30; // up to 30,000 order lines
+
+const soldPage = (supabase, tenantId, since, page) => supabase
+  .from('order_items')
+  .select('id, product_id, quantity')
+  .eq('tenant_id', tenantId)
+  .gte('created_date', since)
+  .order('created_date', { ascending: false })
+  .order('id', { ascending: true })
+  .range(page * SOLD_PAGE_SIZE, page * SOLD_PAGE_SIZE + SOLD_PAGE_SIZE - 1);
+
+function countSold(lines) {
+  const seen = new Set();
+  const counts = {};
+  for (const line of lines) {
+    if (line.id != null) {
+      if (seen.has(line.id)) continue;
+      seen.add(line.id);
+    }
+    counts[line.product_id] = (counts[line.product_id] || 0) + (Number(line.quantity) || 0);
+  }
+  return counts;
+}
+
+// Pages 2 onwards; null if a page fails (the counts from page 1 then stay).
+async function moreSoldLines(supabase, tenantId, since) {
+  const lines = [];
+  for (let page = 1; page < SOLD_MAX_PAGES; page += 1) {
+    const { data, error } = await soldPage(supabase, tenantId, since, page);
+    if (error) return null;
+    lines.push(...(data || []));
+    if (!data || data.length < SOLD_PAGE_SIZE) break;
+  }
+  return lines;
+}
+
 const roundTime = value => {
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' });
@@ -65,6 +105,7 @@ function CounterScreen() {
   const [tables, setTables] = useState([]);
   const [sessions, setSessions] = useState({});
   const [sold, setSold] = useState({});
+  const soldRunRef = useRef(0); // the newest "Most ordered" count; older ones are dropped
   const [view, setView] = useState('tables');
   const [target, setTarget] = useState(null);
   const [tickets, setTickets] = useState(() => {
@@ -129,10 +170,7 @@ function CounterScreen() {
         .eq('tenant_id', tenantId)
         .order('sort_order', { ascending: true })
         .order('name', { ascending: true }),
-      supabase.from('order_items').select('product_id, quantity')
-        .eq('tenant_id', tenantId)
-        .gte('created_date', since)
-        .limit(5000),
+      soldPage(supabase, tenantId, since, 0),
     ]);
     if (tablesRes.error) throw tablesRes.error;
     if (itemsRes.error) throw itemsRes.error;
@@ -140,9 +178,17 @@ function CounterScreen() {
     setProducts(catalog.products || []);
     setCategories(catalog.categories || []);
     setTables(tablesRes.data || []);
-    const counts = {};
-    (itemsRes.data || []).forEach(i => { counts[i.product_id] = (counts[i.product_id] || 0) + (i.quantity || 0); });
-    setSold(counts);
+    const firstLines = itemsRes.data || [];
+    const run = ++soldRunRef.current;
+    setSold(countSold(firstLines));
+    // A full first page means there are more: count them all once the menu is up.
+    if (firstLines.length === SOLD_PAGE_SIZE) {
+      moreSoldLines(supabase, tenantId, since)
+        .then(rest => {
+          if (rest && run === soldRunRef.current && shouldApply()) setSold(countSold([...firstLines, ...rest]));
+        })
+        .catch(() => { /* keep the first page's counts */ });
+    }
   }, [tenantId]);
 
   useAppRefreshHandler(() => Promise.all([loadCatalog(), loadSessions(true)]));

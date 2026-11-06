@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { getSupabase } from '@/lib/supabaseClient';
 import { fetchSalesSince } from '@/lib/salesOrders';
 import { orderTotal } from '@/lib/reportData';
+import { formatMoney } from '@/lib/money';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import RecentOrders from '../components/dashboard/RecentOrders';
@@ -41,9 +42,17 @@ const featureCards = [
 
 function StatCard({ icon: Icon, label, value, subtext, color, onClick, transparent, compact }) {
   if (compact) {
+    // A long value (S$12,345.60) gets a smaller font so it fits the tile on a phone:
+    // sized from the tile's width (container query units). Browsers without them keep
+    // text-sm.
+    const text = String(value ?? '');
+    const fitStyle = text.length > 8
+      ? { fontSize: `min(14px, ${(100 / (0.62 * text.length)).toFixed(1)}cqw)` }
+      : undefined;
     return (
       <button
         onClick={onClick}
+        style={{ containerType: 'inline-size' }}
         className={cn(
           'w-full flex flex-col items-center justify-center gap-0.5 py-2 px-1 rounded-xl active:scale-95 transition-transform',
           transparent ? 'bg-transparent border-none' : 'bg-white border border-slate-100 shadow-sm',
@@ -53,7 +62,7 @@ function StatCard({ icon: Icon, label, value, subtext, color, onClick, transpare
         <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mb-0.5', color)}>
           <Icon className="w-3.5 h-3.5" />
         </div>
-        <p className="text-sm font-bold text-slate-900 leading-tight">{value}</p>
+        <p className="text-sm font-bold text-slate-900 leading-tight whitespace-nowrap" style={fitStyle}>{value}</p>
         <p className="text-[10px] text-slate-400 font-medium text-center leading-tight">{label}</p>
         {subtext && <p className="text-[9px] text-slate-300 leading-tight">{subtext}</p>}
       </button>
@@ -234,7 +243,8 @@ export default function Dashboard() {
   });
   const staff = allStaff.filter(m => m.status === 'active');
 
-  const currency = tenant?.settings?.currency || '$';
+  // The shop's currency is saved on tenants.currency (settings.currency is an older place).
+  const currency = tenant?.currency || tenant?.settings?.currency || 'SGD';
 
   const visibleFeatures = featureCards.filter(f =>
     !f.permission || hasPermission(f.permission)
@@ -361,7 +371,7 @@ export default function Dashboard() {
             compact
             icon={DollarSign}
             label="Today's Revenue"
-            value={`${currency}${todayRevenue.toFixed(2)}`}
+            value={formatMoney(todayRevenue, currency)}
             color="bg-blue-50 text-blue-600"
             onClick={() => navigate(createPageUrl('Reports'))}
           />
@@ -429,12 +439,12 @@ export default function Dashboard() {
 
       {/* Recent Orders */}
       <RequirePermission permission="orders.view" silent>
-        <RecentOrders tenantId={tenantId} shop={tenant?.seller_type === 'individual'} food={isFnBIndustry(tenant?.industry)} />
+        <RecentOrders tenantId={tenantId} currency={currency} shop={tenant?.seller_type === 'individual'} food={isFnBIndustry(tenant?.industry)} />
       </RequirePermission>
 
       {/* Revenue Chart */}
       <RequirePermission permission="reports.view" silent>
-        <RevenueChart tenantId={tenantId} />
+        <RevenueChart tenantId={tenantId} currency={currency} />
       </RequirePermission>
     </div>
   );

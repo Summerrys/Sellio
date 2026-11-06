@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchSalesSince } from '@/lib/salesOrders';
 import { orderTotal } from '@/lib/reportData';
+import { formatMoney } from '@/lib/money';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -12,7 +13,7 @@ import { format, subDays, startOfDay } from 'date-fns';
 // 50 rows in no particular order, so once a shop had more than 50 paid orders the chart
 // was built from old ones and recent days showed $0.
 
-export default function RevenueChart({ tenantId }) {
+export default function RevenueChart({ tenantId, currency }) {
   const [period, setPeriod] = useState('7days');
 
   // One fetch covers both views: the last 30 days, from local midnight.
@@ -45,11 +46,11 @@ export default function RevenueChart({ tenantId }) {
 
   return (
     <Card className="p-6 border-0 shadow-sm">
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
           <h3 className="text-lg font-semibold text-slate-900">Revenue</h3>
           <p className="text-2xl font-bold text-[rgb(var(--color-primary))] mt-1">
-            ${totalRevenue.toFixed(2)}
+            {formatMoney(totalRevenue, currency)}
           </p>
         </div>
         <div className="flex gap-2">
@@ -78,6 +79,7 @@ export default function RevenueChart({ tenantId }) {
           <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 12 }} />
           <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} />
           <Tooltip
+            formatter={(value) => [formatMoney(value, currency), 'Revenue']}
             contentStyle={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '8px' }}
           />
           <Line

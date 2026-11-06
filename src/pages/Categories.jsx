@@ -17,6 +17,33 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Grid3X3, Plus, Pencil, Trash2, LayoutGrid, List, Loader2, GripVertical } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
+// How many items each category has: { [category_id]: count }. Only id and category_id,
+// 1,000 rows per request (Supabase's cap per request).
+const COUNT_PAGE_SIZE = 1000;
+const COUNT_MAX_PAGES = 50;
+
+async function countItemsByCategory(tenantId) {
+  const supabase = await getSupabase();
+  const seen = new Set();
+  const counts = {};
+  for (let page = 0; page < COUNT_MAX_PAGES; page += 1) {
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, category_id')
+      .eq('tenant_id', tenantId)
+      .order('id', { ascending: true })
+      .range(page * COUNT_PAGE_SIZE, page * COUNT_PAGE_SIZE + COUNT_PAGE_SIZE - 1);
+    if (error) throw error;
+    for (const p of data || []) {
+      if (seen.has(p.id)) continue;
+      seen.add(p.id);
+      if (p.category_id) counts[p.category_id] = (counts[p.category_id] || 0) + 1;
+    }
+    if (!data || data.length < COUNT_PAGE_SIZE) break;
+  }
+  return counts;
+}
+
 export default function Categories() {
   return (
     <RequirePermission permission="categories.view">
@@ -86,9 +113,14 @@ function CategoriesContent() {
     }
   };
 
-  const { data: products = [] } = useQuery({
-    queryKey: ['products', tenantId],
-    queryFn: () => db.entities.Product.filter({ tenant_id: tenantId }),
+  // Its own cache entry. This used to load db.entities.Product.filter() (50 items, no
+  // stock) into the Products page's ['products', tenantId], so after a visit here the
+  // Products page showed at most 50 items, with wrong stock, for up to 5 minutes; and
+  // a shop with more than 50 items got wrong counts here. Under ['products', tenantId]
+  // so that refreshing the products list refreshes these counts too.
+  const { data: itemCounts = {} } = useQuery({
+    queryKey: ['products', tenantId, 'countsByCategory'],
+    queryFn: () => countItemsByCategory(tenantId),
     enabled: !!tenantId,
   });
 
@@ -168,7 +200,7 @@ function CategoriesContent() {
         )}
         <div className="grid grid-cols-2 gap-4">
           {sortedCategories.map(cat => {
-            const count = products.filter(p => p.category_id === cat.id).length;
+            const count = itemCounts[cat.id] || 0;
             return (
               <Card key={cat.id} onClick={() => handleCardClick(cat)} className={`border-0 shadow-sm p-4 hover:shadow-md hover:border-slate-300 transition-all active:scale-[0.99] ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}>
                 <div className="flex items-start justify-between">
@@ -210,7 +242,7 @@ function CategoriesContent() {
         {(dropProvided) => (
         <div className="space-y-2" ref={dropProvided.innerRef} {...dropProvided.droppableProps}>
           {sortedCategories.map((cat, index) => {
-            const count = products.filter(p => p.category_id === cat.id).length;
+            const count = itemCounts[cat.id] || 0;
             return (
               <Draggable key={cat.id} draggableId={String(cat.id)} index={index} isDragDisabled={!canEdit}>
               {(dragProvided, snapshot) => (

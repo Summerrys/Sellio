@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { shopMethod, shopStatusLabel } from '@/lib/shopSelling';
+import { formatMoney } from '@/lib/money';
 
 const STATUS_LABEL = {
   pending:   { text: 'New',        cls: 'bg-amber-100 text-amber-700' },
@@ -17,8 +18,8 @@ const STATUS_LABEL = {
   cancelled: { text: 'Cancelled',  cls: 'bg-red-100 text-red-600' },
 };
 
-// shop: a free shop's order words (step 15); food: it sells food.
-export default function RecentOrders({ tenantId, shop = false, food = false }) {
+// shop: a free shop's order words (step 15); food: it sells food; currency: tenants.currency.
+export default function RecentOrders({ tenantId, currency, shop = false, food = false }) {
   const navigate = useNavigate();
 
   const { data: orders = [] } = useQuery({
@@ -70,7 +71,7 @@ export default function RecentOrders({ tenantId, shop = false, food = false }) {
                     </span>
                   </div>
                   <p className="text-xs text-slate-500">
-                    {(order.items || []).length} {(order.items || []).length === 1 ? 'item' : 'items'} · {order.total_amount != null ? `$${parseFloat(order.total_amount).toFixed(2)}` : '—'}
+                    {(order.items || []).length} {(order.items || []).length === 1 ? 'item' : 'items'} · {formatMoney(order.total_amount, currency) || '—'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
