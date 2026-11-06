@@ -91,6 +91,21 @@ export function isClosedLoginError(error) {
   return Boolean(error) && (error.code === 'user_banned' || /user is banned/i.test(String(error.message || '')));
 }
 
+// Supabase Auth doesn't know an emailed link's token: it has expired, was used, or a newer
+// email to the same address replaced it (each new email replaces the one before).
+export function isExpiredLinkError(error) {
+  return Boolean(error) && (error.code === 'otp_expired' || /invalid or has expired/i.test(String(error.message || '')));
+}
+
+// "For security purposes, you can only request this after 13 seconds.": Supabase Auth emailed
+// this address less than a minute ago, and sends no new email until then. The seconds left, or
+// null for any other error (Supabase's "email rate limit exceeded" is a different limit: all of
+// Sellio's emails in an hour).
+export function emailResendWait(error) {
+  const match = /only request this after (\d+) seconds?/i.exec(String(error?.message || ''));
+  return match ? Number(match[1]) : null;
+}
+
 // Where a signed-in person goes next, from my_account_status().
 //   dashboard: they already work in a store
 //   staff:     a staff login (made-up email) without an active store

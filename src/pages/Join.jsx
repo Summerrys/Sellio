@@ -14,14 +14,18 @@ import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
 import ClosedAccount from '@/components/auth/ClosedAccount';
 import { callClosedAccount, closedAccountMessage } from '@/lib/closedAccount';
 import {
-  PHONE_COUNTRIES, JOIN_LINK_TYPES, accountErrorMessage, appBaseUrl, fullPhone, isClosedLoginError, isEmail,
-  isStaffLoginEmail, nextStepFor, readEmailLink,
+  PHONE_COUNTRIES, JOIN_LINK_TYPES, accountErrorMessage, appBaseUrl, emailResendWait, fullPhone, isClosedLoginError,
+  isEmail, isExpiredLinkError, isStaffLoginEmail, nextStepFor, readEmailLink,
 } from '@/lib/accountFlow';
 
 const LOGO_URL = '/branding/sellio-logo.webp';
 const BUTTON_STYLE = { background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' };
 const INPUT_CLASS = 'w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400';
 const RESEND_SECONDS = 60;
+// Each new verification email replaces the one before, and Gmail groups them (same sender and
+// subject) into one conversation, so an older link is easy to tap by mistake (Alvin's test,
+// 6 Nov 2026).
+const LINK_GONE = 'This link no longer works: it has expired, or a newer verification email replaced it. Open the newest email from Sellio, or send a new one below.';
 
 function GoogleIcon() {
   return (
@@ -94,15 +98,24 @@ export default function Join() {
             setNotice('This account is closed. To keep it, or to delete it and start again, send a new verification email and open its link.');
           } else {
             setNotice(link.errorCode === 'otp_expired' || /expired|invalid/i.test(link.errorDescription || '')
-              ? 'This verification link has expired or was already used. Send a new verification email.'
+              ? LINK_GONE
               : (link.errorDescription || 'That verification link didn’t work. Send a new verification email.'));
           }
           setStage('start');
           return;
         }
         if (link.tokenHash) {
-          const type = JOIN_LINK_TYPES.includes(link.type) ? link.type : 'magiclink';
-          const { error } = await supabase.auth.verifyOtp({ token_hash: link.tokenHash, type });
+          let type = JOIN_LINK_TYPES.includes(link.type) ? link.type : 'magiclink';
+          let { error } = await supabase.auth.verifyOtp({ token_hash: link.tokenHash, type });
+          // A sign-in link marked as a sign-up one or the other way round (an email template
+          // with the other file pasted in): 'email' takes either kind.
+          if (isExpiredLinkError(error) && type !== 'email') {
+            const retry = await supabase.auth.verifyOtp({ token_hash: link.tokenHash, type: 'email' });
+            if (!isExpiredLinkError(retry.error)) {
+              error = retry.error;
+              type = 'email';
+            }
+          }
           window.history.replaceState(window.history.state, '', window.location.pathname);
           // A closed account: Supabase refused the link without using it up, so the same link
           // proves who it is to the closed-account screen.
@@ -111,7 +124,9 @@ export default function Join() {
             return;
           }
           if (error) {
-            setNotice('This verification link has expired or was already used. Send a new verification email.');
+            setNotice(/Failed to fetch|NetworkError|Load failed/i.test(String(error.message || ''))
+              ? accountErrorMessage(error)
+              : LINK_GONE);
             setStage('start');
             return;
           }
@@ -239,6 +254,16 @@ export default function Join() {
       setCooldown(RESEND_SECONDS);
       setStage('sent');
     } catch (err) {
+      // This address was emailed less than a minute ago, and that email's link is the one that
+      // works: say so and count down, rather than an error that invites more tries.
+      const wait = emailResendWait(err);
+      if (wait !== null) {
+        setEmail(address);
+        setNotice('No new email was sent: one went to this address less than a minute ago. Open the newest email from Sellio.');
+        setCooldown(Math.max(1, wait));
+        setStage('sent');
+        return;
+      }
       toast.error(accountErrorMessage(err));
     } finally {
       setSending(false);
@@ -405,7 +430,7 @@ export default function Join() {
                   <Check className="w-7 h-7 text-green-500" />
                 </div>
                 <p className="text-xs text-slate-500 text-center leading-relaxed">
-                  Tap <span className="font-semibold text-slate-700">Verify my email</span> in that email, on this device, to continue.
+                  Tap <span className="font-semibold text-slate-700">Verify my email</span> in the newest email from Sellio, on this device, to continue.
                   It can take a minute to arrive; check your spam folder too.
                 </p>
               </div>

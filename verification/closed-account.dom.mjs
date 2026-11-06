@@ -152,12 +152,13 @@ try {
   const CLOSED_OWNER = { kind: 'owner', deleteAfter: '2027-05-05T09:00:00Z', shops: ['Kopi Corner'] };
   let authCalls = [];
   let verifyReply = { data: {}, error: { code: 'user_banned', message: 'User is banned', status: 403 } };
+  let otpReply = { data: {}, error: null };
   let accountStatus = null;
   globalThis.supabaseMock = {
     auth: {
-      verifyOtp: async (args) => { authCalls.push(['verifyOtp', args]); return verifyReply; },
+      verifyOtp: async (args) => { authCalls.push(['verifyOtp', args]); return typeof verifyReply === 'function' ? verifyReply(args) : verifyReply; },
       getSession: async () => ({ data: { session: accountStatus ? { user: { id: 'u-1', email: accountStatus.email } } : null } }),
-      signInWithOtp: async (args) => { authCalls.push(['signInWithOtp', args]); return { data: {}, error: null }; },
+      signInWithOtp: async (args) => { authCalls.push(['signInWithOtp', args]); return otpReply; },
     },
     rpc: async (name) => { authCalls.push(['rpc', name]); return { data: accountStatus, error: null }; },
     from: () => {
@@ -208,7 +209,7 @@ try {
   assert.deepEqual(authCalls, [['signInWithOtp', { email: 'owner@kopi.sg', options: { emailRedirectTo: 'https://sellio.sg/Join', shouldCreateUser: true } }]]);
   assert.match(page.host.textContent, /Check your email/);
   assert.match(page.host.textContent, /We sent a verification email to owner@kopi\.sg/);
-  assert.match(page.host.textContent, /Tap Verify my email in that email, on this device, to continue\./);
+  assert.match(page.host.textContent, /Tap Verify my email in the newest email from Sellio, on this device, to continue\./);
   assert.deepEqual(globalThis.toastErrors, []);
   await page.unmount();
   passed('Join: Start again deletes it with the same link, then Sign up again emails a new sign-up link to the same address');
@@ -295,6 +296,80 @@ try {
   assert.equal(globalThis.navigatedTo, '/Account', 'A finished account without a shop goes to Account (open a shop)');
   await page.unmount();
   passed('Join: a link to an open account signs in as before (new: set up; set up without a shop: Account)');
+
+  // Old and mismatched links (Alvin's test, 6 Nov 2026: Gmail grouped the verification emails
+  // into one conversation, an older link was tapped, and the page then took five refused
+  // "Send verification email" taps before a new email replaced the one that worked).
+  const { default: JoinLinks } = await bundle('src/pages/Join.jsx', 'join-links', {
+    clients: "export const getSupabase = async () => globalThis.supabaseMock; export const getMobileOAuthClient = () => null; export const SUPABASE_URL = 'https://project.example.invalid';",
+    profile: 'export const useAppUser = () => ({ setAppUser() {} });',
+    navigation: 'export const completeAuthNavigation = (to) => { globalThis.navigatedTo = to; };',
+    toast: 'export const toast = { error: value => { globalThis.toastErrors.push(value); }, success() {}, custom() {} };',
+    google: "export const GOOGLE_WEB_CLIENT_ID = 'client'; export const googleSignInAvailable = () => false; export const startGoogleSignIn = async () => ({});",
+  });
+  const EXPIRED = { data: {}, error: { code: 'otp_expired', message: 'Email link is invalid or has expired', status: 403 } };
+  const BANNED = { data: {}, error: { code: 'user_banned', message: 'User is banned', status: 403 } };
+
+  // A link marked with the other kind (an email template with the other file pasted in) still
+  // signs in, as 'email', which takes either kind; to a closed account it opens the closed screen.
+  dom.reconfigure({ url: `https://sellio.sg/Join?token_hash=${HASH}&type=signup` });
+  verifyReply = (args) => (args.type === 'email' ? { data: {}, error: null } : EXPIRED);
+  accountStatus = { email: 'new@kopi.sg', placeholder_email: false, email_proven: true, setup_done: false, profile: null, store: null };
+  calls = [];
+  authCalls = [];
+  globalThis.toastErrors = [];
+  page = await mount(JoinLinks);
+  assert.deepEqual(authCalls, [['verifyOtp', { token_hash: HASH, type: 'signup' }], ['verifyOtp', { token_hash: HASH, type: 'email' }], ['rpc', 'my_account_status']]);
+  assert.match(page.host.textContent, /Set up your account/);
+  await page.unmount();
+  dom.reconfigure({ url: `https://sellio.sg/Join?token_hash=${HASH}&type=magiclink` });
+  verifyReply = (args) => (args.type === 'email' ? BANNED : EXPIRED);
+  accountStatus = null;
+  reply = (body) => (body.action === 'status' ? { ok: true, closed: CLOSED_OWNER, email: 'owner@kopi.sg' } : { ok: false });
+  page = await mount(JoinLinks);
+  assert.deepEqual(calls, [['closed-account', { action: 'status', emailTokenHash: HASH, emailLinkType: 'email' }]]);
+  assert.ok(page.host.querySelector('[data-testid="closed-account"]'), 'The closed-account screen is shown');
+  await page.unmount();
+  passed('Join: a link marked with the other kind still signs in (as email), or opens the closed screen');
+
+  // A link Supabase doesn't know (expired, used, or replaced by a newer email): open the newest
+  // email, or send a new one.
+  dom.reconfigure({ url: `https://sellio.sg/Join?token_hash=${HASH}&type=magiclink` });
+  verifyReply = EXPIRED;
+  calls = [];
+  authCalls = [];
+  page = await mount(JoinLinks);
+  assert.deepEqual(authCalls, [['verifyOtp', { token_hash: HASH, type: 'magiclink' }], ['verifyOtp', { token_hash: HASH, type: 'email' }]]);
+  assert.deepEqual(calls, [], 'Only a locked login asks the closed-account server');
+  assert.equal(window.location.search, '', 'The link is taken out of the address bar');
+  assert.match(page.host.textContent, /This link no longer works: it has expired, or a newer verification email replaced it\. Open the newest email from Sellio, or send a new one below\./);
+  assert.ok(page.host.querySelector('#join-email'), 'The email form is shown');
+
+  // Sending again within the minute: Supabase sends nothing (the last email's link is the one
+  // that works), so the page says so and counts down instead of an error.
+  otpReply = { data: {}, error: { code: 'over_email_send_rate_limit', message: 'For security purposes, you can only request this after 13 seconds.', status: 429 } };
+  await setValue(page.host.querySelector('#join-email'), ' Me@Kopi.sg ');
+  authCalls = [];
+  await act(async () => { page.host.querySelector('form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true })); });
+  await wait(20);
+  assert.deepEqual(authCalls, [['signInWithOtp', { email: 'me@kopi.sg', options: { emailRedirectTo: 'https://sellio.sg/Join', shouldCreateUser: true } }]]);
+  assert.deepEqual(globalThis.toastErrors, []);
+  assert.match(page.host.textContent, /Check your email/);
+  assert.match(page.host.textContent, /We sent a verification email to me@kopi\.sg/);
+  assert.match(page.host.textContent, /No new email was sent: one went to this address less than a minute ago\. Open the newest email from Sellio\./);
+  assert.ok(buttonText(page.host, 'Resend in 13s')?.disabled, 'Resend waits out the time Supabase gave');
+
+  // Sellio's limit on all emails in an hour is a different answer: an error, as before.
+  await click(buttonText(page.host, 'Use a different email'));
+  otpReply = { data: {}, error: { code: 'over_email_send_rate_limit', message: 'email rate limit exceeded', status: 429 } };
+  await act(async () => { page.host.querySelector('form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true })); });
+  await wait(20);
+  assert.deepEqual(globalThis.toastErrors, ['We’re sending a lot of emails right now. Please try again in a few minutes.']);
+  assert.ok(page.host.querySelector('#join-email'), 'Still on the email form');
+  await page.unmount();
+  otpReply = { data: {}, error: null };
+  verifyReply = { data: {}, error: { code: 'user_banned', message: 'User is banned', status: 403 } };
+  passed('Join: an old link says to open the newest email; sending again within the minute counts down instead of an error');
 
   // 4. A reset-password link (forgot password) to a closed account opens the same screen.
   const { default: AuthAgain } = await bundle('src/pages/Auth.jsx', 'auth-recovery', {
