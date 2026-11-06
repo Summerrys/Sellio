@@ -1,21 +1,51 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import db from '@/lib/db';
+import { getSupabase } from '@/lib/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp } from 'lucide-react';
-import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { format, subDays, startOfDay } from 'date-fns';
+
+// Paid orders from `since` onwards, 1,000 rows per request (Supabase's per-request
+// cap). This used to be db.entities.Order.filter(), which returns 50 rows in no
+// particular order — once a shop had more than 50 paid orders, the chart was
+// built from old ones and recent days showed $0.
+// Same rule as the Today's Revenue card: paid, not deleted.
+const ORDER_PAGE_SIZE = 1000;
+const MAX_ORDER_PAGES = 20;
+
+async function fetchPaidOrdersSince(tenantId, since) {
+  const supabase = await getSupabase();
+  const seen = new Set();
+  const orders = [];
+  for (let page = 0; page < MAX_ORDER_PAGES; page += 1) {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id,created_date,total_amount')
+      .eq('tenant_id', tenantId)
+      .eq('payment_status', 'paid')
+      .eq('is_deleted', false)
+      .gte('created_date', since.toISOString())
+      .order('created_date', { ascending: true })
+      .order('id', { ascending: true })
+      .range(page * ORDER_PAGE_SIZE, page * ORDER_PAGE_SIZE + ORDER_PAGE_SIZE - 1);
+    if (error) throw error;
+    for (const o of data || []) {
+      if (!seen.has(o.id)) { seen.add(o.id); orders.push(o); }
+    }
+    if (!data || data.length < ORDER_PAGE_SIZE) break;
+  }
+  return orders;
+}
 
 export default function RevenueChart({ tenantId }) {
   const [period, setPeriod] = useState('7days');
 
+  // One fetch covers both views: the last 30 days, from local midnight.
+  const since = startOfDay(subDays(new Date(), 29));
   const { data: orders = [] } = useQuery({
-    queryKey: ['revenueOrders', tenantId],
-    queryFn: () => db.entities.Order.filter({ 
-      tenant_id: tenantId,
-      payment_status: 'paid'
-    }),
+    queryKey: ['revenueOrders', tenantId, format(since, 'yyyy-MM-dd')],
+    queryFn: () => fetchPaidOrdersSince(tenantId, since),
     enabled: !!tenantId,
   });
 

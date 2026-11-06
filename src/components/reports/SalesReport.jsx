@@ -26,6 +26,12 @@ function StatCard({ label, value, icon: Icon, iconBg, iconColor }) {
   );
 }
 
+// Sales Over Time y-axis: compact labels (850, 1.2K, 12.5K) in a 40 px axis. It
+// used to be a 36 px axis pulled 20 px off the card (margin left -20), which cut
+// the labels down to their last digits ("00", "50").
+const compactNumber = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
+const compactTick = (v) => compactNumber.format(v);
+
 // orders: every order in the selected period (all statuses). Sales count paid
 // orders that are not cancelled (lib/reportData.js, shared with the exports);
 // unpaid and cancelled orders are listed under the cards instead.
@@ -98,10 +104,10 @@ export default function SalesReport({ orders, products = [], categories = [], cu
             <CardContent className="px-1 sm:px-6 pb-3 sm:pb-6">
               <ResponsiveContainer width="100%" height={220}>
                 {isStarter ? (
-                  <LineChart data={revenueData} margin={{ left: -20, right: 8 }}>
+                  <LineChart data={revenueData} margin={{ left: 0, right: 8 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                     <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={36} />
+                    <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={40} tickFormatter={compactTick} />
                     <Tooltip formatter={(value) => [`${currency} ${value}`, 'Sales']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
                     <Line
                       type="monotone"
@@ -114,7 +120,7 @@ export default function SalesReport({ orders, products = [], categories = [], cu
                     />
                   </LineChart>
                 ) : (
-                  <AreaChart data={revenueData} margin={{ left: -20, right: 8 }}>
+                  <AreaChart data={revenueData} margin={{ left: 0, right: 8 }}>
                     <defs>
                       <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={themeColors.primary} stopOpacity={0.35} />
@@ -123,7 +129,7 @@ export default function SalesReport({ orders, products = [], categories = [], cu
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                     <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={36} />
+                    <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={40} tickFormatter={compactTick} />
                     <Tooltip formatter={(value) => [`${currency} ${value}`, 'Sales']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
                     <Area
                       type="monotone"
