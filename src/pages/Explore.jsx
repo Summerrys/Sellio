@@ -14,6 +14,7 @@ import { useRatingSummaries } from '@/lib/ratings';
 import { RatingPill } from '@/components/ratings/RatingParts';
 import { useSell } from '@/lib/sell';
 import { listingUrl, ExploreDesktopTabs } from '@/components/explore/shared';
+import { applyPageMeta, SITE } from '@/lib/pageMeta';
 
 // Sellio Explore: a public, Carousell-style feed of items from Sellio shops.
 // Anyone can browse without an account; tapping an item opens its listing page. Data comes from the explore_feed / explore_shops RPCs, which only
@@ -500,10 +501,12 @@ export default function Explore() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const previous = document.title;
-    document.title = 'Explore shops and items · Sellio';
     markExploreHome();
-    return () => { document.title = previous; };
+    return applyPageMeta({
+      title: 'Explore shops and items · Sellio',
+      description: 'Browse shops and home sellers on Sellio, and order from them directly.',
+      canonical: `${SITE}/explore`,
+    });
   }, []);
 
   // Search as you type, without a request per keystroke.

@@ -7,5 +7,7 @@
 /privacy /privacy/index.html 200
 /terms /terms/index.html 200
 /store/* /store.html 200
+/explore /explore.html 200
+/listing/* /explore.html 200
 
 /* /app.html 200

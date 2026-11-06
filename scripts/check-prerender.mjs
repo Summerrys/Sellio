@@ -60,8 +60,12 @@ const storeShell = await readFile('dist/store.html', 'utf8');
 if (!storeShell.includes('<div id="root"></div>')) failures.push('store.html: SPA root should stay empty');
 if (/name="robots"[^>]*content="[^"]*noindex/i.test(storeShell)) failures.push('store.html: public storefront shell must not be noindex');
 
+const exploreShell = await readFile('dist/explore.html', 'utf8').catch(() => '');
+if (!exploreShell.includes('<div id="root"></div>')) failures.push('explore.html: missing, or its SPA root is not empty');
+if (/name="robots"[^>]*content="[^"]*noindex/i.test(exploreShell)) failures.push('explore.html: public Explore shell must not be noindex');
+
 const redirects = await readFile('dist/_redirects', 'utf8');
-for (const line of ['/ /index.html 200', '/privacy /privacy/index.html 200', '/terms /terms/index.html 200', '/store/* /store.html 200', '/* /app.html 200']) {
+for (const line of ['/ /index.html 200', '/privacy /privacy/index.html 200', '/terms /terms/index.html 200', '/store/* /store.html 200', '/explore /explore.html 200', '/listing/* /explore.html 200', '/* /app.html 200']) {
   if (!redirects.includes(line)) failures.push(`_redirects: missing ${line}`);
 }
 
@@ -79,7 +83,7 @@ try {
   failures.push(`_routes.json: ${error.message}`);
 }
 const worker = await readFile('dist/_worker.js', 'utf8').catch(() => '');
-for (const route of ["'/store'", "'/app'", "'/Privacy': '/privacy'", "'sellio.apptelier.sg'", "const SITE = 'https://sellio.sg'"]) {
+for (const route of ["'/store'", "'/explore'", "'/app'", "'/Privacy': '/privacy'", "'sellio.apptelier.sg'", "const SITE = 'https://sellio.sg'"]) {
   if (!worker.includes(route)) failures.push(`_worker.js: ${route} routing missing`);
 }
 

@@ -21,6 +21,7 @@ import {
   ShopAvatar, ItemImage, storeUrl, listingUrl, chatUrl, newChatUrl, goBack,
 } from './shared';
 import ZoomableImage from '@/components/ui-custom/ZoomableImage';
+import { applyPageMeta, SITE, snippet } from '@/lib/pageMeta';
 
 // One Explore listing. The photo fills the screen from the very top (behind the
 // phone's status bar); scrolling down turns the floating buttons into a solid header
@@ -277,12 +278,18 @@ function Listing({ productId }) {
   const shopRating = shop?.id ? shopRatings[shop.id] || null : null;
   const [ratingOpen, setRatingOpen] = useState(false);
 
+  // Its own title, description and address for search results; an item that's gone isn't kept
+  // in them.
   useEffect(() => {
+    if (state.status === 'missing') return applyPageMeta({ robots: 'noindex, nofollow' });
     if (!item) return undefined;
-    const previous = document.title;
-    document.title = `${item.name} · ${shop?.name || 'Sellio'}`;
-    return () => { document.title = previous; };
-  }, [item, shop]);
+    const from = shop?.name ? ` from ${shop.name}` : '';
+    return applyPageMeta({
+      title: `${item.name} · ${shop?.name || 'Sellio'}`,
+      description: snippet(item.description) || `${item.name}${from} on Sellio.`,
+      canonical: `${SITE}/listing/${encodeURIComponent(productId)}`,
+    });
+  }, [item, shop, state.status, productId]);
 
   // Photo → header as the photo scrolls away.
   useEffect(() => {

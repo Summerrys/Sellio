@@ -7,7 +7,8 @@
 //   /                     → index.html (the landing page, prerendered)
 //   /privacy, /terms      → privacy/index.html, terms/index.html
 //   /store/…              → store.html (a shop's storefront)
-//   any other address     → app.html (the app: sign-in, a shop's workspace, Explore…)
+//   /explore, /listing/…  → explore.html (Explore and its items: public, unlike app.html)
+//   any other address     → app.html (the app: sign-in, a shop's workspace, Explore's own tabs…)
 // Files (scripts, styles, pictures, /.well-known/assetlinks.json…) skip this worker
 // (_routes.json): Pages serves them itself, with the caching in _headers, and answers a missing
 // one with 404.html. Pages answers x.html at /x and x/index.html at /x/, so pages are fetched
@@ -75,6 +76,7 @@ export default {
     if (pathname === '/') return page(env, request, url, '/');
     if (pathname === '/privacy' || pathname === '/terms') return page(env, request, url, `${pathname}/`);
     if (pathname.startsWith('/store/')) return page(env, request, url, '/store');
+    if (pathname === '/explore' || /^\/listing\/[^/]+$/.test(pathname)) return page(env, request, url, '/explore');
 
     // A file _routes.json doesn't list (one added at the top level later, say): as Pages has it.
     const name = pathname.slice(pathname.lastIndexOf('/') + 1);

@@ -59,6 +59,15 @@ const storeShell = template
   .replace(ROOT, ROOT);
 await writeFile('dist/store.html', storeShell);
 
+// Explore and its item pages (/listing/…) are public too (RouteIndexingGuard marks them
+// index, follow), so their shell mustn't say noindex either: Google may not run a page whose
+// HTML says noindex, so it would never see the page's own title, description and canonical,
+// nor follow its links to the shops (Alvin, 6 Nov 2026).
+const exploreShell = template
+  .replace(SEO_BLOCK, '<title>Explore shops and items · Sellio</title>')
+  .replace(ROOT, ROOT);
+await writeFile('dist/explore.html', exploreShell);
+
 for (const path of PRERENDER_ROUTES) {
   const { html, head } = renderRoute(path);
   if (!html || html.length < 1000) throw new Error(`Prerender output for ${path} is unexpectedly small.`);
