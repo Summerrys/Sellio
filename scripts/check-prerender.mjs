@@ -1,9 +1,9 @@
 import { access, readFile, stat } from 'node:fs/promises';
 
-// '/' is the page the host serves at every address, so it must not name a canonical or
-// og:url (null below): LandingPage sets the homepage canonical in the browser.
+// Each page names its sellio.sg address as canonical (null would mean a page served at every
+// address, which must name none). '/' is served only at "/" (public/_worker.js).
 const routes = {
-  '/': ['Commerce has a place to grow.', null],
+  '/': ['Commerce has a place to grow.', 'https://sellio.sg/'],
   '/privacy': ['Privacy Policy', 'https://sellio.sg/privacy'],
   '/terms': ['Terms and Conditions', 'https://sellio.sg/terms'],
 };
@@ -27,8 +27,12 @@ for (const [path, [signature, canonical]] of Object.entries(routes)) {
   if (canonical === null) {
     if (/rel="canonical"/i.test(html)) failures.push(`${path}: served at every address, so it must not name a canonical`);
     if (/property="og:url"/i.test(html)) failures.push(`${path}: served at every address, so it must not name an og:url`);
-  } else if (!html.includes(`rel="canonical" href="${canonical}"`) && !html.includes(`href="${canonical}" rel="canonical"`)) {
-    failures.push(`${path}: canonical missing or incorrect`);
+  } else {
+    if (!html.includes(`rel="canonical" href="${canonical}"`) && !html.includes(`href="${canonical}" rel="canonical"`)) {
+      failures.push(`${path}: canonical missing or incorrect`);
+    }
+    if (!html.includes(`property="og:url" content="${canonical}"`)) failures.push(`${path}: og:url missing or incorrect`);
+    if ((html.match(/rel="canonical"/g) || []).length !== 1) failures.push(`${path}: more than one canonical`);
   }
   if (!html.includes(`property="og:image" content="${SHARE_IMAGE}"`)) failures.push(`${path}: og:image is not the share card`);
   if (!html.includes('property="og:image:width" content="1200"') || !html.includes('property="og:image:height" content="630"')) {
@@ -75,7 +79,7 @@ try {
   failures.push(`_routes.json: ${error.message}`);
 }
 const worker = await readFile('dist/_worker.js', 'utf8').catch(() => '');
-for (const route of ["'/store'", "'/app'", "'/Privacy': '/privacy'"]) {
+for (const route of ["'/store'", "'/app'", "'/Privacy': '/privacy'", "'sellio.apptelier.sg'", "const SITE = 'https://sellio.sg'"]) {
   if (!worker.includes(route)) failures.push(`_worker.js: ${route} routing missing`);
 }
 

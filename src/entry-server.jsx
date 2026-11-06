@@ -21,12 +21,10 @@ const ROUTES = {
     title: 'Sellio — Storefronts, Operations & Marketplace for Modern Commerce',
     description: 'Sellio connects branded storefronts, F&B ordering and merchant operations with an evolving sector-based marketplace world.',
     socialDescription: 'Open your storefront, run daily operations and grow into a sector-based marketplace world with Sellio.',
+    // In the HTML too, not only set by LandingPage in the browser, so search engines list
+    // sellio.sg rather than the old address (Alvin, 6 Nov 2026). The website serves this page
+    // only at "/" (public/_worker.js; other addresses get app.html or store.html).
     canonical: 'https://sellio.sg/',
-    // The host serves this page at every address (store pages, Explore, the app), so its
-    // HTML must not name a canonical or og:url, or every page would claim to be the
-    // homepage. LandingPage, Storefront and the legal pages set their own canonical
-    // in the browser.
-    servedAtEveryAddress: true,
   },
   '/privacy': {
     Component: Privacy,

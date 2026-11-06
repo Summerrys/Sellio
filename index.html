@@ -197,9 +197,9 @@
          placeholder description instead of describing Sellio at all. -->
     <meta name="description" content="Sellio connects branded storefronts, F&B ordering and merchant operations with an evolving sector-based marketplace world." />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-    <!-- No canonical or og:url here: the host serves this page at every address, so
-         either would make every page claim to be the homepage. Pages set their own
-         canonical in the browser (see src/entry-server.jsx). -->
+    <!-- No canonical or og:url here: this block is the head for every address until a
+         page sets its own, so either would make every page claim to be the homepage. The
+         prerendered start page, privacy and terms get theirs from src/entry-server.jsx. -->
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Sellio" />

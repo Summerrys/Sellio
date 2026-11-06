@@ -80,9 +80,32 @@ Keep the current host running until Cloudflare answers for the domains.
   Then, wherever apptelier.sg's DNS is, make (or change) the `sellio` record a CNAME to
   `sellio-f1t.pages.dev`.
 
-Nothing else changes with the move. The addresses stay the same, so sign-in (Supabase and
-Google), Stripe's return pages, emailed links and the Android app's links keep working. After the
-move, open `https://sellio.sg/.well-known/assetlinks.json` once to check it.
+Nothing else changes with the move. Sign-in (Supabase and Google), Stripe's return pages,
+emailed links and the Android app's links keep working. After the move, open
+`https://sellio.sg/.well-known/assetlinks.json` once to check it.
+
+## sellio.sg is the address search engines list
+
+Since 6 Nov 2026 the worker moves every page on sellio.apptelier.sg and on
+sellio-f1t.pages.dev permanently (301) to the same page on sellio.sg, query included. Old links,
+bookmarks and QR codes land on the right page, and search engines swap the old address for
+sellio.sg. Not moved:
+
+- files (`_routes.json`): Pages serves them on every address as they are;
+- `/google-signin`: Base44's old Android app opens Google sign-in there;
+- preview deployments (`<id>.sellio-f1t.pages.dev`).
+
+Keep the move for at least 180 days, as Google asks. The start page, `/privacy` and
+`/terms` name their sellio.sg address as canonical in the HTML, and `/sitemap.xml` lists them.
+
+In Google Search Console (same Google account for both):
+
+1. Add `sellio.sg` as a **Domain** property and verify it (a TXT record in Cloudflare's DNS).
+2. Under **Sitemaps**, submit `https://sellio.sg/sitemap.xml`.
+3. Add `https://sellio.apptelier.sg/` as a **URL prefix** property and verify it. Not the
+   `apptelier.sg` Domain property: a change of address there would move Apptelier's own site.
+4. In the sellio.apptelier.sg property: **Settings** → **Change of address** → sellio.sg.
+5. **URL inspection** → `https://sellio.sg/` → **Request indexing**.
 
 ## Live updates for the apps
 
