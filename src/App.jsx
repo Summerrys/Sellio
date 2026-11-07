@@ -17,6 +17,7 @@ import MobileOAuthReturn from '@/components/auth/MobileOAuthReturn';
 import { isMobileOAuthCallback } from '@/lib/mobileOAuth';
 import LaunchSplash from '@/components/ui-custom/LaunchSplash';
 import GoogleSignInRelay from '@/components/auth/GoogleSignInRelay';
+import SignInWelcome from '@/components/auth/SignInWelcome';
 import { startLaunch } from '@/lib/appLaunch';
 import { GOOGLE_RELAY_PATH } from '@/lib/googleRelay';
 import { isNativeApp as inSellioApp, isBase44Shell, appPlatform } from '@/lib/nativeApp';
@@ -207,6 +208,8 @@ function App() {
           </Suspense>
         </Router>
         <SonnerToaster />
+        {/* "Welcome back!" on the page a sign-in opens (the sign-in page itself is gone by then). */}
+        <SignInWelcome />
         {/* Sellio's question before Android's about push alerts (the Android app only). */}
         {appPlatform() === 'android' && <PushPrompt />}
         <LaunchSplash />

@@ -7,6 +7,7 @@ import { useBackToClose } from '@/lib/useBackToClose';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { completeAuthNavigation } from '@/lib/authNavigation';
+import { noteSignInWelcome } from '@/lib/signInWelcome';
 import { googleSignInAvailable, startGoogleSignIn } from '@/lib/googleSignIn';
 import { clearMobileAuth, isNativeAndroid } from '@/lib/mobileOAuth';
 import AppLoader from '@/components/ui-custom/AppLoader';
@@ -136,7 +137,8 @@ export default function Join() {
           setStage('start');
           return;
         }
-        await continueSignedIn(supabase);
+        // Just signed in by the email's link (not just already signed in): welcome them back.
+        await continueSignedIn(supabase, { welcome: Boolean(link.tokenHash) });
       } catch (err) {
         setNotice(accountErrorMessage(err));
         setStage('start');
@@ -174,7 +176,7 @@ export default function Join() {
         setStage('start');
         return;
       }
-      await continueSignedIn(supabase);
+      await continueSignedIn(supabase, { welcome: true });
     } catch (err) {
       setNotice(accountErrorMessage(err));
       setStage('start');
@@ -199,18 +201,23 @@ export default function Join() {
     if (rows?.[0]) setAppUser(rows[0]);
   };
 
-  // Signed in (link, Google or password): send them where they belong.
-  const continueSignedIn = async (supabase) => {
+  // Signed in (link, Google or password): send them where they belong. welcome: they've just
+  // signed in to an existing account, so the page this opens says "Welcome back!"
+  // (components/auth/SignInWelcome.jsx; a message here would go with this page).
+  const continueSignedIn = async (supabase, { welcome = false } = {}) => {
     const { data: status, error } = await supabase.rpc('my_account_status');
     if (error) throw error;
     const next = nextStepFor(status);
     setAccountEmail(status.email);
     if (next === 'dashboard') {
       await rememberProfile(supabase, status.email);
+      if (welcome) noteSignInWelcome('Welcome back!');
       completeAuthNavigation('/Dashboard');
       return;
     }
     if (next === 'account') {
+      // Not a new account that's here for its business invite: that one isn't back.
+      if (welcome && status.setup_done) noteSignInWelcome('Welcome back!');
       completeAuthNavigation('/Account');
       return;
     }

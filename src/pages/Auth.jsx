@@ -8,6 +8,7 @@ import AuthPricingModal from '@/components/auth/AuthPricingModal';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import { accountDeletionDestination } from '@/components/profile/AccountDeletionForm';
 import { completeAuthNavigation } from '@/lib/authNavigation';
+import { noteSignInWelcome } from '@/lib/signInWelcome';
 import { googleSignInAvailable, startGoogleSignIn } from '@/lib/googleSignIn';
 import { COMPLETE_KEY, clearMobileAuth, hasMobileGoogleCompletion, isNativeAndroid } from '@/lib/mobileOAuth';
 import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
@@ -31,6 +32,14 @@ async function landingWithoutShop(supabase, appUserRow) {
   } catch {
     return '/Onboarding'; // the setup page checks again and sends them on
   }
+}
+
+// Signed in to an existing account: "Welcome back!" on the page the sign-in opens
+// (components/auth/SignInWelcome.jsx). Not on the account-deletion page they came to
+// sign in for, nor on Join, which still asks for the account's details.
+function welcomeBackOn(destination) {
+  if (destination === '/delete-account' || destination === '/Join') return;
+  noteSignInWelcome('Welcome back!');
 }
 
 const COUNTRY_CODES = [
@@ -336,6 +345,7 @@ export default function Auth() {
 
         let existingRow = existingAppUser?.[0] || null;
         let appUsersRowId = existingRow?.id;
+        const returningAccount = Boolean(existingRow);
 
         if (existingRow) {
           await supabase.from('app_users').update({ last_login_at: now }).eq('id', appUsersRowId);
@@ -402,7 +412,11 @@ export default function Auth() {
             .eq('status', 'pending');
         }
 
-        completeAuthNavigation(accountDeletionDestination(appUser.onboarding_completed ? homeFor(appUser) : (joinInUrl ? '/Join' : await landingWithoutShop(supabase, appUser))));
+        const destination = accountDeletionDestination(appUser.onboarding_completed ? homeFor(appUser) : (joinInUrl ? '/Join' : await landingWithoutShop(supabase, appUser)));
+        // An account that was already there is welcomed back on the page this opens; a new
+        // one isn't (Join still asks for its details).
+        if (returningAccount) welcomeBackOn(destination);
+        completeAuthNavigation(destination);
       } catch (err) {
         toast.error(err.message || 'Google Sign-In failed');
         setGoogleLoading(false);
@@ -619,9 +633,11 @@ export default function Auth() {
 
         const userForCookie = { ...appUserRow, tenant_id: tenantId };
         setAppUser(userForCookie);
-        showSuccess('Welcome back!');
-        // Straight on to the app (it loads its first page in full), no extra pause.
-        completeAuthNavigation(accountDeletionDestination(appUserRow.onboarding_completed ? homeFor(appUserRow) : await landingWithoutShop(supabase, appUserRow)));
+        // Straight on to the app (it loads its first page in full), no extra pause. That load
+        // would wipe a message shown here, so the page it opens says "Welcome back!".
+        const destination = accountDeletionDestination(appUserRow.onboarding_completed ? homeFor(appUserRow) : await landingWithoutShop(supabase, appUserRow));
+        welcomeBackOn(destination);
+        completeAuthNavigation(destination);
 
       } else {
         // SIGNUP: check bypass list

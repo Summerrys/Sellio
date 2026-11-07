@@ -75,6 +75,7 @@ const mount = async Component => {
 };
 let passes = 0;
 const passed = name => { passes++; console.log('PASS ' + name); };
+const welcomeLeft = () => JSON.parse(win.sessionStorage.getItem('sellio-sign-in-welcome') || 'null')?.message ?? null;
 const reset = () => {
   win.localStorage.clear(); win.sessionStorage.clear();
   location.href = location.origin + '/Auth'; location.search = ''; location.hash = '';
@@ -216,9 +217,36 @@ try {
     assert.equal(globalThis.authDestination, onboarded ? '/Dashboard' : '/Join');
     assert.equal(globalThis.profile.role, row.role);
     assert.equal(win.sessionStorage.getItem(COMPLETE_KEY), null);
+    // The page Google sign-in opens says "Welcome back!" (src/lib/signInWelcome.js); Join,
+    // which still asks for the account's details, doesn't.
+    assert.equal(welcomeLeft(), onboarded ? 'Welcome back!' : null);
     await auth.close();
   }
-  passed('Completed Google returns preserve existing staff roles and route free signups to Join');
+  passed('Completed Google returns preserve existing staff roles, welcome them back, and route free signups to Join');
+
+  {
+    // A brand-new Google account (a bypass email needs no invite) is not "back".
+    reset(); win.ReactNativeWebView = { postMessage() {} };
+    win.sessionStorage.setItem(COMPLETE_KEY, JSON.stringify({ origin: location.origin, createdAt: Date.now() }));
+    const fresh = { id: 'new-profile', email: 'alvin.leeyq@gmail.com', role: 'admin', tenant_id: null, onboarding_completed: false };
+    let rows = [];
+    const chain = { select() { return this; }, eq() { return this; }, limit: async () => ({ data: rows }),
+      insert: async () => { rows = [fresh]; return { error: null }; }, single: async () => ({ data: fresh, error: null }),
+      update() { return this; }, then(resolve) { resolve({ error: null }); } };
+    globalThis.appClient = {
+      auth: { getSession: async () => ({ data: { session: { user: { email: fresh.email, created_at: new Date().toISOString(),
+        identities: [{ provider: 'google' }], user_metadata: {} } } }, error: null }) },
+      from: () => chain,
+      rpc: async () => ({ data: { email: fresh.email }, error: null }),
+    };
+    globalThis.authDestination = undefined;
+    const auth = await mount(authModule.module.default);
+    await act(async () => {});
+    assert.equal(globalThis.authDestination, '/Onboarding');
+    assert.equal(welcomeLeft(), null);
+    await auth.close();
+  }
+  passed('A new account made by Google sign-in is not welcomed back');
 
   console.log(passes + ' mobile OAuth DOM checks passed');
 } finally {

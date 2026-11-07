@@ -51,6 +51,9 @@ async function bundle(entry, name, contents) {
 
 let passes = 0;
 const passed = name => { passes++; console.log('PASS ' + name); };
+// The "Welcome back!" a sign-in leaves for the page it opens (src/lib/signInWelcome.js).
+const WELCOME_KEY = 'sellio-sign-in-welcome';
+const welcomeLeft = () => JSON.parse(sessionStorage.getItem(WELCOME_KEY) || 'null')?.message ?? null;
 const wait = ms => act(async () => new Promise(resolve => setTimeout(resolve, ms)));
 const click = element => act(async () => { assert.ok(element, 'Control exists'); element.dispatchEvent(new win.MouseEvent('click', { bubbles: true })); });
 const buttonText = (root, text) => [...root.querySelectorAll('button')].find(b => b.textContent.trim() === text);
@@ -241,10 +244,12 @@ try {
   verifyReply = { data: {}, error: null };
   accountStatus = { email: 'owner@kopi.sg', placeholder_email: false, email_proven: true, setup_done: true, profile: null,
     store: { tenant_id: 'shop-1', name: 'Kopi Corner', slug: 'kopi-corner', seller_type: 'individual', is_owner: true } };
+  sessionStorage.removeItem(WELCOME_KEY);
   await click(buttonText(page.host, 'Continue'));
   await wait(30);
   assert.deepEqual(authCalls.slice(0, 2), [['verifyOtp', { token_hash: HASH, type: 'magiclink' }], ['rpc', 'my_account_status']]);
   assert.equal(globalThis.navigatedTo, '/Dashboard', 'Straight into their shop');
+  assert.equal(welcomeLeft(), 'Welcome back!', 'and the shop says Welcome back!');
   assert.deepEqual(globalThis.toastErrors, []);
   await page.unmount();
   passed('Join: Keep my account opens it at once; Continue signs in with the same link and goes to the shop');
@@ -285,17 +290,40 @@ try {
   accountStatus = { email: 'new@kopi.sg', placeholder_email: false, email_proven: true, setup_done: false, profile: null, store: null };
   calls = [];
   authCalls = [];
+  sessionStorage.removeItem(WELCOME_KEY);
   page = await mount(Join);
   assert.deepEqual(calls, []);
   assert.deepEqual(authCalls.map(c => c[0]), ['verifyOtp', 'rpc']);
   assert.match(page.host.textContent, /Set up your account/);
   assert.match(page.host.textContent, /new@kopi\.sg/);
+  assert.equal(welcomeLeft(), null, 'A new account is not "back"');
   await page.unmount();
+  // The page took the link out of its address: open it again, as a tapped link does.
+  dom.reconfigure({ url: `https://sellio.sg/Join?token_hash=${HASH}&type=magiclink` });
   accountStatus = { email: 'shop@kopi.sg', placeholder_email: false, email_proven: true, setup_done: true, profile: null, store: null };
   page = await mount(Join);
   assert.equal(globalThis.navigatedTo, '/Account', 'A finished account without a shop goes to Account (open a shop)');
+  assert.equal(welcomeLeft(), 'Welcome back!', 'Signed in by the link: the page it opens says Welcome back!');
   await page.unmount();
-  passed('Join: a link to an open account signs in as before (new: set up; set up without a shop: Account)');
+  // A new account here for its business invite goes to Account too, but isn't welcomed back.
+  dom.reconfigure({ url: `https://sellio.sg/Join?token_hash=${HASH}&type=magiclink` });
+  sessionStorage.removeItem(WELCOME_KEY);
+  globalThis.navigatedTo = null;
+  accountStatus = { email: 'invited@kopi.sg', placeholder_email: false, email_proven: true, setup_done: false, business_invite: true, profile: null, store: null };
+  page = await mount(Join);
+  assert.equal(globalThis.navigatedTo, '/Account');
+  assert.equal(welcomeLeft(), null);
+  await page.unmount();
+  // Already signed in (no link): sent on, with no Welcome back!.
+  dom.reconfigure({ url: 'https://sellio.sg/Join' });
+  globalThis.navigatedTo = null;
+  accountStatus = { email: 'owner@kopi.sg', placeholder_email: false, email_proven: true, setup_done: true, profile: null,
+    store: { tenant_id: 'shop-1', name: 'Kopi Corner', slug: 'kopi-corner', seller_type: 'individual', is_owner: true } };
+  page = await mount(Join);
+  assert.equal(globalThis.navigatedTo, '/Dashboard');
+  assert.equal(welcomeLeft(), null, 'Not a new sign-in');
+  await page.unmount();
+  passed('Join: a link to an open account signs in as before (new: set up; set up without a shop: Account), welcoming back only existing accounts');
 
   // Old and mismatched links (Alvin's test, 6 Nov 2026: Gmail grouped the verification emails
   // into one conversation, an older link was tapped, and the page then took five refused

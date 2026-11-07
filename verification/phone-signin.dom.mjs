@@ -88,7 +88,9 @@ const setValue = (input, value) => act(async () => {
 const click = element => act(async () => { assert.ok(element, 'Control exists'); element.dispatchEvent(new win.MouseEvent('click', { bubbles: true })); });
 const submit = form => act(async () => { form.dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true })); });
 const buttonText = (root, text) => [...root.querySelectorAll('button')].find(b => b.textContent.trim() === text);
-const reset = () => { calls = []; globalThis.toastErrors = []; globalThis.authDestination = undefined; globalThis.profile = undefined; };
+const WELCOME_KEY = 'sellio-sign-in-welcome'; // src/lib/signInWelcome.js
+const welcomeLeft = () => JSON.parse(win.sessionStorage.getItem(WELCOME_KEY) || 'null')?.message ?? null;
+const reset = () => { calls = []; globalThis.toastErrors = []; globalThis.authDestination = undefined; globalThis.profile = undefined; win.sessionStorage.removeItem(WELCOME_KEY); };
 
 let passes = 0;
 const passed = name => { passes++; console.log('PASS ' + name); };
@@ -117,9 +119,10 @@ try {
   assert.deepEqual(calls.find(c => c[0] === 'from' && c[1] === 'app_users'), ['from', 'app_users', [['phone', '+6591234567']]]);
   assert.equal(globalThis.profile?.tenant_id, 'tenant-fixture');
   assert.equal(globalThis.authDestination, '/explore', 'an owner starts on Explore (staff logins: their Dashboard)');
+  assert.equal(welcomeLeft(), 'Welcome back!', 'the page it opens says Welcome back! (this page is gone by then)');
   assert.deepEqual(globalThis.toastErrors, []);
   assert.ok(!calls.some(c => c[0] === 'forbidden'));
-  passed('Phone sign-in: one plain request to Sydney, sets the returned session, loads only the own profile, opens Explore with no pause');
+  passed('Phone sign-in: one plain request to Sydney, sets the returned session, loads only the own profile, opens Explore with no pause and a Welcome back! there');
 
   const refusals = [
     [{ ok: false, code: 'invalid' }, 'Phone number or password is incorrect.'],
@@ -138,6 +141,7 @@ try {
     assert.deepEqual(globalThis.toastErrors, [message]);
     assert.ok(!calls.some(c => c[0] === 'setSession'), 'No session is set when sign-in is refused');
     assert.equal(globalThis.authDestination, undefined);
+    assert.equal(welcomeLeft(), null, 'no Welcome back! for a refused sign-in');
   }
   passed('Wrong number or password, the 15-minute lock, the network limit, no connection and gateway errors each show one clear message and never sign in');
 
