@@ -22,6 +22,7 @@ import {
 } from './shared';
 import ZoomableImage from '@/components/ui-custom/ZoomableImage';
 import { applyPageMeta, SITE, snippet } from '@/lib/pageMeta';
+import LoadingShapes from '@/components/ui-custom/LoadingShapes';
 
 // One Explore listing. The photo fills the screen from the very top (behind the
 // phone's status bar); scrolling down turns the floating buttons into a solid header
@@ -405,7 +406,7 @@ function Listing({ productId }) {
             <RoundButton label="Back" onClick={back} solid={1}><ArrowLeft className="w-5 h-5" /></RoundButton>
           </div>
         </div>
-        <Skeleton />
+        <LoadingShapes label="Loading this listing"><Skeleton /></LoadingShapes>
       </div>
     );
   }

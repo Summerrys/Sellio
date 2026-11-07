@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { shopMethod, shopStatusLabel } from '@/lib/shopSelling';
 import { formatMoney } from '@/lib/money';
+import ShareShopLinkButton from '@/components/shop/ShareShopLink';
 
 const STATUS_LABEL = {
   pending:   { text: 'New',        cls: 'bg-amber-100 text-amber-700' },
@@ -47,7 +48,12 @@ export default function RecentOrders({ tenantId, currency, shop = false, food = 
       </div>
 
       {orders.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-8">No orders yet today</p>
+        // Its last five orders, whenever they were: none means none at all yet.
+        <div className="text-center py-6" data-testid="recent-orders-empty">
+          <p className="text-sm font-semibold text-slate-900">No orders yet</p>
+          <p className="mt-1 text-sm text-slate-500">Your newest orders show up here as they come in.</p>
+          <div className="mt-4"><ShareShopLinkButton size="sm" /></div>
+        </div>
       ) : (
         <div className="space-y-3">
           {orders.map((order) => {

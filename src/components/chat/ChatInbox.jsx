@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { MessageCircle, RefreshCw, ImageIcon } from 'lucide-react';
 import { chatList } from '@/lib/chat';
 import { BRAND_COLOR, ShopAvatar, ItemImage } from '@/components/explore/shared';
+import LoadingShapes from '@/components/ui-custom/LoadingShapes';
 
 // A list of chats. box: 'all' | 'buying' | 'selling'; tenantId narrows selling chats
 // to one shop (the workspace). Each row links to hrefFor(chat).
@@ -84,15 +85,17 @@ export default function ChatInbox({ box, tenantId = null, hrefFor, selectedId = 
 
   if (status === 'pending') {
     return (
-      <div aria-hidden="true" className="divide-y divide-slate-100">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
-            <div className="w-12 h-12 rounded-full bg-slate-200" />
-            <div className="flex-1 space-y-2"><div className="h-3 w-1/2 rounded bg-slate-200" /><div className="h-3 w-3/4 rounded bg-slate-200" /></div>
-            <div className="w-12 h-12 rounded-lg bg-slate-200" />
-          </div>
-        ))}
-      </div>
+      <LoadingShapes label="Loading chats">
+        <div className="divide-y divide-slate-100">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
+              <div className="w-12 h-12 rounded-full bg-slate-200" />
+              <div className="flex-1 space-y-2"><div className="h-3 w-1/2 rounded bg-slate-200" /><div className="h-3 w-3/4 rounded bg-slate-200" /></div>
+              <div className="w-12 h-12 rounded-lg bg-slate-200" />
+            </div>
+          ))}
+        </div>
+      </LoadingShapes>
     );
   }
 

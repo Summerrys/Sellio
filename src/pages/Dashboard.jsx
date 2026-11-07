@@ -26,6 +26,8 @@ import { getDashboardSteps } from '@/components/tour/tourSteps';
 import { itemWords } from '@/lib/planFeatures';
 import ShopSetupCard from '@/components/shop/ShopSetupCard';
 import { isFnBIndustry } from '@/lib/industry';
+import LoadingShapes, { DashboardShapes } from '@/components/ui-custom/LoadingShapes';
+import { useFirstLoad } from '@/lib/useFirstLoad';
 
 const featureCards = [
   { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view', color: 'bg-blue-50 text-blue-600 border-blue-100' },
@@ -243,6 +245,14 @@ export default function Dashboard() {
   });
   const staff = allStaff.filter(m => m.status === 'active');
 
+  // Its first load: the shapes and Sellio's dots until every card below has its numbers,
+  // then all of it at once (no zeros or "No orders yet" while they're on their way).
+  const loading = useFirstLoad([
+    ['todayOrders', tenantId], ['dashboardProducts', tenantId], ['dashboardInventoryItems', tenantId],
+    ['dashboardStaff', tenantId], ['recentOrders', tenantId], ['revenueOrders', tenantId],
+    ['shop-setup-status', tenantId], ['subscription', tenantId],
+  ]);
+
   // The shop's currency is saved on tenants.currency (settings.currency is an older place).
   const currency = tenant?.currency || tenant?.settings?.currency || 'SGD';
 
@@ -346,7 +356,7 @@ export default function Dashboard() {
         tenantSlug={tenant?.slug}
       />
       <MerchantAssistantWidget externalOpen={aiOpen} onExternalClose={() => setAiOpen(false)} />
-      {dashboardTour.eligible && (
+      {dashboardTour.eligible && !loading && (
         <TourGuide
           steps={getDashboardSteps({
             hasTakeOrders: hasPermission('orders.create'),
@@ -361,6 +371,11 @@ export default function Dashboard() {
         />
       )}
 
+      {loading && (
+        <LoadingShapes label="Loading your dashboard"><DashboardShapes /></LoadingShapes>
+      )}
+      {/* Mounted while loading (so the cards load their numbers), shown when all are in. */}
+      <div hidden={loading} data-testid="dashboard-content" className="space-y-6">
       {/* Free shop: setup steps not finished yet (step 15) */}
       {tenant?.seller_type === 'individual' && <ShopSetupCard />}
 
@@ -446,6 +461,7 @@ export default function Dashboard() {
       <RequirePermission permission="reports.view" silent>
         <RevenueChart tenantId={tenantId} currency={currency} />
       </RequirePermission>
+      </div>
     </div>
   );
 }

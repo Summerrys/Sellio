@@ -4,6 +4,7 @@ import { useTenant } from '../components/tenant/TenantContext';
 import { toast } from 'sonner';
 import RequirePermission from '../components/auth/RequirePermission';
 import EmptyState from '../components/ui-custom/EmptyState';
+import LoadingShapes, { ListShapes } from '@/components/ui-custom/LoadingShapes';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import StockAdjustmentPanel from '../components/inventory/StockAdjustmentPanel';
@@ -247,7 +248,7 @@ function InventoryContent() {
 
             {/* Inventory List/Grid */}
             {isLoading ? (
-              <div className="text-center py-12 text-slate-400">Loading inventory...</div>
+              <LoadingShapes label="Loading inventory"><ListShapes rows={6} /></LoadingShapes>
             ) : sortedProducts.length === 0 ? (
               <EmptyState
                 icon={Package}

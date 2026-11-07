@@ -9,6 +9,7 @@ import Products from '@/pages/Products';
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
 import ShopBell from './ShopBell';
 import { BRAND_GRADIENT, ExploreTabHeader, ItemImage, formatPrice, listingUrl, timeAgo } from './shared';
+import LoadingShapes from '@/components/ui-custom/LoadingShapes';
 
 // A seller's own items: Explore → Listings, and the Listings tab of a free shop. The
 // seller manages them here (the Manage listings tools); someone without access to the
@@ -93,7 +94,7 @@ export function MyListingsContent({ tenantId, signedIn, returnPath }) {
       </Prompt>
     );
   }
-  if (state.status === 'loading') return <ListingsSkeleton />;
+  if (state.status === 'loading') return <LoadingShapes label="Loading your listings"><ListingsSkeleton /></LoadingShapes>;
   if (state.status === 'error') {
     return (
       <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">

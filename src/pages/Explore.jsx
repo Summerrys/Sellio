@@ -15,6 +15,7 @@ import { RatingPill } from '@/components/ratings/RatingParts';
 import { useSell } from '@/lib/sell';
 import { listingUrl, ExploreDesktopTabs } from '@/components/explore/shared';
 import { applyPageMeta, SITE } from '@/lib/pageMeta';
+import LoadingShapes from '@/components/ui-custom/LoadingShapes';
 
 // Sellio Explore: a public, Carousell-style feed of items from Sellio shops.
 // Anyone can browse without an account; tapping an item opens its listing page. Data comes from the explore_feed / explore_shops RPCs, which only
@@ -631,7 +632,7 @@ export default function Explore() {
         <section aria-labelledby="explore-feed-heading" className={!filtered && shops.length > 0 ? '' : 'pt-2.5'}>
           <h2 id="explore-feed-heading" className="text-[15px] font-bold text-slate-900 mb-2 px-1 sm:px-0">{heading}</h2>
 
-          {status === 'loading' && <SkeletonGrid />}
+          {status === 'loading' && <LoadingShapes label="Loading listings"><SkeletonGrid /></LoadingShapes>}
 
           {status === 'error' && (
             <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">

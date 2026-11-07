@@ -13,10 +13,12 @@ import TableCallAlerts from '../components/orders/TableCallAlerts';
 import { useOrderAlerts, REMIND_EVERY } from '@/lib/useOrderAlerts';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { ClipboardList, Bell, BellOff, Monitor, Search, Download, Printer, Loader2, QrCode } from 'lucide-react';
+import { Bell, BellOff, Monitor, Search, Download, Printer, Loader2, QrCode } from 'lucide-react';
 import EditOrderModal from '@/components/orders/EditOrderModal';
 import ChitPreviewSheet from '@/components/orders/ChitPreviewSheet';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
+import LoadingShapes from '@/components/ui-custom/LoadingShapes';
+import OrdersEmpty, { ordersEmptyKind } from '@/components/orders/OrdersEmpty';
 import { useProductTour } from '@/hooks/useProductTour';
 import TourGuide from '@/components/tour/TourGuide';
 import { getOrdersSteps } from '@/components/tour/tourSteps';
@@ -635,6 +637,8 @@ export default function Orders() {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  // The last load failed (the list then says so, rather than "No orders yet").
+  const [loadFailed, setLoadFailed] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const lastSeenDateRef = useRef(null);
@@ -661,6 +665,7 @@ export default function Orders() {
       .eq('is_deleted', false)
       .order('created_date', { ascending: false });
     if (!error) setOrders(data || []);
+    setLoadFailed(!!error);
     setIsLoading(false);
     if (error && throwOnError === true) throw error;
   }, [tenantId]);
@@ -960,13 +965,20 @@ export default function Orders() {
 
           {/* Orders list */}
           {isLoading ? (
-            <SkeletonList count={4} lines={3} imageSize={0} />
+            <LoadingShapes label="Loading orders"><SkeletonList count={4} lines={3} imageSize={0} /></LoadingShapes>
           ) : filteredOrders.length === 0 ? (
-            <div className="text-center py-12">
-              <ClipboardList className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500">
-                {searchQuery ? 'No orders match your search' : `No ${activeTab !== 'all' ? `${statusTabs.find(t => t.value === activeTab)?.label} ` : ''}orders yet`}
-              </p>
+            <div>
+              <OrdersEmpty
+                kind={ordersEmptyKind({ failed: loadFailed, total: orders.length, query: searchQuery })}
+                query={searchQuery}
+                tab={activeTab}
+                isShop={isShop}
+                tableOrdering={!!canUseFeature?.('can_use_table_ordering')}
+                counter={!!canUseFeature?.('can_use_pos')}
+                onSeeAll={() => setActiveTab('all')}
+                onClearSearch={() => setSearchQuery('')}
+                onRetry={() => { setIsLoading(true); fetchOrders(); }}
+              />
               {/* Tour needs a card to point at even with zero real orders yet */}
               {ordersTour.eligible && (
                 <div className="max-w-[280px] mx-auto mt-4">

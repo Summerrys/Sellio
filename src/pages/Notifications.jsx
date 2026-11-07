@@ -7,6 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Bell, ShoppingBag, AlertTriangle, Users, Search, Check, SlidersHorizontal, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { useTenant } from '@/components/tenant/TenantContext';
+import { useFirstLoad } from '@/lib/useFirstLoad';
+import LoadingShapes, { ListShapes } from '@/components/ui-custom/LoadingShapes';
+import NotificationsEmpty from '@/components/notifications/NotificationsEmpty';
 
 const NOTIFICATION_ICONS = {
   new_order: ShoppingBag,
@@ -39,6 +43,9 @@ const TYPE_FILTERS = [
 export default function Notifications() {
   const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  // NotificationProvider's list, on its first load (its key: ['notifications', email]).
+  const { user } = useTenant();
+  const loading = useFirstLoad([['notifications', user?.email || null]]);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -174,10 +181,14 @@ export default function Notifications() {
       </div>
 
       <div className="min-w-0 space-y-2">
-        {filteredNotifications.length === 0 ? (
+        {loading ? (
+          <LoadingShapes label="Loading notifications"><ListShapes rows={6} picture="round" side={false} /></LoadingShapes>
+        ) : !notifications.length ? (
+          <NotificationsEmpty />
+        ) : filteredNotifications.length === 0 ? (
           <div className="rounded-xl border bg-card p-6 text-center">
             <Bell className="mx-auto mb-2 h-8 w-8 text-muted-foreground" aria-hidden="true" />
-            <p className="text-sm text-muted-foreground">{notifications.length ? 'No matching notifications' : 'No notifications yet'}</p>
+            <p className="text-sm text-muted-foreground">No matching notifications</p>
             {(query || typeFilter !== 'all' || statusFilter !== 'all') && (
               <Button variant="ghost" onClick={resetFilters} className="mt-2 min-h-[44px]">Clear filters</Button>
             )}

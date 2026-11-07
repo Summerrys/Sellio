@@ -20,6 +20,7 @@ import { fetchRatingSummaries, forgetRatingSummary, isSignedIn, myOrderRatings }
 import { useChatUser } from '@/lib/chat';
 import { rememberThisPhone } from '@/lib/deviceKey';
 import { OrderRateRow, RateOrderSheet, RatePrompt, RatingSheet } from '@/components/ratings/RatingParts';
+import LoadingShapes, { StoreShapes } from '@/components/ui-custom/LoadingShapes';
 
 // Orders whose "How was your order?" card was dismissed (shown once per order).
 const RATE_PROMPT_KEY = 'sellio_rate_prompt_dismissed';
@@ -821,35 +822,11 @@ function StorefrontInner() {
   };
 
   if (loading) {
+    // The shop's page before its look is known: placeholder shapes with Sellio's dots,
+    // over everything as before (LoadingShapes: both go the moment the shop shows).
     return (
-      <div style={{
-        position: 'fixed', inset: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: 'Inter, sans-serif', background: '#ffffff', zIndex: 1,
-      }}>
-        <style>{`
-          @keyframes sellio-bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-8px); } }
-          @keyframes sellio-pulse-logo { 0%, 100% { transform: scale(1.0); } 50% { transform: scale(1.05); } }
-          .sellio-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; will-change: transform; }
-          .sellio-dot-1 { animation: sellio-bounce 1.2s ease-in-out infinite 0ms; background: #fb923c; }
-          .sellio-dot-2 { animation: sellio-bounce 1.2s ease-in-out infinite 200ms; background: #e0449a; }
-          .sellio-dot-3 { animation: sellio-bounce 1.2s ease-in-out infinite 400ms; background: #8b2fc9; }
-          .sellio-logo-pulse { animation: sellio-pulse-logo 1.5s ease-in-out infinite; }
-        `}</style>
-        <div style={{ textAlign: 'center' }}>
-          <img
-            src="/branding/sellio-logo.webp"
-            alt="Sellio"
-            className="sellio-logo-pulse"
-            style={{ width: 80, objectFit: 'contain', marginBottom: 20, display: 'block', marginLeft: 'auto', marginRight: 'auto' }}
-          />
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 7, justifyContent: 'center', marginBottom: 14, height: 16 }}>
-            <span className="sellio-dot sellio-dot-1" />
-            <span className="sellio-dot sellio-dot-2" />
-            <span className="sellio-dot sellio-dot-3" />
-          </div>
-          <p style={{ color: '#94a3b8', fontSize: 14, margin: 0 }}>Loading menu...</p>
-        </div>
+      <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#ffffff', zIndex: 1, fontFamily: 'Inter, sans-serif' }}>
+        <LoadingShapes label="Loading the shop"><StoreShapes /></LoadingShapes>
       </div>
     );
   }

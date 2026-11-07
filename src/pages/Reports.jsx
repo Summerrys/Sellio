@@ -14,11 +14,13 @@ import InventoryReport from '../components/reports/InventoryReport';
 import CustomerInsights from '../components/reports/CustomerInsights';
 import ExportButton from '../components/reports/ExportButton';
 import PricingModal from '../components/subscription/PricingModal';
-import { BarChart3, Lock, Package, Users, Sparkles } from 'lucide-react';
+import { Lock, Package, Users, Sparkles } from 'lucide-react';
 import { subDays } from 'date-fns';
 import { toast } from 'sonner';
 import { periodOf, inPeriod, dayKey, buildReport } from '@/lib/reportData';
 import { sellsPlans, PLANS_ON_WEBSITE } from '@/lib/nativeApp';
+import LoadingShapes, { ReportShapes } from '@/components/ui-custom/LoadingShapes';
+import ReportsEmpty, { USUAL_DAYS } from '@/components/reports/ReportsEmpty';
 
 const TIER_LABELS = { starter: 'Basic', growth: 'Advanced', pro: 'Custom' };
 
@@ -238,12 +240,10 @@ export default function Reports() {
   });
 
   if (ordersLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-slate-500">Loading reports...</p>
-      </div>
-    );
+    return <LoadingShapes label="Loading reports"><ReportShapes /></LoadingShapes>;
   }
+
+  const showUsualDays = () => setDateRange({ from: subDays(new Date(), USUAL_DAYS - 1), to: new Date() });
 
   return (
     <RequirePermission permission="reports.view">
@@ -314,11 +314,7 @@ export default function Reports() {
 
           <TabsContent value="sales">
             {orders.length === 0 ? (
-              <div className="text-center py-12">
-                <BarChart3 className="w-14 h-14 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500">No data for selected period</p>
-                <p className="text-slate-400 text-sm mt-1">Try a different date range</p>
-              </div>
+              <ReportsEmpty dateRange={dateRange} onShowUsualDays={showUsualDays} />
             ) : (
               <SalesReport
                 orders={orders}
@@ -334,11 +330,7 @@ export default function Reports() {
 
           <TabsContent value="products">
             {orders.length === 0 ? (
-              <div className="text-center py-12">
-                <BarChart3 className="w-14 h-14 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500">No data for selected period</p>
-                <p className="text-slate-400 text-sm mt-1">Try a different date range</p>
-              </div>
+              <ReportsEmpty dateRange={dateRange} onShowUsualDays={showUsualDays} />
             ) : (
               <ProductPerformance
                 orders={orders}

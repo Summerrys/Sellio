@@ -24,6 +24,7 @@ import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown
 import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { isShopTenant } from '@/lib/shopSelling';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
+import LoadingShapes from '@/components/ui-custom/LoadingShapes';
 import { applyCanonicalProductOrder } from '@/lib/storefrontCatalog';
 import { useSubscription } from '@/hooks/useSubscription';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
@@ -780,7 +781,7 @@ export default function Products({ embedded = false } = {}) {
 
         {/* Products Display */}
         {isLoading ? (
-          <SkeletonList count={5} lines={2} imageSize={64} />
+          <LoadingShapes label="Loading products"><SkeletonList count={5} lines={2} imageSize={64} /></LoadingShapes>
         ) : filteredProducts.length === 0 ? (
           <>
             <EmptyState

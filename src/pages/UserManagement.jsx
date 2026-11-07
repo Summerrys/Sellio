@@ -30,6 +30,7 @@ import { Link } from 'react-router-dom';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { sellsPlans } from '@/lib/nativeApp';
+import LoadingShapes, { ListShapes } from '@/components/ui-custom/LoadingShapes';
 
 // Visual identity per permission group in the toggle-based Roles editor — reuses
 // the exact same color language as Dashboard's Quick Access cards (Orders=blue,
@@ -334,7 +335,7 @@ function StaffContent({ onUpgrade }) {
         </div>
 
         {isLoading ? (
-          <div className="text-center py-12 text-slate-400">Loading staff...</div>
+          <LoadingShapes label="Loading staff"><ListShapes rows={5} picture="round" /></LoadingShapes>
         ) : filteredStaff.length === 0 ? (
           <EmptyState icon={Users} title={searchQuery || statusFilter !== 'all' || roleFilter !== 'all' ? "No staff found" : "No staff members yet"} description={searchQuery || statusFilter !== 'all' || roleFilter !== 'all' ? "Try adjusting your filters" : "Add your first team member to get started"} actionLabel={canCreateStaff ? 'Add Staff' : undefined} onAction={canCreateStaff ? () => setCreateOpen(true) : undefined} />
         ) : viewMode === 'table' ? (

@@ -29,6 +29,9 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
 import { useBackToClose } from '@/lib/useBackToClose';
+import LoadingShapes, { TableShapes } from '@/components/ui-custom/LoadingShapes';
+
+const NO_TABLES = [];
 
 const STATUS_CONFIG = {
   available: { label: 'Available', color: 'bg-green-100 text-green-700 border-green-300' },
@@ -95,7 +98,9 @@ export default function Tables() {
   const [qrModalTable, setQrModalTable] = useState(null);
   useBackToClose(!!qrModalTable, () => setQrModalTable(null)); // phone / browser Back closes the QR preview
 
-  const { data: tables = [], isLoading } = useQuery({
+  // NO_TABLES: one empty list for every render while loading. A new [] each render made the
+  // effect below (setLocalTables) run every render: a render loop until the tables came.
+  const { data: tables = NO_TABLES, isLoading } = useQuery({
     queryKey: ['tables', tenantId],
     queryFn: async () => {
       const supabase = await getSupabase();
@@ -460,11 +465,38 @@ export default function Tables() {
 
         {/* Tables display */}
         {isLoading ? (
-          <div style={{ textAlign: 'center', padding: '48px 16px', color: '#94a3b8' }}>Loading tables...</div>
+          <LoadingShapes label="Loading tables"><TableShapes /></LoadingShapes>
         ) : filteredTables.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px 16px' }}>
+          <div style={{ textAlign: 'center', padding: '48px 16px' }} data-testid="tables-empty">
             <QrCode style={{ width: '48px', height: '48px', color: '#cbd5e1', margin: '0 auto 12px' }} />
-            <p style={{ color: '#94a3b8', margin: 0 }}>{searchQuery || zoneFilter || statusFilter ? 'No tables found' : 'No tables yet'}</p>
+            {searchQuery.trim() || zoneFilter !== 'all' || statusFilter !== 'all' ? (
+              <>
+                <p className="text-base font-semibold text-slate-900">No tables match</p>
+                <p className="mt-1 text-sm text-slate-500">No table has that name, zone or status.</p>
+                <button
+                  type="button"
+                  onClick={() => { setSearchQuery(''); setZoneFilter('all'); setStatusFilter('all'); }}
+                  className="mt-5 h-10 px-5 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 active:scale-95 transition-transform"
+                >
+                  Show all tables
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-base font-semibold text-slate-900">No tables yet</p>
+                <p className="mt-1 text-sm text-slate-500 max-w-xs mx-auto">Add your tables to get a QR code for each one. Customers scan it to order from their table.</p>
+                {canCreate && (
+                  <button
+                    type="button"
+                    onClick={handleAdd}
+                    className="mt-5 h-11 px-5 rounded-full text-sm font-semibold text-white inline-flex items-center gap-2 active:scale-95 transition-transform"
+                    style={{ background: 'var(--color-primary-gradient, linear-gradient(135deg, #3b82f6 0%, #9333ea 100%))' }}
+                  >
+                    <Plus className="w-4 h-4" /> Add a table
+                  </button>
+                )}
+              </>
+            )}
           </div>
         ) : (() => {
           const filteredZones = [...new Set(filteredTables.map(t => t.zone || 'Unassigned'))].sort();
