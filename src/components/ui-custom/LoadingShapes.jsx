@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { SellioLoadingMark } from './AppLoader';
 
 // A page's loading state (Alvin, 7 Nov 2026): grey placeholder shapes in the page's own
 // layout, with Sellio's small logo and bouncing dots over them (the full-screen loader's
-// mark, AppLoader; 8 Nov), on their own with no card behind them. One element holds both,
-// so they appear in the same moment and go in the same moment the page shows its content.
-// Everything moves to the dots' 1.2-second beat: the shapes' sweep, the logo's pulse, and
-// the older skeletons a page wraps in it (AppLoader's .sellio-shimmer, Tailwind's
-// animate-pulse). Still loading after 12 seconds: a Reload offer under the mark, as on the
-// full-screen loader.
+// mark, AppLoader; 8 Nov), on their own with no card behind them, in the middle of the
+// screen whatever the shapes (8 Nov; drawn on the page's body, so nothing on the page can
+// move it). One component draws both, so they appear in the same moment and go in the same
+// moment the page shows its content. Everything moves to the dots' 1.2-second beat: the
+// shapes' sweep, the logo's pulse, and the older skeletons a page wraps in it (AppLoader's
+// .sellio-shimmer, Tailwind's animate-pulse). Still loading after 12 seconds: a Reload offer
+// under the mark, as on the full-screen loader.
 const STYLE_ID = 'sellio-loading-shapes-css';
 
 const CSS = `
@@ -19,9 +21,9 @@ const CSS = `
   animation: sellio-loading-sweep 1.2s linear infinite;
 }
 .sellio-loading .sellio-shimmer, .sellio-loading .animate-pulse { animation-duration: 1.2s !important; }
-.sellio-loading .sellio-logo-pulse { animation-duration: 1.2s; }
+.sellio-loading-centre .sellio-logo-pulse { animation-duration: 1.2s; }
 .sellio-loading-centre {
-  position: absolute; left: 50%; top: min(50%, 40vh); transform: translate(-50%, -50%); z-index: 2;
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 25;
   display: flex; flex-direction: column; align-items: center; gap: 10px; pointer-events: none;
 }
 .sellio-loading-mark { display: flex; }
@@ -36,8 +38,8 @@ const CSS = `
   background: var(--color-primary-gradient, linear-gradient(135deg, #3b82f6 0%, #9333ea 100%));
 }
 @media (prefers-reduced-motion: reduce) {
-  .sellio-loading .sellio-shape, .sellio-loading .sellio-logo-pulse,
-  .sellio-loading .sellio-dot-1, .sellio-loading .sellio-dot-2, .sellio-loading .sellio-dot-3 { animation: none; }
+  .sellio-loading .sellio-shape, .sellio-loading-centre .sellio-logo-pulse,
+  .sellio-loading-centre .sellio-dot-1, .sellio-loading-centre .sellio-dot-2, .sellio-loading-centre .sellio-dot-3 { animation: none; }
 }
 `;
 
@@ -73,15 +75,18 @@ export default function LoadingShapes({ children, label = 'Loading', className =
       style={{ position: 'relative', ...style }}
     >
       <div aria-hidden="true">{children}</div>
-      <div className="sellio-loading-centre">
-        <span className="sellio-loading-mark" data-testid="loading-mark"><SellioLoadingMark /></span>
-        {slow && (
-          <span className="sellio-loading-slow">
-            <span>This is taking longer than usual.</span>
-            <button type="button" onClick={() => window.location.reload()}>Reload</button>
-          </span>
-        )}
-      </div>
+      {typeof document === 'undefined' ? null : createPortal(
+        <div className="sellio-loading-centre" data-testid="loading-centre">
+          <span className="sellio-loading-mark" data-testid="loading-mark"><SellioLoadingMark /></span>
+          {slow && (
+            <span className="sellio-loading-slow">
+              <span>This is taking longer than usual.</span>
+              <button type="button" onClick={() => window.location.reload()}>Reload</button>
+            </span>
+          )}
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }

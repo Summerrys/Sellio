@@ -123,7 +123,7 @@ const button = (root, label) => [...root.querySelectorAll('button')].find((b) =>
 const click = (node) => act(async () => { assert.ok(node, 'the button is there'); node.dispatchEvent(new win.MouseEvent('click', { bubbles: true })); });
 
 try {
-  // ── 1. LoadingShapes: shapes and Sellio's mark in one element ────────────────────────
+  // ── 1. LoadingShapes: shapes, and Sellio's mark in the middle of the screen ─────────
   {
     function Page({ loading }) {
       return loading
@@ -136,8 +136,10 @@ try {
     assert.equal(status.getAttribute('aria-label'), 'Loading orders');
     assert.equal(status.getAttribute('aria-busy'), 'true');
     assert.ok(status.querySelector('.sellio-shape'), 'shapes');
-    const mark = status.querySelector('[data-testid="loading-mark"]');
-    assert.ok(mark, 'Sellio\'s mark, inside the same element as the shapes');
+    const centre = document.querySelector('[data-testid="loading-centre"]');
+    const mark = centre?.querySelector('[data-testid="loading-mark"]');
+    assert.ok(mark, 'Sellio\'s mark, from the same first render as the shapes');
+    assert.equal(centre.parentElement === document.body, true, 'drawn on the page\'s body, so nothing on the page can move it off the middle');
     const logo = mark.querySelector('img');
     assert.equal(logo?.getAttribute('src'), '/branding/sellio-logo.webp', 'the Sellio logo, as on the full-screen loader');
     assert.ok(logo.classList.contains('sellio-logo-pulse'), 'the logo pulses, as on the full-screen loader');
@@ -149,7 +151,7 @@ try {
     assert.equal(page.container.querySelector('[data-testid="content"]'), null, 'no content yet');
     await page.render(h(Page, { loading: false }));
     assert.equal(page.container.querySelector('[data-testid="loading-shapes"]'), null, 'shapes gone');
-    assert.equal(page.container.querySelector('[data-testid="loading-mark"]'), null, 'logo and dots gone in the same render');
+    assert.equal(!!document.querySelector('[data-testid="loading-mark"]'), false, 'logo and dots gone in the same render');
     assert.equal(text(page.container), 'Order #ORD-000128', 'the content is all that shows');
     await page.close();
 
@@ -159,22 +161,29 @@ try {
     assert.equal(beat(css, /animation: sellio-loading-sweep ([\d.]+s)/), '1.2s', 'the shapes sweep every 1.2 s');
     assert.equal(beat(allCss, /\.sellio-dot-1 \{ animation: sellio-bounce ([\d.]+s)/), '1.2s', 'the dots bounce every 1.2 s');
     assert.match(allCss, /\.sellio-dot-2 \{ animation: sellio-bounce 1\.2s ease-in-out infinite 200ms[\s\S]*\.sellio-dot-3 \{ animation: sellio-bounce 1\.2s ease-in-out infinite 400ms/, 'the dots one after another, as on the full-screen loader');
-    assert.equal(beat(css, /\.sellio-loading \.sellio-logo-pulse \{ animation-duration: ([\d.]+s)/), '1.2s', 'the logo pulses on the same beat');
+    assert.equal(beat(css, /\.sellio-loading-centre \.sellio-logo-pulse \{ animation-duration: ([\d.]+s)/), '1.2s', 'the logo pulses on the same beat');
+    assert.match(css, /\.sellio-loading-centre \{\s*position: fixed; left: 50%; top: 50%; transform: translate\(-50%, -50%\);/, 'in the middle of the screen');
+    const still = beat(css, /prefers-reduced-motion: reduce\) \{([^}]*)\{ animation: none; \}/) || '';
+    for (const part of ['.sellio-loading .sellio-shape', '.sellio-loading-centre .sellio-logo-pulse', '.sellio-loading-centre .sellio-dot-1', '.sellio-loading-centre .sellio-dot-2', '.sellio-loading-centre .sellio-dot-3']) {
+      assert.ok(still.includes(part), `stands still when the phone asks for less motion: ${part}`);
+    }
     const markRule = beat(css, /\.sellio-loading-mark \{([^}]*)\}/);
     assert.ok(markRule !== undefined, 'the mark has its rule');
     assert.doesNotMatch(markRule, /background|box-shadow|border|padding/, 'just the logo and dots: no card behind them');
     assert.match(css, /\.sellio-loading \.sellio-shimmer, \.sellio-loading \.animate-pulse \{ animation-duration: 1\.2s/, 'older skeletons inside it keep the same beat');
-    passed('LoadingShapes: shapes with Sellio\'s logo and three dots in one element, appearing and going together, on one 1.2 s beat');
+    passed('LoadingShapes: shapes, with Sellio\'s logo and three dots in the middle of the screen, appearing and going together, on one 1.2 s beat');
 
     const slow = await mount(h(app.LoadingShapes, { slowAfterMs: 30 }, h(app.Shape)));
-    assert.equal(button(slow.container, 'Reload'), undefined, 'no Reload offer at first');
+    assert.equal(button(document.body, 'Reload'), undefined, 'no Reload offer at first');
     await wait(60);
-    assert.match(text(slow.container), /This is taking longer than usual\./);
-    assert.ok(button(slow.container, 'Reload'), 'a Reload offer under the logo and dots');
+    const centreText = () => text(document.querySelector('[data-testid="loading-centre"]'));
+    assert.match(centreText(), /This is taking longer than usual\./, 'under the logo and dots');
+    assert.ok(button(document.querySelector('[data-testid="loading-centre"]'), 'Reload'), 'a Reload offer under the logo and dots');
     await slow.close();
+    assert.equal(button(document.body, 'Reload'), undefined, 'it goes with the page');
     const usual = await mount(h(app.LoadingShapes, {}, h(app.Shape)));
     await wait(60);
-    assert.equal(button(usual.container, 'Reload'), undefined, 'the usual wait is 12 seconds');
+    assert.equal(button(document.body, 'Reload'), undefined, 'the usual wait is 12 seconds');
     await usual.close();
     passed('Still loading after the wait: a Reload offer, as on the full-screen loader');
   }
@@ -201,7 +210,7 @@ try {
     }
     const page = await mount(h(QueryClientProvider, { client }, h(Page)));
     const shapes = () => page.container.querySelector('[data-testid="loading-shapes"]');
-    const mark = () => page.container.querySelector('[data-testid="loading-mark"]');
+    const mark = () => document.querySelector('[data-testid="loading-mark"]');
     const cards = () => page.container.querySelector('[data-testid="cards"]');
     assert.ok(shapes() && mark(), 'shapes and Sellio\'s mark from the first render');
     assert.equal(cards().hidden, true, 'the cards are mounted but hidden');
@@ -209,8 +218,8 @@ try {
     assert.equal(text(page.container.querySelector('[data-card="cardA"]')), 'cardA ready', 'one card has its numbers');
     assert.ok(shapes() && mark() && cards().hidden, 'still loading: the other card hasn\'t');
     await wait(80);
-    assert.equal(shapes(), null, 'shapes gone');
-    assert.equal(mark(), null, 'logo and dots gone with them');
+    assert.equal(!!shapes(), false, 'shapes gone');
+    assert.equal(!!mark(), false, 'logo and dots gone with them');
     assert.equal(cards().hidden, false, 'every card shows');
     assert.deepEqual([...cards().querySelectorAll('[data-card]')].map((card) => card.textContent), ['cardA ready', 'cardB ready'], 'all at once, with their numbers (no "empty" on show)');
     assert.ok(!renders.some((r, i) => i > 0 && !renders[i - 1].loading && r.loading), 'never back to loading once shown');

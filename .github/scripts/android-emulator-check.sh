@@ -118,7 +118,7 @@ grep -oE "NotificationChannel\{mId='(orders|messages|updates)', mName=[^,]*" "$O
 grep -E "Sellio push:" "$OUT/logcat-full.txt" | sed -E 's/.*(Sellio push:[^"]*).*/\1/' || echo "(no push lines)"
 echo "--- pull to refresh (expect: the page's answers to the app, the app's 'pulled: refreshing', the page's 'refreshing', one finish)"
 grep -E "Sellio refresh:" "$OUT/logcat-full.txt" | sed -E 's/.*(Sellio refresh:[^"]*).*/\1/' | sort | uniq -c || echo "(no page lines)"
-grep -E "Capacitor/SellioRefresh" "$OUT/logcat-full.txt" | sed -E 's/.*Capacitor\/SellioRefresh: //' || echo "(no app lines)"
+grep -E " (Capacitor/)?SellioRefresh(Plugin)?: " "$OUT/logcat-full.txt" | sed -E 's/.* (Capacitor\/)?SellioRefresh(Plugin)?: //' || echo "(no app lines)"
 for m in touch finish; do echo "SellioRefresh.$m calls: $(grep -c "pluginId: SellioRefresh, methodName: $m, methodData" "$OUT/logcat-full.txt")"; done
 grep -E "pluginId: SellioRefresh, methodName: touch, methodData" "$OUT/logcat-full.txt" | sed -E 's/.*methodData: //' | tail -3 || true
 grep -F "is not implemented on android" "$OUT/logcat-full.txt" | grep -F SellioRefresh | head -2 | cut -c1-200 || true
