@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
+import { SellioLoadingMark } from './AppLoader';
 
 // A page's loading state (Alvin, 7 Nov 2026): grey placeholder shapes in the page's own
-// layout, with Sellio's three bouncing dots over them. One element holds both, so they
-// appear in the same moment and go in the same moment the page shows its content. The
-// shapes sweep to the dots' 1.2-second beat, and so do the older skeletons a page wraps in
-// it (AppLoader's .sellio-shimmer, Tailwind's animate-pulse). Still loading after 12
-// seconds: a Reload offer under the dots, as on the full-screen loader (AppLoader).
+// layout, with Sellio's small logo and bouncing dots over them (the full-screen loader's
+// mark, AppLoader; 8 Nov), on their own with no card behind them. One element holds both,
+// so they appear in the same moment and go in the same moment the page shows its content.
+// Everything moves to the dots' 1.2-second beat: the shapes' sweep, the logo's pulse, and
+// the older skeletons a page wraps in it (AppLoader's .sellio-shimmer, Tailwind's
+// animate-pulse). Still loading after 12 seconds: a Reload offer under the mark, as on the
+// full-screen loader.
 const STYLE_ID = 'sellio-loading-shapes-css';
 
 const CSS = `
-@keyframes sellio-loading-bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-8px); } }
 @keyframes sellio-loading-sweep { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 .sellio-loading .sellio-shape {
   background: linear-gradient(90deg, #f0f0f0 25%, #e6e8eb 50%, #f0f0f0 75%);
@@ -17,19 +19,12 @@ const CSS = `
   animation: sellio-loading-sweep 1.2s linear infinite;
 }
 .sellio-loading .sellio-shimmer, .sellio-loading .animate-pulse { animation-duration: 1.2s !important; }
+.sellio-loading .sellio-logo-pulse { animation-duration: 1.2s; }
 .sellio-loading-centre {
   position: absolute; left: 50%; top: min(50%, 40vh); transform: translate(-50%, -50%); z-index: 2;
   display: flex; flex-direction: column; align-items: center; gap: 10px; pointer-events: none;
 }
-.sellio-loading-badge {
-  display: inline-flex; align-items: center; height: 36px; padding: 0 16px; border-radius: 999px;
-  background: rgba(255, 255, 255, 0.95); box-shadow: 0 8px 24px -10px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(15, 23, 42, 0.05);
-}
-.sellio-loading-dots { display: inline-flex; align-items: flex-end; gap: 7px; height: 16px; }
-.sellio-loading-dots > span { width: 8px; height: 8px; border-radius: 50%; animation: sellio-loading-bounce 1.2s ease-in-out infinite; }
-.sellio-loading-dots > span:nth-child(1) { background: #fb923c; }
-.sellio-loading-dots > span:nth-child(2) { background: #e0449a; animation-delay: 0.2s; }
-.sellio-loading-dots > span:nth-child(3) { background: #8b2fc9; animation-delay: 0.4s; }
+.sellio-loading-mark { display: flex; }
 .sellio-loading-slow {
   pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 8px; max-width: 260px;
   padding: 10px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.97); text-align: center;
@@ -41,7 +36,8 @@ const CSS = `
   background: var(--color-primary-gradient, linear-gradient(135deg, #3b82f6 0%, #9333ea 100%));
 }
 @media (prefers-reduced-motion: reduce) {
-  .sellio-loading .sellio-shape, .sellio-loading-dots > span { animation: none; }
+  .sellio-loading .sellio-shape, .sellio-loading .sellio-logo-pulse,
+  .sellio-loading .sellio-dot-1, .sellio-loading .sellio-dot-2, .sellio-loading .sellio-dot-3 { animation: none; }
 }
 `;
 
@@ -56,11 +52,6 @@ function injectCss() {
 // One grey placeholder shape (inside LoadingShapes).
 export function Shape({ w = '100%', h = 12, r = 8, className = '', style }) {
   return <div className={`sellio-shape ${className}`} style={{ width: w, height: h, borderRadius: r, flexShrink: 0, ...style }} />;
-}
-
-// Sellio's three dots, as on the launch splash.
-export function SellioDots() {
-  return <span className="sellio-loading-dots" aria-hidden="true"><span /><span /><span /></span>;
 }
 
 export default function LoadingShapes({ children, label = 'Loading', className = '', style, slowAfterMs = 12000 }) {
@@ -83,7 +74,7 @@ export default function LoadingShapes({ children, label = 'Loading', className =
     >
       <div aria-hidden="true">{children}</div>
       <div className="sellio-loading-centre">
-        <span className="sellio-loading-badge" data-testid="loading-dots"><SellioDots /></span>
+        <span className="sellio-loading-mark" data-testid="loading-mark"><SellioLoadingMark /></span>
         {slow && (
           <span className="sellio-loading-slow">
             <span>This is taking longer than usual.</span>

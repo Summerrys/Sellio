@@ -116,6 +116,31 @@ export default function AppLoader({ visible = true }) {
   );
 }
 
+// ── Sellio's mark: the small logo over the three bouncing dots ──────────────
+// The same logo and dots as the full-screen loader above, without its words.
+// LoadingShapes puts it over a page's placeholder shapes.
+const DOT = { width: 8, height: 8, borderRadius: '50%', display: 'inline-block' };
+export function SellioLoadingMark() {
+  injectCSS();
+  return (
+    <span aria-hidden="true" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+      <img
+        src="/branding/sellio-logo.webp"
+        alt=""
+        width={80}
+        height={80}
+        className="sellio-logo-pulse"
+        style={{ width: 80, height: 80, objectFit: 'contain', display: 'block' }}
+      />
+      <span style={{ display: 'flex', alignItems: 'flex-end', gap: 7, height: 16 }}>
+        <span className="sellio-dot-1" style={DOT} />
+        <span className="sellio-dot-2" style={DOT} />
+        <span className="sellio-dot-3" style={DOT} />
+      </span>
+    </span>
+  );
+}
+
 // ── Button inline spinner (white, 16px) ─────────────────────────────────────
 export function BtnSpinner() {
   return (
