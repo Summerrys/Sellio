@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 import { useAppUser } from '@/lib/AppUserContext';
 import { HOLD_REASONS, REPORT_REASONS, amIModerator, moderateComment, moderationQueue, ratingReviewQueue, reviewRating } from '@/lib/ratings';
 import { Stars } from '@/components/ratings/RatingParts';
@@ -73,7 +74,7 @@ function HeldRating({ item, onDone }) {
       toast.success(action === 'keep' ? 'Kept. It counts now, and the shop has been told.' : 'Removed. It won’t count.');
       onDone(item.rating_id);
     } catch (e) {
-      toast.error(e?.message || 'That didn’t work. Please try again.');
+      showError(e, action === 'keep' ? 'Couldn’t keep the rating' : 'Couldn’t remove the rating');
       setBusy(null);
     }
   };
@@ -141,7 +142,8 @@ function ReportedComment({ item, onDone }) {
       toast.success(action === 'keep' ? 'Kept. It shows on the shop page.' : 'Removed. The buyer has been told.');
       onDone(item.rating_id);
     } catch (e) {
-      toast.error(e?.message || 'That didn’t work. Please try again.');
+      showError(e, action === 'keep' ? 'Couldn’t keep the comment' : 'Couldn’t remove the comment');
+
       setBusy(null);
     }
   };

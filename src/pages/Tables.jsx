@@ -27,6 +27,7 @@ import TableCard from '../components/tables/TableCard';
 import { QrCode, Plus, Search, LayoutGrid, List, Trash2, Download, Pencil, CheckCircle2, Users, Clock, Wrench, Check, X, Printer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
 import { useBackToClose } from '@/lib/useBackToClose';
 import LoadingShapes, { TableShapes } from '@/components/ui-custom/LoadingShapes';
@@ -249,7 +250,7 @@ export default function Tables() {
       setTableToDelete(null);
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to delete table');
+      showError(error, 'Couldn’t delete the table');
     },
   });
 
@@ -318,7 +319,8 @@ export default function Tables() {
       setLocalTables(prev => prev.map(t => t.id === table.id ? { ...t, qr_image_url: saved } : t));
       toast.success(`QR regenerated for ${table.name}`);
     } else {
-      toast.error('Failed to regenerate QR');
+      showError(null, `Couldn’t make a new QR code for ${table.name}`);
+
     }
   };
 

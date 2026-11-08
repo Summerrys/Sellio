@@ -9,7 +9,22 @@ export const subscribePendingCheckouts = listener => {
 const publish = rows => { pending = rows; pendingListeners.forEach(listener => listener()); };
 const knownRejection = error => error?.hint !== 'checkout_actor_changed' && ['22023', 'P0002', '42501', 'P0001', '40001', '23505'].includes(error?.code);
 
+// The person chose to send a different order after an unconfirmed one (they were told the
+// earlier one may have arrived): forget the earlier attempt, so this order gets its own key.
+export function forgetCheckout(scope) {
+  const storageKey = `sellio_checkout_attempt:${scope}`;
+  let previous = null;
+  try {
+    previous = JSON.parse(sessionStorage.getItem(storageKey) || 'null');
+    sessionStorage.removeItem(storageKey);
+  } catch { /* storage unavailable: nothing kept */ }
+  if (previous?.id) publish(pending.filter(item => item.requestId !== previous.id));
+}
+
 // rpcName: place_order_once (every store), or place_shop_order (free shops, step 15).
+// Errors say which stage failed: checkoutEarlier (an earlier, different order is unconfirmed;
+// nothing was sent), checkoutStorage (no storage for the key; nothing was sent),
+// checkoutUnconfirmed with a cause (sent, but no answer came back).
 export async function submitCheckout(supabase, parameters, scope, rpcName = 'place_order_once') {
   const storageKey = `sellio_checkout_attempt:${scope}`;
   const signature = JSON.stringify(parameters);
@@ -18,14 +33,18 @@ export async function submitCheckout(supabase, parameters, scope, rpcName = 'pla
     const previous = sessionStorage.getItem(storageKey);
     attempt = previous ? JSON.parse(previous) : null;
     if (attempt && attempt.signature !== signature) {
-      throw Object.assign(new Error('An earlier submission is unconfirmed. Retry the same cart to recover its result before starting another order.'), { checkoutUnconfirmed: true });
+      throw Object.assign(new Error('An earlier submission is unconfirmed. Retry the same cart to recover its result before starting another order.'), { checkoutUnconfirmed: true, checkoutEarlier: true });
     }
     if (!attempt) {
       attempt = { id: crypto.randomUUID(), signature };
       sessionStorage.setItem(storageKey, JSON.stringify(attempt));
     }
   } catch (error) {
-    throw Object.assign(new Error(error?.message || 'App storage is required to safely submit this order.'), { checkoutUnconfirmed: !!error?.checkoutUnconfirmed });
+    throw Object.assign(new Error(error?.message || 'App storage is required to safely submit this order.'), {
+      checkoutUnconfirmed: !!error?.checkoutUnconfirmed,
+      checkoutEarlier: !!error?.checkoutEarlier,
+      checkoutStorage: !error?.checkoutEarlier,
+    });
   }
   const record = { requestId: attempt.id, tenantId: parameters.p_tenant_id, count: parameters.p_items.reduce((sum, item) => sum + item.quantity, 0), state: 'sending' };
   publish([...pending.filter(item => item.requestId !== attempt.id), record]);

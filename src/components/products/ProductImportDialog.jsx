@@ -134,7 +134,8 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
         setValidationResults(parsed.map((row, idx) => validateRow(row, idx)));
         setStep('preview');
       } catch {
-        toast.error('Failed to parse CSV file');
+        toast.error('Couldn’t read that file', { description: 'Check it’s a CSV (comma-separated) file, then try again.' });
+
       }
     };
     reader.readAsText(file);

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 import { hasNativeRefresh, loadNativeRefresh } from '@/lib/nativeRefresh';
 
 const PULL_THRESHOLD = 52;
@@ -109,7 +109,8 @@ export default function PullToRefresh({ onRefresh, children, disabled = false, a
       try {
         await optionsRef.current.onRefresh();
       } catch (error) {
-        toast.error(error?.message || 'Could not refresh. Please try again.');
+        showError(error, 'Couldn’t refresh');
+
       } finally {
         refreshingRef.current = false;
         runningRef.current = null;

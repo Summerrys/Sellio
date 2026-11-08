@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 
 export default function StockTakeDialog({ open, onOpenChange, products, tenantId }) {
   const queryClient = useQueryClient();
@@ -74,7 +75,8 @@ export default function StockTakeDialog({ open, onOpenChange, products, tenantId
       resetForm();
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to complete stock take');
+      showError(error, 'Couldn’t finish the stock take');
+
     },
   });
 

@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { generateThemeVariables } from '../theme/themeUtils';
 import { getThemeCSSColors, DEFAULT_COLORS } from '@/lib/themeConstants';
 import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 import { deleteImageFromStorage } from '@/lib/imageStorage';
 import { useAppUser, cookieUtils } from '@/lib/AppUserContext';
 import { normalizeIndustry } from '@/lib/industry';
@@ -194,7 +195,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         setImageUrls(prev => { const n = [...prev]; n[slotIndex] = publicUrl; return n; });
         setImageStoragePaths(prev => { const n = [...prev]; n[slotIndex] = storagePath; return n; });
       } catch (err) {
-        toast.error(`Upload failed for ${file.name}: ` + err.message);
+        showError(err, `Couldn’t upload ${file.name}`);
         // Remove the failed slot
         setImagePreviews(prev => prev.filter((_, idx) => idx !== slotIndex));
         setImageFiles(prev => prev.filter((_, idx) => idx !== slotIndex));
@@ -350,9 +351,10 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       setImageUrls(prev => prev.map((u, i) => i === idx ? publicUrl : u));
       setImageStoragePaths(prev => prev.map((p, i) => i === idx ? storagePath : p));
     } catch (err) {
-      toast.error('Upload failed: ' + err.message);
+      showError(err, 'Couldn’t upload the photo');
     } finally {
       setAdditionalUploading(false);
+
     }
   };
 

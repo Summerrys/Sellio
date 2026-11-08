@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CheckCircle2, AlertCircle, Save, Send } from 'lucide-react';
 import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 import { format, subDays } from 'date-fns';
 
 const SHIFTS = ['Opening', 'Mid-Day', 'Closing'];
@@ -199,7 +200,7 @@ export default function DailyReportTab() {
         })
         .select()
         .single();
-      if (error) { toast.error(error.message); setSaving(false); return; }
+      if (error) { showError(error, 'Couldn’t save the stock take'); setSaving(false); return; }
       takeId = newTake.id;
       setExistingId(takeId);
     } else {
@@ -231,7 +232,8 @@ export default function DailyReportTab() {
     await supabase.from('stock_take_items').delete().eq('stock_take_id', takeId);
     if (itemPayloads.length > 0) {
       const { error: itemErr } = await supabase.from('stock_take_items').insert(itemPayloads);
-      if (itemErr) { toast.error(itemErr.message); setSaving(false); return; }
+      if (itemErr) { showError(itemErr, 'Couldn’t save the counts'); setSaving(false); return; }
+
     }
 
     if (submitStatus === 'submitted') {

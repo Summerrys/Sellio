@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
 import { useBackToClose } from '@/lib/useBackToClose';
 
@@ -80,11 +81,11 @@ export default function SupplierDrawer({ open, onClose, tenantId }) {
     const payload = { ...form, tenant_id: tenantId };
     if (editing === 'new') {
       const { error } = await supabase.from('suppliers').insert({ id: crypto.randomUUID(), ...payload, created_date: new Date().toISOString() });
-      if (error) toast.error(error.message);
+      if (error) showError(error, 'Couldn’t add the supplier');
       else { toast.success('Supplier added'); refresh(); cancelEdit(); }
     } else {
       const { error } = await supabase.from('suppliers').update(payload).eq('id', editing).eq('tenant_id', tenantId);
-      if (error) toast.error(error.message);
+      if (error) showError(error, 'Couldn’t save the supplier');
       else { toast.success('Supplier updated'); refresh(); cancelEdit(); }
     }
     setSaving(false);
@@ -93,7 +94,7 @@ export default function SupplierDrawer({ open, onClose, tenantId }) {
   const handleDelete = async (id) => {
     const supabase = await getSupabase();
     const { error } = await supabase.from('suppliers').delete().eq('id', id).eq('tenant_id', tenantId);
-    if (error) toast.error(error.message);
+    if (error) showError(error, 'Couldn’t delete the supplier');
     else { toast.success('Supplier deleted'); refresh(); if (editing === id) cancelEdit(); }
   };
 
@@ -132,7 +133,8 @@ export default function SupplierDrawer({ open, onClose, tenantId }) {
     if (!rows.length) { toast.error('No valid rows found'); return; }
     const supabase = await getSupabase();
     const { error } = await supabase.from('suppliers').insert(rows);
-    if (error) toast.error(error.message);
+    if (error) showError(error, 'Couldn’t import the suppliers');
+
     else { toast.success(`${rows.length} suppliers imported`); refresh(); }
     e.target.value = '';
   };

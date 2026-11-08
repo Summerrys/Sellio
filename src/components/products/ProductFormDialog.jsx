@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { X, ChevronDown, ChevronUp, Loader2, Trash2, PackagePlus, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { explainError } from '@/lib/plainError';
+import ErrorNote from '@/components/ui-custom/ErrorNote';
 import db from '@/lib/db';
 import { getSupabase } from '@/lib/supabaseClient';
 import { shrinkImage, PHOTO_MAX_SIDE, LONG_CACHE } from '@/lib/imageShrink';
@@ -73,7 +75,7 @@ const saveNewCategory = async (supabase, tenantId, typedName) => {
   const name = cleanCategoryName(typedName);
   const { data: existing, error: readError } = await supabase
     .from('categories').select('id, name, sort_order, is_active').eq('tenant_id', tenantId);
-  if (readError) throw new Error(readError.message);
+  if (readError) throw readError;
   const same = (existing || []).find((c) => c.is_active !== false && sameCategoryName(c.name, name));
   if (same) return same.id;
   const nextOrder = (existing || []).reduce((m, c) => Math.max(m, c.sort_order || 0), 0) + 1;
@@ -82,7 +84,7 @@ const saveNewCategory = async (supabase, tenantId, typedName) => {
     .insert({ tenant_id: tenantId, name, slug: name.toLowerCase().replace(/\s+/g, '-'), is_active: true, sort_order: nextOrder })
     .select('id')
     .single();
-  if (error) throw new Error(error.message);
+  if (error) throw error;
   return data.id;
 };
 import PriceDisplay from './PriceDisplay';
@@ -231,8 +233,13 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     const [errors, setErrors] = useState({});
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    // Why the last save or delete didn't go through; stays above the buttons until the next try.
+    const [saveNote, setSaveNote] = useState(null);
     const [showStockPanel, setShowStockPanel] = useState(false);
     const [currentStock, setCurrentStock] = useState(0);
+
+  // A new opening starts without the last one's message.
+  useEffect(() => { if (!open) setSaveNote(null); }, [open]);
 
   useEffect(() => {
     if (tenant?.theme_config) {
@@ -359,6 +366,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
   const handleSave = async () => {
     if (!validate()) return;
     setSaving(true);
+    setSaveNote(null);
     // The tags, with one still being typed (not yet a chip) added.
     const tags = addTags(formData.tags, [tagDraftRef.current || '']);
     try {
@@ -390,7 +398,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
           track_inventory: formData.track_inventory === true,
         };
         const { error } = await supabase.from('products').update(payload).eq('id', product.id);
-        if (error) throw new Error(error.message);
+        if (error) throw error;
 
         await syncProductVariants(supabase, product.id, tenantId, formData.variants, formData.sku || product.sku);
         toast.success(tenant?.seller_type === 'individual' ? 'Listing updated' : 'Product updated');
@@ -418,7 +426,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
           // Do NOT include sku — let DB trigger generate it
         };
         const { data: inserted, error } = await supabase.from('products').insert(payload).select('id, sku, tenant_id, stock_quantity, low_stock_threshold').single();
-        if (error) throw new Error(error.message);
+        if (error) throw error;
 
         // Create corresponding inventory_items record
         await supabase.from('inventory_items').insert({
@@ -444,7 +452,10 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         onOpenChange(false);
       }
     } catch (err) {
-      toast.error(err.message || 'Failed to save product');
+      const individual = tenant?.seller_type === 'individual';
+      setSaveNote(explainError(err, {
+        title: product?.id ? 'Couldn’t save your changes' : individual ? 'Couldn’t add the listing' : 'Couldn’t create the product',
+      }));
     } finally {
       setSaving(false);
     }
@@ -453,6 +464,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
   const handleDelete = async () => {
     if (!confirmDelete) { setConfirmDelete(true); return; }
     setDeleting(true);
+    setSaveNote(null);
     try {
       const supabase = await getSupabase();
       await supabase.from('inventory_items').delete().eq('product_id', product.id);
@@ -462,7 +474,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
       queryClient.invalidateQueries({ queryKey: ['productCount', tenantId] });
       onOpenChange(false);
     } catch (err) {
-      toast.error(err.message || 'Failed to delete product');
+      setSaveNote(explainError(err, { title: tenant?.seller_type === 'individual' ? 'Couldn’t delete the listing' : 'Couldn’t delete the product' }));
     } finally {
       setDeleting(false);
       setConfirmDelete(false);
@@ -643,8 +655,14 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
           </Section>
         </div>
 
+        {saveNote && (
+          <div className="px-4 pt-3 border-t border-slate-100 flex-shrink-0">
+            <ErrorNote note={saveNote} onDismiss={() => setSaveNote(null)} />
+          </div>
+        )}
+
         {/* Footer */}
-        <div className="flex gap-3 px-4 py-4 border-t border-slate-100 flex-shrink-0">
+        <div className={cn("flex gap-3 px-4 py-4 flex-shrink-0", !saveNote && "border-t border-slate-100")}>
           {product?.id && canDelete ? (
            <Button
              variant="outline"

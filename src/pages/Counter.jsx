@@ -10,7 +10,11 @@ import CounterOrderResult from '@/components/counter/CounterOrderResult';
 import { printTableBill } from '@/lib/orderPrinting';
 import { ROUND_STATUS, itemName, itemQuantity, itemUnitPrice, loadTableBillBySession } from '@/lib/tableBill';
 import { getSupabase } from '@/lib/supabaseClient';
-import { submitCheckout } from '@/lib/mobileCheckout';
+import { forgetCheckout, submitCheckout } from '@/lib/mobileCheckout';
+import { isOffline } from '@/lib/network';
+import { offlineNote } from '@/lib/plainError';
+import { counterSendNote } from '@/lib/counterSendNote';
+import ErrorNote from '@/components/ui-custom/ErrorNote';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import { fetchStorefrontCatalog } from '@/lib/storefrontCatalog';
@@ -119,6 +123,8 @@ function CounterScreen() {
   const [printing, setPrinting] = useState(false);
   const [ticketOpen, setTicketOpen] = useState(false);
   const [sending, setSending] = useState(false);
+  // Why the last send didn't go through, kept on that ticket: { key, note, earlier }.
+  const [sendNote, setSendNote] = useState(null);
   const [settleOpen, setSettleOpen] = useState(false);
   const [settling, setSettling] = useState(false);
   const [bill, setBill] = useState(null);
@@ -386,15 +392,24 @@ function CounterScreen() {
     if (handled) suppressClickUntil.current = Date.now() + 400;
   };
 
-  const send = async () => {
+  // anyway: after an unconfirmed send of a different ticket, send this one with its own key
+  // (staff were told the earlier one may be in Orders already).
+  const send = async (anyway = false) => {
     if (!lines.length || sendingRef.current || sending || !target) return;
     if (lines.some(line => !byId[line.pid] || !validCounterOptions(groupsById[line.pid] || [], line.sel))) {
       toast.error('Check each item’s options before sending. A menu option may have changed.');
       setTicketOpen(true);
       return;
     }
+    const ticketKey = target.key;
+    if (isOffline()) {
+      setSendNote({ key: ticketKey, note: offlineNote('Couldn’t send the order', 'Sending to the kitchen needs the internet. The ticket is kept here.') });
+      return;
+    }
+    if (anyway === true) forgetCheckout(`counter:${tenantId}:${ticketKey}`);
     sendingRef.current = true;
     setSending(true);
+    setSendNote(null);
     try {
       const supabase = await getSupabase();
       const data = await submitCheckout(supabase, {
@@ -417,10 +432,8 @@ function CounterScreen() {
       setSentOrder(data);
       loadSessions();
     } catch (e) {
-      const msg = e?.message || '';
-      if (msg.includes('Order limit reached')) toast.error('This store has reached its monthly order limit. Ask the owner to upgrade the plan.');
-      else if (['P0002', '22023'].includes(e?.code) && msg) toast.error(msg);
-      else toast.error(e?.checkoutUnconfirmed ? e.message : 'Could not send the order. Check your connection and try again.');
+      // It stays on the ticket (which is kept) until the next send: what happened, in plain words.
+      setSendNote({ key: ticketKey, note: counterSendNote(e), earlier: !!e?.checkoutEarlier });
     } finally {
       sendingRef.current = false;
       setSending(false);
@@ -722,6 +735,13 @@ function CounterScreen() {
               )}
             </ul>
             <div className="ctr-foot">
+              {sendNote && sendNote.key === target?.key && (
+                <ErrorNote note={sendNote.note} onDismiss={() => setSendNote(null)}>
+                  {sendNote.earlier && (
+                    <button type="button" className="ctr-send-anyway" onClick={() => send(true)} disabled={sending}>Send anyway</button>
+                  )}
+                </ErrorNote>
+              )}
               <div className="ctr-total"><span>This order</span><b>{money(total)}</b></div>
               <button className="ctr-send" disabled={!lines.length || sending} onClick={send}>
                 {sending ? 'Sending…' : 'Send to kitchen'}
@@ -976,6 +996,7 @@ const CSS = `
 .ctr-send { min-height: 60px; border-radius: 14px; background: var(--color-primary-gradient, rgb(var(--color-primary, 194 51 138))) !important; color: #fff !important; font-weight: 800; font-size: 18px; }
 .ctr-send:disabled { background: #efebf3 !important; color: #6f6879 !important; }
 .ctr-clear { align-self: center; padding: 6px 12px; color: #6f6879 !important; font-weight: 700; font-size: 13px; }
+.ctr-send-anyway { margin-top: 8px; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #fda4af; background: #fff !important; color: #9f1239 !important; font-weight: 700; font-size: 14px; }
 .ctr-sheet-back { position: fixed; inset: 0; z-index: 45; background: rgba(19,17,24,.55); display: grid; place-items: end center; }
 .ctr-sheet { width: min(640px, 100%); max-height: 86%; overflow-y: auto; background: #fff; border-radius: 20px 20px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
 .ctr-sheet h3 { margin: 0; font-size: 20px; font-weight: 800; }

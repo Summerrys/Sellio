@@ -12,6 +12,8 @@ import { Building2, MapPin, Camera, X, Save, Percent, Loader2, Pencil, Hash, Rec
 import PrinterSettings from '@/components/settings/PrinterSettings';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { explainError, showError } from '@/lib/plainError';
+import ErrorNote from '@/components/ui-custom/ErrorNote';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import useSettingsDraft from '@/hooks/useSettingsDraft';
 import { useAppReloadGuard } from '@/lib/AppRefreshContext';
@@ -94,6 +96,8 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
   const [businessHoursOpen, setBusinessHoursOpen] = useState(false);
   const [businessHours, setBusinessHours, applyRemoteHours, markHoursSaved] = useSettingsDraft(tenantId, DEFAULT_BUSINESS_HOURS);
   const [isSavingHours, setIsSavingHours] = useState(false);
+  // Why the last save of the hours didn't go through; stays above Save Hours until the next try.
+  const [hoursNote, setHoursNote] = useState(null);
   useAppReloadGuard(() => ({ dirty: !!logoFile, busy: isSaving || isSavingHours || isUploadingLogo }));
   const [form, setForm, applyRemoteForm, markFormSaved] = useSettingsDraft(tenantId, {
     name: '',
@@ -118,6 +122,8 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  // Why the last save didn't go through; stays above Save Changes until the next try.
+  const [saveNote, setSaveNote] = useState(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [showLogoEditor, setShowLogoEditor] = useState(false);
   const logoFileRef = useRef(logoFile);
@@ -194,7 +200,8 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
       await checkPhoto(file);
     } catch (err) {
       if (err?.friendly) {
-        toast.error(err.message);
+        showError(err, 'Couldn’t use that photo');
+
         e.target.value = '';
         return;
       }
@@ -241,7 +248,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
       setLogoFile(null);
       setForm(prev => ({ ...prev, logo_url: publicUrl }));
     } catch (err) {
-      toast.error('Failed to upload logo');
+      showError(err, 'Couldn’t upload the logo');
     } finally {
       setIsUploadingLogo(false);
     }
@@ -250,6 +257,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
   const handleSave = async () => {
     if (!canEditSettings) return; // defense-in-depth; Save button is hidden without this permission
     setIsSaving(true);
+    setSaveNote(null);
     try {
       const supabase = await getSupabase();
       const logoUrl = await uploadLogo();
@@ -286,7 +294,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
       queryClient.invalidateQueries({ queryKey: ['currentTenant'] });
       toast.success('Business settings saved');
     } catch (err) {
-      toast.error(err.message || 'Failed to save settings');
+      setSaveNote(explainError(err, { title: 'Couldn’t save your business settings' }));
     } finally {
       setIsSaving(false);
     }
@@ -295,6 +303,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
   const saveBusinessHours = async () => {
     if (!canEditSettings) return; // defense-in-depth; button is disabled without this permission
     setIsSavingHours(true);
+    setHoursNote(null);
     try {
       const supabase = await getSupabase();
       const rows = businessHours.map(row => ({
@@ -311,7 +320,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
       queryClient.invalidateQueries({ queryKey: ['businessHours', tenantId] });
       toast.success('Business hours saved');
     } catch (err) {
-      toast.error(err.message || 'Failed to save hours');
+      setHoursNote(explainError(err, { title: 'Couldn’t save your opening hours' }));
     } finally {
       setIsSavingHours(false);
     }
@@ -512,6 +521,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
                 </div>
               ))}
             </div>
+            <ErrorNote note={hoursNote} onDismiss={() => setHoursNote(null)} className="mt-4" />
             <Button
               onClick={saveBusinessHours}
               disabled={isSavingHours || !canEditSettings}
@@ -675,6 +685,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
           onClose={() => setShowLogoEditor(false)}
         />
       )}
+      <ErrorNote note={saveNote} onDismiss={() => setSaveNote(null)} />
       {canEditSettings ? (
         <Button
           onClick={handleSave}

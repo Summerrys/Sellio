@@ -193,7 +193,8 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
         });
         toast.success(`Connected: ${deviceName}`);
       } catch (err) {
-        toast.error(err.message || `Failed to connect to ${deviceName}`);
+        toast.error(err.message || `Couldn’t connect to ${deviceName}`);
+
       } finally {
         setConnecting(null);
       }
@@ -217,7 +218,8 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
       });
       toast.success(`Connected: ${device.name}`);
     } catch (err) {
-      if (err.name !== 'NotFoundError') toast.error(`Failed to connect to ${deviceName}`);
+      if (err.name !== 'NotFoundError') toast.error(`Couldn’t connect to ${deviceName}`, { description: 'Check the printer is on and close by, then try again.' });
+
     }
   };
 

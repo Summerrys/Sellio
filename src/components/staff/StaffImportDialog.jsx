@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 
 function parseCSV(text) {
   const lines = text.trim().split('\n').filter(l => l.trim());
@@ -65,7 +66,7 @@ export default function StaffImportDialog({ open, onOpenChange, onImport, roles 
         setResults(validateRows(parsed, roles));
         setStep('preview');
       } catch {
-        toast.error('Failed to parse CSV file');
+        toast.error('Couldn’t read that file', { description: 'Check it’s a CSV (comma-separated) file, then try again.' });
       }
     };
     reader.readAsText(file);
@@ -84,7 +85,8 @@ export default function StaffImportDialog({ open, onOpenChange, onImport, roles 
       toast.success(`${validRows.length} staff imported successfully`);
       handleClose();
     } catch (err) {
-      toast.error('Import failed: ' + err.message);
+      showError(err, 'Couldn’t import the staff list');
+
     } finally {
       setImporting(false);
     }

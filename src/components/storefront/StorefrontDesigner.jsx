@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 import { X, ArrowLeft, ExternalLink, Upload, Pencil, ImagePlus, ZoomIn, ZoomOut, RotateCcw, Monitor, Tablet, Smartphone, Check } from 'lucide-react';
 import StorefrontView, {
   STOREFRONT_BANNER_DEFAULT_HEIGHT,
@@ -649,14 +650,15 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
       banner = await shrinkImage(file, { maxSide: BANNER_MAX_SIDE });
     } catch (err) {
       // A photo that didn't come through whole (see imageShrink.js): nothing is uploaded.
-      toast.error(err?.friendly ? err.message : 'Upload failed. Please try again.');
+      showError(err, 'Couldn’t use that photo', { fallback: 'Try a different photo.' });
+
       setUploading(false);
       if (e.target) e.target.value = '';
       return;
     }
     const path = `${tenantId}/storefront/banner-bg.${banner.ext}`;
     const { error } = await supabase.storage.from('product-images').upload(path, banner.blob, { upsert: true, contentType: banner.type });
-    if (error) { toast.error('Upload failed: ' + error.message); setUploading(false); return; }
+    if (error) { showError(error, 'Couldn’t upload the photo'); setUploading(false); return; }
     const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
     const nextImageUrl = publicUrl.split('?')[0] + '?t=' + Date.now();
     onChange('banner_bg_image_url', nextImageUrl);
@@ -711,7 +713,7 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
       await applyBannerEdgeColors(nextImageUrl);
       toast.success('Banner updated');
     } catch (err) {
-      toast.error('Save failed: ' + err.message);
+      showError(err, 'Couldn’t save the banner');
     }
     setUploading(false);
   };
@@ -1694,7 +1696,7 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
       setPreviewCategories(catalog.categories);
       setPreviewTenant(tenantRes.data);
     } catch (error) {
-      toast.error(`Unable to refresh storefront preview: ${error.message || 'Unknown error'}`);
+      showError(error, 'Couldn’t refresh the preview');
     }
   };
 
@@ -1818,8 +1820,9 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
 
     setSaving(false);
     if (error) {
-      toast.error('Save failed: ' + error.message);
+      showError(error, 'Couldn’t save your shop page');
     } else {
+
       // Saved: nothing is unsaved any more (changes made while it saved still are).
       setSavedForm(savingForm);
       toast.success('Storefront saved ✓');

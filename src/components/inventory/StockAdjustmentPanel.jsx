@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { explainError } from '@/lib/plainError';
+import ErrorNote from '@/components/ui-custom/ErrorNote';
 import { getSupabase } from '@/lib/supabaseClient';
 import { BellRing, X } from 'lucide-react';
 import { useBackToClose } from '@/lib/useBackToClose';
@@ -16,6 +18,8 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
   const [newStock, setNewStock] = useState(currentStock ?? 0);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Why the last save didn't go through; stays above Save until the next try.
+  const [stockNote, setStockNote] = useState(null);
   const [threshold, setThreshold] = useState(initialThreshold ?? product?.low_stock_threshold ?? product?.inventory?.[0]?.low_stock_threshold ?? 5);
 
   useEffect(() => {
@@ -24,6 +28,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
     setNewStock(observedStock);
     setNotes('');
     setIsSubmitting(false);
+    setStockNote(null);
     setThreshold(initialThreshold ?? product?.low_stock_threshold ?? product?.inventory?.[0]?.low_stock_threshold ?? 5);
   }, [product?.id, open]);
 
@@ -71,7 +76,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
           row._pendingAdjustmentId === variables.p_request_id ? item : row
         ) : rows);
       });
-      toast.error(error.message || 'Failed to save stock. Your change has not been confirmed.');
+      setStockNote(explainError(error, { title: 'Couldn’t save the stock' }));
     },
     onSuccess: (saved, variables) => {
       inventoryKeys.forEach(key => queryClient.setQueryData([key, variables.p_tenant_id], rows => Array.isArray(rows) ? rows.map(row => {
@@ -99,6 +104,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
     }
     submittingRef.current = true;
     setIsSubmitting(true);
+    setStockNote(null);
     try {
       await adjustment.mutateAsync({
         p_tenant_id: tenantId,
@@ -318,6 +324,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
 
           {/* Fixed footer save button */}
           <div className="px-6 pb-6 pt-3 border-t border-slate-100 flex-shrink-0" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }}>
+            <ErrorNote note={stockNote} onDismiss={() => setStockNote(null)} className="mb-3" />
             <button
               onClick={handleSubmit}
               disabled={noChange || isSubmitting}

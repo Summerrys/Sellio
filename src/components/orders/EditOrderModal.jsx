@@ -2,6 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { X, Plus, Minus, Trash2, Search, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
+import { explainError, offlineNote } from '@/lib/plainError';
+import { isOffline } from '@/lib/network';
+import ErrorNote from '@/components/ui-custom/ErrorNote';
 
 // products.variants is already stored pre-grouped as [{name, type, options}] by
 // the sync that runs whenever a merchant edits variants in the Products page —
@@ -21,6 +24,8 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [notes, setNotes] = useState(order.notes || '');
   const [saving, setSaving] = useState(false);
+  // Why the last save didn't go through; stays above Save until the next try.
+  const [saveNote, setSaveNote] = useState(null);
   const [showPicker, setShowPicker] = useState(false);
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -107,7 +112,9 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
       toast.error('An order needs at least one item — cancel it instead if it should be removed entirely.');
       return;
     }
+    if (isOffline()) { setSaveNote(offlineNote('Couldn’t save the order', 'Changing an order needs the internet.')); return; }
     setSaving(true);
+    setSaveNote(null);
     try {
       const supabase = await getSupabase();
 
@@ -144,7 +151,7 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
       toast.success('Order updated');
       onSaved({ ...order, items, notes: notes.trim() || null, subtotal, tax_amount: newTax, total_amount: newTotal });
     } catch (err) {
-      toast.error(err.message || 'Failed to save order');
+      setSaveNote(explainError(err, { title: 'Couldn’t save the order' }));
     } finally {
       setSaving(false);
     }
@@ -365,6 +372,7 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
 
         {!showPicker && (
           <div style={{ padding: '12px 16px', background: 'white', borderTop: '1px solid #f1f5f9', flexShrink: 0 }}>
+            <ErrorNote note={saveNote} onDismiss={() => setSaveNote(null)} className="mb-3" />
             <button
               onClick={handleSave}
               disabled={saving}

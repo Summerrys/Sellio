@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { ChevronRight, X, Loader2, Eye, EyeOff, Lock, CreditCard, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import { openBillingPortal, formatBillingAmount } from '@/lib/billing';
@@ -211,7 +212,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
       if (error) throw error;
       toast.success('Profile saved');
     } catch (err) {
-      toast.error(err.message || 'Failed to save profile');
+      showError(err, 'Couldn’t save your profile');
     } finally {
       setIsSavingProfile(false);
     }
@@ -229,7 +230,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
       setShowPasswordForm(false);
       setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
     } catch (err) {
-      toast.error(err.message || 'Failed to update password');
+      showError(err, 'Couldn’t change your password');
     } finally {
       setIsUpdatingPassword(false);
     }
@@ -244,7 +245,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
       // An open Orders page or kitchen screen follows the change straight away.
       if (field === 'order_alerts') window.dispatchEvent(new CustomEvent(ORDER_ALERTS_EVENT, { detail: { on: value } }));
     } catch (err) {
-      toast.error('Failed to save preference');
+      showError(err, 'Couldn’t save this setting');
     } finally {
       setSavingPrefs(false);
     }
@@ -289,7 +290,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
     try {
       await openBillingPortal(tenantId);
     } catch (error) {
-      toast.error(error.message || 'Could not open billing');
+      showError(error, 'Couldn’t open billing');
       setIsOpeningBilling(false);
     }
   };

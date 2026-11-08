@@ -4,6 +4,7 @@ import db from '@/lib/db';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
 import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
@@ -107,7 +108,8 @@ function CategoriesContent() {
       if (failed) throw failed.error;
       toast.success('Category order saved');
     } catch (e) {
-      toast.error('Could not save the new order. Please try again.');
+      showError(e, 'Couldn’t save the new order of categories');
+
     } finally {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
     }

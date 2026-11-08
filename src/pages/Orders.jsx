@@ -24,6 +24,7 @@ import TourGuide from '@/components/tour/TourGuide';
 import { getOrdersSteps } from '@/components/tour/tourSteps';
 import DummyOrderCard from '@/components/tour/DummyOrderCard';
 import { toast } from 'sonner';
+import { blockedOffline, showError } from '@/lib/plainError';
 import { createPageUrl } from '../utils';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -718,12 +719,13 @@ export default function Orders() {
   }, [tenantId, fetchOrders, ringAlert, seenOrder]);
 
   const handleStatusUpdate = async (orderId, newStatus) => {
+    if (blockedOffline('Couldn’t update the order', 'Updating an order needs the internet.')) return;
     const supabase = await getSupabase();
     const { error } = await supabase
       .from('orders')
       .update({ status: newStatus, updated_date: new Date().toISOString() })
       .eq('id', orderId);
-    if (error) { toast.error('Failed to update order'); return; }
+    if (error) { showError(error, 'Couldn’t update the order'); return; }
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
     toast.success('Order updated');
   };
@@ -732,15 +734,17 @@ export default function Orders() {
   // calls settle_table on the server). Other orders are paid on their own, as before.
   // Free shops keep the order's step (it still has to be collected or delivered).
   const handleMarkPaid = async (order, keepStep = false, method = 'cash') => {
+    if (blockedOffline('Couldn’t mark it as paid', 'Updating an order needs the internet.')) return false;
     const supabase = await getSupabase();
     const { data, error } = await supabase.rpc('mark_order_paid', {
       p_order_id: order.id, p_method: method, p_keep_step: keepStep,
     });
     if (error) {
-      const known = error.code === '22023' || error.code === 'P0002';
-      toast.error(known ? error.message : 'Could not mark this order as paid');
+      // mark_order_paid's own reasons (22023, P0002) are shown as they are.
+      showError(error, 'Couldn’t mark it as paid');
       return false;
     }
+
     if (data?.scope === 'table') {
       if (data.already_closed) toast.info('This table was already settled.');
       else toast.success(`${order.table_name || 'Table'} settled · ${currency} ${Number(data.amount || 0).toFixed(2)}`);

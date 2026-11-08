@@ -15,6 +15,7 @@ import { Card } from '@/components/ui/card';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, ImagePlus, Plus, Check, ArrowLeft, ArrowRight, Palette, Truck, QrCode, ShoppingBag, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 import { createPageUrl } from '@/utils';
 import { isShopTenant } from '@/lib/shopSelling';
 import { useBackToClose, handOverBackStep, removeBackStep } from '@/lib/useBackToClose';
@@ -64,7 +65,7 @@ function LogoStep({ tenant, tenantId }) {
       queryClient.invalidateQueries({ queryKey: ['currentTenant'] });
       toast.success('Logo saved');
     } catch (err) {
-      toast.error(err.message || 'Could not upload the logo.');
+      showError(err, 'Couldn’t upload the logo');
     } finally {
       setUploading(false);
     }
@@ -185,7 +186,8 @@ export default function ShopSetup() {
       await removeBackStep(); // so Back from the Dashboard doesn't return to the finished setup
       navigate(createPageUrl('Dashboard'), { replace: true });
     } catch (err) {
-      toast.error(err.message || 'Could not finish setup.');
+      showError(err, 'Couldn’t finish setting up your shop');
+
       setFinishing(false);
     }
   };

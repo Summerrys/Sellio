@@ -18,6 +18,8 @@ import {
   Loader2, QrCode, X, RefreshCw, Users, Truck
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { explainError, showError } from '@/lib/plainError';
+import ErrorNote from '@/components/ui-custom/ErrorNote';
 import BusinessProfileTab from '../components/settings/BusinessProfileTab';
 import ExploreListingSetting from '../components/settings/ExploreListingSetting';
 import RatingVisibilitySetting from '../components/settings/RatingVisibilitySetting';
@@ -51,6 +53,8 @@ export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
   const setPaymentReference = reference => setPaymentDraft(prev => ({ ...prev, reference }));
   const [isUploadingQR, setIsUploadingQR] = useState(false);
   const [isSavingQR, setIsSavingQR] = useState(false);
+  // Why the last save didn't go through; stays above Save until the next try.
+  const [saveNote, setSaveNote] = useState(null);
   useAppReloadGuard(() => ({ busy: isUploadingQR || isSavingQR }));
   const [qrHovered, setQrHovered] = useState(false);
 
@@ -69,9 +73,10 @@ export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
     const supabase = await getSupabase();
     const path = `${tenantId}/payment-qr/${Date.now()}-${file.name}`;
     const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true });
-    if (error) { toast.error('Failed to upload QR'); setIsUploadingQR(false); return; }
+    if (error) { showError(error, 'Couldn’t upload the QR code'); setIsUploadingQR(false); return; }
     const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
-    await supabase.from('tenants').update({ payment_qr_url: publicUrl }).eq('id', tenantId);
+    const { error: saveError } = await supabase.from('tenants').update({ payment_qr_url: publicUrl }).eq('id', tenantId);
+    if (saveError) { showError(saveError, 'Couldn’t save the QR code'); setIsUploadingQR(false); return; }
     setPaymentQRPreview(publicUrl);
     setIsUploadingQR(false);
     queryClient.invalidateQueries({ queryKey: ['currentTenant'] });
@@ -89,6 +94,7 @@ export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
   const handleSavePaymentQR = async () => {
     if (!canEditPayments) return;
     setIsSavingQR(true);
+    setSaveNote(null);
     try {
       const supabase = await getSupabase();
       const { error } = await supabase.from('tenants').update({
@@ -100,7 +106,7 @@ export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
       queryClient.invalidateQueries({ queryKey: ['currentTenant'] });
       toast.success('Payment settings saved');
     } catch (err) {
-      toast.error(err.message || 'Failed to save payment settings');
+      setSaveNote(explainError(err, { title: 'Couldn’t save your payment settings' }));
     } finally {
       setIsSavingQR(false);
     }
@@ -220,6 +226,7 @@ export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
             </div>
           </div>
 
+          <ErrorNote note={saveNote} onDismiss={() => setSaveNote(null)} />
           {canEditPayments ? (
             <Button
               onClick={handleSavePaymentQR}

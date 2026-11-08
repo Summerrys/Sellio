@@ -6,7 +6,7 @@ import { useTenant } from '@/components/tenant/TenantContext';
 import { CheckCircle2, Circle, ChevronRight } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { isShopTenant } from '@/lib/shopSelling';
-import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 
 // Dashboard card for a free shop that hasn't finished its setup steps.
 export default function ShopSetupCard() {
@@ -46,7 +46,8 @@ export default function ShopSetupCard() {
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['shop-setup-status', tenantId] });
     } catch (err) {
-      toast.error(err.message || 'Could not hide this card.');
+      showError(err, 'Couldn’t hide this card');
+
     }
   };
 

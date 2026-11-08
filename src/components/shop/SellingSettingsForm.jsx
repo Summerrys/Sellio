@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Loader2, Store, Truck, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
+import { explainError } from '@/lib/plainError';
+import ErrorNote from '@/components/ui-custom/ErrorNote';
 import { emptySellingForm, sellingFormFrom, sellingPayload } from '@/lib/shopSelling';
 import AddressMap from '@/components/ui-custom/AddressMap';
 
@@ -47,7 +49,9 @@ export default function SellingSettingsForm({ tenantId, currencySymbol = '$', co
   const [form, setForm] = useState(emptySellingForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [loadError, setLoadError] = useState('');
+  const [loadError, setLoadError] = useState(null);
+  // Why the last save didn't go through; stays above Save until the next try.
+  const [saveNote, setSaveNote] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,7 +62,7 @@ export default function SellingSettingsForm({ tenantId, currencySymbol = '$', co
         if (error) throw error;
         if (!cancelled) setForm(sellingFormFrom(data?.saved ? data : null));
       } catch (err) {
-        if (!cancelled) setLoadError(err.message || 'Could not load your selling settings.');
+        if (!cancelled) setLoadError(explainError(err, { title: 'Couldn’t load your selling settings' }));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -70,6 +74,7 @@ export default function SellingSettingsForm({ tenantId, currencySymbol = '$', co
 
   const save = async () => {
     setSaving(true);
+    setSaveNote(null);
     try {
       const supabase = await getSupabase();
       const { data, error } = await supabase.rpc('save_shop_selling', { p_tenant_id: tenantId, p_settings: sellingPayload(form) });
@@ -78,14 +83,14 @@ export default function SellingSettingsForm({ tenantId, currencySymbol = '$', co
       toast.success('Selling settings saved');
       onSaved?.(data);
     } catch (err) {
-      toast.error(err.message || 'Could not save your selling settings.');
+      setSaveNote(explainError(err, { title: 'Couldn’t save your selling settings' }));
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) return <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-slate-400" /></div>;
-  if (loadError) return <p className="text-sm text-red-600 py-6 text-center">{loadError}</p>;
+  if (loadError) return <ErrorNote note={loadError} className="my-4" />;
 
   const c = form.collection;
   const d = form.delivery;
@@ -193,6 +198,8 @@ export default function SellingSettingsForm({ tenantId, currencySymbol = '$', co
       {!c.enabled && !d.enabled && (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">Turn on self-collection, delivery, or both.</p>
       )}
+
+      <ErrorNote note={saveNote} onDismiss={() => setSaveNote(null)} />
 
       <Button onClick={save} disabled={saving || (!c.enabled && !d.enabled)} className="w-full h-11 text-white" style={{ background: 'var(--color-primary-gradient, linear-gradient(135deg, #3b82f6, #9333ea))' }} data-testid="selling-save">
         {saving ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Saving…</> : saveLabel}

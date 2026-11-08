@@ -2,7 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Eye, ShoppingCart } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
-import { submitCheckout } from '@/lib/mobileCheckout';
+import { forgetCheckout, submitCheckout } from '@/lib/mobileCheckout';
+import { isOffline, useOnline } from '@/lib/network';
+import { CheckoutProblem, CheckoutProblemActions, OrderForStaff, checkoutProblemFor } from '@/components/storefront/CheckoutProblem';
 import { offerPushAlerts } from '@/lib/pushOffer';
 import StorefrontView from '@/components/storefront/StorefrontView';
 import MenuAssistantWidget from '@/components/storefront/MenuAssistantWidget';
@@ -118,6 +120,11 @@ function StorefrontInner() {
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [showLimitReachedModal, setShowLimitReachedModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // An order that didn't go through stays on the checkout (components/storefront/CheckoutProblem.jsx),
+  // with the order shown large for staff when asked.
+  const [checkoutProblem, setCheckoutProblem] = useState(null);
+  const [showOrderToStaff, setShowOrderToStaff] = useState(false);
+  const online = useOnline();
   const [lastCart, setLastCart] = useState([]);
   const [lastCartTotal, setLastCartTotal] = useState(0);
   const [placedOrderNumber, setPlacedOrderNumber] = useState('');
@@ -154,6 +161,12 @@ function StorefrontInner() {
   useBackToClose(showOrderHistory, () => setShowOrderHistory(false));
   useBackToClose(orderSuccess, () => { setOrderSuccess(false); setLastCart([]); setLastCartTotal(0); });
   useBackToClose(showLimitReachedModal, () => setShowLimitReachedModal(false));
+  useBackToClose(showOrderToStaff, () => setShowOrderToStaff(false));
+  // A closed checkout starts afresh next time (an unconfirmed order keeps its key in
+  // lib/mobileCheckout.js, so sending the same order again still can't order twice).
+  useEffect(() => {
+    if (!showCheckout) { setCheckoutProblem(null); setShowOrderToStaff(false); }
+  }, [showCheckout]);
 
   // In the Android app, buying from a store page needs a Sellio sign-in. Table QR
   // orders, staff taking orders and previews stay as they are; the cart is kept and
@@ -727,11 +740,18 @@ function StorefrontInner() {
   const promptVisible = !!promptOrder && !showOrderHistory && !showCart && !showCheckout && !showProductModal && !orderSuccess && !rateTarget && !showRatingSheet;
 
   const checkoutGuard = useRef(false);
+  // A free shop's details from its checkout form, for sending the order again.
+  const lastShopDetails = useRef(null);
+  // The key lib/mobileCheckout.js keeps for this checkout (one per shop, table or takeaway).
+  const checkoutScope = (shopOrder) => (shopOrder ? `shop:${tenant.id}` : `storefront:${tenant.id}:${tableId || 'takeaway'}`);
   const handleSubmitOrder = async (shopDetails) => {
     if (checkoutGuard.current || isSubmitting || !cart.length) return;
     if (ownShop) { blockOwnShop(); return; }
     // A free shop's checkout passes how the buyer gets the order (step 15).
     const shopOrder = shopSelling && shopDetails?.method ? shopDetails : null;
+    if (shopOrder) lastShopDetails.current = shopOrder;
+    // No connection: nothing is sent, and the checkout says so (and that nothing was paid).
+    if (isOffline()) { setCheckoutProblem({ kind: 'offline', offline: true }); return; }
     checkoutGuard.current = true;
     setIsSubmitting(true);
     const savedCartTotal = cartTotal;
@@ -763,7 +783,7 @@ function StorefrontInner() {
             p_date: shopOrder.date,
             p_notes: shopOrder.notes,
             p_customer_id: customerId || null,
-          }, `shop:${tenant.id}`, 'place_shop_order')
+          }, checkoutScope(shopOrder), 'place_shop_order')
         : await submitCheckout(supabase, {
             p_tenant_id: tenant.id,
             p_items: items,
@@ -771,7 +791,7 @@ function StorefrontInner() {
             p_table_id: tableId || null,
             p_notes: checkoutForm.notes || null,
             p_customer_id: customerId || null,
-          }, `storefront:${tenant.id}:${tableId || 'takeaway'}`);
+          }, checkoutScope(null));
     } catch (e) {
       error = e;
     }
@@ -788,6 +808,7 @@ function StorefrontInner() {
       const updatedSessionOrders = [...sessionOrderIds, order.id];
       setSessionOrderIds(updatedSessionOrders);
       try { localStorage.setItem(SESSION_ORDERS_KEY, JSON.stringify(updatedSessionOrders)); } catch {}
+      setCheckoutProblem(null);
       setShowCheckout(false); setIsSubmitting(false); setOrderSuccess(true);
       // A signed-in buyer hears as the shop accepts and readies it: in Sellio's Android app,
       // they're offered those alerts on their phone.
@@ -810,15 +831,24 @@ function StorefrontInner() {
         setShowLimitReachedModal(true);
       } else if (isLimitReached) {
         toast.error("This store has reached its monthly order limit. Please contact your Manager to upgrade the plan.");
-      } else if (['P0002', '22023'].includes(error?.code) && error?.message) {
-        // place_order validation messages are customer-safe, e.g.
-        // "An item in your cart is no longer available"
-        toast.error(error.message);
       } else {
-        toast.error(error?.checkoutUnconfirmed ? error.message : "Something went wrong placing your order. Please try again.");
+        // Anything else stays on the checkout: whether the order reached the shop, and
+        // what to do (place_order's own reasons, e.g. "An item in your cart is no longer
+        // available", are customer-safe and shown as they are).
+        console.warn('Order not placed:', error);
+        setCheckoutProblem({ ...checkoutProblemFor(error), offline: isOffline() });
       }
       setIsSubmitting(false);
     }
+  };
+  // After an unconfirmed order, a different one: the person was told the earlier one may
+  // have arrived, and chose to send this one (with its own key).
+  const sendThisOrderInstead = (shopDetails) => {
+    if (checkoutGuard.current || isSubmitting) return;
+    const details = shopSelling ? (shopDetails?.method ? shopDetails : lastShopDetails.current) : null;
+    forgetCheckout(checkoutScope(details));
+    setCheckoutProblem(null);
+    handleSubmitOrder(details);
   };
 
   if (loading) {
@@ -1109,6 +1139,7 @@ function StorefrontInner() {
                 <span style={{ fontSize: 13, fontWeight: 600, color: primaryColor }}>{table.name}</span>
               </div>
             )}
+            <CheckoutProblem problem={checkoutProblem} t={t} lang={lang} shop={tenant?.name} online={online} />
             <div style={{ marginBottom: 14 }}>
               {cart.map(item => (
                 <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 10, marginBottom: 10, borderBottom: '0.5px solid #f1f5f9' }}>
@@ -1139,9 +1170,10 @@ function StorefrontInner() {
                 isSubmitting={isSubmitting}
                 isStoreOpen={isStoreOpen}
                 closedText={t('orderingUnavailable')}
-                placeText={t('placeOrder')}
+                placeText={checkoutProblem?.kind === 'earlier' ? t('sendThisOrder')
+                  : ['offline', 'failed', 'storage', 'unconfirmed'].includes(checkoutProblem?.kind) ? t('tryAgain') : t('placeOrder')}
                 placingText={t('placingOrder')}
-                onSubmit={handleSubmitOrder}
+                onSubmit={checkoutProblem?.kind === 'earlier' ? sendThisOrderInstead : handleSubmitOrder}
               />
             ) : (<>
             <div style={{ marginBottom: 16 }}>
@@ -1159,6 +1191,17 @@ function StorefrontInner() {
               <div style={{ width: '100%', padding: 14, background: '#f1f5f9', color: '#94a3b8', borderRadius: 12, fontSize: 15, fontWeight: 600, textAlign: 'center' }}>
                 🔒 {t('orderingUnavailable')}
               </div>
+            ) : checkoutProblem ? (
+              <CheckoutProblemActions
+                problem={checkoutProblem}
+                t={t}
+                primaryColor={primaryColor}
+                busy={isSubmitting}
+                onRetry={() => handleSubmitOrder()}
+                onChangeOrder={() => { setShowCheckout(false); setShowCart(true); }}
+                onSendAnyway={() => sendThisOrderInstead()}
+                onShowStaff={isStaffMode ? undefined : () => setShowOrderToStaff(true)}
+              />
             ) : (
               <button
                 onClick={handleSubmitOrder}
@@ -1171,6 +1214,21 @@ function StorefrontInner() {
             </>)}
           </div>
         </div>
+      )}
+
+      {/* ── AN ORDER THAT COULDN'T BE SENT, LARGE, TO SHOW STAFF ── */}
+      {showCheckout && showOrderToStaff && (
+        <OrderForStaff
+          shop={tenant?.name}
+          place={isDineIn ? table?.name : t('takeaway')}
+          lines={cart}
+          total={cartTotal}
+          sym={sym}
+          maybeSent={checkoutProblem?.kind === 'unconfirmed' || checkoutProblem?.kind === 'earlier'}
+          t={t}
+          primaryColor={primaryColor}
+          onClose={() => setShowOrderToStaff(false)}
+        />
       )}
 
       {/* ── ORDER LIMIT REACHED (customers only — staff get a toast instead) ── */}

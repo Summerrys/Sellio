@@ -6,6 +6,7 @@ import { useAppUser } from '@/lib/AppUserContext';
 import { Clock, AlertCircle, ChefHat, ArrowLeft, Maximize2, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { blockedOffline, showError } from '@/lib/plainError';
 import { useOrderAlerts, REMIND_EVERY } from '@/lib/useOrderAlerts';
 import { loadPrinterConfig, buildOrderChit, sendViaBluetooth, sendViaEpsonEPos } from '@/lib/printerUtils';
 import ChitPreviewSheet from '@/components/orders/ChitPreviewSheet';
@@ -351,12 +352,14 @@ function KitchenDisplayScreen() {
   const handleBump = async (orderId, currentStatus) => {
     const nextStatus = NEXT_STATUS[currentStatus];
     if (!nextStatus) return;
+    if (blockedOffline('Couldn’t update the order', 'Updating an order needs the internet.')) return;
     const supabase = await getSupabase();
     const { error } = await supabase
       .from('orders')
       .update({ status: nextStatus, updated_date: new Date().toISOString() })
       .eq('id', orderId);
-    if (error) { toast.error('Failed to update order'); return; }
+    if (error) { showError(error, 'Couldn’t update the order'); return; }
+
     if (nextStatus === 'completed') {
       setOrders(prev => prev.filter(o => o.id !== orderId));
     } else {

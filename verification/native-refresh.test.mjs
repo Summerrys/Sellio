@@ -73,7 +73,7 @@ const mock = { name: 'native-refresh-fixtures', setup(b) {
   b.onLoad({ filter: /.*/, namespace: 'mock' }, (args) => ({ loader: 'js', contents: {
     core: 'export const registerPlugin = (name) => { globalThis.registered.push(name); return globalThis.fakePlugin; };',
     sonner: [
-      'const note = (kind) => (message) => { globalThis.toasts.push({ kind, message }); };',
+      'const note = (kind) => (message, options) => { globalThis.toasts.push(options?.description ? { kind, message, description: options.description } : { kind, message }); };',
       'export const toast = Object.assign(note("toast"), { success: note("success"), error: note("error"), info: note("info") });',
     ].join('\n'),
   }[args.path] }));
@@ -205,7 +205,8 @@ try {
   await act(async () => { pending.reject(new Error('Please wait for the current action to finish.')); });
   await flush();
   assert.equal(plugin.finishes, 3, 'the circle goes');
-  assert.deepEqual(globalThis.toasts.at(-1), { kind: 'error', message: 'Please wait for the current action to finish.' }, 'and the reason shows');
+  // In plain words (lib/plainError.js, 9 Nov): what went wrong, then why.
+  assert.deepEqual(globalThis.toasts.at(-1), { kind: 'error', message: 'Couldn’t refresh', description: 'Please wait for the current action to finish.' }, 'and the reason shows');
   passed('A refresh that fails shows why, and the app\'s circle still goes');
 
   // ── 5. Refresh view (keyboard and screen readers) still refreshes ──────────────────

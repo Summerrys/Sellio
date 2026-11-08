@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, ChevronDown, ChevronUp, AlertCircle, Send, Save } from 'lucide-react';
 import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 import { format } from 'date-fns';
 
 const EMPTY_ITEM = { product_id: '', product_name: '', unit: '', expected_qty: '', received_qty: '', unit_cost: '', notes: '' };
@@ -106,7 +107,7 @@ export default function DeliveryOrderTab() {
       status,
       created_date: new Date().toISOString(),
     });
-    if (error) { toast.error(error.message); setSaving(false); return; }
+    if (error) { showError(error, 'Couldn’t save the delivery order'); setSaving(false); return; }
 
     const lineItems = form.items
       .filter(i => i.product_id || i.product_name)
@@ -125,7 +126,8 @@ export default function DeliveryOrderTab() {
 
     if (lineItems.length > 0) {
       const { error: itemsError } = await supabase.from('delivery_order_items').insert(lineItems);
-      if (itemsError) { toast.error(itemsError.message); setSaving(false); return; }
+      if (itemsError) { showError(itemsError, 'Couldn’t save the delivery items'); setSaving(false); return; }
+
     }
 
     toast.success(status === 'submitted' ? 'DO submitted!' : 'Draft saved');

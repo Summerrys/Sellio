@@ -5,6 +5,7 @@ import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { TenantProvider, useTenant } from './components/tenant/TenantContext';
 import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 import { ThemeProvider } from './components/theme/ThemeProvider';
 import { NotificationProvider } from './components/notifications/NotificationProvider';
 import NotificationBell from './components/notifications/NotificationBell';
@@ -479,7 +480,8 @@ function AppLayout({ children, currentPageName }) {
         if (result?.subscription) setSubscription(result.subscription);
         toast.success('Billing status refreshed');
       })
-      .catch((error) => toast.error(error.message || 'Could not refresh billing status'))
+      .catch((error) => showError(error, 'Couldn’t check your billing'))
+
       .finally(() => {
         params.delete('billing');
         const query = params.toString();

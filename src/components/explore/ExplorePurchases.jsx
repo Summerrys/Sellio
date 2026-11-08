@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Check, ChevronRight, Loader2, MapPin, MessageCircle, RefreshCw, ShoppingBag, Store, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 import { useAppUser } from '@/lib/AppUserContext';
 import { rememberReturnPath } from '@/lib/authNavigation';
 import { exploreItem } from '@/lib/chat';
@@ -419,7 +420,7 @@ export function PurchaseDetail() {
       setConfirmCancel(false);
       reload();
     } catch (e) {
-      toast.error(e.message);
+      showError(e, 'Couldn’t cancel the order');
       setConfirmCancel(false);
       reload();
     }
@@ -434,7 +435,8 @@ export function PurchaseDetail() {
       setRating((r) => (r ? { ...r, note: null, note_public: false, note_state: 'visible' } : r));
       toast.success('Your comment is removed. Your stars still count.');
     } catch (e) {
-      toast.error(e.message);
+      showError(e, 'Couldn’t remove your comment');
+
     }
     setRemoving(false);
   };

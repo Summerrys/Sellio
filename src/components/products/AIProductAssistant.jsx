@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useImperativeHandle } from 'react';
 import { Sparkles, Upload, Loader2, Check, AlertCircle, X, Wand2, ImagePlus, Pencil, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { explainError, showError } from '@/lib/plainError';
 import { cn } from '@/lib/utils';
 import ImageEditModal from '../onboarding/ImageEditModal';
 import { getSupabase } from '@/lib/supabaseClient';
@@ -14,9 +15,9 @@ import { allowanceLine, allowanceSpent, lastSuggestion, functionErrorMessage } f
 // An error whose message is meant for the person (from our own functions).
 const friendlyError = (message) => Object.assign(new Error(message), { friendly: true });
 
-// A failed photo upload, for a toast. A photo that didn't come through whole explains
+// A failed photo upload, in plain words. A photo that didn't come through whole explains
 // itself (see imageShrink.js).
-const uploadErrorText = (err) => (err?.friendly ? err.message : 'Upload failed: ' + err?.message);
+const uploadFailed = (err) => showError(err, 'Couldn’t upload the photo');
 
 // A photo as a data: URL (what the AI function takes).
 const readAsDataUrl = (blob) => new Promise((resolve, reject) => {
@@ -133,7 +134,7 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
       const { error: uploadError } = await supabase.storage
         .from('product-images')
         .upload(filename, photo.blob, { contentType: photo.type, upsert: true, cacheControl: LONG_CACHE });
-      if (uploadError) throw new Error(uploadError.message);
+      if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(filename);
 
       onResult(urlData.publicUrl);
@@ -142,7 +143,8 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
       setCurrentIndex(0);
     } catch (e) {
       console.error('Accept error:', e.message);
-      onError('Failed to save image. Please try again.');
+      onError(explainError(e, { title: 'Couldn’t save the photo' }).description);
+
     } finally {
       setUploading(false);
     }
@@ -488,7 +490,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
         if (onCategoriesRefresh) await onCategoriesRefresh();
       } catch (err) {
         console.error('Failed to create category:', err);
-        toast.error('Could not create category');
+        showError(err, 'Couldn’t create the category');
       }
     }
 
@@ -520,7 +522,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
       setPreview(publicUrl);
       setStep('image_only');
     } catch (err) {
-      toast.error(uploadErrorText(err));
+      uploadFailed(err);
       setStep('idle');
     }
   };
@@ -576,7 +578,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
         }
         setEditModalOpen(false);
       } catch (err) {
-        toast.error(uploadErrorText(err));
+        uploadFailed(err);
       }
     } else {
       // Direct URL from replace — delete old image
@@ -610,7 +612,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
         return updated;
       });
     } catch (err) {
-      toast.error(uploadErrorText(err));
+      uploadFailed(err);
     } finally {
       setAddingImage(false);
     }
@@ -634,9 +636,10 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
         });
       }
     } catch (err) {
-      toast.error('Upload failed: ' + err.message);
+      uploadFailed(err);
     } finally {
       setEditingImageIndex(null);
+
     }
   };
 

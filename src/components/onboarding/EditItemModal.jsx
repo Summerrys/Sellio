@@ -8,6 +8,7 @@ import ImageEditModal from './ImageEditModal';
 import { getSupabase } from '@/lib/supabaseClient';
 import { shrinkImage, withExt, PHOTO_MAX_SIDE } from '@/lib/imageShrink';
 import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 import { useBackToClose } from '@/lib/useBackToClose';
 
 export default function EditItemModal({ item, categories, themeColor, primaryColor, onSave, onClose }) {
@@ -70,7 +71,7 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
          setImagePreviews(prev => [...prev, publicUrl]);
        }
      } catch (err) {
-       toast.error('Upload failed: ' + err.message);
+       showError(err, 'Couldn’t upload the photo');
      } finally {
        setUploading(false);
      }
@@ -90,7 +91,7 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
        const { publicUrl } = await uploadToStorage(file);
        setImagePreviews(prev => [...prev, publicUrl]);
      } catch (err) {
-       toast.error('Upload failed: ' + err.message);
+       showError(err, 'Couldn’t upload the photo');
      } finally {
        setAdditionalUploading(false);
      }
@@ -106,10 +107,11 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
         const url = await uploadBase64ToStorage(newDataUrl);
         setImagePreviews(prev => prev.map((p, i) => i === editingImageIdx ? url : p));
       } catch (err) {
-        toast.error('Upload failed: ' + err.message);
+        showError(err, 'Couldn’t upload the photo');
       } finally {
         setUploading(false);
       }
+
     } else {
       setImagePreviews(prev => prev.map((p, i) => i === editingImageIdx ? newDataUrl : p));
     }

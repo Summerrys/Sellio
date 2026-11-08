@@ -16,10 +16,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { explainError } from '@/lib/plainError';
+import ErrorNote from '@/components/ui-custom/ErrorNote';
 
 export default function TableFormDialog({ open, onOpenChange, table, tenantId, tenant, allTables = [], canDelete = false, onDelete }) {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
+  // Why the last save didn't go through; stays above the buttons until the next try.
+  const [saveNote, setSaveNote] = useState(null);
   const [newZoneName, setNewZoneName] = useState('');
   const [formData, setFormData] = useState({
     name: '',
@@ -44,6 +48,7 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
       setFormData({ name: '', zone: '', capacity: 4, status: 'available', notes: '' });
     }
     setNewZoneName('');
+    setSaveNote(null);
   }, [table, open]);
 
   const saveQRToStorage = async (db, tableId, tableName, orderingUrl) => {
@@ -72,6 +77,7 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
     }
 
     setIsLoading(true);
+    setSaveNote(null);
     try {
       const db = await getSupabase();
       const tableId = table?.id || crypto.randomUUID();
@@ -126,7 +132,7 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
       onOpenChange(false);
     } catch (error) {
       console.error('Table save error:', error);
-      toast.error(`Failed to save table: ${error.message}`);
+      setSaveNote(explainError(error, { title: table ? 'Couldn’t save the table' : 'Couldn’t create the table' }));
     } finally {
       setIsLoading(false);
     }
@@ -218,6 +224,8 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
             />
           </div>
         </div>
+
+        <ErrorNote note={saveNote} onDismiss={() => setSaveNote(null)} />
 
         <DialogFooter className="flex flex-row items-center gap-3">
           {table && canDelete && (

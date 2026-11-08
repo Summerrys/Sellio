@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AlertTriangle, CreditCard, ExternalLink, Loader2 } from 'lucide-react';
 import { openBillingPortal, formatBillingAmount, formatBillingDate } from '@/lib/billing';
-import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 import { sellsPlans, PLANS_ON_WEBSITE } from '@/lib/nativeApp';
 
 export default function BillingStatusBanner({ subscription, tenantId, isOwner }) {
@@ -20,7 +20,8 @@ export default function BillingStatusBanner({ subscription, tenantId, isOwner })
     try {
       await openBillingPortal(tenantId);
     } catch (error) {
-      toast.error(error.message || 'Could not open billing');
+      showError(error, 'Couldn’t open billing');
+
       setOpeningPortal(false);
     }
   };

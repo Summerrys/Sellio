@@ -24,6 +24,7 @@ import StaffCards from '../components/staff/StaffCards';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Shield, Plus, Pencil, Trash2, Copy, Users, UserPlus, Search, LayoutGrid, List, Download, Upload, FileDown, FileSpreadsheet, X, Info, ClipboardList, ShoppingBag, Grid3X3, Package, QrCode, BarChart3, Settings2, Check, LayoutDashboard } from 'lucide-react';
 import { toast } from 'sonner';
+import { showError } from '@/lib/plainError';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Link } from 'react-router-dom';
@@ -408,7 +409,7 @@ function RolesContent({ onUpgrade }) {
       close();
       toast.success(editing ? 'Role updated' : 'Role created');
     },
-    onError: (error) => toast.error(error?.message || 'Could not save role. Please try again.'),
+    onError: (error) => showError(error, 'Couldn’t save the role'),
   });
 
   const deleteMutation = useMutation({
@@ -432,13 +433,13 @@ function RolesContent({ onUpgrade }) {
       if (error) throw error;
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['allRoles'] }); toast.success('Role deleted'); },
-    onError: (error) => toast.error(error.message || 'Could not delete role'),
+    onError: (error) => showError(error, 'Couldn’t delete the role'),
   });
 
   const duplicateMutation = useMutation({
     mutationFn: (role) => db.entities.Role.create({ tenant_id: tenantId, name: `${role.name} (Copy)`, slug: `${role.slug}-copy-${Date.now()}`, description: role.description, permissions: normalisePermissions(role.permissions), is_system: false }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['allRoles'] }); toast.success('Role duplicated'); },
-    onError: (error) => toast.error(error?.message || 'Could not duplicate role'),
+    onError: (error) => showError(error, 'Couldn’t duplicate the role'),
   });
 
   const open = (role) => {
@@ -553,8 +554,9 @@ function RolesContent({ onUpgrade }) {
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['allRoles', tenantId] });
       toast.success('Default roles created successfully');
-    } catch {
-      toast.error('Failed to create default roles');
+    } catch (error) {
+      showError(error, 'Couldn’t create the default roles');
+
     } finally {
       setSeedingRoles(false);
     }

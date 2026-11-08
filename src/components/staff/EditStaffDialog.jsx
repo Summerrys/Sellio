@@ -29,6 +29,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { KeyRound, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { explainError } from '@/lib/plainError';
+import ErrorNote from '@/components/ui-custom/ErrorNote';
 
 const schema = z.object({
   role_id: z.string().min(1, 'Please select a role'),
@@ -75,6 +77,10 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
     if (match) setValue('role_id', match.id);
   }, [open, staff, roles, setValue]);
 
+  // Why the last save or removal didn't go through; stays above the buttons until the next try.
+  const [staffNote, setStaffNote] = React.useState(null);
+  React.useEffect(() => { if (open) setStaffNote(null); }, [open, staff?.id]);
+
   const updateMutation = useMutation({
     mutationFn: async (data) => {
       const role = roles.find(r => r.id === data.role_id);
@@ -93,7 +99,7 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
       onOpenChange(false);
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to update staff');
+      setStaffNote(explainError(error, { title: 'Couldn’t save the changes' }));
     },
   });
 
@@ -106,11 +112,13 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
       onOpenChange(false);
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to remove staff');
+      setShowDeleteDialog(false);
+      setStaffNote(explainError(error, { title: 'Couldn’t remove this person' }));
     },
   });
 
   const onSubmit = (data) => {
+    setStaffNote(null);
     updateMutation.mutate(data);
   };
 
@@ -158,7 +166,7 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
       toast.success('Staff password reset successfully');
       closeResetDialog();
     } catch (error) {
-      setResetError(error.message || 'Failed to reset password');
+      setResetError(explainError(error, { title: 'Couldn’t reset the password' }).description);
     } finally {
       setResettingPassword(false);
     }
@@ -256,6 +264,8 @@ export default function EditStaffDialog({ open, onOpenChange, staff, tenantId })
                 </p>
               </div>
             )}
+
+            <ErrorNote note={staffNote} onDismiss={() => setStaffNote(null)} />
 
             <div className="flex flex-col gap-2 pt-2">
               <div className="flex gap-2">
