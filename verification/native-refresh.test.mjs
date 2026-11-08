@@ -32,8 +32,10 @@ const act = React.act;
 const h = React.createElement;
 
 // ── A stand-in for the app's SellioRefresh plugin ──────────────────────────────────────
-const plugin = {
-  touches: [], finishes: 0, removed: 0, listeners: {},
+// Like Capacitor's plugin object, it answers to any other name as one of the app's methods,
+// `then` included (a promise that resolves to it never settles; 8 Nov, the first emulator run).
+const plugin = { touches: [], finishes: 0, removed: 0, listeners: {} };
+const methods = {
   async touch(args) { plugin.touches.push(args); },
   async finish() { plugin.finishes++; },
   async addListener(name, callback) {
@@ -41,7 +43,14 @@ const plugin = {
     return { remove: async () => { delete plugin.listeners[name]; plugin.removed++; } };
   },
 };
-globalThis.fakePlugin = plugin;
+globalThis.fakePlugin = new Proxy(methods, {
+  get(target, name) {
+    if (name in target) return target[name];
+    if (name === '$$typeof') return undefined;
+    if (name === 'toJSON') return () => ({});
+    return () => Promise.reject(new Error(`"SellioRefresh.${String(name)}()" is not implemented on android`));
+  },
+});
 globalThis.registered = [];
 globalThis.toasts = [];
 const logs = [];

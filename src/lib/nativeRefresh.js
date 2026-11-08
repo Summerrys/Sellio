@@ -16,9 +16,11 @@ export function hasNativeRefresh(browser = typeof window !== 'undefined' ? windo
   }
 }
 
-// Capacitor's own code loads only in the app, so the website doesn't download it.
-let plugin = null;
+// Capacitor's own code loads only in the app, so the website doesn't download it. Resolves to
+// { plugin }, not the plugin itself: Capacitor's plugin object answers to any name as one of the
+// app's methods, `then` included, so a promise would take it for a promise and never settle.
+let loading = null;
 export function loadNativeRefresh() {
-  plugin ||= import('@capacitor/core').then(({ registerPlugin }) => registerPlugin(NATIVE_REFRESH));
-  return plugin;
+  loading ||= import('@capacitor/core').then(({ registerPlugin }) => ({ plugin: registerPlugin(NATIVE_REFRESH) }));
+  return loading;
 }

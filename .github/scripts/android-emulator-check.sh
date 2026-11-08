@@ -116,8 +116,12 @@ grep -E "Capacitor|chromium|AndroidRuntime|SystemBars" "$OUT/logcat-full.txt" > 
 echo "--- push alerts: the app's channels, Firebase, and the two tapped alerts (expect: 3 channels, ready, 2 openings)"
 grep -oE "NotificationChannel\{mId='(orders|messages|updates)', mName=[^,]*" "$OUT/notification-dump.txt" | sort -u || echo "(no Sellio channels found)"
 grep -E "Sellio push:" "$OUT/logcat-full.txt" | sed -E 's/.*(Sellio push:[^"]*).*/\1/' || echo "(no push lines)"
-echo "--- pull to refresh (expect: Android's own pull, the app's 'pulled: refreshing', the page's 'refreshing')"
-grep -E "Sellio refresh:|SellioRefresh" "$OUT/logcat-full.txt" | sed -E 's/.*(Sellio refresh:[^"]*|SellioRefresh.*)/\1/' || echo "(no refresh lines)"
+echo "--- pull to refresh (expect: the page's answers to the app, the app's 'pulled: refreshing', the page's 'refreshing', one finish)"
+grep -E "Sellio refresh:" "$OUT/logcat-full.txt" | sed -E 's/.*(Sellio refresh:[^"]*).*/\1/' | sort | uniq -c || echo "(no page lines)"
+grep -E "Capacitor/SellioRefresh" "$OUT/logcat-full.txt" | sed -E 's/.*Capacitor\/SellioRefresh: //' || echo "(no app lines)"
+for m in touch finish; do echo "SellioRefresh.$m calls: $(grep -c "pluginId: SellioRefresh, methodName: $m, methodData" "$OUT/logcat-full.txt")"; done
+grep -E "pluginId: SellioRefresh, methodName: touch, methodData" "$OUT/logcat-full.txt" | sed -E 's/.*methodData: //' | tail -3 || true
+grep -F "is not implemented on android" "$OUT/logcat-full.txt" | grep -F SellioRefresh | head -2 | cut -c1-200 || true
 echo "--- live updates"
 seen() { if grep -qF "Sellio update: $1" "$OUT/logcat-full.txt"; then echo "PASS $2"; else echo "FAIL $2 (no \"Sellio update: $1\")"; fi; }
 seen "$GOOD is ready" "a. the good update downloaded"

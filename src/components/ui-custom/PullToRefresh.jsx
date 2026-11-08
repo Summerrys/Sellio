@@ -134,7 +134,7 @@ export default function PullToRefresh({ onRefresh, children, disabled = false, a
       let plugin = null;
       let listener = null;
       console.info("Sellio refresh: Android's own pull to refresh");
-      loadNativeRefresh().then(async loaded => {
+      loadNativeRefresh().then(async ({ plugin: loaded }) => {
         if (!alive) return;
         plugin = loaded;
         const handle = await loaded.addListener('refresh', () => {
