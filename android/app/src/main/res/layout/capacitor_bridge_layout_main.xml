@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The app's screen (Capacitor's BridgeActivity), as in Capacitor's own layout of this name,
-     which this replaces, with Android's own pull to refresh (SellioRefreshLayout) around the
-     web view. Capacitor finds the web view by its id, webview. -->
+     which this replaces, with Sellio's pull to refresh, the honeycomb (SellioRefreshLayout),
+     around the web view. Capacitor finds the web view by its id, webview. -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"

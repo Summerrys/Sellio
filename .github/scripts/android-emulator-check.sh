@@ -56,11 +56,11 @@ sleep 25
 shot 5-alert-tapped-closed
 focus 5-alert-tapped-closed
 
-# 6. Pull to refresh, Android's own (SellioRefreshLayout): a finger dragged down from near the top
-#    of the sign-in page brings out Android's refresh circle (6-pulling.png) and refreshes the
-#    page (the app logs "SellioRefresh: pulled: refreshing", the page "Sellio refresh:
-#    refreshing"). A real touch, as on a phone: as the finger lands, the page tells the app
-#    whether it may pull there (PullToRefresh.jsx), and the app waits for that answer.
+# 6. Pull to refresh, the app's own (SellioRefreshLayout): a finger dragged down from near the top
+#    of the sign-in page brings out Sellio's honeycomb (6-pulling.png) and refreshes the page
+#    (the app logs "SellioRefresh: pulled: refreshing", the page "Sellio refresh: refreshing").
+#    A real touch, as on a phone: as the finger lands, the page tells the app whether it may
+#    pull there (PullToRefresh.jsx), and the app waits for that answer.
 adb shell am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d "https://sellio.sg/Auth" "$PKG"
 sleep 15
 read -r W H < <(adb shell wm size | grep -oE '[0-9]+x[0-9]+' | tail -1 | tr 'x' ' ')

@@ -9,8 +9,8 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 /**
- * Android's own pull to refresh (SellioRefreshLayout) and the page (src/lib/nativeRefresh.js,
- * PullToRefresh.jsx):
+ * Sellio's pull to refresh, the honeycomb (SellioRefreshLayout), and the page
+ * (src/lib/nativeRefresh.js, PullToRefresh.jsx):
  * - touch({allowed, x, y}): the page's answer, at each touch, for the finger that just landed.
  * - "refresh": a pull was let go; the page refreshes.
  * - finish(): the page has refreshed; the circle goes.

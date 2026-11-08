@@ -1,13 +1,16 @@
-// Android's own pull to refresh (Alvin, 8 Nov 2026). The page side: PullToRefresh with
-// lib/nativeRefresh.js, against a stand-in for the app's SellioRefresh plugin. The app side:
-// the Android project's pieces fitting together (layout, plugin, MainActivity, Gradle, the
-// native-code fingerprint for live updates). The app itself is checked on the emulator
+// The Android app's own pull to refresh (Alvin, 8 Nov 2026; the honeycomb since that evening).
+// The page side: PullToRefresh with lib/nativeRefresh.js, against a stand-in for the app's
+// SellioRefresh plugin. The app side: the Android project's pieces fitting together (layout,
+// plugin, MainActivity, the native-code fingerprint for live updates), and the pull's own logic
+// (honeycomb, ripple, colours, when a finger becomes a pull) compiled and run here with a JDK
+// (verification/native-pull/PullChecks.java). The app itself is checked on the emulator
 // (android-emulator-check.sh, step 6).
 // Run: node verification/native-refresh.test.mjs /tmp/sellio-verification
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { build } from 'esbuild';
 import { mkdtemp, rm, copyFile, readFile, writeFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import os from 'node:os';
@@ -253,7 +256,7 @@ try {
   const javaDir = `android/app/src/main/java/${pkg.replace(/\./g, '/')}`;
   const layout = await read('android/app/src/main/res/layout/capacitor_bridge_layout_main.xml');
   const wrapper = layout.match(new RegExp(`<${pkg.replace(/\./g, '\\.')}\\.SellioRefreshLayout[\\s\\S]*?</${pkg.replace(/\./g, '\\.')}\\.SellioRefreshLayout>`));
-  assert.ok(wrapper, 'the layout has Android\'s pull (SellioRefreshLayout, by its full name)');
+  assert.ok(wrapper, 'the layout has Sellio\'s pull (SellioRefreshLayout, by its full name)');
   assert.match(wrapper[0], /<com\.getcapacitor\.CapacitorWebView\s+android:id="@\+id\/webview"/, 'around Capacitor\'s web view, by the id Capacitor finds it with');
   assert.equal((layout.match(/CapacitorWebView/g) || []).length, 1, 'one web view');
   const library = await read('node_modules/@capacitor/android/capacitor/src/main/res/layout/capacitor_bridge_layout_main.xml');
@@ -263,9 +266,16 @@ try {
   assert.match(layout, /^<androidx\.coordinatorlayout\.widget\.CoordinatorLayout/m, 'ours has the same root');
   const view = await read(`${javaDir}/SellioRefreshLayout.java`);
   assert.match(view, new RegExp(`^package ${pkg.replace(/\./g, '\\.')};`, 'm'));
-  assert.match(view, /public class SellioRefreshLayout extends SwipeRefreshLayout/);
+  assert.match(view, /public class SellioRefreshLayout extends FrameLayout/);
   assert.match(view, /public SellioRefreshLayout\(@NonNull Context context, @Nullable AttributeSet attrs\)/, 'the constructor a layout needs');
-  assert.match(view, /0xFFFB923C, 0xFFE0449A, 0xFF8B2FC9/, 'Sellio\'s orange, pink and purple');
+  assert.match(view, /protected void onFinishInflate\(\)[\s\S]*addView\(honeycomb/, 'the honeycomb goes in after the web view, so it is drawn over it');
+  for (const used of ['setOnRefreshListener', 'isRefreshing', 'setRefreshing', 'setTouchVerdict']) {
+    assert.match(view, new RegExp(`(public )?(void|boolean) ${used}\\(`), `the plugin's ${used}() exists`);
+  }
+  const honeycomb = await read(`${javaDir}/HoneycombView.java`);
+  assert.match(honeycomb, /private static final boolean ORANGE_WHEN_BIG = true;/, 'X: orange at full size (Alvin\'s pick)');
+  const math = await read(`${javaDir}/HoneycombMath.java`);
+  assert.match(math, /ORANGE = 0xFFFB923C;[\s\S]*PINK = 0xFFE0449A;[\s\S]*PURPLE = 0xFF8B2FC9;/, 'Sellio\'s orange, pink and purple');
   const bridge = await read(`${javaDir}/SellioRefreshPlugin.java`);
   assert.equal(bridge.match(/@CapacitorPlugin\(name = "([^"]+)"\)/)?.[1], app.NATIVE_REFRESH, 'the plugin\'s name is the one the page looks for');
   for (const method of ['touch', 'finish']) assert.match(bridge, new RegExp(`@PluginMethod\\s+public void ${method}\\(PluginCall call\\)`), `the page's ${method}() exists`);
@@ -273,12 +283,24 @@ try {
   assert.match(bridge, /call\.getFloat\("x"\)[\s\S]*call\.getFloat\("y"\)[\s\S]*call\.getBoolean\("allowed"/, 'it reads what the page sends');
   const activity = await read(`${javaDir}/MainActivity.java`);
   assert.match(activity, /registerPlugin\(SellioRefreshPlugin\.class\);\s+super\.onCreate\(savedInstanceState\);/, 'MainActivity adds the plugin before the app starts');
-  const gradle = await read('android/app/build.gradle');
-  const variables = await read('android/variables.gradle');
-  assert.match(gradle, /implementation "androidx\.swiperefreshlayout:swiperefreshlayout:\$androidxSwipeRefreshLayoutVersion"/);
-  assert.match(variables, /androidxSwipeRefreshLayoutVersion = '1\.1\.0'/);
   assert.ok(NATIVE_INPUTS.android.includes('android/app/src/main/res/layout'), 'a change to the layout is a change to the app\'s native code (live updates wait for the store)');
-  passed('The Android project\'s pieces fit together (layout, plugin, MainActivity, Gradle, live-update fingerprint)');
+  passed('The Android project\'s pieces fit together (layout, plugin, MainActivity, live-update fingerprint)');
+
+  // ── 9. The pull's own logic, compiled and run here (needs a JDK) ───────────────────
+  const javac = spawnSync('javac', ['-version'], { encoding: 'utf8' });
+  if (javac.status !== 0) {
+    console.log('SKIP the pull\'s own logic: no JDK here (javac)');
+  } else {
+    const classes = path.join(tmp, 'classes');
+    const sources = [`${javaDir}/HoneycombMath.java`, `${javaDir}/PullGesture.java`, 'verification/native-pull/PullChecks.java'];
+    const compiled = spawnSync('javac', ['-d', classes, ...sources], { encoding: 'utf8' });
+    assert.equal(compiled.status, 0, `compiles: ${compiled.stderr}`);
+    const ran = spawnSync('java', ['-cp', classes, `${pkg}.PullChecks`], { encoding: 'utf8' });
+    for (const line of ran.stdout.split('\n').filter((l) => l.startsWith('PASS '))) console.log('  ' + line);
+    assert.equal(ran.status, 0, `the pull's own checks: ${(ran.stderr || '').split('\n').filter((l) => !l.startsWith('Picked up')).join(' ')}`);
+    assert.match(ran.stdout, /8 pull checks passed/);
+    passed('The pull\'s own logic: honeycomb, ripple, colours, and when a finger becomes a pull (8 checks, run with Java)');
+  }
 
   console.log(passes + ' native pull-to-refresh checks passed');
 } finally {
