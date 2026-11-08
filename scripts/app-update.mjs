@@ -31,6 +31,7 @@ export const NATIVE_INPUTS = {
   android: [
     'android/app/src/main/AndroidManifest.xml',
     'android/app/src/main/java',
+    'android/app/src/main/res/layout', // the screen's layout (pull to refresh around the web view)
     'android/app/build.gradle',
     'android/app/capacitor.build.gradle',
     'android/build.gradle',
