@@ -996,7 +996,7 @@ const CSS = `
 .ctr-send { min-height: 60px; border-radius: 14px; background: var(--color-primary-gradient, rgb(var(--color-primary, 194 51 138))) !important; color: #fff !important; font-weight: 800; font-size: 18px; }
 .ctr-send:disabled { background: #efebf3 !important; color: #6f6879 !important; }
 .ctr-clear { align-self: center; padding: 6px 12px; color: #6f6879 !important; font-weight: 700; font-size: 13px; }
-.ctr-send-anyway { margin-top: 8px; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #fda4af; background: #fff !important; color: #9f1239 !important; font-weight: 700; font-size: 14px; }
+.ctr-root .ctr-send-anyway { margin-top: 8px; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #fda4af; background: #fff; color: #9f1239; font-weight: 700; font-size: 14px; }
 .ctr-sheet-back { position: fixed; inset: 0; z-index: 45; background: rgba(19,17,24,.55); display: grid; place-items: end center; }
 .ctr-sheet { width: min(640px, 100%); max-height: 86%; overflow-y: auto; background: #fff; border-radius: 20px 20px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
 .ctr-sheet h3 { margin: 0; font-size: 20px; font-weight: 800; }

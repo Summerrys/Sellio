@@ -108,6 +108,8 @@ shot 8-after-broken-update
 adb shell am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d "$TEST_LINK" "$PKG"
 sleep 20
 kill "$LU_SERVER" 2> /dev/null || true
+# The log so far (steps 1-7), before the network is turned off and on.
+adb logcat -d > "$OUT/logcat-full.txt"
 
 # 8. No connection (UX states, 4): with the phone's network off, the page hears it (it logs
 #    "Sellio network: offline") and shows "You're offline. Reconnecting…" (9-offline.png);
@@ -126,10 +128,10 @@ adb shell svc data enable > /dev/null 2>&1 || true
 sleep 6
 shot 10-back-online
 sleep 10
+adb logcat -d > "$OUT/logcat-network.txt"
 
 adb shell pm get-app-links "$PKG" > "$OUT/app-links.txt" 2>&1
 adb shell dumpsys notification > "$OUT/notification-dump.txt" 2>&1 || true
-adb logcat -d > "$OUT/logcat-full.txt"
 grep -E "Capacitor|chromium|AndroidRuntime|SystemBars" "$OUT/logcat-full.txt" > "$OUT/logcat-app.txt" || true
 echo "--- push alerts: the app's channels, Firebase, and the two tapped alerts (expect: 3 channels, ready, 2 openings)"
 grep -oE "NotificationChannel\{mId='(orders|messages|updates)', mName=[^,]*" "$OUT/notification-dump.txt" | sort -u || echo "(no Sellio channels found)"
@@ -154,10 +156,11 @@ grep -iE "CapacitorUpdater|Capgo" "$OUT/logcat-full.txt" | grep -iE "success|fai
 echo "--- the test server (expect the manifest and both zips fetched)"
 cat "$OUT/live-update-server.txt" 2> /dev/null | tail -12 || true
 echo "--- no connection (expect: the page heard offline, then online)"
-if grep -qF "Sellio network: offline" "$OUT/logcat-full.txt"; then echo "PASS the page heard the network go"; else echo "FAIL no \"Sellio network: offline\""; fi
-if grep -qF "Sellio network: online" "$OUT/logcat-full.txt"; then echo "PASS the page heard it come back"; else echo "FAIL no \"Sellio network: online\""; fi
-grep -E "Sellio network:|Sellio offline:" "$OUT/logcat-full.txt" | sed -E 's/.*(Sellio (network|offline):[^"]*).*/\1/' | uniq -c || echo "(no network lines)"
-grep -E "android.permission.ACCESS_NETWORK_STATE" <(adb shell dumpsys package "$PKG" 2> /dev/null) | head -2 || echo "(ACCESS_NETWORK_STATE not granted)"
+if grep -qF "Sellio network: offline" "$OUT/logcat-network.txt"; then echo "PASS the page heard the network go"; else echo "FAIL no \"Sellio network: offline\""; fi
+if grep -qF "Sellio network: online" "$OUT/logcat-network.txt"; then echo "PASS the page heard it come back"; else echo "FAIL no \"Sellio network: online\""; fi
+grep -E "Sellio network:|Sellio offline:" "$OUT/logcat-network.txt" | sed -E 's/.*(Sellio (network|offline):[^"]*).*/\1/' | uniq -c || echo "(no network lines)"
+adb shell dumpsys package "$PKG" 2> /dev/null | grep -m2 "ACCESS_NETWORK_STATE" || echo "(ACCESS_NETWORK_STATE not found)"
+echo "app log lines kept: $(grep -c "Capacitor/Console" "$OUT/logcat-full.txt") before the network step, $(grep -c "Capacitor/Console" "$OUT/logcat-network.txt") after"
 echo "--- app console and crashes"
 grep -E "Capacitor/Console|Uncaught|FATAL|AndroidRuntime" "$OUT/logcat-full.txt" | tail -60 || true
 
