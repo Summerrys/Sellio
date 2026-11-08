@@ -22,6 +22,8 @@ import { startLaunch } from '@/lib/appLaunch';
 import { GOOGLE_RELAY_PATH } from '@/lib/googleRelay';
 import { isNativeApp as inSellioApp, isBase44Shell, appPlatform } from '@/lib/nativeApp';
 import PushPrompt from '@/components/notifications/PushPrompt';
+import OfflineKeeper from '@/components/ui-custom/OfflineKeeper';
+import ConnectionStatus from '@/components/ui-custom/ConnectionStatus';
 
 // Pages the app never starts on load on demand, so its first download stays small.
 const LandingPage = lazy(() => import('@/components/landing/LandingPage'));
@@ -193,6 +195,8 @@ function App() {
     <AppUserProvider>
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
+        {/* The app's records on the phone for no connection (before the pages, which use them). */}
+        <OfflineKeeper />
         <AppRefreshProvider>
         <Router>
           <RouteIndexingGuard />
@@ -208,6 +212,8 @@ function App() {
           </Suspense>
         </Router>
         <SonnerToaster />
+        {/* "You're offline. Reconnecting…" above the bottom bar, on every page. */}
+        <ConnectionStatus />
         {/* "Welcome back!" on the page a sign-in opens (the sign-in page itself is gone by then). */}
         <SignInWelcome />
         {/* Sellio's question before Android's about push alerts (the Android app only). */}

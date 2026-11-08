@@ -16,6 +16,9 @@ import { useSell } from '@/lib/sell';
 import { listingUrl, ExploreDesktopTabs } from '@/components/explore/shared';
 import { applyPageMeta, SITE } from '@/lib/pageMeta';
 import LoadingShapes from '@/components/ui-custom/LoadingShapes';
+import { onReconnect, useOnline } from '@/lib/network';
+import { keepSnapshot, loadSnapshot } from '@/lib/offlineStore';
+import OfflineNote, { listNoteWords } from '@/components/ui-custom/OfflineNote';
 
 // Sellio Explore: a public, Carousell-style feed of items from Sellio shops.
 // Anyone can browse without an account; tapping an item opens its listing page. Data comes from the explore_feed / explore_shops RPCs, which only
@@ -476,6 +479,11 @@ export default function Explore() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  // When the feed on screen was loaded, and whether it's the copy kept on the phone (the
+  // first page of everything, for opening Explore with no connection: UX states, 4).
+  const online = useOnline();
+  const [feedAt, setFeedAt] = useState(null);
+  const [feedKept, setFeedKept] = useState(false);
   const requestId = useRef(0);
   const sentinelRef = useRef(null);
   const navigate = useNavigate();
@@ -534,6 +542,7 @@ export default function Explore() {
 
   useEffect(() => {
     const id = ++requestId.current;
+    const everything = !search && kind === 'all';
     setStatus('loading');
     setHasMore(false);
     fetchPage(0)
@@ -543,13 +552,31 @@ export default function Explore() {
         setItemsKind(forKind);
         setHasMore(rows.length === PAGE_SIZE);
         setStatus('ready');
+        setFeedAt(Date.now());
+        setFeedKept(false);
+        if (everything) keepSnapshot('explore:feed', rows);
       })
       .catch((err) => {
         if (id !== requestId.current) return;
         console.warn('Explore feed failed:', err);
+        // No connection: the listings kept on the phone, when there are some.
+        const kept = everything ? loadSnapshot('explore:feed') : null;
+        if (Array.isArray(kept?.data) && kept.data.length) {
+          setItems(kept.data);
+          setItemsKind('all');
+          setStatus('ready');
+          setFeedAt(kept.savedAt);
+          setFeedKept(true);
+          return;
+        }
         setStatus('error');
       });
-  }, [fetchPage, reloadKey]);
+  }, [fetchPage, reloadKey, search, kind]);
+
+  // The connection is back: a feed that couldn't load (or is the copy) loads again.
+  const feedStale = useRef(false);
+  feedStale.current = status === 'error' || feedKept;
+  useEffect(() => onReconnect(() => { if (feedStale.current) setReloadKey((k) => k + 1); }), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -557,9 +584,14 @@ export default function Explore() {
       try {
         const supabase = await getSupabase();
         const { data, error } = await supabase.rpc('explore_shops', { p_limit: 20 });
-        if (!cancelled && !error) setShops(data || []);
+        if (error) throw error;
+        if (!cancelled) setShops(data || []);
+        keepSnapshot('explore:shops', data || []);
       } catch (err) {
         console.warn('Explore shops failed:', err);
+        // No connection: the shops kept on the phone, if none are on screen.
+        const kept = loadSnapshot('explore:shops');
+        if (!cancelled && Array.isArray(kept?.data)) setShops((prev) => (prev.length ? prev : kept.data));
       }
     })();
     return () => { cancelled = true; };
@@ -634,9 +666,18 @@ export default function Explore() {
 
           {status === 'loading' && <LoadingShapes label="Loading listings"><SkeletonGrid /></LoadingShapes>}
 
+          {/* Shown without a fresh load: when the listings are from, and what still works. */}
+          {status === 'ready' && items.length > 0 && feedAt && (!online || feedKept) && (
+            <OfflineNote className="mb-2.5" {...listNoteWords({
+              online, what: 'listings', at: feedAt,
+              offlineText: 'You can look through them. Opening a listing or ordering needs the internet.',
+              failedText: 'Check your connection, then try again.',
+            })} action={online ? { label: 'Try again', onClick: () => setReloadKey((k) => k + 1) } : undefined} />
+          )}
+
           {status === 'error' && (
             <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
-              <p className="text-sm text-slate-600">We couldn't load listings just now.</p>
+              <p className="text-sm text-slate-600">{online ? 'We couldn’t load listings just now.' : 'You’re offline, so listings can’t load just now. They’ll load when you’re back online.'}</p>
               <button
                 type="button"
                 onClick={() => setReloadKey((k) => k + 1)}

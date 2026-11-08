@@ -109,6 +109,24 @@ adb shell am start -W -a android.intent.action.VIEW -c android.intent.category.B
 sleep 20
 kill "$LU_SERVER" 2> /dev/null || true
 
+# 8. No connection (UX states, 4): with the phone's network off, the page hears it (it logs
+#    "Sellio network: offline") and shows "You're offline. Reconnecting…" (9-offline.png);
+#    with it back, "Sellio network: online" and "Back online" (10-back-online.png). This needs
+#    Android to tell the app's WebView about the network (the ACCESS_NETWORK_STATE permission).
+adb shell am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d "https://sellio.sg/Auth" "$PKG"
+sleep 15
+adb shell cmd connectivity airplane-mode enable > /dev/null 2>&1 || true
+adb shell svc wifi disable > /dev/null 2>&1 || true
+adb shell svc data disable > /dev/null 2>&1 || true
+sleep 10
+shot 9-offline
+adb shell cmd connectivity airplane-mode disable > /dev/null 2>&1 || true
+adb shell svc wifi enable > /dev/null 2>&1 || true
+adb shell svc data enable > /dev/null 2>&1 || true
+sleep 6
+shot 10-back-online
+sleep 10
+
 adb shell pm get-app-links "$PKG" > "$OUT/app-links.txt" 2>&1
 adb shell dumpsys notification > "$OUT/notification-dump.txt" 2>&1 || true
 adb logcat -d > "$OUT/logcat-full.txt"
@@ -135,6 +153,11 @@ echo "--- the updater's own lines about loading and going back"
 grep -iE "CapacitorUpdater|Capgo" "$OUT/logcat-full.txt" | grep -iE "success|fail|rollback|reset|timeout|ready" | tail -25 || true
 echo "--- the test server (expect the manifest and both zips fetched)"
 cat "$OUT/live-update-server.txt" 2> /dev/null | tail -12 || true
+echo "--- no connection (expect: the page heard offline, then online)"
+if grep -qF "Sellio network: offline" "$OUT/logcat-full.txt"; then echo "PASS the page heard the network go"; else echo "FAIL no \"Sellio network: offline\""; fi
+if grep -qF "Sellio network: online" "$OUT/logcat-full.txt"; then echo "PASS the page heard it come back"; else echo "FAIL no \"Sellio network: online\""; fi
+grep -E "Sellio network:|Sellio offline:" "$OUT/logcat-full.txt" | sed -E 's/.*(Sellio (network|offline):[^"]*).*/\1/' | uniq -c || echo "(no network lines)"
+grep -E "android.permission.ACCESS_NETWORK_STATE" <(adb shell dumpsys package "$PKG" 2> /dev/null) | head -2 || echo "(ACCESS_NETWORK_STATE not granted)"
 echo "--- app console and crashes"
 grep -E "Capacitor/Console|Uncaught|FATAL|AndroidRuntime" "$OUT/logcat-full.txt" | tail -60 || true
 

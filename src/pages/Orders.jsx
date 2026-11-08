@@ -32,6 +32,12 @@ import ShopOrderInfo, { ShopMethodBadge } from '@/components/shop/ShopOrderInfo'
 import { isShopTenant, shopMethod, shopNextAction, shopStatusLabel, shopStatusTabs } from '@/lib/shopSelling';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
 import { useBackToClose } from '@/lib/useBackToClose';
+import { useOnline } from '@/lib/network';
+import { keepSnapshot, loadSnapshot } from '@/lib/offlineStore';
+import OfflineNote, { listNoteWords } from '@/components/ui-custom/OfflineNote';
+
+// The latest orders kept on the phone, for opening Orders with no connection (UX states, 4).
+const KEPT_ORDERS = 100;
 
 const STATUS_TABS = [
   { value: 'all',       label: 'All' },
@@ -640,6 +646,14 @@ export default function Orders() {
   const [isLoading, setIsLoading] = useState(true);
   // The last load failed (the list then says so, rather than "No orders yet").
   const [loadFailed, setLoadFailed] = useState(false);
+  // When the list on screen was loaded, and (keptLatest) whether it's the copy on the phone:
+  // with no connection the list stays, and says when it's from (OfflineNote).
+  const online = useOnline();
+  const [listAt, setListAt] = useState(null);
+  const [keptLatest, setKeptLatest] = useState(null); // { latest: n kept, when fewer than there were }
+  const ordersRef = useRef(orders);
+  ordersRef.current = orders;
+  const ownerId = appUser?.id || null;
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const lastSeenDateRef = useRef(null);
@@ -665,11 +679,25 @@ export default function Orders() {
       .eq('tenant_id', tenantId)
       .eq('is_deleted', false)
       .order('created_date', { ascending: false });
-    if (!error) setOrders(data || []);
+    if (!error) {
+      const rows = data || [];
+      setOrders(rows);
+      setListAt(Date.now());
+      setKeptLatest(null);
+      if (ownerId) keepSnapshot(`orders:${tenantId}`, { orders: rows.slice(0, KEPT_ORDERS), total: rows.length }, ownerId);
+    } else if (ownerId && !ordersRef.current.length) {
+      // No orders on screen yet (the app opened offline): the latest ones kept on the phone.
+      const kept = loadSnapshot(`orders:${tenantId}`, ownerId);
+      if (Array.isArray(kept?.data?.orders) && kept.data.orders.length) {
+        setOrders(kept.data.orders);
+        setListAt(kept.savedAt);
+        setKeptLatest(kept.data.total > kept.data.orders.length ? { latest: kept.data.orders.length } : {});
+      }
+    }
     setLoadFailed(!!error);
     setIsLoading(false);
     if (error && throwOnError === true) throw error;
-  }, [tenantId]);
+  }, [tenantId, ownerId]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -967,13 +995,22 @@ export default function Orders() {
             })}
           </div>
 
+          {/* Shown without a fresh load: when the list is from, and what still works. */}
+          {!isLoading && orders.length > 0 && listAt && (!online || loadFailed || keptLatest) && (
+            <OfflineNote {...listNoteWords({
+              online, what: 'orders', at: listAt, latest: keptLatest?.latest,
+              offlineText: 'You can look through them. Updating an order needs the internet.',
+              failedText: 'Pull down to try again.',
+            })} />
+          )}
+
           {/* Orders list */}
           {isLoading ? (
             <LoadingShapes label="Loading orders"><SkeletonList count={4} lines={3} imageSize={0} /></LoadingShapes>
           ) : filteredOrders.length === 0 ? (
             <div>
               <OrdersEmpty
-                kind={ordersEmptyKind({ failed: loadFailed, total: orders.length, query: searchQuery })}
+                kind={ordersEmptyKind({ failed: loadFailed, total: orders.length, query: searchQuery, offline: !online })}
                 query={searchQuery}
                 tab={activeTab}
                 isShop={isShop}

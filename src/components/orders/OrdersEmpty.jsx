@@ -4,11 +4,13 @@ import ShareShopLinkButton from '@/components/shop/ShareShopLink';
 
 // What the Orders list says when it has nothing to show (Alvin, 7 Nov 2026: say why it's
 // empty, then give one next step).
-//   failed — the orders couldn't be loaded, so the list isn't really empty
-//   search — nothing matches what was typed
-//   tab    — there are orders, just none with the chosen status
-//   none   — no orders yet
-export function ordersEmptyKind({ failed, total, query }) {
+//   offline — no connection, and no orders kept on the phone to show
+//   failed  — the orders couldn't be loaded, so the list isn't really empty
+//   search  — nothing matches what was typed
+//   tab     — there are orders, just none with the chosen status
+//   none    — no orders yet
+export function ordersEmptyKind({ failed, total, query, offline = false }) {
+  if (failed && !total && offline) return 'offline';
   if (failed && !total) return 'failed';
   if (!total) return 'none';
   if (query.trim()) return 'search';
@@ -41,7 +43,11 @@ export default function OrdersEmpty({
   let text;
   let action = null;
 
-  if (kind === 'failed') {
+  if (kind === 'offline') {
+    icon = WifiOff;
+    title = 'You’re offline';
+    text = 'Your orders show here once you’re back online. Sellio reconnects by itself.';
+  } else if (kind === 'failed') {
     icon = WifiOff;
     title = 'Couldn’t load your orders';
     text = 'Sellio couldn’t reach the server. Check your connection, then try again.';

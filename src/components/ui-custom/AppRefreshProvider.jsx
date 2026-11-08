@@ -7,6 +7,7 @@ import { AppRefreshContext } from '@/lib/AppRefreshContext';
 import { fetchPublishedAppVersion, getAppAssetVersion, getAppReloadUrl, isNewAppVersion } from '@/lib/appUpdates';
 import { stepToFirstEntry } from '@/lib/useBackToClose';
 import { isCapacitorApp } from '@/lib/nativeApp';
+import { onReconnect } from '@/lib/network';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -96,6 +97,20 @@ export default function AppRefreshProvider({ children }) {
       window.removeEventListener('focus', check);
     };
   }, [checkVersion]);
+
+  // The connection is back: each page that refreshes itself does so now (React Query's own
+  // data refetches by itself), a second after the last change, as Wi-Fi can come and go.
+  useEffect(() => {
+    let timer = null;
+    const stop = onReconnect(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        console.info('Sellio network: back online, refreshing the page');
+        handlers.current.forEach(handler => { void Promise.resolve().then(handler).catch(() => {}); });
+      }, 1000);
+    });
+    return () => { stop(); clearTimeout(timer); };
+  }, []);
 
   // In the apps: a live update finished downloading in the background.
   useEffect(() => {
