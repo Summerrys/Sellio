@@ -1,12 +1,14 @@
 import React from 'react';
 import { ClipboardList, Search, WifiOff } from 'lucide-react';
 import ShareShopLinkButton from '@/components/shop/ShareShopLink';
+import { DidYouMean } from '@/components/ui-custom/NoMatches';
 
 // What the Orders list says when it has nothing to show (Alvin, 7 Nov 2026: say why it's
 // empty, then give one next step).
 //   offline — no connection, and no orders kept on the phone to show
 //   failed  — the orders couldn't be loaded, so the list isn't really empty
-//   search  — nothing matches what was typed
+//   search  — nothing matches what was typed: where it does match (other statuses), else
+//             the likely spelling (UX state 6), else what search looks at
 //   tab     — there are orders, just none with the chosen status
 //   none    — no orders yet
 export function ordersEmptyKind({ failed, total, query, offline = false }) {
@@ -36,7 +38,7 @@ function sourcesText(parts) {
 
 export default function OrdersEmpty({
   kind, query = '', tab = 'all', isShop = false, tableOrdering = false, counter = false,
-  onSeeAll, onClearSearch, onRetry,
+  onSeeAll, onClearSearch, onRetry, foundElsewhere = 0, suggestion = null, onSearch,
 }) {
   let icon = ClipboardList;
   let title;
@@ -55,10 +57,18 @@ export default function OrdersEmpty({
   } else if (kind === 'search') {
     icon = Search;
     title = `No orders match “${query.trim()}”`;
-    text = isShop
-      ? 'Search looks at order numbers, buyers’ names and phone numbers, and items.'
-      : 'Search looks at order numbers, tables, customers’ names and items.';
-    action = <button type="button" onClick={onClearSearch} className={GHOST}>Clear search</button>;
+    if (foundElsewhere > 0) {
+      text = foundElsewhere === 1 ? 'One order with another status matches.' : `${foundElsewhere} orders with other statuses match.`;
+      action = <button type="button" onClick={onSeeAll} className={GHOST}>Search all orders</button>;
+    } else if (suggestion) {
+      text = <DidYouMean suggestion={suggestion} onPick={onSearch} />;
+      action = <button type="button" onClick={() => onSearch(suggestion)} className={`${GHOST} max-w-full truncate`}>Search “{suggestion}”</button>;
+    } else {
+      text = isShop
+        ? 'Search looks at order numbers, buyers’ names and phone numbers, and items.'
+        : 'Search looks at order numbers, tables, customers’ names and items.';
+      action = <button type="button" onClick={onClearSearch} className={GHOST}>Clear search</button>;
+    }
   } else if (kind === 'tab') {
     const copy = TAB_COPY[tab] || { title: 'No orders here', text: 'Orders with this status show up here.' };
     title = (isShop && copy.shopTitle) || copy.title;
@@ -79,7 +89,7 @@ export default function OrdersEmpty({
       <div className="w-16 h-16 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-4">
         <Icon className="w-7 h-7" aria-hidden="true" />
       </div>
-      <p className="text-base font-semibold text-slate-900">{title}</p>
+      <p className="text-base font-semibold text-slate-900 break-words">{title}</p>
       <p className="mt-1 text-sm text-slate-500 max-w-xs mx-auto">{text}</p>
       {action && <div className="mt-5">{action}</div>}
     </div>

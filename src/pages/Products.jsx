@@ -7,6 +7,8 @@ import { useTenant } from '../components/tenant/TenantContext';
 import { toast } from 'sonner';
 import RequirePermission from '../components/auth/RequirePermission';
 import EmptyState from '../components/ui-custom/EmptyState';
+import NoMatches, { DidYouMean } from '../components/ui-custom/NoMatches';
+import { didYouMean } from '@/lib/searchSuggest';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -396,21 +398,35 @@ export default function Products({ embedded = false } = {}) {
     enabled: !!tenantId,
   });
 
-  // Filter products
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = !searchQuery || 
-      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+  // Filter products. A search finds names and descriptions; spaces either side don't count
+  // (phone keyboards add one after a word).
+  const searchText = searchQuery.trim();
+  const productFound = (product, text) => {
+    const q = text.trim().toLowerCase();
+    return !!(product.name?.toLowerCase().includes(q) || product.description?.toLowerCase().includes(q));
+  };
+  const filtersOn = categoryFilter !== 'all' || statusFilter !== 'all';
+  const passesFilters = (product) => {
     const matchesCategory = categoryFilter === 'all' || product.category_id === categoryFilter;
-    
-    const matchesStatus = statusFilter === 'all' || 
+    const matchesStatus = statusFilter === 'all' ||
       (statusFilter === 'active' && product.is_active) ||
       (statusFilter === 'inactive' && !product.is_active) ||
       (statusFilter === 'low_stock' && product.current_stock <= product.low_stock_threshold);
-
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
+    return matchesCategory && matchesStatus;
+  };
+  const filteredProducts = products.filter(product => (!searchText || productFound(product, searchText)) && passesFilters(product));
+  // A search that finds nothing (UX state 6): say if the filters hide what it finds, else
+  // offer the likely spelling of a name.
+  const searchMissed = !!searchText && filteredProducts.length === 0 && products.length > 0;
+  const hiddenByFilters = searchMissed && filtersOn ? products.filter(p => productFound(p, searchText)).length : 0;
+  const searchSuggestion = searchMissed && !hiddenByFilters
+    ? didYouMean(
+        searchText,
+        products.filter(passesFilters).map(p => p.name).filter(Boolean),
+        text => products.some(p => passesFilters(p) && productFound(p, text)),
+      )
+    : null;
+  const showAllProducts = () => { setCategoryFilter('all'); setStatusFilter('all'); };
 
   const handleEdit = (product) => {
     // FIX: previously any user who could see the Products page could click into any
@@ -782,17 +798,43 @@ export default function Products({ embedded = false } = {}) {
         {/* Products Display */}
         {isLoading ? (
           <LoadingShapes label="Loading products"><SkeletonList count={5} lines={2} imageSize={64} /></LoadingShapes>
+        ) : filteredProducts.length === 0 && products.length > 0 && searchText ? (
+          hiddenByFilters > 0 ? (
+            <NoMatches
+              title={`No ${words.products} match “${searchText}”`}
+              text={`Your filters hide ${hiddenByFilters === 1 ? `one ${words.product} that matches` : `${hiddenByFilters} ${words.products} that match`}.`}
+              actionLabel={`Show all ${words.products}`}
+              onAction={showAllProducts}
+            />
+          ) : searchSuggestion ? (
+            <NoMatches
+              title={`No ${words.products} match “${searchText}”`}
+              text={<DidYouMean suggestion={searchSuggestion} onPick={setSearchQuery} />}
+              actionLabel={`Search “${searchSuggestion}”`}
+              onAction={() => setSearchQuery(searchSuggestion)}
+            />
+          ) : (
+            <NoMatches
+              title={`No ${words.products} match “${searchText}”`}
+              text="Search looks at names and descriptions."
+              actionLabel="Clear search"
+              onAction={() => setSearchQuery('')}
+            />
+          )
+        ) : filteredProducts.length === 0 && products.length > 0 && filtersOn ? (
+          <NoMatches
+            title={`No ${words.products} match these filters`}
+            text="Try another category or status."
+            actionLabel={`Show all ${words.products}`}
+            onAction={showAllProducts}
+          />
         ) : filteredProducts.length === 0 ? (
           <>
             <EmptyState
               icon={ShoppingBag}
-              title={searchQuery || categoryFilter !== 'all' || statusFilter !== 'all' 
-                ? `No ${words.products} found`
-                : `No ${words.products} yet`}
-              description={searchQuery || categoryFilter !== 'all' || statusFilter !== 'all'
-                ? "Try adjusting your filters"
-                : isListings ? 'Add a photo, a name and a price. It shows on Explore straight away.'
-                  : `Start building your catalog by adding your first ${words.product}`}
+              title={`No ${words.products} yet`}
+              description={isListings ? 'Add a photo, a name and a price. It shows on Explore straight away.'
+                : `Start building your catalog by adding your first ${words.product}`}
               actionLabel={`Add ${words.Product}`}
               onAction={handleAdd}
             />

@@ -33,8 +33,10 @@ import ZoomableImage from '@/components/ui-custom/ZoomableImage';
 import {
   MenuPhoto, MenuPhotosProvider, PhotoProgress, PhotosOffNote, createPhotoTracker, initialPhotosOff, rememberPhotos, useMenuPhotos,
 } from './MenuPhotos';
+import { didYouMean } from '@/lib/searchSuggest';
 
 const sfType = pixels => `calc(${pixels}px * var(--sf-type-scale, 1))`;
+const fill = (text, values) => text.replace(/\{(\w+)\}/g, (match, key) => (key in values ? String(values[key]) : match));
 
 // The header's back arrow: back to wherever the customer came from (Explore, a listing,
 // the Dashboard's Take Order). A menu opened straight from a link or QR code has nothing
@@ -723,13 +725,16 @@ export default function StorefrontView({
   // sectioning is temporarily bypassed rather than trying to search within
   // each section separately.
   const searchActive = searchQuery.trim().length > 0;
-  const searchedProducts = searchActive
-    ? products.filter(p => {
-        const q = searchQuery.trim().toLowerCase();
-        const name = (contentMap[p.name] || p.name || '').toLowerCase();
-        const desc = (contentMap[p.description] || p.description || '').toLowerCase();
-        return name.includes(q) || desc.includes(q);
-      })
+  // A menu search finds a dish by its name or description, as shown (translated) or as the
+  // shop wrote it. Finding nothing, it offers the likely spelling (UX state 6).
+  const menuFinds = (product, text) => {
+    const q = text.trim().toLowerCase();
+    return [contentMap[product.name], product.name, contentMap[product.description], product.description]
+      .some(value => (value || '').toLowerCase().includes(q));
+  };
+  const searchedProducts = searchActive ? products.filter(p => menuFinds(p, searchQuery)) : null;
+  const searchSuggestion = searchActive && searchedProducts.length === 0
+    ? didYouMean(searchQuery, products.flatMap(p => [contentMap[p.name], p.name]).filter(Boolean), text => products.some(p => menuFinds(p, text)))
     : null;
 
   // Set first active section on load (deals first if present)
@@ -966,7 +971,7 @@ export default function StorefrontView({
                       autoFocus
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
-                      placeholder="Search menu..."
+                      placeholder={t('searchMenu')}
                       style={{ width: '100%', padding: '9px 12px 9px 32px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#f8fafc', fontSize: sfType(13), outline: 'none', boxSizing: 'border-box' }}
                     />
                     {searchQuery && (
@@ -983,14 +988,9 @@ export default function StorefrontView({
 
           {searchActive ? (
             <div style={{ padding: '16px 16px 40px' }}>
-              <p style={{ fontSize: sfType(12), fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '4px 0 12px' }}>
-                {searchedProducts.length} result{searchedProducts.length === 1 ? '' : 's'} for "{searchQuery.trim()}"
-              </p>
+              <MenuResultsLabel count={searchedProducts.length} query={searchQuery} />
               {searchedProducts.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '48px 16px' }}>
-                  <p style={{ fontSize: sfType(32), margin: '0 0 12px' }}>🔍</p>
-                  <p style={{ color: '#94a3b8', fontSize: sfType(14) }}>No products match "{searchQuery.trim()}"</p>
-                </div>
+                <MenuNoMatch query={searchQuery} suggestion={searchSuggestion} onSearch={setSearchQuery} primaryColor={primaryColor} />
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: `repeat(${getResponsiveMenuColumns(isDesktop, isLandscape, menuDensity)}, 1fr)`, gap: menuDensity === 'compact' ? 8 : 10 }}>
                   {searchedProducts.map(product => (
@@ -1130,6 +1130,7 @@ export default function StorefrontView({
             setSearchQuery={setSearchQuery}
             searchActive={searchActive}
             searchedProducts={searchedProducts}
+            searchSuggestion={searchSuggestion}
             stickyTop={marqueeHeight + headerHeight}
           />
         )}
@@ -1164,6 +1165,51 @@ export default function StorefrontView({
       )}
     </div>
     </MenuPhotosProvider>
+  );
+}
+
+// ── Menu search: how many it found, and what to try when it found nothing ────
+function MenuResultsLabel({ count, query }) {
+  const { t } = useLanguage();
+  return (
+    <p style={{ fontSize: sfType(12), fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '4px 0 12px', overflowWrap: 'anywhere' }}>
+      {fill(t(count === 1 ? 'searchResultOne' : 'searchResults'), { count, query: query.trim() })}
+    </p>
+  );
+}
+
+// "Did you mean Kaya toast?" with one tap to search for it; else back to the whole menu.
+function MenuNoMatch({ query, suggestion, onSearch, primaryColor }) {
+  const { t } = useLanguage();
+  const [before, after = ''] = t('didYouMean').split('{suggestion}');
+  return (
+    <div data-testid="menu-no-match" style={{ textAlign: 'center', padding: '40px 16px' }}>
+      <p style={{ fontSize: sfType(32), margin: '0 0 12px' }}>🔍</p>
+      <p style={{ color: '#0f172a', fontWeight: 700, fontSize: sfType(15), margin: 0, overflowWrap: 'anywhere' }}>{fill(t('noMenuMatch'), { query: query.trim() })}</p>
+      {suggestion && (
+        <p data-testid="did-you-mean" style={{ color: '#475569', fontSize: sfType(14), margin: '8px 0 0' }}>
+          {before}
+          <button type="button" onClick={() => onSearch(suggestion)} style={{ border: 'none', background: 'none', padding: 0, font: 'inherit', fontWeight: 700, color: primaryColor, textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer' }}>
+            {suggestion}
+          </button>
+          {after}
+        </p>
+      )}
+      <button
+        type="button"
+        data-testid="menu-no-match-action"
+        onClick={() => onSearch(suggestion || '')}
+        style={{
+          marginTop: 18, minHeight: 40, maxWidth: '100%', padding: '8px 18px', borderRadius: 999, cursor: 'pointer',
+          fontSize: sfType(13), fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          ...(suggestion
+            ? { border: 'none', background: primaryColor, color: '#ffffff' }
+            : { border: '1px solid #e2e8f0', background: '#ffffff', color: '#334155' }),
+        }}
+      >
+        {suggestion ? fill(t('searchFor'), { query: suggestion }) : t('showWholeMenu')}
+      </button>
+    </div>
   );
 }
 
@@ -1230,7 +1276,7 @@ function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onA
 }
 
 // ── Non-split content (grid / list / carousel) ───────────────────────────────
-function NonSplitContent({ products, categories, primaryColor, currency, storefrontConfig, showStockBadge, onAddToCart, onProductClick, contentMap, isDesktop = false, isLandscape = false, searchOpen, setSearchOpen, searchQuery, setSearchQuery, searchActive = false, searchedProducts = [], stickyTop = 84 }) {
+function NonSplitContent({ products, categories, primaryColor, currency, storefrontConfig, showStockBadge, onAddToCart, onProductClick, contentMap, isDesktop = false, isLandscape = false, searchOpen, setSearchOpen, searchQuery, setSearchQuery, searchActive = false, searchedProducts = [], searchSuggestion = null, stickyTop = 84 }) {
   const { t } = useLanguage();
   const tr = (text) => contentMap[text] || text;
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -1284,7 +1330,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
                 autoFocus
                 value={searchQuery}
                 onChange={e => setSearchQuery?.(e.target.value)}
-                placeholder="Search menu..."
+                placeholder={t('searchMenu')}
                 style={{ width: '100%', padding: '9px 12px 9px 32px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#f8fafc', fontSize: sfType(13), outline: 'none', boxSizing: 'border-box' }}
               />
               {searchQuery && (
@@ -1300,14 +1346,9 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
       <div style={{ padding: '16px 16px 0' }}>
         {searchActive ? (
           <>
-            <p style={{ fontSize: sfType(12), fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '4px 0 12px' }}>
-              {searchedProducts.length} result{searchedProducts.length === 1 ? '' : 's'} for "{searchQuery.trim()}"
-            </p>
+            <MenuResultsLabel count={searchedProducts.length} query={searchQuery} />
             {searchedProducts.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '48px 16px' }}>
-                <p style={{ fontSize: sfType(32), margin: '0 0 12px' }}>🔍</p>
-                <p style={{ color: '#94a3b8', fontSize: sfType(14) }}>No products match "{searchQuery.trim()}"</p>
-              </div>
+              <MenuNoMatch query={searchQuery} suggestion={searchSuggestion} onSearch={setSearchQuery} primaryColor={primaryColor} />
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, gap: gridGap }}>
                 {searchedProducts.map(product => <GridCard key={product.id} product={product} currency={currency} primaryColor={primaryColor} storefrontConfig={storefrontConfig} showStockBadge={showStockBadge} onAddToCart={onAddToCart} onProductClick={onProductClick} contentMap={contentMap} />)}

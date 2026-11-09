@@ -19,6 +19,7 @@ import ChitPreviewSheet from '@/components/orders/ChitPreviewSheet';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
 import LoadingShapes from '@/components/ui-custom/LoadingShapes';
 import OrdersEmpty, { ordersEmptyKind } from '@/components/orders/OrdersEmpty';
+import { didYouMean } from '@/lib/searchSuggest';
 import { useProductTour } from '@/hooks/useProductTour';
 import TourGuide from '@/components/tour/TourGuide';
 import { getOrdersSteps } from '@/components/tour/tourSteps';
@@ -790,18 +791,29 @@ export default function Orders() {
   useAppRefreshHandler(() => fetchOrders(true));
 
   const tabOrders = activeTab === 'all' ? orders : orders.filter(o => o.status === activeTab);
-  const filteredOrders = searchQuery.trim()
-    ? tabOrders.filter(o => {
-        const q = searchQuery.toLowerCase();
-        return (
-          (o.order_number || '').toLowerCase().includes(q) ||
-          (o.table_name || '').toLowerCase().includes(q) ||
-          (o.customer_name || '').toLowerCase().includes(q) ||
-          (isShop && (o.customer_phone || '').toLowerCase().includes(q)) ||
-          (o.items || []).some(i => (i.name || i.product_name || '').toLowerCase().includes(q))
-        );
-      })
-    : tabOrders;
+  // Spaces either side don't count (phone keyboards add one after a word).
+  const orderFound = (o, text) => {
+    const q = text.trim().toLowerCase();
+    return (
+      (o.order_number || '').toLowerCase().includes(q) ||
+      (o.table_name || '').toLowerCase().includes(q) ||
+      (o.customer_name || '').toLowerCase().includes(q) ||
+      (isShop && (o.customer_phone || '').toLowerCase().includes(q)) ||
+      (o.items || []).some(i => (i.name || i.product_name || '').toLowerCase().includes(q))
+    );
+  };
+  const filteredOrders = searchQuery.trim() ? tabOrders.filter(o => orderFound(o, searchQuery)) : tabOrders;
+  // A search that finds nothing here (UX state 6): say if it finds orders with other
+  // statuses, else offer the likely spelling of a customer, table or item.
+  const searchMissed = searchQuery.trim() !== '' && filteredOrders.length === 0 && orders.length > 0;
+  const foundElsewhere = searchMissed && activeTab !== 'all' ? orders.filter(o => orderFound(o, searchQuery)).length : 0;
+  const searchSuggestion = searchMissed && !foundElsewhere
+    ? didYouMean(
+        searchQuery,
+        tabOrders.flatMap(o => [o.customer_name, o.table_name, ...(o.items || []).map(i => i.name || i.product_name)]).filter(Boolean),
+        text => tabOrders.some(o => orderFound(o, text)),
+      )
+    : null;
   const countFor = (status) => orders.filter(o => o.status === status).length;
 
   const handleDownload = () => {
@@ -1018,6 +1030,9 @@ export default function Orders() {
                 counter={!!canUseFeature?.('can_use_pos')}
                 onSeeAll={() => setActiveTab('all')}
                 onClearSearch={() => setSearchQuery('')}
+                foundElsewhere={foundElsewhere}
+                suggestion={searchSuggestion}
+                onSearch={setSearchQuery}
                 onRetry={() => { setIsLoading(true); fetchOrders(); }}
               />
               {/* Tour needs a card to point at even with zero real orders yet */}
