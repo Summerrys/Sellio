@@ -117,6 +117,10 @@ adb logcat -d > "$OUT/logcat-full.txt"
 #    Android to tell the app's WebView about the network (the ACCESS_NETWORK_STATE permission).
 adb shell am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d "https://sellio.sg/Auth" "$PKG"
 sleep 15
+# The app's lines are written down as they come (not dumped at the end), so they're kept even
+# when the emulator stops answering adb after the network comes back (it has, now and then).
+adb logcat -T 1 > "$OUT/logcat-network.txt" 2>&1 &
+NETLOG=$!
 adb shell cmd connectivity airplane-mode enable > /dev/null 2>&1 || true
 adb shell svc wifi disable > /dev/null 2>&1 || true
 adb shell svc data disable > /dev/null 2>&1 || true
@@ -128,7 +132,7 @@ adb shell svc data enable > /dev/null 2>&1 || true
 sleep 6
 shot 10-back-online
 sleep 10
-adb logcat -d > "$OUT/logcat-network.txt"
+kill "$NETLOG" 2> /dev/null || true
 
 adb shell pm get-app-links "$PKG" > "$OUT/app-links.txt" 2>&1
 adb shell dumpsys notification > "$OUT/notification-dump.txt" 2>&1 || true
@@ -160,7 +164,7 @@ if grep -qF "Sellio network: offline" "$OUT/logcat-network.txt"; then echo "PASS
 if grep -qF "Sellio network: online" "$OUT/logcat-network.txt"; then echo "PASS the page heard it come back"; else echo "FAIL no \"Sellio network: online\""; fi
 grep -E "Sellio network:|Sellio offline:" "$OUT/logcat-network.txt" | sed -E 's/.*(Sellio (network|offline):[^"]*).*/\1/' | uniq -c || echo "(no network lines)"
 adb shell dumpsys package "$PKG" 2> /dev/null | grep -m2 "ACCESS_NETWORK_STATE" || echo "(ACCESS_NETWORK_STATE not found)"
-echo "app log lines kept: $(grep -c "Capacitor/Console" "$OUT/logcat-full.txt") before the network step, $(grep -c "Capacitor/Console" "$OUT/logcat-network.txt") after"
+echo "app log lines kept: $(grep -c "Capacitor/Console" "$OUT/logcat-full.txt") before the network step, $(grep -c "Capacitor/Console" "$OUT/logcat-network.txt") during it"
 echo "--- app console and crashes"
 grep -E "Capacitor/Console|Uncaught|FATAL|AndroidRuntime" "$OUT/logcat-full.txt" | tail -60 || true
 
