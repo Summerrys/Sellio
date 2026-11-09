@@ -60,6 +60,7 @@ try {
   const { default: AccountProfileModal } = await import(pathToFileURL(local));
 
   const user = { id: 'u-1', email: 'alvin@example.com', full_name: 'Alvin' };
+  let lastPanel = null; // what the last panel showed: { text, payLink, buttons }
   async function panel() {
     const host = document.createElement('div'); document.body.appendChild(host);
     const root = createRoot(host);
@@ -68,6 +69,9 @@ try {
         React.createElement(AccountProfileModal, { open: true, onClose() {}, user, subscription: null })));
     });
     const text = document.body.textContent;
+    const pay = document.body.querySelector('a[href^="https://invoice.stripe.com/"]');
+    lastPanel = { text, payLink: pay ? { target: pay.getAttribute('target') } : null,
+      buttons: [...document.body.querySelectorAll('button')].map((b) => b.textContent.trim()) };
     await act(async () => root.unmount());
     host.remove();
     return text;
@@ -106,6 +110,30 @@ try {
   text = await panel();
   assert.match(text, /Personal Seller \(free\) · Free/);
   passed('A shop: its plan (Professional Plan · Active, Personal Seller (free)), and none guessed while loading');
+
+  // The owner's plan buttons in Sellio's Android app (Alvin, 9 Nov 2026): as on the website, with
+  // Stripe's invoice page handed to the phone (no new window); the iPhone app sells no plans.
+  globalThis.tenantState = { tenantId: 'shop-1', isOwner: true, tenant: { id: 'shop-1', name: 'Kopi', seller_type: 'merchant' }, noStore: false, isLoading: false };
+  win.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'android' };
+  globalThis.subscriptionState = { subscription: { tier: 'starter', status: 'active', billing_cycle: 'monthly', stripe_customer_id: 'cus_fixture' }, tier: 'starter' };
+  await panel();
+  assert.ok(lastPanel.buttons.includes('Upgrade Plan'), 'Upgrade Plan in the Android app');
+  assert.ok(lastPanel.buttons.includes('Manage Billing'));
+  assert.doesNotMatch(lastPanel.text, /Plans are managed on the Sellio website/);
+  globalThis.subscriptionState = { subscription: { tier: 'starter', status: 'past_due', billing_cycle: 'monthly', stripe_customer_id: 'cus_fixture',
+    invoice_hosted_url: 'https://invoice.stripe.com/i/fixture', invoice_amount_due_minor: 3900, invoice_currency: 'SGD' }, tier: 'starter' };
+  await panel();
+  assert.ok(lastPanel.payLink, 'Pay outstanding invoice in the Android app');
+  assert.equal(lastPanel.payLink.target, null, 'handed to the phone, not a new window');
+  win.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'ios' };
+  await panel();
+  assert.equal(lastPanel.payLink, null);
+  assert.equal(lastPanel.buttons.includes('Manage Billing'), false);
+  assert.match(lastPanel.text, /Plans are managed on the Sellio website/);
+  delete win.Capacitor;
+  await panel();
+  assert.equal(lastPanel.payLink?.target, '_blank', 'a browser: a new tab');
+  passed("The owner's plan buttons: in the Android app as on the website (Stripe opens in the phone's browser); none in the iPhone app");
 
   console.log(passes + ' account-panel checks passed');
 } finally {

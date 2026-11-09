@@ -4,7 +4,7 @@ import { paymentLinkFor } from '@/lib/accountFlow';
 import { BUSINESS_PLANS } from '@/lib/plans';
 import PlanFootnotes from '@/components/subscription/PlanFootnotes';
 import { useBackToClose } from '@/lib/useBackToClose';
-import { sellsPlans } from '@/lib/nativeApp';
+import { sellsPlans, outsideLinkProps } from '@/lib/nativeApp';
 import PlansOnWebsite from '@/components/subscription/PlansOnWebsite';
 
 // Presentation only: prices, Stripe links and features come from lib/plans.js.
@@ -96,7 +96,7 @@ export default function AuthPricingModal({ onClose, prefilledEmail = '' }) {
                       </li>
                     ))}
                   </ul>
-                  <a href={link} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+                  <a {...outsideLinkProps(link)} style={{ display: 'block' }}>
                     <button
                       style={{
                         width: '100%', padding: '10px 0', borderRadius: 12, fontSize: 13, fontWeight: 600, color: '#fff', border: 'none', cursor: 'pointer',

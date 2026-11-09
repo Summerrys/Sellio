@@ -5,7 +5,7 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { BUSINESS_PLANS, NO_TRIAL_LINKS } from '@/lib/plans';
 import PlanFootnotes from './PlanFootnotes';
 import PlansOnWebsite from './PlansOnWebsite';
-import { sellsPlans } from '@/lib/nativeApp';
+import { sellsPlans, openOutside } from '@/lib/nativeApp';
 
 // Presentation only: prices, Stripe links and features come from lib/plans.js.
 const PLAN_STYLE = {
@@ -160,7 +160,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => window.open(getLink(plan), '_blank')}
+                      onClick={() => openOutside(getLink(plan))}
                       style={{
                         width: '100%', padding: '10px 0', borderRadius: 12, fontSize: 13, fontWeight: 600, color: '#fff', border: 'none', cursor: 'pointer',
                         background: focus ? SELLIO_PINK_PURPLE : SIGNUP_ORANGE,

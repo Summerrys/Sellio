@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AlertTriangle, CreditCard, ExternalLink, Loader2 } from 'lucide-react';
 import { openBillingPortal, formatBillingAmount, formatBillingDate } from '@/lib/billing';
 import { showError } from '@/lib/plainError';
-import { sellsPlans, PLANS_ON_WEBSITE } from '@/lib/nativeApp';
+import { sellsPlans, PLANS_ON_WEBSITE, outsideLinkProps } from '@/lib/nativeApp';
 
 export default function BillingStatusBanner({ subscription, tenantId, isOwner }) {
   const [openingPortal, setOpeningPortal] = useState(false);
@@ -18,7 +18,7 @@ export default function BillingStatusBanner({ subscription, tenantId, isOwner })
   const handleManageBilling = async () => {
     setOpeningPortal(true);
     try {
-      await openBillingPortal(tenantId);
+      if (await openBillingPortal(tenantId)) setOpeningPortal(false); // the app stays here
     } catch (error) {
       showError(error, 'Couldn’t open billing');
 
@@ -51,9 +51,7 @@ export default function BillingStatusBanner({ subscription, tenantId, isOwner })
           <div className="flex gap-2 flex-shrink-0">
             {subscription.invoice_hosted_url && (
               <a
-                href={subscription.invoice_hosted_url}
-                target="_blank"
-                rel="noopener noreferrer"
+                {...outsideLinkProps(subscription.invoice_hosted_url)}
                 className="h-10 px-3 rounded-xl bg-amber-900 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-amber-950"
               >
                 Pay invoice

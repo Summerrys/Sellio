@@ -5,7 +5,7 @@ import TenantContext from '@/components/tenant/TenantContext';
 import { BUSINESS_PLANS, NO_TRIAL_LINKS } from '@/lib/plans';
 import PlanFootnotes from './PlanFootnotes';
 import PlansOnWebsite from './PlansOnWebsite';
-import { sellsPlans } from '@/lib/nativeApp';
+import { sellsPlans, openOutside } from '@/lib/nativeApp';
 
 // Presentation only: prices, Stripe links and features come from lib/plans.js.
 const PLAN_STYLE = {
@@ -195,7 +195,7 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
                   </ul>
                   {/* CTA always at bottom */}
                   <button
-                    onClick={() => !isCurrent && window.open(getLink(plan), '_blank')}
+                    onClick={() => !isCurrent && openOutside(getLink(plan))}
                     disabled={isCurrent}
                     className="w-full font-semibold text-sm mt-auto"
                     style={{

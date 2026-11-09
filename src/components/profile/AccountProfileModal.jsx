@@ -15,7 +15,7 @@ import { showError } from '@/lib/plainError';
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import { openBillingPortal, formatBillingAmount } from '@/lib/billing';
-import { sellsPlans, PLANS_ON_WEBSITE, appPlatform } from '@/lib/nativeApp';
+import { sellsPlans, PLANS_ON_WEBSITE, appPlatform, outsideLinkProps } from '@/lib/nativeApp';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { ORDER_ALERTS_EVENT } from '@/lib/useOrderAlerts';
 
@@ -288,7 +288,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
   const handleManageBilling = async () => {
     setIsOpeningBilling(true);
     try {
-      await openBillingPortal(tenantId);
+      if (await openBillingPortal(tenantId)) setIsOpeningBilling(false); // the app stays here
     } catch (error) {
       showError(error, 'Couldn’t open billing');
       setIsOpeningBilling(false);
@@ -490,9 +490,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
               <div className="space-y-2">
                 {activeSub?.status === 'past_due' && activeSub?.invoice_hosted_url && (
                   <a
-                    href={activeSub.invoice_hosted_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    {...outsideLinkProps(activeSub.invoice_hosted_url)}
                     className="w-full h-11 rounded-lg bg-slate-900 text-white text-sm font-semibold flex items-center justify-center gap-2"
                   >
                     Pay outstanding invoice

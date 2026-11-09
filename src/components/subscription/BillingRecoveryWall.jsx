@@ -3,7 +3,7 @@ import { AlertTriangle, CreditCard, ExternalLink, Loader2, LogOut, ShieldCheck }
 import { getSupabase } from '@/lib/supabaseClient';
 import { openBillingPortal, formatBillingAmount, formatBillingDate } from '@/lib/billing';
 import { showError } from '@/lib/plainError';
-import { sellsPlans, PLANS_ON_WEBSITE } from '@/lib/nativeApp';
+import { sellsPlans, PLANS_ON_WEBSITE, outsideLinkProps } from '@/lib/nativeApp';
 
 export default function BillingRecoveryWall({ subscription, tenantId, isOwner }) {
   const [openingPortal, setOpeningPortal] = useState(false);
@@ -16,7 +16,7 @@ export default function BillingRecoveryWall({ subscription, tenantId, isOwner })
   const handleManageBilling = async () => {
     setOpeningPortal(true);
     try {
-      await openBillingPortal(tenantId);
+      if (await openBillingPortal(tenantId)) setOpeningPortal(false); // the app stays here
     } catch (error) {
       showError(error, 'Couldn’t open billing');
 
@@ -76,9 +76,7 @@ export default function BillingRecoveryWall({ subscription, tenantId, isOwner })
             <div className="space-y-2 pt-1">
               {subscription?.invoice_hosted_url && (
                 <a
-                  href={subscription.invoice_hosted_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  {...outsideLinkProps(subscription.invoice_hosted_url)}
                   className="w-full h-11 rounded-xl bg-slate-900 text-white font-semibold text-sm flex items-center justify-center gap-2 hover:bg-slate-800"
                 >
                   Pay outstanding invoice

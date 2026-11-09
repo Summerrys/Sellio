@@ -1,4 +1,12 @@
 import { getSupabase } from '@/lib/supabaseClient';
+import { isNativeApp } from '@/lib/nativeApp';
+
+// Where Stripe's billing page sends its "Return" link. In Sellio's app that page opens in the
+// phone's browser, where the app's own address (https://localhost) isn't Sellio: the same page
+// on sellio.sg is.
+export function billingReturnUrl(where = window.location) {
+  return isNativeApp() ? `https://sellio.sg${where.pathname}${where.search}` : where.href;
+}
 
 export async function openBillingPortal(tenantId) {
   if (!tenantId) throw new Error('Tenant is not available');
@@ -6,12 +14,16 @@ export async function openBillingPortal(tenantId) {
   const { data, error } = await supabase.functions.invoke('manage-billing', {
     body: {
       tenantId,
-      returnUrl: window.location.href,
+      returnUrl: billingReturnUrl(),
     },
   });
   if (error) throw error;
   if (!data?.url) throw new Error(data?.error || 'Billing portal is unavailable');
+  // A browser goes to Stripe in this tab; Sellio's app hands the address to the phone, which
+  // opens it in the browser (as openOutside does) while the app stays on this page: true then,
+  // so the button stops spinning.
   window.location.assign(data.url);
+  return isNativeApp();
 }
 
 export async function reconcileBilling(tenantId) {
