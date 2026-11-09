@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { MessageCircle } from 'lucide-react';
 import { useTenant } from '@/components/tenant/TenantContext';
 import ChatInbox from '@/components/chat/ChatInbox';
@@ -22,17 +22,22 @@ function useWide() {
   return wide;
 }
 
+// The shop's Archived chats (each person's own): /Chats?archived=1.
+const ARCHIVED_HREF = '/Chats?archived=1';
+
 export default function Chats() {
   const { tenant, tenantId, hasPermission } = useTenant();
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const wide = useWide();
   const selected = params.get('c');
+  const archived = params.get('archived') === '1';
 
   useEffect(() => {
     const previous = document.title;
-    document.title = 'Chats · Sellio';
+    document.title = archived ? 'Archived chats · Sellio' : 'Chats · Sellio';
     return () => { document.title = previous; };
-  }, []);
+  }, [archived]);
 
   if (!hasPermission('orders.view')) {
     return (
@@ -46,19 +51,39 @@ export default function Chats() {
   // A chat link (notification) on a phone: open it full screen.
   if (!wide && selected) return <Navigate to={chatUrl(selected)} replace />;
 
-  const hrefFor = (chat) => (wide ? `/Chats?c=${encodeURIComponent(chat.id)}` : chatUrl(chat.id));
-  const emptyText = 'When buyers message you about your listings on Explore, the chats show up here.';
+  const hrefFor = (chat) => (wide ? `/Chats?${archived ? 'archived=1&' : ''}c=${encodeURIComponent(chat.id)}` : chatUrl(chat.id));
+  const emptyText = archived
+    ? 'No archived chats. Chats you archive show up here.'
+    : 'When buyers message you about your listings on Explore, the chats show up here.';
+  // A chat deleted while it's open beside the list: the list alone again.
+  const onRemoved = (id) => { if (id === selected) navigate(archived ? ARCHIVED_HREF : '/Chats', { replace: true }); };
+  const inbox = (extra) => (
+    <ChatInbox
+      box="selling"
+      tenantId={tenantId}
+      hrefFor={hrefFor}
+      emptyText={emptyText}
+      archived={archived}
+      archivedHref={archived ? null : ARCHIVED_HREF}
+      onRemoved={onRemoved}
+      {...extra}
+    />
+  );
 
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-4 px-2 sm:px-0">
-        <h1 className="text-2xl font-bold text-slate-900">Chats</h1>
-        <p className="text-sm text-slate-500">Buyers' questions about {tenant?.name ? `${tenant.name}'s` : 'your'} listings.</p>
+        <h1 className="text-2xl font-bold text-slate-900">{archived ? 'Archived chats' : 'Chats'}</h1>
+        <p className="text-sm text-slate-500">
+          {archived
+            ? 'Chats you\'ve archived (just for you).'
+            : <>Buyers' questions about {tenant?.name ? `${tenant.name}'s` : 'your'} listings.</>}
+        </p>
       </div>
       {wide ? (
         <div className="grid grid-cols-[360px_1fr] bg-white rounded-2xl border border-slate-100 overflow-hidden" style={{ height: 'calc(100vh - 15rem)', minHeight: 480 }}>
           <div className="border-r border-slate-100 overflow-y-auto">
-            <ChatInbox box="selling" tenantId={tenantId} hrefFor={hrefFor} selectedId={selected} emptyText={emptyText} />
+            {inbox({ selectedId: selected })}
           </div>
           <div className="min-h-0">
             {selected ? (
@@ -73,7 +98,7 @@ export default function Chats() {
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-          <ChatInbox box="selling" tenantId={tenantId} hrefFor={hrefFor} emptyText={emptyText} />
+          {inbox({})}
         </div>
       )}
     </div>

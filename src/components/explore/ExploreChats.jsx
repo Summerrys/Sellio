@@ -23,13 +23,41 @@ const EMPTY = {
   selling: 'When buyers message you about your listings, the chats show up here.',
 };
 const BOX_KEY = 'sellio_chat_box';
+export const ARCHIVED_CHATS_URL = '/explore/chats/archived';
+
+function savedBox() {
+  try {
+    const box = sessionStorage.getItem(BOX_KEY);
+    return BOXES.some((b) => b.key === box) ? box : 'all';
+  } catch {
+    return 'all';
+  }
+}
+
+function LogInToChat() {
+  return (
+    <div className="m-4 bg-white rounded-2xl border border-slate-100 p-6 text-center">
+      <span className="mx-auto w-12 h-12 rounded-full flex items-center justify-center text-white" style={{ background: BRAND_GRADIENT }}>
+        <MessageCircle className="w-6 h-6" />
+      </span>
+      <p className="mt-3 text-base font-bold text-slate-900">Chat with sellers</p>
+      <p className="mt-1 text-sm text-slate-500">Log in to ask about listings and see your chats.</p>
+      <Link
+        to="/Auth"
+        onClick={() => rememberReturnPath('/explore/chats')}
+        className="mt-4 h-10 px-5 rounded-full text-sm font-semibold text-white inline-flex items-center"
+        style={{ background: BRAND_GRADIENT }}
+      >
+        Log in
+      </Link>
+    </div>
+  );
+}
 
 export default function ExploreChats() {
   const { appUser } = useAppUser() || {};
   const unread = useChatUnread(!!appUser);
-  const [box, setBox] = useState(() => {
-    try { return sessionStorage.getItem(BOX_KEY) || 'all'; } catch { return 'all'; }
-  });
+  const [box, setBox] = useState(savedBox);
 
   useEffect(() => {
     const previous = document.title;
@@ -75,25 +103,36 @@ export default function ExploreChats() {
       <main className="max-w-3xl mx-auto" style={{ paddingBottom: TAB_BAR_SPACE }}>
         {appUser ? (
           <div className="bg-white md:mt-4 md:rounded-2xl md:border md:border-slate-100 overflow-hidden">
-            <ChatInbox box={box} hrefFor={(chat) => chatUrl(chat.id)} emptyText={EMPTY[box]} />
+            <ChatInbox box={box} hrefFor={(chat) => chatUrl(chat.id)} emptyText={EMPTY[box]} archivedHref={ARCHIVED_CHATS_URL} />
           </div>
-        ) : (
-          <div className="m-4 bg-white rounded-2xl border border-slate-100 p-6 text-center">
-            <span className="mx-auto w-12 h-12 rounded-full flex items-center justify-center text-white" style={{ background: BRAND_GRADIENT }}>
-              <MessageCircle className="w-6 h-6" />
-            </span>
-            <p className="mt-3 text-base font-bold text-slate-900">Chat with sellers</p>
-            <p className="mt-1 text-sm text-slate-500">Log in to ask about listings and see your chats.</p>
-            <Link
-              to="/Auth"
-              onClick={() => rememberReturnPath('/explore/chats')}
-              className="mt-4 h-10 px-5 rounded-full text-sm font-semibold text-white inline-flex items-center"
-              style={{ background: BRAND_GRADIENT }}
-            >
-              Log in
-            </Link>
+        ) : <LogInToChat />}
+      </main>
+      <ExploreTabBar active="chats" />
+    </div>
+  );
+}
+
+// /explore/chats/archived: the chats this person archived, for the list chosen in Chats (All,
+// Buying or Selling). The phone's Back returns to Chats.
+export function ExploreArchivedChats() {
+  const { appUser } = useAppUser() || {};
+  const [box] = useState(savedBox);
+
+  useEffect(() => {
+    const previous = document.title;
+    document.title = 'Archived chats · Sellio';
+    return () => { document.title = previous; };
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <ExploreTabHeader title="Archived chats" right={<ShopBell withChat={false} />} />
+      <main className="max-w-3xl mx-auto" style={{ paddingBottom: TAB_BAR_SPACE }}>
+        {appUser ? (
+          <div className="bg-white md:mt-4 md:rounded-2xl md:border md:border-slate-100 overflow-hidden">
+            <ChatInbox box={box} archived hrefFor={(chat) => chatUrl(chat.id)} emptyText="No archived chats. Chats you archive show up here." />
           </div>
-        )}
+        ) : <LogInToChat />}
       </main>
       <ExploreTabBar active="chats" />
     </div>

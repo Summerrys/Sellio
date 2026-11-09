@@ -23,6 +23,7 @@ import { GOOGLE_RELAY_PATH } from '@/lib/googleRelay';
 import { isNativeApp as inSellioApp, isBase44Shell, appPlatform } from '@/lib/nativeApp';
 import PushPrompt from '@/components/notifications/PushPrompt';
 import OfflineKeeper from '@/components/ui-custom/OfflineKeeper';
+import PresencePing from '@/components/chat/PresencePing';
 import ConnectionStatus from '@/components/ui-custom/ConnectionStatus';
 
 // Pages the app never starts on load on demand, so its first download stays small.
@@ -37,6 +38,7 @@ const ExploreListings = lazy(() => import('@/components/explore/ExploreListings'
 const ExploreMe = lazy(() => import('@/components/explore/ExploreMe'));
 const ExploreChats = lazy(() => import('@/components/explore/ExploreChats'));
 const ExploreChatThread = lazy(() => import('@/components/explore/ExploreChats').then((m) => ({ default: m.ExploreChatThread })));
+const ExploreArchivedChats = lazy(() => import('@/components/explore/ExploreChats').then((m) => ({ default: m.ExploreArchivedChats })));
 const ExplorePurchases = lazy(() => import('@/components/explore/ExplorePurchases'));
 const PurchaseDetail = lazy(() => import('@/components/explore/ExplorePurchases').then((m) => ({ default: m.PurchaseDetail })));
 const ExploreModeration = lazy(() => import('@/components/explore/ExploreModeration'));
@@ -170,6 +172,7 @@ const AuthenticatedApp = () => {
         <Route path="/explore/listings" element={<LayoutWrapper currentPageName="Explore"><ExploreListings /></LayoutWrapper>} />
         <Route path="/explore/me" element={<LayoutWrapper currentPageName="Explore"><ExploreMe /></LayoutWrapper>} />
         <Route path="/explore/chats" element={<LayoutWrapper currentPageName="Explore"><ExploreChats /></LayoutWrapper>} />
+        <Route path="/explore/chats/archived" element={<LayoutWrapper currentPageName="Explore"><ExploreArchivedChats /></LayoutWrapper>} />
         <Route path="/explore/chats/:conversationId" element={<LayoutWrapper currentPageName="Explore"><ExploreChatThread /></LayoutWrapper>} />
         <Route path="/explore/purchases" element={<LayoutWrapper currentPageName="Explore"><ExplorePurchases /></LayoutWrapper>} />
         <Route path="/explore/purchases/:orderId" element={<LayoutWrapper currentPageName="Explore"><PurchaseDetail /></LayoutWrapper>} />
@@ -216,6 +219,8 @@ function App() {
         <ConnectionStatus />
         {/* "Welcome back!" on the page a sign-in opens (the sign-in page itself is gone by then). */}
         <SignInWelcome />
+        {/* Online and last seen in Chats, while Sellio is on screen. */}
+        <PresencePing />
         {/* Sellio's question before Android's about push alerts (the Android app only). */}
         {appPlatform() === 'android' && <PushPrompt />}
         <LaunchSplash />

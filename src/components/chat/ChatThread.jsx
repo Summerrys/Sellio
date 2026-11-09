@@ -7,8 +7,8 @@ import PhotoPickerControl from '@/components/ui-custom/PhotoPickerControl';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { rememberReturnPath } from '@/lib/authNavigation';
 import {
-  chatThread, chatSend, chatMarkRead, chatErrorMessage, chatPhotoUrls, exploreItem,
-  uploadChatPhoto, useChatLive, useChatUser,
+  ONLINE_GREEN, chatThread, chatSend, chatMarkRead, chatErrorMessage, chatPhotoUrls, exploreItem,
+  lastSeenText, uploadChatPhoto, useChatLive, useChatUser,
 } from '@/lib/chat';
 import {
   BRAND_COLOR, BRAND_GRADIENT, BOTTOM_INSET, ShopAvatar, ItemImage, formatPrice, listingUrl, storeUrl,
@@ -58,6 +58,31 @@ function headFromItem(data) {
     sold_out: data.product.sold_out,
     other_read_at: null,
   };
+}
+
+// The clock for "Last seen 5 min ago": ticks every 30 seconds.
+function useNow(ms = 30000) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), ms);
+    return () => clearInterval(timer);
+  }, [ms]);
+  return now;
+}
+
+// Under the name: "Online" (green) or when they were last on Sellio, then who they are.
+function PresenceLine({ presence, rest }) {
+  const online = presence === 'Online';
+  return (
+    <span className="flex items-center gap-1.5 text-xs text-slate-500 min-w-0" data-testid="chat-presence">
+      {online && <span aria-hidden="true" className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: ONLINE_GREEN }} />}
+      <span className="truncate">
+        {presence && <span className={online ? 'font-bold text-green-700' : undefined}>{presence}</span>}
+        {presence ? ' · ' : ''}
+        {rest}
+      </span>
+    </span>
+  );
 }
 
 function ImageViewer({ src, onClose }) {
@@ -299,6 +324,8 @@ export default function ChatThread({ conversationId = null, productId = null, va
 
   const isBuyer = head?.my_role === 'buyer';
   const title = head ? (isBuyer ? head.shop_name : head.buyer_name) : '';
+  const now = useNow();
+  const presence = head ? lastSeenText(head, now) : '';
   const lastMine = [...messages].reverse().find((m) => m.from_me);
   const seen = !!(lastMine && head?.other_read_at && new Date(head.other_read_at) >= new Date(lastMine.created_at));
 
@@ -327,7 +354,7 @@ export default function ChatThread({ conversationId = null, productId = null, va
                 <ShopAvatar name={head.shop_name} logo={head.shop_logo_url} size={36} />
                 <span className="min-w-0">
                   <span className="block text-[15px] font-bold text-slate-900 truncate">{title}</span>
-                  <span className="block text-xs text-slate-500">Seller</span>
+                  <PresenceLine presence={presence} rest="Seller" />
                 </span>
               </Link>
             ) : (
@@ -335,7 +362,7 @@ export default function ChatThread({ conversationId = null, productId = null, va
                 <ShopAvatar name={head.buyer_name} logo={null} size={36} />
                 <span className="min-w-0">
                   <span className="block text-[15px] font-bold text-slate-900 truncate">{title}</span>
-                  <span className="block text-xs text-slate-500">Buyer · {head.shop_name}</span>
+                  <PresenceLine presence={presence} rest={`Buyer · ${head.shop_name}`} />
                 </span>
               </div>
             )
