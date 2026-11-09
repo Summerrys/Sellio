@@ -110,6 +110,11 @@ const DICTIONARY = {
     takeaway: 'Takeaway',
     forStaffNotSent: 'This order hasn’t been sent. Please take it for me.',
     forStaffMaybeSent: 'This order may already have reached you. Please check before taking it.',
+    loadingPhotos: 'Loading photos',
+    photosCount: '{done} of {total}',
+    showMenuWithoutPhotos: 'Show menu without photos',
+    menuWithoutPhotos: 'Showing the menu without photos.',
+    showPhotos: 'Show photos',
   },
   zh: {
     poweredBy: '技术支持',
@@ -206,6 +211,11 @@ const DICTIONARY = {
     takeaway: '外带',
     forStaffNotSent: '这张订单还没有发出，请帮我下单。',
     forStaffMaybeSent: '这张订单可能已经送到您那里，请先确认再下单。',
+    loadingPhotos: '正在加载图片',
+    photosCount: '{done}/{total}',
+    showMenuWithoutPhotos: '显示无图菜单',
+    menuWithoutPhotos: '正在显示无图菜单。',
+    showPhotos: '显示图片',
   },
   ms: {
     poweredBy: 'Dikuasakan oleh',
@@ -302,6 +312,11 @@ const DICTIONARY = {
     takeaway: 'Bungkus',
     forStaffNotSent: 'Pesanan ini belum dihantar. Sila ambil pesanan saya.',
     forStaffMaybeSent: 'Pesanan ini mungkin sudah sampai kepada anda. Sila semak dahulu sebelum mengambilnya.',
+    loadingPhotos: 'Memuatkan foto',
+    photosCount: '{done} daripada {total}',
+    showMenuWithoutPhotos: 'Tunjuk menu tanpa foto',
+    menuWithoutPhotos: 'Menu ditunjukkan tanpa foto.',
+    showPhotos: 'Tunjuk foto',
   },
 };
 

@@ -30,6 +30,9 @@ import { extractBannerEdgeAssets, isValidBannerEdgeColor } from '@/lib/bannerEdg
 import { getStorefrontFontStack, getStorefrontTypographyScale } from '@/lib/storefrontTypography';
 import { storefrontLayout } from '@/lib/storefrontDefaults';
 import ZoomableImage from '@/components/ui-custom/ZoomableImage';
+import {
+  MenuPhoto, MenuPhotosProvider, PhotoProgress, PhotosOffNote, createPhotoTracker, initialPhotosOff, rememberPhotos, useMenuPhotos,
+} from './MenuPhotos';
 
 const sfType = pixels => `calc(${pixels}px * var(--sf-type-scale, 1))`;
 
@@ -367,6 +370,7 @@ function StorefrontBanner({
             src={bannerBgImage}
             alt=""
             draggable={false}
+            data-banner-photo=""
             style={{
               position: 'relative',
               zIndex: 1,
@@ -500,6 +504,37 @@ export default function StorefrontView({
   const categoryRefs = useRef({});
   const splitRightRef = useRef(null);
   const rootRef = useRef(null);
+
+  // On a slow connection the customer can switch to the menu without photos (MenuPhotos.jsx).
+  // Design Store's preview always shows them.
+  const [photosOff, setPhotosOff] = useState(() => (previewMode ? false : initialPhotosOff()));
+  const [photoTracker, setPhotoTracker] = useState(null);
+  useEffect(() => {
+    if (previewMode || photosOff) {
+      setPhotoTracker(null);
+      return undefined;
+    }
+    const tracker = createPhotoTracker();
+    setPhotoTracker(tracker);
+    return () => tracker?.stop();
+  }, [previewMode, photosOff]);
+  const menuPhotos = useMemo(
+    () => ({ off: !previewMode && photosOff, track: photoTracker?.track ?? null }),
+    [previewMode, photosOff, photoTracker],
+  );
+  const menuHasPhotos = !!bannerBgImage || products.some(p => p.image_url);
+  const turnPhotosOff = useCallback(() => {
+    // Stop the photos still on their way, so they stop using the customer's data.
+    rootRef.current?.querySelectorAll('img[data-menu-photo], img[data-banner-photo]').forEach((img) => {
+      if (!img.complete) img.removeAttribute('src');
+    });
+    rememberPhotos(true);
+    setPhotosOff(true);
+  }, []);
+  const turnPhotosOn = useCallback(() => {
+    rememberPhotos(false);
+    setPhotosOff(false);
+  }, []);
 
   const headerRef = useRef(null);
   const [headerHeight, setHeaderHeight] = useState(84);
@@ -803,6 +838,7 @@ export default function StorefrontView({
   // preview. No JS-computed height needed for either.
 
   return (
+    <MenuPhotosProvider value={menuPhotos}>
     <div ref={rootRef} style={{
       fontFamily: getStorefrontFontStack(storefrontConfig?.font_family),
       '--sf-type-scale': typographyScale,
@@ -853,7 +889,7 @@ export default function StorefrontView({
       <div style={{ position: 'relative' }}>
         <StorefrontBanner
           primaryColor={primaryColor}
-          bannerBgImage={bannerBgImage}
+          bannerBgImage={menuPhotos.off ? null : bannerBgImage}
           positionX={storefrontConfig?.banner_position_x}
           positionY={storefrontConfig?.banner_position_y}
           height={bannerHeight}
@@ -875,6 +911,10 @@ export default function StorefrontView({
       }}>
 
         {notice && <div style={{ padding: '14px 16px 2px' }}>{notice}</div>}
+
+        {!previewMode && (menuPhotos.off
+          ? (menuHasPhotos ? <PhotosOffNote primaryColor={primaryColor} onPhotosOn={turnPhotosOn} /> : null)
+          : <PhotoProgress tracker={photoTracker} primaryColor={primaryColor} topInset={marqueeHeight + headerHeight} onPhotosOff={turnPhotosOff} />)}
 
         {productLayout === 'split' ? (
           <>
@@ -1123,12 +1163,14 @@ export default function StorefrontView({
         />
       )}
     </div>
+    </MenuPhotosProvider>
   );
 }
 
 // ── Product row item (split layout) ─────────────────────────────────────────
 function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onAddToCart, onProductClick, featured = false, contentMap = {}, isDesktop = false }) {
   const { t } = useLanguage();
+  const { off: photosOff } = useMenuPhotos();
   const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
   const name = contentMap[product.name] || product.name;
   const description = contentMap[product.description] || product.description;
@@ -1147,17 +1189,25 @@ function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onA
         cursor: 'pointer',
       }}
     >
-      <div style={{ position: 'relative', flexShrink: 0 }}>
-        {product.image_url
-          ? <img src={product.image_url} alt="" loading="lazy" decoding="async" className="sellio-photo" style={{ width: thumbSize, height: thumbSize, borderRadius: 10, objectFit: 'cover', display: 'block' }} />
-          : <div style={{ width: thumbSize, height: thumbSize, borderRadius: 10, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: sfType(24) }}>🛍️</div>
-        }
-        {featured && (
-          <span style={{ position: 'absolute', bottom: 4, left: 4, background: '#f59e0b', color: 'white', fontSize: sfType(9), fontWeight: 700, borderRadius: 4, padding: '1px 5px', lineHeight: 1.6 }}>★ Featured</span>
-        )}
-      </div>
+      {/* The menu without photos is a list of words: no photo, and no empty square for one. */}
+      {!photosOff && (
+        <div className="sellio-photo-slot" style={{ position: 'relative', flexShrink: 0, borderRadius: 10 }}>
+          {product.image_url
+            ? <MenuPhoto src={product.image_url} style={{ width: thumbSize, height: thumbSize, borderRadius: 10, objectFit: 'cover', display: 'block' }} />
+            : <div style={{ width: thumbSize, height: thumbSize, borderRadius: 10, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: sfType(24) }}>🛍️</div>
+          }
+          {featured && (
+            <span style={{ position: 'absolute', bottom: 4, left: 4, background: '#f59e0b', color: 'white', fontSize: sfType(9), fontWeight: 700, borderRadius: 4, padding: '1px 5px', lineHeight: 1.6 }}>★ Featured</span>
+          )}
+        </div>
+      )}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontWeight: 600, fontSize: sfType(isDesktop ? 15 : 13), margin: '0 0 2px', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</p>
+        <p style={{ fontWeight: 600, fontSize: sfType(isDesktop ? 15 : 13), margin: '0 0 2px', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {photosOff && featured && (
+            <span style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 6, background: '#f59e0b', color: 'white', fontSize: sfType(9), fontWeight: 700, borderRadius: 4, padding: '1px 5px', lineHeight: 1.6 }}>★ Featured</span>
+          )}
+          {name}
+        </p>
         {storefrontConfig?.show_product_description !== false && product.description && (
           isDesktop
             ? <p style={{ fontSize: sfType(12), color: '#64748b', margin: '0 0 6px', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{description}</p>
@@ -1319,6 +1369,7 @@ function NonSplitContent({ products, categories, primaryColor, currency, storefr
 
 function FeaturedCard({ product, currency, primaryColor, storefrontConfig, showStockBadge, onAddToCart, onProductClick, contentMap = {} }) {
   const { t } = useLanguage();
+  const { off: photosOff } = useMenuPhotos();
   const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
   const name = contentMap[product.name] || product.name;
   const description = contentMap[product.description] || product.description;
@@ -1326,7 +1377,11 @@ function FeaturedCard({ product, currency, primaryColor, storefrontConfig, showS
   const imageSize = isCompact ? 94 : 110;
   return (
     <div onClick={() => onProductClick(product)} style={{ display: 'flex', background: '#f8fafc', borderRadius: isCompact ? 11 : 14, overflow: 'hidden', marginBottom: isCompact ? 7 : 10, border: '0.5px solid #e5e7eb', cursor: 'pointer' }}>
-      {product.image_url && <img src={product.image_url} alt="" loading="lazy" decoding="async" className="sellio-photo" style={{ width: imageSize, height: imageSize, objectFit: 'cover', flexShrink: 0 }} />}
+      {product.image_url && !photosOff && (
+        <div className="sellio-photo-slot" style={{ width: imageSize, height: imageSize, flexShrink: 0 }}>
+          <MenuPhoto src={product.image_url} style={{ width: imageSize, height: imageSize, objectFit: 'cover', display: 'block' }} />
+        </div>
+      )}
       <div style={{ flex: 1, padding: isCompact ? 9 : 12, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
         <div>
           <p style={{ fontWeight: 600, fontSize: sfType(14), margin: '0 0 3px', color: '#0f172a' }}>{name}</p>
@@ -1353,23 +1408,26 @@ function FeaturedCard({ product, currency, primaryColor, storefrontConfig, showS
 
 function GridCard({ product, currency, primaryColor, storefrontConfig, showStockBadge, onAddToCart, onProductClick, contentMap = {} }) {
   const { t } = useLanguage();
+  const { off: photosOff } = useMenuPhotos();
   const isOutOfStock = product.track_inventory && product.stock_quantity === 0;
   const name = contentMap[product.name] || product.name;
   const description = contentMap[product.description] || product.description;
   const isCompact = storefrontConfig?.menu_density === 'compact';
   return (
     <div onClick={() => onProductClick(product)} style={{ background: '#fff', borderRadius: isCompact ? 9 : 12, border: '0.5px solid #e5e7eb', overflow: 'hidden', cursor: 'pointer' }}>
-      <div style={{ position: 'relative' }}>
-        {product.image_url
-          ? <img src={product.image_url} alt="" loading="lazy" decoding="async" className="sellio-photo" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover' }} />
-          : <div style={{ width: '100%', aspectRatio: '1', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: sfType(32) }}>🛍️</div>
-        }
-        {isOutOfStock && showStockBadge && (
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: 'white', fontWeight: 700, fontSize: sfType(12) }}>{t('soldOut')}</span>
-          </div>
-        )}
-      </div>
+      {!photosOff && (
+        <div className="sellio-photo-slot" style={{ position: 'relative' }}>
+          {product.image_url
+            ? <MenuPhoto src={product.image_url} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover' }} />
+            : <div style={{ width: '100%', aspectRatio: '1', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: sfType(32) }}>🛍️</div>
+          }
+          {isOutOfStock && showStockBadge && (
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ color: 'white', fontWeight: 700, fontSize: sfType(12) }}>{t('soldOut')}</span>
+            </div>
+          )}
+        </div>
+      )}
       <div style={{ padding: isCompact ? 7 : 10 }}>
         <p style={{ fontWeight: 600, fontSize: sfType(isCompact ? 12 : 13), margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#0f172a' }}>{name}</p>
         {storefrontConfig?.show_product_description !== false && product.description && (
@@ -1385,6 +1443,10 @@ function GridCard({ product, currency, primaryColor, storefrontConfig, showStock
           {!isOutOfStock && (
             <button onClick={(e) => { e.stopPropagation(); if (product.variants?.length > 0) { onProductClick(product); } else { onAddToCart(product); } }}
               style={{ width: 28, height: 28, borderRadius: '50%', background: primaryColor, color: 'white', border: 'none', fontSize: sfType(18), cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>+</button>
+          )}
+          {/* Without photos, Sold out has no photo to sit on: it goes where the + would be. */}
+          {isOutOfStock && showStockBadge && photosOff && (
+            <span style={{ fontSize: sfType(10), color: '#dc2626', fontWeight: 600, flexShrink: 0 }}>{t('soldOut')}</span>
           )}
         </div>
       </div>

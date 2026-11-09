@@ -122,4 +122,7 @@ html { color-scheme: only light; }
    (main.jsx marks each one data-loaded when it has loaded, or failed). */
 img.sellio-photo { opacity: 0; transition: opacity .25s ease; }
 img.sellio-photo[data-loaded] { opacity: 1; }
-@media (prefers-reduced-motion: reduce) { img.sellio-photo { transition: none; } }
+/* A shop's menu photo still on its way: a grey square holds its place (MenuPhotos.jsx). */
+.sellio-photo-slot { transition: background-color .25s ease; }
+.sellio-photo-slot:has(> img.sellio-photo:not([data-loaded])) { background-color: #f1f5f9; }
+@media (prefers-reduced-motion: reduce) { img.sellio-photo, .sellio-photo-slot { transition: none; } }
