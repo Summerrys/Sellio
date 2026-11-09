@@ -423,11 +423,13 @@ function AppLayout({ children, currentPageName }) {
 
   const tenantId = tenant?.id;
   const refreshSubscriptionRef = useRef(null);
+  const lastPlan = useRef(null); // the plan last read, to notice it change
   useAppRefreshHandler(() => refreshSubscriptionRef.current?.(true));
 
   useEffect(() => {
     if (!tenantId) return;
     let cancelled = false;
+    lastPlan.current = null; // another shop: nothing to compare yet
 
     const refreshSubscription = async (throwOnError = false) => {
       try {
@@ -440,7 +442,17 @@ function AppLayout({ children, currentPageName }) {
           .limit(1)
           .maybeSingle();
         if (error) throw error;
-        if (!cancelled) setSubscription(data);
+        if (cancelled) return;
+        setSubscription(data);
+        // The plan changed (a home shop's first plan makes it a business shop; when that plan
+        // ends it's a home shop again): read the shop again too.
+        const plan = data ? `${data.stripe_subscription_id}|${data.status}|${data.tier}` : '';
+        if (lastPlan.current !== null && lastPlan.current !== plan) {
+          queryClient.invalidateQueries({ queryKey: ['currentTenant', tenantId] }, { cancelRefetch: false });
+          queryClient.invalidateQueries({ queryKey: ['tenantDirect', tenantId] }, { cancelRefetch: false });
+          queryClient.invalidateQueries({ queryKey: ['entitlements', tenantId] }, { cancelRefetch: false });
+        }
+        lastPlan.current = plan;
       } catch (error) {
         if (throwOnError) throw error;
         console.warn('Subscription refresh failed:', error.message);
@@ -460,6 +472,8 @@ function AppLayout({ children, currentPageName }) {
       queryClient.invalidateQueries({ queryKey: ['tenantSubscription', tenantId] }, { cancelRefetch: false });
       queryClient.invalidateQueries({ queryKey: ['subscription', tenantId] }, { cancelRefetch: false });
       queryClient.invalidateQueries({ queryKey: ['entitlements', tenantId] }, { cancelRefetch: false });
+      queryClient.invalidateQueries({ queryKey: ['currentTenant', tenantId] }, { cancelRefetch: false });
+      queryClient.invalidateQueries({ queryKey: ['tenantDirect', tenantId] }, { cancelRefetch: false });
     };
     document.addEventListener('visibilitychange', onFront);
     return () => {
@@ -527,7 +541,9 @@ function AppLayout({ children, currentPageName }) {
     : null;
   const hasActiveGrace = subscription?.status === 'past_due' &&
     gracePeriodEndsAt && gracePeriodEndsAt > new Date();
-  const isLocked = subscription && (
+  // A free home shop is never locked by a plan: one that went back to the free plan keeps its
+  // ended subscription's record (Alvin, 9 Nov 2026).
+  const isLocked = tenant?.seller_type !== 'individual' && subscription && (
     subscription.status === 'cancelled' ||
     subscription.status === 'suspended' ||
     (subscription.status === 'past_due' && !hasActiveGrace) ||
@@ -729,7 +745,14 @@ function AppLayout({ children, currentPageName }) {
 
         <div className="p-2 sm:p-6 lg:p-8 max-w-[1280px] mx-auto overflow-x-hidden">
           {pageOutsidePlan
-            ? <PlanFeatureNotice feature={planPageFeature} personal={tenant?.seller_type === 'individual'} />
+            ? (
+              <PlanFeatureNotice
+                feature={planPageFeature}
+                personal={tenant?.seller_type === 'individual'}
+                freeTrial={!tenant?.has_used_trial}
+                onSeePlans={isOwner && sellsPlans() ? () => setShowPricingModal(true) : null}
+              />
+            )
             : children}
         </div>
       </main>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Lock, Check } from 'lucide-react';
 import { useTenant } from '../tenant/TenantContext';
 import { getSupabase } from '@/lib/supabaseClient';
-import { BUSINESS_PLANS, NO_TRIAL_LINKS } from '@/lib/plans';
+import { BUSINESS_PLANS, shopCheckoutLink } from '@/lib/plans';
 import PlanFootnotes from './PlanFootnotes';
 import PlansOnWebsite from './PlansOnWebsite';
 import { sellsPlans, openOutside } from '@/lib/nativeApp';
@@ -37,19 +37,15 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
   const previousTier = subscription?.tier ?? null;
   const currentTier = isLockedAccount ? null : (currentTierProp ?? previousTier);
 
-  const getLink = (plan) => {
-    // A returning (locked) merchant never gets a second free trial.
-    const linkSet = (isLockedAccount || tenant?.has_used_trial) ? NO_TRIAL_LINKS[plan.key] : plan.links;
-    const base = annual ? linkSet.yearly : linkSet.monthly;
-    // Always tie checkout to this store: stripe-webhook uses client_reference_id
-    // to attach the new subscription to the EXISTING tenant and unlock it.
-    if (!tenantId) return base;
-    const params = new URLSearchParams();
-    params.set('client_reference_id', tenantId);
-    if (user?.email) params.set('prefilled_email', user.email);
-    params.set('upgraded', '1');
-    return `${base}?${params.toString()}`;
-  };
+  // Always tied to this store: stripe-webhook uses client_reference_id to attach the new
+  // subscription to the EXISTING tenant and unlock it. A returning (locked) merchant never gets a
+  // second free trial. Stripe's page then says to go back to Sellio (shopCheckoutLink).
+  const getLink = (plan) => shopCheckoutLink(plan.key, {
+    yearly: annual,
+    trial: !isLockedAccount && !tenant?.has_used_trial,
+    tenantId,
+    email: user?.email && !/@sellio\.app$/i.test(user.email) ? user.email : '',
+  });
 
   const isFocus = (plan) => isLockedAccount && plan.key === previousTier;
 

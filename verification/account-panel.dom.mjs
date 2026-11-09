@@ -135,6 +135,23 @@ try {
   assert.equal(lastPanel.payLink?.target, '_blank', 'a browser: a new tab');
   passed("The owner's plan buttons: in the Android app as on the website (Stripe opens in the phone's browser); none in the iPhone app");
 
+  // A free home shop's owner (Alvin, 9 Nov 2026): a business plan from here, free for 7 days if
+  // the shop hasn't had its trial. A home shop that went back to free keeps its ended plan's record.
+  win.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'android' };
+  globalThis.tenantState = { tenantId: 'shop-1', isOwner: true, tenant: { id: 'shop-1', name: 'Mei', seller_type: 'individual', has_used_trial: false }, noStore: false, isLoading: false };
+  globalThis.subscriptionState = { subscription: null, tier: 'starter' };
+  await panel();
+  assert.match(lastPanel.text, /Personal Seller \(free\) · Free/);
+  assert.ok(lastPanel.buttons.includes('Try a business plan free'), 'Try a business plan free');
+  globalThis.tenantState = { ...globalThis.tenantState, tenant: { ...globalThis.tenantState.tenant, has_used_trial: true } };
+  globalThis.subscriptionState = { subscription: { tier: 'growth', status: 'cancelled', billing_cycle: 'monthly', stripe_customer_id: 'cus_fixture' }, tier: 'growth' };
+  await panel();
+  assert.match(lastPanel.text, /Personal Seller \(free\) · Free/, 'back on the free plan, whatever its old plan says');
+  assert.ok(lastPanel.buttons.includes('Move to a business plan'), 'trial used: Move to a business plan');
+  assert.equal(lastPanel.buttons.includes('Upgrade Plan'), false);
+  delete win.Capacitor;
+  passed("A free home shop's owner: Try a business plan free (or Move to a business plan once the trial is used)");
+
   console.log(passes + ' account-panel checks passed');
 } finally {
   await rm(local, { force: true });

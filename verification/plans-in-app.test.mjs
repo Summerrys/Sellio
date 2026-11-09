@@ -19,8 +19,11 @@ import { build } from 'esbuild';
 
 const app = process.cwd();
 const require = createRequire(path.join(process.argv[2] || app, 'package.json'));
-const { JSDOM } = require('jsdom');
-const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://sellio.example.invalid/Dashboard', pretendToBeVisual: true });
+const { JSDOM, VirtualConsole } = require('jsdom');
+// In the app a checkout goes to Stripe's address in place (openOutside), which jsdom can't do.
+const virtualConsole = new VirtualConsole();
+virtualConsole.on('jsdomError', (error) => { if (!/Not implemented: navigation/.test(error?.message)) console.error(error); });
+const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://sellio.example.invalid/Dashboard', pretendToBeVisual: true, virtualConsole });
 for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLInputElement', 'HTMLButtonElement', 'HTMLTextAreaElement', 'HTMLSelectElement', 'DocumentFragment', 'CustomEvent', 'Node', 'Event', 'MouseEvent', 'MutationObserver', 'sessionStorage', 'localStorage', 'getComputedStyle', 'navigator', 'NodeFilter']) {
   Object.defineProperty(globalThis, key, { value: dom.window[key], configurable: true, writable: true });
 }
@@ -113,9 +116,24 @@ try {
     view = await render(React.createElement(PlanFeatureNotice, { feature: 'pos', personal: false }));
     assert.match(view.textContent, /Email sellio@apptelier\.sg to change your plan/);
     view = await render(React.createElement(PlanFeatureNotice, { feature: 'pos', personal: true }));
-    assert.match(view.textContent, /coming soon/);
+    assert.match(view.textContent, /It comes with a business plan\. Plans are managed on the Sellio website\./, 'no way to buy here: where plans are managed');
+    assert.equal(view.textContent.includes('coming soon'), false);
   }
-  passed('a page outside the plan says how to change it, in the apps as on the website');
+  // A free home shop's owner where plans are sold (Alvin, 9 Nov 2026): the business plans from here.
+  let seen = 0;
+  view = await render(React.createElement(PlanFeatureNotice, { feature: 'can_use_pos', personal: true, freeTrial: true, onSeePlans: () => { seen++; } }));
+  assert.match(view.textContent, /The Counter isn’t included in your plan\. It comes with a business plan, free for 7 days\. Your shop keeps its link, listings and orders\./);
+  const tryFree = [...view.querySelectorAll('button')].find((b) => b.textContent === 'Try a business plan free');
+  assert.ok(tryFree, 'Try a business plan free');
+  await act(async () => { tryFree.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+  assert.equal(seen, 1, 'it opens the plans');
+  view = await render(React.createElement(PlanFeatureNotice, { feature: 'pos', personal: true, freeTrial: false, onSeePlans: () => {} }));
+  assert.match(view.textContent, /It comes with a business plan\. Your shop keeps/);
+  assert.ok([...view.querySelectorAll('button')].some((b) => b.textContent === 'See business plans'), 'trial used: See business plans');
+  const layoutForNotice = await readFile(path.join(app, 'src/Layout.jsx'), 'utf8');
+  assert.match(layoutForNotice, /onSeePlans=\{isOwner && sellsPlans\(\) \? \(\) => setShowPricingModal\(true\) : null\}/, "the owner, where plans are sold: the shop's plan window");
+  assert.match(layoutForNotice, /freeTrial=\{!tenant\?\.has_used_trial\}/);
+  passed('a page outside the plan: a free home shop\'s owner can move to a business plan from it (free for 7 days the first time); elsewhere it says how');
 
   const { default: BillingStatusBanner } = await load('src/components/subscription/BillingStatusBanner.jsx');
   const pastDue = { status: 'past_due', invoice_amount_due_minor: 3900, invoice_currency: 'SGD', invoice_hosted_url: 'https://invoice.stripe.com/i/fixture', next_payment_attempt: null, grace_period_ends_at: null };
@@ -201,13 +219,16 @@ try {
   const planButtons = [...document.body.querySelectorAll('button')].filter((b) => /Upgrade|Downgrade|Get Started/.test(b.textContent));
   assert.ok(planButtons.length >= 2, 'The plans have buttons');
   for (const button of planButtons) await act(async () => { button.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-  const noTrial = new Set(plans.BUSINESS_PLANS.flatMap((p) => [p.noTrialLinks.monthly, p.noTrialLinks.yearly]));
-  const trial = new Set(plans.BUSINESS_PLANS.flatMap((p) => [p.links.monthly, p.links.yearly]));
+  const linkSet = (key) => new Set(plans.BUSINESS_PLANS.flatMap((p) => [p[key].monthly, p[key].yearly]));
+  const shopLinks = linkSet('shopLinks');
+  const shopTrialLinks = linkSet('shopTrialLinks');
+  const signUpLinks = new Set([...linkSet('links'), ...linkSet('noTrialLinks')]);
+  assert.equal(new Set([...shopLinks, ...shopTrialLinks, ...signUpLinks]).size, 24, 'four different links per plan and billing');
   assert.equal(opened.length, planButtons.length);
   for (const url of opened) {
     const [base, query] = url.split('?');
-    assert.ok(noTrial.has(base), `${base} is a no-trial checkout`);
-    assert.equal(trial.has(base), false);
+    assert.ok(shopLinks.has(base), `${base} is a shop's checkout without a trial`);
+    assert.equal(signUpLinks.has(base), false, "not a sign-up link (those return to the sign-up page)");
     assert.equal(new URLSearchParams(query).get('client_reference_id'), 'shop-1');
   }
   const step3 = await readFile(path.join(app, 'src/components/onboarding/Step3MenuSetup.jsx'), 'utf8');
@@ -276,6 +297,82 @@ try {
   assert.equal(await prefilled({ id: 'shop-1', owner_email: '6588833442@sellio.app', seller_type: 'merchant' }), null);
   assert.equal(await prefilled({ id: 'shop-2', owner_email: 'other@shop.sg', seller_type: 'merchant' }), null);
   passed("the plan checkout starts with the shop owner's email");
+
+  // A free home shop (Alvin, 9 Nov 2026): the business plans, free for 7 days if the shop hasn't
+  // had its trial, through the shop's own links (Stripe's page then says to go back to Sellio).
+  const homeShop = async (tenant) => {
+    for (const root of roots.splice(0)) await act(async () => root.unmount());
+    document.body.innerHTML = '';
+    opened.length = 0;
+    await render(React.createElement(withShop.TenantContext.Provider, { value: { tenant } },
+      React.createElement(withShop.PricingModal, { open: true, onOpenChange: () => {}, tenantId: 'shop-1', currentTier: 'starter' })));
+    const body = document.body.textContent.replace(/\s+/g, ' ');
+    const buttons = [...document.body.querySelectorAll('button')].map((b) => b.textContent.trim());
+    const plan = [...document.body.querySelectorAll('button')].filter((b) => /Start free trial|Choose plan/.test(b.textContent));
+    for (const button of plan) await act(async () => { button.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    return { body, buttons, urls: [...opened] };
+  };
+  let home = await homeShop({ id: 'shop-1', name: 'Mei’s Bakes', owner_email: 'mei@bakes.sg', seller_type: 'individual', has_used_trial: false });
+  assert.match(home.body, /Move to a business plan/);
+  assert.match(home.body, /Free for 7 days, then the plan’s price\. Mei’s Bakes keeps its link, listings, orders and ratings, and gets the counter, kitchen display, tables & QR, staff logins and printing\./);
+  assert.match(home.body, /Its order page becomes a business one \(takeaway or dine-in, pay by PayNow or at the counter\)\. If you stop paying, it goes back to a free home shop\./);
+  assert.match(home.body, /Same 10 listings and 100 orders a month as your free shop\./, 'Starter: the same limits as free');
+  assert.equal(home.buttons.filter((b) => b === 'Start free trial →').length, 3, 'every plan starts with the free trial');
+  assert.equal(home.body.includes('Current Plan'), false, 'a home shop is on none of them');
+  assert.equal(home.body.includes('coming soon'), false);
+  assert.equal(home.urls.length, 3);
+  for (const url of home.urls) {
+    const [base, query] = url.split('?');
+    assert.ok(shopTrialLinks.has(base), `${base}: the shop's free-trial checkout`);
+    const params = new URLSearchParams(query);
+    assert.equal(params.get('client_reference_id'), 'shop-1');
+    assert.equal(params.get('prefilled_email'), 'mei@bakes.sg');
+  }
+  home = await homeShop({ id: 'shop-1', name: 'Mei’s Bakes', owner_email: 'mei@bakes.sg', seller_type: 'individual', has_used_trial: true });
+  assert.equal(home.buttons.filter((b) => b === 'Choose plan →').length, 3, 'trial used: Choose plan');
+  assert.equal(home.body.includes('Free for 7 days'), false);
+  for (const url of home.urls) assert.ok(shopLinks.has(url.split('?')[0]), 'trial used: charged now');
+  inApp('android');
+  home = await homeShop({ id: 'shop-1', name: 'Mei’s Bakes', owner_email: 'mei@bakes.sg', seller_type: 'individual', has_used_trial: false });
+  assert.equal(home.buttons.filter((b) => b === 'Start free trial →').length, 3, 'the Android app too');
+  assert.equal(home.urls.length, 0, 'in the app the checkout is handed to the phone, not a new window');
+  inApp('ios');
+  home = await homeShop({ id: 'shop-1', name: 'Mei’s Bakes', owner_email: 'mei@bakes.sg', seller_type: 'individual', has_used_trial: false });
+  assert.ok(home.body.includes(WEBSITE), 'the iPhone app: where plans are managed');
+  assert.match(home.body, /Your personal shop is on the free plan/);
+  inApp(false);
+  passed('a free home shop: the business plans, free for 7 days the first time, through its own checkout; what changes is said first');
+
+  // The locked-shop wall: the shop's own links, never a second trial.
+  const wallEntry = path.join(temporary, 'wall-with-shop.jsx');
+  await writeFile(wallEntry, [
+    "export { default as UpgradeWall } from '@/components/subscription/UpgradeWall.jsx';",
+    "export { default as TenantContext } from '@/components/tenant/TenantContext.jsx';",
+  ].join('\n'));
+  const wall = await load(path.relative(app, wallEntry));
+  for (const root of roots.splice(0)) await act(async () => root.unmount());
+  document.body.innerHTML = '';
+  opened.length = 0;
+  await render(React.createElement(wall.TenantContext.Provider, { value: {
+    tenantId: 'shop-9', user: { email: 'owner@kopi.sg' }, tenant: { id: 'shop-9', has_used_trial: true, seller_type: 'merchant' },
+    subscription: { status: 'cancelled', tier: 'growth' },
+  } }, React.createElement(wall.UpgradeWall)));
+  const wallButtons = [...document.body.querySelectorAll('button')].filter((b) => /Resubscribe|Choose plan/.test(b.textContent));
+  assert.equal(wallButtons.length, 3);
+  for (const button of wallButtons) await act(async () => { button.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+  assert.equal(opened.length, 3);
+  for (const url of opened) {
+    const [base, query] = url.split('?');
+    assert.ok(shopLinks.has(base), `${base}: the shop's checkout, no trial`);
+    assert.equal(new URLSearchParams(query).get('client_reference_id'), 'shop-9');
+    assert.equal(new URLSearchParams(query).get('prefilled_email'), 'owner@kopi.sg');
+  }
+  const layoutLock = await readFile(path.join(app, 'src/Layout.jsx'), 'utf8');
+  assert.match(layoutLock, /const isLocked = tenant\?\.seller_type !== 'individual' && subscription && \(/, 'a home shop is never locked by an ended plan');
+  assert.equal((layoutLock.match(/invalidateQueries\(\{ queryKey: \['currentTenant', tenantId\] \}/g) || []).length, 2,
+    'the shop is read again when the app comes back and when its plan changes');
+  assert.match(layoutLock, /if \(lastPlan\.current !== null && lastPlan\.current !== plan\) \{/);
+  passed("the locked-shop wall resubscribes through the shop's own checkout; a home shop is never locked by an ended plan");
 
   for (const root of roots) await act(async () => root.unmount());
   console.log(passes + ' plans-in-app checks passed.');

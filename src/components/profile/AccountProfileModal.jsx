@@ -497,13 +497,14 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
                     <ExternalLink className="w-4 h-4" />
                   </a>
                 )}
-                {showUpgrade && (
+                {(showUpgrade || isPersonalShop) && (
                   <Button
                     className="w-full h-11 text-white font-semibold"
                     style={{ background: 'linear-gradient(135deg, #f97316, #ec4899, #8b5cf6)' }}
                     onClick={() => { onClose(); onOpenPricing?.(); }}
                   >
-                    Upgrade Plan
+                    {/* A free home shop: a business plan, free for 7 days if the shop hasn't had its trial. */}
+                    {isPersonalShop ? (tenant?.has_used_trial ? 'Move to a business plan' : 'Try a business plan free') : 'Upgrade Plan'}
                   </Button>
                 )}
                 {activeSub?.stripe_customer_id && (

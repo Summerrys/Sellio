@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Check } from 'lucide-react';
 import TenantContext from '@/components/tenant/TenantContext';
-import { BUSINESS_PLANS, NO_TRIAL_LINKS } from '@/lib/plans';
+import { BUSINESS_PLANS, shopCheckoutLink } from '@/lib/plans';
 import PlanFootnotes from './PlanFootnotes';
 import PlansOnWebsite from './PlansOnWebsite';
 import { sellsPlans, openOutside } from '@/lib/nativeApp';
@@ -45,33 +45,31 @@ const CURRENT_BORDER_COLOR = '#4ade80';
 
 const PLAN_RANK = { starter: 0, growth: 1, pro: 2 };
 
-// The plans for a shop that exists already: always without a free trial. Every business shop
-// has had its trial (complete-onboarding sets tenants.has_used_trial when it creates the shop),
-// and a free shop sees "coming soon" here instead of plans. Only new sign-ups (the landing page,
-// AuthPricingModal) offer the trial. Before 5 Nov 2026 this followed a hasUsedTrial prop, which
-// one caller left out (Settings) and onboarding set to false, so those offered a second trial.
+// The plans for a shop that exists already, from inside it (shopCheckoutLink: Stripe's page then
+// says to go back to Sellio). A business shop gets them without a free trial: every business shop
+// has had its trial (complete-onboarding sets tenants.has_used_trial when it creates the shop).
+// Before 5 Nov 2026 this followed a hasUsedTrial prop, which one caller left out (Settings) and
+// onboarding set to false, so those offered a second trial.
+// A free home shop (Alvin, 9 Nov 2026): the business plans, with the 7-day free trial if the shop
+// hasn't had one; paying makes it a business shop in place (sync_stripe_billing_state), and it
+// goes back to a free home shop if it stops paying.
 export default function PricingModal({ open, onOpenChange, tenantId, currentTier = null }) {
   const [billing, setBilling] = useState('monthly');
   const shop = useContext(TenantContext)?.tenant;
-  // A free personal shop can't move to a business plan here yet (scorecard step 3):
-  // a payment from here would not change its plan.
   const isPersonalShop = shop?.seller_type === 'individual';
+  const freeTrial = isPersonalShop && shop?.id === tenantId && !shop?.has_used_trial;
   // Only the shop's owner pays for the shop: stripe-webhook attaches a payment only when its
   // email (or phone) is the owner's (5 Nov 2026). So Stripe's form starts with the owner's
   // email. A phone sign-in's placeholder address (…@sellio.app) isn't one.
   const ownerEmail = shop?.id === tenantId && typeof shop?.owner_email === 'string'
     && !/@sellio\.app$/i.test(shop.owner_email.trim()) ? shop.owner_email.trim() : '';
 
-  const getLink = (plan) => {
-    const linkSet = NO_TRIAL_LINKS[plan.key];
-    const base = billing === 'annual' ? linkSet.yearly : linkSet.monthly;
-    const params = new URLSearchParams();
-    if (tenantId) params.set('client_reference_id', tenantId);
-    if (ownerEmail) params.set('prefilled_email', ownerEmail);
-    return `${base}?${params.toString()}`;
-  };
+  const getLink = (plan) => shopCheckoutLink(plan.key, {
+    yearly: billing === 'annual', trial: freeTrial, tenantId, email: ownerEmail,
+  });
 
   const getButtonLabel = (plan) => {
+    if (isPersonalShop) return freeTrial ? 'Start free trial →' : 'Choose plan →';
     if (currentTier === null) return 'Get Started →';
     if (plan.key === currentTier) return 'Current Plan';
     const planRank = PLAN_RANK[plan.key] ?? 0;
@@ -79,7 +77,7 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
     return planRank > currentRank ? 'Upgrade →' : 'Downgrade →';
   };
 
-  const isCurrentPlan = (plan) => currentTier !== null && plan.key === currentTier;
+  const isCurrentPlan = (plan) => !isPersonalShop && currentTier !== null && plan.key === currentTier;
 
   // Sellio's apps sell no plans: the plan, and that plans are managed on the website.
   if (!sellsPlans()) {
@@ -98,29 +96,25 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
     );
   }
 
-  if (isPersonalShop) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-center">Business plans</DialogTitle>
-          </DialogHeader>
-          <div data-testid="personal-upgrade-soon" className="space-y-3 text-sm text-slate-600">
-            <p>Your personal shop is on the free plan: up to 10 listings and 100 orders a month.</p>
-            <p>Moving a personal shop to a business plan (the counter, staff logins, tables &amp; QR, more listings and orders) is coming soon.</p>
-            <p>Need it sooner? Email <a href="mailto:sellio@apptelier.sg" className="font-semibold text-slate-800 underline">sellio@apptelier.sg</a>.</p>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-center">Choose Your Plan</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-center">{isPersonalShop ? 'Move to a business plan' : 'Choose Your Plan'}</DialogTitle>
         </DialogHeader>
+        {isPersonalShop && (
+          <div data-testid="home-shop-upgrade" className="-mt-1 mb-2 max-w-xl mx-auto text-center text-sm text-slate-600 space-y-1.5">
+            <p>
+              {freeTrial ? 'Free for 7 days, then the plan’s price. ' : ''}
+              {shop?.name ? <span className="font-semibold text-slate-800">{shop.name}</span> : 'Your shop'} keeps its link,
+              listings, orders and ratings, and gets the counter, kitchen display, tables &amp; QR, staff logins and printing.
+            </p>
+            <p className="text-xs text-slate-500">
+              Its order page becomes a business one (takeaway or dine-in, pay by PayNow or at the counter). If you stop paying,
+              it goes back to a free home shop.
+            </p>
+          </div>
+        )}
 
         {/* Pill Toggle */}
         <div className="flex items-center justify-center gap-2 mb-6">
@@ -184,7 +178,10 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
                     <span className="text-xs text-slate-400 ml-1">/{billing === 'annual' ? 'year' : 'month'}</span>
                   </div>
                   {billing === 'annual' && <p className="text-xs text-green-600 font-medium mb-2">Save SGD {saving}</p>}
-                  <p className="text-xs text-slate-500 mb-4">{plan.description}</p>
+                  <p className={`text-xs text-slate-500 ${isPersonalShop && plan.key === 'starter' ? 'mb-1.5' : 'mb-4'}`}>{plan.description}</p>
+                  {isPersonalShop && plan.key === 'starter' && (
+                    <p data-testid="starter-same-limits" className="text-xs font-medium text-amber-700 mb-4">Same 10 listings and 100 orders a month as your free shop.</p>
+                  )}
                   <ul className="space-y-1.5 flex-1 mb-4">
                     {plan.features.map(f => (
                       <li key={f} className="flex items-start gap-1.5 text-xs text-slate-600">
