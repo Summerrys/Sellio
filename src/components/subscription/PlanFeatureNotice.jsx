@@ -7,8 +7,9 @@ import { PLANS_ON_WEBSITE } from '@/lib/nativeApp';
 
 // Shown instead of a page the store's plan doesn't include (for example the
 // Counter or Inventory on a free personal shop). A free home shop's owner can move it to a
-// business plan from here (onSeePlans: the plan window), with the free trial if the shop hasn't
-// had one (freeTrial); where Sellio sells no plans (the iPhone app), where plans are managed.
+// business plan from here (onSeePlans: the plan window, "Upgrade to Business"), with the free
+// trial if the shop hasn't had one (freeTrial); without onSeePlans (not the owner, or where
+// Sellio sells no plans: sellsPlans), where plans are managed.
 export default function PlanFeatureNotice({ feature, personal = true, onSeePlans = null, freeTrial = false }) {
   const label = FEATURE_LABELS[feature] || 'This page';
   let how = 'Email sellio@apptelier.sg to change your plan.';
@@ -34,7 +35,7 @@ export default function PlanFeatureNotice({ feature, personal = true, onSeePlans
             className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold text-white"
             style={{ background: 'linear-gradient(135deg, #f97316, #ec4899, #8b5cf6)' }}
           >
-            {freeTrial ? 'Try a business plan free' : 'See business plans'}
+            Upgrade to Business
           </button>
         )}
         <Link

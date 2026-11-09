@@ -75,6 +75,7 @@ const BUSINESS_TAB_PAGES = ['Products', 'Counter', 'Orders'];
 
 function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription, onOpenProfile, onToggleCollapse, onClose, staff = false }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [linkCopied, setLinkCopied] = useState(false);
   const storefrontUrl = tenant?.slug ? `https://sellio.sg/store/${tenant.slug}` : null;
   const copyStorefrontLink = () => {
@@ -85,6 +86,8 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
     });
   };
   const superAdminItems = [];
+  // A free home shop (no counter): the same test as its bottom bar (freeShopNav in Layout).
+  const homeShop = isShopTenant(tenant) && !hasPermission?.('orders.create');
 
   // Check if user is admin
   const isAdmin = user?.role === 'admin';
@@ -95,7 +98,9 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
     { label: isShopTenant(tenant) ? 'Manage listings' : itemWords(tenant?.seller_type).Products, icon: ShoppingBag, page: 'Products', permission: 'products.view' },
     { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view' },
     { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view' },
-    { label: 'Chats', icon: MessageCircle, page: 'Chats', permission: 'orders.view' },
+    // A free home shop's Chats is its bottom bar's Chat: Explore's, chats it buys and sells in
+    // (Alvin, 10 Nov 2026: "Sidebar menu Chat should be the same as the bottom Chat").
+    { label: 'Chats', icon: MessageCircle, page: 'Chats', to: homeShop ? '/explore/chats' : null, permission: 'orders.view' },
     { label: 'Ratings', icon: Star, page: 'Ratings', permission: 'orders.view' },
     { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view' },
     ...(isFnBIndustry(tenant?.industry) ? [{ label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view' }] : []),
@@ -116,7 +121,10 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
 
   const navItems = [...superAdminItems, ...tenantItems];
   const chatUnread = useChatUnread(!!tenant?.id && hasPermission?.('orders.view'));
-  const chatsWaiting = Number(chatUnread.by_tenant?.[tenant?.id]) || 0;
+  // A home shop: the bottom bar's Chat count (buying and selling); otherwise this shop's chats.
+  const chatsWaiting = homeShop
+    ? (Number(chatUnread.buying) || 0) + (Number(chatUnread.selling) || 0)
+    : Number(chatUnread.by_tenant?.[tenant?.id]) || 0;
 
   return (
     <div className="flex flex-col h-full">
@@ -210,11 +218,12 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
             return <div key={idx} className="h-px bg-slate-100 my-3" />;
           }
           const Icon = item.icon;
-          const isActive = currentPageName === item.page;
+          const to = item.to || createPageUrl(item.page);
+          const isActive = item.to ? location.pathname.startsWith(item.to) : currentPageName === item.page;
           return (
             <Link
               key={item.page}
-              to={createPageUrl(item.page)}
+              to={to}
               onClick={onNavigate ? (event) => {
                 // From the phone menu: the new page takes over the menu's Back step, so
                 // Back from it returns to the page the menu was opened on.
@@ -222,7 +231,6 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
                 event.preventDefault();
                 // The page already open: just close the menu (opening it again would add
                 // a second copy of the page, and the next Back would seem to do nothing).
-                const to = createPageUrl(item.page);
                 if (to !== window.location.pathname + window.location.search) navigate(to, { replace: handOverBackStep() });
                 onNavigate();
               } : undefined}

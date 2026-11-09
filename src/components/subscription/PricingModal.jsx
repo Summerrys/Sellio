@@ -100,7 +100,7 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-center">{isPersonalShop ? 'Move to a business plan' : 'Choose Your Plan'}</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-center">{isPersonalShop ? 'Upgrade to Business' : 'Choose Your Plan'}</DialogTitle>
         </DialogHeader>
         {isPersonalShop && (
           <div data-testid="home-shop-upgrade" className="-mt-1 mb-2 max-w-xl mx-auto text-center text-sm text-slate-600 space-y-1.5">

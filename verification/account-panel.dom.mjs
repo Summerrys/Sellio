@@ -111,8 +111,8 @@ try {
   assert.match(text, /Personal Seller \(free\) · Free/);
   passed('A shop: its plan (Professional Plan · Active, Personal Seller (free)), and none guessed while loading');
 
-  // The owner's plan buttons in Sellio's Android app (Alvin, 9 Nov 2026): as on the website, with
-  // Stripe's invoice page handed to the phone (no new window); the iPhone app sells no plans.
+  // The owner's plan buttons in Sellio's apps (Android 9 Nov 2026, iPhone 10 Nov 2026): as on the
+  // website, with Stripe's invoice page handed to the phone (no new window).
   globalThis.tenantState = { tenantId: 'shop-1', isOwner: true, tenant: { id: 'shop-1', name: 'Kopi', seller_type: 'merchant' }, noStore: false, isLoading: false };
   win.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'android' };
   globalThis.subscriptionState = { subscription: { tier: 'starter', status: 'active', billing_cycle: 'monthly', stripe_customer_id: 'cus_fixture' }, tier: 'starter' };
@@ -127,13 +127,19 @@ try {
   assert.equal(lastPanel.payLink.target, null, 'handed to the phone, not a new window');
   win.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'ios' };
   await panel();
-  assert.equal(lastPanel.payLink, null);
-  assert.equal(lastPanel.buttons.includes('Manage Billing'), false);
-  assert.match(lastPanel.text, /Plans are managed on the Sellio website/);
+  assert.ok(lastPanel.payLink, 'Pay outstanding invoice in the iPhone app too');
+  assert.equal(lastPanel.payLink.target, null, 'handed to the phone');
+  assert.ok(lastPanel.buttons.includes('Manage Billing'));
+  assert.doesNotMatch(lastPanel.text, /Plans are managed on the Sellio website/);
+  const overdue = globalThis.subscriptionState;
+  globalThis.subscriptionState = { subscription: { tier: 'starter', status: 'active', billing_cycle: 'monthly', stripe_customer_id: 'cus_fixture' }, tier: 'starter' };
+  await panel();
+  assert.ok(lastPanel.buttons.includes('Upgrade Plan'), 'Upgrade Plan in the iPhone app');
+  globalThis.subscriptionState = overdue;
   delete win.Capacitor;
   await panel();
   assert.equal(lastPanel.payLink?.target, '_blank', 'a browser: a new tab');
-  passed("The owner's plan buttons: in the Android app as on the website (Stripe opens in the phone's browser); none in the iPhone app");
+  passed("The owner's plan buttons: in both apps as on the website (Stripe opens in the phone's browser)");
 
   // A free home shop's owner (Alvin, 9 Nov 2026): a business plan from here, free for 7 days if
   // the shop hasn't had its trial. A home shop that went back to free keeps its ended plan's record.
@@ -142,15 +148,15 @@ try {
   globalThis.subscriptionState = { subscription: null, tier: 'starter' };
   await panel();
   assert.match(lastPanel.text, /Personal Seller \(free\) · Free/);
-  assert.ok(lastPanel.buttons.includes('Try a business plan free'), 'Try a business plan free');
+  assert.ok(lastPanel.buttons.includes('Upgrade to Business'), 'Upgrade to Business (Alvin, 10 Nov 2026)');
   globalThis.tenantState = { ...globalThis.tenantState, tenant: { ...globalThis.tenantState.tenant, has_used_trial: true } };
   globalThis.subscriptionState = { subscription: { tier: 'growth', status: 'cancelled', billing_cycle: 'monthly', stripe_customer_id: 'cus_fixture' }, tier: 'growth' };
   await panel();
   assert.match(lastPanel.text, /Personal Seller \(free\) · Free/, 'back on the free plan, whatever its old plan says');
-  assert.ok(lastPanel.buttons.includes('Move to a business plan'), 'trial used: Move to a business plan');
+  assert.ok(lastPanel.buttons.includes('Upgrade to Business'), 'trial used: the same Upgrade to Business');
   assert.equal(lastPanel.buttons.includes('Upgrade Plan'), false);
   delete win.Capacitor;
-  passed("A free home shop's owner: Try a business plan free (or Move to a business plan once the trial is used)");
+  passed("A free home shop's owner: Upgrade to Business (trial or not)");
 
   console.log(passes + ' account-panel checks passed');
 } finally {

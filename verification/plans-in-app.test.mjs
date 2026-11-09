@@ -67,9 +67,9 @@ try {
   const native = await load('src/lib/nativeApp.js');
   assert.equal(native.PLANS_ON_WEBSITE, WEBSITE);
   inApp('android'); assert.equal(native.sellsPlans(), true);
-  inApp('ios'); assert.equal(native.sellsPlans(), false);
+  inApp('ios'); assert.equal(native.sellsPlans(), true);
   inApp(false); assert.equal(native.sellsPlans(), true);
-  passed('the Android app and the website sell the plans; the iPhone app sells none');
+  passed('the website, the Android app and (since 10 Nov 2026) the iPhone app sell the plans');
 
   // Stripe's pages: a browser opens a new tab; the app goes to the address in place, which the
   // app hands to the phone (the browser opens it). A stand-in window shows where it went.
@@ -108,7 +108,7 @@ try {
   assert.match(view.textContent, /Your plan: Growth/);
   assert.ok(view.textContent.includes(WEBSITE));
   assert.equal(view.querySelectorAll('a, button').length, 0, 'No links or buttons to buy');
-  passed('the iPhone app: the plan and where plans are managed, no way to buy');
+  passed('where no plans are sold (none today: sellsPlans): the plan and where plans are managed, no way to buy');
 
   const { default: PlanFeatureNotice } = await load('src/components/subscription/PlanFeatureNotice.jsx');
   for (const platform of ['android', 'ios', false]) {
@@ -123,13 +123,13 @@ try {
   let seen = 0;
   view = await render(React.createElement(PlanFeatureNotice, { feature: 'can_use_pos', personal: true, freeTrial: true, onSeePlans: () => { seen++; } }));
   assert.match(view.textContent, /The Counter isn’t included in your plan\. It comes with a business plan, free for 7 days\. Your shop keeps its link, listings and orders\./);
-  const tryFree = [...view.querySelectorAll('button')].find((b) => b.textContent === 'Try a business plan free');
-  assert.ok(tryFree, 'Try a business plan free');
+  const tryFree = [...view.querySelectorAll('button')].find((b) => b.textContent === 'Upgrade to Business');
+  assert.ok(tryFree, 'Upgrade to Business');
   await act(async () => { tryFree.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
   assert.equal(seen, 1, 'it opens the plans');
   view = await render(React.createElement(PlanFeatureNotice, { feature: 'pos', personal: true, freeTrial: false, onSeePlans: () => {} }));
   assert.match(view.textContent, /It comes with a business plan\. Your shop keeps/);
-  assert.ok([...view.querySelectorAll('button')].some((b) => b.textContent === 'See business plans'), 'trial used: See business plans');
+  assert.ok([...view.querySelectorAll('button')].some((b) => b.textContent === 'Upgrade to Business'), 'trial used: the same Upgrade to Business');
   const layoutForNotice = await readFile(path.join(app, 'src/Layout.jsx'), 'utf8');
   assert.match(layoutForNotice, /onSeePlans=\{isOwner && sellsPlans\(\) \? \(\) => setShowPricingModal\(true\) : null\}/, "the owner, where plans are sold: the shop's plan window");
   assert.match(layoutForNotice, /freeTrial=\{!tenant\?\.has_used_trial\}/);
@@ -137,25 +137,24 @@ try {
 
   const { default: BillingStatusBanner } = await load('src/components/subscription/BillingStatusBanner.jsx');
   const pastDue = { status: 'past_due', invoice_amount_due_minor: 3900, invoice_currency: 'SGD', invoice_hosted_url: 'https://invoice.stripe.com/i/fixture', next_payment_attempt: null, grace_period_ends_at: null };
-  inApp('ios');
-  view = await render(React.createElement(BillingStatusBanner, { subscription: pastDue, tenantId: 't1', isOwner: true }));
-  assert.match(view.textContent, /Payment needs attention/);
-  assert.ok(view.textContent.includes(WEBSITE));
-  assert.equal(view.querySelectorAll('a, button').length, 0, 'No Pay invoice or Billing in the iPhone app');
-  inApp('android');
-  view = await render(React.createElement(BillingStatusBanner, { subscription: pastDue, tenantId: 't1', isOwner: true }));
-  let payLink = view.querySelector('a[href="https://invoice.stripe.com/i/fixture"]');
-  assert.ok(payLink, 'The Android app has Pay invoice');
-  assert.equal(payLink.getAttribute('target'), null, 'opened in place: the app hands it to the phone');
-  assert.ok([...view.querySelectorAll('button')].some((b) => b.textContent.includes('Billing')));
-  assert.equal(view.textContent.includes(WEBSITE), false);
+  let payLink;
+  for (const platform of ['android', 'ios']) {
+    inApp(platform);
+    view = await render(React.createElement(BillingStatusBanner, { subscription: pastDue, tenantId: 't1', isOwner: true }));
+    assert.match(view.textContent, /Payment needs attention/);
+    payLink = view.querySelector('a[href="https://invoice.stripe.com/i/fixture"]');
+    assert.ok(payLink, `The ${platform} app has Pay invoice`);
+    assert.equal(payLink.getAttribute('target'), null, 'opened in place: the app hands it to the phone');
+    assert.ok([...view.querySelectorAll('button')].some((b) => b.textContent.includes('Billing')));
+    assert.equal(view.textContent.includes(WEBSITE), false);
+  }
   inApp(false);
   view = await render(React.createElement(BillingStatusBanner, { subscription: pastDue, tenantId: 't1', isOwner: true }));
   payLink = view.querySelector('a[href="https://invoice.stripe.com/i/fixture"]');
   assert.ok(payLink, 'The website keeps Pay invoice');
   assert.equal(payLink.getAttribute('target'), '_blank');
   assert.ok([...view.querySelectorAll('button')].some((b) => b.textContent.includes('Billing')));
-  passed('a payment problem: Pay invoice and Billing on the website and in the Android app; the iPhone app points to the website');
+  passed('a payment problem: Pay invoice and Billing on the website and in both apps');
 
   const { default: BillingRecoveryWall } = await load('src/components/subscription/BillingRecoveryWall.jsx');
   inApp('android');
@@ -167,17 +166,16 @@ try {
   passed('a shop locked for an unpaid invoice can pay it from the Android app');
 
   const { default: TrialReminderModal } = await load('src/components/subscription/TrialReminderModal.jsx');
-  inApp('ios');
   let closed = 0;
+  inApp('ios');
   view = await render(React.createElement(TrialReminderModal, { hoursLeft: 5, onUpgrade: () => {}, onDismiss: () => { closed++; } }));
   assert.match(view.textContent, /Your trial ends soon/);
-  assert.ok(view.textContent.includes(WEBSITE));
-  assert.equal([...view.querySelectorAll('button')].some((b) => /Choose a Plan/.test(b.textContent)), false, 'No Choose a Plan in the iPhone app');
+  assert.equal(view.textContent.includes(WEBSITE), false);
   const later = [...view.querySelectorAll('button')].find((b) => /Remind me later/.test(b.textContent));
-  assert.ok(later, 'The iPhone app can close it');
+  assert.ok(later, 'closable when the shop may close it (canDismissTrialModal)');
   await act(async () => { later.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
   assert.equal(closed, 1);
-  for (const platform of ['android', false]) {
+  for (const platform of ['android', 'ios', false]) {
     inApp(platform);
     view = await render(React.createElement(TrialReminderModal, { hoursLeft: 5, onUpgrade: () => {}, onDismiss: null }));
     assert.ok([...view.querySelectorAll('button')].some((b) => /Choose a Plan/.test(b.textContent)), `${platform || 'The website'} offers Choose a Plan`);
@@ -189,7 +187,7 @@ try {
   assert.doesNotMatch(layout, /if \(!sellsPlans\(\)\) return;/, 'The reminder shows in the apps too');
   assert.match(layout, /document\.addEventListener\('visibilitychange', onFront\)/, 'Layout reads the plan again when the app comes back');
   assert.match(layout, /invalidateQueries\(\{ queryKey: \['entitlements', tenantId\] \}/);
-  passed('the trial reminder offers Choose a Plan in the Android app, can be closed in the iPhone app, and the plan is read again on return');
+  passed('the trial reminder offers Choose a Plan in both apps and on the website, and the plan is read again on return');
 
   const tour = await load('src/components/tour/tourStepsContent.jsx');
   const text = (steps) => steps.map((s) => (typeof s.content === 'string' ? s.content : '')).join(' ');
@@ -215,6 +213,9 @@ try {
   inApp(false);
   const opened = [];
   window.open = (url) => { opened.push(url); return null; };
+  // Only the plan window on the page (the earlier notices' Upgrade to Business buttons gone).
+  for (const root of roots.splice(0)) await act(async () => root.unmount());
+  document.body.innerHTML = '';
   view = await render(React.createElement(PricingModal, { open: true, onOpenChange: () => {}, tenantId: 'shop-1', currentTier: 'starter' }));
   const planButtons = [...document.body.querySelectorAll('button')].filter((b) => /Upgrade|Downgrade|Get Started/.test(b.textContent));
   assert.ok(planButtons.length >= 2, 'The plans have buttons');
@@ -249,8 +250,8 @@ try {
   for (const root of roots.splice(0)) await act(async () => root.unmount());
   document.body.innerHTML = '';
   await render(React.createElement(PricingModal, { open: true, onOpenChange: () => {}, tenantId: 'shop-1', currentTier: 'starter' }));
-  assert.ok(document.body.textContent.includes(WEBSITE), 'The iPhone app: where plans are managed');
-  assert.equal([...document.body.querySelectorAll('button')].filter((b) => /Upgrade|Downgrade/.test(b.textContent)).length, 0);
+  assert.equal(document.body.textContent.includes(WEBSITE), false, 'The iPhone app: the plans too');
+  assert.equal([...document.body.querySelectorAll('button')].filter((b) => /Upgrade|Downgrade/.test(b.textContent)).length, 2);
   for (const root of roots.splice(0)) await act(async () => root.unmount());
   document.body.innerHTML = '';
   inApp(false);
@@ -269,7 +270,7 @@ try {
     for (const root of roots.splice(0)) await act(async () => root.unmount());
     document.body.innerHTML = '';
   }
-  passed('the Android app shows the plan cards and hands checkout to the phone; the iPhone app shows where plans are managed');
+  passed('both apps show the plan cards and hand checkout to the phone');
 
   // Only the shop's owner pays for the shop (stripe-webhook, 5 Nov 2026), so Stripe's form starts
   // with the owner's email; not a phone sign-in's placeholder, and not another shop's owner.
@@ -313,7 +314,7 @@ try {
     return { body, buttons, urls: [...opened] };
   };
   let home = await homeShop({ id: 'shop-1', name: 'Mei’s Bakes', owner_email: 'mei@bakes.sg', seller_type: 'individual', has_used_trial: false });
-  assert.match(home.body, /Move to a business plan/);
+  assert.match(home.body, /Upgrade to Business/);
   assert.match(home.body, /Free for 7 days, then the plan’s price\. Mei’s Bakes keeps its link, listings, orders and ratings, and gets the counter, kitchen display, tables & QR, staff logins and printing\./);
   assert.match(home.body, /Its order page becomes a business one \(takeaway or dine-in, pay by PayNow or at the counter\)\. If you stop paying, it goes back to a free home shop\./);
   assert.match(home.body, /Same 10 listings and 100 orders a month as your free shop\./, 'Starter: the same limits as free');
@@ -338,8 +339,9 @@ try {
   assert.equal(home.urls.length, 0, 'in the app the checkout is handed to the phone, not a new window');
   inApp('ios');
   home = await homeShop({ id: 'shop-1', name: 'Mei’s Bakes', owner_email: 'mei@bakes.sg', seller_type: 'individual', has_used_trial: false });
-  assert.ok(home.body.includes(WEBSITE), 'the iPhone app: where plans are managed');
-  assert.match(home.body, /Your personal shop is on the free plan/);
+  assert.equal(home.buttons.filter((b) => b === 'Start free trial →').length, 3, 'the iPhone app too (10 Nov 2026)');
+  assert.equal(home.urls.length, 0, 'handed to the phone');
+  assert.equal(home.body.includes(WEBSITE), false);
   inApp(false);
   passed('a free home shop: the business plans, free for 7 days the first time, through its own checkout; what changes is said first');
 

@@ -5,9 +5,12 @@ import { useTenant } from '@/components/tenant/TenantContext';
 import ChatInbox from '@/components/chat/ChatInbox';
 import ChatThread from '@/components/chat/ChatThread';
 import { chatUrl } from '@/components/explore/shared';
+import { isShopTenant } from '@/lib/shopSelling';
 
 // The shop's chats with buyers. Wide screens: the list and the open chat side by side.
 // Phones: the list; a chat opens full screen (the same screen as in Explore).
+// A free home shop has one Chat, Explore's (its bottom bar and its menu open it): this address
+// goes there (Alvin, 10 Nov 2026).
 
 const WIDE = '(min-width: 1024px)';
 
@@ -38,6 +41,11 @@ export default function Chats() {
     document.title = archived ? 'Archived chats · Sellio' : 'Chats · Sellio';
     return () => { document.title = previous; };
   }, [archived]);
+
+  if (isShopTenant(tenant) && !hasPermission('orders.create')) {
+    const to = selected ? chatUrl(selected) : archived ? '/explore/chats/archived' : '/explore/chats';
+    return <Navigate to={to} replace />;
+  }
 
   if (!hasPermission('orders.view')) {
     return (

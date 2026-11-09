@@ -503,8 +503,9 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
                     style={{ background: 'linear-gradient(135deg, #f97316, #ec4899, #8b5cf6)' }}
                     onClick={() => { onClose(); onOpenPricing?.(); }}
                   >
-                    {/* A free home shop: a business plan, free for 7 days if the shop hasn't had its trial. */}
-                    {isPersonalShop ? (tenant?.has_used_trial ? 'Move to a business plan' : 'Try a business plan free') : 'Upgrade Plan'}
+                    {/* A free home shop: a business plan, free for 7 days if the shop hasn't had its trial
+                        (Alvin, 10 Nov 2026: "Upgrade to Business"). */}
+                    {isPersonalShop ? 'Upgrade to Business' : 'Upgrade Plan'}
                   </Button>
                 )}
                 {activeSub?.stripe_customer_id && (

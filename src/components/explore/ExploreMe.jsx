@@ -9,6 +9,7 @@ import { amIModerator, moderationQueue, ratingReviewQueue, ratingText, shopRatin
 import { itemWords } from '@/lib/planFeatures';
 import { purchaseSummary } from '@/lib/purchases';
 import AccountProfileModal from '@/components/profile/AccountProfileModal';
+import PricingModal from '@/components/subscription/PricingModal';
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
 import ShopBell from './ShopBell';
 import { BRAND_GRADIENT, ExploreTabHeader, LOGO_URL } from './shared';
@@ -46,6 +47,9 @@ export default function ExploreMe() {
   const { user, tenant, hasPermission, isOwner, subscription, noStore } = useTenant();
   const [signingOut, setSigningOut] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  // The plan window, from the profile window's Upgrade to Business (or Upgrade Plan). Before
+  // 10 Nov 2026 Me had none, so that button only closed the profile window.
+  const [plansOpen, setPlansOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   // The saved sign-in can still name a shop this login no longer has (closed or removed, or
   // its access ended); the memberships just read say so.
@@ -240,13 +244,17 @@ export default function ExploreMe() {
       <ExploreTabBar active="me" />
 
       {hasShop && (
-        <AccountProfileModal
-          open={profileOpen}
-          onClose={() => setProfileOpen(false)}
-          user={appUser || user}
-          subscription={subscription}
-          clearAppUser={clearAppUser}
-        />
+        <>
+          <AccountProfileModal
+            open={profileOpen}
+            onClose={() => setProfileOpen(false)}
+            user={appUser || user}
+            subscription={subscription}
+            onOpenPricing={() => setPlansOpen(true)}
+            clearAppUser={clearAppUser}
+          />
+          <PricingModal open={plansOpen} onOpenChange={setPlansOpen} tenantId={tenant?.id} currentTier={subscription?.tier ?? null} />
+        </>
       )}
     </div>
   );

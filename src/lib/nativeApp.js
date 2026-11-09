@@ -37,14 +37,17 @@ export function isNativeApp(browser = currentWindow()) {
 }
 
 // Where Sellio sells its plans: the plan cards, the upgrade wall, Pay invoice and Billing.
-// The website, and since 9 Nov 2026 the Android app again (Alvin: "revert back to that upgrade
-// wall", accepting that Google Play doesn't allow a payment link out of an app for Singapore and
-// Malaysia yet: "we will handle what google rejects later on"). In the app the Stripe pages open
-// in the phone's browser (openOutside). Sellio's iPhone app still sells none, since Apple rejects
-// that at review outside the US: it shows the plan and PLANS_ON_WEBSITE. To take the plans out
-// of the Android app again: return !isNativeApp(browser).
+// Everywhere: the website, since 9 Nov 2026 the Android app again (Alvin: "revert back to that
+// upgrade wall", accepting that Google Play doesn't allow a payment link out of an app for
+// Singapore and Malaysia yet: "we will handle what google rejects later on"), and since 10 Nov
+// 2026 the iPhone app too ("Apple users also put that in anyway"; Apple's review rejects a link
+// out to pay for a subscription outside the US). In the apps the Stripe pages open in the phone's
+// browser (openOutside). Where it returns false, the app shows the plan and PLANS_ON_WEBSITE:
+// for the iPhone app only, return appPlatform(browser) !== 'ios'; for both apps,
+// return !isNativeApp(browser).
+// eslint-disable-next-line no-unused-vars
 export function sellsPlans(browser = currentWindow()) {
-  return appPlatform(browser) !== 'ios';
+  return true;
 }
 export const PLANS_ON_WEBSITE = 'Plans are managed on the Sellio website';
 
