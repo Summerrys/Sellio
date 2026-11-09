@@ -19,6 +19,7 @@ import LoadingShapes from '@/components/ui-custom/LoadingShapes';
 import { onReconnect, useOnline } from '@/lib/network';
 import { keepSnapshot, loadSnapshot } from '@/lib/offlineStore';
 import OfflineNote, { listNoteWords } from '@/components/ui-custom/OfflineNote';
+import ExploreNoResults from '@/components/explore/ExploreNoResults';
 
 // Sellio Explore: a public, Carousell-style feed of items from Sellio shops.
 // Anyone can browse without an account; tapping an item opens its listing page. Data comes from the explore_feed / explore_shops RPCs, which only
@@ -688,7 +689,17 @@ export default function Explore() {
             </div>
           )}
 
-          {status === 'ready' && items.length === 0 && (
+          {/* A search that found nothing: the likely spelling, and popular listings to try. */}
+          {status === 'ready' && items.length === 0 && !!search && (
+            <ExploreNoResults
+              search={search}
+              kind={kind === 'all' ? null : kind}
+              onSearch={(text) => { setQuery(text); setSearch(text.trim()); }}
+              onShowAll={() => { setQuery(''); setSearch(''); setKind('all'); }}
+            />
+          )}
+
+          {status === 'ready' && items.length === 0 && !search && (
             <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
               {filtered ? (
                 <>
