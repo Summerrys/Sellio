@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { isBase44Shell } from '@/lib/nativeApp';
+import { ShopMenuButton } from '@/components/navigation/ShopMenu';
 
 // Shared by Explore, its listing pages and chats.
 
@@ -117,10 +118,13 @@ export function ExploreDesktopTabs() {
 }
 
 // A compact page header for Explore's tabs: clear of the phone's status bar.
-export function ExploreTabHeader({ title, right = null, children = null }) {
+// shopMenu: the shop's side menu button before the title, for a free home shop's owner (Listings
+// and Chat: ShopMenuButton shows only where Layout offers the menu).
+export function ExploreTabHeader({ title, right = null, children = null, shopMenu = false }) {
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
+        {shopMenu && <ShopMenuButton />}
         <h1 className="text-lg font-bold text-slate-900">{title}</h1>
         <ExploreDesktopTabs />
         <div className="ml-auto flex items-center gap-2">{right}</div>

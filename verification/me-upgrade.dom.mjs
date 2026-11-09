@@ -101,9 +101,10 @@ try {
   await click(upgrade);
   const dialogText = text(document.body);
   assert.match(dialogText, /Upgrade to Business/, 'the plan window opened');
-  const trials = [...document.body.querySelectorAll('button')].filter((b) => text(b) === 'Start free trial →');
-  assert.equal(trials.length, 3, 'three plans, each with the free trial');
-  await click(trials[0]);
+  assert.equal(document.body.querySelectorAll('[role="radio"][data-plan]').length, 3, 'the three plans');
+  const start = document.body.querySelector('[data-testid="plan-checkout"]');
+  assert.equal(text(start), 'Start 7 days free', 'with the free trial');
+  await click(start);
   assert.equal(opened.length, 1, 'Stripe opens');
   const params = new URLSearchParams(opened[0].split('?')[1]);
   assert.equal(params.get('client_reference_id'), 'shop-1', "for Mei's shop");
@@ -124,7 +125,7 @@ try {
   assert.match(layout, /const homeShop = isShopTenant\(tenant\) && !hasPermission\?\.\('orders\.create'\);/);
   assert.match(layout, /\{ label: 'Chats', icon: MessageCircle, page: 'Chats', to: homeShop \? '\/explore\/chats' : null, permission: 'orders\.view' \}/);
   assert.match(layout, /const chatsWaiting = homeShop\s*\? \(Number\(chatUnread\.buying\) \|\| 0\) \+ \(Number\(chatUnread\.selling\) \|\| 0\)\s*: Number\(chatUnread\.by_tenant\?\.\[tenant\?\.id\]\) \|\| 0;/);
-  assert.match(layout, /const to = item\.to \|\| createPageUrl\(item\.page\);\s*const isActive = item\.to \? location\.pathname\.startsWith\(item\.to\) : currentPageName === item\.page;/);
+  assert.match(layout, /const to = item\.to \|\| createPageUrl\(item\.page\);[\s\S]{0,140}const isActive = item\.to \? location\.pathname\.startsWith\(item\.to\)\s*: item\.page === 'Explore' \? location\.pathname === '\/explore'\s*: currentPageName === item\.page;/);
   assert.match(layout, /<Link\s+key=\{item\.page\}\s+to=\{to\}/);
   assert.match(layout, /if \(to !== window\.location\.pathname \+ window\.location\.search\) navigate\(to, \{ replace: handOverBackStep\(\) \}\);/);
   assert.match(layout, /\{ page: 'Chats', to: '\/explore\/chats', label: 'Chat', icon: MessageCircle, badge: shopChatsWaiting \}/, 'the bottom bar: the same place');

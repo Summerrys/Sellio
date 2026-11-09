@@ -43,7 +43,6 @@ import { useChatUnread } from '@/lib/chat';
 import { getSupabase } from '@/lib/supabaseClient';
 import PricingModal from './components/subscription/PricingModal';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAppUser } from '@/lib/AppUserContext';
 import { isFnBIndustry } from '@/lib/industry';
 import { cn } from '@/lib/utils';
@@ -55,6 +54,8 @@ import { reconcileBilling } from '@/lib/billing';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import TrialReminderModal from './components/subscription/TrialReminderModal';
 import AccountProfileModal from './components/profile/AccountProfileModal';
+import { ShopMenuContext } from './components/navigation/ShopMenu';
+import { ProfileAvatar } from './components/profile/ProfilePhoto';
 import InstallBanner from './components/onboarding/InstallBanner';
 import { installPromptSeen, offerInstall, OFFER_INSTALL_EVENT } from '@/lib/pwaInstall';
 import { offerPushAlerts } from '@/lib/pushOffer';
@@ -219,7 +220,10 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
           }
           const Icon = item.icon;
           const to = item.to || createPageUrl(item.page);
-          const isActive = item.to ? location.pathname.startsWith(item.to) : currentPageName === item.page;
+          // On Explore's pages (a home shop's menu there): Explore is lit only on its home page.
+          const isActive = item.to ? location.pathname.startsWith(item.to)
+            : item.page === 'Explore' ? location.pathname === '/explore'
+            : currentPageName === item.page;
           return (
             <Link
               key={item.page}
@@ -266,11 +270,12 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
               className="flex items-center gap-3 flex-1 min-w-0 text-left hover:bg-slate-50 rounded-lg p-1 -m-1 transition-colors"
               onClick={onOpenProfile}
             >
-              <Avatar className="w-8 h-8 flex-shrink-0">
-                <AvatarFallback className="bg-slate-100 text-slate-600 text-xs font-medium">
-                  {user?.full_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
+              <ProfileAvatar
+                email={user?.email}
+                initial={user?.full_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                size={32}
+                fallbackClassName="bg-slate-100 text-slate-600 text-xs font-medium"
+              />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-900 truncate">{user?.full_name || 'User'}</p>
                 <p className="text-xs text-slate-400 truncate">{user?.email}</p>
@@ -603,7 +608,12 @@ function AppLayout({ children, currentPageName }) {
   const workspaceShown = !(currentPageName === 'Explore' && staffAccount) &&
     !publicPages.includes(currentPageName) && !isLoading &&
     !(noStore && currentPageName !== 'Onboarding') && !isLocked;
-  useBackToClose(mobileOpen && workspaceShown, () => setMobileOpen(false));
+  // A free home shop's owner on Explore's pages: the shop's side menu there too, from the menu
+  // button on Listings and Chat (Alvin, 10 Nov 2026), with the profile and plan windows its
+  // footer opens.
+  const exploreShopMenu = currentPageName === 'Explore' && freeShopNav && isOwner && !!displayUser && !!tenantId && !staffAccount;
+  const openShopMenu = useCallback(() => setMobileOpen(true), []);
+  useBackToClose(mobileOpen && (workspaceShown || exploreShopMenu), () => setMobileOpen(false));
   // In the last 12 hours the reminder stays up until a plan is chosen (Choose a Plan). Sellio's
   // apps have no Choose a Plan (sellsPlans), so there it can always be closed: it would
   // otherwise block the shop until the trial ran out.
@@ -615,12 +625,40 @@ function AppLayout({ children, currentPageName }) {
     return <Navigate to={createPageUrl('Dashboard')} replace />;
   }
 
+  // The phone menu (and, on Explore's pages, the menu at any width: they have no side bar).
+  const menuDrawer = (onExplore) => (
+    <div
+      data-testid="shop-menu"
+      className={cn('fixed left-0 right-0 bottom-0', onExplore ? 'z-50' : 'lg:hidden z-40')}
+      style={{ top: 'env(safe-area-inset-top, 0px)' }}
+    >
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+      <aside className="absolute left-0 top-0 h-full w-[280px] bg-white shadow-xl">
+        <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => setMobileOpen(false)} onClose={() => setMobileOpen(false)} subscription={subscription} onOpenProfile={() => { setMobileOpen(false); setShowProfileModal(true); }} staff={staffAccount} />
+      </aside>
+    </div>
+  );
+
   if (publicPages.includes(currentPageName)) {
     return (
-      <>
+      <ShopMenuContext.Provider value={exploreShopMenu ? openShopMenu : null}>
         {children}
+        {exploreShopMenu && mobileOpen && menuDrawer(true)}
+        {exploreShopMenu && (
+          <>
+            <AccountProfileModal
+              open={showProfileModal}
+              onClose={() => setShowProfileModal(false)}
+              user={displayUser}
+              subscription={subscription}
+              onOpenPricing={() => setShowPricingModal(true)}
+              clearAppUser={clearAppUser}
+            />
+            <PricingModal open={showPricingModal} onOpenChange={setShowPricingModal} tenantId={tenantId} currentTier={subscription?.tier ?? null} />
+          </>
+        )}
         <InstallBanner open={showInstallPrompt} kind={installKind} onClose={() => setShowInstallPrompt(false)} />
-      </>
+      </ShopMenuContext.Provider>
     );
   }
 
@@ -722,17 +760,7 @@ function AppLayout({ children, currentPageName }) {
       )}
 
       {/* Mobile Sidebar Overlay */}
-      {mobileOpen && (
-        <div
-          className="lg:hidden fixed left-0 right-0 bottom-0 z-40"
-          style={{ top: 'env(safe-area-inset-top, 0px)' }}
-        >
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute left-0 top-0 h-full w-[280px] bg-white shadow-xl">
-            <SidebarContent collapsed={false} currentPageName={currentPageName} tenant={tenant} user={displayUser} isSuperAdmin={isSuperAdmin} isRealSuperAdmin={isRealSuperAdmin} hasPermission={hasPermission} clearAppUser={clearAppUser} onNavigate={() => setMobileOpen(false)} onClose={() => setMobileOpen(false)} subscription={subscription} onOpenProfile={() => { setMobileOpen(false); setShowProfileModal(true); }} staff={staffAccount} />
-          </aside>
-        </div>
-      )}
+      {mobileOpen && menuDrawer(false)}
 
       {/* Main Content */}
       <main

@@ -45,7 +45,6 @@ export function isNativeApp(browser = currentWindow()) {
 // browser (openOutside). Where it returns false, the app shows the plan and PLANS_ON_WEBSITE:
 // for the iPhone app only, return appPlatform(browser) !== 'ios'; for both apps,
 // return !isNativeApp(browser).
-// eslint-disable-next-line no-unused-vars
 export function sellsPlans(browser = currentWindow()) {
   return true;
 }

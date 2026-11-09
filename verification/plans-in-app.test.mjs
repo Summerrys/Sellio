@@ -210,6 +210,18 @@ try {
   // wherever its plan window opens (the account panel, Settings, Products, Reports, Sell).
   const plans = await load('src/lib/plans.js');
   const { default: PricingModal } = await load('src/components/subscription/PricingModal.jsx');
+  // The short plan window (Alvin, 10 Nov 2026): one list of plans and one button.
+  const planRadio = (key) => document.body.querySelector(`[role="radio"][data-plan="${key}"]`);
+  const checkoutButton = () => document.body.querySelector('[data-testid="plan-checkout"]');
+  const pickAndPay = async (keys = ['starter', 'growth', 'pro']) => {
+    const labels = [];
+    for (const key of keys) {
+      await act(async () => { planRadio(key).dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+      labels.push(checkoutButton().textContent.trim());
+      await act(async () => { checkoutButton().dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    }
+    return labels;
+  };
   inApp(false);
   const opened = [];
   window.open = (url) => { opened.push(url); return null; };
@@ -217,9 +229,14 @@ try {
   for (const root of roots.splice(0)) await act(async () => root.unmount());
   document.body.innerHTML = '';
   view = await render(React.createElement(PricingModal, { open: true, onOpenChange: () => {}, tenantId: 'shop-1', currentTier: 'starter' }));
-  const planButtons = [...document.body.querySelectorAll('button')].filter((b) => /Upgrade|Downgrade|Get Started/.test(b.textContent));
-  assert.ok(planButtons.length >= 2, 'The plans have buttons');
-  for (const button of planButtons) await act(async () => { button.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+  assert.match(document.body.textContent, /Choose your plan\s*You're on Starter\./);
+  assert.equal(checkoutButton().textContent.trim(), 'Upgrade to Growth', 'the next plan up, picked first');
+  const planLabels = await pickAndPay();
+  assert.deepEqual(planLabels, ['Your current plan', 'Upgrade to Growth', 'Upgrade to Professional']);
+  assert.equal(checkoutButton().disabled, false);
+  await act(async () => { planRadio('starter').dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+  assert.equal(checkoutButton().disabled, true, 'the current plan: nothing to pay');
+  const planButtons = ['growth', 'pro'];
   const linkSet = (key) => new Set(plans.BUSINESS_PLANS.flatMap((p) => [p[key].monthly, p[key].yearly]));
   const shopLinks = linkSet('shopLinks');
   const shopTrialLinks = linkSet('shopTrialLinks');
@@ -243,21 +260,25 @@ try {
   opened.length = 0;
   inApp('android');
   await render(React.createElement(PricingModal, { open: true, onOpenChange: () => {}, tenantId: 'shop-1', currentTier: 'starter' }));
-  const appButtons = [...document.body.querySelectorAll('button')].filter((b) => /Upgrade|Downgrade/.test(b.textContent));
-  assert.equal(appButtons.length, 2, 'The Android app shows the plans to move to');
+  assert.equal(document.body.querySelectorAll('[role="radio"][data-plan]').length, 3, 'The Android app shows the plans');
+  assert.equal(checkoutButton().textContent.trim(), 'Upgrade to Growth');
   assert.equal(document.body.textContent.includes(WEBSITE), false);
   inApp('ios');
   for (const root of roots.splice(0)) await act(async () => root.unmount());
   document.body.innerHTML = '';
   await render(React.createElement(PricingModal, { open: true, onOpenChange: () => {}, tenantId: 'shop-1', currentTier: 'starter' }));
   assert.equal(document.body.textContent.includes(WEBSITE), false, 'The iPhone app: the plans too');
-  assert.equal([...document.body.querySelectorAll('button')].filter((b) => /Upgrade|Downgrade/.test(b.textContent)).length, 2);
+  assert.equal(document.body.querySelectorAll('[role="radio"][data-plan]').length, 3);
+  assert.equal(checkoutButton().textContent.trim(), 'Upgrade to Growth');
   for (const root of roots.splice(0)) await act(async () => root.unmount());
   document.body.innerHTML = '';
   inApp(false);
-  for (const file of ['src/components/subscription/PricingModal.jsx', 'src/components/subscription/UpgradeWall.jsx']) {
+  for (const [file, opens] of [
+    ['src/components/subscription/PricingModal.jsx', /openOutside\(shopCheckoutLink\(plan\.key, \{ yearly, trial: freeTrial, tenantId, email: ownerEmail \}\)\)/],
+    ['src/components/subscription/UpgradeWall.jsx', /openOutside\(getLink\(plan\)\)/],
+  ]) {
     const source = await readFile(path.join(app, file), 'utf8');
-    assert.match(source, /openOutside\(getLink\(plan\)\)/, `${file}: a plan opens through openOutside`);
+    assert.match(source, opens, `${file}: a plan opens through openOutside`);
     assert.doesNotMatch(source, /window\.open\(/, `${file}: no window.open`);
   }
   const { default: AuthPricingModal } = await load('src/components/auth/AuthPricingModal.jsx');
@@ -286,8 +307,7 @@ try {
     opened.length = 0;
     await render(React.createElement(withShop.TenantContext.Provider, { value: { tenant } },
       React.createElement(withShop.PricingModal, { open: true, onOpenChange: () => {}, tenantId: 'shop-1', currentTier: 'starter' })));
-    const button = [...document.body.querySelectorAll('button')].filter((b) => /Upgrade/.test(b.textContent)).pop();
-    await act(async () => { button.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    await act(async () => { checkoutButton().dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     const params = new URLSearchParams(opened.at(-1).split('?')[1]);
     assert.equal(params.get('client_reference_id'), 'shop-1');
     for (const root of roots.splice(0)) await act(async () => root.unmount());
@@ -308,17 +328,19 @@ try {
     await render(React.createElement(withShop.TenantContext.Provider, { value: { tenant } },
       React.createElement(withShop.PricingModal, { open: true, onOpenChange: () => {}, tenantId: 'shop-1', currentTier: 'starter' })));
     const body = document.body.textContent.replace(/\s+/g, ' ');
-    const buttons = [...document.body.querySelectorAll('button')].map((b) => b.textContent.trim());
-    const plan = [...document.body.querySelectorAll('button')].filter((b) => /Start free trial|Choose plan/.test(b.textContent));
-    for (const button of plan) await act(async () => { button.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    return { body, buttons, urls: [...opened] };
+    const fine = document.body.querySelector('[data-testid="plan-fine-print"]').textContent;
+    const buttons = await pickAndPay();
+    return { body, fine, buttons, urls: [...opened] };
   };
   let home = await homeShop({ id: 'shop-1', name: 'Mei’s Bakes', owner_email: 'mei@bakes.sg', seller_type: 'individual', has_used_trial: false });
-  assert.match(home.body, /Upgrade to Business/);
-  assert.match(home.body, /Free for 7 days, then the plan’s price\. Mei’s Bakes keeps its link, listings, orders and ratings, and gets the counter, kitchen display, tables & QR, staff logins and printing\./);
-  assert.match(home.body, /Its order page becomes a business one \(takeaway or dine-in, pay by PayNow or at the counter\)\. If you stop paying, it goes back to a free home shop\./);
-  assert.match(home.body, /Same 10 listings and 100 orders a month as your free shop\./, 'Starter: the same limits as free');
-  assert.equal(home.buttons.filter((b) => b === 'Start free trial →').length, 3, 'every plan starts with the free trial');
+  assert.match(home.body, /^Upgrade to Business ?7 days free\. Your shop keeps its link, listings and orders\./);
+  assert.match(home.body, /Starter ?10 listings · 100 orders a month ?S\$39\/mo/, 'Starter: the same limits as free, said in its row');
+  assert.match(home.body, /Growth ?Popular ?50 listings · 1,000 orders a month ?S\$79\/mo/);
+  assert.match(home.body, /Professional ?Unlimited listings and orders ?S\$119\/mo/);
+  assert.match(home.body, /Every plan: counter, kitchen display, tables & QR, staff logins and printing\. ?Compare plans/);
+  assert.equal(home.fine, 'Then S$79 a month. If you stop paying, it goes back to a free home shop.', 'what it costs after the free week (Growth, picked first)');
+  assert.deepEqual(home.buttons, ['Start 7 days free', 'Start 7 days free', 'Start 7 days free'], 'every plan starts with the free trial');
+  assert.equal(home.body.includes('Multi-outlet'), false, 'no business footnotes for a home shop');
   assert.equal(home.body.includes('Current Plan'), false, 'a home shop is on none of them');
   assert.equal(home.body.includes('coming soon'), false);
   assert.equal(home.urls.length, 3);
@@ -330,16 +352,17 @@ try {
     assert.equal(params.get('prefilled_email'), 'mei@bakes.sg');
   }
   home = await homeShop({ id: 'shop-1', name: 'Mei’s Bakes', owner_email: 'mei@bakes.sg', seller_type: 'individual', has_used_trial: true });
-  assert.equal(home.buttons.filter((b) => b === 'Choose plan →').length, 3, 'trial used: Choose plan');
-  assert.equal(home.body.includes('Free for 7 days'), false);
+  assert.deepEqual(home.buttons, ['Upgrade to Starter', 'Upgrade to Growth', 'Upgrade to Professional'], 'trial used: Upgrade to …');
+  assert.equal(home.body.includes('7 days free'), false);
+  assert.equal(home.fine, 'S$79 a month. If you stop paying, it goes back to a free home shop.');
   for (const url of home.urls) assert.ok(shopLinks.has(url.split('?')[0]), 'trial used: charged now');
   inApp('android');
   home = await homeShop({ id: 'shop-1', name: 'Mei’s Bakes', owner_email: 'mei@bakes.sg', seller_type: 'individual', has_used_trial: false });
-  assert.equal(home.buttons.filter((b) => b === 'Start free trial →').length, 3, 'the Android app too');
+  assert.deepEqual(home.buttons, ['Start 7 days free', 'Start 7 days free', 'Start 7 days free'], 'the Android app too');
   assert.equal(home.urls.length, 0, 'in the app the checkout is handed to the phone, not a new window');
   inApp('ios');
   home = await homeShop({ id: 'shop-1', name: 'Mei’s Bakes', owner_email: 'mei@bakes.sg', seller_type: 'individual', has_used_trial: false });
-  assert.equal(home.buttons.filter((b) => b === 'Start free trial →').length, 3, 'the iPhone app too (10 Nov 2026)');
+  assert.deepEqual(home.buttons, ['Start 7 days free', 'Start 7 days free', 'Start 7 days free'], 'the iPhone app too (10 Nov 2026)');
   assert.equal(home.urls.length, 0, 'handed to the phone');
   assert.equal(home.body.includes(WEBSITE), false);
   inApp(false);

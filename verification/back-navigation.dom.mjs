@@ -579,7 +579,8 @@ try {
   assert.match(layout, /if \(to !== window\.location\.pathname \+ window\.location\.search\) navigate\(to, \{ replace: handOverBackStep\(\) \}\);\s*onNavigate\(\);/,
     'a menu link hands over its Back step; the page already open just closes the menu');
   // The phone menu and trial reminder only count as open while the workspace shows them.
-  assert.match(layout, /useBackToClose\(mobileOpen && workspaceShown, \(\) => setMobileOpen\(false\)\)/);
+  // (and on Explore's Listings and Chat, where a home shop's owner has it too: exploreShopMenu)
+  assert.match(layout, /useBackToClose\(mobileOpen && \(workspaceShown \|\| exploreShopMenu\), \(\) => setMobileOpen\(false\)\)/);
   // (The trial reminder can be closed by Back when it can be closed at all: in the last 12 hours
   // only in Sellio's apps, which have no Choose a Plan.)
   assert.match(layout, /const trialReminderClosable = canDismissTrialModal \|\| !sellsPlans\(\);\s*useBackToClose\(showTrialModal && trialReminderClosable && workspaceShown, dismissTrialModal\)/);

@@ -18,6 +18,7 @@ import { openBillingPortal, formatBillingAmount } from '@/lib/billing';
 import { sellsPlans, PLANS_ON_WEBSITE, appPlatform, outsideLinkProps } from '@/lib/nativeApp';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { ORDER_ALERTS_EVENT } from '@/lib/useOrderAlerts';
+import { ProfilePhotoEditor } from './ProfilePhoto';
 
 // Sellio's Android app: whether this phone gets push alerts (src/lib/pushNotifications.js),
 // with Turn on while Sellio can still ask. Android's own settings for Sellio turn them off, or
@@ -355,11 +356,14 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
         <div className="overflow-y-auto flex-1 px-5 pb-8" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 2rem)' }}>
           {/* Header */}
           <div className="flex flex-col items-center pt-4 pb-6">
-            <div
-              className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-bold mb-3"
-              style={{ background: 'var(--color-primary-gradient, linear-gradient(135deg, #f97316, #ec4899, #8b5cf6))' }}
-            >
-              {initial}
+            {/* Their photo (Google's, or one they chose): a tap changes it (Alvin, 10 Nov 2026). */}
+            <div className="mb-3">
+              <ProfilePhotoEditor
+                email={user?.email}
+                initial={initial}
+                size={72}
+                fallbackStyle={{ background: 'var(--color-primary-gradient, linear-gradient(135deg, #f97316, #ec4899, #8b5cf6))' }}
+              />
             </div>
             <p className="text-lg font-bold text-slate-900">{fullName || user?.full_name || 'User'}</p>
             <p className="text-sm text-slate-400 mt-0.5">{user?.email}</p>

@@ -160,7 +160,7 @@ export default function ExploreListings() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <ExploreTabHeader title="My listings" right={tenantId ? <><OrdersButton /><ShopBell /></> : null} />
+      <ExploreTabHeader title="My listings" shopMenu right={tenantId ? <><OrdersButton /><ShopBell /></> : null} />
       <main className="max-w-6xl mx-auto px-4 pt-4" style={{ paddingBottom: TAB_BAR_SPACE }}>
         {canManage ? <Products embedded />
           : shopLoading ? <ListingsSkeleton />

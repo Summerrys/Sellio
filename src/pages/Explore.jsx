@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Plus, X, Loader2, RefreshCw, Store, ChevronRight, SlidersHorizontal, Heart } from 'lucide-react';
 import { toast } from 'sonner';
@@ -20,6 +20,7 @@ import { onReconnect, useOnline } from '@/lib/network';
 import { keepSnapshot, loadSnapshot } from '@/lib/offlineStore';
 import OfflineNote, { listNoteWords } from '@/components/ui-custom/OfflineNote';
 import ExploreNoResults from '@/components/explore/ExploreNoResults';
+import { SuggestionList, useExploreSuggestions, useSuggestionKeys } from '@/components/explore/ExploreSuggestions';
 
 // Sellio Explore: a public, Carousell-style feed of items from Sellio shops.
 // Anyone can browse without an account; tapping an item opens its listing page. Data comes from the explore_feed / explore_shops RPCs, which only
@@ -285,8 +286,28 @@ function SkeletonGrid() {
 // own scroll state, so the feed doesn't re-render as it slides.
 const FOLD_EASE = 'cubic-bezier(0.2, 0, 0, 1)';
 
-function ExploreHeader({ query, onQuery, kind, onKind, signedIn, hasShop }) {
+function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, hasShop }) {
   const [scrolled, setScrolled] = useState(false);
+  // Suggestions while typing (ExploreSuggestions), under the search box while it has the focus.
+  // A pick, Enter or Escape closes the list until something else is typed.
+  const navigate = useNavigate();
+  const searchRef = useRef(null);
+  const listId = useId();
+  const [focused, setFocused] = useState(false);
+  const [closedFor, setClosedFor] = useState(null);
+  const suggestions = useExploreSuggestions(query, kind === 'all' ? null : kind, focused);
+  const showList = focused && closedFor !== query && suggestions.length > 0;
+  const pickSuggestion = (s) => {
+    setClosedFor(s.type === 'search' ? s.text : query);
+    searchRef.current?.blur();
+    if (s.type === 'shop') navigate(storeUrl(s.slug));
+    else onSearchNow(s.text);
+  };
+  const keys = useSuggestionKeys(showList ? suggestions : [], {
+    onPick: pickSuggestion,
+    onSubmit: () => { setClosedFor(query); searchRef.current?.blur(); onSearchNow(query); },
+    onClose: () => setClosedFor(query),
+  });
   const [peek, setPeek] = useState(false);
   const peekRef = useRef({ open: false, fromY: 0 });
   useEffect(() => {
@@ -380,14 +401,23 @@ function ExploreHeader({ query, onQuery, kind, onKind, signedIn, hasShop }) {
             </div>
           {/* The cart sits beside the search (the row above has no room for it on phones);
               its 44px tap area overhangs the row's padding, so the row keeps its height. */}
-          <div className="max-w-6xl mx-auto px-3 sm:px-4 pb-2 flex items-center gap-1">
+          <div className="relative max-w-6xl mx-auto px-3 sm:px-4 pb-2 flex items-center gap-1">
             <label className="relative block flex-1 min-w-0">
               <span className="sr-only">Search Sellio Explore</span>
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
+                ref={searchRef}
                 type="search"
                 value={query}
                 onChange={(e) => onQuery(e.target.value)}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                onKeyDown={keys.onKeyDown}
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded={showList}
+                aria-controls={showList ? listId : undefined}
+                aria-activedescendant={showList && keys.active >= 0 ? `${listId}-${keys.active}` : undefined}
                 placeholder="Search for an item or shop"
                 enterKeyHint="search"
                 className={`w-full h-[38px] pl-9 ${query ? 'pr-[76px]' : 'pr-11'} rounded-[10px] bg-slate-100 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none focus:bg-white focus:ring-2 focus:ring-pink-200 [&::-webkit-search-cancel-button]:hidden`}
@@ -422,6 +452,9 @@ function ExploreHeader({ query, onQuery, kind, onKind, signedIn, hasShop }) {
               </button>
             </label>
             <CartLink className="flex-shrink-0 -my-[3px] -mr-1" />
+            {showList && (
+              <SuggestionList id={listId} items={suggestions} typed={query} active={keys.active} onPick={pickSuggestion} onHover={keys.setActive} />
+            )}
           </div>
         </div>
         <div
@@ -638,6 +671,7 @@ export default function Explore() {
       <ExploreHeader
         query={query}
         onQuery={setQuery}
+        onSearchNow={(text) => { setQuery(text); setSearch(text.trim()); }}
         kind={kind}
         onKind={setKind}
         signedIn={signedIn}

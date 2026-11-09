@@ -10,6 +10,7 @@ import { itemWords } from '@/lib/planFeatures';
 import { purchaseSummary } from '@/lib/purchases';
 import AccountProfileModal from '@/components/profile/AccountProfileModal';
 import PricingModal from '@/components/subscription/PricingModal';
+import { ProfileAvatar, ProfilePhotoEditor } from '@/components/profile/ProfilePhoto';
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
 import ShopBell from './ShopBell';
 import { BRAND_GRADIENT, ExploreTabHeader, LOGO_URL } from './shared';
@@ -128,10 +129,14 @@ export default function ExploreMe() {
     }).catch(() => {});
   };
 
-  const avatar = (
-    <span className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0" style={{ background: BRAND_GRADIENT }}>
-      {name.trim().charAt(0).toUpperCase()}
-    </span>
+  // Their photo (Google's, or one they chose) in place of the letter. Without a shop there's no
+  // profile window, so a tap on it here changes it; with one, the profile window does.
+  const photoEmail = appUser?.email || user?.email;
+  const initial = name.trim().charAt(0).toUpperCase();
+  const avatar = hasShop ? (
+    <ProfileAvatar email={photoEmail} initial={initial} size={56} fallbackClassName="text-white text-xl font-bold" fallbackStyle={{ background: BRAND_GRADIENT }} />
+  ) : (
+    <ProfilePhotoEditor email={photoEmail} initial={initial} size={56} fallbackStyle={{ background: BRAND_GRADIENT }} />
   );
 
   return (
