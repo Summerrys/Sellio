@@ -98,7 +98,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
   const [isSavingHours, setIsSavingHours] = useState(false);
   // Why the last save of the hours didn't go through; stays above Save Hours until the next try.
   const [hoursNote, setHoursNote] = useState(null);
-  useAppReloadGuard(() => ({ dirty: !!logoFile, busy: isSaving || isSavingHours || isUploadingLogo }));
+  useAppReloadGuard(() => ({ dirty: false, busy: isSaving || isSavingHours || isUploadingLogo }));
   const [form, setForm, applyRemoteForm, markFormSaved] = useSettingsDraft(tenantId, {
     name: '',
     branch_name: '',
@@ -109,7 +109,6 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
     address: '',
     tax_rate: '',
     tax_inclusive: false,
-    logo_url: '',
     order_id_prefix: 'ORD',
     order_id_start: 1,
     receipt_paper_size: 'thermal_80',
@@ -119,25 +118,24 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
     receipt_footer: '',
   });
 
+  // The logo saves on its own, as soon as it's chosen, edited or removed (Alvin, 10 Nov 2026: a
+  // new logo "did not load or save it" — it waited for Save Changes at the foot of the page).
+  // logoPreview: the shop's logo as saved (or none).
   const [logoPreview, setLogoPreview] = useState(null);
-  const [logoFile, setLogoFile] = useState(null);
+  const [shownLogo, setShownLogo] = useState(null);
+  const [brokenLogo, setBrokenLogo] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   // Why the last save didn't go through; stays above Save Changes until the next try.
   const [saveNote, setSaveNote] = useState(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [showLogoEditor, setShowLogoEditor] = useState(false);
-  const logoFileRef = useRef(logoFile);
-  logoFileRef.current = logoFile;
-  const logoUrlRef = useRef(form.logo_url);
-  logoUrlRef.current = form.logo_url;
-  const logoScopeRef = useRef(tenantId);
+  const uploadingRef = useRef(false);
+  uploadingRef.current = isUploadingLogo;
 
   useEffect(() => {
     if (!tenant) return;
-    if (logoScopeRef.current !== tenantId) {
-      logoScopeRef.current = tenantId;
-      setLogoFile(null);
-    } else if (logoFileRef.current) return;
+    // The logo as saved, unless one is being saved right now.
+    if (!uploadingRef.current) setLogoPreview(tenant.logo_url || null);
     const settings = tenant.settings || {};
     const storedCurrency = tenant.currency || 'SGD';
     const country = CURRENCY_TO_COUNTRY[storedCurrency] || tenant.country || 'Singapore';
@@ -151,7 +149,6 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
       address: tenant.address || '',
       tax_rate: settings.tax_rate != null ? String(settings.tax_rate) : '',
       tax_inclusive: settings.tax_inclusive || false,
-      logo_url: tenant.logo_url || '',
       order_id_prefix: tenant.order_id_prefix || 'ORD',
       order_id_start: tenant.order_id_start || 1,
       receipt_paper_size: tenant.receipt_paper_size || 'thermal_80',
@@ -160,7 +157,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
       receipt_show_order_number: tenant.receipt_show_order_number !== false,
       receipt_footer: tenant.receipt_footer || '',
     };
-    if (applyRemoteForm(nextForm)) setLogoPreview(tenant.logo_url || null);
+    applyRemoteForm(nextForm);
   }, [tenant, tenantId, applyRemoteForm, refreshVersion]);
 
   const { data: savedBusinessHours } = useQuery({
@@ -192,8 +189,37 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
     setForm(prev => ({ ...prev, currency, country }));
   };
 
+  // The shop's logo address, saved now; the page header shows it straight away.
+  const saveLogoUrl = async (url) => {
+    const supabase = await getSupabase();
+    const { error } = await supabase.from('tenants').update({ logo_url: url }).eq('id', tenantId);
+    if (error) throw error;
+    setLogoPreview(url || null);
+    queryClient.invalidateQueries({ queryKey: ['currentTenant'] });
+  };
+
+  // A logo photo: shrunk, uploaded and saved as the shop's logo.
+  const saveLogoImage = async (image) => {
+    setIsUploadingLogo(true);
+    try {
+      const supabase = await getSupabase();
+      const logo = await shrinkImage(image, { maxSide: LOGO_MAX_SIDE });
+      const path = `${tenantId}/logo/${Date.now()}.${logo.ext}`;
+      const { error } = await supabase.storage.from('product-images').upload(path, logo.blob, { upsert: true, contentType: logo.type, cacheControl: LONG_CACHE });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
+      await saveLogoUrl(publicUrl);
+      toast.success('Logo saved');
+    } catch (err) {
+      showError(err, 'Couldn’t save the logo');
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
   const handleLogoSelect = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
     // A photo that didn't come through whole is refused here (see imageShrink.js).
     try {
@@ -201,56 +227,35 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
     } catch (err) {
       if (err?.friendly) {
         showError(err, 'Couldn’t use that photo');
-
-        e.target.value = '';
         return;
       }
     }
-    setLogoFile(file);
-    setLogoPreview(URL.createObjectURL(file));
+    await saveLogoImage(file);
   };
 
-  const handleRemoveLogo = () => {
-    setLogoFile(null);
-    setLogoPreview(null);
-    setForm(prev => ({ ...prev, logo_url: '' }));
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const uploadLogo = async () => {
-    if (!logoFile) return form.logo_url;
+  // Removed at once, with Undo in case it was a slip.
+  const handleRemoveLogo = async () => {
+    const before = logoPreview;
     setIsUploadingLogo(true);
     try {
-      const supabase = await getSupabase();
-      const logo = await shrinkImage(logoFile, { maxSide: LOGO_MAX_SIDE });
-      const path = `${tenantId}/logo/${Date.now()}.${logo.ext}`;
-      const { error } = await supabase.storage.from('product-images').upload(path, logo.blob, { upsert: true, contentType: logo.type, cacheControl: LONG_CACHE });
-      if (error) throw error;
-      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
-      return publicUrl;
+      await saveLogoUrl('');
+      toast.success('Logo removed', before ? {
+        action: { label: 'Undo', onClick: () => { saveLogoUrl(before).catch((err) => showError(err, 'Couldn’t put the logo back')); } },
+      } : undefined);
+    } catch (err) {
+      showError(err, 'Couldn’t remove the logo');
     } finally {
       setIsUploadingLogo(false);
     }
   };
 
   const handleLogoEditSave = async (imageData) => {
-    if (!imageData) { handleRemoveLogo(); return; }
-    setIsUploadingLogo(true);
+    if (!imageData) { await handleRemoveLogo(); return; }
     try {
-      const supabase = await getSupabase();
       const res = await fetch(imageData);
-      const logo = await shrinkImage(await res.blob(), { maxSide: LOGO_MAX_SIDE });
-      const path = `${tenantId}/logo/${Date.now()}.${logo.ext}`;
-      const { error } = await supabase.storage.from('product-images').upload(path, logo.blob, { upsert: true, contentType: logo.type, cacheControl: LONG_CACHE });
-      if (error) throw error;
-      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
-      setLogoPreview(publicUrl);
-      setLogoFile(null);
-      setForm(prev => ({ ...prev, logo_url: publicUrl }));
+      await saveLogoImage(await res.blob());
     } catch (err) {
-      showError(err, 'Couldn’t upload the logo');
-    } finally {
-      setIsUploadingLogo(false);
+      showError(err, 'Couldn’t save the logo');
     }
   };
 
@@ -260,7 +265,6 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
     setSaveNote(null);
     try {
       const supabase = await getSupabase();
-      const logoUrl = await uploadLogo();
       const existingSettings = tenant?.settings || {};
       const { error } = await supabase.from('tenants').update({
         name: form.name,
@@ -269,7 +273,6 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
         phone: form.phone,
         currency: form.currency,
         address: form.address,
-        logo_url: logoUrl,
         order_id_prefix: form.order_id_prefix || 'ORD',
         order_id_start: parseInt(form.order_id_start) || 1,
         receipt_paper_size: form.receipt_paper_size,
@@ -285,12 +288,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
         },
       }).eq('id', tenantId);
       if (error) throw error;
-      markFormSaved({ ...form, logo_url: logoUrl });
-      setForm(prev => prev.logo_url === form.logo_url ? { ...prev, logo_url: logoUrl } : prev);
-      if (logoFileRef.current === logoFile && logoUrlRef.current === form.logo_url) {
-        setLogoFile(null);
-        setLogoPreview(logoUrl || null);
-      }
+      markFormSaved({ ...form });
       queryClient.invalidateQueries({ queryKey: ['currentTenant'] });
       toast.success('Business settings saved');
     } catch (err) {
@@ -347,12 +345,26 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
                 <div
                   className="relative rounded-xl border border-slate-200 bg-slate-50 shadow-sm flex items-center justify-center overflow-hidden cursor-pointer"
                   style={{ width: 200, height: 120, margin: '0 auto' }}
-                  onClick={() => setShowLogoEditor(true)}
+                  // A logo that can't be shown: a tap chooses it again (the editor couldn't open it).
+                  onClick={() => (brokenLogo === logoPreview ? fileInputRef.current?.click() : setShowLogoEditor(true))}
                 >
                   {isUploadingLogo ? (
                     <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
                   ) : (
-                    <img src={logoPreview} alt="Logo" style={{ maxWidth: 200, maxHeight: 120, objectFit: 'contain', display: 'block' }} />
+                    <>
+                      <img
+                        src={logoPreview}
+                        alt="Logo"
+                        onLoad={() => setShownLogo(logoPreview)}
+                        onError={() => setBrokenLogo(logoPreview)}
+                        style={{ maxWidth: 200, maxHeight: 120, objectFit: 'contain', display: 'block', opacity: shownLogo === logoPreview ? 1 : 0 }}
+                      />
+                      {shownLogo !== logoPreview && (
+                        brokenLogo === logoPreview
+                          ? <span className="absolute inset-0 flex items-center justify-center px-4 text-center text-xs text-slate-500">Couldn’t show the logo. Tap to choose it again.</span>
+                          : <Loader2 data-testid="logo-loading" className="absolute w-6 h-6 text-slate-400 animate-spin" />
+                      )}
+                    </>
                   )}
                   <button
                     type="button"

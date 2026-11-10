@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, RotateCw, Crop, Undo2, ImagePlus, Save, Trash2 } from 'lucide-react';
+import { X, RotateCw, Crop, Undo2, ImagePlus, Save, Trash2, Loader2 } from 'lucide-react';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { toast } from 'sonner';
 import { checkPhoto, UnreadablePhotoError } from '@/lib/imageShrink';
@@ -56,33 +56,57 @@ export default function ImageEditModal({
   const [dragDimensions, setDragDimensions] = useState(null);
 
   const imgRef = useRef(new Image());
+  // The photo on screen, once it has opened: Save, Rotate and Crop wait for it, and for a photo
+  // chosen with Replace from the moment it's chosen. On a phone a big photo can take seconds to
+  // read and open, and until 10 Nov 2026 a Save tapped meanwhile saved the photo from before
+  // (Alvin: a new logo "did not load or save"). A photo that can't be opened says so, and isn't
+  // saved blank.
+  const [opened, setOpened] = useState({ src: null, state: 'loading' });
+  const [replacing, setReplacing] = useState(false);
+  const replacingRef = useRef(0);
+  const ready = !replacing && opened.src === current.imageSrc && opened.state === 'ready';
+  const failed = !replacing && opened.src === current.imageSrc && opened.state === 'failed';
 
+  // Open each photo as a new picture, so the one Save reads is always the one that opened.
   useEffect(() => {
-    const img = imgRef.current;
+    const img = new Image();
+    let alive = true;
+    setOpened({ src: current.imageSrc, state: 'loading' });
     img.crossOrigin = 'anonymous';
+    img.onerror = () => { if (alive) setOpened({ src: current.imageSrc, state: 'failed' }); };
     img.onload = () => {
-      const container = containerRef.current;
-      const maxW = container ? container.offsetWidth - 32 : 320;
-      const maxH = 300;
-      let w = img.naturalWidth, h = img.naturalHeight;
-      const swapped = current.rotation % 180 !== 0;
-      const dW = swapped ? h : w, dH = swapped ? w : h;
-      const scale = Math.min(maxW / dW, maxH / dH, 1);
-      const cw = Math.round(dW * scale), ch = Math.round(dH * scale);
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      canvas.width = cw; canvas.height = ch;
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, cw, ch);
-      ctx.save();
-      ctx.translate(cw / 2, ch / 2);
-      ctx.rotate((current.rotation * Math.PI) / 180);
-      const drawW = swapped ? ch : cw, drawH = swapped ? cw : ch;
-      ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
-      ctx.restore();
+      if (!alive) return;
+      imgRef.current = img;
+      setOpened({ src: current.imageSrc, state: 'ready' });
     };
     img.src = current.imageSrc;
-  }, [current]);
+    return () => { alive = false; img.onload = null; img.onerror = null; };
+  }, [current.imageSrc]);
+
+  // Draw it (again after a turn: Rotate doesn't open the photo again).
+  useEffect(() => {
+    if (!ready) return;
+    const img = imgRef.current;
+    const container = containerRef.current;
+    const maxW = container ? container.offsetWidth - 32 : 320;
+    const maxH = 300;
+    const w = img.naturalWidth, h = img.naturalHeight;
+    const swapped = current.rotation % 180 !== 0;
+    const dW = swapped ? h : w, dH = swapped ? w : h;
+    const scale = Math.min(maxW / dW, maxH / dH, 1);
+    const cw = Math.round(dW * scale), ch = Math.round(dH * scale);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.width = cw; canvas.height = ch;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.save();
+    ctx.translate(cw / 2, ch / 2);
+    ctx.rotate((current.rotation * Math.PI) / 180);
+    const drawW = swapped ? ch : cw, drawH = swapped ? cw : ch;
+    ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+    ctx.restore();
+  }, [ready, current]);
 
   const pushHistory = (newState) => {
     setHistory(prev => [...prev, newState]);
@@ -105,14 +129,23 @@ export default function ImageEditModal({
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
+    // The photo on screen is on its way out: Save waits for this one (only the last one chosen).
+    const turn = ++replacingRef.current;
+    const done = () => { if (turn === replacingRef.current) setReplacing(false); };
+    setReplacing(true);
     // A replacement that didn't come through whole is refused (see above).
     try {
       await checkPhoto(file);
     } catch (err) {
-      if (err instanceof UnreadablePhotoError) { toast.error(err.message); return; }
+      if (err instanceof UnreadablePhotoError) { toast.error(err.message); done(); return; }
     }
     const reader = new FileReader();
-    reader.onloadend = () => pushHistory({ imageSrc: reader.result, rotation: 0 });
+    reader.onloadend = () => {
+      if (turn !== replacingRef.current) return;
+      if (typeof reader.result === 'string') pushHistory({ imageSrc: reader.result, rotation: 0 });
+      else toast.error('Couldn’t open that photo. Please choose it again.');
+      setReplacing(false);
+    };
     reader.readAsDataURL(file);
   };
 
@@ -254,13 +287,14 @@ export default function ImageEditModal({
   };
 
   const applyCrop = () => {
-    if (!cropStart || !cropEnd) return;
+    if (!ready || !cropStart || !cropEnd) return;
     const output = renderCrop(preserveResolution);
     if (!output) return;
     pushHistory({ imageSrc: output.toDataURL('image/jpeg', 0.92), rotation: 0 });
   };
 
   const handleSave = () => {
+    if (!ready) return;
     const isActiveCrop = tool === TOOLS.CROP && cropStart && cropEnd;
     const output = isActiveCrop
       ? renderCrop(preserveResolution)
@@ -301,7 +335,16 @@ export default function ImageEditModal({
 
 
         {/* Canvas */}
-        <div className="flex-1 flex items-center justify-center bg-slate-900 px-4 py-4 overflow-auto">
+        <div className="relative flex-1 flex items-center justify-center bg-slate-900 px-4 py-4 overflow-auto min-h-[180px]">
+          {!ready && (
+            <div data-testid="photo-opening" className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-slate-900/80 text-white text-sm font-medium px-6 text-center">
+              {failed ? (
+                <>Couldn’t open this photo. Tap Replace to choose it again.</>
+              ) : (
+                <><Loader2 className="w-6 h-6 animate-spin" aria-hidden="true" /> Opening photo…</>
+              )}
+            </div>
+          )}
           <div
             className="relative inline-block select-none"
             style={{ cursor: isCropping ? 'crosshair' : 'default', touchAction: isCropping ? 'none' : 'auto' }}
@@ -335,7 +378,7 @@ export default function ImageEditModal({
         <div className="grid grid-cols-5 gap-px bg-slate-100 border-t border-slate-100">
           {[
             { label: 'Undo', icon: Undo2, action: handleUndo, disabled: history.length <= 1 },
-            { label: 'Rotate', icon: RotateCw, action: () => handleRotateByDegree((current.rotation + 90) % 360) },
+            { label: 'Rotate', icon: RotateCw, action: () => handleRotateByDegree((current.rotation + 90) % 360), disabled: !ready },
             {
               label: 'Crop', icon: Crop,
               action: () => {
@@ -354,7 +397,7 @@ export default function ImageEditModal({
                 }
               },
               active: isCropping,
-              disabled: isCropping,
+              disabled: isCropping || !ready,
             },
             { label: 'Replace', icon: ImagePlus, action: () => replaceInputRef.current?.click() },
             { label: 'Delete', icon: Trash2, action: () => { onSave(null); onClose(); }, danger: true },
@@ -395,7 +438,8 @@ export default function ImageEditModal({
                 handleSave();
               }
             }}
-            className="flex-1 py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2"
+            disabled={!ready}
+            className="flex-1 py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: themeColor }}
           >
             <Save className="w-4 h-4" /> {isCropping ? 'Apply' : 'Save'}

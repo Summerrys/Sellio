@@ -96,7 +96,10 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
   // Tenant menu with permission requirements
   const allTenantItems = [
     { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard', permission: null },
-    { label: isShopTenant(tenant) ? 'Manage listings' : itemWords(tenant?.seller_type).Products, icon: ShoppingBag, page: 'Products', permission: 'products.view' },
+    // A home shop's Manage listings is its bottom bar's Listings: /Products sends a home shop
+    // there (pages/Products.jsx), so the menu goes there itself and is lit up while it's open
+    // (Alvin, 10 Nov 2026), as its Chats is the bottom bar's Chat.
+    { label: isShopTenant(tenant) ? 'Manage listings' : itemWords(tenant?.seller_type).Products, icon: ShoppingBag, page: 'Products', to: isShopTenant(tenant) ? '/explore/listings' : null, permission: 'products.view' },
     { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view' },
     { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view' },
     // A free home shop's Chats is its bottom bar's Chat: Explore's, chats it buys and sells in
@@ -246,6 +249,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
                 collapsed && "justify-center px-2"
               )}
               style={isActive ? { background: 'var(--color-primary-gradient, rgb(var(--color-primary)))' } : {}}
+              aria-current={isActive ? 'page' : undefined}
               title={collapsed ? item.label : undefined}
             >
               <Icon className="w-4.5 h-4.5 flex-shrink-0" style={{ width: 18, height: 18 }} />

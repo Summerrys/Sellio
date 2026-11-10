@@ -147,6 +147,7 @@ try {
   assert.match(text(link('Chats')), /^Chats\s*2$/, 'with the bottom bar’s count (buying and selling)');
   assert.equal(lit(link('Explore')), false, 'Explore isn’t lit on its Chat page');
   assert.equal(lit(link('Dashboard')), false);
+  assert.equal(lit(link('Manage listings')), false, 'Manage listings isn’t lit on Chat');
   assert.match(text(drawer()), /Mei’s Bakes/);
   assert.ok(drawer().querySelector('[data-testid="profile-photo"]'), 'the footer shows her photo');
   await click(link('Chats'));
@@ -161,16 +162,34 @@ try {
   await close();
   passed('from the menu to the Dashboard');
 
-  // Listings: the same button; the scrim closes the menu.
+  // Chat to Listings by the menu: Manage listings is the bottom bar's Listings (Alvin, 10 Nov
+  // 2026: "When I'm in Listing page, the side menu Manage listing is not active/highlighted").
+  close = await show('/explore/chats', 'Chats');
+  await click(menuButton());
+  assert.equal(link('Manage listings').getAttribute('href'), '/explore/listings', "Manage listings is the bottom bar's Listings");
+  await click(link('Manage listings'));
+  assert.equal(drawer(), null);
+  assert.equal(where, '/explore/listings', 'straight to her listings');
+  assert.equal(text(document.querySelector('h1')), 'My listings');
+  await close();
+  passed('from Chat to her listings by the menu');
+
+  // Listings: the same button, Manage listings lit up; the scrim closes the menu.
   close = await show('/explore/listings', 'My listings');
   assert.ok(menuButton(), 'the menu button on Listings');
   await click(menuButton());
   assert.ok(drawer());
-  assert.equal(lit(link('Chats')), false);
+  assert.ok(lit(link('Manage listings')), 'Manage listings lit up on her listings');
+  assert.equal(link('Manage listings').getAttribute('aria-current'), 'page');
+  for (const label of ['Dashboard', 'Orders', 'Chats', 'Settings', 'Explore']) assert.equal(lit(link(label)), false, `${label} isn’t lit`);
+  await click(link('Manage listings'));
+  assert.equal(drawer(), null, 'the page already open: the menu just closes');
+  assert.equal(where, '/explore/listings');
+  await click(menuButton());
   await click(drawer().firstElementChild);
   assert.equal(drawer(), null, 'a tap beside the menu closes it');
   await close();
-  passed('Listings has the button too; a tap beside the menu closes it');
+  passed('Listings has the button too, Manage listings lit up there; a tap beside the menu closes it');
 
   // Not a home shop's owner: no button.
   globalThis.tenantState = home({ hasPermission: () => true });
