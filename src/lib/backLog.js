@@ -1,8 +1,9 @@
 // TEMPORARY — remove once Back in the Android app is confirmed working.
 // A short record of what happens around Back (and of errors) in Sellio's Android apps (Base44's old one and
 // the Capacitor one), for Alvin's account only:
-// kept on the phone (never sent anywhere), with a small "Back log" button at the top centre that
-// copies it to paste to Claude (away from the screen's side edges, where the Back swipe starts).
+// kept on the phone (never sent anywhere), with a small "Back log" button low on the left, above
+// the bottom bar, that copies it to paste to Claude (in from the screen's side edge, where the
+// Back swipe starts).
 // Also while signed out on a phone where Alvin's account has been signed in (so a sign-out and
 // the next sign-in show up); never while another account is signed in.
 // Nothing is recorded or shown anywhere else.
@@ -146,8 +147,10 @@ function showTab() {
   tab.id = 'sellio-back-log-tab';
   tab.type = 'button';
   tab.setAttribute('aria-label', 'Copy the Back log');
-  // A small pill at the top centre, inside a larger see-through area that is easy to hit.
-  tab.style.cssText = 'position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 2px);transform:translateX(-50%);'
+  // A small pill low on the left, above the bottom bar, inside a larger see-through area that is
+  // easy to hit. Until 10 Nov 2026 it sat at the top centre, over page titles (Alvin: "move it a
+  // little"); down here it keeps clear of the headers and the bar's buttons.
+  tab.style.cssText = 'position:fixed;left:40px;bottom:calc(env(safe-area-inset-bottom, 0px) + 68px);'
     + 'z-index:2147483000;padding:8px 10px;background:transparent;border:0;';
   const pill = browser.document.createElement('span');
   pill.textContent = 'Back log';
