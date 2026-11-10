@@ -1,9 +1,9 @@
 // TEMPORARY — remove once Back in the Android app is confirmed working.
 // A short record of what happens around Back (and of errors) in Sellio's Android apps (Base44's old one and
 // the Capacitor one), for Alvin's account only:
-// kept on the phone (never sent anywhere), with a small "Back log" button low on the left, above
-// the bottom bar, that copies it to paste to Claude (in from the screen's side edge, where the
-// Back swipe starts).
+// kept on the phone (never sent anywhere), with a small "Back log" button that copies it to paste
+// to Claude. It starts low on the left, above the bottom bar, and can be dragged anywhere on the
+// screen; it stays where it's left.
 // Also while signed out on a phone where Alvin's account has been signed in (so a sign-out and
 // the next sign-in show up); never while another account is signed in.
 // Nothing is recorded or shown anywhere else.
@@ -12,6 +12,7 @@ import { isNativeApp } from './nativeApp.js';
 // Alvin's account, by a hash of its email: this code is public, the email needn't be.
 const OWNER_HASH = 'ff948dec1bdf0';
 const STORE_KEY = 'sellio-back-log';
+const PLACE_KEY = 'sellio-back-log-place'; // where the button was dragged to (see showTab)
 const OWNER_PHONE_KEY = 'sellio-back-log-phone'; // Alvin's account has been signed in on this phone
 const MAX_LINES = 400;
 // The chat keeps only the first 20,000 characters of a paste: the copy takes the newest lines
@@ -140,6 +141,38 @@ async function copyLog() {
   setTimeout(() => note.remove(), 2500);
 }
 
+// The button can be dragged anywhere on the screen (Alvin, 11 Nov 2026: "Make the 'Back log'
+// pill draggable so I can move anywhere I want"). Where it's left is kept on the phone as the
+// middle of the button, in parts of the screen's width and height, so it comes back there when
+// the app is opened again or the phone is turned; it's always kept whole on the screen. A finger
+// that moves less than DRAG_FROM is a tap, which copies the log.
+const DRAG_FROM = 8;
+let movingTab = false; // a drag of the button is on: its taps aren't logged
+
+function placeSaved() {
+  try {
+    const place = JSON.parse(browser.localStorage.getItem(PLACE_KEY) || 'null');
+    return place && Number.isFinite(place.x) && Number.isFinite(place.y) ? place : null;
+  } catch { return null; }
+}
+
+// Puts the button's top-left corner at (left, top), kept whole on the screen.
+function moveTab(tab, left, top) {
+  const width = tab.offsetWidth;
+  const height = tab.offsetHeight;
+  const x = Math.min(Math.max(left, 0), Math.max(browser.innerWidth - width, 0));
+  const y = Math.min(Math.max(top, 0), Math.max(browser.innerHeight - height, 0));
+  tab.style.left = `${Math.round(x)}px`;
+  tab.style.top = `${Math.round(y)}px`;
+  tab.style.bottom = 'auto';
+}
+
+function putTabWhereLeft(tab) {
+  const place = placeSaved();
+  if (!place) return;
+  moveTab(tab, place.x * browser.innerWidth - tab.offsetWidth / 2, place.y * browser.innerHeight - tab.offsetHeight / 2);
+}
+
 function showTab() {
   if (browser.document.getElementById('sellio-back-log-tab')) return true;
   if (!browser.document.body) return false;
@@ -147,18 +180,65 @@ function showTab() {
   tab.id = 'sellio-back-log-tab';
   tab.type = 'button';
   tab.setAttribute('aria-label', 'Copy the Back log');
-  // A small pill low on the left, above the bottom bar, inside a larger see-through area that is
-  // easy to hit. Until 10 Nov 2026 it sat at the top centre, over page titles (Alvin: "move it a
-  // little"); down here it keeps clear of the headers and the bar's buttons.
+  // A small pill inside a larger see-through area that is easy to hit and to drag. It starts low
+  // on the left, above the bottom bar, clear of the headers and the bar's buttons (until 10 Nov
+  // 2026 it sat at the top centre, over page titles). The page doesn't scroll or select text
+  // while it's dragged.
   tab.style.cssText = 'position:fixed;left:40px;bottom:calc(env(safe-area-inset-bottom, 0px) + 68px);'
-    + 'z-index:2147483000;padding:8px 10px;background:transparent;border:0;';
+    + 'z-index:2147483000;padding:8px 10px;background:transparent;border:0;touch-action:none;'
+    + 'user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;';
   const pill = browser.document.createElement('span');
   pill.textContent = 'Back log';
   pill.style.cssText = 'display:block;padding:6px 14px;font:600 12px/1 system-ui,sans-serif;color:#fff;'
-    + 'background:rgba(15,23,42,0.6);border-radius:999px;';
+    + 'background:rgba(15,23,42,0.6);border-radius:999px;pointer-events:none;';
   tab.appendChild(pill);
-  tab.addEventListener('click', () => { void copyLog(); });
+
+  // A tap is seen here, when the finger lifts without having moved: Chrome doesn't always make a
+  // click of a tap just after a drag. The click that may follow is then let go; a click with no
+  // finger or mouse before it (the keyboard) still copies.
+  let drag = null;
+  let handled = false;
+  tab.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0 || drag) return;
+    handled = false;
+    const box = tab.getBoundingClientRect();
+    drag = { id: event.pointerId, x: event.clientX, y: event.clientY, left: box.left, top: box.top, moved: false };
+    try { tab.setPointerCapture(event.pointerId); } catch { /* moves still reach it while over it */ }
+  });
+  tab.addEventListener('pointermove', (event) => {
+    if (!drag || event.pointerId !== drag.id) return;
+    const dx = event.clientX - drag.x;
+    const dy = event.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < DRAG_FROM) return;
+    drag.moved = true;
+    movingTab = true;
+    moveTab(tab, drag.left + dx, drag.top + dy);
+  });
+  const endDrag = (event) => {
+    if (!drag || event.pointerId !== drag.id) return;
+    handled = true;
+    if (!drag.moved && event.type === 'pointerup') void copyLog();
+    if (drag.moved) {
+      const box = tab.getBoundingClientRect();
+      try {
+        browser.localStorage.setItem(PLACE_KEY, JSON.stringify({
+          x: (box.left + box.width / 2) / browser.innerWidth,
+          y: (box.top + box.height / 2) / browser.innerHeight,
+        }));
+      } catch { /* left here until the app is opened again */ }
+    }
+    drag = null;
+    movingTab = false;
+  };
+  tab.addEventListener('pointerup', endDrag);
+  tab.addEventListener('pointercancel', endDrag);
+  tab.addEventListener('click', () => {
+    if (handled) { handled = false; return; }
+    void copyLog();
+  });
   browser.document.body.appendChild(tab);
+  putTabWhereLeft(tab);
+  browser.addEventListener('resize', () => putTabWhereLeft(tab));
   return true;
 }
 
@@ -195,7 +275,7 @@ if (browser && inAndroidApp()) {
   browser.addEventListener('pageshow', (event) => backLog(`pageshow${event.persisted ? ' (from memory)' : ''}`), true);
   browser.addEventListener('pagehide', () => { backLog('pagehide'); saveNow(); }, true);
   browser.addEventListener('popstate', (event) => backLog(`popstate${event.state?.sellioOverlay ? ' (onto a step)' : ''}`), true);
-  browser.addEventListener('pointerup', (event) => backLog(`tap ${label(event.target)}`), true);
+  browser.addEventListener('pointerup', (event) => { if (!movingTab) backLog(`tap ${label(event.target)}`); }, true);
   // Errors: the page's own (uncaught), and Sellio's own code or styles failing to download (not
   // photos, fonts or the extra files a page fetches ahead). The same one again within 5 seconds
   // is noted once.
