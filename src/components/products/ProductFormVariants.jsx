@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Check, X, Circle, CheckSquare } from 'lucide-react';
+import { formatMoney } from '@/lib/money';
 
 // FIX: this used to auto-detect single-vs-multi-select from keywords in the
 // group's name ("size" \u2192 single, "add-on"/"extra" \u2192 multi, anything else \u2192
@@ -56,7 +57,7 @@ function OptionChip({ option, onEdit, onRemove, currency }) {
       </span>
       {option.price_modifier !== 0 && (
         <span style={{ fontSize: 11, color: '#64748b', fontWeight: 400, flexShrink: 0 }}>
-          {option.price_modifier > 0 ? '+' : ''}{currency} {parseFloat(option.price_modifier || 0).toFixed(2)}
+          {option.price_modifier > 0 ? '+' : ''}{formatMoney(option.price_modifier || 0, currency)}
         </span>
       )}
       <button

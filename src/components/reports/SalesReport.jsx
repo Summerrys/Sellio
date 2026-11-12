@@ -64,7 +64,7 @@ export default function SalesReport({ orders, products = [], categories = [], cu
       <div className="grid grid-cols-3 gap-1.5 sm:gap-4">
         <StatCard
           label="Sales"
-          value={`${currency} ${summary.salesTotal.toFixed(2)}`}
+          value={fmtMoney(summary.salesTotal, currency)}
           icon={DollarSign}
           iconBg="bg-emerald-50"
           iconColor="text-emerald-600"
@@ -78,7 +78,7 @@ export default function SalesReport({ orders, products = [], categories = [], cu
         />
         <StatCard
           label="Avg Order"
-          value={`${currency} ${summary.avgOrder.toFixed(2)}`}
+          value={fmtMoney(summary.avgOrder, currency)}
           icon={TrendingUp}
           iconBg="bg-purple-50"
           iconColor="text-purple-600"
@@ -108,7 +108,7 @@ export default function SalesReport({ orders, products = [], categories = [], cu
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                     <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={40} tickFormatter={compactTick} />
-                    <Tooltip formatter={(value) => [`${currency} ${value}`, 'Sales']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
+                    <Tooltip formatter={(value) => [fmtMoney(value, currency), 'Sales']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
                     <Line
                       type="monotone"
                       dataKey="revenue"
@@ -130,7 +130,7 @@ export default function SalesReport({ orders, products = [], categories = [], cu
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                     <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={40} tickFormatter={compactTick} />
-                    <Tooltip formatter={(value) => [`${currency} ${value}`, 'Sales']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
+                    <Tooltip formatter={(value) => [fmtMoney(value, currency), 'Sales']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
                     <Area
                       type="monotone"
                       dataKey="revenue"
@@ -159,7 +159,7 @@ export default function SalesReport({ orders, products = [], categories = [], cu
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                     <YAxis dataKey="category" type="category" width={80} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={fitTick(80)} />
-                    <Tooltip formatter={(value) => [`${currency} ${value}`, 'Item sales']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
+                    <Tooltip formatter={(value) => [fmtMoney(value, currency), 'Item sales']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
                     <Bar dataKey="revenue" fill={themeColors.primary} radius={[0, 6, 6, 0]} barSize={16} />
                   </BarChart>
                 </ResponsiveContainer>

@@ -29,8 +29,8 @@ const ROUTES = {
   '/privacy': {
     Component: Privacy,
     title: 'Privacy Policy | Sellio',
-    description: "Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and Singapore PDPA rights.",
-    socialDescription: "Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and Singapore PDPA rights.",
+    description: "Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and your privacy rights.",
+    socialDescription: "Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and your privacy rights.",
     canonical: 'https://sellio.sg/privacy',
   },
   '/terms': {

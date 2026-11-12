@@ -15,9 +15,10 @@ import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
 import ClosedAccount from '@/components/auth/ClosedAccount';
 import { callClosedAccount, closedAccountMessage } from '@/lib/closedAccount';
 import {
-  PHONE_COUNTRIES, JOIN_LINK_TYPES, accountErrorMessage, appBaseUrl, emailResendWait, fullPhone, isClosedLoginError,
+  PHONE_COUNTRIES, JOIN_LINK_TYPES, accountErrorMessage, appBaseUrl, emailResendWait, fullPhone, isClosedLoginError, phoneCountryFor,
   isEmail, isExpiredLinkError, isStaffLoginEmail, nextStepFor, readEmailLink,
 } from '@/lib/accountFlow';
+import { visitorCountry } from '@/lib/countries';
 
 const LOGO_URL = '/branding/sellio-logo.webp';
 const BUTTON_STYLE = { background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' };
@@ -72,7 +73,8 @@ export default function Join() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [accountEmail, setAccountEmail] = useState('');
-  const [country, setCountry] = useState(PHONE_COUNTRIES[0]);
+  // The phone code starts as the visitor's country's, when their phone or computer says it.
+  const [country, setCountry] = useState(() => phoneCountryFor(visitorCountry()));
   const [showCountries, setShowCountries] = useState(false);
   const [form, setForm] = useState({ full_name: '', phone: '', password: '', confirm: '' });
   const [saving, setSaving] = useState(false);

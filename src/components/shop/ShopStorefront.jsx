@@ -4,6 +4,7 @@ import {
   shopMethod, whatsappLink,
 } from '@/lib/shopSelling';
 import { mapLinkProps, outsideLinkProps } from '@/lib/nativeApp';
+import { formatMoney } from '@/lib/money';
 
 // Free-shop parts of the store page: checkout (how to get the order, name, mobile,
 // address, date), the details shown after ordering, and the buyer's order history.
@@ -19,9 +20,12 @@ const saveBuyer = (details) => {
 
 const labelStyle = { fontSize: 12, color: '#64748b', display: 'block', marginBottom: 4 };
 const inputStyle = { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 15, outline: 'none', boxSizing: 'border-box', background: 'white' };
-const money = (sym, n) => `${sym}${Number(n || 0).toFixed(2)}`;
+// The shop's own money (lib/money.js): S$9.00, RM9.00, Rp38.000.
+const money = (currency, n) => formatMoney(Number(n || 0), currency);
+// A mobile number as people write it locally in the shop's country.
+const PHONE_EXAMPLE = { SGD: '9123 4567', MYR: '012 345 6789', IDR: '0812 3456 7890' };
 
-export function ShopCheckout({ selling, cartTotal, sym, primaryColor, lang, isSubmitting, isStoreOpen, closedText, placeText, placingText, onSubmit }) {
+export function ShopCheckout({ selling, cartTotal, currency, primaryColor, lang, isSubmitting, isStoreOpen, closedText, placeText, placingText, onSubmit }) {
   const methods = useMemo(() => availableMethods(selling), [selling]);
   const saved = useMemo(readBuyer, []);
   const [method, setMethod] = useState(methods.includes(saved.method) ? saved.method : methods[0]);
@@ -70,7 +74,7 @@ export function ShopCheckout({ selling, cartTotal, sym, primaryColor, lang, isSu
     </button>
   );
 
-  const deliveryDetail = d.fee_mode === 'extra' && Number(d.fee) > 0 ? money(sym, d.fee) : T('deliveryIncluded');
+  const deliveryDetail = d.fee_mode === 'extra' && Number(d.fee) > 0 ? money(currency, d.fee) : T('deliveryIncluded');
 
   return (
     <div data-testid="shop-checkout">
@@ -88,8 +92,8 @@ export function ShopCheckout({ selling, cartTotal, sym, primaryColor, lang, isSu
           </>
         ) : (
           <>
-            <div>{d.fee_mode === 'extra' && Number(d.fee) > 0 ? `${T('deliveryFee')}: ${money(sym, d.fee)}` : T('deliveryIncluded')}</div>
-            {d.fee_mode === 'extra' && d.free_above != null && <div>{T('freeAbove')} {money(sym, d.free_above)}</div>}
+            <div>{d.fee_mode === 'extra' && Number(d.fee) > 0 ? `${T('deliveryFee')}: ${money(currency, d.fee)}` : T('deliveryIncluded')}</div>
+            {d.fee_mode === 'extra' && d.free_above != null && <div>{T('freeAbove')} {money(currency, d.free_above)}</div>}
             {d.areas && <div><strong>{T('deliversTo')}:</strong> {d.areas}</div>}
             {d.notes && <div>{d.notes}</div>}
           </>
@@ -103,7 +107,7 @@ export function ShopCheckout({ selling, cartTotal, sym, primaryColor, lang, isSu
         </div>
         <div>
           <label style={labelStyle} htmlFor="shop-phone">{T('yourMobile')}</label>
-          <input id="shop-phone" style={inputStyle} value={phone} inputMode="tel" autoComplete="tel" placeholder="9123 4567" disabled={isSubmitting} onChange={e => setPhone(e.target.value)} />
+          <input id="shop-phone" style={inputStyle} value={phone} inputMode="tel" autoComplete="tel" placeholder={PHONE_EXAMPLE[currency] || ''} disabled={isSubmitting} onChange={e => setPhone(e.target.value)} />
           <p style={{ fontSize: 11, color: '#94a3b8', margin: '4px 0 0' }}>{T('mobileHint')}</p>
         </div>
         {method === 'delivery' && (
@@ -126,15 +130,15 @@ export function ShopCheckout({ selling, cartTotal, sym, primaryColor, lang, isSu
       </div>
 
       <div style={{ borderTop: '0.5px solid #e5e7eb', paddingTop: 10, marginBottom: 14, fontSize: 13, color: '#475569' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>{T('subtotal')}</span><span>{money(sym, cartTotal)}</span></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>{T('subtotal')}</span><span>{money(currency, cartTotal)}</span></div>
         {method === 'delivery' && (
           <div style={{ display: 'flex', justifyContent: 'space-between' }} data-testid="shop-fee-line">
             <span>{T('delivery')}</span>
-            <span>{d.fee_mode === 'extra' ? (fee > 0 ? money(sym, fee) : T('free')) : T('included')}</span>
+            <span>{d.fee_mode === 'extra' ? (fee > 0 ? money(currency, fee) : T('free')) : T('included')}</span>
           </div>
         )}
         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 15, color: '#0f172a', marginTop: 4 }}>
-          <span>{T('total')}</span><span style={{ color: primaryColor }} data-testid="shop-total">{money(sym, total)}</span>
+          <span>{T('total')}</span><span style={{ color: primaryColor }} data-testid="shop-total">{money(currency, total)}</span>
         </div>
       </div>
 
@@ -152,7 +156,7 @@ export function ShopCheckout({ selling, cartTotal, sym, primaryColor, lang, isSu
           data-testid="shop-place-order"
           style={{ width: '100%', padding: 14, background: isSubmitting ? '#94a3b8' : primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
         >
-          {isSubmitting ? (placingText || '…') : `${placeText || shopT(lang, 'yourOrder')} · ${money(sym, total)}`}
+          {isSubmitting ? (placingText || '…') : `${placeText || shopT(lang, 'yourOrder')} · ${money(currency, total)}`}
         </button>
       )}
     </div>
@@ -160,7 +164,7 @@ export function ShopCheckout({ selling, cartTotal, sym, primaryColor, lang, isSu
 }
 
 // How the buyer gets the order: shown after ordering and in the order history.
-export function ShopOrderDetails({ order, sym, lang, food, sellerPhone }) {
+export function ShopOrderDetails({ order, currency, lang, food, sellerPhone }) {
   const f = order?.fulfilment || {};
   const method = shopMethod(order);
   const T = (k) => shopT(lang, k);
@@ -184,7 +188,7 @@ export function ShopOrderDetails({ order, sym, lang, food, sellerPhone }) {
       )}
       {f.seller_notes && <div style={{ color: '#64748b' }}>{f.seller_notes}</div>}
       {method === 'delivery' && (
-        <div style={{ color: '#64748b' }}>{T('delivery')}: {f.fee_mode === 'extra' ? (fee > 0 ? money(sym, fee) : T('free')) : T('included')}</div>
+        <div style={{ color: '#64748b' }}>{T('delivery')}: {f.fee_mode === 'extra' ? (fee > 0 ? money(currency, fee) : T('free')) : T('included')}</div>
       )}
       {order?.status && (
         <div style={{ color: '#64748b' }}>{buyerStatusLabel(lang, order.status, method, food)}</div>
@@ -208,7 +212,7 @@ const STATUS_STYLE = {
   cancelled: { bg: '#fee2e2', color: '#991b1b' },
 };
 
-export function ShopOrderHistory({ orders, sym, lang, food, primaryColor, paymentQrUrl, renderExtra }) {
+export function ShopOrderHistory({ orders, currency, lang, food, primaryColor, paymentQrUrl, renderExtra }) {
   const T = (k) => shopT(lang, k);
   const [qrFor, setQrFor] = useState(null);
   if (!orders.length) {
@@ -232,13 +236,13 @@ export function ShopOrderHistory({ orders, sym, lang, food, primaryColor, paymen
         {(order.items || []).map((item, idx) => (
           <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b', marginBottom: 2 }}>
             <span>{item.name}{item.variant ? ` (${item.variant})` : ''} × {item.quantity}</span>
-            <span style={{ fontWeight: 600 }}>{money(sym, item.price * item.quantity)}</span>
+            <span style={{ fontWeight: 600 }}>{money(currency, item.price * item.quantity)}</span>
           </div>
         ))}
-        <div style={{ margin: '8px 0' }}><ShopOrderDetails order={{ ...order, status: null }} sym={sym} lang={lang} food={food} /></div>
+        <div style={{ margin: '8px 0' }}><ShopOrderDetails order={{ ...order, status: null }} currency={currency} lang={lang} food={food} /></div>
         <div style={{ borderTop: '0.5px solid #e5e7eb', paddingTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 700, fontSize: 13 }}>
           <span>{T('total')} <span style={{ fontWeight: 500, fontSize: 11, color: order.payment_status === 'paid' ? '#16a34a' : '#b45309' }}>· {order.payment_status === 'paid' ? T('paid') : T('notPaid')}</span></span>
-          <span style={{ color: primaryColor }}>{money(sym, order.total_amount)}</span>
+          <span style={{ color: primaryColor }}>{money(currency, order.total_amount)}</span>
         </div>
         {unpaid && paymentQrUrl && (
           qrFor === order.id

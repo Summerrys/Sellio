@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLanguage, SUPPORTED_LANGUAGES } from '@/lib/LanguageContext';
 
-// Short collapsed labels per the merchant's request: EN / 中 / MY
-const SHORT_LABEL = { en: 'EN', zh: '中', ms: 'MY' };
+// Short collapsed labels per the merchant's request: EN / 中 / MY, and ID for Bahasa Indonesia
+const SHORT_LABEL = { en: 'EN', zh: '中', ms: 'MY', id: 'ID' };
 // Flag shown to the left of each label for quick visual identification
-const FLAG = { en: '🇬🇧', zh: '🇨🇳', ms: '🇲🇾' };
+const FLAG = { en: '🇬🇧', zh: '🇨🇳', ms: '🇲🇾', id: '🇮🇩' };
 
 function hexToRgba(hex, alpha) {
   const h = hex.replace('#', '');

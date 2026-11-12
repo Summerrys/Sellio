@@ -202,7 +202,7 @@ export default function Privacy() {
       title="Privacy Policy"
       eyebrow="Your data, handled with care"
       intro="This policy explains what Sellio collects, why we use it, when it may be shared and the choices available to merchants, staff and storefront customers."
-      description="Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and Singapore PDPA rights."
+      description="Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and your privacy rights."
       path="/privacy"
       lastUpdated="12 November 2026"
       dateModified="2026-11-12"

@@ -21,6 +21,7 @@ import { keepSnapshot, loadSnapshot } from '@/lib/offlineStore';
 import OfflineNote, { listNoteWords } from '@/components/ui-custom/OfflineNote';
 import ExploreNoResults from '@/components/explore/ExploreNoResults';
 import { SuggestionList, useExploreSuggestions, useSuggestionKeys } from '@/components/explore/ExploreSuggestions';
+import { formatMoney } from '@/lib/money';
 
 // Sellio Explore: a public, Carousell-style feed of items from Sellio shops.
 // Anyone can browse without an account; tapping an item opens its listing page. Data comes from the explore_feed / explore_shops RPCs, which only
@@ -43,10 +44,11 @@ const KINDS = [
 
 const hideScrollbar = { scrollbarWidth: 'none', msOverflowStyle: 'none' };
 
+// A listing's price in its shop's currency (lib/money.js): S$4.50, RM4.50, Rp15.000.
 function formatPrice(amount, currency) {
   const value = Number(amount);
   if (amount == null || Number.isNaN(value)) return '';
-  return `${currency === 'MYR' ? 'RM' : 'S$'}${value.toFixed(2)}`;
+  return formatMoney(value, currency);
 }
 
 function timeAgo(iso) {

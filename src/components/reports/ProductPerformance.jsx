@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { TrendingUp, TrendingDown, Package } from 'lucide-react';
 import { isSale, productStats, notSold } from '@/lib/reportData';
 import { fitTick } from '@/lib/chartLabels';
+import { formatMoney } from '@/lib/money';
 
 function StatCard({ label, value, sublabel, icon: Icon, iconBg, iconColor }) {
   return (
@@ -56,7 +57,7 @@ export default function ProductPerformance({ orders, products, categories = [], 
         />
         <StatCard
           label="Top Revenue"
-          value={`${currency} ${(productArray[0]?.sales || 0).toFixed(2)}`}
+          value={formatMoney(productArray[0]?.sales || 0, currency)}
           sublabel={productArray[0] ? short(productArray[0].name) : undefined}
           icon={TrendingUp}
           iconBg="bg-emerald-50"
@@ -88,7 +89,7 @@ export default function ProductPerformance({ orders, products, categories = [], 
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                   <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={fitTick(100)} />
-                  <Tooltip formatter={(value) => [`${currency} ${value}`, 'Revenue']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
+                  <Tooltip formatter={(value) => [formatMoney(value, currency), 'Revenue']} contentStyle={{ borderRadius: 12, border: '1px solid #f1f5f9', fontSize: 12 }} />
                   <Bar dataKey="revenue" fill={themeColors.primary} radius={[0, 6, 6, 0]} barSize={14} />
                 </BarChart>
               </ResponsiveContainer>
@@ -138,7 +139,7 @@ export default function ProductPerformance({ orders, products, categories = [], 
                         <p className="text-[10px] sm:text-xs text-slate-400">{product.qty} units sold</p>
                       </div>
                       <p className="text-xs sm:text-sm font-medium text-slate-500 flex-shrink-0 ml-2">
-                        {currency} {product.sales.toFixed(2)}
+                        {formatMoney(product.sales, currency)}
                       </p>
                     </div>
                   ))}
@@ -160,7 +161,7 @@ export default function ProductPerformance({ orders, products, categories = [], 
               {neverOrdered.slice(0, 12).map((product) => (
                 <div key={product.product_id} className="p-2.5 sm:p-3 bg-red-50/60 rounded-xl border border-red-100">
                   <p className="font-medium text-slate-800 text-xs sm:text-sm truncate">{product.name}</p>
-                  <p className="text-[10px] sm:text-xs text-slate-500">{currency} {product.price.toFixed(2)}</p>
+                  <p className="text-[10px] sm:text-xs text-slate-500">{formatMoney(product.price, currency)}</p>
                 </div>
               ))}
               {neverOrdered.length > 12 && (

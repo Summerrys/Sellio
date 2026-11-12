@@ -5,12 +5,13 @@ import { printCounterOrder, printTableBill } from '@/lib/orderPrinting';
 import { getSupabase } from '@/lib/supabaseClient';
 import { loadTableBillForOrder } from '@/lib/tableBill';
 import { useBackToClose } from '@/lib/useBackToClose';
+import { formatMoney } from '@/lib/money';
 
 export default function CounterOrderResult({ order, tenant, tenantId, canPrintChit, printing, setPrinting, onClose }) {
   const [receiptOpen, setReceiptOpen] = useState(false);
   const printingRef = useRef(false);
   useBackToClose(receiptOpen, () => { if (printingRef.current) return false; setReceiptOpen(false); });
-  const money = n => `${tenant?.currency || 'SGD'} ${(Number(n) || 0).toFixed(2)}`;
+  const money = n => formatMoney(Number(n) || 0, tenant?.currency || 'SGD');
   const print = async kind => {
     if (printingRef.current) return;
     printingRef.current = true; setPrinting(true);

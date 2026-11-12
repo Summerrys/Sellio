@@ -192,7 +192,7 @@ export function getSettingsSteps() {
     },
     {
       target: '[data-tour="settings-payment-tab"]',
-      content: "Upload your PayNow/DuitNow QR so customers can pay you directly.",
+      content: "Upload your payment QR so customers can pay you directly.",
     },
     {
       target: '[data-tour="settings-theme-tab"]',

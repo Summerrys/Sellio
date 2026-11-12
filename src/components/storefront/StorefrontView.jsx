@@ -34,6 +34,7 @@ import {
   MenuPhoto, MenuPhotosProvider, PhotoProgress, PhotosOffNote, createPhotoTracker, initialPhotosOff, rememberPhotos, useMenuPhotos,
 } from './MenuPhotos';
 import { didYouMean } from '@/lib/searchSuggest';
+import { formatMoney } from '@/lib/money';
 
 const sfType = pixels => `calc(${pixels}px * var(--sf-type-scale, 1))`;
 const fill = (text, values) => text.replace(/\{(\w+)\}/g, (match, key) => (key in values ? String(values[key]) : match));
@@ -74,8 +75,7 @@ function getResponsiveMenuColumns(isDesktop, isLandscape, density = 'comfortable
 }
 
 // ── Currency symbol helper ───────────────────────────────────────────────────
-// Returns display symbol: SGD→"$", MYR→"RM ", USD→"$", GBP→"£", EUR→"€"
-const getCurrencySymbol = (c) => ({ SGD:'$', MYR:'RM ', USD:'$', AUD:'A$', GBP:'£', EUR:'€' }[c] || (c + ' '));
+// Prices as the shop's currency writes them (lib/money.js): S$4.50, RM4.50, Rp15.000.
 
 // ── Category icon resolver ──────────────────────────────────────────────────
 function getCategoryIcon(name = '') {
@@ -714,7 +714,7 @@ export default function StorefrontView({
     const specialDeals = products.filter(p => p.compare_at_price > p.price && !p.is_featured);
     const auto = [
       ...featuredProducts.map(p => `⭐ ${tr(p.name)}`),
-      ...specialDeals.map(p => `🏷️ ${tr(p.name)} — now ${getCurrencySymbol(currency)}${parseFloat(p.price).toFixed(2)}`),
+      ...specialDeals.map(p => `🏷️ ${tr(p.name)} — now ${formatMoney(p.price, currency)}`),
     ];
     return auto;
   }, [storefrontConfig?.banner_headline, storefrontConfig?.banner_tagline, featuredProducts, products, contentMap, currency]);
@@ -1261,9 +1261,9 @@ function ProductRowItem({ product, currency, primaryColor, storefrontConfig, onA
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {product.compare_at_price > product.price && (
-            <span style={{ fontSize: sfType(11), color: '#94a3b8', textDecoration: 'line-through' }}>{getCurrencySymbol(currency)}{parseFloat(product.compare_at_price).toFixed(2)}</span>
+            <span style={{ fontSize: sfType(11), color: '#94a3b8', textDecoration: 'line-through' }}>{formatMoney(product.compare_at_price, currency)}</span>
           )}
-          <p style={{ fontSize: sfType(13), fontWeight: 700, color: primaryColor, margin: 0 }}>{getCurrencySymbol(currency)}{parseFloat(product.price).toFixed(2)}</p>
+          <p style={{ fontSize: sfType(13), fontWeight: 700, color: primaryColor, margin: 0 }}>{formatMoney(product.price, currency)}</p>
         </div>
       </div>
       {isOutOfStock
@@ -1433,9 +1433,9 @@ function FeaturedCard({ product, currency, primaryColor, storefrontConfig, showS
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {product.compare_at_price > product.price && (
-              <span style={{ fontSize: sfType(12), color: '#94a3b8', textDecoration: 'line-through' }}>{getCurrencySymbol(currency)}{parseFloat(product.compare_at_price).toFixed(2)}</span>
+              <span style={{ fontSize: sfType(12), color: '#94a3b8', textDecoration: 'line-through' }}>{formatMoney(product.compare_at_price, currency)}</span>
             )}
-            <span style={{ fontSize: sfType(15), fontWeight: 700, color: primaryColor }}>{getCurrencySymbol(currency)}{parseFloat(product.price).toFixed(2)}</span>
+            <span style={{ fontSize: sfType(15), fontWeight: 700, color: primaryColor }}>{formatMoney(product.price, currency)}</span>
           </div>
           {isOutOfStock && showStockBadge
             ? <span style={{ fontSize: sfType(11), color: '#dc2626', fontWeight: 600, background: '#fee2e2', padding: '4px 10px', borderRadius: 999 }}>{t('soldOut')}</span>
@@ -1477,9 +1477,9 @@ function GridCard({ product, currency, primaryColor, storefrontConfig, showStock
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {product.compare_at_price > product.price && (
-              <span style={{ fontSize: sfType(11), color: '#94a3b8', textDecoration: 'line-through' }}>{getCurrencySymbol(currency)}{parseFloat(product.compare_at_price).toFixed(2)}</span>
+              <span style={{ fontSize: sfType(11), color: '#94a3b8', textDecoration: 'line-through' }}>{formatMoney(product.compare_at_price, currency)}</span>
             )}
-            <span style={{ fontSize: sfType(13), fontWeight: 700, color: primaryColor }}>{getCurrencySymbol(currency)}{parseFloat(product.price).toFixed(2)}</span>
+            <span style={{ fontSize: sfType(13), fontWeight: 700, color: primaryColor }}>{formatMoney(product.price, currency)}</span>
           </div>
           {!isOutOfStock && (
             <button onClick={(e) => { e.stopPropagation(); if (product.variants?.length > 0) { onProductClick(product); } else { onAddToCart(product); } }}
@@ -1659,9 +1659,9 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
             <p style={{ fontWeight: 700, fontSize: sfType(18), margin: '0 0 6px', color: '#0f172a' }}>{name}</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
               {product.compare_at_price > product.price && (
-                <span style={{ fontSize: sfType(13), color: '#94a3b8', textDecoration: 'line-through' }}>{getCurrencySymbol(currency)}{parseFloat(product.compare_at_price).toFixed(2)}</span>
+                <span style={{ fontSize: sfType(13), color: '#94a3b8', textDecoration: 'line-through' }}>{formatMoney(product.compare_at_price, currency)}</span>
               )}
-              <span style={{ fontSize: sfType(20), fontWeight: 700, color: primaryColor }}>{getCurrencySymbol(currency)}{parseFloat(product.price).toFixed(2)}</span>
+              <span style={{ fontSize: sfType(20), fontWeight: 700, color: primaryColor }}>{formatMoney(product.price, currency)}</span>
             </div>
             {buyerBar && like?.likes > 0 && (
               <div data-testid="item-like-count" style={{ display: 'flex', alignItems: 'center', gap: 5, margin: '-4px 0 12px', fontSize: sfType(12), fontWeight: 600, color: '#334155' }}>
@@ -1697,7 +1697,7 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                           return (
                             <button key={oi} onClick={handleClick}
                               style={{ padding: '8px 10px', borderRadius: 14, border: isSelected ? `2px solid ${primaryColor}` : '1.5px solid #e2e8f0', background: isSelected ? `${primaryColor}15` : 'white', cursor: 'pointer', fontWeight: isSelected ? 700 : 500, color: isSelected ? primaryColor : '#374151', transition: 'all 0.15s', fontSize: sfType(13), textAlign: 'center', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3, minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {opt.label}{opt.price_modifier > 0 ? ` +${getCurrencySymbol(currency)}${parseFloat(opt.price_modifier).toFixed(2)}` : ''}
+                              {opt.label}{opt.price_modifier > 0 ? ` +${formatMoney(opt.price_modifier, currency)}` : ''}
                             </button>
                           );
                         })}
@@ -1741,7 +1741,7 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                 : { width: '100%', padding: 14, background: primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: sfType(15), fontWeight: 700, cursor: 'pointer' }}>
               {missingOptions.length > 0
                 ? t('selectOption')
-                : <>{t('addToOrder')} · {getCurrencySymbol(currency)}{(parseFloat(product.price) + (combineChoices(selectedVariants)?.price_modifier || 0)).toFixed(2)}</>}
+                : <>{t('addToOrder')} · {formatMoney(parseFloat(product.price) + (combineChoices(selectedVariants)?.price_modifier || 0), currency)}</>}
             </button>
             )}
           </div>
@@ -1794,7 +1794,7 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                     ) : (
                       <>
                         <span style={{ fontSize: sfType(15), fontWeight: 700 }}>{t('buyNow')}</span>
-                        <span style={{ fontSize: sfType(11), fontWeight: 500 }}>{getCurrencySymbol(currency)}{(parseFloat(product.price) + (combineChoices(selectedVariants)?.price_modifier || 0)).toFixed(2)}</span>
+                        <span style={{ fontSize: sfType(11), fontWeight: 500 }}>{formatMoney(parseFloat(product.price) + (combineChoices(selectedVariants)?.price_modifier || 0), currency)}</span>
                       </>
                     )}
                   </button>

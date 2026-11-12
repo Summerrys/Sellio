@@ -2,6 +2,7 @@ import React from 'react';
 import { TriangleAlert, WifiOff } from 'lucide-react';
 import { ownMessage } from '@/lib/plainError';
 import { isNetworkError } from '@/lib/network';
+import { formatMoney } from '@/lib/money';
 
 // An order that didn't go through stays on the checkout (UX states, 3): whether it reached
 // the shop, that nothing was paid, and a way round it. Kinds:
@@ -89,7 +90,7 @@ export function CheckoutProblemActions({ problem, t, primaryColor, busy, onRetry
 
 // The order, large, for the customer to show a member of staff when it can't be sent.
 // maybeSent: the order may already have reached the shop (staff check before taking it).
-export function OrderForStaff({ shop, place, lines, total, sym, maybeSent, t, primaryColor, onClose }) {
+export function OrderForStaff({ shop, place, lines, total, currency, maybeSent, t, primaryColor, onClose }) {
   return (
     <div role="dialog" aria-modal="true" aria-label={t('myOrder')} data-testid="order-for-staff"
       style={{ position: 'fixed', inset: 0, zIndex: 130, background: '#fff', display: 'flex', flexDirection: 'column',
@@ -109,13 +110,13 @@ export function OrderForStaff({ shop, place, lines, total, sym, maybeSent, t, pr
                 {line.variant && <p style={{ margin: '2px 0 0', fontSize: 17, color: '#334155' }}>{line.variant}</p>}
                 {line.notes && <p style={{ margin: '2px 0 0', fontSize: 17, color: '#334155', fontStyle: 'italic' }}>“{line.notes}”</p>}
               </div>
-              <span style={{ fontSize: 18, fontWeight: 600, color: '#334155', whiteSpace: 'nowrap' }}>{sym}{(line.price * line.quantity).toFixed(2)}</span>
+              <span style={{ fontSize: 18, fontWeight: 600, color: '#334155', whiteSpace: 'nowrap' }}>{formatMoney(line.price * line.quantity, currency)}</span>
             </li>
           ))}
         </ul>
         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '14px 0 0', fontSize: 22, fontWeight: 800, color: '#0f172a' }}>
           <span>{t('total')}</span>
-          <span style={{ color: primaryColor }}>{sym}{total.toFixed(2)}</span>
+          <span style={{ color: primaryColor }}>{formatMoney(total, currency)}</span>
         </div>
       </div>
       <div style={{ padding: '12px 20px 20px', borderTop: '1px solid #f1f5f9' }}>

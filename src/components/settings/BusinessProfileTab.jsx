@@ -21,24 +21,18 @@ import ImageEditModal from '@/components/onboarding/ImageEditModal';
 import { INDUSTRY_OPTIONS, normalizeIndustry } from '@/lib/industry';
 import { cn } from '@/lib/utils';
 import AddressMap from '@/components/ui-custom/AddressMap';
+import { COUNTRIES, countryNamed, countryForCurrency, taxNameFor } from '@/lib/countries';
 
 // FIX: previously had its own local INDUSTRIES + normaliseIndustry copy, separate
 // from onboarding's — the two lists could (and did) drift. Both now import from
 // src/lib/industry.js.
 const INDUSTRIES = INDUSTRY_OPTIONS;
 
-const COUNTRIES = ['Singapore', 'Malaysia'];
-
-const CURRENCIES = [
-  { value: 'SGD', label: 'SGD — Singapore Dollar' },
-  { value: 'MYR', label: 'MYR — Malaysian Ringgit' },
-];
-
-const COUNTRY_CONFIG = {
-  Singapore: { currency: 'SGD', phonePlaceholder: '+65 9123 4567' },
-  Malaysia:  { currency: 'MYR', phonePlaceholder: '+60 12 345 6789' },
-};
-const CURRENCY_TO_COUNTRY = { SGD: 'Singapore', MYR: 'Malaysia' };
+// Sellio's countries (lib/countries.js): each one's currency, phone example, time zones and tax
+// presets. Country and currency go together, and both lock after the shop's first order
+// (changing the currency then would make its old prices and reports wrong).
+const CURRENCY_NAMES = { SGD: 'Singapore Dollar', MYR: 'Malaysian Ringgit', IDR: 'Indonesian Rupiah' };
+const CURRENCIES = COUNTRIES.map((c) => ({ value: c.currency, label: `${c.currency} — ${CURRENCY_NAMES[c.currency]}` }));
 const DEFAULT_BUSINESS_HOURS = [
     { day: 'monday',    label: 'Mon', enabled: true,  open: '09:00', close: '22:00' },
     { day: 'tuesday',   label: 'Tue', enabled: true,  open: '09:00', close: '22:00' },
@@ -106,6 +100,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
     country: '',
     phone: '',
     currency: 'SGD',
+    timezone: 'Asia/Singapore',
     address: '',
     tax_rate: '',
     tax_inclusive: false,
@@ -138,7 +133,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
     if (!uploadingRef.current) setLogoPreview(tenant.logo_url || null);
     const settings = tenant.settings || {};
     const storedCurrency = tenant.currency || 'SGD';
-    const country = CURRENCY_TO_COUNTRY[storedCurrency] || tenant.country || 'Singapore';
+    const country = countryForCurrency(storedCurrency)?.name || tenant.country || 'Singapore';
     const nextForm = {
       name: tenant.name || '',
       branch_name: settings.branch_name || '',
@@ -146,6 +141,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
       country,
       phone: tenant.phone || '',
       currency: storedCurrency,
+      timezone: tenant.timezone || countryNamed(country)?.timezone || 'Asia/Singapore',
       address: tenant.address || '',
       tax_rate: settings.tax_rate != null ? String(settings.tax_rate) : '',
       tax_inclusive: settings.tax_inclusive || false,
@@ -179,15 +175,37 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
     }));
   }, [savedBusinessHours, applyRemoteHours, refreshVersion]);
 
+  // A country's currency and time zone come with it (the time zone stays when it's one of the
+  // country's own).
+  const withCountry = (prev, name) => {
+    const cfg = countryNamed(name);
+    if (!cfg) return { ...prev, country: name };
+    const zoneKept = cfg.zones.some((z) => z.zone === prev.timezone);
+    return { ...prev, country: name, currency: cfg.currency, timezone: zoneKept ? prev.timezone : cfg.timezone };
+  };
+
   const handleCountryChange = (country) => {
-    const cfg = COUNTRY_CONFIG[country];
-    setForm(prev => ({ ...prev, country, currency: cfg?.currency || prev.currency }));
+    setForm(prev => withCountry(prev, country));
   };
 
   const handleCurrencyChange = (currency) => {
-    const country = CURRENCY_TO_COUNTRY[currency] || form.country;
-    setForm(prev => ({ ...prev, currency, country }));
+    const country = countryForCurrency(currency)?.name || form.country;
+    setForm(prev => ({ ...withCountry(prev, country), currency }));
   };
+
+  // Country and currency lock once the shop has an order.
+  const { data: hasOrders = false } = useQuery({
+    queryKey: ['shopHasOrders', tenantId],
+    queryFn: async () => {
+      const supabase = await getSupabase();
+      const { count, error } = await supabase.from('orders').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId);
+      if (error) throw error;
+      return (count || 0) > 0;
+    },
+    enabled: !!tenantId,
+    staleTime: 60 * 1000,
+  });
+  const currentCountry = countryNamed(form.country);
 
   // The shop's logo address, saved now; the page header shows it straight away.
   const saveLogoUrl = async (url) => {
@@ -272,6 +290,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
         country: form.country,
         phone: form.phone,
         currency: form.currency,
+        timezone: form.timezone,
         address: form.address,
         order_id_prefix: form.order_id_prefix || 'ORD',
         order_id_start: parseInt(form.order_id_start) || 1,
@@ -453,26 +472,43 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
             <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-xs text-slate-600 mb-1 block">Country</Label>
-                <Select value={form.country} onValueChange={handleCountryChange}>
-                  <SelectTrigger className="h-10"><SelectValue placeholder="Select country" /></SelectTrigger>
+                <Select value={form.country} onValueChange={handleCountryChange} disabled={hasOrders}>
+                  <SelectTrigger className="h-10" data-testid="business-country"><SelectValue placeholder="Select country" /></SelectTrigger>
                   <SelectContent>
-                    {COUNTRIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {COUNTRIES.map(c => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label className="text-xs text-slate-600 mb-1 block">Currency</Label>
-                <Select value={form.currency} onValueChange={handleCurrencyChange}>
-                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                <Select value={form.currency} onValueChange={handleCurrencyChange} disabled={hasOrders}>
+                  <SelectTrigger className="h-10" data-testid="business-currency"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {CURRENCIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             </div>
+            {hasOrders && (
+              <p className="text-xs text-slate-500 -mt-2" data-testid="country-locked">
+                Country and currency can't change once your shop has orders: its prices and reports are in {form.currency}.
+              </p>
+            )}
+            {(currentCountry?.zones.length || 0) > 1 && (
+              <div>
+                <Label className="text-xs text-slate-600 mb-1 block">Time zone</Label>
+                <Select value={form.timezone} onValueChange={v => set('timezone', v)}>
+                  <SelectTrigger className="h-10" data-testid="business-timezone"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {currentCountry.zones.map(z => <SelectItem key={z.zone} value={z.zone}>{z.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-400 mt-1">Your shop's day, reports and limits follow this time.</p>
+              </div>
+            )}
             <div>
               <Label className="text-xs text-slate-600 mb-1 block">Phone</Label>
-              <Input className="h-10" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder={COUNTRY_CONFIG[form.country]?.phonePlaceholder || '+X XXXX XXXX'} />
+              <Input className="h-10" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder={currentCountry?.phone.example || '+X XXXX XXXX'} />
             </div>
             <div>
               <Label className="text-xs text-slate-600 mb-1 block">Address</Label>
@@ -563,7 +599,25 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
           <GatedFields canEdit={canEditSettings} onBlocked={showNoAccessMessage} className="space-y-4">
             <div className="pt-4">
               <Label className="text-xs text-slate-600 mb-1 block">Tax Rate (%)</Label>
-              <Input className="h-10" type="number" min="0" max="100" step="0.1" value={form.tax_rate} onChange={e => set('tax_rate', e.target.value)} placeholder="e.g. 9" />
+              <Input className="h-10" type="number" min="0" max="100" step="0.1" value={form.tax_rate} onChange={e => set('tax_rate', e.target.value)} placeholder={`e.g. ${currentCountry?.tax.rate || 0}`} />
+              {(currentCountry?.taxPresets.length || 0) > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2" data-testid="tax-presets">
+                  {currentCountry.taxPresets.map(p => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => set('tax_rate', String(p.rate))}
+                      className={cn('h-8 px-3 rounded-full border text-xs font-semibold',
+                        String(p.rate) === String(form.tax_rate) ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700')}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {form.country === 'Indonesia' && (
+                <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">PBJT is the regional tax on food and drink (up to 10%, set by your region). PPN is VAT, for VAT-registered sellers.</p>
+              )}
             </div>
             <div className="flex items-start justify-between gap-4 py-1">
               <div className="flex-1">
@@ -646,7 +700,8 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
             </div>
 
             {/* Printer connection */}
-            <PrinterSettings tenantId={tenantId} merchantName={form.name} receiptPaperSize={form.receipt_paper_size} />
+            <PrinterSettings tenantId={tenantId} merchantName={form.name} receiptPaperSize={form.receipt_paper_size}
+              currency={form.currency} tax={{ name: taxNameFor(form, form.tax_rate), rate: Number(form.tax_rate) || 0 }} />
           </GatedFields>
           </div>
         )}

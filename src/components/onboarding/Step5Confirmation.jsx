@@ -10,6 +10,7 @@ import { useAppUser, cookieUtils } from '@/lib/AppUserContext';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useBackToClose } from '@/lib/useBackToClose';
+import { countryNamed } from '@/lib/countries';
 
 export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   const { appUser, updateAppUser } = useAppUser();
@@ -31,20 +32,10 @@ export default function Step5Confirmation({ formData, prevStep, onComplete }) {
   const chosenColor = formData?.theme ? formData.customPrimary : '#3b82f6';
   const themeColor = formData?.theme ? formData.customPrimary : 'linear-gradient(to right, #3b82f6, #9333ea)';
 
-  const getTaxRate = () => {
-    if (formData.country === 'Singapore') return 9;
-    if (formData.country === 'Malaysia') return 6;
-    return formData.taxRate ?? 0;
-  };
-
-  const getTaxLabel = () => {
-    if (formData.country === 'Singapore') return 'GST';
-    if (formData.country === 'Malaysia') return 'SST';
-    return 'Tax';
-  };
-
-  const taxRate = getTaxRate();
-  const taxLabel = getTaxLabel();
+  // The country's tax preset (lib/countries.js): GST 9%, SST 6%, or none in Indonesia.
+  const country = countryNamed(formData.country);
+  const taxRate = formData.taxRate ?? country?.tax.rate ?? 0;
+  const taxLabel = taxRate > 0 ? (country?.tax.name || 'Tax') : 'No tax';
 
   const isFoodBeverage = isFnBIndustry(formData.businessType);
 

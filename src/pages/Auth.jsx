@@ -12,7 +12,8 @@ import { noteSignInWelcome } from '@/lib/signInWelcome';
 import { googleSignInAvailable, startGoogleSignIn } from '@/lib/googleSignIn';
 import { COMPLETE_KEY, clearMobileAuth, hasMobileGoogleCompletion, isNativeAndroid } from '@/lib/mobileOAuth';
 import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
-import { SELLIO_SITE, SELLIO_WEB_ORIGINS, decideOnboardingAccess, isClosedLoginError } from '@/lib/accountFlow';
+import { SELLIO_SITE, SELLIO_WEB_ORIGINS, decideOnboardingAccess, isClosedLoginError, phoneCountryFor } from '@/lib/accountFlow';
+import { visitorCountry } from '@/lib/countries';
 import { homeFor, isStaffAccount } from '@/lib/staffAccess';
 import { callPhoneAuth } from '@/lib/phoneAuth';
 import { callClosedAccount, closedAccountMessage } from '@/lib/closedAccount';
@@ -42,10 +43,14 @@ function welcomeBackOn(destination) {
   noteSignInWelcome('Welcome back!');
 }
 
+// Same rules as PHONE_COUNTRIES in src/lib/accountFlow.js (Indonesia: 12 Nov 2026).
 const COUNTRY_CODES = [
   { code: '+65', flag: '🇸🇬', name: 'SG', placeholder: '91234567', validate: (p) => /^[89]\d{7}$/.test(p), hint: '8 digits, starting with 8 or 9' },
   { code: '+60', flag: '🇲🇾', name: 'MY', placeholder: '112345678', validate: (p) => /^1\d{8,9}$/.test(p), hint: '9–10 digits, starting with 1' },
+  { code: '+62', flag: '🇮🇩', name: 'ID', placeholder: '81234567890', validate: (p) => /^8[1-9]\d{7,10}$/.test(p), hint: '9–12 digits, starting with 8' },
 ];
+// The code to start with: the visitor's country's, when their phone or computer says it.
+const startCountryCode = () => COUNTRY_CODES.find((c) => c.code === phoneCountryFor(visitorCountry()).code) || COUNTRY_CODES[0];
 
 // Same rule as appBaseUrl in src/lib/accountFlow.js: back to the Sellio address the
 // person started on (sellio.sg or sellio.apptelier.sg). In Sellio's app: sellio.sg, whose
@@ -103,7 +108,7 @@ export default function Auth() {
   const [forgotMode, setForgotMode] = useState(false);
   const [forgotStep, setForgotStep] = useState(1); // 1=phone, 2=otp, 3=new password, 4=email sent
   const [forgotPhone, setForgotPhone] = useState('');
-  const [forgotCountry, setForgotCountry] = useState(COUNTRY_CODES[0]);
+  const [forgotCountry, setForgotCountry] = useState(startCountryCode);
   const [forgotStaffEmail, setForgotStaffEmail] = useState('');
   const [forgotNewPassword, setForgotNewPassword] = useState('');
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
@@ -123,7 +128,7 @@ export default function Auth() {
   const [showForgotCountryDropdown, setShowForgotCountryDropdown] = useState(false);
 
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);
+  const [selectedCountry, setSelectedCountry] = useState(startCountryCode);
   const [formData, setFormData] = useState({ full_name: '', email: '', phone: '', password: '' });
 
   // On mount: check if user is already authenticated and has completed onboarding.
@@ -247,12 +252,10 @@ export default function Auth() {
         if (invite.phone) {
           let phoneNumber = invite.phone;
           let detectedCountry = COUNTRY_CODES[0];
-          if (invite.phone.startsWith('+60')) {
-            detectedCountry = COUNTRY_CODES.find(c => c.code === '+60');
-            phoneNumber = invite.phone.replace('+60', '');
-          } else if (invite.phone.startsWith('+65')) {
-            detectedCountry = COUNTRY_CODES.find(c => c.code === '+65');
-            phoneNumber = invite.phone.replace('+65', '');
+          const fromInvite = COUNTRY_CODES.find(c => invite.phone.startsWith(c.code));
+          if (fromInvite) {
+            detectedCountry = fromInvite;
+            phoneNumber = invite.phone.replace(fromInvite.code, '');
           }
           setSelectedCountry(detectedCountry);
           setFormData(prev => ({ ...prev, phone: phoneNumber }));

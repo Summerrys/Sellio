@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, X, Send, ShoppingCart } from 'lucide-react';
+import { X, Send, ShoppingCart } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 
 import { useLanguage } from '@/lib/LanguageContext';
 import { useBackToClose } from '@/lib/useBackToClose';
+import { formatMoney } from '@/lib/money';
 
 export default function MenuAssistantWidget({ products, tenant, onProductSelect, onAddToCart, storefront, externalOpen, onExternalClose, isStoreOpen = true, isPreview = false, cart, hidden = false, onUpdateCartQuantity, onOpenCart }) {
   const { t } = useLanguage();
@@ -429,11 +430,11 @@ export default function MenuAssistantWidget({ products, tenant, onProductSelect,
                             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                               {product.compare_at_price > product.price && (
                                 <span style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through' }}>
-                                  {currency} {parseFloat(product.compare_at_price).toFixed(2)}
+                                  {formatMoney(product.compare_at_price, tenant?.currency)}
                                 </span>
                               )}
                               <span style={{ fontSize: 12, color: primaryColor, fontWeight: 700 }}>
-                                {currency} {parseFloat(product.price).toFixed(2)}
+                                {formatMoney(product.price, tenant?.currency)}
                               </span>
                             </div>
                           </div>

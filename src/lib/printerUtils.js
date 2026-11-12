@@ -1,6 +1,7 @@
 // ESC/POS receipt builder utility
 import { paymentText } from './tableBill';
 import { isCapacitorApp } from './nativeApp.js';
+import { currencyDecimals, formatMoney, roundMoney } from './money';
 
 // Known BLE thermal/label printer GATT service+characteristic UUID pairs.
 // Different chipsets use different UUIDs — we try each in order until one works.
@@ -168,18 +169,18 @@ export function buildOrderReceipt(order, currency, merchantName, paperSize = 'th
   }
   lines.push({ text: sep, align: 'center' });
   (order.items || []).forEach(item => {
-    const lineTotal = ((item.price || item.unit_price || 0) * (item.quantity || 1)).toFixed(2);
+    const lineTotal = (item.price || item.unit_price || 0) * (item.quantity || 1);
     const left = `${item.quantity}x ${item.name || item.product_name}`;
-    const right = `${currency} ${lineTotal}`;
+    const right = formatMoney(lineTotal, currency);
     itemLine(left, right, width).forEach(text => lines.push({ text, align: 'left' }));
     if (item.variant) lines.push({ text: `  (${item.variant})`, align: 'left' });
   });
   lines.push({ text: sep, align: 'center' });
   const subtotal = parseFloat(order.subtotal || 0);
-  if (subtotal > 0) lines.push({ text: padLine('Subtotal', `${currency} ${subtotal.toFixed(2)}`, width), align: 'left' });
+  if (subtotal > 0) lines.push({ text: padLine('Subtotal', formatMoney(subtotal, currency), width), align: 'left' });
   const tax = parseFloat(order.tax_amount || 0);
-  if (tax > 0) lines.push({ text: padLine('Tax', `${currency} ${tax.toFixed(2)}`, width), align: 'left' });
-  lines.push({ text: padLine('TOTAL', `${currency} ${parseFloat(order.total_amount || 0).toFixed(2)}`, width), bold: true, align: 'left' });
+  if (tax > 0) lines.push({ text: padLine('Tax', formatMoney(tax, currency), width), align: 'left' });
+  lines.push({ text: padLine('TOTAL', formatMoney(parseFloat(order.total_amount || 0), currency), width), bold: true, align: 'left' });
   lines.push({ text: sep, align: 'center' });
   lines.push({ text: 'Thank you for your visit!', align: 'center' });
   lines.push({ text: 'Powered by Sellio', align: 'center' });
@@ -206,7 +207,7 @@ export function buildTableReceipt(bill, currency, merchantName, paperSize = 'the
   const wide = paperSize === 'thermal_80' || paperSize === 'a4';
   const width = wide ? 48 : 32;
   const sep = '-'.repeat(width);
-  const money = n => `${currency} ${(Number(n) || 0).toFixed(2)}`;
+  const money = n => formatMoney(Number(n) || 0, currency);
   const lines = [
     { text: merchantName || 'Receipt', bold: true, align: 'center' },
     { text: new Date().toLocaleString('en-SG', { dateStyle: 'medium', timeStyle: 'short' }), align: 'center' },
@@ -279,10 +280,18 @@ export function buildOrderChit(order, merchantName, paperSize = 'thermal_80') {
   return buildReceipt(lines);
 }
 
-export function buildTestReceipt(merchantName, paperSize = 'thermal_80') {
+// A sample receipt in the shop's own money and tax (tax: { name, rate }, e.g. GST 9%, SST 6%,
+// none in Indonesia by default). Rupiah samples are 10,000 times the dollar ones.
+export function buildTestReceipt(merchantName, paperSize = 'thermal_80', { currency = 'SGD', tax = { name: 'GST', rate: 9 } } = {}) {
   const wide = paperSize === 'thermal_80' || paperSize === 'a4';
-  const sep = '-'.repeat(wide ? 48 : 32);
+  const width = wide ? 48 : 32;
+  const sep = '-'.repeat(width);
   const now = new Date().toLocaleString('en-SG', { dateStyle: 'medium', timeStyle: 'short' });
+  const scale = currencyDecimals(currency) === 0 ? 10000 : 1;
+  const items = [[1, 'Kopi O', 1.5], [2, 'Nasi Lemak', 3.5], [1, 'Teh Tarik', 1.8]];
+  const subtotal = roundMoney(items.reduce((sum, [qty, , price]) => sum + qty * price * scale, 0), currency);
+  const rate = Number(tax?.rate) || 0;
+  const taxAmount = roundMoney(subtotal * rate / 100, currency);
   return buildReceipt([
     { text: merchantName || 'My Store', bold: true, align: 'center' },
     { text: '** TEST PRINT **', bold: false, align: 'center' },
@@ -292,14 +301,12 @@ export function buildTestReceipt(merchantName, paperSize = 'thermal_80') {
     { text: 'Order: ORD-000001', align: 'left' },
     { text: 'Cashier: Staff', align: 'left' },
     { text: sep, align: 'center' },
-    { text: '1x Kopi O                   1.50', align: 'left' },
-    { text: '2x Nasi Lemak               7.00', align: 'left' },
-    { text: '1x Teh Tarik                1.80', align: 'left' },
+    ...items.map(([qty, name, price]) => ({ text: padLine(`${qty}x ${name}`, formatMoney(qty * price * scale, currency), width), align: 'left' })),
     { text: sep, align: 'center' },
-    { text: 'Subtotal:              SGD 10.30', align: 'left' },
-    { text: 'GST (9%):               SGD 0.93', align: 'left' },
+    { text: padLine('Subtotal:', formatMoney(subtotal, currency), width), align: 'left' },
+    ...(rate > 0 ? [{ text: padLine(`${tax.name || 'Tax'} (${rate}%):`, formatMoney(taxAmount, currency), width), align: 'left' }] : []),
     { text: sep, align: 'center' },
-    { text: 'TOTAL:                 SGD 11.23', bold: true, align: 'left' },
+    { text: padLine('TOTAL:', formatMoney(subtotal + taxAmount, currency), width), bold: true, align: 'left' },
     { text: sep, align: 'center' },
     { text: 'Payment: Cash', align: 'left' },
     { text: sep, align: 'center' },

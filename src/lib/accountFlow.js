@@ -4,11 +4,19 @@
 // Same accounts as Auth.jsx and complete-onboarding (owner test accounts).
 export const BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
 
-// Same rules as Auth.jsx and the database (complete_account_setup).
+// Same rules as Auth.jsx, lib/countries.js and the database (complete_account_setup).
+// Indonesia (12 Nov 2026): mobiles start with 8 after +62 (a leading 0 is dropped).
 export const PHONE_COUNTRIES = [
   { code: '+65', flag: '🇸🇬', name: 'SG', placeholder: '91234567', pattern: /^[89]\d{7}$/, hint: '8 digits, starting with 8 or 9' },
   { code: '+60', flag: '🇲🇾', name: 'MY', placeholder: '112345678', pattern: /^1\d{8,9}$/, hint: '9–10 digits, starting with 1' },
+  { code: '+62', flag: '🇮🇩', name: 'ID', placeholder: '81234567890', pattern: /^8[1-9]\d{7,10}$/, hint: '9–12 digits, starting with 8' },
 ];
+
+// The phone code to start with for a country (lib/countries.js names), else Singapore's.
+const COUNTRY_PHONE = { Singapore: '+65', Malaysia: '+60', Indonesia: '+62' };
+export function phoneCountryFor(countryName) {
+  return PHONE_COUNTRIES.find((c) => c.code === COUNTRY_PHONE[countryName]) || PHONE_COUNTRIES[0];
+}
 
 // "+6591234567", or null when the number doesn't fit the country.
 export function fullPhone(country, local) {
@@ -144,7 +152,7 @@ const MESSAGES = {
   staff_account: 'This is a staff login. Staff sign in with their phone number on the login page.',
   email_link_required: 'Please open the verification link we emailed you, then try again.',
   name_invalid: 'Please enter your name.',
-  phone_invalid: 'Please enter a valid Singapore or Malaysia mobile number.',
+  phone_invalid: 'Please enter a valid mobile number.',
   phone_taken: 'This phone number is already used by another Sellio account (it may be a staff login). Use a different number, or contact sellio@apptelier.sg.',
   account_setup_required: 'Please finish setting up your account first.',
   store_exists: 'This account already has a store. Sign in to manage it, or contact sellio@apptelier.sg to open another one.',

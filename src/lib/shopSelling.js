@@ -5,6 +5,8 @@
 // my_shop_selling for the owner; step 15). The server checks everything again:
 // nothing here is trusted for prices, fees or dates.
 
+import { formatMoney } from './money';
+
 export const isShopTenant = (tenant) => tenant?.seller_type === 'individual';
 
 // ── Order steps for a free shop ──────────────────────────────────────────────────
@@ -55,7 +57,7 @@ export function shopStatusTabs(food) {
   ];
 }
 
-// ── Dates (shops are in Singapore or Malaysia, both UTC+8) ──────────────────────────
+// ── Dates (a shop's day as YYYY-MM-DD, shown as it is: no time zone involved) ─────────
 export function formatShopDate(ymd) {
   if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return '';
   const [y, m, d] = ymd.split('-').map(Number);
@@ -63,14 +65,17 @@ export function formatShopDate(ymd) {
   return date.toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 
-// ── Phone numbers (same rules as the server) ─────────────────────────────────────
+// ── Phone numbers (same rules as the server, place_shop_order) ───────────────────────
+// Singapore, Malaysia and Indonesia (12 Nov 2026: 08…, 628… or +628…) mobiles.
 export function normaliseBuyerPhone(raw) {
   let v = String(raw || '').replace(/[\s()-]/g, '');
   if (/^[89]\d{7}$/.test(v)) v = '+65' + v;
   else if (/^65[89]\d{7}$/.test(v)) v = '+' + v;
   else if (/^01\d{8,9}$/.test(v)) v = '+6' + v;
   else if (/^601\d{8,9}$/.test(v)) v = '+' + v;
-  return /^\+65[89]\d{7}$/.test(v) || /^\+601\d{8,9}$/.test(v) ? v : null;
+  else if (/^08[1-9]\d{7,10}$/.test(v)) v = '+62' + v.slice(1);
+  else if (/^628[1-9]\d{7,10}$/.test(v)) v = '+' + v;
+  return /^\+65[89]\d{7}$/.test(v) || /^\+601\d{8,9}$/.test(v) || /^\+628[1-9]\d{7,10}$/.test(v) ? v : null;
 }
 
 // wa.me needs the number without "+".
@@ -150,21 +155,21 @@ export function sellingPayload(form) {
 }
 
 // One line describing how a shop sells, e.g. for the Dashboard card or Settings.
-export function sellingSummary(settings, sym = '$') {
+export function sellingSummary(settings, currency = 'SGD') {
   if (!settings) return '';
   const parts = [];
   if (settings.collection?.enabled) parts.push(`Self-collection${settings.collection.area ? ` (${settings.collection.area})` : ''}`);
   if (settings.delivery?.enabled) {
     const d = settings.delivery;
     parts.push(d.fee_mode === 'extra' && Number(d.fee) > 0
-      ? `Delivery ${sym}${Number(d.fee).toFixed(2)}${d.free_above ? `, free above ${sym}${Number(d.free_above).toFixed(2)}` : ''}`
+      ? `Delivery ${formatMoney(Number(d.fee), currency)}${d.free_above ? `, free above ${formatMoney(Number(d.free_above), currency)}` : ''}`
       : 'Delivery (postage & courier included)');
   }
   if (settings.preorder?.enabled) parts.push(`Pre-orders, ${settings.preorder.min_days} day${settings.preorder.min_days === 1 ? '' : 's'} notice`);
   return parts.join(' · ');
 }
 
-// ── Words on the store page (English, Chinese, Malay) ───────────────────────────────
+// ── Words on the store page (English, Chinese, Malay, Indonesian) ───────────────────
 const SHOP_TEXT = {
   en: {
     howToGet: 'How would you like to get your order?',
@@ -189,7 +194,7 @@ const SHOP_TEXT = {
     included: 'Included',
     total: 'Total',
     nameNeeded: 'Please enter your name.',
-    phoneNeeded: 'Please enter a Singapore or Malaysia mobile number.',
+    phoneNeeded: 'Please enter a valid mobile number.',
     addressNeeded: 'Please enter the delivery address.',
     dateNeeded: 'Please choose a date.',
     yourOrder: 'Your order',
@@ -227,7 +232,7 @@ const SHOP_TEXT = {
     included: '已包含',
     total: '总计',
     nameNeeded: '请输入您的名字。',
-    phoneNeeded: '请输入新加坡或马来西亚的手机号码。',
+    phoneNeeded: '请输入有效的手机号码。',
     addressNeeded: '请输入送货地址。',
     dateNeeded: '请选择日期。',
     yourOrder: '您的订单',
@@ -265,7 +270,7 @@ const SHOP_TEXT = {
     included: 'Termasuk',
     total: 'Jumlah',
     nameNeeded: 'Sila masukkan nama anda.',
-    phoneNeeded: 'Sila masukkan nombor telefon bimbit Singapura atau Malaysia.',
+    phoneNeeded: 'Sila masukkan nombor telefon bimbit yang sah.',
     addressNeeded: 'Sila masukkan alamat penghantaran.',
     dateNeeded: 'Sila pilih tarikh.',
     yourOrder: 'Pesanan anda',
@@ -276,6 +281,44 @@ const SHOP_TEXT = {
     orderHistory: 'Pesanan anda',
     noOrders: 'Belum ada pesanan',
     showQr: 'Tunjuk QR bayaran',
+    paid: 'Sudah dibayar',
+    notPaid: 'Belum dibayar',
+    for: 'Untuk',
+  },
+  id: {
+    howToGet: 'Bagaimana Anda ingin menerima pesanan?',
+    collection: 'Ambil sendiri',
+    delivery: 'Pengiriman',
+    collectionAt: 'Ambil di',
+    addressAfterAccept: 'Penjual akan memberi tahu alamat lengkapnya setelah menerima pesanan Anda.',
+    deliveryIncluded: 'Sudah termasuk ongkos kirim',
+    deliveryFee: 'Ongkos kirim',
+    freeAbove: 'Gratis ongkir untuk pesanan mulai',
+    deliversTo: 'Mengirim ke',
+    yourName: 'Nama Anda',
+    yourMobile: 'Nomor ponsel',
+    mobileHint: 'Penjual akan menghubungi Anda di nomor ini.',
+    deliveryAddress: 'Alamat pengiriman',
+    pickDate: 'Tanggal',
+    pickDateHint: 'Pre-order: pilih tanggal mulai',
+    notes: 'Catatan (opsional)',
+    notesPlaceholder: 'Ada yang perlu penjual ketahui?',
+    subtotal: 'Subtotal',
+    free: 'Gratis',
+    included: 'Termasuk',
+    total: 'Total',
+    nameNeeded: 'Silakan masukkan nama Anda.',
+    phoneNeeded: 'Silakan masukkan nomor ponsel yang valid.',
+    addressNeeded: 'Silakan masukkan alamat pengiriman.',
+    dateNeeded: 'Silakan pilih tanggal.',
+    yourOrder: 'Pesanan Anda',
+    contactSeller: 'Kirim pesan ke penjual lewat WhatsApp',
+    openMap: 'buka di Maps',
+    payLater: 'Penjual akan menghubungi Anda soal pembayaran.',
+    statusNew: 'Menunggu penjual menerima pesanan',
+    orderHistory: 'Pesanan Anda',
+    noOrders: 'Belum ada pesanan',
+    showQr: 'Tampilkan QR pembayaran',
     paid: 'Sudah dibayar',
     notPaid: 'Belum dibayar',
     for: 'Untuk',
@@ -291,6 +334,7 @@ const BUYER_STATUS = {
   en: { pending: 'Waiting for the seller', confirmed: 'Accepted', preparing_food: 'Preparing', preparing: 'Packing', ready_collection: 'Ready for collection', ready_delivery: 'Out for delivery', completed_collection: 'Collected', completed_delivery: 'Delivered', cancelled: 'Cancelled' },
   zh: { pending: '等待卖家接受', confirmed: '已接受', preparing_food: '准备中', preparing: '包装中', ready_collection: '可以自取', ready_delivery: '送货中', completed_collection: '已自取', completed_delivery: '已送达', cancelled: '已取消' },
   ms: { pending: 'Menunggu penjual', confirmed: 'Diterima', preparing_food: 'Sedang disediakan', preparing: 'Sedang dibungkus', ready_collection: 'Sedia untuk diambil', ready_delivery: 'Dalam penghantaran', completed_collection: 'Telah diambil', completed_delivery: 'Telah dihantar', cancelled: 'Dibatalkan' },
+  id: { pending: 'Menunggu penjual', confirmed: 'Diterima', preparing_food: 'Sedang disiapkan', preparing: 'Sedang dikemas', ready_collection: 'Siap diambil', ready_delivery: 'Sedang diantar', completed_collection: 'Sudah diambil', completed_delivery: 'Sudah diantar', cancelled: 'Dibatalkan' },
 };
 
 export function buyerStatusLabel(lang, status, method, food) {

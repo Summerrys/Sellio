@@ -77,7 +77,7 @@ const DICTIONARY = {
     copied: 'Copied',
     copy: 'Copy',
     howToPay: 'How to pay',
-    payStep1: 'Open your banking app (DBS PayLah, OCBC, UOB etc.)',
+    payStep1: 'Open your banking or e-wallet app',
     payStep2: 'Long press the QR code above \u2192 Save image \u2192 Scan from photo',
     payStep3: 'Enter the amount and confirm your payment',
     backToMenu: 'Back to menu',
@@ -188,7 +188,7 @@ const DICTIONARY = {
     copied: '已复制',
     copy: '复制',
     howToPay: '支付方式',
-    payStep1: '打开您的银行应用程序（DBS PayLah、OCBC、UOB 等）',
+    payStep1: '打开您的银行或电子钱包应用程序',
     payStep2: '长按上方二维码 → 保存图片 → 从相册扫描',
     payStep3: '输入金额并确认付款',
     backToMenu: '返回菜单',
@@ -296,7 +296,7 @@ const DICTIONARY = {
     copied: 'Disalin',
     copy: 'Salin',
     howToPay: 'Cara membayar',
-    payStep1: 'Buka aplikasi perbankan anda (DBS PayLah, OCBC, UOB dll.)',
+    payStep1: 'Buka aplikasi perbankan atau e-dompet anda',
     payStep2: 'Tekan lama kod QR di atas \u2192 Simpan imej \u2192 Imbas dari foto',
     payStep3: 'Masukkan jumlah dan sahkan pembayaran anda',
     backToMenu: 'Kembali ke menu',
@@ -339,26 +339,155 @@ const DICTIONARY = {
     searchFor: 'Cari “{query}”',
     showWholeMenu: 'Tunjuk semua menu',
   },
+  // Bahasa Indonesia (12 Nov 2026), for Indonesian shops' buyers. Not the Malay above:
+  // Indonesians write Didukung oleh, ponsel, Keranjang. To be checked by a native speaker.
+  id: {
+    poweredBy: 'Didukung oleh',
+    menu: 'Menu',
+    all: 'Semua',
+    todaysPicks: 'Pilihan Hari Ini',
+    specialDeals: 'Promo Spesial',
+    other: 'Lainnya',
+    search: 'Cari',
+    loading: 'Memuat…',
+    closedNow: 'Kami sedang tutup',
+    opensAt: 'Buka pukul',
+    viewHours: 'Lihat jam buka',
+    orderingUnavailable: 'Pemesanan tidak tersedia selama kami tutup',
+    storeUnavailable: 'Toko tidak tersedia',
+    storeUnavailableDesc: 'Toko ini sedang tidak menerima pesanan. Silakan coba lagi nanti.',
+    storeUnavailableAskStaff: 'Silakan pesan langsung ke staf kami.',
+    addToOrder: 'Tambah ke pesanan',
+    outOfStock: 'Stok habis',
+    soldOut: 'Terjual habis',
+    unlimited: 'Tanpa batas',
+    inStock: 'tersisa',
+    size: 'Ukuran',
+    selectOption: 'Silakan pilih salah satu',
+    required: 'Wajib',
+    like: 'Suka',
+    liked: 'Disukai',
+    likeItem: 'Sukai item ini',
+    unlikeItem: 'Batal suka',
+    likesOne: '1 suka',
+    likesMany: '{n} suka',
+    chat: 'Chat',
+    chatSeller: 'Chat dengan penjual',
+    addToCart: 'Tambah ke keranjang',
+    buyNow: 'Beli sekarang',
+    chooseNamed: 'Pilih {name}',
+    logInToLike: 'Masuk untuk menyukai item.',
+    likedFound: 'Disukai. Lihat di Me › My likes.',
+    ownShopNote: 'Ini toko Anda, seperti yang dilihat pembeli. Anda tidak bisa membeli dari toko sendiri.',
+    ownShopNoBuy: 'Anda tidak bisa membeli dari toko sendiri.',
+    yourOrder: 'Pesanan Anda',
+    cart: 'Keranjang',
+    emptyCart: 'Keranjang Anda kosong',
+    total: 'Total',
+    subtotal: 'Subtotal',
+    tax: 'Pajak',
+    proceedToCheckout: 'Lanjut ke checkout',
+    remove: 'Hapus',
+    checkout: 'Checkout',
+    orderNotes: 'Catatan pesanan (opsional)',
+    orderNotesPlaceholder: 'Ada permintaan khusus?',
+    yourName: 'Nama Anda',
+    yourNamePlaceholder: 'Masukkan nama Anda',
+    placingOrder: 'Mengirim pesanan…',
+    placeOrder: 'Pesan sekarang',
+    table: 'Meja',
+    orderPlaced: 'Pesanan berhasil dibuat!',
+    yourOrderSummary: 'Pesanan Anda',
+    payAtCounter: 'Bayar di kasir',
+    payAtCounterDesc: 'Silakan ke kasir dengan nomor pesanan Anda. Staf kami akan membantu pembayaran Anda.',
+    payViaQr: 'Bayar dengan kode QR',
+    longPressToScan: 'Tekan lama untuk simpan & pindai',
+    reference: 'Referensi',
+    copied: 'Tersalin',
+    copy: 'Salin',
+    howToPay: 'Cara membayar',
+    payStep1: 'Buka aplikasi bank atau e-wallet Anda',
+    payStep2: 'Tekan lama kode QR di atas → Simpan gambar → Pindai dari galeri',
+    payStep3: 'Masukkan jumlah dan konfirmasi pembayaran Anda',
+    backToMenu: 'Kembali ke menu',
+    thankYou: 'Terima kasih atas kunjungan Anda!',
+    askMeAnything: 'Tanya apa saja',
+    menuAssistantPlaceholder: 'Tanya tentang menu kami…',
+    close: 'Tutup',
+    cancel: 'Batal',
+    confirm: 'Konfirmasi',
+    back: 'Kembali',
+    orderNotSent: 'Pesanan Anda belum terkirim',
+    orderOffline: 'Ponsel Anda sedang offline, jadi pesanan tidak sampai ke {shop}.',
+    nothingSentNotPaid: 'Tidak ada yang terkirim, dan Anda belum membayar.',
+    orderFailed: 'Sellio belum bisa menerima pesanan Anda saat ini. Masalahnya ada di pihak kami, bukan Anda.',
+    orderStorage: 'Browser ini menghalangi Sellio mencatat pesanan, jadi pesanan tidak terkirim. Mode penyamaran bisa menyebabkan ini: coba jendela browser biasa.',
+    orderUnconfirmed: 'Kami tidak bisa memastikan pesanan Anda',
+    orderUnconfirmedText: 'Koneksi terputus saat pesanan dikirim, jadi pesanan mungkin sudah atau belum sampai ke {shop}. Ketuk Coba lagi: jika sudah sampai, Anda akan melihatnya, dan pesanan tidak dibuat dua kali.',
+    orderEarlier: 'Pesanan terakhir Anda belum terkonfirmasi',
+    orderEarlierText: 'Pesanan itu mungkin sudah sampai ke {shop}. Jika ragu, tanyakan dulu ke mereka, lalu kirim pesanan ini.',
+    waitingForInternet: 'Menunggu koneksi internet…',
+    backOnline: 'Anda sudah online lagi. Anda bisa mengirimnya sekarang.',
+    tryAgain: 'Coba lagi',
+    showOrderToStaff: 'Tunjukkan pesanan saya ke staf',
+    changeMyOrder: 'Ubah pesanan saya',
+    sendThisOrder: 'Kirim pesanan ini',
+    myOrder: 'Pesanan saya',
+    takeaway: 'Bawa pulang',
+    forStaffNotSent: 'Pesanan ini belum terkirim. Tolong catat pesanan saya.',
+    forStaffMaybeSent: 'Pesanan ini mungkin sudah masuk ke Anda. Mohon periksa dulu sebelum mencatatnya.',
+    loadingPhotos: 'Memuat foto',
+    photosCount: '{done} dari {total}',
+    showMenuWithoutPhotos: 'Tampilkan menu tanpa foto',
+    menuWithoutPhotos: 'Menu ditampilkan tanpa foto.',
+    showPhotos: 'Tampilkan foto',
+    searchMenu: 'Cari di menu…',
+    searchResults: '{count} hasil untuk “{query}”',
+    searchResultOne: '1 hasil untuk “{query}”',
+    noMenuMatch: 'Tidak ada menu yang cocok dengan “{query}”',
+    didYouMean: 'Maksud Anda {suggestion}?',
+    searchFor: 'Cari “{query}”',
+    showWholeMenu: 'Tampilkan semua menu',
+  },
 };
 
 export const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'EN', name: 'English' },
   { code: 'zh', label: '中文', name: 'Chinese' },
   { code: 'ms', label: 'BM', name: 'Bahasa Melayu' },
+  { code: 'id', label: 'ID', name: 'Bahasa Indonesia' },
 ];
 
 const LanguageContext = createContext(null);
 
 const STORAGE_KEY = 'sellio_storefront_lang';
 
+// The language a visitor chose before, if they did.
+function storedLanguage() {
+  try {
+    const code = localStorage.getItem(STORAGE_KEY);
+    return SUPPORTED_LANGUAGES.some((l) => l.code === code) ? code : null;
+  } catch {
+    return null;
+  }
+}
+
+// contentLang: the language the shop writes its menu in; its own text isn't translated into it.
+// An Indonesian shop's page opens in Bahasa Indonesia for a first visit and its menu is taken
+// as Indonesian (preferLanguage / setContentLang from the store page); a visitor's own choice
+// still wins.
 export function LanguageProvider({ children }) {
-  const [lang, setLangState] = useState(() => {
-    try { return localStorage.getItem(STORAGE_KEY) || 'en'; } catch { return 'en'; }
-  });
+  const [lang, setLangState] = useState(() => storedLanguage() || 'en');
+  const [contentLang, setContentLang] = useState('en');
 
   const setLang = useCallback((code) => {
     setLangState(code);
     try { localStorage.setItem(STORAGE_KEY, code); } catch {}
+  }, []);
+
+  // The shop's own language for a visitor who hasn't chosen one (not remembered as theirs).
+  const preferLanguage = useCallback((code) => {
+    if (!storedLanguage() && DICTIONARY[code]) setLangState(code);
   }, []);
 
   const t = useCallback((key) => {
@@ -366,7 +495,7 @@ export function LanguageProvider({ children }) {
   }, [lang]);
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t }}>
+    <LanguageContext.Provider value={{ lang, setLang, t, preferLanguage, contentLang, setContentLang }}>
       {children}
     </LanguageContext.Provider>
   );
@@ -383,7 +512,7 @@ export function useLanguage() {
 // products/categories don't re-request the same string twice client-side.
 // The edge function itself also caches server-side (translations table) so
 // even a fresh page load for a different customer is instant after the first.
-const memoryCache = { zh: {}, ms: {} };
+const memoryCache = { zh: {}, ms: {}, id: {}, en: {} };
 
 async function fetchTranslations(texts, language) {
   const uncached = texts.filter(t => t && !memoryCache[language]?.[t]);
@@ -404,11 +533,11 @@ async function fetchTranslations(texts, language) {
  * once available (near-instant if cached, ~1-2s on first-ever translation).
  */
 export function useTranslatedText(text) {
-  const { lang } = useLanguage();
+  const { lang, contentLang } = useLanguage();
   const [translated, setTranslated] = useState(text);
 
   useEffect(() => {
-    if (!text || lang === 'en') { setTranslated(text); return; }
+    if (!text || lang === contentLang) { setTranslated(text); return; }
     const cached = memoryCache[lang]?.[text];
     if (cached) { setTranslated(cached); return; }
     setTranslated(text); // show original while translating
@@ -417,7 +546,7 @@ export function useTranslatedText(text) {
       if (!cancelled) setTranslated(memoryCache[lang]?.[text] || text);
     });
     return () => { cancelled = true; };
-  }, [text, lang]);
+  }, [text, lang, contentLang]);
 
   return translated;
 }
@@ -428,12 +557,12 @@ export function useTranslatedText(text) {
  * Returns a map { originalText: translatedText }.
  */
 export function useTranslatedTexts(texts) {
-  const { lang } = useLanguage();
+  const { lang, contentLang } = useLanguage();
   const [map, setMap] = useState({});
   const key = (texts || []).join('|');
 
   useEffect(() => {
-    if (!texts || texts.length === 0 || lang === 'en') { setMap({}); return; }
+    if (!texts || texts.length === 0 || lang === contentLang) { setMap({}); return; }
     let cancelled = false;
     fetchTranslations(texts, lang).then(() => {
       if (cancelled) return;
@@ -443,9 +572,9 @@ export function useTranslatedTexts(texts) {
     });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, lang]);
+  }, [key, lang, contentLang]);
 
-  return lang === 'en' ? {} : map;
+  return lang === contentLang ? {} : map;
 }
 
 /**
@@ -455,9 +584,10 @@ export function useTranslatedTexts(texts) {
  * *other* languages are usually already cached — so the toggle feels instant.
  * Safe to call repeatedly; fetchTranslations already skips anything cached.
  */
-export function prewarmTranslations(texts) {
+// languages: which to warm (Chinese and Malay unless the store page says otherwise, e.g.
+// English, Chinese and Malay for an Indonesian shop's Indonesian menu).
+export function prewarmTranslations(texts, languages = ['zh', 'ms']) {
   const clean = (texts || []).filter(Boolean);
   if (clean.length === 0) return;
-  fetchTranslations(clean, 'zh');
-  fetchTranslations(clean, 'ms');
+  for (const language of languages) fetchTranslations(clean, language);
 }

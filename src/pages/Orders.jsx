@@ -36,6 +36,8 @@ import { useBackToClose } from '@/lib/useBackToClose';
 import { useOnline } from '@/lib/network';
 import { keepSnapshot, loadSnapshot } from '@/lib/offlineStore';
 import OfflineNote, { listNoteWords } from '@/components/ui-custom/OfflineNote';
+import { currencyDecimals, formatMoney } from '@/lib/money';
+import { paymentQrName } from '@/lib/countries';
 
 // The latest orders kept on the phone, for opening Orders with no connection (UX states, 4).
 const KEPT_ORDERS = 100;
@@ -71,15 +73,15 @@ const THEME_BUTTON_STATUSES = new Set(['pending', 'confirmed', 'preparing', 'rea
 
 function printReceipt(order, currency, merchantName) {
   const itemsHtml = (order.items || []).map(item => {
-    const lineTotal = ((item.price || item.unit_price || 0) * (item.quantity || 1)).toFixed(2);
+    const lineTotal = (item.price || item.unit_price || 0) * (item.quantity || 1);
     return `<tr>
       <td style="padding:4px 8px 4px 0">${item.quantity}× ${item.name || item.product_name}${item.variant ? ` (${item.variant})` : ''}</td>
-      <td style="padding:4px 0;text-align:right">${currency} ${lineTotal}</td>
+      <td style="padding:4px 0;text-align:right">${formatMoney(lineTotal, currency)}</td>
     </tr>`;
   }).join('');
-  const subtotal = parseFloat(order.subtotal || order.total_amount || 0).toFixed(2);
-  const tax = parseFloat(order.tax_amount || 0).toFixed(2);
-  const total = parseFloat(order.total_amount || 0).toFixed(2);
+  const subtotal = formatMoney(parseFloat(order.subtotal || order.total_amount || 0), currency);
+  const tax = formatMoney(parseFloat(order.tax_amount || 0), currency);
+  const total = formatMoney(parseFloat(order.total_amount || 0), currency);
   const date = new Date(order.created_date || Date.now()).toLocaleString();
 
   const win = window.open('', '_blank', 'width=400,height=600');
@@ -102,9 +104,9 @@ function printReceipt(order, currency, merchantName) {
   <table>${itemsHtml}</table>
   <div class="divider"></div>
   <table>
-    <tr><td>Subtotal</td><td style="text-align:right">${currency} ${subtotal}</td></tr>
-    <tr><td>Tax</td><td style="text-align:right">${currency} ${tax}</td></tr>
-    <tr class="total"><td>Total</td><td style="text-align:right">${currency} ${total}</td></tr>
+    <tr><td>Subtotal</td><td style="text-align:right">${subtotal}</td></tr>
+    <tr><td>Tax</td><td style="text-align:right">${tax}</td></tr>
+    <tr class="total"><td>Total</td><td style="text-align:right">${total}</td></tr>
   </table>
   <div class="divider"></div>
   <p class="center small">Thank you for your visit!</p>
@@ -155,7 +157,8 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
   useBackToClose(showReceipt, () => { if (receiptPrinting) return false; setShowReceipt(false); });
   useBackToClose(showChit, () => { if (chitPrinting) return false; setShowChit(false); });
   useBackToClose(showPaymentQR, () => { if (payBusy) return false; setShowPaymentQR(false); });
-  const qrPayLabel = tenant?.currency === 'MYR' ? 'QR · DuitNow / TNG' : 'QR · PayNow';
+  // The shop's own country's QR: PayNow, DuitNow or QRIS (lib/countries.js).
+  const qrPayLabel = `QR · ${paymentQrName(tenant)}`;
 
   useEffect(() => {
     if (!showPaymentQR || !order.table_id) { setTableBill(null); return undefined; }
@@ -302,7 +305,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                     {item.variant ? <span className="text-slate-500 font-normal"> ({item.variant})</span> : ''}
                   </span>
                   {item.price != null && (
-                    <span className="text-slate-500 text-xs">{currency} {((item.price || 0) * (item.quantity || 1)).toFixed(2)}</span>
+                    <span className="text-slate-500 text-xs">{formatMoney((item.price || 0) * (item.quantity || 1), currency)}</span>
                   )}
                 </div>
                 {item.notes && (
@@ -319,7 +322,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
 
           {/* Total */}
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-slate-900">{currency} {parseFloat(order.total_amount || 0).toFixed(2)}</span>
+            <span className="text-sm font-bold text-slate-900">{formatMoney(parseFloat(order.total_amount || 0), currency)}</span>
             {order.status === 'completed' && (
               <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">✓ {isShop ? shopStatusLabel('completed', shopMethod(order), shopFood) : 'Completed'}</span>
             )}
@@ -472,7 +475,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                   <div key={i} style={{ marginBottom: 6 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                       <span style={{ flex: 1, marginRight: 8 }}>{item.quantity}× {item.name}</span>
-                      <span style={{ flexShrink: 0, fontWeight: 500 }}>{currency} {item.total.toFixed(2)}</span>
+                      <span style={{ flexShrink: 0, fontWeight: 500 }}>{formatMoney(item.total, currency)}</span>
                     </div>
                     {item.variant && <p style={{ margin: '2px 0 0 14px', color: '#64748b', fontSize: 11 }}>({item.variant})</p>}
                   </div>
@@ -480,21 +483,21 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
                 {receiptBill.subtotal > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                    <span>Subtotal</span><span>{currency} {receiptBill.subtotal.toFixed(2)}</span>
+                    <span>Subtotal</span><span>{formatMoney(receiptBill.subtotal, currency)}</span>
                   </div>
                 )}
                 {receiptBill.tax > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                    <span>Tax</span><span>{currency} {receiptBill.tax.toFixed(2)}</span>
+                    <span>Tax</span><span>{formatMoney(receiptBill.tax, currency)}</span>
                   </div>
                 )}
                 {receiptBill.discount > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                    <span>Discount</span><span>-{currency} {receiptBill.discount.toFixed(2)}</span>
+                    <span>Discount</span><span>-{formatMoney(receiptBill.discount, currency)}</span>
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 13, marginTop: 6, padding: '6px 0', borderTop: '1px solid #e2e8f0' }}>
-                  <span>TOTAL</span><span>{currency} {receiptBill.total.toFixed(2)}</span>
+                  <span>TOTAL</span><span>{formatMoney(receiptBill.total, currency)}</span>
                 </div>
                 <p style={{ margin: '4px 0', fontSize: 12, fontWeight: 700 }}>{paymentText(receiptBill)}</p>
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
@@ -515,12 +518,12 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 )}
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
                 {(order.items || []).map((item, i) => {
-                  const lineTotal = ((item.price || item.unit_price || 0) * (item.quantity || 1)).toFixed(2);
+                  const lineTotal = formatMoney((item.price || item.unit_price || 0) * (item.quantity || 1), currency);
                   return (
                     <div key={i} style={{ marginBottom: 6 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                         <span style={{ flex: 1, marginRight: 8 }}>{item.quantity}× {item.name || item.product_name}</span>
-                        <span style={{ flexShrink: 0, fontWeight: 500 }}>{currency} {lineTotal}</span>
+                        <span style={{ flexShrink: 0, fontWeight: 500 }}>{lineTotal}</span>
                       </div>
                       {item.variant && <p style={{ margin: '2px 0 0 14px', color: '#64748b', fontSize: 11 }}>({item.variant})</p>}
                     </div>
@@ -529,16 +532,16 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
                 {order.subtotal && parseFloat(order.subtotal) > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                    <span>Subtotal</span><span>{currency} {parseFloat(order.subtotal || 0).toFixed(2)}</span>
+                    <span>Subtotal</span><span>{formatMoney(parseFloat(order.subtotal || 0), currency)}</span>
                   </div>
                 )}
                 {order.tax_amount && parseFloat(order.tax_amount) > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                    <span>Tax</span><span>{currency} {parseFloat(order.tax_amount || 0).toFixed(2)}</span>
+                    <span>Tax</span><span>{formatMoney(parseFloat(order.tax_amount || 0), currency)}</span>
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 13, marginTop: 6, padding: '6px 0', borderTop: '1px solid #e2e8f0' }}>
-                  <span>TOTAL</span><span>{currency} {parseFloat(order.total_amount || 0).toFixed(2)}</span>
+                  <span>TOTAL</span><span>{formatMoney(parseFloat(order.total_amount || 0), currency)}</span>
                 </div>
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
                 <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '4px 0' }}>Thank you for your visit!</p>
@@ -599,8 +602,8 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
             </p>
             <p style={{ margin: '0 0 4px', fontSize: 13, color: '#64748b' }}>
               {tableBill
-                ? `Whole table bill · ${currency} ${tableBill.total.toFixed(2)}`
-                : `#${order.order_number || order.id?.slice(-6)} · ${currency} ${parseFloat(order.total_amount || 0).toFixed(2)}`}
+                ? `Whole table bill · ${formatMoney(tableBill.total, currency)}`
+                : `#${order.order_number || order.id?.slice(-6)} · ${formatMoney(parseFloat(order.total_amount || 0), currency)}`}
             </p>
             <p style={{ margin: '0 0 16px', fontSize: 12, color: '#94a3b8' }}>
               {tableBill ? 'Pays every order on this table and frees the table.' : 'How did the customer pay?'}
@@ -776,7 +779,7 @@ export default function Orders() {
 
     if (data?.scope === 'table') {
       if (data.already_closed) toast.info('This table was already settled.');
-      else toast.success(`${order.table_name || 'Table'} settled · ${currency} ${Number(data.amount || 0).toFixed(2)}`);
+      else toast.success(`${order.table_name || 'Table'} settled · ${formatMoney(Number(data.amount || 0), currency)}`);
       await fetchOrders();
     } else {
       setOrders(prev => prev.map(o =>
@@ -823,7 +826,7 @@ export default function Orders() {
         o.order_number || '', shopStatusLabel(o.status, shopMethod(o), isFnB), shopMethod(o) === 'delivery' ? 'Delivery' : 'Self-collect',
         o.fulfilment?.date || '', cell(o.customer_name), cell(o.customer_phone), cell(o.fulfilment?.address),
         cell((o.items || []).map(i => `${i.quantity}x ${i.name || i.product_name}`).join(', ')),
-        (Number(o.fulfilment?.fee) || 0).toFixed(2), parseFloat(o.total_amount || 0).toFixed(2),
+        (Number(o.fulfilment?.fee) || 0).toFixed(currencyDecimals(currency)), parseFloat(o.total_amount || 0).toFixed(currencyDecimals(currency)),
         o.payment_status === 'paid' ? 'paid' : 'unpaid', o.created_date || '',
       ].join(','));
       const shopCsv = '\uFEFF' + ['order_number,status,method,date,buyer,mobile,address,items,delivery_charge,total_amount,payment,created_date', ...shopRows].join('\n');
@@ -847,7 +850,7 @@ export default function Orders() {
         o.status || '',
         o.table_name || '',
         `"${itemsStr}"`,
-        parseFloat(o.total_amount || 0).toFixed(2),
+        parseFloat(o.total_amount || 0).toFixed(currencyDecimals(currency)),
         o.created_date || '',
       ].join(',');
     });

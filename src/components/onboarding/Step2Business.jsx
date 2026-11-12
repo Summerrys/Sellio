@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Card } from '@/components/ui/card';
@@ -116,7 +116,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
           </Label>
           <Textarea
             {...register('address')}
-            placeholder="123 Main Street, Singapore 123456"
+            placeholder="Street, building, unit, postcode"
             rows={2}
             className="resize-none text-sm"
           />

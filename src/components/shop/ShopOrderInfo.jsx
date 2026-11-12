@@ -2,6 +2,7 @@ import React from 'react';
 import { Phone, MessageCircle, Truck, Store, CalendarDays, MapPin } from 'lucide-react';
 import { formatShopDate, shopMethod, whatsappLink } from '@/lib/shopSelling';
 import { outsideLinkProps } from '@/lib/nativeApp';
+import { formatMoney } from '@/lib/money';
 
 // A free-shop order's details on the owner's order card: how the buyer gets it,
 // the date, the buyer and how to reach them, the address and the delivery charge.
@@ -50,7 +51,7 @@ export default function ShopOrderInfo({ order, currency, shopName }) {
         <p className="flex items-start gap-1"><MapPin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> {f.address}</p>
       )}
       {method === 'delivery' && (
-        <p>Delivery: {f.fee_mode === 'extra' ? (fee > 0 ? `${currency} ${fee.toFixed(2)}` : 'free (order above the free-delivery amount)') : 'included in prices'}</p>
+        <p>Delivery: {f.fee_mode === 'extra' ? (fee > 0 ? formatMoney(fee, currency) : 'free (order above the free-delivery amount)') : 'included in prices'}</p>
       )}
       {method === 'collection' && f.area && <p className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> Collect at {f.area}</p>}
     </div>

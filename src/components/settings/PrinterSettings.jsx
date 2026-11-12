@@ -29,7 +29,8 @@ const getRSSILabel = (rssi) => {
   return '▮░░░ Weak';
 };
 
-export default function PrinterSettings({ tenantId, merchantName, receiptPaperSize }) {
+// currency and tax: the shop's, for the test print's sample amounts (Settings passes them).
+export default function PrinterSettings({ tenantId, merchantName, receiptPaperSize, currency = 'SGD', tax }) {
   const [mode, setMode] = useState('bluetooth');
   const [btDevice, setBtDevice] = useState(null);
   // Off by default — this changes production behavior (a chit fires for
@@ -272,7 +273,7 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
     const activeProtocol = cfg?.protocol || protocol;
     const bytes = activeProtocol === 'tspl'
       ? buildTSPLTestReceipt(merchantName)
-      : buildTestReceipt(merchantName, paperSize);
+      : buildTestReceipt(merchantName, paperSize, { currency, tax });
     try {
       if (cfg?.mode === 'bluetooth' && cfg.deviceName) {
         await sendViaBluetooth(cfg.deviceName, bytes, cfg.deviceId);

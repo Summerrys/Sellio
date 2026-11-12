@@ -6,6 +6,8 @@
 // and cancelled orders are reported separately and never counted as sales. Amounts
 // are order totals (after discounts, including tax). Dates use the device's local time.
 
+import { formatMoney } from './money';
+
 export const SALES_RULE_TEXT =
   'Sales count paid orders that are not cancelled. Amounts are order totals (after discounts, including tax).';
 
@@ -76,10 +78,13 @@ export function fmtPeriod(period) {
 }
 
 // ── text ────────────────────────────────────────────────────────────────────
+// In the shop's currency as lib/money.js writes it (S$1,234.50, RM…, Rp1.234.500); with no
+// currency, the number alone.
 export function fmtMoney(v, currency = 'SGD') {
   const n = round2(v);
+  if (currency) return formatMoney(n, currency);
   const s = Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return `${n < 0 ? '-' : ''}${currency ? `${currency} ` : ''}${s}`;
+  return `${n < 0 ? '-' : ''}${s}`;
 }
 export function fmtQty(v) {
   const n = num(v);

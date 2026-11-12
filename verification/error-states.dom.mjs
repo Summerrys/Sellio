@@ -407,22 +407,22 @@ try {
     await wait(20);
     const body = document.body;
     const openCheckout = async () => {
-      const bar = [...body.querySelectorAll('button')].find((b) => /^3 \$10\.80$/.test(text(b)));
+      const bar = [...body.querySelectorAll('button')].find((b) => /^3 S\$10\.80$/.test(text(b)));
       await click(bar);
       await click(button(body, 'Proceed to checkout'));
     };
     await openCheckout();
-    assert.ok(button(body, 'Place order · $10.80'), 'the checkout is open');
+    assert.ok(button(body, 'Place order · S$10.80'), 'the checkout is open');
 
     // Offline: nothing is sent; it says so, and that nothing was paid.
     setOnline(false);
-    await click(button(body, 'Place order · $10.80'));
+    await click(button(body, 'Place order · S$10.80'));
     let problem = body.querySelector('[data-testid="checkout-problem"]');
     assert.ok(problem, 'the problem stays on the checkout');
     assert.equal(problem.getAttribute('data-kind'), 'offline');
     assert.equal(text(problem), 'Your order wasn’t sent Your phone is offline, so the order didn’t reach Kopi Corner. Nothing was sent, and you haven’t paid. Waiting for the internet…');
     assert.equal(placed().length, 0, 'offline: no request at all');
-    assert.equal(button(body, 'Place order · $10.80'), undefined, 'Place order gives way to the ways forward');
+    assert.equal(button(body, 'Place order · S$10.80'), undefined, 'Place order gives way to the ways forward');
     assert.deepEqual(buttons(body.querySelector('[data-testid="checkout-problem-actions"]')), ['Try again', 'Show my order to staff']);
     assert.ok(text(body).includes('Kaya toast set'), 'the order is still there, under the message');
     assert.equal(globalThis.toasts.filter((t) => t.kind === 'error').length, 0, 'no vanishing toast instead');
@@ -436,7 +436,7 @@ try {
     await click(button(body, 'Show my order to staff'));
     const staff = body.querySelector('[data-testid="order-for-staff"]');
     assert.ok(staff);
-    assert.equal(text(staff), 'Kopi Corner · Takeaway My order This order hasn’t been sent. Please take it for me. 2 × Kaya toast set Soft-boiled eggs $9.00 1 × Kopi C “Less sugar” $1.80 Total $10.80 Back');
+    assert.equal(text(staff), 'Kopi Corner · Takeaway My order This order hasn’t been sent. Please take it for me. 2 × Kaya toast set Soft-boiled eggs S$9.00 1 × Kopi C “Less sugar” S$1.80 Total S$10.80 Back');
     assert.equal(staff.querySelector('h2').style.fontSize, '28px', 'large, to be read across the counter');
     await click(button(staff, 'Back'));
     assert.equal(body.querySelector('[data-testid="order-for-staff"]'), null);
@@ -477,7 +477,7 @@ try {
     await wait(20);
     await openCheckout();
     globalThis.placeOrder = () => ({ data: null, error: { code: 'P0002', message: 'An item in your cart is no longer available', details: null, hint: null } });
-    await click(button(body, 'Place order · $10.80'));
+    await click(button(body, 'Place order · S$10.80'));
     await wait();
     problem = body.querySelector('[data-testid="checkout-problem"]');
     assert.equal(text(problem), 'Your order wasn’t sent An item in your cart is no longer available. Nothing was sent, and you haven’t paid.');
@@ -491,7 +491,7 @@ try {
 
     // No answer, then a different order: it may have arrived; Send this order uses a new key.
     globalThis.placeOrder = () => ({ data: null, error: { message: 'TypeError: Failed to fetch', code: '' } });
-    await click(button(body, 'Place order · $10.80'));
+    await click(button(body, 'Place order · S$10.80'));
     await wait();
     const firstKey = placed().at(-1).args.p_request_id;
     const notes = body.querySelector('textarea');

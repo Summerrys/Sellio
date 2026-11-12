@@ -11,6 +11,7 @@ import { deleteImageFromStorage } from '@/lib/imageStorage';
 import PhotoSourceControl from '../ui-custom/PhotoSourceControl';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { allowanceLine, allowanceSpent, lastSuggestion, functionErrorMessage } from '@/lib/aiAllowance';
+import { formatMoney } from '@/lib/money';
 
 // An error whose message is meant for the person (from our own functions).
 const friendlyError = (message) => Object.assign(new Error(message), { friendly: true });
@@ -784,7 +785,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">📂 {result.suggested_category}</span>
                   )}
                   {result.estimated_price > 0 && (
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">💰 {currency} {result.estimated_price.toFixed(2)}</span>
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">💰 {formatMoney(result.estimated_price, currency)}</span>
                   )}
                   {result.suggested_tags?.slice(0, 3).map(tag => (
                     <span key={tag} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">#{tag}</span>

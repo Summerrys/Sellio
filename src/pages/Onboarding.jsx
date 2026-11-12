@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,6 +13,7 @@ import AppLoader from '@/components/ui-custom/AppLoader';
 import { getSupabase } from '@/lib/supabaseClient';
 import { decideOnboardingAccess } from '@/lib/accountFlow';
 import { useBackToClose, removeBackStep } from '@/lib/useBackToClose';
+import { COUNTRIES, countryNamed, visitorCountry } from '@/lib/countries';
 
 const STORAGE_KEY = 'apptelier_onboarding_state';
 
@@ -59,16 +60,19 @@ export default function Onboarding() {
     return newId;
   };
 
+  // The country starts as the visitor's when their phone or computer is in one of Sellio's
+  // (lib/countries.js), else Singapore; its currency and tax preset come with it.
+  const [startCountry] = useState(() => countryNamed(visitorCountry()) || COUNTRIES[0]);
   const [formData, setFormData] = useState({
     // Step 1 (Business & Theme)
     businessName: '',
     businessType: '',
-    country: 'Singapore',
+    country: startCountry.name,
     logoUrl: '',
     theme: '',
     // Step 2 (Branch Setup)
-    currency: 'SGD',
-    taxRate: 9,
+    currency: startCountry.currency,
+    taxRate: startCountry.tax.rate,
     taxInclusive: false,
     businessHours: {},
     tableCount: 0,

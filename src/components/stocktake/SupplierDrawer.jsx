@@ -11,6 +11,8 @@ import { toast } from 'sonner';
 import { showError } from '@/lib/plainError';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
 import { useBackToClose } from '@/lib/useBackToClose';
+import { useTenant } from '@/components/tenant/TenantContext';
+import { shopCountry } from '@/lib/countries';
 
 const EMPTY_SUPPLIER = { name: '', phone: '', contact_person: '', notes: '', is_active: true };
 
@@ -31,6 +33,9 @@ function downloadCSV(filename, content, { tenantId, label } = {}) {
 }
 
 export default function SupplierDrawer({ open, onClose, tenantId }) {
+  // A supplier's phone starts with the shop's own country code (+65, +60 or +62).
+  const { tenant } = useTenant();
+  const dial = shopCountry(tenant).dial;
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(null); // null or supplier object
   const [form, setForm] = useState(EMPTY_SUPPLIER);
@@ -240,7 +245,7 @@ function SupplierForm({ form, onChange, onSave, onCancel, saving }) {
         </div>
         <div>
           <label className="text-xs text-slate-500 mb-1 block">Phone</label>
-          <Input value={form.phone} onChange={e => onChange(f => ({ ...f, phone: e.target.value }))} placeholder="+65..." className="h-9" />
+          <Input value={form.phone} onChange={e => onChange(f => ({ ...f, phone: e.target.value }))} placeholder={`+${dial}...`} className="h-9" />
         </div>
         <div>
           <label className="text-xs text-slate-500 mb-1 block">Contact Person</label>

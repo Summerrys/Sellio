@@ -28,6 +28,8 @@ import PricingModal from '../components/subscription/PricingModal';
 import { useAppRefreshHandler, useAppReloadGuard } from '@/lib/AppRefreshContext';
 import useSettingsDraft from '@/hooks/useSettingsDraft';
 import SellingSettingsForm from '../components/shop/SellingSettingsForm';
+import { currencyPrefix } from '@/lib/money';
+import { paymentQrName } from '@/lib/countries';
 
 export default function TenantSettings() {
   return (
@@ -119,7 +121,7 @@ export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
           <div className="w-full text-center">
             <p className="text-sm font-semibold text-slate-800 mb-1">Payment QR Code</p>
             <p className="text-xs text-slate-400">
-              Upload your PayNow, Touch N Go, DuitNow or any payment QR.<br />
+              Upload the QR code customers scan to pay you, for example your {paymentQrName(tenant)} QR.<br />
               Shown to customers after they place an order.
             </p>
           </div>
@@ -210,7 +212,7 @@ export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
                 className="h-10"
                 value={paymentQRLabel}
                 onChange={e => setPaymentQRLabel(e.target.value)}
-                placeholder="e.g. Scan to pay via PayNow"
+                placeholder="e.g. Scan to pay"
                 disabled={!canEditPayments}
               />
             </div>
@@ -220,7 +222,7 @@ export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
                 className="h-10"
                 value={paymentReference}
                 onChange={e => setPaymentReference(e.target.value)}
-                placeholder="e.g. UEN 12345678A"
+                placeholder="e.g. account name or number"
                 disabled={!canEditPayments}
               />
             </div>
@@ -339,7 +341,7 @@ function TenantSettingsContent() {
         )}
         {settingsTab === 'selling' && showSellingTab && (
           <div className="max-w-2xl mx-auto">
-            <SellingSettingsForm tenantId={tenantId} currencySymbol={tenant?.currency === 'MYR' ? 'RM ' : '$'} country={tenant?.country || ''} />
+            <SellingSettingsForm tenantId={tenantId} currencySymbol={currencyPrefix(tenant?.currency)} country={tenant?.country || ''} />
           </div>
         )}
         {settingsTab === 'payment_qr' && (

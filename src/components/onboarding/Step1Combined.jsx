@@ -14,6 +14,7 @@ import { generateThemeVariables, COLOR_SETS as POPULAR_PALETTES, DEFAULT_GRADIEN
 import { INDUSTRY_OPTIONS } from '@/lib/industry';
 import { offerInstall } from '@/lib/pwaInstall';
 import { useBackToClose } from '@/lib/useBackToClose';
+import { COUNTRIES, countryNamed } from '@/lib/countries';
 
 const schema = z.object({
   businessName: z.string().min(2, 'Business name is required').max(100, 'Business name must be under 100 characters'),
@@ -27,7 +28,9 @@ const schema = z.object({
 // share this one list (src/lib/industry.js) so there's nothing left to drift.
 const businessTypes = INDUSTRY_OPTIONS;
 
-const countries = ['Singapore', 'Malaysia'];
+// Sellio's countries (lib/countries.js). The country picked here sets the shop's currency and
+// tax preset (and, in the database, its time zone): Indonesia is Rupiah, no tax, Jakarta time.
+const countries = COUNTRIES.map((country) => country.name);
 
 
 
@@ -192,7 +195,8 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
       });
     }
     
-    updateFormData({ ...data, ...themeData });
+    const picked = countryNamed(data.country) || COUNTRIES[0];
+    updateFormData({ ...data, ...themeData, currency: picked.currency, taxRate: picked.tax.rate });
 
     // Offer "Install Sellio" right after the merchant commits to filling in real business
     // details (the natural "I'm serious about this" moment): the banner at the top of the

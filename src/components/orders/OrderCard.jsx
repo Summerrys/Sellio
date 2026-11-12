@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Clock, MapPin, User, AlertCircle } from 'lucide-react';
+import { Clock, MapPin, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatMoney } from '@/lib/money';
 
 export default function OrderCard({ order, onStatusChange, onClick, currency }) {
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -99,7 +100,7 @@ export default function OrderCard({ order, onStatusChange, onClick, currency }) 
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-        <span className="font-bold text-slate-900">{currency} {order.total_amount.toFixed(2)}</span>
+        <span className="font-bold text-slate-900">{formatMoney(order.total_amount, currency)}</span>
         {action && (
           <Button
             size="sm"

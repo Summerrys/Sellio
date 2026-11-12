@@ -2,6 +2,8 @@
 // shown, settled and printed as a whole. Shared by the Counter, the Orders page and
 // the printed receipt, so all three always show the same items and total.
 
+import { formatMoney } from './money';
+
 const ROUND_FIELDS = 'id, order_number, status, payment_status, payment_method, created_date, items, subtotal, tax_amount, discount_amount, total_amount, table_id, table_name, is_deleted';
 const SESSION_FIELDS = 'id, table_id, table_name, status, order_ids, total_amount, started_at, ended_at';
 
@@ -116,7 +118,7 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => (
 
 // Browser-print version of the table receipt, for shops without a receipt printer.
 export function tableReceiptHtml(bill, currency, merchantName) {
-  const money = n => `${escapeHtml(currency)} ${(Number(n) || 0).toFixed(2)}`;
+  const money = n => escapeHtml(formatMoney(Number(n) || 0, currency));
   const rows = (bill.items || []).map(item => `<tr>
       <td style="padding:4px 8px 4px 0">${item.quantity}× ${escapeHtml(item.name)}${item.variant ? ` (${escapeHtml(item.variant)})` : ''}</td>
       <td style="padding:4px 0;text-align:right">${money(item.total)}</td>

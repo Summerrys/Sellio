@@ -106,11 +106,11 @@ export default function SellingSettingsForm({ tenantId, currencySymbol = '$', co
         onChange={v => set('collection', 'enabled', v)}
         testId="selling-collection"
       >
-        <Field label="Area shown on your store page (optional)" hint="For example: Tampines, near Blk 201" htmlFor="sell-area">
-          <Input id="sell-area" value={c.area} maxLength={60} onChange={e => set('collection', 'area', e.target.value)} placeholder="Tampines" />
+        <Field label="Area shown on your store page (optional)" hint="For example: your neighbourhood or a landmark near you" htmlFor="sell-area">
+          <Input id="sell-area" value={c.area} maxLength={60} onChange={e => set('collection', 'area', e.target.value)} placeholder="Neighbourhood" />
         </Field>
         <Field label="Collection address" hint="Buyers see this only after you accept their order." htmlFor="sell-address">
-          <Textarea id="sell-address" value={c.address} maxLength={300} rows={2} onChange={e => set('collection', 'address', e.target.value)} placeholder="Blk 201 Tampines St 21, #01-123, Singapore 520201" />
+          <Textarea id="sell-address" value={c.address} maxLength={300} rows={2} onChange={e => set('collection', 'address', e.target.value)} placeholder="Street, building, unit" />
         </Field>
         {/* So the seller can check the pin (the shop's country is added when missing). */}
         <AddressMap
@@ -166,10 +166,10 @@ export default function SellingSettingsForm({ tenantId, currencySymbol = '$', co
           </div>
         )}
         <Field label="Areas you deliver to (optional)" htmlFor="sell-areas">
-          <Input id="sell-areas" value={d.areas} maxLength={200} onChange={e => set('delivery', 'areas', e.target.value)} placeholder="All of Singapore" />
+          <Input id="sell-areas" value={d.areas} maxLength={200} onChange={e => set('delivery', 'areas', e.target.value)} placeholder="e.g. within 5 km" />
         </Field>
-        <Field label="Delivery notes (optional)" hint="For example: by Grab or Lalamove; SingPost, 3–5 working days." htmlFor="sell-dnotes">
-          <Input id="sell-dnotes" value={d.notes} maxLength={300} onChange={e => set('delivery', 'notes', e.target.value)} placeholder="SingPost, 3–5 working days" />
+        <Field label="Delivery notes (optional)" hint="For example: by courier, 3–5 working days." htmlFor="sell-dnotes">
+          <Input id="sell-dnotes" value={d.notes} maxLength={300} onChange={e => set('delivery', 'notes', e.target.value)} placeholder="Courier, 3–5 working days" />
         </Field>
       </Section>
 

@@ -9,20 +9,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { useTenant } from '../tenant/TenantContext';
 import db from '@/lib/db';
+import { shopCountry } from '@/lib/countries';
 
 const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6a3R1dGVlZGJ0bmF4ZmR5bHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NzY2NzIsImV4cCI6MjA5MDU1MjY3Mn0.zZL0Tyizzj3U8JTggYYKZ8BFrhDOKAzwISGNPJDAFzg';
 
 const COUNTRY_CODES = [
-  { code: '+65', label: '🇸🇬 +65' },
-  { code: '+60', label: '🇲🇾 +60' },
+  { code: '+65', label: '🇸🇬 +65', placeholder: '91234567' },
+  { code: '+60', label: '🇲🇾 +60', placeholder: '112345678' },
+  { code: '+62', label: '🇮🇩 +62', placeholder: '81234567890' },
 ];
 
 export default function CreateStaffDialog({ open, onClose, onSuccess }) {
-  const { tenantId } = useTenant();
+  const { tenantId, tenant } = useTenant();
+  // The shop's own country's code first (lib/countries.js).
+  const homeCode = `+${shopCountry(tenant).dial}`;
   const [form, setForm] = useState({
     fullName: '',
-    countryCode: '+65',
+    countryCode: homeCode,
     phone: '',
     password: '',
     confirmPassword: '',
@@ -60,7 +64,8 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
     setLoading(true);
     setError('');
     try {
-      const fullPhone = `${form.countryCode}${form.phone.trim()}`;
+      // A number typed with its leading 0 (0812…) is the same number without it.
+      const fullPhone = `${form.countryCode}${form.phone.trim().replace(/^0+/, '')}`;
       const supabase = await getSupabase();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
@@ -94,7 +99,7 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
       // The privileged function creates Auth, app_users and tenant_users together.
       // The caller's own session remains untouched.
       toast.success('Staff account created successfully');
-      setForm({ fullName: '', countryCode: '+65', phone: '', password: '', confirmPassword: '', roleId: '' });
+      setForm({ fullName: '', countryCode: homeCode, phone: '', password: '', confirmPassword: '', roleId: '' });
       onSuccess?.();
     } catch (err) {
       setError(err?.response?.data?.error || err.message || 'Something went wrong');
@@ -106,7 +111,7 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
   const handleOpenChange = (open) => {
     if (!open) {
       setError('');
-      setForm({ fullName: '', countryCode: '+65', phone: '', password: '', confirmPassword: '', roleId: '' });
+      setForm({ fullName: '', countryCode: homeCode, phone: '', password: '', confirmPassword: '', roleId: '' });
       onClose?.();
     }
   };
@@ -144,7 +149,7 @@ export default function CreateStaffDialog({ open, onClose, onSuccess }) {
                 </SelectContent>
               </Select>
               <Input
-                placeholder="91234567"
+                placeholder={COUNTRY_CODES.find((c) => c.code === form.countryCode)?.placeholder || ''}
                 value={form.phone}
                 onChange={set('phone')}
                 inputMode="numeric"

@@ -9,6 +9,11 @@ import { offerPushAlerts } from '@/lib/pushOffer';
 import StorefrontView from '@/components/storefront/StorefrontView';
 import MenuAssistantWidget from '@/components/storefront/MenuAssistantWidget';
 import { LanguageProvider, useLanguage, prewarmTranslations } from '@/lib/LanguageContext';
+import { shopCountry } from '@/lib/countries';
+
+// The languages a shop's menu is translated into ahead of time: Chinese and Malay, and for an
+// Indonesian shop (menu written in Indonesian) English too. Others are fetched when chosen.
+const warmLanguages = (shop) => (shopCountry(shop).code === 'ID' ? ['en', 'zh', 'ms'] : ['zh', 'ms']);
 import { isFnBIndustry } from '@/lib/industry';
 import { fetchStorefrontCatalog } from '@/lib/storefrontCatalog';
 import { handOverBackStep, useBackToClose } from '@/lib/useBackToClose';
@@ -25,6 +30,7 @@ import { OrderRateRow, RateOrderSheet, RatePrompt, RatingSheet } from '@/compone
 import LoadingShapes, { StoreShapes } from '@/components/ui-custom/LoadingShapes';
 // Open/closed from the posted hours, including hours that close at or past midnight.
 import { computeStoreOpenState } from '@/lib/storeHours';
+import { formatMoney } from '@/lib/money';
 
 // Orders whose "How was your order?" card was dismissed (shown once per order).
 const RATE_PROMPT_KEY = 'sellio_rate_prompt_dismissed';
@@ -50,7 +56,7 @@ const STATUS_COLORS = {
 function StorefrontInner() {
   const { tenantSlug, tableId } = useParams();
   const navigate = useNavigate();
-  const { t, lang } = useLanguage();
+  const { t, lang, preferLanguage, setContentLang } = useLanguage();
   const isDineIn = !!tableId;
   const isPreview = new URLSearchParams(window.location.search).get('preview') === 'true';
   // Set by the staff-facing "Take Orders" flow on the Dashboard, so a staff member
@@ -233,6 +239,9 @@ function StorefrontInner() {
       // field (older database) keeps the menu open.
       if (tenantData.is_available === false) { setUnavailableStore(tenantData); setLoading(false); return; }
       setTenant(tenantData);
+      // An Indonesian shop (12 Nov 2026): its page opens in Bahasa Indonesia for a visitor who
+      // hasn't chosen a language, and its menu is taken as written in Indonesian.
+      if (shopCountry(tenantData).code === 'ID') { preferLanguage('id'); setContentLang('id'); }
       const tenantId = tenantData.id;
       const [themeRes, storefrontRes, catalog, shopRes] = await Promise.all([
         supabase.from('theme_configs').select('*').eq('tenant_id', tenantId).maybeSingle(),
@@ -253,7 +262,7 @@ function StorefrontInner() {
       catalog.products.forEach(p => { if (p.name) contentToPrewarm.push(p.name); if (p.description) contentToPrewarm.push(p.description); });
       catalog.categories.forEach(c => { if (c.name) contentToPrewarm.push(c.name); });
       if (storefrontRes.data?.featured_section_title) contentToPrewarm.push(storefrontRes.data.featured_section_title);
-      prewarmTranslations(contentToPrewarm);
+      prewarmTranslations(contentToPrewarm, warmLanguages(tenantData));
       if (tableId) {
         // Validates the table, marks it occupied and opens a session if none is
         // active — all server-side (the browser no longer writes these tables).
@@ -356,7 +365,7 @@ function StorefrontInner() {
           catalog.categories.forEach(c => {
             if (c.name) contentToPrewarm.push(c.name);
           });
-          prewarmTranslations(contentToPrewarm);
+          prewarmTranslations(contentToPrewarm, warmLanguages(tenant));
         }
       } catch {
         // Preserve the current catalogue and retry on the next event/focus.
@@ -553,7 +562,8 @@ function StorefrontInner() {
   const cartTotal = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
   const primaryColor = storefrontConfig?.banner_bg_color || theme?.primary_color || '#6366f1';
   const currency = tenant?.currency || 'SGD';
-  const sym = { SGD:'$', MYR:'RM ', USD:'$', AUD:'A$', GBP:'£', EUR:'€' }[currency] || (currency + ' ');
+  // Money as the shop's currency writes it (lib/money.js): S$10.80, RM10.80, Rp38.000.
+  const money = (n) => formatMoney(Number(n) || 0, currency);
   const isFnB = isFnBIndustry(tenant?.industry);
 
   const addToCart = (product, variant = null, notes = null) => {
@@ -989,7 +999,7 @@ function StorefrontInner() {
             whiteSpace: 'nowrap',
           }}>
             <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>{cartCount}</span>
-            {sym}{cartTotal.toFixed(2)}
+            {money(cartTotal)}
           </button>
         </div>
       )}
@@ -1030,7 +1040,7 @@ function StorefrontInner() {
                     <div style={{ flex: 1 }}>
                       <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 2px', color: '#0f172a' }}>{item.name}</p>
                       {item.variant && <p style={{ fontSize: 11, color: '#94a3b8', margin: '0 0 4px' }}>{item.variant}</p>}
-                      <p style={{ fontWeight: 700, fontSize: 13, color: primaryColor, margin: 0 }}>{sym}{(item.price * item.quantity).toFixed(2)}</p>
+                      <p style={{ fontWeight: 700, fontSize: 13, color: primaryColor, margin: 0 }}>{money(item.price * item.quantity)}</p>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                                       <button onClick={() => updateQuantity(item.key, item.quantity - 1)} style={{ width: 28, height: 28, background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 300, lineHeight: 1 }}>−</button>
@@ -1041,7 +1051,7 @@ function StorefrontInner() {
                 ))}
                 <div style={{ borderTop: '0.5px solid #e5e7eb', paddingTop: 12, marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ fontWeight: 600, fontSize: 15 }}>{t('total')}</span>
-                  <span style={{ fontWeight: 700, fontSize: 18, color: primaryColor }}>{sym}{cartTotal.toFixed(2)}</span>
+                  <span style={{ fontWeight: 700, fontSize: 18, color: primaryColor }}>{money(cartTotal)}</span>
                 </div>
                 {!isStoreOpen ? (
                   <div style={{ width: '100%', padding: 14, background: '#f1f5f9', color: '#94a3b8', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, textAlign: 'center' }}>
@@ -1066,7 +1076,7 @@ function StorefrontInner() {
               <button onClick={() => setShowOrderHistory(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22, lineHeight: 1 }}>✕</button>
             </div>
             {shopSelling ? (
-              <ShopOrderHistory orders={orderHistory} sym={sym} lang={lang} food={isFnB} primaryColor={primaryColor} paymentQrUrl={tenant.payment_qr_url}
+              <ShopOrderHistory orders={orderHistory} currency={currency} lang={lang} food={isFnB} primaryColor={primaryColor} paymentQrUrl={tenant.payment_qr_url}
                 renderExtra={(order) => <OrderRateRow order={order} rating={myRatings[order.id]} onPick={(n) => pickRating(order, n)} accent={primaryColor} />} />
             ) : orderHistory.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0' }}><p style={{ fontSize: 36, margin: '0 0 8px' }}>🍽️</p><p style={{ color: '#94a3b8', fontSize: 14 }}>No orders yet</p></div>
@@ -1085,12 +1095,12 @@ function StorefrontInner() {
                     {(order.items || []).map((item, idx) => (
                       <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b', marginBottom: 2 }}>
                         <span>{item.name}{item.variant ? ` (${item.variant})` : ''} × {item.quantity}</span>
-                        <span style={{ fontWeight: 600 }}>{currency} {(item.price * item.quantity).toFixed(2)}</span>
+                        <span style={{ fontWeight: 600 }}>{money(item.price * item.quantity)}</span>
                       </div>
                     ))}
                     <div style={{ borderTop: '0.5px solid #e5e7eb', marginTop: 8, paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 13 }}>
                       <span>{t('total')}</span>
-                      <span style={{ color: primaryColor }}>{currency} {parseFloat(order.total_amount || 0).toFixed(2)}</span>
+                      <span style={{ color: primaryColor }}>{money(order.total_amount)}</span>
                     </div>
                     <OrderRateRow order={order} rating={myRatings[order.id]} onPick={(n) => pickRating(order, n)} accent={primaryColor} />
                   </div>
@@ -1131,13 +1141,13 @@ function StorefrontInner() {
                       <p style={{ fontSize: 12, color: '#64748b', margin: '2px 0 0' }}>× {item.quantity}</p>
                     </div>
                   </div>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: primaryColor }}>{sym}{(item.price * item.quantity).toFixed(2)}</span>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: primaryColor }}>{money(item.price * item.quantity)}</span>
                 </div>
               ))}
               {!shopSelling && (
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
                 <span style={{ fontWeight: 700, fontSize: 15 }}>{t('total')}</span>
-                <span style={{ fontWeight: 700, fontSize: 17, color: primaryColor }}>{sym}{cartTotal.toFixed(2)}</span>
+                <span style={{ fontWeight: 700, fontSize: 17, color: primaryColor }}>{money(cartTotal)}</span>
               </div>
               )}
             </div>
@@ -1145,7 +1155,7 @@ function StorefrontInner() {
               <ShopCheckout
                 selling={shopSelling}
                 cartTotal={cartTotal}
-                sym={sym}
+                currency={currency}
                 primaryColor={primaryColor}
                 lang={lang}
                 isSubmitting={isSubmitting}
@@ -1189,7 +1199,7 @@ function StorefrontInner() {
                 disabled={isSubmitting}
                 style={{ width: '100%', padding: 14, background: isSubmitting ? '#94a3b8' : primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
               >
-                {isSubmitting ? t('placingOrder') : `${t('placeOrder')} · ${sym}${cartTotal.toFixed(2)}`}
+                {isSubmitting ? t('placingOrder') : `${t('placeOrder')} · ${money(cartTotal)}`}
               </button>
             )}
             </>)}
@@ -1204,7 +1214,7 @@ function StorefrontInner() {
           place={isDineIn ? table?.name : t('takeaway')}
           lines={cart}
           total={cartTotal}
-          sym={sym}
+          currency={currency}
           maybeSent={checkoutProblem?.kind === 'unconfirmed' || checkoutProblem?.kind === 'earlier'}
           t={t}
           primaryColor={primaryColor}
@@ -1267,7 +1277,7 @@ function StorefrontInner() {
 
             {shopSelling && lastOrder?.fulfilment && (
               <div style={{ width: '100%', background: 'white', borderRadius: 16, border: '1px solid #e2e8f0', padding: '14px 16px', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-                <ShopOrderDetails order={lastOrder} sym={sym} lang={lang} food={isFnB} sellerPhone={tenant.phone} />
+                <ShopOrderDetails order={lastOrder} currency={currency} lang={lang} food={isFnB} sellerPhone={tenant.phone} />
               </div>
             )}
 
@@ -1287,12 +1297,12 @@ function StorefrontInner() {
                         <p style={{ margin: '2px 0 0', fontSize: 11, color: '#94a3b8' }}>{item.variant}</p>
                       )}
                     </div>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#374151', flexShrink: 0 }}>{currency} {(item.price * item.quantity).toFixed(2)}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#374151', flexShrink: 0 }}>{money(item.price * item.quantity)}</span>
                   </div>
                 ))}
                 <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 12, paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{t('total')}</span>
-                  <span style={{ fontSize: 16, fontWeight: 800, color: primaryColor }}>{sym}{lastCartTotal.toFixed(2)}</span>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: primaryColor }}>{money(lastCartTotal)}</span>
                 </div>
               </div>
             </div>
@@ -1304,7 +1314,7 @@ function StorefrontInner() {
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#0f172a', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
                     {tenant.payment_qr_label || t('payViaQr')}
                   </p>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: primaryColor }}>{sym}{lastCartTotal.toFixed(2)}</span>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: primaryColor }}>{money(lastCartTotal)}</span>
                 </div>
                 <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   {/* QR code with long-press hint */}
@@ -1347,7 +1357,7 @@ function StorefrontInner() {
                     {[
                       { step: '1', text: t('payStep1') },
                       { step: '2', text: t('payStep2') },
-                      { step: '3', text: `${t('payStep3')} (${sym}${lastCartTotal.toFixed(2)})` },
+                      { step: '3', text: `${t('payStep3')} (${money(lastCartTotal)})` },
                     ].map(({ step, text }) => (
                       <div key={step} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: step !== '3' ? 8 : 0 }}>
                         <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>

@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Users, UserPlus, DollarSign } from 'lucide-react';
 import { isWithinInterval } from 'date-fns';
+import { formatMoney } from '@/lib/money';
 
 function StatCard({ label, value, icon: Icon, iconBg, iconColor }) {
   return (
@@ -68,7 +69,7 @@ export default function CustomerInsights({ customers, dateRange, currency, theme
         />
         <StatCard
           label="Avg Spend"
-          value={`${currency} ${avgSpend.toFixed(2)}`}
+          value={formatMoney(avgSpend, currency)}
           icon={DollarSign}
           iconBg="bg-purple-50"
           iconColor="text-purple-600"
@@ -127,7 +128,7 @@ export default function CustomerInsights({ customers, dateRange, currency, theme
                       </div>
                     </div>
                     <p className="text-xs sm:text-sm font-bold flex-shrink-0 ml-2" style={{ color: themeColors.primary }}>
-                      {currency} {(c.total_spent || 0).toFixed(2)}
+                      {formatMoney(c.total_spent || 0, currency)}
                     </p>
                   </div>
                 ))}

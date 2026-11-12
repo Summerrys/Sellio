@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { X, Upload, Plus, Pencil, Loader2 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,8 +10,9 @@ import { shrinkImage, withExt, PHOTO_MAX_SIDE } from '@/lib/imageShrink';
 import { toast } from 'sonner';
 import { showError } from '@/lib/plainError';
 import { useBackToClose } from '@/lib/useBackToClose';
+import { currencyDecimals } from '@/lib/money';
 
-export default function EditItemModal({ item, categories, themeColor, primaryColor, onSave, onClose }) {
+export default function EditItemModal({ item, categories, themeColor, primaryColor, onSave, onClose, currency = 'SGD' }) {
   useBackToClose(true, onClose); // phone / browser Back closes it, like its ✕ (shown only while open)
    const [name, setName] = useState(item.name);
    const [price, setPrice] = useState(String(item.price));
@@ -228,8 +229,8 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
 
             {/* Price */}
             <div>
-              <Label className="text-sm font-medium text-slate-700 block mb-2">$ Price</Label>
-              <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" step="0.01" min="0" className="h-10 text-sm" />
+              <Label className="text-sm font-medium text-slate-700 block mb-2">Price ({currency})</Label>
+              <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder={currencyDecimals(currency) === 0 ? '0' : '0.00'} step={currencyDecimals(currency) === 0 ? '1' : '0.01'} min="0" className="h-10 text-sm" />
             </div>
 
             {/* Description */}

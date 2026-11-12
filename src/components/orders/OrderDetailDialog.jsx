@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { MapPin, Clock, User, Printer, XCircle } from 'lucide-react';
 import StatusBadge from '../ui-custom/StatusBadge';
+import { formatMoney } from '@/lib/money';
 
 export default function OrderDetailDialog({ open, onOpenChange, order, onPrint, onCancel, currency }) {
   if (!order) return null;
@@ -87,7 +88,7 @@ export default function OrderDetailDialog({ open, onOpenChange, order, onPrint, 
                       </div>
                     )}
                   </div>
-                  <p className="font-medium text-slate-900">{currency} {item.total.toFixed(2)}</p>
+                  <p className="font-medium text-slate-900">{formatMoney(item.total, currency)}</p>
                 </div>
               ))}
             </div>
@@ -105,21 +106,21 @@ export default function OrderDetailDialog({ open, onOpenChange, order, onPrint, 
           <div className="bg-slate-50 rounded-lg p-4 space-y-2">
             <div className="flex justify-between text-slate-600">
               <span>Subtotal</span>
-              <span>{currency} {order.subtotal.toFixed(2)}</span>
+              <span>{formatMoney(order.subtotal, currency)}</span>
             </div>
             <div className="flex justify-between text-slate-600">
               <span>Tax</span>
-              <span>{currency} {order.tax_amount.toFixed(2)}</span>
+              <span>{formatMoney(order.tax_amount, currency)}</span>
             </div>
             {order.discount_amount > 0 && (
               <div className="flex justify-between text-green-600">
                 <span>Discount</span>
-                <span>-{currency} {order.discount_amount.toFixed(2)}</span>
+                <span>-{formatMoney(order.discount_amount, currency)}</span>
               </div>
             )}
             <div className="flex justify-between text-lg font-bold text-slate-900 pt-2 border-t border-slate-200">
               <span>Total</span>
-              <span>{currency} {order.total_amount.toFixed(2)}</span>
+              <span>{formatMoney(order.total_amount, currency)}</span>
             </div>
           </div>
         </div>

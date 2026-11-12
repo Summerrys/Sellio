@@ -19,12 +19,13 @@ import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import { fetchStorefrontCatalog } from '@/lib/storefrontCatalog';
 import { createPageUrl } from '@/utils';
+import { formatMoney } from '@/lib/money';
+import { paymentQrName } from '@/lib/countries';
 
 // Counter: staff order entry for the counter tablet (adapts to phones).
 // Pick a table (or Takeaway) -> one tap per dish -> Send. Prices, order numbers
 // and each table's running bill are handled server-side by place_order().
 
-const CURRENCY_SYMBOLS = { SGD: '$', MYR: 'RM ', USD: '$', AUD: 'A$', GBP: '£', EUR: '€' };
 
 
 function splitName(s) {
@@ -100,8 +101,9 @@ function CounterScreen() {
   const navigate = useNavigate();
   const { tenantId, tenant, user, hasPermission } = useTenant();
   const draftKey = `sellio_counter_drafts:${tenantId}:${user?.id || 'staff'}`;
-  const sym = CURRENCY_SYMBOLS[tenant?.currency] || (tenant?.currency ? `${tenant.currency} ` : '$');
-  const money = useCallback(n => `${sym}${(Number(n) || 0).toFixed(2)}`, [sym]);
+  // Money as the shop's currency writes it (lib/money.js): S$4.50, RM4.50, Rp15.000.
+  const shopCurrency = tenant?.currency || 'SGD';
+  const money = useCallback(n => formatMoney(Number(n) || 0, shopCurrency), [shopCurrency]);
 
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
@@ -503,7 +505,8 @@ function CounterScreen() {
   const visibleItems = q
     ? products.filter(p => String(p.name || '').toLowerCase().includes(q))
     : cat === 'popular' ? popular : cat === 'other' ? uncategorized : products.filter(p => p.category_id === cat);
-  const qrLabel = tenant?.currency === 'MYR' ? 'QR · DuitNow / TNG' : 'QR · PayNow';
+  // The shop's own country's QR: PayNow, DuitNow or QRIS (lib/countries.js).
+  const qrLabel = `QR · ${paymentQrName(tenant)}`;
 
   return (
     <div className="ctr-root" aria-busy={sending}

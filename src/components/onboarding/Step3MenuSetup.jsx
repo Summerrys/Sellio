@@ -18,6 +18,7 @@ import { deleteImageFromStorage } from '@/lib/imageStorage';
 import { useAppUser, cookieUtils } from '@/lib/AppUserContext';
 import { normalizeIndustry } from '@/lib/industry';
 import { functionErrorMessage } from '@/lib/aiAllowance';
+import { currencyDecimals, formatMoney } from '@/lib/money';
 
 // Adding past the plan's limit during setup (5 Nov 2026: no plan checkout here, see addItem).
 const LIMIT_MESSAGE = (max) => `Your plan includes up to ${max} items. You can change your plan once your shop is set up.`;
@@ -675,7 +676,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                   <button onClick={dismissAi} className="ml-auto text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
                 </div>
                 <p className="text-sm font-bold text-slate-900">{aiResult.name}</p>
-                <p className="text-xs text-slate-500 mb-3">{aiResult.suggested_category} · {formData.currency || '$'}{aiResult.estimated_price?.toFixed(2)}</p>
+                <p className="text-xs text-slate-500 mb-3">{aiResult.suggested_category} · {formatMoney(aiResult.estimated_price, formData.currency)}</p>
                 <div className="flex gap-2">
                   <Button type="button" size="sm" onClick={applyAiResult} className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-1.5">
                     <Check className="w-4 h-4" /> Apply to fields
@@ -769,13 +770,13 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               />
             </div>
             <div>
-              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">$ Price</Label>
+              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Price ({formData.currency || 'SGD'})</Label>
               <Input
                 type="number"
                 value={itemPrice}
                 onChange={(e) => setItemPrice(e.target.value)}
-                placeholder="0.00"
-                step="0.01"
+                placeholder={currencyDecimals(formData.currency) === 0 ? '0' : '0.00'}
+                step={currencyDecimals(formData.currency) === 0 ? '1' : '0.01'}
                 min="0"
                 className="h-10 text-sm"
               />
@@ -832,7 +833,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-sm font-semibold text-slate-700">${item.price.toFixed(2)}</span>
+                    <span className="text-sm font-semibold text-slate-700">{formatMoney(item.price, formData.currency)}</span>
                     <button
                       onClick={() => startEditItem(item)}
                       className="text-slate-300 hover:text-blue-500 transition-colors"
@@ -859,6 +860,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
 
       {editingItem && (
         <EditItemModal
+          currency={formData.currency}
           item={editingItem}
           categories={categories}
           themeColor={themeColor}

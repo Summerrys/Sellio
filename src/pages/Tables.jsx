@@ -1,17 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import db from '@/lib/db';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
 import RequirePermission from '../components/auth/RequirePermission';
 import PageHeader from '../components/ui-custom/PageHeader';
-import EmptyState from '../components/ui-custom/EmptyState';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,14 +18,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import TableFormDialog from '../components/tables/TableFormDialog';
-import TableCard from '../components/tables/TableCard';
 import { QrCode, Plus, Search, LayoutGrid, List, Trash2, Download, Pencil, CheckCircle2, Users, Clock, Wrench, Check, X, Printer } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { showError } from '@/lib/plainError';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
 import { useBackToClose } from '@/lib/useBackToClose';
 import LoadingShapes, { TableShapes } from '@/components/ui-custom/LoadingShapes';
+import { formatMoney } from '@/lib/money';
 
 const NO_TABLES = [];
 
@@ -593,7 +587,7 @@ export default function Tables() {
                             return activeSession ? (
                               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginTop: '2px' }}>
                                 <span style={{ color: '#DC2626', fontWeight: '600' }}>⏱ {formatDuration(activeSession.started_at)}</span>
-                                <span style={{ fontWeight: '600', color: '#0f172a' }}>{currency} {(activeSession.total_amount || 0).toFixed(2)}</span>
+                                <span style={{ fontWeight: '600', color: '#0f172a' }}>{formatMoney(activeSession.total_amount || 0, currency)}</span>
                               </div>
                             ) : null;
                           })()}
@@ -683,7 +677,7 @@ export default function Tables() {
                               const activeSession = activeSessions.find(s => s.table_id === table.id);
                               return activeSession ? (
                                 <span style={{ fontSize: '10px', color: '#DC2626', fontWeight: '600' }}>
-                                  ⏱ {formatDuration(activeSession.started_at)} · {currency} {(activeSession.total_amount || 0).toFixed(2)}
+                                  ⏱ {formatDuration(activeSession.started_at)} · {formatMoney(activeSession.total_amount || 0, currency)}
                                 </span>
                               ) : null;
                             })()}

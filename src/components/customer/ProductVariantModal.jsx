@@ -7,11 +7,11 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Plus, Minus, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatMoney } from '@/lib/money';
 
 export default function ProductVariantModal({ open, onOpenChange, product, onAddToCart, currency }) {
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -82,7 +82,7 @@ export default function ProductVariantModal({ open, onOpenChange, product, onAdd
                     </div>
                     {variant.price_modifier !== 0 && (
                       <span className="text-sm font-semibold text-slate-700">
-                        {variant.price_modifier > 0 ? '+' : ''}{currency} {variant.price_modifier.toFixed(2)}
+                        {variant.price_modifier > 0 ? '+' : ''}{formatMoney(variant.price_modifier, currency)}
                       </span>
                     )}
                   </button>
@@ -134,7 +134,7 @@ export default function ProductVariantModal({ open, onOpenChange, product, onAdd
             className="w-full h-12 text-lg font-semibold"
             style={{ backgroundColor: 'var(--primary)' }}
           >
-            Add to Cart - {currency} {totalPrice.toFixed(2)}
+            Add to Cart - {formatMoney(totalPrice, currency)}
           </Button>
         </DialogFooter>
       </DialogContent>

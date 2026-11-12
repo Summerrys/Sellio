@@ -39,7 +39,7 @@ const requests=[];
 globalThis.__dbRows = {};
 globalThis.__client = {
   from: table => { const query = {}, eqs = [], ins = [];
-    for (const name of ['select','gte','order','limit','update','neq']) query[name]=()=>query;
+    for (const name of ['select','gte','order','limit','range','update','neq']) query[name]=()=>query;
     query.eq=(col,val)=>{eqs.push([col,val]);return query;};
     query.in=(col,vals)=>{ins.push([col,vals]);return query;};
     query.then=resolve=>{
@@ -179,21 +179,21 @@ try{
  ];
  await act(async()=>{for(const {root} of roots.slice(1))root.unmount();await tick();});
  const tbl=await mount(Counter);
- const tile=tbl.querySelector('.ctr-tile');assert.ok(tile.classList.contains('busy'));assert.match(tile.textContent,/\$9\.00/);
+ const tile=tbl.querySelector('.ctr-tile');assert.ok(tile.classList.contains('busy'));assert.match(tile.textContent,/S\$9\.00/);
  await click(tile);await act(async()=>{await tick();await tick();});
- assert.match(tbl.querySelector('.ctr-bill-bar').textContent,/Bill \$9\.00 · 2 orders/);
+ assert.match(tbl.querySelector('.ctr-bill-bar').textContent,/Bill S\$9\.00 · 2 orders/);
  const sent=tbl.querySelector('[aria-label="Already ordered"]');assert.ok(sent,'Occupied table lists what was already ordered');
  const rounds=[...sent.querySelectorAll('.ctr-round')];assert.equal(rounds.length,3);
  assert.match(rounds[0].textContent,/Round 1 · ORD-000001/);assert.match(rounds[0].textContent,/Preparing/);assert.match(rounds[0].textContent,/no butter/);
  assert.match(rounds[1].textContent,/Round 2 · ORD-000002/);assert.match(rounds[1].textContent,/Ready/);
  assert.ok(rounds[2].classList.contains('void'));assert.match(rounds[2].textContent,/Cancelled/);
- assert.match(sent.querySelector('.ctr-sent-head').textContent,/\$9\.00/);assert.ok(tbl.querySelector('.ctr-new-head'));
+ assert.match(sent.querySelector('.ctr-sent-head').textContent,/S\$9\.00/);assert.ok(tbl.querySelector('.ctr-new-head'));
  pass('An occupied table shows every round, its kitchen status and cancelled rounds struck out');
  await click(button(tbl,'Settle bill'));
  const sheet=tbl.querySelector('[aria-label="Settle Table 1"]');assert.ok(sheet);
  const billLines=[...sheet.querySelectorAll('[aria-label="Table 1 bill"] li')].map(li=>li.textContent);
- assert.deepEqual(billLines,['2× Americano · Small, Hot$7.00','1× Toast$2.00']);
- assert.equal(sheet.querySelector('.ctr-settle-total').textContent,'$9.00');assert.match(sheet.textContent,/Marks 2 orders/);
+ assert.deepEqual(billLines,['2× Americano · Small, HotS$7.00','1× ToastS$2.00']);
+ assert.equal(sheet.querySelector('.ctr-settle-total').textContent,'S$9.00');assert.match(sheet.textContent,/Marks 2 orders/);
  localStorage.setItem('sellio_printer_counter-test',JSON.stringify({mode:'bluetooth',deviceName:'Fixture Printer'}));
  const printsBefore=__prints.length;
  await click(button(sheet,'Print bill'));assert.equal(__prints.length,printsBefore+1);assert.equal(__prints.at(-1).kind,3);
@@ -202,7 +202,7 @@ try{
  await click(button(sheet,'QR · PayNow'));await act(async()=>{await tick();await tick();});
  const settleCall=requests.filter(r=>r.name==='settle_table').at(-1);assert.deepEqual(settleCall.payload,{p_session_id:'s1',p_method:'qr'});
  const done=tbl.querySelector('[aria-label="Table 1 settled"]');assert.ok(done,'Settling shows a confirmation');
- assert.match(done.textContent,/\$9\.00 · Paid by QR · PayNow/);assert.equal(__prints.length,printsBefore+1,'Nothing prints unless tapped');
+ assert.match(done.textContent,/S\$9\.00 · Paid by QR · PayNow/);assert.equal(__prints.length,printsBefore+1,'Nothing prints unless tapped');
  assert.ok(tbl.querySelector('.ctr-tables'));assert.match(tbl.querySelector('.ctr-tile').textContent,/Free/);
  await click(button(done,'Print receipt'));assert.equal(__prints.length,printsBefore+2);assert.equal(__lastTableBill.paid,true);assert.deepEqual(__lastTableBill.paidMethods,['qr']);
  await click(button(done,'Done'));assert.equal(tbl.querySelector('[aria-label="Table 1 settled"]'),null);

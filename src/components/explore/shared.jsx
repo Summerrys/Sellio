@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { isBase44Shell } from '@/lib/nativeApp';
 import { ShopMenuButton } from '@/components/navigation/ShopMenu';
+import { formatMoney } from '@/lib/money';
 
 // Shared by Explore, its listing pages and chats.
 
@@ -25,10 +26,11 @@ export const listingUrl = (productId) => `/listing/${encodeURIComponent(productI
 export const chatUrl = (conversationId) => `/explore/chats/${encodeURIComponent(conversationId)}`;
 export const newChatUrl = (productId) => `/explore/chats/new?listing=${encodeURIComponent(productId)}`;
 
+// A listing's price in its shop's currency (lib/money.js): S$4.50, RM4.50, Rp15.000.
 export function formatPrice(amount, currency) {
   const value = Number(amount);
   if (amount == null || Number.isNaN(value)) return '';
-  return `${currency === 'MYR' ? 'RM' : 'S$'}${value.toFixed(2)}`;
+  return formatMoney(value, currency);
 }
 
 export function timeAgo(iso) {

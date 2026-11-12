@@ -19,6 +19,7 @@ import { showError } from '@/lib/plainError';
 import { createPageUrl } from '@/utils';
 import { isShopTenant } from '@/lib/shopSelling';
 import { useBackToClose, handOverBackStep, removeBackStep } from '@/lib/useBackToClose';
+import { currencyPrefix, formatMoney } from '@/lib/money';
 
 // Setup steps for a new free shop (after "Sell from home"), in the same look as a
 // business's onboarding: the progress header, a card per step and the gradient
@@ -29,13 +30,12 @@ import { useBackToClose, handOverBackStep, removeBackStep } from '@/lib/useBackT
 const STEPS = [
   { key: 'look', progress: 'Shop Look', icon: Palette, title: 'Your shop’s look', subtitle: 'Add a logo and pick your colours.' },
   { key: 'selling', progress: 'How You Sell', icon: Truck, title: 'How you sell', subtitle: 'Self-collection, delivery, or both.' },
-  { key: 'payment', progress: 'Get Paid', icon: QrCode, title: 'Get paid', subtitle: 'Upload your PayNow or DuitNow QR. Buyers see it after they order.' },
+  { key: 'payment', progress: 'Get Paid', icon: QrCode, title: 'Get paid', subtitle: 'Upload your payment QR. Buyers see it after they order.' },
   { key: 'listings', progress: 'Listings', icon: ShoppingBag, title: 'Your first listings', subtitle: 'Add what you sell. You can add up to 10 on the free plan.' },
   { key: 'share', progress: 'Share Shop', icon: Share2, title: 'Share your shop', subtitle: 'Send your store page to your buyers.' },
 ];
 const GRADIENT_BUTTON = { background: 'var(--color-primary-gradient, linear-gradient(135deg, #3b82f6, #9333ea))', color: '#fff' };
 
-const SYMBOLS = { SGD: '$', MYR: 'RM ' };
 
 function LogoStep({ tenant, tenantId }) {
   const queryClient = useQueryClient();
@@ -95,6 +95,7 @@ function LogoStep({ tenant, tenantId }) {
 }
 
 function ListingsStep({ tenantId }) {
+  const { tenant } = useTenant();
   const [open, setOpen] = useState(false);
   const closeOrOpenForm = (v) => { setOpen(v); if (!v) refetch(); };
   // Phone / browser Back closes the listing form, as on the Products page.
@@ -123,7 +124,7 @@ function ListingsStep({ tenantId }) {
             <div key={item.id} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-2.5">
               {item.image_url ? <img src={item.image_url} alt="" className="w-10 h-10 rounded-lg object-cover" /> : <div className="w-10 h-10 rounded-lg bg-slate-100" />}
               <span className="flex-1 text-sm font-medium text-slate-800 truncate">{item.name}</span>
-              <span className="text-xs text-slate-500">{Number(item.price || 0).toFixed(2)}</span>
+              <span className="text-xs text-slate-500">{formatMoney(Number(item.price || 0), tenant?.currency)}</span>
             </div>
           ))}
         </div>
@@ -168,7 +169,7 @@ export default function ShopSetup() {
 
   const current = STEPS[step];
   const Icon = current.icon;
-  const sym = SYMBOLS[tenant.currency] || '$';
+  const sym = currencyPrefix(tenant.currency);
   const next = () => {
     setVisited(v => (v.includes(step + 1) ? v : [...v, step + 1]));
     setStep(s => Math.min(s + 1, STEPS.length - 1));

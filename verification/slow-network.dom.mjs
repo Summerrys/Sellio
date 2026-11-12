@@ -303,13 +303,13 @@ try {
   assert.equal(view.container.querySelectorAll('.sellio-photo-slot').length, 0);
   assert.ok(view.note());
   const gridText = text(view.container);
-  assert.match(gridText, /Teh tarik \$1\.90 Sold out/, 'grid without photos: Sold out where the + would be');
+  assert.match(gridText, /Teh tarik S\$1\.90 Sold out/, 'grid without photos: Sold out where the + would be');
   assert.doesNotMatch(gridText, /🛍️/);
   await closeAll();
   view = await mount({ storefrontConfig: { ...split, product_layout: 'list' } });
   assert.equal(view.photos().length, 0, 'list menus too, Today’s picks included');
   assert.equal(view.container.querySelectorAll('.sellio-photo-slot').length, 0, 'and no empty spaces where photos were');
-  assert.match(text(view.container), /Kaya toast set Toast, 2 soft-boiled eggs, kopi \$4\.50/);
+  assert.match(text(view.container), /Kaya toast set Toast, 2 soft-boiled eggs, kopi S\$4\.50/);
   await closeAll();
   sessionStorage.setItem(app.PHOTOS_KEY, 'on');
   view = await mount({ storefrontConfig: grid });

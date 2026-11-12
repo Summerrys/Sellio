@@ -2606,7 +2606,7 @@ function Privacy() {
       title: "Privacy Policy",
       eyebrow: "Your data, handled with care",
       intro: "This policy explains what Sellio collects, why we use it, when it may be shared and the choices available to merchants, staff and storefront customers.",
-      description: "Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and Singapore PDPA rights.",
+      description: "Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and your privacy rights.",
       path: "/privacy",
       lastUpdated: "12 November 2026",
       dateModified: "2026-11-12",
@@ -2695,7 +2695,7 @@ const sections = [
     id: "subscriptions",
     title: "Plans, trials and subscriptions",
     content: /* @__PURE__ */ jsxs(Fragment, { children: [
-      /* @__PURE__ */ jsx("p", { children: "Merchant features are offered under the plans, prices, billing periods and usage limits shown on the Sellio website or at checkout. Prices are in Singapore dollars unless stated otherwise and may exclude applicable taxes." }),
+      /* @__PURE__ */ jsx("p", { children: "Merchant features are offered under the plans, prices, billing periods and usage limits shown on the Sellio website or at checkout. Prices are in the currency shown at checkout and may exclude applicable taxes." }),
       /* @__PURE__ */ jsx("p", { children: "Eligible merchants may receive a trial or promotional offer. The checkout or offer states the applicable duration, eligibility and conversion terms. Unless it clearly says otherwise, providing a payment method for a recurring plan authorises the plan to begin billing when the trial or promotional period ends." }),
       /* @__PURE__ */ jsx("p", { children: "Monthly and annual subscriptions renew automatically for successive billing periods until cancelled. You authorise Stripe and Sellio to charge the payment method associated with the subscription for the plan price, applicable taxes and any authorised changes." }),
       /* @__PURE__ */ jsx("p", { children: "Plan limits may include products, orders, staff, branches, tables, reports, roles or other usage. We may restrict a feature, request an upgrade or apply a separately disclosed charge if usage exceeds the purchased plan." })
@@ -2716,7 +2716,7 @@ const sections = [
     title: "Payments and third-party payment services",
     content: /* @__PURE__ */ jsxs(Fragment, { children: [
       /* @__PURE__ */ jsx("p", { children: "Stripe processes merchant plan checkout, recurring subscription payments, invoices and billing management. Stripe's own terms and privacy notice also apply to its services." }),
-      /* @__PURE__ */ jsx("p", { children: "A merchant may configure customer-facing payment methods such as cash, bank transfer, PayNow, payment QR or a supported online payment option. Unless Sellio expressly states otherwise for a specific payment product, Sellio is not a bank, stored-value facility, escrow agent or money-transfer service and does not hold customer funds." }),
+      /* @__PURE__ */ jsx("p", { children: "A merchant may configure customer-facing payment methods such as cash, bank transfer, a payment QR (for example PayNow, DuitNow or QRIS) or a supported online payment option. Unless Sellio expressly states otherwise for a specific payment product, Sellio is not a bank, stored-value facility, escrow agent or money-transfer service and does not hold customer funds." }),
       /* @__PURE__ */ jsx("p", { children: "Merchants are responsible for reconciling payments, issuing refunds, resolving chargebacks and complying with the rules of their chosen payment providers. A status recorded in Sellio does not by itself prove that funds have finally settled." })
     ] })
   },
@@ -2882,7 +2882,7 @@ function Terms() {
       intro: "These terms explain the rules for using Sellio as a merchant, staff member or storefront customer, including accounts, orders, subscriptions, content and Sellio Coins.",
       description: "Read Sellio's Terms and Conditions for merchant accounts, storefront orders, Stripe subscriptions, AI features, Sellio Coins and platform use.",
       path: "/terms",
-      lastUpdated: "22 September 2026",
+      lastUpdated: "12 November 2026",
       sections
     }
   );
@@ -2907,8 +2907,8 @@ const ROUTES = {
   "/privacy": {
     Component: Privacy,
     title: "Privacy Policy | Sellio",
-    description: "Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and Singapore PDPA rights.",
-    socialDescription: "Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and Singapore PDPA rights.",
+    description: "Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and your privacy rights.",
+    socialDescription: "Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and your privacy rights.",
     canonical: "https://sellio.sg/privacy"
   },
   "/terms": {

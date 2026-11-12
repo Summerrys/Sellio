@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { explainError, offlineNote } from '@/lib/plainError';
 import { isOffline } from '@/lib/network';
 import ErrorNote from '@/components/ui-custom/ErrorNote';
+import { formatMoney } from '@/lib/money';
 
 // products.variants is already stored pre-grouped as [{name, type, options}] by
 // the sync that runs whenever a merchant edits variants in the Products page —
@@ -189,7 +190,7 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
                       <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#0f172a' }}>
                         {item.name}{item.variant ? <span style={{ color: '#94a3b8', fontWeight: 400 }}> ({item.variant})</span> : ''}
                       </p>
-                      <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>{currency} {(item.price || 0).toFixed(2)} each</p>
+                      <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>{formatMoney(item.price || 0, currency)} each</p>
                       {item.notes && (
                         <p style={{ margin: '2px 0 0', fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>📝 {item.notes}</p>
                       )}
@@ -230,7 +231,7 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
 
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 2px', fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
                 <span>Subtotal</span>
-                <span>{currency} {subtotal.toFixed(2)}</span>
+                <span>{formatMoney(subtotal, currency)}</span>
               </div>
             </>
           ) : pickingVariantsFor ? (
@@ -242,7 +243,7 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
                 ← Back to menu
               </button>
               <p style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{pickingVariantsFor.name}</p>
-              <p style={{ margin: '0 0 16px', fontSize: 13, color: '#64748b' }}>{currency} {(pickingVariantsFor.price || 0).toFixed(2)}</p>
+              <p style={{ margin: '0 0 16px', fontSize: 13, color: '#64748b' }}>{formatMoney(pickingVariantsFor.price || 0, currency)}</p>
               {normaliseEditVariants(pickingVariantsFor.variants).map((group, gi) => {
                 const isMultiSelect = group.type === 'addon';
                 const selectedForGroup = selectedVariants[gi];
@@ -279,7 +280,7 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
                             onClick={handleClick}
                             style={{ padding: '8px 10px', borderRadius: 14, border: isSelected ? '2px solid rgb(var(--color-primary))' : '1.5px solid #e2e8f0', background: isSelected ? 'rgba(var(--color-primary),0.08)' : 'white', cursor: 'pointer', fontWeight: isSelected ? 700 : 500, color: isSelected ? 'rgb(var(--color-primary))' : '#374151', fontSize: 13, textAlign: 'center', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3, minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           >
-                            {opt.label}{opt.price_modifier > 0 ? ` +${currency} ${parseFloat(opt.price_modifier).toFixed(2)}` : ''}
+                            {opt.label}{opt.price_modifier > 0 ? ` +${formatMoney(opt.price_modifier, currency)}` : ''}
                           </button>
                         );
                       })}
@@ -351,7 +352,7 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
                       )}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{p.name}</p>
-                        <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>{currency} {(p.price || 0).toFixed(2)}</p>
+                        <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>{formatMoney(p.price || 0, currency)}</p>
                       </div>
                     </button>
                   ))}

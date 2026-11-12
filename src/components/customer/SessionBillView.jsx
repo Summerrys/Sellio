@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Receipt } from 'lucide-react';
+import { formatMoney } from '@/lib/money';
 
 export default function SessionBillView({ orders, currency, onRequestBill, billRequested }) {
   const subtotal = orders.reduce((sum, order) => sum + order.subtotal, 0);
@@ -26,7 +27,7 @@ export default function SessionBillView({ orders, currency, onRequestBill, billR
                   Order {order.order_number}
                 </span>
                 <span className="font-medium text-slate-900">
-                  {currency} {order.total_amount.toFixed(2)}
+                  {formatMoney(order.total_amount, currency)}
                 </span>
               </div>
               <div className="text-sm text-slate-500 space-y-1">
@@ -36,7 +37,7 @@ export default function SessionBillView({ orders, currency, onRequestBill, billR
                       {item.quantity}x {item.product_name}
                       {item.variant ? ` (${item.variant})` : ''}
                     </span>
-                    <span>{currency} {item.total.toFixed(2)}</span>
+                    <span>{formatMoney(item.total, currency)}</span>
                   </div>
                 ))}
               </div>
@@ -48,15 +49,15 @@ export default function SessionBillView({ orders, currency, onRequestBill, billR
         <div className="bg-slate-50 rounded-lg p-4 space-y-2">
           <div className="flex justify-between text-slate-600">
             <span>Subtotal</span>
-            <span>{currency} {subtotal.toFixed(2)}</span>
+            <span>{formatMoney(subtotal, currency)}</span>
           </div>
           <div className="flex justify-between text-slate-600">
             <span>Tax</span>
-            <span>{currency} {tax.toFixed(2)}</span>
+            <span>{formatMoney(tax, currency)}</span>
           </div>
           <div className="flex justify-between text-xl font-bold text-slate-900 pt-2 border-t border-slate-200">
             <span>Total</span>
-            <span>{currency} {total.toFixed(2)}</span>
+            <span>{formatMoney(total, currency)}</span>
           </div>
         </div>
 

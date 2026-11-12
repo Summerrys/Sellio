@@ -73,7 +73,7 @@ try {
     .replace(/\x1b@|\x1ba[\x00-\x02]|\x1bE[\x00\x01]|\x1bd[\s\S]|\x1d![\s\S]|\x1dVB\x00/g, '')
     .split('\n').map(l => l.replace(/[\x00-\x1f]/g, '').trimEnd()).filter(Boolean);
   const receipt = toText(printer.buildTableReceipt(b1, 'SGD', 'Cafetelier', 'thermal_80'));
-  for (const expected of ['Cafetelier', 'Table: T1', 'Orders: #ORD-000004, #ORD-000005', '2x Latte', 'SGD 11.00', '2x Toast', 'SGD 4.00', '1x Latte', '(Large)', 'TOTAL', 'SGD 21.00', 'Not paid yet', 'Thank you for your visit!']) {
+  for (const expected of ['Cafetelier', 'Table: T1', 'Orders: #ORD-000004, #ORD-000005', '2x Latte', 'S$11.00', '2x Toast', 'S$4.00', '1x Latte', '(Large)', 'TOTAL', 'S$21.00', 'Not paid yet', 'Thank you for your visit!']) {
     assert.ok(receipt.includes(expected), `Receipt shows ${expected}`);
   }
   for (const missing of ['Cake', 'Tea', 'Other table', 'ORD-000006', 'Tax', 'Discount']) {
@@ -87,6 +87,14 @@ try {
   assert.ok(visible.some(l => l.startsWith('Orders: #ORD-000004')) && visible.some(l => l.includes('#ORD-000011')), 'Long order list wraps instead of being cut');
   const taxed = toText(printer.buildTableReceipt({ ...b1, tax: 1.89, discount: 1, total: 21.89 }, 'RM', 'Kedai', 'thermal_80'));
   assert.ok(taxed.includes('RM 1.89') && taxed.includes('-RM 1.00') && taxed.includes('RM 21.89'));
+  // Money as the app writes it (lib/money.js): ringgit RM1.89, rupiah Rp38.000 (no decimals).
+  const ringgit = toText(printer.buildTableReceipt({ ...b1, tax: 1.89, discount: 1, total: 21.89 }, 'MYR', 'Kedai', 'thermal_80'));
+  assert.ok(ringgit.includes('RM1.89') && ringgit.includes('-RM1.00') && ringgit.includes('RM21.89'), 'Ringgit receipt');
+  const rupiahBill = { ...b1, items: b1.items.map(item => ({ ...item, unitPrice: item.unitPrice * 10000, total: item.total * 10000 })), subtotal: 210000, total: 210000 };
+  const rupiah = visibleLines(printer.buildTableReceipt(rupiahBill, 'IDR', 'Kue Bu Sri', 'thermal_58'));
+  assert.ok(rupiah.some(l => /^TOTAL +Rp210\.000$/.test(l)), 'Rupiah total without decimals: ' + rupiah.join(' | '));
+  assert.ok(rupiah.some(l => /Rp110\.000$/.test(l)) && !rupiah.some(l => /Rp[0-9.]+,[0-9]{2}|\.00$/.test(l)), 'Rupiah lines have no cents');
+  assert.ok(rupiah.every(l => l.length <= 32), 'Rupiah lines fit 58mm paper');
   pass('Printed table receipt: merged lines, one total, paid state, fits 58mm and 80mm paper');
 
   const html = bill.tableReceiptHtml({ ...b1, items: [{ name: '<img src=x onerror=alert(1)>', variant: '', quantity: 1, total: 1 }] }, 'SGD', 'Cafe & Co');
