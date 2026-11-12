@@ -24,7 +24,7 @@ import {
   WandSparkles,
   Warehouse,
 } from 'lucide-react';
-import { BUSINESS_PLANS } from '@/lib/plans';
+import { plansFor } from '@/lib/plans';
 
 export const SELLIO_COLORS = {
   orange: '#fb923c',
@@ -206,11 +206,16 @@ const LANDING_PLAN_STYLE = {
   pro: { description: 'For businesses that need maximum scale.', badge: null, accent: '#e0449a' },
 };
 
-export const PLANS = BUSINESS_PLANS.map((plan) => ({
-  ...plan,
-  ...LANDING_PLAN_STYLE[plan.key],
-  links: { monthly: plan.links.monthly, annual: plan.links.yearly },
-}));
+// region: 'SG' (Singapore and Malaysia) or 'ID' (Indonesia's prices), lib/plans.js.
+export function landingPlans(region = 'SG') {
+  return plansFor(region).map((plan) => ({
+    ...plan,
+    ...LANDING_PLAN_STYLE[plan.key],
+    links: { monthly: plan.links.monthly, annual: plan.links.yearly },
+  }));
+}
+
+export const PLANS = landingPlans('SG');
 
 export const ROADMAP = [
   {

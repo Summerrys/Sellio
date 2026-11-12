@@ -2,18 +2,19 @@ import React, { useState } from 'react';
 import { Lock, Check } from 'lucide-react';
 import { useTenant } from '../tenant/TenantContext';
 import { getSupabase } from '@/lib/supabaseClient';
-import { BUSINESS_PLANS, shopCheckoutLink } from '@/lib/plans';
+import { plansFor, rupiahNote, shopCheckoutLink } from '@/lib/plans';
+import { usePlanRegion } from '@/lib/usePlanRegion';
 import PlanFootnotes from './PlanFootnotes';
 import PlansOnWebsite from './PlansOnWebsite';
 import { sellsPlans, openOutside } from '@/lib/nativeApp';
 
-// Presentation only: prices, Stripe links and features come from lib/plans.js.
+// Presentation only: prices, Stripe links and features come from lib/plans.js (an Indonesian
+// shop gets Indonesia's, with about what they come to in rupiah).
 const PLAN_STYLE = {
   starter: { description: 'Perfect for small businesses just getting started', color: 'blue' },
   growth: { description: 'For growing businesses with higher demands', color: 'purple', badge: 'Most Popular' },
   pro: { description: 'Enterprise-grade solution for maximum scalability', color: 'gold' },
 };
-const PLANS = BUSINESS_PLANS.map((plan) => ({ ...plan, ...PLAN_STYLE[plan.key] }));
 
 // Sellio platform screen: same palette for every tenant, never the tenant theme.
 // Matches the sign-up "View Plans" pricing card; the plan the merchant had is
@@ -26,6 +27,8 @@ const PLAN_RANK = { starter: 0, growth: 1, pro: 2 };
 export default function UpgradeWall({ currentTier: currentTierProp = null }) {
   const [annual, setAnnual] = useState(false);
   const { tenantId, subscription, user, tenant } = useTenant();
+  const region = usePlanRegion(tenant);
+  const PLANS = plansFor(region).map((plan) => ({ ...plan, ...PLAN_STYLE[plan.key] }));
 
   // Locked = cancelled, suspended, past due, or an expired trial. A locked
   // account has no current plan to protect: every plan is selectable, and the
@@ -45,6 +48,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
     trial: !isLockedAccount && !tenant?.has_used_trial,
     tenantId,
     email: user?.email && !/@sellio\.app$/i.test(user.email) ? user.email : '',
+    region,
   });
 
   const isFocus = (plan) => isLockedAccount && plan.key === previousTier;
@@ -139,6 +143,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
                     <span style={{ fontSize: 26, fontWeight: 800, color: '#0f172a' }}>SGD {price}</span>
                     <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 4 }}>/{annual ? 'year' : 'month'}</span>
                   </div>
+                  {region === 'ID' && <p data-testid="plan-rupiah" style={{ fontSize: 11, color: '#475569', fontWeight: 500, marginBottom: 2 }}>{rupiahNote(price)}</p>}
                   {annual && <p style={{ fontSize: 11, color: '#16a34a', fontWeight: 500, marginBottom: 4 }}>Save SGD {saving}</p>}
                   <p style={{ fontSize: 11, color: '#64748b', marginBottom: 12 }}>{plan.description}</p>
                   <ul style={{ flex: 1, marginBottom: 16, listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -170,7 +175,7 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
             );
           })}
         </div>
-        <PlanFootnotes showSetup={false} />
+        <PlanFootnotes showSetup={false} region={region} />
         </>
         )}
       </div>

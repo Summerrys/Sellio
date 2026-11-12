@@ -2,7 +2,9 @@ import React, { useContext, useEffect, useId, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Check, X } from 'lucide-react';
 import TenantContext from '@/components/tenant/TenantContext';
-import { BUSINESS_PLANS, shopCheckoutLink } from '@/lib/plans';
+import { BUSINESS_PLANS, INDONESIA_PAYMENT_NOTE, approxRupiah, plansFor, rupiahNote, shopCheckoutLink } from '@/lib/plans';
+import { formatMoney } from '@/lib/money';
+import { usePlanRegion } from '@/lib/usePlanRegion';
 import { itemWords } from '@/lib/planFeatures';
 import BottomSheet from '@/components/explore/BottomSheet';
 import PlanFootnotes from './PlanFootnotes';
@@ -23,6 +25,8 @@ import { sellsPlans, openOutside } from '@/lib/nativeApp';
 // A free home shop (Alvin, 9 Nov 2026): Upgrade to Business, the business plans with the 7-day
 // free trial if the shop hasn't had one; paying makes it a business shop in place
 // (sync_stripe_billing_state), and it goes back to a free home shop if it stops paying.
+// An Indonesian shop (12 Nov 2026) gets Indonesia's prices and links (lib/plans.js), with about
+// what they come to in rupiah.
 
 const PLAN_RANK = { starter: 0, growth: 1, pro: 2 };
 const LIMITS = {
@@ -57,6 +61,8 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
   // email. A phone sign-in's placeholder address (…@sellio.app) isn't one.
   const ownerEmail = shop?.id === tenantId && typeof shop?.owner_email === 'string'
     && !/@sellio\.app$/i.test(shop.owner_email.trim()) ? shop.owner_email.trim() : '';
+  const region = usePlanRegion(shop?.id === tenantId ? shop : null);
+  const plans = plansFor(region);
 
   // Opened again: the first pick, the full list closed.
   useEffect(() => {
@@ -85,21 +91,23 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
   }
 
   const yearly = billing === 'annual';
-  const plan = BUSINESS_PLANS.find((p) => p.key === picked) || BUSINESS_PLANS[0];
+  const plan = plans.find((p) => p.key === picked) || plans[0];
   const price = yearly ? plan.yearly : plan.monthly;
   const isCurrent = !!current && plan.key === current;
   let action = `Choose ${plan.name}`;
   if (isPersonalShop) action = freeTrial ? 'Start 7 days free' : `Upgrade to ${plan.name}`;
   else if (isCurrent) action = 'Your current plan';
   else if (current) action = (PLAN_RANK[plan.key] ?? 0) > (PLAN_RANK[current] ?? 0) ? `Upgrade to ${plan.name}` : `Move to ${plan.name}`;
-  const cost = `${money(price)} a ${yearly ? 'year' : 'month'}.`;
+  const cost = region === 'ID'
+    ? `${money(price)} a ${yearly ? 'year' : 'month'}, ${rupiahNote(price)}.`
+    : `${money(price)} a ${yearly ? 'year' : 'month'}.`;
   const fine = isPersonalShop
     ? `${freeTrial ? 'Then ' : ''}${cost} If you stop paying, it goes back to a free home shop.`
     : cost;
 
   const checkout = () => {
     if (isCurrent) return;
-    openOutside(shopCheckoutLink(plan.key, { yearly, trial: freeTrial, tenantId, email: ownerEmail }));
+    openOutside(shopCheckoutLink(plan.key, { yearly, trial: freeTrial, tenantId, email: ownerEmail, region }));
   };
 
   const footer = (
@@ -117,7 +125,9 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
       <p data-testid="plan-fine-print" className="mt-2 text-center text-[11.5px] leading-snug text-slate-400">
         {fine}
       </p>
-      {!isPersonalShop && <PlanFootnotes />}
+      {isPersonalShop
+        ? region === 'ID' && <p data-testid="plan-payment-note" className="mt-1 text-center text-[11.5px] leading-snug text-slate-400">{INDONESIA_PAYMENT_NOTE}</p>
+        : <PlanFootnotes region={region} />}
     </>
   );
 
@@ -158,7 +168,7 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
         </div>
 
         <div role="radiogroup" aria-label="Plan" className="mt-3 space-y-2">
-          {BUSINESS_PLANS.map((p) => {
+          {plans.map((p) => {
             const on = p.key === picked;
             const thisCurrent = !!current && p.key === current;
             return (
@@ -193,6 +203,11 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
                 <span className="text-right flex-shrink-0">
                   <span className="text-[15px] font-extrabold text-slate-900">{money(yearly ? p.yearly : p.monthly)}</span>
                   <span className="text-[10.5px] font-semibold text-slate-400">/{yearly ? 'yr' : 'mo'}</span>
+                  {region === 'ID' && (
+                    <span data-testid="plan-rupiah" className="block text-[10.5px] font-semibold text-slate-500">
+                      ≈ {formatMoney(approxRupiah(yearly ? p.yearly : p.monthly), 'IDR')}
+                    </span>
+                  )}
                 </span>
               </button>
             );
@@ -207,7 +222,7 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
         </p>
         {compare && (
           <div data-testid="plan-compare" className="mt-3 space-y-3">
-            {BUSINESS_PLANS.map((p) => (
+            {plans.map((p) => (
               <div key={p.key}>
                 <p className="text-[12.5px] font-bold text-slate-900">{p.name}</p>
                 <ul className="mt-1 space-y-1">

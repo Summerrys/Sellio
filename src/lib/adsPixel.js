@@ -14,13 +14,14 @@
 // again (or /Auth then /Account) counts once, and a server event sent later with the same id is
 // matched to it. A shop's own trial (its plan window) ends on Stripe's page, so it isn't measured
 // here. Tests: verification/openai-pixel.test.mjs and .browser.mjs.
-import { BUSINESS_PLANS } from '@/lib/plans';
+import { BUSINESS_PLANS, INDONESIA_PLANS } from '@/lib/plans';
 import { CONSENT_EVENT } from '@/lib/cookieConsent';
 
 export const TRIAL_NOTE = 'sellio-ads-trial-checkout';
 const NOTE_LIFE = 24 * 60 * 60 * 1000;
 const CHECKOUT_ID = /^cs_(?:live|test)_[A-Za-z0-9]+$/;
-const TRIAL_LINKS = new Set(BUSINESS_PLANS.flatMap((plan) => [plan.links.monthly, plan.links.yearly]));
+// The sign-up trial links of every region (Indonesia's too, lib/plans.js).
+const TRIAL_LINKS = new Set([...BUSINESS_PLANS, ...INDONESIA_PLANS].flatMap((plan) => [plan.links.monthly, plan.links.yearly]));
 
 // The Pixel, where it runs on this page.
 const pixelOn = (browser) => (typeof browser.oaiq === 'function' ? browser.oaiq : null);

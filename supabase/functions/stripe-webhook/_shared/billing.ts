@@ -17,6 +17,13 @@ export const PRICE_ID_TO_PLAN: Record<string, string> = {
   "price_1UQssgRF2IZPNHjuu4HVsuIv": "growth_yearly",
   "price_1UQssiRF2IZPNHjuRjRWx7sP": "pro_monthly",
   "price_1UQssjRF2IZPNHjuQmTzmtEX": "pro_yearly",
+  // Indonesia, 12 Nov 2026 (S$18 / S$35 / S$56 a month, in SGD; Stripe charges Rupiah)
+  "price_1UauonRF2IZPNHjuPstO0tfj": "starter_monthly",
+  "price_1UauotRF2IZPNHju381s5osP": "starter_yearly",
+  "price_1UauozRF2IZPNHju066GJwfS": "growth_monthly",
+  "price_1Uaup2RF2IZPNHjuDsJ37tU4": "growth_yearly",
+  "price_1Uaup5RF2IZPNHju2ZsBv8yg": "pro_monthly",
+  "price_1Uaup8RF2IZPNHjubDD4DZxI": "pro_yearly",
 };
 
 const PLAN_LIMITS: Record<string, {

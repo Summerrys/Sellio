@@ -274,7 +274,7 @@ try {
   document.body.innerHTML = '';
   inApp(false);
   for (const [file, opens] of [
-    ['src/components/subscription/PricingModal.jsx', /openOutside\(shopCheckoutLink\(plan\.key, \{ yearly, trial: freeTrial, tenantId, email: ownerEmail \}\)\)/],
+    ['src/components/subscription/PricingModal.jsx', /openOutside\(shopCheckoutLink\(plan\.key, \{ yearly, trial: freeTrial, tenantId, email: ownerEmail, region \}\)\)/],
     ['src/components/subscription/UpgradeWall.jsx', /openOutside\(getLink\(plan\)\)/],
   ]) {
     const source = await readFile(path.join(app, file), 'utf8');

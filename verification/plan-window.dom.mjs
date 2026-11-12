@@ -119,6 +119,39 @@ try {
   assert.match(text(document.body), /Multi-outlet\?/, 'a business keeps the multi-outlet line');
   passed('a business: Current on its plan, the next one up picked first, Move to … for a smaller plan');
 
+  // An Indonesian shop (Alvin, 12 Nov 2026): Indonesia's prices and links, about what they come to
+  // in rupiah, how they're paid, and no setup visit.
+  assert.match(text(document.body), /Done-for-you setup is SGD 149/, 'a Singapore business: the setup visit');
+  opened.length = 0;
+  const warung = { id: 'shop-3', name: 'Warung Bu Sri', seller_type: 'merchant', has_used_trial: true, country: 'Indonesia', currency: 'IDR', owner_email: 'sri@warung.id' };
+  await show(warung);
+  await click(billing('Monthly'));
+  assert.match(text(radio('starter')), /S\$18\/mo≈ Rp255\.000$/);
+  assert.match(text(radio('growth')), /S\$35\/mo≈ Rp496\.000$/);
+  assert.match(text(radio('pro')), /S\$56\/mo≈ Rp793\.000$/);
+  assert.equal(radio('growth').getAttribute('aria-checked'), 'true');
+  assert.equal(fine(), 'S$35 a month, about Rp496.000, charged in Rupiah.');
+  assert.match(text(document.querySelector('[data-testid="plan-payment-note"]')), /^Paid by card, in Rupiah: Stripe converts at the day's rate/);
+  assert.equal(text(document.body).includes('Done-for-you setup'), false, 'no setup visit in Indonesia');
+  assert.match(text(document.body), /Multi-outlet\?/);
+  await click(cta());
+  assert.equal(opened.at(-1), 'https://buy.stripe.com/dRmcN7gL75AD35Vd7G7bW0X?client_reference_id=shop-3&prefilled_email=sri%40warung.id', "Growth monthly: Indonesia's shop link");
+  await click(billing('Yearly'));
+  assert.match(text(radio('growth')), /S\$350\/yr≈ Rp4\.957\.000$/);
+  assert.equal(fine(), 'S$350 a year, about Rp4.957.000, charged in Rupiah.');
+  await click(cta());
+  assert.match(opened.at(-1), /^https:\/\/buy\.stripe\.com\/aFa14p7ax6EH9uj0kU7bW0Y\?client_reference_id=shop-3&/, 'Growth yearly');
+  // An Indonesian home shop: its free week on Indonesia's trial link; no business footnotes.
+  const ibu = { id: 'shop-4', name: 'Kue Ibu', seller_type: 'individual', has_used_trial: false, country: 'Indonesia', currency: 'IDR', owner_email: 'ibu@kue.id' };
+  await show(ibu);
+  await click(billing('Monthly'));
+  assert.equal(fine(), 'Then S$35 a month, about Rp496.000, charged in Rupiah. If you stop paying, it goes back to a free home shop.');
+  assert.ok(document.querySelector('[data-testid="plan-payment-note"]'));
+  assert.equal(text(document.body).includes('Multi-outlet'), false);
+  await click(cta());
+  assert.equal(opened.at(-1), 'https://buy.stripe.com/8x2bJ3eCZ0gj49Z2t27bW13?client_reference_id=shop-4&prefilled_email=ibu%40kue.id', "Growth monthly: Indonesia's free-week link");
+  passed("an Indonesian shop: Indonesia's prices and links with about what they are in rupiah; no setup visit");
+
   await act(async () => root.unmount());
   console.log(passes + ' plan-window checks passed');
 } finally {

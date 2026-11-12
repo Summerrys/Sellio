@@ -6,6 +6,8 @@
 // stripe-webhook edge function (PRICE_ID_TO_PLAN, PLAN_LIMITS). Keep this copy in
 // step with those.
 
+import { formatMoney } from './money';
+
 // Sales and setup enquiries go to Sellio's WhatsApp.
 export const SELLIO_WHATSAPP = '6582228103';
 
@@ -131,15 +133,116 @@ export const BUSINESS_PLANS = [
   },
 ];
 
+// Indonesia (Alvin, 12 Nov 2026): lower prices on their own Stripe Payment Links, still in SGD:
+// S$18, S$35 and S$56 a month, a year at 10 months' price. Stripe's Adaptive Pricing shows and
+// charges Indonesian owners Rupiah (by card only, plus Stripe's 2–4% conversion fee) and pays
+// Sellio SGD, so the referral programme counts these bills like any other. The same four link
+// sets as above, each set up as its Singapore twin (checked in Stripe, 12 Nov 2026); the links
+// and their prices are marked region: ID, and each price's metadata.plan is what stripe-webhook
+// reads first, so they unlock the right plan.
+const INDONESIA = {
+  starter: {
+    monthly: 18,
+    yearly: 180,
+    links: {
+      monthly: 'https://buy.stripe.com/4gM00l8eB0gj5e32t27bW0J',
+      yearly: 'https://buy.stripe.com/7sYdRbcuRd35dKz5Fe7bW0K',
+    },
+    noTrialLinks: {
+      monthly: 'https://buy.stripe.com/4gM00lamJe795e32t27bW0P',
+      yearly: 'https://buy.stripe.com/fZu28t8eB5ADgWL6Ji7bW0Q',
+    },
+    shopLinks: {
+      monthly: 'https://buy.stripe.com/8x2eVfamJbZ149Z3x67bW0V',
+      yearly: 'https://buy.stripe.com/eVq3cxamJ1kncGv2t27bW0W',
+    },
+    shopTrialLinks: {
+      monthly: 'https://buy.stripe.com/28EfZj1Qd9QTayn7Nm7bW11',
+      yearly: 'https://buy.stripe.com/cNi3cxdyV4wzgWLaZy7bW12',
+    },
+  },
+  growth: {
+    monthly: 35,
+    yearly: 350,
+    links: {
+      monthly: 'https://buy.stripe.com/8x228t2Uh4wz35Vd7G7bW0L',
+      yearly: 'https://buy.stripe.com/bJedRbfH30gjdKzgjS7bW0M',
+    },
+    noTrialLinks: {
+      monthly: 'https://buy.stripe.com/eVq14p1Qde79dKzebK7bW0R',
+      yearly: 'https://buy.stripe.com/dRmfZjbqN4wz7mbebK7bW0S',
+    },
+    shopLinks: {
+      monthly: 'https://buy.stripe.com/dRmcN7gL75AD35Vd7G7bW0X',
+      yearly: 'https://buy.stripe.com/aFa14p7ax6EH9uj0kU7bW0Y',
+    },
+    shopTrialLinks: {
+      monthly: 'https://buy.stripe.com/8x2bJ3eCZ0gj49Z2t27bW13',
+      yearly: 'https://buy.stripe.com/6oU7sNeCZfbdeODebK7bW14',
+    },
+  },
+  pro: {
+    monthly: 56,
+    yearly: 560,
+    links: {
+      monthly: 'https://buy.stripe.com/9B65kFbqN3sv9ujd7G7bW0N',
+      yearly: 'https://buy.stripe.com/28E14peCZ6EH8qfc3C7bW0O',
+    },
+    noTrialLinks: {
+      monthly: 'https://buy.stripe.com/dRm7sNamJ7ILaynaZy7bW0T',
+      yearly: 'https://buy.stripe.com/14A7sN3Yl3svcGvebK7bW0U',
+    },
+    shopLinks: {
+      monthly: 'https://buy.stripe.com/5kQ8wR9iF9QT6i71oY7bW0Z',
+      yearly: 'https://buy.stripe.com/6oU8wR8eB8MP0XNd7G7bW10',
+    },
+    shopTrialLinks: {
+      monthly: 'https://buy.stripe.com/aFa8wR7ax3svcGvffO7bW15',
+      yearly: 'https://buy.stripe.com/bJe14pfH3d35dKzc3C7bW16',
+    },
+  },
+};
+
+export const INDONESIA_PLANS = BUSINESS_PLANS.map((plan) => ({ ...plan, ...INDONESIA[plan.key] }));
+
+// Which prices a shop or a visitor gets: 'ID' for Indonesia (the shop's country, or rupiah as its
+// currency), else 'SG' (Singapore and Malaysia pay the same SGD prices).
+export function planRegionFor(place) {
+  return place?.country === 'Indonesia' || place?.currency === 'IDR' ? 'ID' : 'SG';
+}
+
+export function plansFor(region) {
+  return region === 'ID' ? INDONESIA_PLANS : BUSINESS_PLANS;
+}
+
+// About what a price in SGD comes to in rupiah, to the nearest Rp1.000, for Indonesian owners.
+// Stripe charges the rate of the day plus its fee, so this is a guide: Pluang's mid-market rate
+// on 12 Nov 2026 (1 SGD = Rp14.162,84). Update it if the rate moves a lot.
+export const SGD_TO_IDR = 14163;
+
+export function approxRupiah(sgd) {
+  return Math.round((Number(sgd) * SGD_TO_IDR) / 1000) * 1000;
+}
+
+// "about Rp255.000, charged in Rupiah" under an Indonesian price.
+export function rupiahNote(sgd) {
+  return `about ${formatMoney(approxRupiah(sgd), 'IDR')}, charged in Rupiah`;
+}
+
+// How Indonesian owners pay, under the plans.
+export const INDONESIA_PAYMENT_NOTE = "Paid by card, in Rupiah: Stripe converts at the day's rate and adds a 2–4% conversion fee. Prices are before PPN (VAT).";
+
 export const NO_TRIAL_LINKS = Object.fromEntries(BUSINESS_PLANS.map((plan) => [plan.key, plan.noTrialLinks]));
 export const SHOP_LINKS = Object.fromEntries(BUSINESS_PLANS.map((plan) => [plan.key, plan.shopLinks]));
 export const SHOP_TRIAL_LINKS = Object.fromEntries(BUSINESS_PLANS.map((plan) => [plan.key, plan.shopTrialLinks]));
 
 // A shop's checkout for a plan from inside the shop. The shop's id goes to Stripe so the webhook
 // attaches the plan to it; the owner's email starts Stripe's form (only the owner's payment is
-// attached). trial: a free home shop that hasn't had its free trial.
-export function shopCheckoutLink(planKey, { yearly = false, trial = false, tenantId = '', email = '' } = {}) {
-  const set = (trial ? SHOP_TRIAL_LINKS : SHOP_LINKS)[planKey];
+// attached). trial: a free home shop that hasn't had its free trial. region: the shop's prices
+// (planRegionFor).
+export function shopCheckoutLink(planKey, { yearly = false, trial = false, tenantId = '', email = '', region = 'SG' } = {}) {
+  const plan = plansFor(region).find((p) => p.key === planKey);
+  const set = plan && (trial ? plan.shopTrialLinks : plan.shopLinks);
   if (!set) return '';
   const base = yearly ? set.yearly : set.monthly;
   const params = new URLSearchParams();

@@ -146,7 +146,17 @@ for (const link of trialLinks) {
 for (const link of [...linksOf('noTrialLinks'), ...linksOf('shopLinks'), ...linksOf('shopTrialLinks'), 'https://buy.stripe.com/28E28t1Qd5AD9uj2t27bW0q', 'https://sellio.sg/', 'not a link', '']) {
   assert.equal(isTrialCheckoutLink(link), false, link);
 }
-passed('the six trial links count, with or without the locked email; no-trial, shop and setup links do not');
+// Indonesia's (lib/plans.js, 12 Nov 2026): its six trial links count too; its other links don't.
+const indonesiaOf = (key) => plans.INDONESIA_PLANS.flatMap((plan) => [plan[key].monthly, plan[key].yearly]);
+assert.equal(indonesiaOf('links').length, 6);
+for (const link of indonesiaOf('links')) {
+  assert.ok(isTrialCheckoutLink(link), link);
+  assert.ok(isTrialCheckoutLink(`${link}?locked_prefilled_email=a%40b.id`), `${link} with the locked email`);
+}
+for (const link of [...indonesiaOf('noTrialLinks'), ...indonesiaOf('shopLinks'), ...indonesiaOf('shopTrialLinks')]) {
+  assert.equal(isTrialCheckoutLink(link), false, link);
+}
+passed("the six trial links count (and Indonesia's six), with or without the locked email; no-trial, shop and setup links do not");
 
 // A website page: the head script defined __sellioOpenAIPixel and (Allow given) oaiq; calls recorded.
 function site(url, { pixel = true, starter = true } = {}) {

@@ -24,8 +24,9 @@ import ConnectedCommerce from './ConnectedCommerce';
 import ProductShowcase from './ProductShowcase';
 import WorldLayers from './WorldLayers';
 import ChapterTransition from './ChapterTransition';
-import { PLANS } from './landingData';
-import { MULTI_OUTLET_URL, SETUP_OFFER } from '@/lib/plans';
+import { PLANS, landingPlans } from './landingData';
+import { INDONESIA_PAYMENT_NOTE, MULTI_OUTLET_URL, SETUP_OFFER, rupiahNote } from '@/lib/plans';
+import { usePlanRegion } from '@/lib/usePlanRegion';
 import './landing.css';
 import './phase1b.css';
 import './immersive.css';
@@ -393,15 +394,19 @@ function LandingHeader() {
   );
 }
 
+// Visitors in Indonesia (their phone or computer's time zone or language, usePlanRegion) see
+// Indonesia's prices, with about what they come to in rupiah; the built page shows the rest's.
 function PricingSection() {
   const [annual, setAnnual] = useState(false);
+  const region = usePlanRegion();
+  const indonesia = region === 'ID';
   return (
     <section id="pricing" className="sellio-section sellio-pricing-section sellio-pricing-section--phase1b" aria-labelledby="sellio-pricing-heading">
       <div className="sellio-container">
         <div className="sellio-section-heading sellio-section-heading--center"><span className="sellio-eyebrow"><CircleDollarSign /> Start your next chapter</span><h2 id="sellio-pricing-heading">Launch your storefront.<br />Start taking orders.</h2><p>Choose the plan that fits your business. Every plan includes your own storefront, QR ordering and the Sellio counter.</p></div>
         <div className="sellio-billing-toggle" role="group" aria-label="Billing period"><button type="button" className={!annual ? 'is-active' : ''} onClick={() => setAnnual(false)}>Monthly</button><button type="button" className={annual ? 'is-active' : ''} onClick={() => setAnnual(true)}>Annual <span>2 months free</span></button></div>
         <div className="sellio-pricing-grid">
-          {PLANS.map((plan) => {
+          {landingPlans(region).map((plan) => {
             const amount = annual ? plan.yearly : plan.monthly;
             const href = annual ? plan.links.annual : plan.links.monthly;
             return (
@@ -409,6 +414,7 @@ function PricingSection() {
                 {plan.badge && <span className="sellio-plan-badge">{plan.badge}</span>}
                 <div className="sellio-pricing-card__top"><h3>{plan.name}</h3><p>{plan.description}</p></div>
                 <div className="sellio-plan-price"><small>SGD</small><strong>{amount}</strong><span>/{annual ? 'year' : 'month'}</span></div>
+                {indonesia && <p className="sellio-plan-rupiah" data-testid="plan-rupiah">{rupiahNote(amount)}</p>}
                 {annual && <p className="sellio-plan-saving">Save SGD {plan.monthly * 12 - plan.yearly} annually</p>}
                 <ul>{plan.features.map((feature) => <li key={feature}><Check /> {feature}</li>)}</ul>
                 <a href={href} target="_blank" rel="noopener noreferrer" className="sellio-button sellio-button--plan"><span className="sellio-plan-cta-long">Start Free Trial</span><span className="sellio-plan-cta-short" aria-hidden="true">Start</span><ArrowUpRight /></a>
@@ -417,9 +423,10 @@ function PricingSection() {
           })}
         </div>
         <p className="sellio-pricing-note">Eligible new merchants receive a seven-day trial. Sellio World, our marketplace map, is coming soon.</p>
+        {indonesia && <p className="sellio-pricing-note" data-testid="plan-payment-note">{INDONESIA_PAYMENT_NOTE}</p>}
         <p className="sellio-pricing-note">Selling from home? <a href="/join" rel="nofollow" style={{ fontWeight: 700, textDecoration: 'underline' }}>Open a free personal shop</a>: up to 10 listings and 100 orders a month.</p>
         <p className="sellio-pricing-note">Multi-outlet? <a href={MULTI_OUTLET_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline' }}>Talk to us on WhatsApp</a>.</p>
-        <p className="sellio-pricing-note">Want us to set it up for you? Done-for-you setup is SGD {SETUP_OFFER.price} one-time: {SETUP_OFFER.includes}. <a href={SETUP_OFFER.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline' }}>Book on WhatsApp</a>.</p>
+        {!indonesia && <p className="sellio-pricing-note">Want us to set it up for you? Done-for-you setup is SGD {SETUP_OFFER.price} one-time: {SETUP_OFFER.includes}. <a href={SETUP_OFFER.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline' }}>Book on WhatsApp</a>.</p>}
       </div>
     </section>
   );

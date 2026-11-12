@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { X, Check } from 'lucide-react';
 import { paymentLinkFor } from '@/lib/accountFlow';
-import { BUSINESS_PLANS } from '@/lib/plans';
+import { plansFor, rupiahNote } from '@/lib/plans';
+import { usePlanRegion } from '@/lib/usePlanRegion';
 import PlanFootnotes from '@/components/subscription/PlanFootnotes';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { sellsPlans, outsideLinkProps } from '@/lib/nativeApp';
@@ -13,12 +14,14 @@ const PLAN_STYLE = {
   growth: { description: 'For growing businesses with higher demands', badge: 'Most Popular' },
   pro: { description: 'Enterprise-grade solution for maximum scalability' },
 };
-const PLANS = BUSINESS_PLANS.map((plan) => ({ ...plan, ...PLAN_STYLE[plan.key] }));
 
 // prefilledEmail: a signed-in account's email, locked on the Stripe page so the
-// business plan it pays for belongs to this account.
+// business plan it pays for belongs to this account. There's no shop yet, so the visitor's
+// phone or computer decides the prices (Indonesia's or the rest's, usePlanRegion).
 export default function AuthPricingModal({ onClose, prefilledEmail = '' }) {
   const [annual, setAnnual] = useState(false);
+  const region = usePlanRegion();
+  const PLANS = plansFor(region).map((plan) => ({ ...plan, ...PLAN_STYLE[plan.key] }));
   useBackToClose(true, onClose); // phone / browser Back closes the plans (shown only while open)
 
   return (
@@ -86,6 +89,7 @@ export default function AuthPricingModal({ onClose, prefilledEmail = '' }) {
                     <span style={{ fontSize: 26, fontWeight: 800, color: '#0f172a' }}>SGD {price}</span>
                     <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 4 }}>/{annual ? 'year' : 'month'}</span>
                   </div>
+                  {region === 'ID' && <p data-testid="plan-rupiah" style={{ fontSize: 11, color: '#475569', fontWeight: 500, marginBottom: 2 }}>{rupiahNote(price)}</p>}
                   {annual && <p style={{ fontSize: 11, color: '#16a34a', fontWeight: 500, marginBottom: 4 }}>Save SGD {saving}</p>}
                   <p style={{ fontSize: 11, color: '#64748b', marginBottom: 12 }}>{plan.description}</p>
                   <ul style={{ flex: 1, marginBottom: 16, listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -111,7 +115,7 @@ export default function AuthPricingModal({ onClose, prefilledEmail = '' }) {
             );
           })}
         </div>
-        <PlanFootnotes />
+        <PlanFootnotes region={region} />
         </>
         )}
       </div>

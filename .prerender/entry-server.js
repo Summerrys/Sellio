@@ -1011,6 +1011,23 @@ function ConnectedCommerce() {
     ] })
   ] }) }) });
 }
+const WHOLE_UNITS = /* @__PURE__ */ new Set(["IDR"]);
+function currencyPrefix(currency) {
+  return "Rp";
+}
+function rupiahDigits(whole) {
+  return String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+function formatMoney(amount, currency) {
+  const n = Number(amount);
+  if (amount == null || amount === "" || !Number.isFinite(n)) return "";
+  if (WHOLE_UNITS.has(currency)) {
+    const whole = Math.round(Math.abs(n));
+    return `${n < 0 && whole > 0 ? "-" : ""}${currencyPrefix()}${rupiahDigits(whole)}`;
+  }
+  const digits = Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${n < 0 ? "-" : ""}${currencyPrefix()}${digits}`;
+}
 const SELLIO_WHATSAPP = "6582228103";
 function sellioWhatsAppUrl(text = "") {
   return `https://wa.me/${SELLIO_WHATSAPP}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
@@ -1117,6 +1134,83 @@ const BUSINESS_PLANS = [
     }
   }
 ];
+const INDONESIA = {
+  starter: {
+    monthly: 18,
+    yearly: 180,
+    links: {
+      monthly: "https://buy.stripe.com/4gM00l8eB0gj5e32t27bW0J",
+      yearly: "https://buy.stripe.com/7sYdRbcuRd35dKz5Fe7bW0K"
+    },
+    noTrialLinks: {
+      monthly: "https://buy.stripe.com/4gM00lamJe795e32t27bW0P",
+      yearly: "https://buy.stripe.com/fZu28t8eB5ADgWL6Ji7bW0Q"
+    },
+    shopLinks: {
+      monthly: "https://buy.stripe.com/8x2eVfamJbZ149Z3x67bW0V",
+      yearly: "https://buy.stripe.com/eVq3cxamJ1kncGv2t27bW0W"
+    },
+    shopTrialLinks: {
+      monthly: "https://buy.stripe.com/28EfZj1Qd9QTayn7Nm7bW11",
+      yearly: "https://buy.stripe.com/cNi3cxdyV4wzgWLaZy7bW12"
+    }
+  },
+  growth: {
+    monthly: 35,
+    yearly: 350,
+    links: {
+      monthly: "https://buy.stripe.com/8x228t2Uh4wz35Vd7G7bW0L",
+      yearly: "https://buy.stripe.com/bJedRbfH30gjdKzgjS7bW0M"
+    },
+    noTrialLinks: {
+      monthly: "https://buy.stripe.com/eVq14p1Qde79dKzebK7bW0R",
+      yearly: "https://buy.stripe.com/dRmfZjbqN4wz7mbebK7bW0S"
+    },
+    shopLinks: {
+      monthly: "https://buy.stripe.com/dRmcN7gL75AD35Vd7G7bW0X",
+      yearly: "https://buy.stripe.com/aFa14p7ax6EH9uj0kU7bW0Y"
+    },
+    shopTrialLinks: {
+      monthly: "https://buy.stripe.com/8x2bJ3eCZ0gj49Z2t27bW13",
+      yearly: "https://buy.stripe.com/6oU7sNeCZfbdeODebK7bW14"
+    }
+  },
+  pro: {
+    monthly: 56,
+    yearly: 560,
+    links: {
+      monthly: "https://buy.stripe.com/9B65kFbqN3sv9ujd7G7bW0N",
+      yearly: "https://buy.stripe.com/28E14peCZ6EH8qfc3C7bW0O"
+    },
+    noTrialLinks: {
+      monthly: "https://buy.stripe.com/dRm7sNamJ7ILaynaZy7bW0T",
+      yearly: "https://buy.stripe.com/14A7sN3Yl3svcGvebK7bW0U"
+    },
+    shopLinks: {
+      monthly: "https://buy.stripe.com/5kQ8wR9iF9QT6i71oY7bW0Z",
+      yearly: "https://buy.stripe.com/6oU8wR8eB8MP0XNd7G7bW10"
+    },
+    shopTrialLinks: {
+      monthly: "https://buy.stripe.com/aFa8wR7ax3svcGvffO7bW15",
+      yearly: "https://buy.stripe.com/bJe14pfH3d35dKzc3C7bW16"
+    }
+  }
+};
+const INDONESIA_PLANS = BUSINESS_PLANS.map((plan) => ({ ...plan, ...INDONESIA[plan.key] }));
+function planRegionFor(place) {
+  return (place == null ? void 0 : place.country) === "Indonesia" || (place == null ? void 0 : place.currency) === "IDR" ? "ID" : "SG";
+}
+function plansFor(region) {
+  return region === "ID" ? INDONESIA_PLANS : BUSINESS_PLANS;
+}
+const SGD_TO_IDR = 14163;
+function approxRupiah(sgd) {
+  return Math.round(Number(sgd) * SGD_TO_IDR / 1e3) * 1e3;
+}
+function rupiahNote(sgd) {
+  return `about ${formatMoney(approxRupiah(sgd), "IDR")}, charged in Rupiah`;
+}
+const INDONESIA_PAYMENT_NOTE = "Paid by card, in Rupiah: Stripe converts at the day's rate and adds a 2–4% conversion fee. Prices are before PPN (VAT).";
 Object.fromEntries(BUSINESS_PLANS.map((plan) => [plan.key, plan.noTrialLinks]));
 Object.fromEntries(BUSINESS_PLANS.map((plan) => [plan.key, plan.shopLinks]));
 Object.fromEntries(BUSINESS_PLANS.map((plan) => [plan.key, plan.shopTrialLinks]));
@@ -1162,11 +1256,14 @@ const LANDING_PLAN_STYLE = {
   growth: { description: "For growing teams and busier operations.", badge: "Most popular", accent: "#8b2fc9" },
   pro: { description: "For businesses that need maximum scale.", badge: null, accent: "#e0449a" }
 };
-const PLANS = BUSINESS_PLANS.map((plan) => ({
-  ...plan,
-  ...LANDING_PLAN_STYLE[plan.key],
-  links: { monthly: plan.links.monthly, annual: plan.links.yearly }
-}));
+function landingPlans(region = "SG") {
+  return plansFor(region).map((plan) => ({
+    ...plan,
+    ...LANDING_PLAN_STYLE[plan.key],
+    links: { monthly: plan.links.monthly, annual: plan.links.yearly }
+  }));
+}
+const PLANS = landingPlans("SG");
 const CALLOUT_POSITIONS = [
   { x: "5%", y: "62%", mobileX: "48%", mobileY: "63%" },
   // Phones: cards 02-05 share the clear lower-right floor, just below 03 and right of 01 and 02, so
@@ -1371,6 +1468,35 @@ function ChapterTransition({ children, className = "", label }) {
       ]
     }
   );
+}
+const ZONES = {
+  "Asia/Singapore": "Singapore",
+  "Asia/Kuala_Lumpur": "Malaysia",
+  "Asia/Kuching": "Malaysia",
+  "Asia/Jakarta": "Indonesia",
+  "Asia/Pontianak": "Indonesia",
+  "Asia/Makassar": "Indonesia",
+  "Asia/Jayapura": "Indonesia"
+};
+function deviceZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  } catch {
+    return "";
+  }
+}
+function deviceLanguages() {
+  const nav = typeof navigator === "undefined" ? null : navigator;
+  return [...(nav == null ? void 0 : nav.languages) || [], nav == null ? void 0 : nav.language].filter(Boolean);
+}
+function visitorCountry({ zone = deviceZone(), languages = deviceLanguages() } = {}) {
+  if (ZONES[zone]) return ZONES[zone];
+  if (languages.some((language) => /^(id|in)(-|_|$)/i.test(language))) return "Indonesia";
+  return null;
+}
+function usePlanRegion(shop = null) {
+  const [visitor] = useState(() => typeof window === "undefined" ? null : visitorCountry());
+  return planRegionFor(shop || { country: visitor });
 }
 const SITE_URL$1 = "https://sellio.sg/";
 const LOGO_URL$1 = "/branding/sellio-logo.webp";
@@ -1685,6 +1811,8 @@ function LandingHeader() {
 }
 function PricingSection() {
   const [annual, setAnnual] = useState(false);
+  const region = usePlanRegion();
+  const indonesia = region === "ID";
   return /* @__PURE__ */ jsx("section", { id: "pricing", className: "sellio-section sellio-pricing-section sellio-pricing-section--phase1b", "aria-labelledby": "sellio-pricing-heading", children: /* @__PURE__ */ jsxs("div", { className: "sellio-container", children: [
     /* @__PURE__ */ jsxs("div", { className: "sellio-section-heading sellio-section-heading--center", children: [
       /* @__PURE__ */ jsxs("span", { className: "sellio-eyebrow", children: [
@@ -1705,7 +1833,7 @@ function PricingSection() {
         /* @__PURE__ */ jsx("span", { children: "2 months free" })
       ] })
     ] }),
-    /* @__PURE__ */ jsx("div", { className: "sellio-pricing-grid", children: PLANS.map((plan) => {
+    /* @__PURE__ */ jsx("div", { className: "sellio-pricing-grid", children: landingPlans(region).map((plan) => {
       const amount = annual ? plan.yearly : plan.monthly;
       const href = annual ? plan.links.annual : plan.links.monthly;
       return /* @__PURE__ */ jsxs("article", { className: "sellio-pricing-card " + (plan.badge ? "is-featured" : ""), style: { "--plan-accent": plan.accent }, children: [
@@ -1722,6 +1850,7 @@ function PricingSection() {
             annual ? "year" : "month"
           ] })
         ] }),
+        indonesia && /* @__PURE__ */ jsx("p", { className: "sellio-plan-rupiah", "data-testid": "plan-rupiah", children: rupiahNote(amount) }),
         annual && /* @__PURE__ */ jsxs("p", { className: "sellio-plan-saving", children: [
           "Save SGD ",
           plan.monthly * 12 - plan.yearly,
@@ -1740,6 +1869,7 @@ function PricingSection() {
       ] }, plan.key);
     }) }),
     /* @__PURE__ */ jsx("p", { className: "sellio-pricing-note", children: "Eligible new merchants receive a seven-day trial. Sellio World, our marketplace map, is coming soon." }),
+    indonesia && /* @__PURE__ */ jsx("p", { className: "sellio-pricing-note", "data-testid": "plan-payment-note", children: INDONESIA_PAYMENT_NOTE }),
     /* @__PURE__ */ jsxs("p", { className: "sellio-pricing-note", children: [
       "Selling from home? ",
       /* @__PURE__ */ jsx("a", { href: "/join", rel: "nofollow", style: { fontWeight: 700, textDecoration: "underline" }, children: "Open a free personal shop" }),
@@ -1750,7 +1880,7 @@ function PricingSection() {
       /* @__PURE__ */ jsx("a", { href: MULTI_OUTLET_URL, target: "_blank", rel: "noopener noreferrer", style: { fontWeight: 700, textDecoration: "underline" }, children: "Talk to us on WhatsApp" }),
       "."
     ] }),
-    /* @__PURE__ */ jsxs("p", { className: "sellio-pricing-note", children: [
+    !indonesia && /* @__PURE__ */ jsxs("p", { className: "sellio-pricing-note", children: [
       "Want us to set it up for you? Done-for-you setup is SGD ",
       SETUP_OFFER.price,
       " one-time: ",
