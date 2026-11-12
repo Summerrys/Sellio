@@ -59,6 +59,7 @@ const sections = [
           <li>send service, account, security, billing and support communications;</li>
           <li>detect misuse, investigate incidents and protect Sellio, merchants and customers;</li>
           <li>understand performance and improve the platform, where allowed by your cookie choice;</li>
+          <li>measure whether Sellio's own ads, such as ads on ChatGPT, lead to visits and free trials, where allowed by your cookie choice;</li>
           <li>comply with applicable law, enforce our terms and resolve disputes; and</li>
           <li>carry out another purpose explained at collection or authorised by you.</li>
         </ul>
@@ -84,8 +85,9 @@ const sections = [
     title: 'Cookies and local storage',
     content: (
       <>
-        <p>Sellio uses essential cookies and similar browser storage for sign-in, session continuity, security, navigation, interface preferences and core app functions. These are required for the service to work and are not disabled by declining optional analytics.</p>
-        <p>Our cookie panel lets you allow or decline optional site-usage analytics. We remember that choice in your browser for up to 180 days. Optional analytics operate only after permission is given and when such analytics are enabled. You can reopen <strong>Cookie settings</strong> from the footer at any time.</p>
+        <p>Sellio uses essential cookies and similar browser storage for sign-in, session continuity, security, navigation, interface preferences and core app functions. These are required for the service to work and are not disabled by declining optional cookies.</p>
+        <p>Our cookie panel lets you allow or decline optional cookies, used for site-usage analytics and advertising measurement. We remember that choice in your browser for up to 180 days. Optional cookies are used only after permission is given and when such features are enabled. You can reopen <strong>Cookie settings</strong> from the footer at any time.</p>
+        <p>If you allow optional cookies, Sellio's public and sign-up pages on sellio.sg use OpenAI's advertising measurement pixel, which tells us whether a visit or a free trial came from one of Sellio's ads on ChatGPT. It sets two cookies on sellio.sg: <code>__oppref</code>, which keeps the ad reference from the page you arrived on for 30 days, and <code>__obref</code>, a random browser reference kept for up to a year. It is not used in the Sellio apps, on merchants' storefronts or in merchant workspaces. Declining in <strong>Cookie settings</strong> stops it and removes those cookies.</p>
         <p>Clearing browser data, using a different device or browser, or changing our consent setup may cause Sellio to ask again. Blocking essential browser storage may prevent sign-in or other functions from working properly.</p>
       </>
     ),
@@ -101,6 +103,7 @@ const sections = [
           <li><strong>Supabase</strong>, for database, authentication, storage and related platform services;</li>
           <li><strong>Stripe</strong>, for merchant checkout, subscriptions, invoices and billing management;</li>
           <li><strong>Google</strong>, when you choose Google sign-in or another Google-enabled function;</li>
+          <li><strong>OpenAI</strong>, if you allow optional cookies, to measure Sellio's ads on ChatGPT (see Cookies and local storage);</li>
           <li><strong>service providers</strong> supporting hosting, content delivery, communications, monitoring, security, support and AI-assisted functions;</li>
           <li><strong>professional advisers, authorities or other parties</strong> where reasonably necessary to comply with law, protect rights and safety, investigate misuse, or establish or defend legal claims; and</li>
           <li><strong>a successor or transaction party</strong> in connection with a genuine restructuring, financing, sale or transfer of all or part of the service, subject to appropriate confidentiality protections.</li>
@@ -201,8 +204,8 @@ export default function Privacy() {
       intro="This policy explains what Sellio collects, why we use it, when it may be shared and the choices available to merchants, staff and storefront customers."
       description="Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and Singapore PDPA rights."
       path="/privacy"
-      lastUpdated="5 November 2026"
-      dateModified="2026-11-05"
+      lastUpdated="12 November 2026"
+      dateModified="2026-11-12"
       sections={sections}
     />
   );

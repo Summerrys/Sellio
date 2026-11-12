@@ -122,6 +122,50 @@
         }
       })();
     </script>
+    <script id="sellio-openai-pixel">
+      /* ChatGPT ads: OpenAI's Pixel, as Ads Manager gives it (Alvin, 12 Nov 2026), set up only
+         - on sellio.sg in a browser: never in Sellio's apps (scripts/build-app.mjs leaves this
+           script out of them) nor at other addresses (Cloudflare previews, local builds);
+         - once the visitor has allowed cookies, as the Privacy Policy says (the cookie bar,
+           src/lib/cookieConsent.js: keep allowed() in step with getCookieConsent);
+         - on Sellio's public and sign-up pages: the start page, privacy, terms, Explore and its
+           listings, /Auth, /Join and /Account. Not on shops' storefronts or in shops' workspaces,
+           which show the shops' own customers.
+         A visitor who allows cookies later starts it through window.__sellioOpenAIPixel(true)
+         (src/lib/adsPixel.js, which also measures trial_started). tests: verification/openai-pixel.* */
+      (function () {
+        var w = window;
+        var onPage = function () {
+          var l = w.location, path = l.pathname.toLowerCase().replace(/\/+$/, '') || '/';
+          return l.hostname === 'sellio.sg' && (path === '/' || path === '/privacy' || path === '/terms' ||
+            path === '/explore' || /^\/listing\/[^/]+$/.test(path) || path === '/auth' || path === '/join' || path === '/account');
+        };
+        var inApp = function () {
+          try { if (w.Capacitor && w.Capacitor.isNativePlatform && w.Capacitor.isNativePlatform()) return true; } catch (e) { /* not the app */ }
+          return !!((w.ReactNativeWebView && typeof w.ReactNativeWebView.postMessage === 'function') ||
+            (w.__hybrid_bridge && typeof w.__hybrid_bridge.sendMessage === 'function'));
+        };
+        var allowed = function () {
+          try {
+            var name = 'sellio_cookie_consent=', item = document.cookie.split('; ').filter(function (c) { return c.indexOf(name) === 0; })[0];
+            var c = item ? JSON.parse(decodeURIComponent(item.slice(name.length))) : null, now = Date.now();
+            return !!c && c.version === 1 && c.analytics === true && Number.isFinite(c.updatedAt) && Number.isFinite(c.expiresAt) &&
+              c.updatedAt <= now && c.expiresAt > now && c.expiresAt <= c.updatedAt + 180 * 24 * 60 * 60 * 1000;
+          } catch (e) { return false; } // a malformed or blocked cookie is never consent
+        };
+        // justAllowed: the visitor has just pressed Allow (a browser that blocks cookies keeps
+        // that choice for the visit only, so it may not be in the cookie).
+        w.__sellioOpenAIPixel = function (justAllowed) {
+          if (inApp() || !onPage() || !(justAllowed === true || allowed())) return false;
+          if (typeof w.oaiq === 'function') { w.oaiq('consent', true); return true; }
+          !function(w,d,s,u){if(w.oaiq)return;var q=function(){q.q.push(arguments)};q.q=[];w.oaiq=q;var j=d.createElement(s);j.async=1;j.src=u;var f=d.getElementsByTagName(s)[0];f.parentNode.insertBefore(j,f)}(window,document,"script","https://bzrcdn.openai.com/sdk/oaiq.min.js");
+          oaiq("consent", true); // OpenAI's consent switch, before init: a decline it remembers is lifted by Allow
+          oaiq("init",{pixelId:"2bHx6GyaD53HN9UapJRGVS",debug:true});
+          return true;
+        };
+        w.__sellioOpenAIPixel();
+      })();
+    </script>
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/sellio-tab-16.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/sellio-tab-32.png" />
     <link rel="icon" type="image/png" sizes="64x64" href="/icons/sellio-tab-64.png" />

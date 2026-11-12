@@ -7,11 +7,14 @@
 // - the landing page's media (assets/immersive*);
 // - the files only a web host or a search engine reads (_redirects, .htaccess, Cloudflare
 //   Pages' _worker.js, _routes.json, _headers and 404.html, robots.txt, sitemap.xml, llms.txt,
-//   the share image), the prerendered /privacy and /terms copies and store.html (the app shows
-//   those pages itself), sw.js (the app registers no service worker), and app-updates/ (these
+//   the share image), the prerendered /privacy and /terms copies, store.html and explore.html
+//   (the web host's shells for those addresses; the app shows those pages itself, from its own
+//   index.html), sw.js (the app registers no service worker), and app-updates/ (these
 //   files themselves, published for the apps by scripts/app-update.mjs).
 // Its index.html is dist/app.html: the same page and scripts without the landing page's
-// prerendered markup, which the app would only hide.
+// prerendered markup, which the app would only hide, and without the ChatGPT ads Pixel
+// (index.html's #sellio-openai-pixel script): the apps measure no ads, and Apple and Google
+// would count an ad pixel as tracking.
 import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -34,13 +37,19 @@ const LEFT_OUT = new Set([
   'privacy',
   'terms',
   'store.html',
+  'explore.html',
   'sw.js',
   'app-updates',
   'index.html', // replaced by app.html below
   'app.html',
 ]);
 
-const appShell = await readFile(path.join(SRC, 'app.html'), 'utf8');
+const PIXEL_SCRIPT = /\n[ \t]*<script id="sellio-openai-pixel">[\s\S]*?<\/script>/;
+const PIXEL_TRACES = /sellio-openai-pixel|bzrcdn\.openai\.com|2bHx6GyaD53HN9UapJRGVS/;
+const appShell = (await readFile(path.join(SRC, 'app.html'), 'utf8')).replace(PIXEL_SCRIPT, '');
+if (PIXEL_TRACES.test(appShell)) {
+  throw new Error('dist/app.html: the ChatGPT ads Pixel is still in the page the apps would carry.');
+}
 if (!/<script[^>]+type="module"[^>]+src="\/assets\/index-[^"]+\.js"/.test(appShell)) {
   throw new Error('dist/app.html has no entry script. Run the website build first.');
 }
@@ -64,6 +73,19 @@ const named = [...appShell.matchAll(/(?:src|href)="\/(assets\/[^"]+\.(?:js|css))
 for (const file of named) {
   await stat(path.join(OUT, file)).catch(() => { throw new Error(`dist-app is missing ${file}`); });
 }
+
+// And nothing in dist-app/ loads or names the ChatGPT ads Pixel.
+async function pixelTraces(dir) {
+  const found = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) found.push(...await pixelTraces(full));
+    else if (/\.(?:html|js|mjs|css|json|txt|xml|webmanifest)$/.test(entry.name) && PIXEL_TRACES.test(await readFile(full, 'utf8'))) found.push(full);
+  }
+  return found;
+}
+const traces = await pixelTraces(OUT);
+if (traces.length) throw new Error(`dist-app must not carry the ChatGPT ads Pixel: ${traces.join(', ')}`);
 
 async function size(dir) {
   let total = 0;

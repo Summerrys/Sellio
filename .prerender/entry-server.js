@@ -1044,6 +1044,14 @@ const BUSINESS_PLANS = [
     noTrialLinks: {
       monthly: "https://buy.stripe.com/00w9AVfH30gj6i7d7G7bW0k",
       yearly: "https://buy.stripe.com/cNicN7bqN5ADcGv4Ba7bW0l"
+    },
+    shopLinks: {
+      monthly: "https://buy.stripe.com/14A7sN1Qd2ordKzebK7bW0x",
+      yearly: "https://buy.stripe.com/6oU8wR3Yle799ujaZy7bW0y"
+    },
+    shopTrialLinks: {
+      monthly: "https://buy.stripe.com/3cI28t1Qd2orbCrebK7bW0D",
+      yearly: "https://buy.stripe.com/4gM28teCZ4wz5e33x67bW0E"
     }
   },
   {
@@ -1067,6 +1075,14 @@ const BUSINESS_PLANS = [
     noTrialLinks: {
       monthly: "https://buy.stripe.com/4gM14p2Uhe79fSH3x67bW0m",
       yearly: "https://buy.stripe.com/7sY00lfH39QT49Z3x67bW0n"
+    },
+    shopLinks: {
+      monthly: "https://buy.stripe.com/28E00l2UhbZ18qf9Vu7bW0z",
+      yearly: "https://buy.stripe.com/7sYcN7dyVfbddKz9Vu7bW0A"
+    },
+    shopTrialLinks: {
+      monthly: "https://buy.stripe.com/fZufZj0M9e7921R7Nm7bW0F",
+      yearly: "https://buy.stripe.com/9B63cx1Qd0gj49Z6Ji7bW0G"
     }
   },
   {
@@ -1090,10 +1106,20 @@ const BUSINESS_PLANS = [
     noTrialLinks: {
       monthly: "https://buy.stripe.com/4gM4gBcuR5ADayn0kU7bW0o",
       yearly: "https://buy.stripe.com/4gM14pbqN2or21RffO7bW0p"
+    },
+    shopLinks: {
+      monthly: "https://buy.stripe.com/fZu14p8eBe798qf5Fe7bW0B",
+      yearly: "https://buy.stripe.com/28E9AV52pe7949Z6Ji7bW0C"
+    },
+    shopTrialLinks: {
+      monthly: "https://buy.stripe.com/eVqbJ33Yl6EH7mbd7G7bW0H",
+      yearly: "https://buy.stripe.com/28EeVf0M9e7935Vc3C7bW0I"
     }
   }
 ];
 Object.fromEntries(BUSINESS_PLANS.map((plan) => [plan.key, plan.noTrialLinks]));
+Object.fromEntries(BUSINESS_PLANS.map((plan) => [plan.key, plan.shopLinks]));
+Object.fromEntries(BUSINESS_PLANS.map((plan) => [plan.key, plan.shopTrialLinks]));
 const PRODUCT_VIEWS = [
   {
     key: "storefront",
@@ -2281,6 +2307,7 @@ const sections$1 = [
         /* @__PURE__ */ jsx("li", { children: "send service, account, security, billing and support communications;" }),
         /* @__PURE__ */ jsx("li", { children: "detect misuse, investigate incidents and protect Sellio, merchants and customers;" }),
         /* @__PURE__ */ jsx("li", { children: "understand performance and improve the platform, where allowed by your cookie choice;" }),
+        /* @__PURE__ */ jsx("li", { children: "measure whether Sellio's own ads, such as ads on ChatGPT, lead to visits and free trials, where allowed by your cookie choice;" }),
         /* @__PURE__ */ jsx("li", { children: "comply with applicable law, enforce our terms and resolve disputes; and" }),
         /* @__PURE__ */ jsx("li", { children: "carry out another purpose explained at collection or authorised by you." })
       ] }),
@@ -2303,11 +2330,20 @@ const sections$1 = [
     id: "cookies",
     title: "Cookies and local storage",
     content: /* @__PURE__ */ jsxs(Fragment, { children: [
-      /* @__PURE__ */ jsx("p", { children: "Sellio uses essential cookies and similar browser storage for sign-in, session continuity, security, navigation, interface preferences and core app functions. These are required for the service to work and are not disabled by declining optional analytics." }),
+      /* @__PURE__ */ jsx("p", { children: "Sellio uses essential cookies and similar browser storage for sign-in, session continuity, security, navigation, interface preferences and core app functions. These are required for the service to work and are not disabled by declining optional cookies." }),
       /* @__PURE__ */ jsxs("p", { children: [
-        "Our cookie panel lets you allow or decline optional site-usage analytics. We remember that choice in your browser for up to 180 days. Optional analytics operate only after permission is given and when such analytics are enabled. You can reopen ",
+        "Our cookie panel lets you allow or decline optional cookies, used for site-usage analytics and advertising measurement. We remember that choice in your browser for up to 180 days. Optional cookies are used only after permission is given and when such features are enabled. You can reopen ",
         /* @__PURE__ */ jsx("strong", { children: "Cookie settings" }),
         " from the footer at any time."
+      ] }),
+      /* @__PURE__ */ jsxs("p", { children: [
+        "If you allow optional cookies, Sellio's public and sign-up pages on sellio.sg use OpenAI's advertising measurement pixel, which tells us whether a visit or a free trial came from one of Sellio's ads on ChatGPT. It sets two cookies on sellio.sg: ",
+        /* @__PURE__ */ jsx("code", { children: "__oppref" }),
+        ", which keeps the ad reference from the page you arrived on for 30 days, and ",
+        /* @__PURE__ */ jsx("code", { children: "__obref" }),
+        ", a random browser reference kept for up to a year. It is not used in the Sellio apps, on merchants' storefronts or in merchant workspaces. Declining in ",
+        /* @__PURE__ */ jsx("strong", { children: "Cookie settings" }),
+        " stops it and removes those cookies."
       ] }),
       /* @__PURE__ */ jsx("p", { children: "Clearing browser data, using a different device or browser, or changing our consent setup may cause Sellio to ask again. Blocking essential browser storage may prevent sign-in or other functions from working properly." })
     ] })
@@ -2333,6 +2369,10 @@ const sections$1 = [
         /* @__PURE__ */ jsxs("li", { children: [
           /* @__PURE__ */ jsx("strong", { children: "Google" }),
           ", when you choose Google sign-in or another Google-enabled function;"
+        ] }),
+        /* @__PURE__ */ jsxs("li", { children: [
+          /* @__PURE__ */ jsx("strong", { children: "OpenAI" }),
+          ", if you allow optional cookies, to measure Sellio's ads on ChatGPT (see Cookies and local storage);"
         ] }),
         /* @__PURE__ */ jsxs("li", { children: [
           /* @__PURE__ */ jsx("strong", { children: "service providers" }),
@@ -2438,8 +2478,8 @@ function Privacy() {
       intro: "This policy explains what Sellio collects, why we use it, when it may be shared and the choices available to merchants, staff and storefront customers.",
       description: "Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and Singapore PDPA rights.",
       path: "/privacy",
-      lastUpdated: "5 November 2026",
-      dateModified: "2026-11-05",
+      lastUpdated: "12 November 2026",
+      dateModified: "2026-11-12",
       sections: sections$1
     }
   );

@@ -89,5 +89,14 @@ for (const route of ["'/store'", "'/explore'", "'/app'", "'/sitemap.xml'", "/res
   if (!worker.includes(route)) failures.push(`_worker.js: ${route} routing missing`);
 }
 
+// The ChatGPT ads Pixel (index.html's #sellio-openai-pixel) is in every website page's head, once;
+// the script itself decides where it runs. scripts/build-app.mjs takes it out of the apps' copy.
+for (const file of ['dist/index.html', 'dist/privacy/index.html', 'dist/terms/index.html', 'dist/app.html', 'dist/store.html', 'dist/explore.html']) {
+  const html = await readFile(file, 'utf8').catch(() => '');
+  const count = (html.match(/<script id="sellio-openai-pixel">/g) || []).length;
+  if (count !== 1) failures.push(`${file}: the ChatGPT ads Pixel script appears ${count} times (expected once)`);
+  else if (html.indexOf('<script id="sellio-openai-pixel">') > html.indexOf('</head>')) failures.push(`${file}: the ChatGPT ads Pixel must be in the head`);
+}
+
 if (failures.length) throw new Error('Sellio prerender validation failed:\n' + failures.join('\n'));
 console.log('Sellio prerender validation passed for 3 public routes.');

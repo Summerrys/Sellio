@@ -6,8 +6,13 @@ import '@/index.css'
 import { removeAppReloadParam } from '@/lib/appUpdates'
 import { installEdgeSwipeBack } from '@/lib/edgeSwipeBack'
 import { isCapacitorApp } from '@/lib/nativeApp'
+import { startAdsMeasurement } from '@/lib/adsPixel'
 
 removeAppReloadParam()
+
+// ChatGPT ads on the website (index.html's OpenAI Pixel; the apps have none): the cookie choice,
+// and trial_started when a free trial from the website comes back from Stripe.
+startAdsMeasurement()
 
 // Product and shop photos (class "sellio-photo") fade in once they've loaded (index.css).
 // A data attribute rather than a class, so React re-rendering the class never hides one.
