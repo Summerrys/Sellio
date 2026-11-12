@@ -15,11 +15,12 @@ import { INDUSTRY_OPTIONS } from '@/lib/industry';
 import { offerInstall } from '@/lib/pwaInstall';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { COUNTRIES, countryNamed } from '@/lib/countries';
+import { useAppText, N_ } from '@/lib/appText';
 
 const schema = z.object({
-  businessName: z.string().min(2, 'Business name is required').max(100, 'Business name must be under 100 characters'),
-  businessType: z.string().min(1, 'Please select a business type'),
-  country: z.string().min(1, 'Please select a country'),
+  businessName: z.string().min(2, N_('Business name is required')).max(100, N_('Business name must be under 100 characters')),
+  businessType: z.string().min(1, N_('Please select a business type')),
+  country: z.string().min(1, N_('Please select a country')),
 });
 
 // FIX: previously stored the value 'food' for the F&B option, while Settings >
@@ -31,6 +32,8 @@ const businessTypes = INDUSTRY_OPTIONS;
 // Sellio's countries (lib/countries.js). The country picked here sets the shop's currency and
 // tax preset (and, in the database, its time zone): Indonesia is Rupiah, no tax, Jakarta time.
 const countries = COUNTRIES.map((country) => country.name);
+// How each one is shown; the value kept is the English name.
+const COUNTRY_SHOWN = { Singapore: N_('Singapore'), Malaysia: N_('Malaysia'), Indonesia: N_('Indonesia') };
 
 
 
@@ -38,6 +41,7 @@ const countries = COUNTRIES.map((country) => country.name);
 const getPendingTenantId = () => localStorage.getItem('pending_tenant_id') || crypto.randomUUID();
 
 export default function Step1Combined({ formData, updateFormData, nextStep }) {
+  const { t } = useAppText();
   const [logoFile, setLogoFile] = React.useState(null);
   const [logoPreview, setLogoPreview] = React.useState(null);
   const [logoError, setLogoError] = React.useState('');
@@ -94,13 +98,13 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
 
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
-      setLogoError('Please upload JPG, PNG, or WEBP files only');
+      setLogoError(t('Please upload JPG, PNG, or WEBP files only'));
       return;
     }
 
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      setLogoError('File size must be under 10MB');
+      setLogoError(t('File size must be under 10MB'));
       return;
     }
 
@@ -137,7 +141,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
       updateFormData({ logoUrl: publicUrl, logoTempPath: storagePath });
     } catch (error) {
       console.error('Logo upload failed:', error);
-      setLogoError(error?.friendly ? error.message : 'Upload failed, please try again');
+      setLogoError(error?.friendly ? error.message : t('Upload failed, please try again'));
     } finally {
       setLogoUploading(false);
     }
@@ -226,15 +230,15 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
           <Building2 className="w-8 h-8 text-white" />
         </div>
-        <h2 className="text-3xl font-bold text-slate-900 mb-2">Let's set up your business</h2>
-        <p className="text-slate-600">Tell us about your company and choose your brand colors</p>
+        <h2 className="text-3xl font-bold text-slate-900 mb-2">{t('Let\'s set up your business')}</h2>
+        <p className="text-slate-600">{t('Tell us about your company and choose your brand colors')}</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Logo Upload */}
         <div>
           <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-3">
-            <Sparkles className="w-4 h-4 text-purple-500" /> Business Logo (optional)
+            <Sparkles className="w-4 h-4 text-purple-500" />{' '}{t('Business Logo (optional)')}
           </Label>
           <input
             ref={fileInputRef}
@@ -249,7 +253,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                onClick={() => fileInputRef.current?.click()}
                className="relative w-24 h-24 rounded-2xl overflow-hidden cursor-pointer group"
              >
-               <img src={logoPreview} alt="Logo preview" className="w-full h-full object-cover" />
+               <img src={logoPreview} alt={t('Logo preview')} className="w-full h-full object-cover" />
                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                  <Edit3 className="w-6 h-6 text-white" />
                </div>
@@ -278,13 +282,13 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
               {logoUploading ? (
                 <>
                   <Loader2 className="w-8 h-8 text-slate-400 mx-auto mb-2 animate-spin" />
-                  <p className="text-sm text-slate-500">Uploading...</p>
+                  <p className="text-sm text-slate-500">{t('Uploading...')}</p>
                 </>
               ) : (
                 <>
                   <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                  <p className="text-sm text-slate-600 font-medium">Upload your logo</p>
-                  <p className="text-xs text-slate-500 mt-1">JPG, PNG, WEBP up to 10MB</p>
+                  <p className="text-sm text-slate-600 font-medium">{t('Upload your logo')}</p>
+                  <p className="text-xs text-slate-500 mt-1">{t('JPG, PNG, WEBP up to 10MB')}</p>
                 </>
               )}
             </div>
@@ -298,34 +302,34 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {/* Business name takes full width on mobile */}
           <div className="col-span-1 sm:col-span-1">
-            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Building2 className="w-4 h-4 text-blue-500" /> Business Name</Label>
+            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Building2 className="w-4 h-4 text-blue-500" />{' '}{t('Business Name')}</Label>
             <Input
               {...register('businessName')}
-              placeholder="eg. Xin Fu Ji Local Delights"
+              placeholder={t('eg. Golden Spoon Kitchen')}
               className="mt-2 h-11"
             />
             {errors.businessName && (
-              <p className="text-xs text-red-500 mt-1">{errors.businessName.message}</p>
+              <p className="text-xs text-red-500 mt-1">{t(errors.businessName.message)}</p>
             )}
           </div>
 
           {/* Industry + Country side by side on mobile */}
           <div className="grid grid-cols-2 sm:contents gap-4">
           <div>
-            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Briefcase className="w-4 h-4 text-green-500" /> Industry Type</Label>
+            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Briefcase className="w-4 h-4 text-green-500" />{' '}{t('Industry Type')}</Label>
             <Select
               value={watch('businessType')}
               onValueChange={(v) => setValue('businessType', v)}
             >
               <SelectTrigger className="mt-2 h-11">
-                <SelectValue placeholder="Select industry" />
+                <SelectValue placeholder={t('Select industry')} />
               </SelectTrigger>
               <SelectContent>
                 {businessTypes.map((type) => (
                   <SelectItem key={type.value} value={type.value} disabled={type.disabled}>
                        <div className="flex items-center gap-2">
                          <type.Icon className={`w-4 h-4 ${type.disabled ? 'opacity-40' : type.color}`} style={type.disabled ? { color: '#8b5cf6' } : undefined} />
-                         <span className={type.disabled ? 'opacity-60' : ''}>{type.label}</span>
+                         <span className={type.disabled ? 'opacity-60' : ''}>{t(type.label)}</span>
                          {type.disabled && (
                            <span
                              className="ml-1 text-[10px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1"
@@ -335,7 +339,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                                border: '1px solid rgba(139,92,246,0.25)',
                              }}
                            >
-                             ✨ Coming Soon
+                             {t('✨ Coming Soon')}
                            </span>
                          )}
                        </div>
@@ -344,12 +348,12 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
               </SelectContent>
             </Select>
             {errors.businessType && (
-              <p className="text-xs text-red-500 mt-1">{errors.businessType.message}</p>
+              <p className="text-xs text-red-500 mt-1">{t(errors.businessType.message)}</p>
             )}
           </div>
 
           <div>
-            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Globe className="w-4 h-4 text-orange-500" /> Country</Label>
+            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Globe className="w-4 h-4 text-orange-500" />{' '}{t('Country')}</Label>
             <Select
               value={watch('country')}
               onValueChange={(v) => setValue('country', v)}
@@ -360,7 +364,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
               <SelectContent>
                 {countries.map((country) => (
                   <SelectItem key={country} value={country}>
-                    {country}
+                    {t(COUNTRY_SHOWN[country] ?? country)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -372,7 +376,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
         {/* Theme Selection - Grid Layout */}
         <div className="border-t pt-6">
           <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-4">
-            <Palette className="w-4 h-4 text-purple-500" /> Choose Your Brand Colors
+            <Palette className="w-4 h-4 text-purple-500" />{' '}{t('Choose Your Brand Colors')}
           </Label>
           
           <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
@@ -381,11 +385,11 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
               type="button"
               onClick={() => setShowColorPicker(true)}
               className="relative rounded-lg overflow-hidden border-2 border-dashed border-slate-300 hover:border-slate-400 transition-all aspect-square flex items-center justify-center group"
-              title="Custom Colors"
+              title={t('Custom Colors')}
             >
               <div className="flex flex-col items-center gap-2">
                 <Pipette className="w-6 h-6 text-slate-400 group-hover:text-slate-600" />
-                <span className="text-xs text-slate-400 group-hover:text-slate-600 font-medium">Custom</span>
+                <span className="text-xs text-slate-400 group-hover:text-slate-600 font-medium">{t('Custom')}</span>
               </div>
             </button>
 
@@ -396,7 +400,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                   key={palette.name}
                   type="button"
                   onClick={() => handleThemeSelect(palette)}
-                  title={palette.name}
+                  title={t(palette.name)}
                   style={{
                     border: isSelected ? `3px solid ${palette.dark}` : '2px solid #e2e8f0',
                     transition: 'border 0.15s, transform 0.15s',
@@ -422,7 +426,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                         className="text-[9px] sm:text-[10px] font-medium text-white px-1.5 py-0.5 rounded-full truncate max-w-[90%] text-center"
                         style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
                       >
-                        {palette.name}
+                        {t(palette.name)}
                       </span>
                     </div>
                   </div>
@@ -444,11 +448,11 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
           {showColorPicker && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
               <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
-                <h3 className="text-lg font-bold text-slate-900 mb-4">Choose Custom Colors</h3>
+                <h3 className="text-lg font-bold text-slate-900 mb-4">{t('Choose Custom Colors')}</h3>
                 
                 <div className="space-y-4 mb-6">
                   <div>
-                    <Label className="text-sm font-medium text-slate-700 mb-2 block">Primary Color</Label>
+                    <Label className="text-sm font-medium text-slate-700 mb-2 block">{t('Primary Color')}</Label>
                     <div className="flex items-center gap-3">
                       <input
                         type="color"
@@ -461,7 +465,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                   </div>
                   
                   <div>
-                    <Label className="text-sm font-medium text-slate-700 mb-2 block">Secondary Color</Label>
+                    <Label className="text-sm font-medium text-slate-700 mb-2 block">{t('Secondary Color')}</Label>
                     <div className="flex items-center gap-3">
                       <input
                         type="color"
@@ -481,7 +485,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                     onClick={() => setShowColorPicker(false)}
                     className="flex-1"
                   >
-                    Cancel
+                    {t('Cancel')}
                   </Button>
                   <Button
                     type="button"
@@ -496,7 +500,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                     }}
                     className="flex-1 bg-slate-900 hover:bg-slate-800 text-white"
                   >
-                    Apply
+                    {t('Apply')}
                   </Button>
                 </div>
               </div>
@@ -524,7 +528,7 @@ export default function Step1Combined({ formData, updateFormData, nextStep }) {
                 e.target.style.opacity = '1';
               }}
             >
-              Continue <ArrowRight className="w-4 h-4" />
+              {t('Continue')}{' '}<ArrowRight className="w-4 h-4" />
             </Button>
           );
         })()}

@@ -1,3 +1,5 @@
+import { N_ } from '@/lib/appText';
+
 // Default gradient fallback (blue-to-purple) — not a selectable palette. Stores that
 // haven't chosen a theme, and visitors who aren't signed in, see this.
 export const DEFAULT_GRADIENT = 'linear-gradient(135deg, #3b82f6 0%, #9333ea 100%)';
@@ -22,14 +24,14 @@ export function resolveSavedTheme(row) {
 
 // Color theme sets with light and dark anchor colors (no Default entry)
 export const COLOR_SETS = [
-  { name: 'Ocean Blue',    dark: '#0369A1', light: '#E0F2FE' },
-  { name: 'Forest Green',  dark: '#15803D', light: '#DCFCE7' },
-  { name: 'Sunset Orange', dark: '#EA580C', light: '#FFEDD5' },
-  { name: 'Royal Purple',  dark: '#7E22CE', light: '#F3E8FF' },
-  { name: 'Berry Red',     dark: '#DC2626', light: '#FEE2E2' },
-  { name: 'Teal Breeze',   dark: '#0891B2', light: '#CFFAFE' },
-  { name: 'Indigo Sky',    dark: '#4F46E5', light: '#E0E7FF' },
-  { name: 'Rose Garden',   dark: '#BE185D', light: '#FFE4E6' },
+  { name: N_('Ocean Blue'),    dark: '#0369A1', light: '#E0F2FE' },
+  { name: N_('Forest Green'),  dark: '#15803D', light: '#DCFCE7' },
+  { name: N_('Sunset Orange'), dark: '#EA580C', light: '#FFEDD5' },
+  { name: N_('Royal Purple'),  dark: '#7E22CE', light: '#F3E8FF' },
+  { name: N_('Berry Red'),     dark: '#DC2626', light: '#FEE2E2' },
+  { name: N_('Teal Breeze'),   dark: '#0891B2', light: '#CFFAFE' },
+  { name: N_('Indigo Sky'),    dark: '#4F46E5', light: '#E0E7FF' },
+  { name: N_('Rose Garden'),   dark: '#BE185D', light: '#FFE4E6' },
 ];
 
 // Convert hex to RGB

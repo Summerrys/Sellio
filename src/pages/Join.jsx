@@ -13,21 +13,27 @@ import { clearMobileAuth, isNativeAndroid } from '@/lib/mobileOAuth';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
 import ClosedAccount from '@/components/auth/ClosedAccount';
+import TermsLine from '@/components/auth/TermsLine';
+import AppLanguageSwitch from '@/components/ui-custom/AppLanguageSwitch';
 import { callClosedAccount, closedAccountMessage } from '@/lib/closedAccount';
 import {
   PHONE_COUNTRIES, JOIN_LINK_TYPES, accountErrorMessage, appBaseUrl, emailResendWait, fullPhone, isClosedLoginError, phoneCountryFor,
   isEmail, isExpiredLinkError, isStaffLoginEmail, nextStepFor, readEmailLink,
 } from '@/lib/accountFlow';
 import { visitorCountry } from '@/lib/countries';
+import { useAppText, N_ } from '@/lib/appText';
 
 const LOGO_URL = '/branding/sellio-logo.webp';
 const BUTTON_STYLE = { background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' };
 const INPUT_CLASS = 'w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400';
 const RESEND_SECONDS = 60;
+// The button in the verification email (scripts/email-templates.py). The email is in English,
+// so the hint names the button as the email shows it.
+const EMAIL_BUTTON = 'Verify my email';
 // Each new verification email replaces the one before, and Gmail groups them (same sender and
 // subject) into one conversation, so an older link is easy to tap by mistake (Alvin's test,
 // 6 Nov 2026).
-const LINK_GONE = 'This link no longer works: it has expired, or a newer verification email replaced it. Open the newest email from Sellio, or send a new one below.';
+const LINK_GONE = N_('This link no longer works: it has expired, or a newer verification email replaced it. Open the newest email from Sellio, or send a new one below.');
 
 function GoogleIcon() {
   return (
@@ -59,6 +65,7 @@ function Notice({ tone = 'amber', children }) {
 // closed (its deletion is pending) gets the closed-account screen instead: Keep my account
 // (open again and carry on) or Start again (deleted, then sign up afresh).
 export default function Join() {
+  const { t } = useAppText();
   const { setAppUser } = useAppUser();
   const [stage, setStage] = useState('loading'); // loading | start | sent | finish | staff | closed
   // Phone / browser Back from "check your email" returns to the email form, like
@@ -98,11 +105,11 @@ export default function Join() {
           if (link.errorCode === 'user_banned') {
             // A link that went through Supabase first (older emails) to a closed account:
             // Supabase only says the login is locked. A new link opens the closed screen.
-            setNotice('This account is closed. To keep it, or to delete it and start again, send a new verification email and open its link.');
+            setNotice(t('This account is closed. To keep it, or to delete it and start again, send a new verification email and open its link.'));
           } else {
             setNotice(link.errorCode === 'otp_expired' || /expired|invalid/i.test(link.errorDescription || '')
-              ? LINK_GONE
-              : (link.errorDescription || 'That verification link didn’t work. Send a new verification email.'));
+              ? t(LINK_GONE)
+              : (link.errorDescription || t('That verification link didn’t work. Send a new verification email.')));
           }
           setStage('start');
           return;
@@ -129,7 +136,7 @@ export default function Join() {
           if (error) {
             setNotice(/Failed to fetch|NetworkError|Load failed/i.test(String(error.message || ''))
               ? accountErrorMessage(error)
-              : LINK_GONE);
+              : t(LINK_GONE));
             setStage('start');
             return;
           }
@@ -160,7 +167,7 @@ export default function Join() {
     // 'invalid' is phone sign-in's answer, from a closed-account server older than email links:
     // for a link it means the link didn't work.
     const refusal = reply?.code === 'invalid' ? { code: 'link_invalid' } : reply;
-    setNotice(reply ? closedAccountMessage(refusal) : 'Can’t reach Sellio. Check your connection and try again.');
+    setNotice(reply ? closedAccountMessage(refusal) : t('Can’t reach Sellio. Check your connection and try again.'));
     setStage('start');
   };
 
@@ -174,7 +181,7 @@ export default function Join() {
       const supabase = await getSupabase();
       const { error } = await supabase.auth.verifyOtp({ token_hash: proof?.emailTokenHash, type: proof?.emailLinkType || 'magiclink' });
       if (error) {
-        setNotice('Your account is open again. Send a new verification email to sign in.');
+        setNotice(t('Your account is open again. Send a new verification email to sign in.'));
         setStage('start');
         return;
       }
@@ -213,13 +220,13 @@ export default function Join() {
     setAccountEmail(status.email);
     if (next === 'dashboard') {
       await rememberProfile(supabase, status.email);
-      if (welcome) noteSignInWelcome('Welcome back!');
+      if (welcome) noteSignInWelcome(t('Welcome back!'));
       completeAuthNavigation('/Dashboard');
       return;
     }
     if (next === 'account') {
       // Not a new account that's here for its business invite: that one isn't back.
-      if (welcome && status.setup_done) noteSignInWelcome('Welcome back!');
+      if (welcome && status.setup_done) noteSignInWelcome(t('Welcome back!'));
       completeAuthNavigation('/Account');
       return;
     }
@@ -230,7 +237,7 @@ export default function Join() {
     // Finishing the account needs a session that proved the email (link or Google).
     if (!status.email_proven) {
       setEmail(status.email);
-      setNotice('To finish your account, verify your email: we’ll send you a verification email.');
+      setNotice(t('To finish your account, verify your email: we’ll send you a verification email.'));
       setStage('start');
       return;
     }
@@ -248,8 +255,8 @@ export default function Join() {
   const sendLink = async (e, to) => {
     e?.preventDefault();
     const address = (typeof to === 'string' ? to : email).trim().toLowerCase();
-    if (!isEmail(address)) { toast.error('Please enter a valid email address.'); return; }
-    if (isStaffLoginEmail(address)) { toast.error('That’s a staff login. Staff sign in with their phone number on the login page.'); return; }
+    if (!isEmail(address)) { toast.error(t('Please enter a valid email address.')); return; }
+    if (isStaffLoginEmail(address)) { toast.error(t('That’s a staff login. Staff sign in with their phone number on the login page.')); return; }
     setSending(true);
     try {
       const supabase = await getSupabase();
@@ -268,7 +275,7 @@ export default function Join() {
       const wait = emailResendWait(err);
       if (wait !== null) {
         setEmail(address);
-        setNotice('No new email was sent: one went to this address less than a minute ago. Open the newest email from Sellio.');
+        setNotice(t('No new email was sent: one went to this address less than a minute ago. Open the newest email from Sellio.'));
         setCooldown(Math.max(1, wait));
         setStage('sent');
         return;
@@ -308,10 +315,10 @@ export default function Join() {
     e.preventDefault();
     const name = form.full_name.trim();
     const phone = fullPhone(country, form.phone);
-    if (!name) { toast.error('Please enter your name.'); return; }
-    if (!phone) { toast.error(`Please enter a valid ${country.name} mobile number (${country.hint}).`); return; }
-    if (form.password.length < 6) { toast.error('Please choose a password of at least 6 characters.'); return; }
-    if (form.password !== form.confirm) { toast.error('The passwords don’t match.'); return; }
+    if (!name) { toast.error(t('Please enter your name.')); return; }
+    if (!phone) { toast.error(t('Please enter a valid {name} mobile number ({hint}).', { name: country.name, hint: t(country.hint) })); return; }
+    if (form.password.length < 6) { toast.error(t('Please choose a password of at least 6 characters.')); return; }
+    if (form.password !== form.confirm) { toast.error(t('The passwords don’t match.')); return; }
     setSaving(true);
     try {
       const supabase = await getSupabase();
@@ -348,29 +355,29 @@ export default function Join() {
             {/* In the app the logo opens Explore without reloading the app (websites keep
                 the home link). */}
             {isNativeApp() ? (
-              <Link to="/explore" className="inline-flex items-center justify-center mb-3" aria-label="Sellio home">
+              <Link to="/explore" className="inline-flex items-center justify-center mb-3" aria-label={t('Sellio home')}>
                 <img src={LOGO_URL} alt="Sellio" className="h-20 w-auto object-contain" />
               </Link>
             ) : (
-              <a href="/" className="inline-flex items-center justify-center mb-3" aria-label="Sellio home">
+              <a href="/" className="inline-flex items-center justify-center mb-3" aria-label={t('Sellio home')}>
                 <img src={LOGO_URL} alt="Sellio" className="h-20 w-auto object-contain" />
               </a>
             )}
             {stage === 'start' && (<>
-              <h1 className="text-xl font-semibold text-slate-800 mb-1">Create your Sellio account</h1>
-              <p className="text-sm text-slate-500">Free to start. Sell from home, or run your business on Sellio.</p>
+              <h1 className="text-xl font-semibold text-slate-800 mb-1">{t('Create your Sellio account')}</h1>
+              <p className="text-sm text-slate-500">{t('Free to start. Sell from home, or run your business on Sellio.')}</p>
             </>)}
             {stage === 'sent' && (<>
-              <h1 className="text-xl font-semibold text-slate-800 mb-1">Check your email</h1>
-              <p className="text-sm text-slate-500">We sent a verification email to <span className="font-medium text-slate-700 break-all">{email}</span>.</p>
+              <h1 className="text-xl font-semibold text-slate-800 mb-1">{t('Check your email')}</h1>
+              <p className="text-sm text-slate-500">{t('We sent a verification email to {email}.', { email: <span className="font-medium text-slate-700 break-all">{email}</span> })}</p>
             </>)}
             {stage === 'finish' && (<>
-              <h1 className="text-xl font-semibold text-slate-800 mb-1">Set up your account</h1>
+              <h1 className="text-xl font-semibold text-slate-800 mb-1">{t('Set up your account')}</h1>
               <p className="text-sm text-slate-500 break-all">{accountEmail}</p>
             </>)}
             {stage === 'staff' && (<>
-              <h1 className="text-xl font-semibold text-slate-800 mb-1">This is a staff login</h1>
-              <p className="text-sm text-slate-500">Staff logins belong to a store. Ask the store owner if you can’t get in.</p>
+              <h1 className="text-xl font-semibold text-slate-800 mb-1">{t('This is a staff login')}</h1>
+              <p className="text-sm text-slate-500">{t('Staff logins belong to a store. Ask the store owner if you can’t get in.')}</p>
             </>)}
           </div>
 
@@ -397,24 +404,24 @@ export default function Join() {
                     <input id="join-email" type="email" autoComplete="email" placeholder="you@example.com" value={email}
                       onChange={(e) => setEmail(e.target.value)} className={INPUT_CLASS} aria-describedby="join-email-hint" />
                   </div>
-                  <p id="join-email-hint" className="mt-1.5 text-xs text-slate-400">We’ll email you a link to verify it’s yours.</p>
+                  <p id="join-email-hint" className="mt-1.5 text-xs text-slate-400">{t('We’ll email you a link to verify it’s yours.')}</p>
                 </div>
                 <button type="submit" disabled={sending || !email.trim()}
                   className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70" style={BUTTON_STYLE}>
-                  {sending ? 'Sending…' : 'Send verification email'}
+                  {sending ? t('Sending…') : t('Send verification email')}
                 </button>
               </form>
               {googleSignInAvailable() && (
                 <>
                   <div className="flex items-center gap-3 my-4">
                     <div className="flex-1 h-px bg-slate-200" />
-                    <span className="text-xs text-slate-400 font-medium">or</span>
+                    <span className="text-xs text-slate-400 font-medium">{t('or')}</span>
                     <div className="flex-1 h-px bg-slate-200" />
                   </div>
                   <button type="button" onClick={continueWithGoogle} disabled={googleLoading}
                     className="w-full flex items-center justify-center gap-3 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-70">
                     {googleLoading ? <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" /> : <GoogleIcon />}
-                    {googleLoading ? 'Redirecting…' : 'Continue with Google'}
+                    {googleLoading ? t('Redirecting…') : t('Continue with Google')}
                   </button>
                   <GoogleBrowserHint />
                 </>
@@ -422,12 +429,12 @@ export default function Join() {
               {googleLoading && isNativeAndroid() && (
                 <button type="button" className="w-full min-h-11 mt-2 text-sm text-orange-700 underline"
                   onClick={() => { clearMobileAuth(window.localStorage); setGoogleLoading(false); }}>
-                  Cancel Google sign-in
+                  {t('Cancel Google sign-in')}
                 </button>
               )}
               <p className="mt-5 text-center text-sm text-slate-500">
-                Already have an account?{' '}
-                <a href="/Auth" className="font-semibold text-orange-500 hover:text-orange-600">Log in</a>
+                {t('Already have an account?')}{' '}
+                <a href="/Auth" className="font-semibold text-orange-500 hover:text-orange-600">{t('Log in')}</a>
               </p>
             </>
           )}
@@ -439,17 +446,16 @@ export default function Join() {
                   <Check className="w-7 h-7 text-green-500" />
                 </div>
                 <p className="text-xs text-slate-500 text-center leading-relaxed">
-                  Tap <span className="font-semibold text-slate-700">Verify my email</span> in the newest email from Sellio, on this device, to continue.
-                  It can take a minute to arrive; check your spam folder too.
+                  {t('Tap {button} in the newest email from Sellio, on this device, to continue. It can take a minute to arrive; check your spam folder too.', { button: <span className="font-semibold text-slate-700">{EMAIL_BUTTON}</span> })}
                 </p>
               </div>
               <button type="button" onClick={sendLink} disabled={sending || cooldown > 0}
                 className="w-full py-2.5 rounded-xl text-sm font-medium text-slate-700 border border-slate-200 bg-white hover:bg-slate-50 transition-colors disabled:opacity-60">
-                {cooldown > 0 ? `Resend in ${cooldown}s` : (sending ? 'Sending…' : 'Resend verification email')}
+                {cooldown > 0 ? t('Resend in {cooldown}s', { cooldown }) : (sending ? t('Sending…') : t('Resend verification email'))}
               </button>
               <button type="button" onClick={() => { setStage('start'); setNotice(''); }}
                 className="w-full text-xs text-orange-500 hover:text-orange-600 font-medium bg-transparent border-none cursor-pointer">
-                Use a different email
+                {t('Use a different email')}
               </button>
             </div>
           )}
@@ -457,18 +463,18 @@ export default function Join() {
           {stage === 'finish' && (
             <form onSubmit={finishAccount} className="space-y-4" noValidate>
               <div>
-                <label htmlFor="join-name" className="block text-sm font-medium text-slate-700 mb-1">Your name</label>
+                <label htmlFor="join-name" className="block text-sm font-medium text-slate-700 mb-1">{t('Your name')}</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input id="join-name" type="text" autoComplete="name" placeholder="Jane Tan" maxLength={80} value={form.full_name}
+                  <input id="join-name" type="text" autoComplete="name" placeholder={t('Jane Doe')} maxLength={80} value={form.full_name}
                     onChange={(e) => setForm({ ...form, full_name: e.target.value })} className={INPUT_CLASS} />
                 </div>
               </div>
               <div>
-                <label htmlFor="join-phone" className="block text-sm font-medium text-slate-700 mb-1">Mobile number</label>
+                <label htmlFor="join-phone" className="block text-sm font-medium text-slate-700 mb-1">{t('Mobile number')}</label>
                 <div className="flex gap-2">
                   <div className="relative" onClick={(e) => e.stopPropagation()}>
-                    <button type="button" onClick={() => setShowCountries(!showCountries)} aria-label="Country code"
+                    <button type="button" onClick={() => setShowCountries(!showCountries)} aria-label={t('Country code')}
                       className="flex items-center gap-1.5 px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white hover:bg-slate-50 transition-colors whitespace-nowrap">
                       <span>{country.flag}</span>
                       <span className="text-slate-700">{country.code}</span>
@@ -495,25 +501,25 @@ export default function Join() {
                 </div>
               </div>
               <div>
-                <label htmlFor="join-password" className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                <label htmlFor="join-password" className="block text-sm font-medium text-slate-700 mb-1">{t('Password')}</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input id="join-password" type="password" autoComplete="new-password" placeholder="At least 6 characters" value={form.password}
+                  <input id="join-password" type="password" autoComplete="new-password" placeholder={t('At least 6 characters')} value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })} className={INPUT_CLASS} />
                 </div>
               </div>
               <div>
-                <label htmlFor="join-confirm" className="block text-sm font-medium text-slate-700 mb-1">Confirm password</label>
+                <label htmlFor="join-confirm" className="block text-sm font-medium text-slate-700 mb-1">{t('Confirm password')}</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input id="join-confirm" type="password" autoComplete="new-password" placeholder="Type it again" value={form.confirm}
+                  <input id="join-confirm" type="password" autoComplete="new-password" placeholder={t('Type it again')} value={form.confirm}
                     onChange={(e) => setForm({ ...form, confirm: e.target.value })} className={INPUT_CLASS} />
                 </div>
               </div>
-              <p className="text-xs text-slate-400">You’ll log in with this mobile number and password.</p>
+              <p className="text-xs text-slate-400">{t('You’ll log in with this mobile number and password.')}</p>
               <button type="submit" disabled={saving}
                 className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70" style={BUTTON_STYLE}>
-                {saving ? 'Saving…' : 'Continue'}
+                {saving ? t('Saving…') : t('Continue')}
               </button>
             </form>
           )}
@@ -521,16 +527,14 @@ export default function Join() {
           {stage === 'staff' && (
             <button type="button" onClick={signOut}
               className="w-full py-2.5 rounded-xl text-sm font-medium text-slate-700 border border-slate-200 bg-white hover:bg-slate-50 transition-colors">
-              Sign out
+              {t('Sign out')}
             </button>
           )}
 
           {stage !== 'closed' && <p className="mt-5 text-center text-[11px] leading-relaxed text-slate-400">
-            By continuing, you agree to Sellio’s<br />
-            <a href="/terms" className="font-semibold text-orange-500 hover:text-orange-600 underline underline-offset-2">Terms and Conditions</a>
-            {' '}and{' '}
-            <a href="/privacy" className="font-semibold text-orange-500 hover:text-orange-600 underline underline-offset-2">Privacy Policy</a>.
+            <TermsLine />
           </p>}
+          <AppLanguageSwitch className="mt-3" />
         </div>
       </div>
     </div>

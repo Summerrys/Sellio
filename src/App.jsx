@@ -18,6 +18,7 @@ import { isMobileOAuthCallback } from '@/lib/mobileOAuth';
 import LaunchSplash from '@/components/ui-custom/LaunchSplash';
 import GoogleSignInRelay from '@/components/auth/GoogleSignInRelay';
 import SignInWelcome from '@/components/auth/SignInWelcome';
+import { AppLanguagePreviewBadge } from '@/components/ui-custom/AppLanguageSwitch';
 import { startLaunch } from '@/lib/appLaunch';
 import { GOOGLE_RELAY_PATH } from '@/lib/googleRelay';
 import { isNativeApp as inSellioApp, isBase44Shell, appPlatform } from '@/lib/nativeApp';
@@ -219,6 +220,8 @@ function App() {
         <ConnectionStatus />
         {/* "Welcome back!" on the page a sign-in opens (the sign-in page itself is gone by then). */}
         <SignInWelcome />
+        {/* A reviewer's preview of the app in Bahasa Indonesia, and how to end it. */}
+        <AppLanguagePreviewBadge />
         {/* Online and last seen in Chats, while Sellio is on screen. */}
         <PresencePing />
         {/* Sellio's question before Android's about push alerts (the Android app only). */}

@@ -11,8 +11,10 @@ import { toast } from 'sonner';
 import { showError } from '@/lib/plainError';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { currencyDecimals } from '@/lib/money';
+import { useAppText } from '@/lib/appText';
 
 export default function EditItemModal({ item, categories, themeColor, primaryColor, onSave, onClose, currency = 'SGD' }) {
+  const { t } = useAppText();
   useBackToClose(true, onClose); // phone / browser Back closes it, like its ✕ (shown only while open)
    const [name, setName] = useState(item.name);
    const [price, setPrice] = useState(String(item.price));
@@ -65,14 +67,14 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
      try {
        for (const file of files) {
          if (imagePreviews.length >= MAX_IMAGES) {
-           toast.error(`Maximum ${MAX_IMAGES} images allowed`);
+           toast.error(t('Maximum {MAX_IMAGES} images allowed', { MAX_IMAGES }));
            break;
          }
          const { publicUrl } = await uploadToStorage(file);
          setImagePreviews(prev => [...prev, publicUrl]);
        }
      } catch (err) {
-       showError(err, 'Couldn’t upload the photo');
+       showError(err, t('Couldn’t upload the photo'), { t });
      } finally {
        setUploading(false);
      }
@@ -83,7 +85,7 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
      const file = e.target.files?.[0];
      if (!file) return;
      if (imagePreviews.length >= MAX_IMAGES) {
-       toast.error(`Maximum ${MAX_IMAGES} images allowed`);
+       toast.error(t('Maximum {MAX_IMAGES} images allowed', { MAX_IMAGES }));
        return;
      }
      e.target.value = '';
@@ -92,7 +94,7 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
        const { publicUrl } = await uploadToStorage(file);
        setImagePreviews(prev => [...prev, publicUrl]);
      } catch (err) {
-       showError(err, 'Couldn’t upload the photo');
+       showError(err, t('Couldn’t upload the photo'), { t });
      } finally {
        setAdditionalUploading(false);
      }
@@ -108,7 +110,7 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
         const url = await uploadBase64ToStorage(newDataUrl);
         setImagePreviews(prev => prev.map((p, i) => i === editingImageIdx ? url : p));
       } catch (err) {
-        showError(err, 'Couldn’t upload the photo');
+        showError(err, t('Couldn’t upload the photo'), { t });
       } finally {
         setUploading(false);
       }
@@ -135,7 +137,7 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
         >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-slate-100">
-            <h2 className="text-base font-bold text-slate-900">Edit Item</h2>
+            <h2 className="text-base font-bold text-slate-900">{t('Edit Item')}</h2>
             <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
               <X className="w-5 h-5" />
             </button>
@@ -144,11 +146,11 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
           <div className="p-4 space-y-4">
             {/* Images */}
             <div>
-              <Label className="text-sm font-medium text-slate-700 block mb-2">Images</Label>
+              <Label className="text-sm font-medium text-slate-700 block mb-2">{t('Images')}</Label>
               {imagePreviews.length === 0 ? (
                 <label className="border-2 border-dashed border-slate-300 rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors">
                   <Upload className="w-5 h-5 text-slate-400 mb-1" />
-                  <span className="text-xs text-slate-500">Click to add images</span>
+                  <span className="text-xs text-slate-500">{t('Click to add images')}</span>
                   <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
                 </label>
               ) : (
@@ -175,9 +177,9 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
                                   style={{ borderColor: idx === 0 ? primaryColor : '#e2e8f0', ...provided.draggableProps.style }}
                                   onClick={() => setEditingImageIdx(idx)}
                                 >
-                                  <img src={src} alt="preview" className="w-full h-full object-cover" />
+                                  <img src={src} alt={t('preview')} className="w-full h-full object-cover" />
                                   {idx === 0 && (
-                                    <div className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium" style={{ background: themeColor }}>Cover</div>
+                                    <div className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium" style={{ background: themeColor }}>{t('Cover')}</div>
                                   )}
                                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                                     <Pencil className="w-4 h-4 text-white" />
@@ -208,10 +210,10 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
 
             {/* Category */}
             <div>
-              <Label className="text-sm font-medium text-slate-700 block mb-2">Category</Label>
+              <Label className="text-sm font-medium text-slate-700 block mb-2">{t('Category')}</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger className="w-full h-10 text-sm">
-                  <SelectValue placeholder="Select category" />
+                  <SelectValue placeholder={t('Select category')} />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((cat) => (
@@ -223,20 +225,20 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
 
             {/* Name */}
             <div>
-              <Label className="text-sm font-medium text-slate-700 block mb-2">Item Name</Label>
+              <Label className="text-sm font-medium text-slate-700 block mb-2">{t('Item Name')}</Label>
               <Input value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-sm" />
             </div>
 
             {/* Price */}
             <div>
-              <Label className="text-sm font-medium text-slate-700 block mb-2">Price ({currency})</Label>
+              <Label className="text-sm font-medium text-slate-700 block mb-2">{t('Price ({currency})', { currency })}</Label>
               <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder={currencyDecimals(currency) === 0 ? '0' : '0.00'} step={currencyDecimals(currency) === 0 ? '1' : '0.01'} min="0" className="h-10 text-sm" />
             </div>
 
             {/* Description */}
             <div>
-              <Label className="text-sm font-medium text-slate-700 block mb-2">Description</Label>
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe your item..." className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-slate-300 h-20 resize-none" />
+              <Label className="text-sm font-medium text-slate-700 block mb-2">{t('Description')}</Label>
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('Describe your item...')} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-slate-300 h-20 resize-none" />
             </div>
             </div>
 
@@ -246,7 +248,7 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
               onClick={onClose}
               className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50 transition-all font-medium"
             >
-              Cancel
+              {t('Cancel')}
             </button>
             <button
               onClick={handleSave}
@@ -254,7 +256,7 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
               className="flex-1 py-2.5 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 hover:opacity-90 flex items-center justify-center gap-2"
               style={{ background: themeColor }}
             >
-              {uploading ? <><Loader2 className="w-4 h-4 animate-spin" /> Uploading...</> : 'Save Changes'}
+              {uploading ? <><Loader2 className="w-4 h-4 animate-spin" />{' '}{t('Uploading...')}</> : t('Save Changes')}
             </button>
           </div>
         </div>

@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, RotateCw, Crop, Undo2, ImagePlus, Save, Trash2, Loader2 } from 'lucide-react';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { toast } from 'sonner';
-import { checkPhoto, UnreadablePhotoError } from '@/lib/imageShrink';
+import { checkPhoto, UnreadablePhotoError, UNREADABLE_PHOTO_MESSAGE } from '@/lib/imageShrink';
+import { useAppText } from '@/lib/appText';
 
 const TOOLS = { NONE: 'none', CROP: 'crop' };
 // preserveResolution: save from the photo itself (up to this many px on the long side),
@@ -17,9 +18,10 @@ export default function ImageEditModal({
   onClose,
   cropAspectRatio = null,
   preserveResolution = true,
-  title = 'Edit Image',
+  title,
   recommendation = '',
 }) {
+  const { t } = useAppText();
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const replaceInputRef = useRef(null);
@@ -37,7 +39,7 @@ export default function ImageEditModal({
         await checkPhoto(await (await fetch(src)).blob());
       } catch (err) {
         if (alive && err instanceof UnreadablePhotoError) {
-          toast.error(err.message);
+          toast.error(t(UNREADABLE_PHOTO_MESSAGE));
           onClose();
         }
       }
@@ -143,7 +145,7 @@ export default function ImageEditModal({
     reader.onloadend = () => {
       if (turn !== replacingRef.current) return;
       if (typeof reader.result === 'string') pushHistory({ imageSrc: reader.result, rotation: 0 });
-      else toast.error('Couldn’t open that photo. Please choose it again.');
+      else toast.error(t('Couldn’t open that photo. Please choose it again.'));
       setReplacing(false);
     };
     reader.readAsDataURL(file);
@@ -324,7 +326,7 @@ export default function ImageEditModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
           <div>
-            <h3 className="font-semibold text-slate-900 text-base">{title}</h3>
+            <h3 className="font-semibold text-slate-900 text-base">{title ?? t('Edit Image')}</h3>
             {recommendation && <p className="text-xs text-slate-400 mt-0.5">{recommendation}</p>}
           </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200">
@@ -339,9 +341,9 @@ export default function ImageEditModal({
           {!ready && (
             <div data-testid="photo-opening" className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-slate-900/80 text-white text-sm font-medium px-6 text-center">
               {failed ? (
-                <>Couldn’t open this photo. Tap Replace to choose it again.</>
+                <>{t('Couldn’t open this photo. Tap Replace to choose it again.')}</>
               ) : (
-                <><Loader2 className="w-6 h-6 animate-spin" aria-hidden="true" /> Opening photo…</>
+                <><Loader2 className="w-6 h-6 animate-spin" aria-hidden="true" />{' '}{t('Opening photo…')}</>
               )}
             </div>
           )}
@@ -377,10 +379,10 @@ export default function ImageEditModal({
         {/* Tool buttons */}
         <div className="grid grid-cols-5 gap-px bg-slate-100 border-t border-slate-100">
           {[
-            { label: 'Undo', icon: Undo2, action: handleUndo, disabled: history.length <= 1 },
-            { label: 'Rotate', icon: RotateCw, action: () => handleRotateByDegree((current.rotation + 90) % 360), disabled: !ready },
+            { label: t('Undo'), icon: Undo2, action: handleUndo, disabled: history.length <= 1 },
+            { label: t('Rotate'), icon: RotateCw, action: () => handleRotateByDegree((current.rotation + 90) % 360), disabled: !ready },
             {
-              label: 'Crop', icon: Crop,
+              label: t('Crop'), icon: Crop,
               action: () => {
                 setTool(TOOLS.CROP);
                 const canvas = canvasRef.current;
@@ -399,8 +401,8 @@ export default function ImageEditModal({
               active: isCropping,
               disabled: isCropping || !ready,
             },
-            { label: 'Replace', icon: ImagePlus, action: () => replaceInputRef.current?.click() },
-            { label: 'Delete', icon: Trash2, action: () => { onSave(null); onClose(); }, danger: true },
+            { label: t('Replace'), icon: ImagePlus, action: () => replaceInputRef.current?.click() },
+            { label: t('Delete'), icon: Trash2, action: () => { onSave(null); onClose(); }, danger: true },
           ].map(({ label, icon: Icon, action, active, disabled, danger }) => (
             <button
               key={label}
@@ -428,7 +430,7 @@ export default function ImageEditModal({
             }}
             className="flex-1 py-3 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600"
           >
-            Cancel
+            {t('Cancel')}
           </button>
           <button
             onClick={() => {
@@ -442,7 +444,7 @@ export default function ImageEditModal({
             className="flex-1 py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: themeColor }}
           >
-            <Save className="w-4 h-4" /> {isCropping ? 'Apply' : 'Save'}
+            <Save className="w-4 h-4" /> {isCropping ? t('Apply') : t('Save')}
           </button>
         </div>
 

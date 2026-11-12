@@ -14,10 +14,12 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { decideOnboardingAccess } from '@/lib/accountFlow';
 import { useBackToClose, removeBackStep } from '@/lib/useBackToClose';
 import { COUNTRIES, countryNamed, visitorCountry } from '@/lib/countries';
+import { useAppText } from '@/lib/appText';
 
 const STORAGE_KEY = 'apptelier_onboarding_state';
 
 export default function Onboarding() {
+  const { t, textKey } = useAppText();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState([]);
@@ -123,21 +125,21 @@ export default function Onboarding() {
   const getSteps = () => {
     const isFnB = isFnBIndustry(formData.businessType);
     const baseSteps = [
-      { component: Step1Combined, title: 'Business Theme' },
-      { component: Step2Business, title: 'Branch Setup' },
-      { component: Step3MenuSetup, title: 'Menu Setup' },
+      { component: Step1Combined, title: t('Business Theme') },
+      { component: Step2Business, title: t('Branch Setup') },
+      { component: Step3MenuSetup, title: t('Menu Setup') },
     ];
     
     if (isFnB) {
-      baseSteps.push({ component: Step4TablesQR, title: 'Tables & QR' });
+      baseSteps.push({ component: Step4TablesQR, title: t('Tables & QR') });
     }
     
-    baseSteps.push({ component: Step5Confirmation, title: 'Review & Launch' });
+    baseSteps.push({ component: Step5Confirmation, title: t('Review & Launch') });
     return baseSteps;
   };
 
-  // Recalculate steps whenever businessType changes
-  const steps = React.useMemo(() => getSteps(), [formData.businessType]);
+  // Recalculate steps whenever businessType (or the app's language) changes
+  const steps = React.useMemo(() => getSteps(), [formData.businessType, textKey]);
 
   const nextStep = () => {
     if (currentStep < steps.length) {

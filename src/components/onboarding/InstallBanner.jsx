@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import InstallPWAModal from './InstallPWAModal';
 import { isAndroid, isIOS, hasNativePrompt, promptInstall, openInAppLink } from '@/lib/pwaInstall';
+import { useAppText } from '@/lib/appText';
 
 // How long it stays before it goes by itself (as the browser's own install banner does).
 const SHOW_MS = 10000;
@@ -18,6 +19,7 @@ const LEAVE_MS = 180;
 // kind 'open': the browser says Sellio is installed already, so it offers "Open in app",
 // which opens this page in the installed app (openInAppLink).
 export default function InstallBanner({ open, kind = 'install', onClose }) {
+  const { t } = useAppText();
   const [leaving, setLeaving] = useState(null); // null | 'up' | 'left' | 'right'
   const [steps, setSteps] = useState(false);
   const [drag, setDrag] = useState(null);       // { x, y } while a finger moves it
@@ -29,10 +31,10 @@ export default function InstallBanner({ open, kind = 'install', onClose }) {
 
   const phone = isAndroid() || isIOS();
   const opening = kind === 'open';
-  const title = opening ? 'Sellio is installed' : 'Install Sellio';
+  const title = opening ? t('Sellio is installed') : t('Install Sellio');
   const where = opening
-    ? (phone ? 'On this phone' : 'On this computer')
-    : (phone ? 'Add it to your Home Screen' : (typeof window !== 'undefined' ? window.location.host : ''));
+    ? (phone ? t('On this phone') : t('On this computer'))
+    : (phone ? t('Add it to your Home Screen') : (typeof window !== 'undefined' ? window.location.host : ''));
 
   const leave = (way = 'up') => {
     clearTimeout(showTimer.current);
@@ -143,9 +145,9 @@ export default function InstallBanner({ open, kind = 'install', onClose }) {
           <p style={{ margin: '2px 0 0', fontSize: 13, color: '#64748b', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{where}</p>
         </div>
         {opening ? (
-          <a {...openInAppLink()} onClick={() => leave('up')} style={button}>Open in app</a>
+          <a {...openInAppLink()} onClick={() => leave('up')} style={button}>{t('Open in app')}</a>
         ) : (
-          <button type="button" onClick={install} style={button}>Install</button>
+          <button type="button" onClick={install} style={button}>{t('Install')}</button>
         )}
       </div>
     </div>

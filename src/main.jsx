@@ -7,6 +7,7 @@ import { removeAppReloadParam } from '@/lib/appUpdates'
 import { installEdgeSwipeBack } from '@/lib/edgeSwipeBack'
 import { isCapacitorApp } from '@/lib/nativeApp'
 import { startAdsMeasurement } from '@/lib/adsPixel'
+import { appTextReady } from '@/lib/appText'
 
 removeAppReloadParam()
 
@@ -48,6 +49,11 @@ if ('serviceWorker' in navigator && !isCapacitorApp()) {
 if (window.location.pathname !== '/') document.getElementById('sellio-prerender')?.remove()
 
 // A screen that fails to load or crashes shows a Reload screen, never a blank app.
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <AppErrorBoundary><App /></AppErrorBoundary>
-)
+const root = ReactDOM.createRoot(document.getElementById('root'))
+const renderApp = () => root.render(<AppErrorBoundary><App /></AppErrorBoundary>)
+
+// The owner app's words in Bahasa Indonesia load before its first screen (1.5 s at most; the
+// launch splash shows meanwhile), so it doesn't open in English for a moment. In English there
+// is nothing to wait for. The landing page and store pages don't use them.
+if (/^\/((store|order)\/|(privacy|terms|delete-account)?\/?$)/.test(window.location.pathname)) renderApp()
+else appTextReady().then(renderApp, renderApp)

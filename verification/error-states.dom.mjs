@@ -294,7 +294,7 @@ try {
       'src/components/orders/EditOrderModal.jsx': [/setSaveNote\(explainError\(err, \{ title: 'Couldn’t save the order' \}\)\)/, /<ErrorNote note=\{saveNote\}/, /if \(isOffline\(\)\) \{ setSaveNote\(offlineNote\('Couldn’t save the order', 'Changing an order needs the internet\.'\)\); return; \}/],
       'src/components/tables/TableFormDialog.jsx': [/setSaveNote\(explainError\(error, \{ title: table \? 'Couldn’t save the table' : 'Couldn’t create the table' \}\)\)/, /<ErrorNote note=\{saveNote\}/],
       'src/components/staff/EditStaffDialog.jsx': [/setStaffNote\(explainError\(error, \{ title: 'Couldn’t save the changes' \}\)\)/, /setStaffNote\(explainError\(error, \{ title: 'Couldn’t remove this person' \}\)\)/, /<ErrorNote note=\{staffNote\}/],
-      'src/components/shop/SellingSettingsForm.jsx': [/setSaveNote\(explainError\(err, \{ title: 'Couldn’t save your selling settings' \}\)\)/, /<ErrorNote note=\{saveNote\}/],
+      'src/components/shop/SellingSettingsForm.jsx': [/setSaveNote\(explainError\(err, \{ title: t\('Couldn’t save your selling settings'\), t \}\)\)/, /<ErrorNote note=\{saveNote\}/],
       'src/components/inventory/StockAdjustmentPanel.jsx': [/setStockNote\(explainError\(error, \{ title: 'Couldn’t save the stock' \}\)\)/, /<ErrorNote note=\{stockNote\}/],
       'src/components/settings/BusinessProfileTab.jsx': [/setSaveNote\(explainError\(err, \{ title: 'Couldn’t save your business settings' \}\)\)/, /setHoursNote\(explainError\(err, \{ title: 'Couldn’t save your opening hours' \}\)\)/, /<ErrorNote note=\{saveNote\}/, /<ErrorNote note=\{hoursNote\}/],
       'src/pages/TenantSettings.jsx': [/setSaveNote\(explainError\(err, \{ title: 'Couldn’t save your payment settings' \}\)\)/, /<ErrorNote note=\{saveNote\}/],
@@ -314,7 +314,7 @@ try {
       .split('\n').filter(Boolean)
       // Left as they are: the sign-in page (auth), printing (the printer's own words, about a
       // device on the counter) and a photo's own explanation (UnreadablePhotoError, friendly).
-      .filter((line) => !/^src\/pages\/Auth\.jsx|Print failed|Printing failed|Kitchen print|Bluetooth scan|Couldn’t connect to \$\{deviceName\}|err\?\.friendly|UnreadablePhotoError|ImageEditModal\.jsx:40:/.test(line));
+      .filter((line) => !/^src\/pages\/Auth\.jsx|Print failed|Printing failed|Kitchen print|Bluetooth scan|Couldn’t connect to \$\{deviceName\}|err\?\.friendly|UnreadablePhotoError/.test(line));
     assert.deepEqual(raw, [], 'error toasts show plain words, not the error’s own text');
     const failed = execSync("grep -rnE \"toast\\.error\\(['\\\"\\`]Failed to\" src --include=*.jsx --include=*.js || true", { encoding: 'utf8' }).split('\n').filter(Boolean);
     assert.deepEqual(failed, [], 'no "Failed to …"');

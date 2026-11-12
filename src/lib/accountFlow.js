@@ -1,3 +1,4 @@
+import { N_, appT } from './appText';
 // Account-first sign-up (Join → Account → free shop or business plan).
 // Plain functions with no imports, so they can be tested without a browser.
 
@@ -7,9 +8,9 @@ export const BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg
 // Same rules as Auth.jsx, lib/countries.js and the database (complete_account_setup).
 // Indonesia (12 Nov 2026): mobiles start with 8 after +62 (a leading 0 is dropped).
 export const PHONE_COUNTRIES = [
-  { code: '+65', flag: '🇸🇬', name: 'SG', placeholder: '91234567', pattern: /^[89]\d{7}$/, hint: '8 digits, starting with 8 or 9' },
-  { code: '+60', flag: '🇲🇾', name: 'MY', placeholder: '112345678', pattern: /^1\d{8,9}$/, hint: '9–10 digits, starting with 1' },
-  { code: '+62', flag: '🇮🇩', name: 'ID', placeholder: '81234567890', pattern: /^8[1-9]\d{7,10}$/, hint: '9–12 digits, starting with 8' },
+  { code: '+65', flag: '🇸🇬', name: 'SG', placeholder: '91234567', pattern: /^[89]\d{7}$/, hint: N_('8 digits, starting with 8 or 9') },
+  { code: '+60', flag: '🇲🇾', name: 'MY', placeholder: '112345678', pattern: /^1\d{8,9}$/, hint: N_('9–10 digits, starting with 1') },
+  { code: '+62', flag: '🇮🇩', name: 'ID', placeholder: '81234567890', pattern: /^8[1-9]\d{7,10}$/, hint: N_('9–12 digits, starting with 8') },
 ];
 
 // The phone code to start with for a country (lib/countries.js names), else Singapore's.
@@ -148,27 +149,27 @@ export function paymentLinkFor(link, email) {
 }
 
 const MESSAGES = {
-  not_signed_in: 'Please sign in again.',
-  staff_account: 'This is a staff login. Staff sign in with their phone number on the login page.',
-  email_link_required: 'Please open the verification link we emailed you, then try again.',
-  name_invalid: 'Please enter your name.',
-  phone_invalid: 'Please enter a valid mobile number.',
-  phone_taken: 'This phone number is already used by another Sellio account (it may be a staff login). Use a different number, or contact sellio@apptelier.sg.',
-  account_setup_required: 'Please finish setting up your account first.',
-  store_exists: 'This account already has a store. Sign in to manage it, or contact sellio@apptelier.sg to open another one.',
-  slug_unavailable: 'We couldn’t create a web address for this name. Please try a different shop name.',
+  not_signed_in: N_('Please sign in again.'),
+  staff_account: N_('This is a staff login. Staff sign in with their phone number on the login page.'),
+  email_link_required: N_('Please open the verification link we emailed you, then try again.'),
+  name_invalid: N_('Please enter your name.'),
+  phone_invalid: N_('Please enter a valid mobile number.'),
+  phone_taken: N_('This phone number is already used by another Sellio account (it may be a staff login). Use a different number, or contact sellio@apptelier.sg.'),
+  account_setup_required: N_('Please finish setting up your account first.'),
+  store_exists: N_('This account already has a store. Sign in to manage it, or contact sellio@apptelier.sg to open another one.'),
+  slug_unavailable: N_('We couldn’t create a web address for this name. Please try a different shop name.'),
 };
 
 // A friendly message for errors from the account functions and Supabase Auth.
 export function accountErrorMessage(error) {
   if (!error) return '';
-  if (error.hint && MESSAGES[error.hint]) return MESSAGES[error.hint];
+  if (error.hint && MESSAGES[error.hint]) return appT(MESSAGES[error.hint]);
   const text = String(error.message || '');
-  if (error.code === '23505' && /phone/i.test(`${text} ${error.details || ''}`)) return MESSAGES.phone_taken;
-  if (/rate limit/i.test(text)) return 'We’re sending a lot of emails right now. Please try again in a few minutes.';
+  if (error.code === '23505' && /phone/i.test(`${text} ${error.details || ''}`)) return appT(MESSAGES.phone_taken);
+  if (/rate limit/i.test(text)) return appT('We’re sending a lot of emails right now. Please try again in a few minutes.');
   const wait = text.match(/after (\d+) seconds?/i);
-  if (wait) return `Please wait ${wait[1]} seconds before asking for another link.`;
-  if (/password should be at least|weak password/i.test(text)) return 'Please choose a longer password (at least 6 characters).';
-  if (/Failed to fetch|NetworkError|Load failed/i.test(text)) return 'Can’t reach Sellio. Check your connection and try again.';
-  return text || 'Something went wrong. Please try again.';
+  if (wait) return appT('Please wait {seconds} seconds before asking for another link.', { seconds: wait[1] });
+  if (/password should be at least|weak password/i.test(text)) return appT('Please choose a longer password (at least 6 characters).');
+  if (/Failed to fetch|NetworkError|Load failed/i.test(text)) return appT('Can’t reach Sellio. Check your connection and try again.');
+  return text || appT('Something went wrong. Please try again.');
 }

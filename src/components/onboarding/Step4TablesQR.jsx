@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowRight, ArrowLeft, QrCode, Table2, Download, Printer, Pencil, Trash2, Check, X } from 'lucide-react';
 
 import { generateThemeVariables } from '../theme/themeUtils';
@@ -13,23 +12,25 @@ import QR from 'qrcode';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
 import { zipFiles } from '@/lib/xlsxWriter';
 import { useBackToClose } from '@/lib/useBackToClose';
+import { useAppText, appT } from '@/lib/appText';
 
 // Inside Sellio's Android app the QR codes are saved through the phone's browser
 // (lib/appFiles); all tables' codes go as one .zip there.
 async function saveQrCodesInApp(codes) {
-  if (codes.length === 1) return saveFileInApp(codes[0].url, codes[0].name, { publicQr: true, label: 'QR code' });
+  if (codes.length === 1) return saveFileInApp(codes[0].url, codes[0].name, { publicQr: true, label: appT('QR code') });
   try {
     const files = await Promise.all(codes.map(async (c) => ({ name: c.name, data: new Uint8Array(await (await fetch(c.url)).arrayBuffer()) })));
     const zip = await zipFiles(files, new Date(), { compress: false });
-    return saveFileInApp(new Blob([zip], { type: 'application/zip' }), 'table_QR_codes.zip', { publicQr: true, label: 'QR codes' });
+    return saveFileInApp(new Blob([zip], { type: 'application/zip' }), 'table_QR_codes.zip', { publicQr: true, label: appT('QR codes') });
   } catch (e) {
     console.warn('Zipping the QR codes failed:', e);
-    toast.error('Couldn’t get the QR codes ready. Please try again.');
+    toast.error(appT('Couldn’t get the QR codes ready. Please try again.'));
     return false;
   }
 }
 
 export default function Step4TablesQR({ formData, updateFormData, nextStep, prevStep }) {
+  useAppText();
   const [setupTables, setSetupTables] = useState(formData.tables && formData.tables.length > 0);
   const [setupQr, setSetupQr] = useState(!!formData.singleQrLabel || false);
   const [localTables, setLocalTables] = useState(formData.tables || []);
@@ -42,7 +43,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const [qrModalOpen, setQRModalOpen] = useState(false);
   // Phone / browser Back closes the QR code window, like its ✕.
   useBackToClose(!!selectedQR && qrModalOpen, () => { setQRModalOpen(false); setSelectedQR(null); });
-  const [singleQrLabel, setSingleQrLabel] = useState(formData.singleQrLabel || 'Online Menu');
+  const [singleQrLabel, setSingleQrLabel] = useState(formData.singleQrLabel || appT('Online Menu'));
   const [singleQrGenerated, setSingleQrGenerated] = useState(!!formData.singleQrCode);
 
   useEffect(() => {
@@ -126,7 +127,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
       const tableNumber = existingInZone + i + 1;
       return {
         id: tableId,
-        name: `Table ${tableNumber}`,
+        name: appT('Table {number}', { number: tableNumber }),
         capacity: parseInt(generateForm.pax) || 2,
         zone: generateForm.zone.trim(),
         status: 'available',
@@ -192,7 +193,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
   const handleDownloadSingleQR = () => {
     const qrCode = qrCodes['single'];
     if (qrCode && inAppFiles()) {
-      saveFileInApp(qrCode, `${singleQrLabel.replace(/\s+/g, '_')}_QR.png`, { publicQr: true, label: 'QR code' });
+      saveFileInApp(qrCode, `${singleQrLabel.replace(/\s+/g, '_')}_QR.png`, { publicQr: true, label: appT('QR code') });
       return;
     }
     if (qrCode) {
@@ -253,14 +254,14 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
         <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: themeColor }}>
           <QrCode className="w-8 h-8 text-white" />
         </div>
-        <h2 className="text-lg font-bold text-slate-900 mb-0.5">Tables & QR Codes</h2>
-        <p className="text-xs text-slate-500">Choose what you'd like to set up.</p>
+        <h2 className="text-lg font-bold text-slate-900 mb-0.5">{appT('Tables & QR Codes')}</h2>
+        <p className="text-xs text-slate-500">{appT('Choose what you\'d like to set up.')}</p>
       </div>
 
       {/* Conversational branch — only shown before a choice has been made */}
       {!setupTables && !setupQr && (
         <div className="mb-4">
-          <p className="text-sm font-semibold text-slate-800 text-center mb-3">Do you have physical tables where customers sit?</p>
+          <p className="text-sm font-semibold text-slate-800 text-center mb-3">{appT('Do you have physical tables where customers sit?')}</p>
           <div className="space-y-2">
             <button
               type="button"
@@ -271,8 +272,8 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                 <Table2 className="w-5 h-5 text-green-600" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-slate-900">Yes, we have tables</p>
-                <p className="text-xs text-slate-500">Each table gets its own QR code for scan-to-order at their seat</p>
+                <p className="text-sm font-semibold text-slate-900">{appT('Yes, we have tables')}</p>
+                <p className="text-xs text-slate-500">{appT('Each table gets its own QR code for scan-to-order at their seat')}</p>
               </div>
             </button>
             <button
@@ -284,8 +285,8 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                 <QrCode className="w-5 h-5 text-orange-600" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-slate-900">No, takeaway / counter only</p>
-                <p className="text-xs text-slate-500">One QR code to print at your counter or takeaway point</p>
+                <p className="text-sm font-semibold text-slate-900">{appT('No, takeaway / counter only')}</p>
+                <p className="text-xs text-slate-500">{appT('One QR code to print at your counter or takeaway point')}</p>
               </div>
             </button>
           </div>
@@ -294,7 +295,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
             onClick={() => { updateFormData({ ...formData, tables: [], singleQrLabel: null, setupTables: false, setupQr: false }); nextStep(); }}
             className="w-full text-center text-xs text-slate-400 hover:text-slate-600 mt-3 bg-transparent border-none cursor-pointer py-1"
           >
-            Skip — I'll set this up later
+            {appT('Skip — I\'ll set this up later')}
           </button>
         </div>
       )}
@@ -306,7 +307,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
           onClick={() => { setSetupTables(false); setSetupQr(false); setLocalTables([]); }}
           className="text-xs text-slate-400 hover:text-slate-600 mb-3 bg-transparent border-none cursor-pointer flex items-center gap-1"
         >
-          <ArrowLeft className="w-3 h-3" /> Change answer
+          <ArrowLeft className="w-3 h-3" />{' '}{appT('Change answer')}
         </button>
       )}
 
@@ -315,12 +316,12 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
         <div className="space-y-3 mb-4 pb-4 border-b border-slate-200">
           {/* Quick Generate (unified form with zone) */}
           <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-200">
-            <Label className="text-xs font-semibold text-slate-700 mb-2 block">Quick Generate Tables</Label>
+            <Label className="text-xs font-semibold text-slate-700 mb-2 block">{appT('Quick Generate Tables')}</Label>
             <div className="flex gap-2 mb-2">
               <Input
                 value={generateForm.zone}
                 onChange={e => setGenerateForm(p => ({ ...p, zone: e.target.value }))}
-                placeholder="Zone e.g. VIP, Indoor, Bar"
+                placeholder={appT('Zone e.g. VIP, Indoor, Bar')}
                 className="h-9 text-sm"
                 style={{ flex: 2 }}
               />
@@ -329,7 +330,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                 inputMode="numeric"
                 value={generateForm.qty || ''}
                 onChange={e => setGenerateForm(p => ({ ...p, qty: parseInt(e.target.value) || '' }))}
-                placeholder="Qty"
+                placeholder={appT('Qty')}
                 className="h-9 text-sm w-16"
               />
               <Input
@@ -337,7 +338,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                 inputMode="numeric"
                 value={generateForm.pax || ''}
                 onChange={e => setGenerateForm(p => ({ ...p, pax: parseInt(e.target.value) || '' }))}
-                placeholder="Pax"
+                placeholder={appT('Pax')}
                 className="h-9 text-sm w-16"
               />
             </div>
@@ -347,7 +348,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
               className="w-full h-9 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:opacity-90"
               style={{ background: themeColor }}
             >
-              Generate
+              {appT('Generate')}
             </button>
           </div>
 
@@ -355,8 +356,8 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
           {localTables.length > 0 && (
             <div className="bg-white rounded-lg border border-slate-200 p-2.5">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-semibold text-slate-700">{localTables.length} table{localTables.length > 1 ? 's' : ''} added</p>
-                <button onClick={() => setLocalTables([])} className="text-xs text-red-400 hover:text-red-600">Clear all</button>
+                <p className="text-xs font-semibold text-slate-700">{localTables.length === 1 ? appT('1 table added') : appT('{count} tables added', { count: localTables.length })}</p>
+                <button onClick={() => setLocalTables([])} className="text-xs text-red-400 hover:text-red-600">{appT('Clear all')}</button>
               </div>
               <div className="max-h-56 overflow-y-auto space-y-3">
                 {Object.entries(
@@ -382,7 +383,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                                 value={editLabel}
                                 onChange={(e) => setEditLabel(e.target.value)}
                                 className="w-full text-xs px-2 py-1 border border-slate-200 rounded focus:outline-none focus:border-slate-400"
-                                placeholder="Name"
+                                placeholder={appT('Name')}
                                 autoFocus
                                 onKeyDown={(e) => e.key === 'Enter' && saveEdit()}
                               />
@@ -391,21 +392,21 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                                 value={editPax}
                                 onChange={(e) => setEditPax(e.target.value)}
                                 className="w-full text-xs px-2 py-1 border border-slate-200 rounded focus:outline-none focus:border-slate-400"
-                                placeholder="Pax"
+                                placeholder={appT('Pax')}
                               />
                               <div className="flex gap-1">
                                 <button
                                   onClick={saveEdit}
                                   className="flex-1 text-xs py-1 rounded text-white font-medium hover:opacity-90 flex items-center justify-center"
                                   style={{ background: themeColor }}
-                                  aria-label="Save"
+                                  aria-label={appT('Save')}
                                 >
                                   <Check className="w-3.5 h-3.5" />
                                 </button>
                                 <button
                                   onClick={cancelEdit}
                                   className="flex-1 text-xs py-1 rounded bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center"
-                                  aria-label="Cancel"
+                                  aria-label={appT('Cancel')}
                                 >
                                   <X className="w-3.5 h-3.5" />
                                 </button>
@@ -425,19 +426,19 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                             {/* Card top — name, pax, actions */}
                             <div className="px-2 pt-1.5 pb-1">
                               <p className="text-xs font-semibold text-slate-700 truncate leading-tight mb-0.5">{t.name}</p>
-                              <p className="text-xs text-slate-400">{t.capacity} pax</p>
+                              <p className="text-xs text-slate-400">{appT('{capacity} pax', { capacity: t.capacity })}</p>
                               <div className="flex justify-end gap-0.5 mt-1">
                                 <button
                                   onClick={(e) => { e.stopPropagation(); editLocalTable(t); }}
                                   className="w-5 h-5 flex items-center justify-center rounded hover:opacity-70"
-                                  aria-label={`Edit ${t.name}`}
+                                  aria-label={appT('Edit {name}', { name: t.name })}
                                 >
                                   <Pencil className="w-3 h-3" style={{ color: primaryColor }} />
                                 </button>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); removeLocalTable(t.id); }}
                                   className="w-5 h-5 flex items-center justify-center rounded hover:opacity-70"
-                                  aria-label={`Delete ${t.name}`}
+                                  aria-label={appT('Delete {name}', { name: t.name })}
                                 >
                                   <Trash2 className="w-3 h-3 text-red-500" />
                                 </button>
@@ -449,7 +450,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                                 onClick={(e) => { e.stopPropagation(); handleOpenQRModal(t); }}
                                 className="w-full flex items-center justify-center py-1.5 hover:bg-slate-50 transition-colors"
                                 style={{ borderTop: '0.5px solid #f1f5f9' }}
-                                aria-label={`View QR code for ${t.name}`}
+                                aria-label={appT('View QR code for {name}', { name: t.name })}
                               >
                                 <QrCode className="w-4 h-4" style={{ color: '#f97316' }} />
                               </button>
@@ -466,7 +467,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
 
           {localTables.length === 0 && (
             <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-              ⚠️ Please add at least one table to continue.
+              {appT('⚠️ Please add at least one table to continue.')}
             </p>
           )}
         </div>
@@ -480,21 +481,21 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
       {setupQr && !setupTables && (
        <div className="space-y-3 mb-4 pb-4 border-b border-slate-200">
          <div className="bg-white rounded-lg p-3 border border-slate-200">
-           <Label className="text-xs font-semibold text-slate-700 mb-2 block">Online Menu QR Code</Label>
-            <p className="text-xs text-slate-500 mb-3">Generate a single QR code for your online ordering menu</p>
+           <Label className="text-xs font-semibold text-slate-700 mb-2 block">{appT('Online Menu QR Code')}</Label>
+            <p className="text-xs text-slate-500 mb-3">{appT('Generate a single QR code for your online ordering menu')}</p>
             
             <div className="flex gap-2 mb-4">
               <Input
                 value={singleQrLabel}
                 onChange={(e) => setSingleQrLabel(e.target.value)}
-                placeholder="e.g. Online Menu"
+                placeholder={appT('e.g. Online Menu')}
                 className="h-9 text-sm flex-1"
               />
             </div>
 
             {singleQrGenerated && qrCodes['single'] && (
               <div className="flex flex-col items-center gap-3 bg-slate-50 rounded-lg p-4">
-                <img src={qrCodes['single']} alt="QR Code" className="w-32 h-32" />
+                <img src={qrCodes['single']} alt={appT('QR Code')} className="w-32 h-32" />
                 <p className="text-xs text-slate-500">{singleQrLabel}</p>
                 <div className="flex gap-2 w-full">
                   <button
@@ -502,14 +503,14 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
                     className="flex-1 px-3 h-8 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors flex items-center gap-1 justify-center"
                     style={{ background: themeColor }}
                   >
-                    <Download className="w-3.5 h-3.5" /> Download
+                    <Download className="w-3.5 h-3.5" />{' '}{appT('Download')}
                   </button>
                   <button
                     onClick={handlePrintSingleQR}
                     className="flex-1 px-3 h-8 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors flex items-center gap-1 justify-center"
                     style={{ background: themeColor }}
                   >
-                    <Printer className="w-3.5 h-3.5" /> Print
+                    <Printer className="w-3.5 h-3.5" />{' '}{appT('Print')}
                   </button>
                 </div>
               </div>
@@ -524,29 +525,29 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => { setQRModalOpen(false); setSelectedQR(null); }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-slate-900 text-base">{selectedQR.name} — QR Code</h3>
+              <h3 className="font-bold text-slate-900 text-base">{appT('{name} — QR Code', { name: selectedQR.name })}</h3>
               <button onClick={() => { setQRModalOpen(false); setSelectedQR(null); }} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
             </div>
             <div className="flex flex-col items-center gap-3">
               <div className="p-3 bg-white rounded-lg border border-slate-200">
-                {qrCodes[selectedQR.id] && <img src={qrCodes[selectedQR.id]} alt="QR Code" className="w-48 h-48" />}
+                {qrCodes[selectedQR.id] && <img src={qrCodes[selectedQR.id]} alt={appT('QR Code')} className="w-48 h-48" />}
               </div>
-              <p className="text-sm text-slate-500">{selectedQR.capacity} pax</p>
+              <p className="text-sm text-slate-500">{appT('{capacity} pax', { capacity: selectedQR.capacity })}</p>
               <div className="flex gap-2 w-full">
                 <button
                   onClick={() => {
                     const name = `${selectedQR.name.replace(/\s+/g, '_')}_QR.png`;
-                    if (inAppFiles()) { saveFileInApp(qrCodes[selectedQR.id], name, { publicQr: true, label: 'QR code' }); return; }
+                    if (inAppFiles()) { saveFileInApp(qrCodes[selectedQR.id], name, { publicQr: true, label: appT('QR code') }); return; }
                     const link = document.createElement('a'); link.href = qrCodes[selectedQR.id]; link.download = name; link.click();
                   }}
                   className="flex-1 px-3 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 flex items-center gap-2 justify-center"
                   style={{ background: themeColor }}
-                ><Download className="w-4 h-4" /> Download</button>
+                ><Download className="w-4 h-4" />{' '}{appT('Download')}</button>
                 <button
-                  onClick={() => { const w = window.open(); w.document.write(`<html><head><title>${selectedQR.name}</title></head><body style="text-align:center;font-family:Arial"><h2>${selectedQR.name}</h2><p>${selectedQR.capacity} pax</p><img src="${qrCodes[selectedQR.id]}" /></body></html>`); w.document.close(); setTimeout(() => w.print(), 250); }}
+                  onClick={() => { const w = window.open(); w.document.write(`<html><head><title>${selectedQR.name}</title></head><body style="text-align:center;font-family:Arial"><h2>${selectedQR.name}</h2><p>${appT('{capacity} pax', { capacity: selectedQR.capacity })}</p><img src="${qrCodes[selectedQR.id]}" /></body></html>`); w.document.close(); setTimeout(() => w.print(), 250); }}
                   className="flex-1 px-3 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 flex items-center gap-2 justify-center"
                   style={{ background: themeColor }}
-                ><Printer className="w-4 h-4" /> Print</button>
+                ><Printer className="w-4 h-4" />{' '}{appT('Print')}</button>
               </div>
             </div>
           </div>
@@ -555,7 +556,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
 
       <div className="flex gap-2 sm:gap-3 pt-3 sm:pt-4">
         <Button type="button" onClick={prevStep} variant="outline" className="h-10 sm:h-11 px-4 sm:px-6 gap-1 sm:gap-2 text-sm">
-          <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Back</span>
+          <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">{appT('Back')}</span>
         </Button>
         <Button
           type="button"
@@ -563,7 +564,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
           variant="outline"
           className="h-10 sm:h-11 px-3 sm:px-4 text-xs sm:text-sm text-slate-500"
         >
-          Skip
+          {appT('Skip')}
         </Button>
         <Button
           type="button"
@@ -572,7 +573,7 @@ export default function Step4TablesQR({ formData, updateFormData, nextStep, prev
           className="flex-1 h-10 sm:h-11 text-white gap-1 sm:gap-2 text-sm disabled:opacity-50"
           style={{ background: themeColor }}
         >
-          Next <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
+          {appT('Next')}{' '}<ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
         </Button>
       </div>
     </Card>

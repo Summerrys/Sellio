@@ -18,8 +18,11 @@ import { homeFor, isStaffAccount } from '@/lib/staffAccess';
 import { callPhoneAuth } from '@/lib/phoneAuth';
 import { callClosedAccount, closedAccountMessage } from '@/lib/closedAccount';
 import ClosedAccount from '@/components/auth/ClosedAccount';
+import TermsLine from '@/components/auth/TermsLine';
+import AppLanguageSwitch from '@/components/ui-custom/AppLanguageSwitch';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { isCapacitorApp, outsideLinkProps, sellsPlans, PLANS_ON_WEBSITE } from '@/lib/nativeApp';
+import { useAppText, N_, appT } from '@/lib/appText';
 
 const BYPASS_EMAILS = ['alvin.leeyq@gmail.com', 'alvin_y_q_lee@ite.edu.sg'];
 
@@ -40,14 +43,14 @@ async function landingWithoutShop(supabase, appUserRow) {
 // sign in for, nor on Join, which still asks for the account's details.
 function welcomeBackOn(destination) {
   if (destination === '/delete-account' || destination === '/Join') return;
-  noteSignInWelcome('Welcome back!');
+  noteSignInWelcome(appT('Welcome back!'));
 }
 
 // Same rules as PHONE_COUNTRIES in src/lib/accountFlow.js (Indonesia: 12 Nov 2026).
 const COUNTRY_CODES = [
-  { code: '+65', flag: '🇸🇬', name: 'SG', placeholder: '91234567', validate: (p) => /^[89]\d{7}$/.test(p), hint: '8 digits, starting with 8 or 9' },
-  { code: '+60', flag: '🇲🇾', name: 'MY', placeholder: '112345678', validate: (p) => /^1\d{8,9}$/.test(p), hint: '9–10 digits, starting with 1' },
-  { code: '+62', flag: '🇮🇩', name: 'ID', placeholder: '81234567890', validate: (p) => /^8[1-9]\d{7,10}$/.test(p), hint: '9–12 digits, starting with 8' },
+  { code: '+65', flag: '🇸🇬', name: 'SG', placeholder: '91234567', validate: (p) => /^[89]\d{7}$/.test(p), hint: N_('8 digits, starting with 8 or 9') },
+  { code: '+60', flag: '🇲🇾', name: 'MY', placeholder: '112345678', validate: (p) => /^1\d{8,9}$/.test(p), hint: N_('9–10 digits, starting with 1') },
+  { code: '+62', flag: '🇮🇩', name: 'ID', placeholder: '81234567890', validate: (p) => /^8[1-9]\d{7,10}$/.test(p), hint: N_('9–12 digits, starting with 8') },
 ];
 // The code to start with: the visitor's country's, when their phone or computer says it.
 const startCountryCode = () => COUNTRY_CODES.find((c) => c.code === phoneCountryFor(visitorCountry()).code) || COUNTRY_CODES[0];
@@ -68,21 +71,22 @@ const getBaseUrl = () => {
 // "1 minute" / "15 minutes", for the phone sign-in and reset limits.
 const waitText = (minutes) => {
   const n = Math.max(1, Math.round(Number(minutes) || 1));
-  return n === 1 ? '1 minute' : `${n} minutes`;
+  return n === 1 ? appT('1 minute') : appT('{count} minutes', { count: n });
 };
 
 // What to show when phone sign-in (the phone-auth server function) says no.
 const phoneSignInMessage = (result) => {
   switch (result?.code) {
-    case 'invalid': return 'Phone number or password is incorrect.';
-    case 'locked': return `Too many wrong passwords for this number. Try again in ${waitText(result.retry_after_minutes)}, or reset your password.`;
-    case 'too_many': return `Too many sign-in attempts from this network. Try again in ${waitText(result.retry_after_minutes)}.`;
-    case 'busy': return 'Sign-in is busy right now. Please try again in a minute.';
-    default: return 'Could not sign in right now. Please try again.';
+    case 'invalid': return appT('Phone number or password is incorrect.');
+    case 'locked': return appT('Too many wrong passwords for this number. Try again in {wait}, or reset your password.', { wait: waitText(result.retry_after_minutes) });
+    case 'too_many': return appT('Too many sign-in attempts from this network. Try again in {wait}.', { wait: waitText(result.retry_after_minutes) });
+    case 'busy': return appT('Sign-in is busy right now. Please try again in a minute.');
+    default: return appT('Could not sign in right now. Please try again.');
   }
 };
 
 export default function Auth() {
+  const { t } = useAppText();
   const { setAppUser } = useAppUser();
   const [mobileGoogleCompleted] = useState(() => hasMobileGoogleCompletion());
   // Read token from URL on mount
@@ -286,7 +290,7 @@ export default function Auth() {
         setClosedAccount({ web: true });
         return;
       }
-      toast.error(params.get('error_description') || 'Google Sign-In failed');
+      toast.error(params.get('error_description') || t('Google Sign-In failed'));
       return;
     }
     if (!hash.includes('access_token') && !mobileGoogleCompleted) return;
@@ -297,11 +301,11 @@ export default function Auth() {
       try {
         const supabase = await getSupabase();
         const { data: { session }, error } = await supabase.auth.getSession();
-        if (error || !session) throw error || new Error('No session found');
+        if (error || !session) throw error || new Error(t('No session found'));
 
         const user = session.user;
         if (mobileGoogleCompleted && !user.identities?.some(identity => identity.provider === 'google')) {
-          throw new Error('Google did not return a valid sign-in. Please try again.');
+          throw new Error(t('Google did not return a valid sign-in. Please try again.'));
         }
         const now = new Date(Date.now() + 8 * 3600 * 1000).toISOString().replace('Z', '').replace('T', ' ').substring(0, 23);
 
@@ -335,7 +339,7 @@ export default function Auth() {
             await supabase.auth.signOut({ scope: 'local' }); // this device only
             setGoogleLoading(false);
             window.history.replaceState(window.history.state, '', `${window.location.pathname}?token=${tokenInUrl}`);
-            setGoogleSignupError(`Please sign up with the email address used during payment (${invite.email})`);
+            setGoogleSignupError(t('Please sign up with the email address used during payment ({email})', { email: invite.email }));
             return;
           }
         }
@@ -389,7 +393,7 @@ export default function Auth() {
           appUsersRowId = fetchedUser?.id;
         }
 
-        if (!appUsersRowId) throw new Error('Failed to create or find user record.');
+        if (!appUsersRowId) throw new Error(t('Failed to create or find user record.'));
 
         const appUser = {
           id: appUsersRowId,
@@ -421,7 +425,7 @@ export default function Auth() {
         if (returningAccount) welcomeBackOn(destination);
         completeAuthNavigation(destination);
       } catch (err) {
-        toast.error(err.message || 'Google Sign-In failed');
+        toast.error(err.message || t('Google Sign-In failed'));
         setGoogleLoading(false);
         window.history.replaceState(window.history.state, '', window.location.pathname);
       }
@@ -466,7 +470,7 @@ export default function Auth() {
         await openGoogleClosedAccount(err);
         return;
       }
-      toast.error(err.message || 'Google Sign-In failed. Please try again.');
+      toast.error(err.message || t('Google Sign-In failed. Please try again.'));
       setGoogleLoading(false);
     }
   };
@@ -483,12 +487,12 @@ export default function Auth() {
       // background, so the account's email address never reaches the browser: only a
       // masked one (al•••@gmail.com) comes back to show.
       const result = await callPhoneAuth({ action: 'reset', phone: fullPhone, redirect_to: `${getBaseUrl()}/Auth?type=recovery` });
-      if (!result) throw new Error('Something went wrong. Please try again.');
+      if (!result) throw new Error(t('Something went wrong. Please try again.'));
 
       if (!result.ok) {
         toast.error(result.code === 'not_found'
-          ? 'No account found for this phone number.'
-          : `Too many reset requests. Please try again in ${waitText(result.retry_after_minutes)}.`);
+          ? t('No account found for this phone number.')
+          : t('Too many reset requests. Please try again in {waitText}.', { waitText: waitText(result.retry_after_minutes) }));
         return;
       }
 
@@ -496,14 +500,14 @@ export default function Auth() {
 
       if (result.kind === 'staff') {
         // Staff logins have no email of their own: the shop owner resets their password.
-        toast.error('Staff passwords are reset by the shop owner. Please ask your owner to reset yours.');
+        toast.error(t('Staff passwords are reset by the shop owner. Please ask your owner to reset yours.'));
         return;
       }
 
       setForgotMaskedEmail(result.masked_email || '');
       setForgotStep(4);
     } catch (err) {
-      toast.error(err.message || 'Something went wrong. Please try again.');
+      toast.error(err.message || t('Something went wrong. Please try again.'));
     } finally {
       setForgotLoading(false);
     }
@@ -513,16 +517,16 @@ export default function Auth() {
     // Placeholder-email accounts cannot safely prove ownership with only a phone
     // number and a newly supplied email. Keep the account locked instead of exposing
     // an account-takeover path; an owner-assisted reset flow will replace this.
-    toast.error('This staff account needs an owner-assisted password reset. Please contact your Sellio account owner.');
+    toast.error(t('This staff account needs an owner-assisted password reset. Please contact your Sellio account owner.'));
   };
 
   const handleForgotSetPassword = async () => {
     if (!forgotNewPassword || forgotNewPassword.length < 6) {
-      toast.error('Password must be at least 6 characters.');
+      toast.error(t('Password must be at least 6 characters.'));
       return;
     }
     if (forgotNewPassword !== forgotConfirmPassword) {
-      toast.error('Passwords do not match.');
+      toast.error(t('Passwords do not match.'));
       return;
     }
     setForgotLoading(true);
@@ -538,10 +542,10 @@ export default function Auth() {
       // After a password change, sign out on every device (deliberately not 'local').
       await supabase.auth.signOut();
 
-      toast.success('Password updated successfully!');
+      toast.success(t('Password updated successfully!'));
       setTimeout(() => { window.location.replace(`${getBaseUrl()}/Auth`); }, 800);
     } catch (err) {
-      toast.error(err.message || 'Failed to update password.');
+      toast.error(err.message || t('Failed to update password.'));
     } finally {
       setForgotLoading(false);
     }
@@ -564,7 +568,7 @@ export default function Auth() {
         await openGoogleClosedAccount(err);
         return;
       }
-      toast.error(err.message || 'Google Sign-Up failed. Please try again.');
+      toast.error(err.message || t('Google Sign-Up failed. Please try again.'));
       setGoogleLoading(false);
     }
   };
@@ -577,7 +581,7 @@ export default function Auth() {
         </div>
         <div className="flex-1">
           <p className="text-sm font-semibold text-green-900">{message}</p>
-          <p className="text-xs text-green-700">You're all set. Redirecting now...</p>
+          <p className="text-xs text-green-700">{t('You\'re all set. Redirecting now...')}</p>
         </div>
       </div>
     ));
@@ -596,7 +600,7 @@ export default function Auth() {
         // this browser's session, so the account's email address never reaches the browser.
         // Supabase Auth still validates the password. app_users is profile data only.
         const result = await callPhoneAuth({ action: 'sign_in', phone: fullPhone, password: formData.password });
-        if (!result) throw new Error('Could not sign in right now. Please try again.');
+        if (!result) throw new Error(t('Could not sign in right now. Please try again.'));
         // A closed account (its deletion is pending) and the right password: when it will be
         // deleted, and the choice to keep it or start again (components/auth/ClosedAccount).
         if (result.code === 'closed' && result.closed) {
@@ -620,7 +624,7 @@ export default function Auth() {
           .limit(1);
         if (profileError) throw profileError;
         const appUserRow = rows?.[0];
-        if (!appUserRow) throw new Error('Account profile not found. Please contact support.');
+        if (!appUserRow) throw new Error(t('Account profile not found. Please contact support.'));
 
         // If tenant_id is missing from app_users, look it up from tenant_users
         let tenantId = appUserRow.tenant_id;
@@ -648,13 +652,13 @@ export default function Auth() {
         const isBypass = BYPASS_EMAILS.includes(emailToUse.toLowerCase());
 
         if (!isBypass && signupMode !== 'allowed') {
-          toast.error('Please purchase a plan to register.');
+          toast.error(t('Please purchase a plan to register.'));
           setLoading(false);
           return;
         }
 
         if (!selectedCountry.validate(cleanPhone)) {
-          toast.error(`Invalid phone number for ${selectedCountry.name}. Expected: ${selectedCountry.hint}`);
+          toast.error(t('Invalid phone number for {name}. Expected: {hint}', { name: selectedCountry.name, hint: t(selectedCountry.hint) }));
           setLoading(false);
           return;
         }
@@ -693,11 +697,11 @@ export default function Auth() {
             .eq('status', 'pending');
         }
 
-        showSuccess('Account created!');
+        showSuccess(t('Account created!'));
         setTimeout(() => { completeAuthNavigation(createPageUrl('Onboarding')); }, 500);
       }
     } catch (error) {
-      toast.error(error.message || 'An unexpected error occurred');
+      toast.error(error.message || t('An unexpected error occurred'));
     } finally {
       setLoading(false);
     }
@@ -732,7 +736,7 @@ export default function Auth() {
                 return;
               }
             }
-            toast.error('This reset link has expired or was already used. Please request a new one.');
+            toast.error(t('This reset link has expired or was already used. Please request a new one.'));
             setForgotStep(1);
           })
           .finally(() => setForgotLoading(false));
@@ -799,16 +803,16 @@ export default function Auth() {
                   </button>
                   <div>
                     <p className="text-base font-semibold text-slate-800">
-                      {forgotStep === 1 && 'Reset Password'}
-                      {forgotStep === 2 && 'Confirm Your Email'}
-                      {forgotStep === 3 && 'New Password'}
-                      {forgotStep === 4 && 'Check Your Email'}
+                      {forgotStep === 1 && t('Reset Password')}
+                      {forgotStep === 2 && t('Confirm Your Email')}
+                      {forgotStep === 3 && t('New Password')}
+                      {forgotStep === 4 && t('Check Your Email')}
                     </p>
                     <p className="text-xs text-slate-400">
-                      {forgotStep === 1 && 'Enter your registered phone number'}
-                      {forgotStep === 2 && 'We need a valid email to send your reset link'}
-                      {forgotStep === 3 && 'Choose a new password'}
-                      {forgotStep === 4 && 'Reset link sent'}
+                      {forgotStep === 1 && t('Enter your registered phone number')}
+                      {forgotStep === 2 && t('We need a valid email to send your reset link')}
+                      {forgotStep === 3 && t('Choose a new password')}
+                      {forgotStep === 4 && t('Reset link sent')}
                     </p>
                   </div>
                 </div>
@@ -817,7 +821,7 @@ export default function Auth() {
                 {forgotStep === 1 && (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">{t('Phone Number')}</label>
                       <div className="flex gap-2">
                         <div className="relative" onClick={(e) => e.stopPropagation()}>
                           <button
@@ -865,7 +869,7 @@ export default function Auth() {
                       className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70"
                       style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
                     >
-                      {forgotLoading ? 'Please wait...' : 'Continue'}
+                      {forgotLoading ? t('Please wait...') : t('Continue')}
                     </button>
                   </div>
                 )}
@@ -875,10 +879,10 @@ export default function Auth() {
                   <div className="space-y-4">
                     <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                       <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-amber-800">We don't have a valid email on file for this account yet. Enter one below to receive your password reset link.</p>
+                      <p className="text-xs text-amber-800">{t('We don\'t have a valid email on file for this account yet. Enter one below to receive your password reset link.')}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">{t('Email Address')}</label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
@@ -897,7 +901,7 @@ export default function Auth() {
                       className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70"
                       style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
                     >
-                      {forgotLoading ? 'Sending...' : 'Send Reset Link'}
+                      {forgotLoading ? t('Sending...') : t('Send Reset Link')}
                     </button>
                   </div>
                 )}
@@ -906,12 +910,12 @@ export default function Auth() {
                 {forgotStep === 3 && (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">{t('New Password')}</label>
                       <div className="relative">
                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
                           type="password"
-                          placeholder="Min. 6 characters"
+                          placeholder={t('Min. 6 characters')}
                           value={forgotNewPassword}
                           onChange={(e) => setForgotNewPassword(e.target.value)}
                           className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
@@ -919,12 +923,12 @@ export default function Auth() {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Confirm Password</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">{t('Confirm Password')}</label>
                       <div className="relative">
                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
                           type="password"
-                          placeholder="Re-enter password"
+                          placeholder={t('Re-enter password')}
                           value={forgotConfirmPassword}
                           onChange={(e) => setForgotConfirmPassword(e.target.value)}
                           className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
@@ -938,7 +942,7 @@ export default function Auth() {
                       className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70"
                       style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
                     >
-                      {forgotLoading ? 'Saving...' : 'Set New Password'}
+                      {forgotLoading ? t('Saving...') : t('Set New Password')}
                     </button>
                   </div>
                 )}
@@ -950,14 +954,14 @@ export default function Auth() {
                       <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center">
                         <Check className="w-7 h-7 text-green-500" />
                       </div>
-                      <p className="text-sm font-semibold text-slate-800 text-center">Reset link sent!</p>
+                      <p className="text-sm font-semibold text-slate-800 text-center">{t('Reset link sent!')}</p>
                       <p className="text-xs text-slate-500 text-center leading-relaxed">
-                        {forgotMaskedEmail ? <>We sent it to <span className="font-semibold text-slate-700">{forgotMaskedEmail}</span>. </> : null}
-                        Check your email inbox and click the reset link. It may take a minute to arrive.
+                        {forgotMaskedEmail ? <>{t('We sent it to {forgotMaskedEmail}.', { forgotMaskedEmail: <span className="font-semibold text-slate-700">{forgotMaskedEmail}</span> })}{' '}</> : null}
+                        {t('Check your email inbox and click the reset link. It may take a minute to arrive.')}
                       </p>
                     </div>
                     <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                      <p className="text-xs font-semibold text-slate-600 mb-2">Need further help?</p>
+                      <p className="text-xs font-semibold text-slate-600 mb-2">{t('Need further help?')}</p>
                       <a
                         href="mailto:sellio@apptelier.sg"
                         className="flex items-center gap-2 text-xs text-slate-600 hover:text-orange-500 transition-colors mb-2"
@@ -971,7 +975,7 @@ export default function Auth() {
                           className="flex items-center gap-2 text-xs font-medium text-green-700 hover:text-green-800 transition-colors"
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.564 4.14 1.548 5.874L0 24l6.336-1.524A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.006-1.371l-.36-.214-3.732.898.934-3.617-.235-.372A9.818 9.818 0 1112 21.818z"/></svg>
-                          WhatsApp Priority Support
+                          {t('WhatsApp Priority Support')}
                         </a>
                       )}
                     </div>
@@ -980,7 +984,7 @@ export default function Auth() {
                       onClick={() => { setForgotMode(false); setForgotStep(1); }}
                       className="w-full py-2.5 rounded-xl text-sm font-medium text-slate-600 border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
                     >
-                      Back to Login
+                      {t('Back to Login')}
                     </button>
                   </div>
                 )}
@@ -992,8 +996,8 @@ export default function Auth() {
               <div className="auth-logo-gap flex items-center justify-center">
                 <img src="/branding/sellio-logo.webp" alt="Sellio" className="auth-logo w-auto object-contain" />
               </div>
-              <p className="text-xl font-semibold text-slate-800 mb-0.5">Welcome!</p>
-              <p className="text-sm text-slate-500">Let's get you started</p>
+              <p className="text-xl font-semibold text-slate-800 mb-0.5">{t('Welcome!')}</p>
+              <p className="text-sm text-slate-500">{t('Let\'s get you started')}</p>
             </div>
 
             {/* Tab Toggle */}
@@ -1003,14 +1007,14 @@ export default function Auth() {
                 onClick={() => setIsLogin(true)}
                 className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${isLogin ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
               >
-                Login
+                {t('Login')}
               </button>
               <button
                 type="button"
                 onClick={() => setIsLogin(false)}
                 className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${!isLogin ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
               >
-                Sign Up
+                {t('Sign Up')}
               </button>
             </div>
 
@@ -1020,7 +1024,7 @@ export default function Auth() {
                 <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl mb-4">
                   <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-red-700">
-                    This invite link is invalid or has expired.{plansSold ? ' Please purchase a plan to get started.' : ''}
+                    {t('This invite link is invalid or has expired.')}{plansSold ? ' ' + t('Please purchase a plan to get started.') : ''}
                   </p>
                 </div>
                 {plansSold ? (
@@ -1029,7 +1033,7 @@ export default function Auth() {
                     className="w-full py-2.5 rounded-xl text-white text-sm font-semibold"
                     style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
                   >
-                    View Plans
+                    {t('View Plans')}
                   </button>
                 ) : (
                   <p className="text-center text-sm text-slate-500">{PLANS_ON_WEBSITE}</p>
@@ -1051,7 +1055,7 @@ export default function Auth() {
                   <span className="sellio-dot-inline-2" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
                   <span className="sellio-dot-inline-3" style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
                 </div>
-                <p className="text-sm text-slate-500">Verifying your payment...</p>
+                <p className="text-sm text-slate-500">{t('Verifying your payment...')}</p>
               </div>
             )}
 
@@ -1060,12 +1064,12 @@ export default function Auth() {
               <form onSubmit={handleSubmit} className="auth-fields">
                 {!isLogin && (
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('Name *')}</label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input
                         type="text"
-                        placeholder="John Doe"
+                        placeholder={t('John Doe')}
                         value={formData.full_name}
                         onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                         readOnly={signupMode === 'allowed' && !!inviteName}
@@ -1074,13 +1078,13 @@ export default function Auth() {
                       />
                     </div>
                     {signupMode === 'allowed' && !!inviteName && (
-                      <p className="text-xs text-slate-400 mt-1">Name pre-filled from your registration.</p>
+                      <p className="text-xs text-slate-400 mt-1">{t('Name pre-filled from your registration.')}</p>
                     )}
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('Phone Number *')}</label>
                   <div className="flex gap-2">
                     <div className="relative" onClick={(e) => e.stopPropagation()}>
                       <button
@@ -1126,7 +1130,7 @@ export default function Auth() {
                 {!isLogin && (
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Email {signupMode === 'allowed' && inviteEmail ? '' : <span className="text-slate-400 font-normal">(optional)</span>}
+                      Email {signupMode === 'allowed' && inviteEmail ? '' : <span className="text-slate-400 font-normal">{t('(optional)')}</span>}
                     </label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -1140,7 +1144,7 @@ export default function Auth() {
                       />
                     </div>
                     {signupMode === 'allowed' && inviteEmail && (
-                      <p className="text-xs text-slate-400 mt-1">Email pre-filled from your invite.</p>
+                      <p className="text-xs text-slate-400 mt-1">{t('Email pre-filled from your invite.')}</p>
                     )}
                   </div>
                 )}
@@ -1148,14 +1152,14 @@ export default function Auth() {
                 <div>
                   {/* "Forgot password?" sits on the label's line (saves a row) */}
                   <div className="flex items-center justify-between gap-3 mb-1">
-                    <label className="block text-sm font-medium text-slate-700">Password *</label>
+                    <label className="block text-sm font-medium text-slate-700">{t('Password *')}</label>
                     {isLogin && (
                       <button
                         type="button"
                         onClick={() => { setForgotMode(true); setForgotStep(1); }}
                         className="text-xs text-orange-500 hover:text-orange-600 font-medium bg-transparent border-none cursor-pointer p-0"
                       >
-                        Forgot password?
+                        {t('Forgot password?')}
                       </button>
                     )}
                   </div>
@@ -1163,7 +1167,7 @@ export default function Auth() {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       type="password"
-                      placeholder="Enter password"
+                      placeholder={t('Enter password')}
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       required
@@ -1178,7 +1182,7 @@ export default function Auth() {
                   className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70"
                   style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
                 >
-                  {loading ? 'Please wait...' : isLogin ? 'Login' : 'Sign Up'}
+                  {loading ? t('Please wait...') : isLogin ? t('Login') : t('Sign Up')}
                 </button>
               </form>
             )}
@@ -1188,7 +1192,7 @@ export default function Auth() {
               <>
                 <div className="auth-gap-y flex items-center gap-3">
                   <div className="flex-1 h-px bg-slate-200" />
-                  <span className="text-xs text-slate-400 font-medium">or sign up with</span>
+                  <span className="text-xs text-slate-400 font-medium">{t('or sign up with')}</span>
                   <div className="flex-1 h-px bg-slate-200" />
                 </div>
                 <button
@@ -1207,7 +1211,7 @@ export default function Auth() {
                       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                     </svg>
                   )}
-                  {googleLoading ? 'Redirecting...' : 'Sign up with Google'}
+                  {googleLoading ? t('Redirecting...') : t('Sign up with Google')}
                 </button>
                 <GoogleBrowserHint />
                 {googleSignupError && (
@@ -1224,22 +1228,22 @@ export default function Auth() {
               <div className="text-center py-4">
                 <p className="text-sm text-slate-500 mb-4">
                   {plansSold
-                    ? 'Create a free Sellio account: sell from home for free, or choose a business plan.'
-                    : 'Create a free Sellio account to sell from home for free.'}
+                    ? t('Create a free Sellio account: sell from home for free, or choose a business plan.')
+                    : t('Create a free Sellio account to sell from home for free.')}
                 </p>
                 <a
                   href="/Join"
                   className="block w-full py-2.5 rounded-xl text-white text-sm font-semibold"
                   style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
                 >
-                  Create my free account
+                  {t('Create my free account')}
                 </a>
                 {plansSold ? (
                   <button
                     onClick={() => setShowPricingModal(true)}
                     className="w-full mt-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
                   >
-                    Business plans (7-day free trial)
+                    {t('Business plans (7-day free trial)')}
                   </button>
                 ) : (
                   <p className="mt-3 text-sm text-slate-500">{PLANS_ON_WEBSITE}</p>
@@ -1251,7 +1255,7 @@ export default function Auth() {
               <button type="button" className="w-full min-h-11 mt-3 text-sm underline"
                 style={{ color: 'var(--primary)' }}
                 onClick={() => { clearMobileAuth(window.localStorage); setGoogleLoading(false); }}>
-                Cancel Google sign-in
+                {t('Cancel Google sign-in')}
               </button>
             )}
 
@@ -1260,7 +1264,7 @@ export default function Auth() {
               <>
                 <div className="auth-gap-y flex items-center gap-3">
                   <div className="flex-1 h-px bg-slate-200" />
-                  <span className="text-xs text-slate-400 font-medium">or continue with</span>
+                  <span className="text-xs text-slate-400 font-medium">{t('or continue with')}</span>
                   <div className="flex-1 h-px bg-slate-200" />
                 </div>
 
@@ -1280,7 +1284,7 @@ export default function Auth() {
                       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                     </svg>
                   )}
-                  {googleLoading ? 'Redirecting...' : 'Sign in with Google'}
+                  {googleLoading ? t('Redirecting...') : t('Sign in with Google')}
                 </button>
                 <GoogleBrowserHint />
 
@@ -1288,12 +1292,12 @@ export default function Auth() {
                   <div className="mt-3 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                     <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-amber-800">
-                      There’s no Sellio account for this Google email yet.{' '}
-                      <a href="/Join" style={{ fontWeight: 600, color: '#d97706', textDecoration: 'underline' }}>Create a free account</a>
+                      {t('There’s no Sellio account for this Google email yet.')}{' '}
+                      <a href="/Join" style={{ fontWeight: 600, color: '#d97706', textDecoration: 'underline' }}>{t('Create a free account')}</a>
                       {plansSold && (
                         <>
-                          {' '}or{' '}
-                          <span onClick={() => setShowPricingModal(true)} style={{ fontWeight: 600, color: '#d97706', textDecoration: 'underline', cursor: 'pointer' }}>see business plans</span>
+                          {' '}{t('or')}{' '}
+                          <span onClick={() => setShowPricingModal(true)} style={{ fontWeight: 600, color: '#d97706', textDecoration: 'underline', cursor: 'pointer' }}>{t('see business plans')}</span>
                         </>
                       )}.
                     </p>
@@ -1304,13 +1308,10 @@ export default function Auth() {
 
             {!checkingToken && (
               <p className="auth-gap-t text-center text-[11px] leading-relaxed text-slate-400">
-                By continuing, you agree to Sellio's{' '}
-                <br></br>
-                <a href="/terms" className="font-semibold text-orange-500 hover:text-orange-600 underline underline-offset-2">Terms and Conditions</a>
-                {' '}and {' '}
-                <a href="/privacy" className="font-semibold text-orange-500 hover:text-orange-600 underline underline-offset-2">Privacy Policy</a>.
+                <TermsLine />
               </p>
             )}
+            <AppLanguageSwitch className="mt-2" />
             </>
             )}
           </div>

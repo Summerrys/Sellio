@@ -20,6 +20,7 @@ import { createPageUrl } from '@/utils';
 import { isShopTenant } from '@/lib/shopSelling';
 import { useBackToClose, handOverBackStep, removeBackStep } from '@/lib/useBackToClose';
 import { currencyPrefix, formatMoney } from '@/lib/money';
+import { useAppText, N_ } from '@/lib/appText';
 
 // Setup steps for a new free shop (after "Sell from home"), in the same look as a
 // business's onboarding: the progress header, a card per step and the gradient
@@ -28,16 +29,17 @@ import { currencyPrefix, formatMoney } from '@/lib/money';
 // until the owner finishes here.
 // progress: the step's name under its number in the progress header.
 const STEPS = [
-  { key: 'look', progress: 'Shop Look', icon: Palette, title: 'Your shop’s look', subtitle: 'Add a logo and pick your colours.' },
-  { key: 'selling', progress: 'How You Sell', icon: Truck, title: 'How you sell', subtitle: 'Self-collection, delivery, or both.' },
-  { key: 'payment', progress: 'Get Paid', icon: QrCode, title: 'Get paid', subtitle: 'Upload your payment QR. Buyers see it after they order.' },
-  { key: 'listings', progress: 'Listings', icon: ShoppingBag, title: 'Your first listings', subtitle: 'Add what you sell. You can add up to 10 on the free plan.' },
-  { key: 'share', progress: 'Share Shop', icon: Share2, title: 'Share your shop', subtitle: 'Send your store page to your buyers.' },
+  { key: 'look', progress: N_('Shop Look'), icon: Palette, title: N_('Your shop’s look'), subtitle: N_('Add a logo and pick your colours.') },
+  { key: 'selling', progress: N_('How You Sell'), icon: Truck, title: N_('How you sell'), subtitle: N_('Self-collection, delivery, or both.') },
+  { key: 'payment', progress: N_('Get Paid'), icon: QrCode, title: N_('Get paid'), subtitle: N_('Upload your payment QR. Buyers see it after they order.') },
+  { key: 'listings', progress: N_('Listings'), icon: ShoppingBag, title: N_('Your first listings'), subtitle: N_('Add what you sell. You can add up to 10 on the free plan.') },
+  { key: 'share', progress: N_('Share Shop'), icon: Share2, title: N_('Share your shop'), subtitle: N_('Send your store page to your buyers.') },
 ];
 const GRADIENT_BUTTON = { background: 'var(--color-primary-gradient, linear-gradient(135deg, #3b82f6, #9333ea))', color: '#fff' };
 
 
 function LogoStep({ tenant, tenantId }) {
+  const { t } = useAppText();
   const queryClient = useQueryClient();
   const inputRef = useRef(null);
   const [logo, setLogo] = useState(tenant?.logo_url || null);
@@ -49,11 +51,11 @@ function LogoStep({ tenant, tenantId }) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (!file.type.startsWith('image/')) { toast.error('Please choose an image.'); return; }
+    if (!file.type.startsWith('image/')) { toast.error(t('Please choose an image.')); return; }
     setUploading(true);
     try {
       const logo = await shrinkImage(file, { maxSide: LOGO_MAX_SIDE });
-      if (logo.blob.size > 5 * 1024 * 1024) { toast.error('Please use an image under 5 MB.'); return; }
+      if (logo.blob.size > 5 * 1024 * 1024) { toast.error(t('Please use an image under 5 MB.')); return; }
       const supabase = await getSupabase();
       const path = `${tenantId}/logo/${Date.now()}.${logo.ext}`;
       const { error } = await supabase.storage.from('product-images').upload(path, logo.blob, { upsert: true, contentType: logo.type, cacheControl: LONG_CACHE });
@@ -63,9 +65,9 @@ function LogoStep({ tenant, tenantId }) {
       if (saveError) throw saveError;
       setLogo(publicUrl);
       queryClient.invalidateQueries({ queryKey: ['currentTenant'] });
-      toast.success('Logo saved');
+      toast.success(t('Logo saved'));
     } catch (err) {
-      showError(err, 'Couldn’t upload the logo');
+      showError(err, t('Couldn’t upload the logo'), { t });
     } finally {
       setUploading(false);
     }
@@ -78,23 +80,24 @@ function LogoStep({ tenant, tenantId }) {
           type="button"
           onClick={() => inputRef.current?.click()}
           className="w-28 h-28 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center overflow-hidden"
-          aria-label="Upload logo"
+          aria-label={t('Upload logo')}
           data-testid="setup-logo"
         >
           {uploading ? <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-            : logo ? <img src={logo} alt="Shop logo" className="w-full h-full object-contain bg-white" />
+            : logo ? <img src={logo} alt={t('Shop logo')} className="w-full h-full object-contain bg-white" />
             : <ImagePlus className="w-8 h-8 text-slate-400" />}
         </button>
-        <p className="text-xs text-slate-500">{logo ? 'Tap to change your logo' : 'Tap to add a logo (optional)'}</p>
+        <p className="text-xs text-slate-500">{logo ? t('Tap to change your logo') : t('Tap to add a logo (optional)')}</p>
         <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={upload} />
       </div>
       <ThemeSelector variant="compact" />
-      <p className="text-xs text-slate-400 text-center">Later, Design Store on the Dashboard lets you change your banner, layout and fonts.</p>
+      <p className="text-xs text-slate-400 text-center">{t('Later, Design Store on the Dashboard lets you change your banner, layout and fonts.')}</p>
     </div>
   );
 }
 
 function ListingsStep({ tenantId }) {
+  const { t } = useAppText();
   const { tenant } = useTenant();
   const [open, setOpen] = useState(false);
   const closeOrOpenForm = (v) => { setOpen(v); if (!v) refetch(); };
@@ -117,7 +120,7 @@ function ListingsStep({ tenantId }) {
       {isLoading ? (
         <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-slate-400" /></div>
       ) : listings.length === 0 ? (
-        <p className="text-sm text-slate-500 text-center py-4">No listings yet.</p>
+        <p className="text-sm text-slate-500 text-center py-4">{t('No listings yet.')}</p>
       ) : (
         <div className="space-y-2" data-testid="setup-listings">
           {listings.map(item => (
@@ -129,9 +132,9 @@ function ListingsStep({ tenantId }) {
           ))}
         </div>
       )}
-      <p className="text-xs text-slate-400 text-center">{listings.length} of 10 listings</p>
+      <p className="text-xs text-slate-400 text-center">{t('{count} of 10 listings', { count: listings.length })}</p>
       <Button variant="outline" className="w-full h-11" onClick={() => setOpen(true)} disabled={listings.length >= 10} data-testid="setup-add-listing">
-        <Plus className="w-4 h-4 mr-1.5" /> Add a listing
+        <Plus className="w-4 h-4 mr-1.5" />{' '}{t('Add a listing')}
       </Button>
       <ProductFormDialog
         open={open}
@@ -144,6 +147,7 @@ function ListingsStep({ tenantId }) {
 }
 
 export default function ShopSetup() {
+  const { t } = useAppText();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { tenant, tenantId, isOwner, isLoading } = useTenant();
@@ -183,11 +187,11 @@ export default function ShopSetup() {
       const { error } = await supabase.rpc('finish_shop_setup', { p_tenant_id: tenantId });
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['shop-setup-status', tenantId] });
-      toast.success('Your shop is ready');
+      toast.success(t('Your shop is ready'));
       await removeBackStep(); // so Back from the Dashboard doesn't return to the finished setup
       navigate(createPageUrl('Dashboard'), { replace: true });
     } catch (err) {
-      showError(err, 'Couldn’t finish setting up your shop');
+      showError(err, t('Couldn’t finish setting up your shop'), { t });
 
       setFinishing(false);
     }
@@ -198,7 +202,7 @@ export default function ShopSetup() {
       {/* Header with the progress, as in a business's onboarding */}
       <div className="bg-white border-b border-slate-100 px-4 py-4" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top, 0px))' }}>
         <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 1rem' }}>
-          <OnboardingProgress currentStep={step + 1} completedSteps={visited} steps={STEPS.map(s => ({ title: s.progress }))} />
+          <OnboardingProgress currentStep={step + 1} completedSteps={visited} steps={STEPS.map(s => ({ title: t(s.progress) }))} />
         </div>
       </div>
 
@@ -218,14 +222,14 @@ export default function ShopSetup() {
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
                     <Icon className="w-8 h-8 text-white" />
                   </div>
-                  <p className="text-xs font-medium text-slate-400 mb-1">Step {step + 1} of {STEPS.length}</p>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2" data-testid="setup-title">{current.title}</h1>
-                  <p className="text-slate-600">{current.subtitle}</p>
+                  <p className="text-xs font-medium text-slate-400 mb-1">{t('Step {step} of {total}', { step: step + 1, total: STEPS.length })}</p>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2" data-testid="setup-title">{t(current.title)}</h1>
+                  <p className="text-slate-600">{t(current.subtitle)}</p>
                 </div>
 
                 {current.key === 'look' && <LogoStep tenant={tenant} tenantId={tenantId} />}
                 {current.key === 'selling' && (
-                  <SellingSettingsForm tenantId={tenantId} currencySymbol={sym} country={tenant.country || ''} saveLabel="Save and continue" onSaved={next} />
+                  <SellingSettingsForm tenantId={tenantId} currencySymbol={sym} country={tenant.country || ''} saveLabel={t('Save and continue')} onSaved={next} />
                 )}
                 {current.key === 'payment' && <PaymentQRTab tenant={tenant} tenantId={tenantId} />}
                 {current.key === 'listings' && <ListingsStep tenantId={tenantId} />}
@@ -234,20 +238,20 @@ export default function ShopSetup() {
                 <div className="flex gap-2 pt-6">
                   {step > 0 && (
                     <Button variant="outline" className="h-11 px-4 sm:px-6 gap-1" onClick={back}>
-                      <ArrowLeft className="w-4 h-4" /> Back
+                      <ArrowLeft className="w-4 h-4" />{' '}{t('Back')}
                     </Button>
                   )}
                   {current.key === 'share' ? (
                     <Button className="flex-1 h-11 text-white gap-1.5" style={GRADIENT_BUTTON} onClick={finish} disabled={finishing} data-testid="setup-finish">
-                      {finishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> Finish</>}
+                      {finishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" />{' '}{t('Finish')}</>}
                     </Button>
                   ) : current.key === 'selling' ? (
                     <Button variant="outline" className="flex-1 h-11" onClick={next} data-testid="setup-next">
-                      Skip for now
+                      {t('Skip for now')}
                     </Button>
                   ) : (
                     <Button className="flex-1 h-11 text-white gap-1.5" style={GRADIENT_BUTTON} onClick={next} data-testid="setup-next">
-                      Continue <ArrowRight className="w-4 h-4" />
+                      {t('Continue')}{' '}<ArrowRight className="w-4 h-4" />
                     </Button>
                   )}
                 </div>
@@ -257,7 +261,7 @@ export default function ShopSetup() {
 
           <div className="text-center pt-4">
             <button type="button" onClick={() => navigate(createPageUrl('Dashboard'), { replace: handOverBackStep() })} className="text-sm text-slate-500 underline underline-offset-2">
-              I&apos;ll finish this later
+              {t('I\'ll finish this later')}
             </button>
           </div>
         </div>

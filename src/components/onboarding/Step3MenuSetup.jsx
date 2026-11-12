@@ -19,9 +19,10 @@ import { useAppUser, cookieUtils } from '@/lib/AppUserContext';
 import { normalizeIndustry } from '@/lib/industry';
 import { functionErrorMessage } from '@/lib/aiAllowance';
 import { currencyDecimals, formatMoney } from '@/lib/money';
+import { useAppText, N_, appT } from '@/lib/appText';
 
 // Adding past the plan's limit during setup (5 Nov 2026: no plan checkout here, see addItem).
-const LIMIT_MESSAGE = (max) => `Your plan includes up to ${max} items. You can change your plan once your shop is set up.`;
+const LIMIT_MESSAGE = (max) => appT('Your plan includes up to {max} items. You can change your plan once your shop is set up.', { max });
 
 // Mirrors PLAN_LIMITS in the complete-onboarding edge function — keep in sync.
 // Used here only to warn the merchant *before* they submit; the edge function
@@ -37,28 +38,29 @@ const ONBOARDING_PLAN_LIMITS = {
 
 const INDUSTRY_HINTS = {
   'f&b': {
-    categoryPlaceholder: 'Appetizers, Mains, Desserts...',
-    itemPlaceholder: 'eg., Caesar Salad',
-    sectionTitle: 'Build your menu',
-    sectionSubtitle: 'Create categories and add your menu items',
+    categoryPlaceholder: N_('Appetizers, Mains, Desserts...'),
+    itemPlaceholder: N_('eg., Caesar Salad'),
+    sectionTitle: N_('Build your menu'),
+    sectionSubtitle: N_('Create categories and add your menu items'),
   },
   'retail': {
-    categoryPlaceholder: 'Clothing, Electronics, Accessories...',
-    itemPlaceholder: 'eg., Blue Denim Jacket',
-    sectionTitle: 'Set up your catalogue',
-    sectionSubtitle: 'Create categories and add your products',
+    categoryPlaceholder: N_('Clothing, Electronics, Accessories...'),
+    itemPlaceholder: N_('eg., Blue Denim Jacket'),
+    sectionTitle: N_('Set up your catalogue'),
+    sectionSubtitle: N_('Create categories and add your products'),
   },
   'service': {
-    categoryPlaceholder: 'Haircuts, Treatments, Packages...',
-    itemPlaceholder: 'eg., 60-min Facial Treatment',
-    sectionTitle: 'Set up your services',
-    sectionSubtitle: 'Create categories and add your services',
+    categoryPlaceholder: N_('Haircuts, Treatments, Packages...'),
+    itemPlaceholder: N_('eg., 60-min Facial Treatment'),
+    sectionTitle: N_('Set up your services'),
+    sectionSubtitle: N_('Create categories and add your services'),
   },
 };
 
 const DEFAULT_HINTS = INDUSTRY_HINTS['f&b'];
 
 export default function Step3MenuSetup({ formData, updateFormData, nextStep, prevStep }) {
+  const { t } = useAppText();
   const [categories, setCategories] = useState(formData.menuCategories || []);
   const [categoryInput, setCategoryInput] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -196,7 +198,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         setImageUrls(prev => { const n = [...prev]; n[slotIndex] = publicUrl; return n; });
         setImageStoragePaths(prev => { const n = [...prev]; n[slotIndex] = storagePath; return n; });
       } catch (err) {
-        showError(err, `Couldn’t upload ${file.name}`);
+        showError(err, t('Couldn’t upload {name}', { name: file.name }), { t });
         // Remove the failed slot
         setImagePreviews(prev => prev.filter((_, idx) => idx !== slotIndex));
         setImageFiles(prev => prev.filter((_, idx) => idx !== slotIndex));
@@ -237,7 +239,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         const imageBase64 = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result);
-          reader.onerror = () => reject(new Error('Could not read this photo. Please choose another image.'));
+          reader.onerror = () => reject(new Error(t('Could not read this photo. Please choose another image.')));
           reader.readAsDataURL(photo.blob);
         });
         const currency = /^[A-Z]{3}$/.test(formData.currency || '') ? formData.currency : undefined;
@@ -254,7 +256,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       setImagePreviews([uploadResult.publicUrl]);
       setImageFiles([null]); // already uploaded
 
-      if (analysis.error) throw new Error(await functionErrorMessage(analysis.error, 'AI analysis failed'));
+      if (analysis.error) throw new Error(await functionErrorMessage(analysis.error, t('AI analysis failed')));
       const data = analysis.data || {};
       if (!data.confidence || data.confidence < 0.3) {
         setAiStep('idle');
@@ -270,7 +272,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       });
       setAiStep('done');
     } catch (err) {
-      setAiError(err.message || 'AI analysis failed');
+      setAiError(err.message || t('AI analysis failed'));
       setAiStep('error');
     }
   };
@@ -306,7 +308,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
 
     setAiStep('idle');
     setAiResult(null);
-    toast.success('AI suggestions applied!');
+    toast.success(t('AI suggestions applied!'));
   };
 
   const dismissAi = () => {
@@ -352,7 +354,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       setImageUrls(prev => prev.map((u, i) => i === idx ? publicUrl : u));
       setImageStoragePaths(prev => prev.map((p, i) => i === idx ? storagePath : p));
     } catch (err) {
-      showError(err, 'Couldn’t upload the photo');
+      showError(err, t('Couldn’t upload the photo'), { t });
     } finally {
       setAdditionalUploading(false);
 
@@ -416,7 +418,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
     );
     updateFormData({ ...formData, products: updated });
     setEditingItem(null);
-    toast.success(`"${updatedItem.name}" updated!`);
+    toast.success(t('"{name}" updated!', { name: updatedItem.name }));
   };
 
   const addItem = async () => {
@@ -465,7 +467,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       );
       updateFormData({ ...formData, products: updated });
       setEditingItemId(null);
-      toast.success(`"${itemName}" updated successfully!`);
+      toast.success(t('"{itemName}" updated successfully!', { itemName }));
     } else {
       const newItem = {
         id: Date.now(),
@@ -533,8 +535,8 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: themeColor }}>
           <Menu className="w-8 h-8 text-white" />
         </div>
-        <h2 className="text-xl font-bold text-slate-900 mb-1">{hints.sectionTitle}</h2>
-        <p className="text-xs text-slate-500">{hints.sectionSubtitle}</p>
+        <h2 className="text-xl font-bold text-slate-900 mb-1">{t(hints.sectionTitle)}</h2>
+        <p className="text-xs text-slate-500">{t(hints.sectionSubtitle)}</p>
       </div>
 
       <div className="space-y-3 mb-4 w-full min-w-0">
@@ -543,25 +545,25 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         <div className="bg-white border border-slate-200 rounded-xl p-3 overflow-visible">
           <h3 className="text-sm font-bold text-slate-900 mb-1 flex items-center gap-2">
             <Upload className="w-4 h-4" style={{ color: primaryColor }} />
-            Product Images
+            {t('Product Images')}
           </h3>
-          <p className="text-xs text-slate-400 mb-3">Upload a photo — AI will auto-fill the name, price &amp; category</p>
+          <p className="text-xs text-slate-400 mb-3">{t('Upload a photo — AI will auto-fill the name, price & category')}</p>
 
           {imagePreviews.length === 0 ? (
             <label className={`border-2 border-dashed rounded-lg p-5 flex flex-col items-center justify-center cursor-pointer transition-colors w-full min-w-0 ${aiStep === 'analyzing' ? 'border-blue-300 bg-blue-50' : 'border-slate-300 hover:border-slate-400'}`}>
               {aiStep === 'analyzing' ? (
                 <>
                   <Loader2 className="w-6 h-6 text-blue-500 animate-spin mb-2" />
-                  <span className="text-sm font-medium text-blue-700">Analyzing with AI...</span>
-                  <span className="text-xs text-blue-400 mt-0.5">Generating name, price &amp; category</span>
+                  <span className="text-sm font-medium text-blue-700">{t('Analyzing with AI...')}</span>
+                  <span className="text-xs text-blue-400 mt-0.5">{t('Generating name, price & category')}</span>
                 </>
               ) : (
                 <>
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2" style={{ background: themeColor }}>
                     <Wand2 className="w-5 h-5 text-white" />
                   </div>
-                  <span className="text-sm font-medium text-slate-700">Upload photo to auto-fill</span>
-                  <span className="text-xs text-slate-400 mt-0.5">AI generates name, price &amp; category</span>
+                  <span className="text-sm font-medium text-slate-700">{t('Upload photo to auto-fill')}</span>
+                  <span className="text-xs text-slate-400 mt-0.5">{t('AI generates name, price & category')}</span>
                 </>
               )}
               <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" disabled={aiStep === 'analyzing'} />
@@ -598,9 +600,9 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                               className={`relative w-full aspect-square rounded-lg overflow-hidden border-2 group transition-all duration-150 ${snapshot.isDragging ? 'shadow-lg opacity-70 scale-95' : 'opacity-100'} col-span-1`}
                               style={idx === 0 ? { ...provided.draggableProps.style, borderColor: primaryColor, cursor: 'grab' } : provided.draggableProps.style}
                             >
-                              <img src={src} alt="preview" className="w-full h-full object-cover" />
+                              <img src={src} alt={t('preview')} className="w-full h-full object-cover" />
                               {idx === 0 && (
-                                <div className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium" style={{ background: themeColor }}>Cover</div>
+                                <div className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium" style={{ background: themeColor }}>{t('Cover')}</div>
                               )}
                               {/* Hover overlay with edit pencil — same for all slots */}
                               <div
@@ -637,7 +639,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                         </label>
                       ) : (
                         <div className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center">
-                          <span className="text-[9px] text-slate-400 text-center px-1">Max 10 images</span>
+                          <span className="text-[9px] text-slate-400 text-center px-1">{t('Max 10 images')}</span>
                         </div>
                       )}
                     </div>
@@ -650,7 +652,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                 <div className="mt-3 flex items-center gap-3 p-3 rounded-xl bg-blue-50 border border-blue-200">
                   <Loader2 className="w-4 h-4 text-blue-500 animate-spin flex-shrink-0" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-blue-800">Analyzing image with AI...</p>
+                    <p className="text-sm font-medium text-blue-800">{t('Analyzing image with AI...')}</p>
                     <div className="mt-1 h-1.5 bg-blue-100 rounded-full overflow-hidden">
                       <div className="h-full rounded-full w-3/4" style={{ background: themeColor }} />
                     </div>
@@ -665,23 +667,23 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
             aiResult._incomplete ? (
               <div className="mt-3 flex items-start gap-3 p-3 rounded-xl bg-amber-50 border border-amber-200">
                 <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-amber-800 flex-1">AI couldn't identify this product clearly. You can still fill in the details manually.</p>
+                <p className="text-sm text-amber-800 flex-1">{t('AI couldn\'t identify this product clearly. You can still fill in the details manually.')}</p>
                 <button onClick={dismissAi} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
               </div>
             ) : (
               <div className="mt-3 p-3 rounded-xl bg-green-50 border border-green-200">
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="w-4 h-4 text-green-600" />
-                  <p className="text-sm font-semibold text-green-800">AI suggestions ready</p>
+                  <p className="text-sm font-semibold text-green-800">{t('AI suggestions ready')}</p>
                   <button onClick={dismissAi} className="ml-auto text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
                 </div>
                 <p className="text-sm font-bold text-slate-900">{aiResult.name}</p>
                 <p className="text-xs text-slate-500 mb-3">{aiResult.suggested_category} · {formatMoney(aiResult.estimated_price, formData.currency)}</p>
                 <div className="flex gap-2">
                   <Button type="button" size="sm" onClick={applyAiResult} className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-1.5">
-                    <Check className="w-4 h-4" /> Apply to fields
+                    <Check className="w-4 h-4" />{' '}{t('Apply to fields')}
                   </Button>
-                  <Button type="button" size="sm" variant="outline" onClick={dismissAi}>Dismiss</Button>
+                  <Button type="button" size="sm" variant="outline" onClick={dismissAi}>{t('Dismiss')}</Button>
                 </div>
               </div>
             )
@@ -701,19 +703,19 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         <div className="bg-white border border-slate-200 rounded-xl p-3">
           <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
             <Sparkles className="w-4 h-4" style={{ color: secondaryColor }} />
-            Item Details
+            {t('Item Details')}
           </h3>
           <div className="space-y-4">
             {/* Create categories */}
             <div>
-              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Create Categories</Label>
+              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">{t('Create Categories')}</Label>
               <div className="flex gap-2 w-full min-w-0 overflow-hidden">
                 <input
                   type="text"
                   value={categoryInput}
                   onChange={(e) => setCategoryInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && addCategory()}
-                  placeholder={hints.categoryPlaceholder}
+                  placeholder={t(hints.categoryPlaceholder)}
                   className="flex-1 min-w-0 w-0 px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-slate-300"
                 />
                 <button
@@ -722,7 +724,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                   className="px-4 py-2.5 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 text-sm"
                   style={{ background: themeColor }}
                 >
-                  Add
+                  {t('Add')}
                 </button>
               </div>
               {categories.length > 0 && (
@@ -748,10 +750,10 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
             </div>
             {/* Select category */}
             <div>
-              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Category</Label>
+              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">{t('Category')}</Label>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger className="w-full h-10 text-sm min-w-0">
-                  <SelectValue placeholder={categories.length === 0 ? 'Add a category above first' : 'Select category'} />
+                  <SelectValue placeholder={categories.length === 0 ? t('Add a category above first') : t('Select category')} />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((cat) => (
@@ -761,16 +763,16 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               </Select>
             </div>
             <div>
-              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Item Name</Label>
+              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">{t('Item Name')}</Label>
               <Input
                 value={itemName}
                 onChange={(e) => setItemName(e.target.value)}
-                placeholder={hints.itemPlaceholder}
+                placeholder={t(hints.itemPlaceholder)}
                 className="h-10 text-sm"
               />
             </div>
             <div>
-              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Price ({formData.currency || 'SGD'})</Label>
+              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">{t('Price ({currency})', { currency: formData.currency || 'SGD' })}</Label>
               <Input
                 type="number"
                 value={itemPrice}
@@ -782,11 +784,11 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
               />
             </div>
             <div>
-              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">Description (optional)</Label>
+              <Label className="text-xs sm:text-sm font-medium text-slate-700 block mb-2">{t('Description (optional)')}</Label>
               <textarea
                 value={itemDescription}
                 onChange={(e) => setItemDescription(e.target.value)}
-                placeholder="eg., Fresh, homemade, spicy..."
+                placeholder={t('eg., Fresh, homemade, spicy...')}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-slate-300 h-16 resize-none"
               />
             </div>
@@ -796,7 +798,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                   onClick={cancelEdit}
                   className="px-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-all"
                 >
-                  Cancel
+                  {t('Cancel')}
                 </button>
               )}
               <button
@@ -805,7 +807,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
                 className="flex-1 py-2.5 text-white rounded-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:opacity-90"
                 style={{ background: themeColor }}
               >
-                {uploading ? 'Uploading...' : editingItemId !== null ? '✓ Save Changes' : '+ Add Item'}
+                {uploading ? t('Uploading...') : editingItemId !== null ? t('✓ Save Changes') : t('+ Add Item')}
               </button>
             </div>
           </div>
@@ -815,9 +817,11 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
         {(formData.products || []).length > 0 && (
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-slate-900">Added Items ({formData.products.length}{planMaxProducts != null ? ` / ${planMaxProducts}` : ''})</h3>
+              <h3 className="text-sm font-bold text-slate-900">{planMaxProducts != null
+                ? t('Added Items ({count} / {max})', { count: formData.products.length, max: planMaxProducts })
+                : t('Added Items ({count})', { count: formData.products.length })}</h3>
               {planMaxProducts != null && formData.products.length >= planMaxProducts && (
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700" title={LIMIT_MESSAGE(planMaxProducts)}>Limit reached</span>
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700" title={LIMIT_MESSAGE(planMaxProducts)}>{t('Limit reached')}</span>
               )}
             </div>
             <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -886,7 +890,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
           variant="outline"
           className="h-10 sm:h-11 px-4 sm:px-6 gap-1 sm:gap-2 text-sm"
         >
-          <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Back</span>
+          <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">{t('Back')}</span>
         </Button>
         <Button
           type="button"
@@ -894,7 +898,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
           variant="outline"
           className="h-10 sm:h-11 px-3 sm:px-4 text-xs sm:text-sm text-slate-500"
         >
-          Skip
+          {t('Skip')}
         </Button>
         <Button
           type="button"
@@ -902,7 +906,7 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
           className="flex-1 h-10 sm:h-11 text-white gap-1 sm:gap-2 text-sm"
           style={{ background: themeColor }}
         >
-          <span className="hidden sm:inline">Next</span> <span className="sm:hidden">Next</span> <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
+          <span className="hidden sm:inline">{t('Next')}</span> <span className="sm:hidden">{t('Next')}</span> <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
         </Button>
       </div>
     </Card>

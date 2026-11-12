@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
 import { featureOn, planAllowsPermission } from '@/lib/planFeatures';
+import { noteShopCountry } from '@/lib/appText';
+import { shopCountry } from '@/lib/countries';
 
 const TenantContext = createContext(null);
 
@@ -568,6 +570,12 @@ export function TenantProvider({ children }) {
   const hasAnyPermission = (permissions) => permissions.some(p => hasPermission(p));
 
   const switchTenant = (tenantId) => setCurrentTenantId(tenantId);
+
+  // The owner app's language follows the shop's country unless the person picked one
+  // (lib/appText.js): an Indonesian shop's team gets Bahasa Indonesia.
+  const activeShop = tenant?.[0] || null;
+  const activeShopCountry = activeShop ? shopCountry(activeShop).name : null;
+  useEffect(() => { noteShopCountry(activeShopCountry); }, [activeShopCountry]);
 
   const value = {
     user,

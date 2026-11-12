@@ -91,6 +91,7 @@ const mocks = {
   shrink: [
     "export const LOGO_MAX_SIDE = 800; export const LONG_CACHE = '31536000';",
     'export class UnreadablePhotoError extends Error {}',
+    "export const UNREADABLE_PHOTO_MESSAGE = 'This photo did not come through in full.';",
     "export async function checkPhoto(file) { if (file?.name === 'cut-off.jpg') throw new UnreadablePhotoError('This photo didn’t come through in full from your phone. Please take it again or choose another photo.'); }",
     "export async function shrinkImage(input, options) { globalThis.shrunkWith = options; return { blob: input, type: 'image/jpeg', ext: 'jpg' }; }",
   ].join('\n'),

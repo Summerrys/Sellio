@@ -1,24 +1,26 @@
 import React, { useState } from 'react';
 import { X, Check } from 'lucide-react';
 import { paymentLinkFor } from '@/lib/accountFlow';
-import { plansFor, rupiahNote } from '@/lib/plans';
+import { RUPIAH_NOTE, plansFor, rupiahAmount } from '@/lib/plans';
 import { usePlanRegion } from '@/lib/usePlanRegion';
 import PlanFootnotes from '@/components/subscription/PlanFootnotes';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { sellsPlans, outsideLinkProps } from '@/lib/nativeApp';
 import PlansOnWebsite from '@/components/subscription/PlansOnWebsite';
+import { useAppText, N_ } from '@/lib/appText';
 
 // Presentation only: prices, Stripe links and features come from lib/plans.js.
 const PLAN_STYLE = {
-  starter: { description: 'Perfect for small businesses just getting started' },
-  growth: { description: 'For growing businesses with higher demands', badge: 'Most Popular' },
-  pro: { description: 'Enterprise-grade solution for maximum scalability' },
+  starter: { description: N_('Perfect for small businesses just getting started') },
+  growth: { description: N_('For growing businesses with higher demands'), badge: N_('Most Popular') },
+  pro: { description: N_('Enterprise-grade solution for maximum scalability') },
 };
 
 // prefilledEmail: a signed-in account's email, locked on the Stripe page so the
 // business plan it pays for belongs to this account. There's no shop yet, so the visitor's
 // phone or computer decides the prices (Indonesia's or the rest's, usePlanRegion).
 export default function AuthPricingModal({ onClose, prefilledEmail = '' }) {
+  const { t } = useAppText();
   const [annual, setAnnual] = useState(false);
   const region = usePlanRegion();
   const PLANS = plansFor(region).map((plan) => ({ ...plan, ...PLAN_STYLE[plan.key] }));
@@ -43,24 +45,24 @@ export default function AuthPricingModal({ onClose, prefilledEmail = '' }) {
         {!sellsPlans() ? (
           // Sellio's apps sell no plans.
           <div style={{ padding: '8px 8px 0' }}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', textAlign: 'center', marginBottom: 12 }}>Business plans</h2>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', textAlign: 'center', marginBottom: 12 }}>{t('Business plans')}</h2>
             <PlansOnWebsite className="text-center" />
           </div>
         ) : (
         <>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', textAlign: 'center', marginBottom: 4 }}>Choose a plan to get started</h2>
-        <p style={{ fontSize: 13, color: '#64748b', textAlign: 'center', marginBottom: 20 }}>Start your 7-day free trial. No charge until trial ends.</p>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', textAlign: 'center', marginBottom: 4 }}>{t('Choose a plan to get started')}</h2>
+        <p style={{ fontSize: 13, color: '#64748b', textAlign: 'center', marginBottom: 20 }}>{t('Start your 7-day free trial. No charge until trial ends.')}</p>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24 }}>
-          <span onClick={() => setAnnual(false)} style={{ fontSize: 13, fontWeight: 500, color: !annual ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}>Monthly</span>
+          <span onClick={() => setAnnual(false)} style={{ fontSize: 13, fontWeight: 500, color: !annual ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}>{t('Monthly')}</span>
           <button
             onClick={() => setAnnual(v => !v)}
             style={{ position: 'relative', width: 44, height: 24, borderRadius: 12, background: annual ? '#16a34a' : '#cbd5e1', border: 'none', cursor: 'pointer', flexShrink: 0, transition: 'background 0.2s' }}
           >
             <span style={{ position: 'absolute', top: 2, width: 20, height: 20, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s', left: annual ? 22 : 2 }} />
           </button>
-          <span onClick={() => setAnnual(true)} style={{ fontSize: 13, fontWeight: 500, color: annual ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}>Annual</span>
-          {annual && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#dcfce7', color: '#15803d' }}>2 months free</span>}
+          <span onClick={() => setAnnual(true)} style={{ fontSize: 13, fontWeight: 500, color: annual ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}>{t('Annual')}</span>
+          {annual && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#dcfce7', color: '#15803d' }}>{t('2 months free')}</span>}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
@@ -83,20 +85,20 @@ export default function AuthPricingModal({ onClose, prefilledEmail = '' }) {
                 <div style={{ padding: '20px 20px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{plan.name}</span>
-                    {plan.badge && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#ede9fe', color: '#7c3aed' }}>{plan.badge}</span>}
+                    {plan.badge && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#ede9fe', color: '#7c3aed' }}>{t(plan.badge)}</span>}
                   </div>
                   <div style={{ margin: '10px 0 2px' }}>
                     <span style={{ fontSize: 26, fontWeight: 800, color: '#0f172a' }}>SGD {price}</span>
-                    <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 4 }}>/{annual ? 'year' : 'month'}</span>
+                    <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 4 }}>/{annual ? t('year') : t('month')}</span>
                   </div>
-                  {region === 'ID' && <p data-testid="plan-rupiah" style={{ fontSize: 11, color: '#475569', fontWeight: 500, marginBottom: 2 }}>{rupiahNote(price)}</p>}
-                  {annual && <p style={{ fontSize: 11, color: '#16a34a', fontWeight: 500, marginBottom: 4 }}>Save SGD {saving}</p>}
-                  <p style={{ fontSize: 11, color: '#64748b', marginBottom: 12 }}>{plan.description}</p>
+                  {region === 'ID' && <p data-testid="plan-rupiah" style={{ fontSize: 11, color: '#475569', fontWeight: 500, marginBottom: 2 }}>{t(RUPIAH_NOTE, { amount: rupiahAmount(price) })}</p>}
+                  {annual && <p style={{ fontSize: 11, color: '#16a34a', fontWeight: 500, marginBottom: 4 }}>{t('Save SGD {saving}', { saving })}</p>}
+                  <p style={{ fontSize: 11, color: '#64748b', marginBottom: 12 }}>{t(plan.description)}</p>
                   <ul style={{ flex: 1, marginBottom: 16, listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {plan.features.map((f) => (
                       <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 11, color: '#475569' }}>
                         <Check style={{ width: 13, height: 13, color: '#22c55e', marginTop: 1, flexShrink: 0 }} />
-                        {f}
+                        {t(f)}
                       </li>
                     ))}
                   </ul>
@@ -107,7 +109,7 @@ export default function AuthPricingModal({ onClose, prefilledEmail = '' }) {
                         background: isGrowth ? 'linear-gradient(90deg, #8b5cf6, #6366f1)' : 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)',
                       }}
                     >
-                      Start Free Trial
+                      {t('Start Free Trial')}
                     </button>
                   </a>
                 </div>

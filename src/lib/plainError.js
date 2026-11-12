@@ -1,30 +1,34 @@
 import { toast } from 'sonner';
 import { isOffline, isNetworkError } from '@/lib/network';
+import { N_ } from '@/lib/appText';
 
 // Errors in plain words (UX states, 3): what went wrong (the title, in the words of what the
 // person was doing: "Couldn't save the product"), whose side it's on, and what to do next.
 // Database and network wording never reaches the screen; the console keeps it for us.
+// The words are English unless a translated screen passes its t (lib/appText.js):
+// showError(err, t('Couldn’t upload the logo'), { t }). Other screens stay all English, so
+// no note mixes two languages.
 
 export const SUPPORT_EMAIL = 'sellio@apptelier.sg';
 // An error toast stays this long, with a close button (others go after 4 seconds).
 export const ERROR_TOAST_MS = 10000;
 
 const SAYS = {
-  offline: 'You’re offline. Connect to the internet, then try again.',
-  network: 'Your phone couldn’t reach Sellio. Check your internet connection, then try again.',
-  'signed-out': 'You’ve been signed out. Sign in again, then try again.',
-  'no-access': 'Your account isn’t allowed to do this. Ask the shop’s owner for access.',
-  'in-use': 'It’s still used elsewhere in your shop, so it can’t be removed yet.',
-  stale: 'It was changed or removed somewhere else. Refresh the page, then try again.',
-  invalid: 'Some details weren’t accepted. Check what you entered, then try again.',
-  missing: 'A required detail is missing. Fill it in, then try again.',
-  'too-long': 'Some text is too long. Shorten it, then try again.',
-  'too-big': 'A number is too large. Check the amounts, then try again.',
-  clash: 'Someone else changed this at the same moment. Refresh, check it, then try again.',
-  'file-too-big': 'That file is too big. Choose a smaller one, then try again.',
-  'rate-limit': 'That’s a lot of tries in a short time. Wait a minute, then try again.',
-  timeout: 'Sellio took too long to answer. That’s on our side, not yours. Try again in a moment.',
-  server: `Something went wrong on Sellio’s side, not yours. Try again in a moment. If it keeps happening, email ${SUPPORT_EMAIL}.`,
+  offline: N_('You’re offline. Connect to the internet, then try again.'),
+  network: N_('Your phone couldn’t reach Sellio. Check your internet connection, then try again.'),
+  'signed-out': N_('You’ve been signed out. Sign in again, then try again.'),
+  'no-access': N_('Your account isn’t allowed to do this. Ask the shop’s owner for access.'),
+  'in-use': N_('It’s still used elsewhere in your shop, so it can’t be removed yet.'),
+  stale: N_('It was changed or removed somewhere else. Refresh the page, then try again.'),
+  invalid: N_('Some details weren’t accepted. Check what you entered, then try again.'),
+  missing: N_('A required detail is missing. Fill it in, then try again.'),
+  'too-long': N_('Some text is too long. Shorten it, then try again.'),
+  'too-big': N_('A number is too large. Check the amounts, then try again.'),
+  clash: N_('Someone else changed this at the same moment. Refresh, check it, then try again.'),
+  'file-too-big': N_('That file is too big. Choose a smaller one, then try again.'),
+  'rate-limit': N_('That’s a lot of tries in a short time. Wait a minute, then try again.'),
+  timeout: N_('Sellio took too long to answer. That’s on our side, not yours. Try again in a moment.'),
+  server: N_('Something went wrong on Sellio’s side, not yours. Try again in a moment. If it keeps happening, email {email}.'),
 };
 
 // Words that only a program would write: such a message is never shown as it is.
@@ -89,37 +93,46 @@ export function errorKind(error) {
 
 // "Key (tenant_id, sku)=(…) already exists" → "That SKU is already in use…"
 const FIELDS = {
-  phone_number: 'That phone number', table_number: 'That table number', order_number: 'That order number',
-  email: 'That email address', phone: 'That phone number', slug: 'That web address', name: 'That name',
-  sku: 'That SKU', code: 'That code', number: 'That number',
+  phone_number: N_('That phone number'), table_number: N_('That table number'), order_number: N_('That order number'),
+  email: N_('That email address'), phone: N_('That phone number'), slug: N_('That web address'), name: N_('That name'),
+  sku: N_('That SKU'), code: N_('That code'), number: N_('That number'),
 };
+const SAME_DETAILS = N_('Something with the same details');
+const IN_USE = N_('{thing} is already in use. Change it, then try again.');
+const DEFAULT_TITLE = N_('That didn’t work');
+
+// English words with their {blanks} filled, for a screen that isn't translated.
+const english = (phrase, vars) => phrase.replace(/\{([a-zA-Z0-9_]+)\}/g, (whole, name) => (vars?.[name] != null ? String(vars[name]) : whole));
 const FIELD_KEYS = Object.keys(FIELDS).sort((a, b) => b.length - a.length);
-function duplicateText(error) {
+function duplicateText(error, say) {
   const text = `${typeof error.details === 'string' ? error.details : ''} ${error.message || ''}`;
   const keys = (text.match(/Key \(([^)]+)\)/i)?.[1] || '').split(',').map((k) => k.trim().toLowerCase()).reverse();
   const constraint = (text.match(/constraint "([^"]+)"/i)?.[1] || '').toLowerCase().replace(/_(key|idx|unique|uniq)$/, '');
   const field = keys.find((k) => FIELDS[k]) || FIELD_KEYS.find((k) => new RegExp(`(^|_)${k}$`).test(constraint));
-  return `${FIELDS[field] || 'Something with the same details'} is already in use. Change it, then try again.`;
+  return say(IN_USE, { thing: say(FIELDS[field] || SAME_DETAILS) });
 }
 
 const sentence = (text) => (/[.!?…]$/.test(text) ? text : `${text}.`);
 
 // { kind, title, description } for an error. fallback: what to say instead of the general
 // "on Sellio's side" when nothing more is known (e.g. a print that needs the printer checked).
-export function explainError(error, { title = 'That didn’t work', fallback } = {}) {
+// t: a translated screen's own (see the top).
+export function explainError(error, { title, fallback, t } = {}) {
+  const say = t || english;
   const kind = errorKind(error);
+  const heading = title ?? say(DEFAULT_TITLE);
   let description;
-  if (kind === 'own') description = sentence(ownMessage(error));
-  else if (kind === 'duplicate') description = duplicateText(error);
+  if (kind === 'own') description = sentence(say(ownMessage(error))); // the app's own words, translated when known
+  else if (kind === 'duplicate') description = duplicateText(error, say);
   else if (kind === 'server' && fallback) description = fallback;
-  else description = SAYS[kind];
-  if (error && typeof console !== 'undefined') console.warn(`${title}:`, error);
-  return { kind, title, description };
+  else description = say(SAYS[kind], { email: SUPPORT_EMAIL });
+  if (error && typeof console !== 'undefined') console.warn(`${heading}:`, error);
+  return { kind, title: heading, description };
 }
 
 // The same as a toast, which stays ERROR_TOAST_MS with a close button. Returns the words.
-export function showError(error, title, { fallback, id, duration = ERROR_TOAST_MS } = {}) {
-  const note = explainError(error, { title, fallback });
+export function showError(error, title, { fallback, id, duration = ERROR_TOAST_MS, t } = {}) {
+  const note = explainError(error, { title, fallback, t });
   toast.error(note.title, { description: note.description, duration, closeButton: true, ...(id ? { id } : {}) });
   return note;
 }

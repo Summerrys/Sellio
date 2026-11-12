@@ -1,4 +1,5 @@
 import { UtensilsCrossed, ShoppingBag, Wrench } from 'lucide-react';
+import { N_ } from './appText';
 
 // Single source of truth for industry selection — used by onboarding (Step1Combined)
 // and Settings > Business (BusinessProfileTab) so both render the exact same options,
@@ -6,9 +7,9 @@ import { UtensilsCrossed, ShoppingBag, Wrench } from 'lucide-react';
 // 'f&b' is the canonical stored value going forward (see normalizeIndustry below for
 // why older tenants may still have 'food' stored, and how that's reconciled).
 export const INDUSTRY_OPTIONS = [
-  { value: 'f&b', label: 'F&B / Cafe / Restaurant', Icon: UtensilsCrossed, color: 'text-orange-500' },
-  { value: 'retail', label: 'Retail', Icon: ShoppingBag, color: 'text-blue-500', disabled: true },
-  { value: 'service', label: 'Service', Icon: Wrench, color: 'text-green-500', disabled: true },
+  { value: 'f&b', label: N_('F&B / Cafe / Restaurant'), Icon: UtensilsCrossed, color: 'text-orange-500' },
+  { value: 'retail', label: N_('Retail'), Icon: ShoppingBag, color: 'text-blue-500', disabled: true },
+  { value: 'service', label: N_('Service'), Icon: Wrench, color: 'text-green-500', disabled: true },
 ];
 
 // Normalizes any historical/free-text industry value into one of our 3 canonical

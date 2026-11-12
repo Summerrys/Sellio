@@ -201,7 +201,7 @@ try {
   const sources = Object.fromEntries(await Promise.all([
     'src/pages/Account.jsx', 'src/pages/UserManagement.jsx',
   ].map(async (file) => [file, await readFile(path.join(app, file), 'utf8')])));
-  assert.match(sources['src/pages/Account.jsx'], /\{!businessReady && \(\s*<Card icon=\{Briefcase\} iconClass="bg-purple-50 text-purple-600" title="Run my business" badge="Paid plans">/, 'Run my business shows in the app too');
+  assert.match(sources['src/pages/Account.jsx'], /\{!businessReady && \(\s*<Card icon=\{Briefcase\} iconClass="bg-purple-50 text-purple-600" title=\{t\('Run my business'\)\} badge=\{t\('Paid plans'\)\}>/, 'Run my business shows in the app too');
   assert.match(sources['src/pages/Account.jsx'], /\{sellsPlans\(\) \? \(\s*<button type="button" onClick=\{\(\) => setShowPlans\(true\)\}/, 'See plans wherever plans are sold');
   assert.match(sources['src/pages/UserManagement.jsx'], /Upgrade to Pro for unlimited roles\./);
   passed('Run my business and Upgrade to Pro show in the apps; See plans wherever plans are sold');

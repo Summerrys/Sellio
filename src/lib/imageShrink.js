@@ -1,3 +1,4 @@
+import { N_ } from './appText';
 // Photos are shrunk on the phone before they're uploaded, so customers download a few
 // hundred KB instead of the camera's multi-MB original: at most `maxSide` px on the long
 // side, as WebP (JPEG, or PNG for see-through logos, where the phone can't make WebP).
@@ -18,7 +19,8 @@ export const BANNER_MAX_SIDE = 2048; // a store's banner (full width on a comput
 // An upload with a unique name can be cached for a year; a replacement gets a new name.
 export const LONG_CACHE = '31536000';
 
-export const UNREADABLE_PHOTO_MESSAGE = "This photo didn't come through in full from your phone. Please take it again or choose another photo.";
+// Marked for translation (lib/appText.js): a translated screen shows it through its t.
+export const UNREADABLE_PHOTO_MESSAGE = N_("This photo didn't come through in full from your phone. Please take it again or choose another photo.");
 
 export class UnreadablePhotoError extends Error {
   constructor() {

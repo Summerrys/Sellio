@@ -19,6 +19,7 @@ import { sellsPlans, PLANS_ON_WEBSITE, appPlatform, outsideLinkProps } from '@/l
 import { useBackToClose } from '@/lib/useBackToClose';
 import { ORDER_ALERTS_EVENT } from '@/lib/useOrderAlerts';
 import { ProfilePhotoEditor } from './ProfilePhoto';
+import { AppLanguageRow } from '@/components/ui-custom/AppLanguageSwitch';
 
 // Sellio's Android app: whether this phone gets push alerts (src/lib/pushNotifications.js),
 // with Turn on while Sellio can still ask. Android's own settings for Sellio turn them off, or
@@ -548,6 +549,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
               <Switch checked={orderAlerts} disabled={savingPrefs} onCheckedChange={handleOrderAlertsToggle} />
             </div>
             {appPlatform() === 'android' && <PhoneAlertsRow />}
+            <AppLanguageRow />
           </SectionCard>
 
           {/* Danger Zone */}

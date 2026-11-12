@@ -1028,6 +1028,72 @@ function formatMoney(amount, currency) {
   const digits = Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return `${n < 0 ? "-" : ""}${currencyPrefix()}${digits}`;
 }
+const ZONES = {
+  "Asia/Singapore": "Singapore",
+  "Asia/Kuala_Lumpur": "Malaysia",
+  "Asia/Kuching": "Malaysia",
+  "Asia/Jakarta": "Indonesia",
+  "Asia/Pontianak": "Indonesia",
+  "Asia/Makassar": "Indonesia",
+  "Asia/Jayapura": "Indonesia"
+};
+function deviceZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  } catch {
+    return "";
+  }
+}
+function deviceLanguages() {
+  const nav = typeof navigator === "undefined" ? null : navigator;
+  return [...(nav == null ? void 0 : nav.languages) || [], nav == null ? void 0 : nav.language].filter(Boolean);
+}
+function visitorCountry({ zone = deviceZone(), languages = deviceLanguages() } = {}) {
+  if (ZONES[zone]) return ZONES[zone];
+  if (languages.some((language) => /^(id|in)(-|_|$)/i.test(language))) return "Indonesia";
+  return null;
+}
+const CHOICE_KEY = "sellio_app_language";
+const PREVIEW_KEY = "sellio_app_language_preview";
+const hasWindow = () => typeof window !== "undefined";
+function readStorage(key) {
+  try {
+    return hasWindow() ? window.localStorage.getItem(key) : null;
+  } catch {
+    return null;
+  }
+}
+function writeStorage(key, value) {
+  try {
+    if (!hasWindow()) return;
+    if (value == null) window.localStorage.removeItem(key);
+    else window.localStorage.setItem(key, value);
+  } catch {
+  }
+}
+const N_ = (phrase) => phrase;
+function start() {
+  if (!hasWindow()) return;
+  try {
+    const url = new URL(window.location.href);
+    const preview = url.searchParams.get("preview_language");
+    if (preview === "id") {
+      writeStorage(PREVIEW_KEY, "1");
+      writeStorage(CHOICE_KEY, "id");
+    } else if (preview === "off") {
+      writeStorage(PREVIEW_KEY, null);
+      writeStorage(CHOICE_KEY, null);
+    }
+    if (preview) {
+      url.searchParams.delete("preview_language");
+      window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+    }
+  } catch {
+  }
+  readStorage(PREVIEW_KEY) === "1";
+  readStorage(CHOICE_KEY);
+}
+start();
 const SELLIO_WHATSAPP = "6582228103";
 function sellioWhatsAppUrl(text = "") {
   return `https://wa.me/${SELLIO_WHATSAPP}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
@@ -1035,7 +1101,7 @@ function sellioWhatsAppUrl(text = "") {
 const MULTI_OUTLET_URL = sellioWhatsAppUrl("Hi, I run more than one outlet and would like to talk about Sellio.");
 const SETUP_OFFER = {
   price: 149,
-  includes: "menu scan, storefront build, printer setup and on-site staff training",
+  includes: N_("menu scan, storefront build, printer setup and on-site staff training"),
   url: sellioWhatsAppUrl("Hi, I would like to book the Sellio done-for-you setup (SGD 149).")
 };
 const BUSINESS_PLANS = [
@@ -1045,14 +1111,14 @@ const BUSINESS_PLANS = [
     monthly: 39,
     yearly: 390,
     features: [
-      "10 products",
-      "Up to 100 orders/month",
-      "3 staff accounts",
-      "5 tables and QR codes",
-      "POS counter, QR ordering and storefront",
-      "Kitchen display and receipt printing",
-      "Basic reports",
-      "Sellio AI tools"
+      N_("10 products"),
+      N_("Up to 100 orders/month"),
+      N_("3 staff accounts"),
+      N_("5 tables and QR codes"),
+      N_("POS counter, QR ordering and storefront"),
+      N_("Kitchen display and receipt printing"),
+      N_("Basic reports"),
+      N_("Sellio AI tools")
     ],
     links: {
       monthly: "https://buy.stripe.com/14A28t1Qd2or6i72t27bW0r",
@@ -1077,13 +1143,13 @@ const BUSINESS_PLANS = [
     monthly: 79,
     yearly: 790,
     features: [
-      "Everything in Starter",
-      "50 products",
-      "Up to 1,000 orders/month",
-      "5 staff accounts",
-      "Advanced reports",
-      "Custom editable roles",
-      "Email and chat support"
+      N_("Everything in Starter"),
+      N_("50 products"),
+      N_("Up to 1,000 orders/month"),
+      N_("5 staff accounts"),
+      N_("Advanced reports"),
+      N_("Custom editable roles"),
+      N_("Email and chat support")
     ],
     links: {
       monthly: "https://buy.stripe.com/6oU8wRgL77ILbCr7Nm7bW0t",
@@ -1108,13 +1174,13 @@ const BUSINESS_PLANS = [
     monthly: 119,
     yearly: 1190,
     features: [
-      "Everything in Growth",
-      "Unlimited products and orders",
-      "Unlimited staff accounts",
-      "Unlimited tables and QR codes",
-      "Custom real-time reports",
-      "Unlimited custom roles",
-      "Priority support"
+      N_("Everything in Growth"),
+      N_("Unlimited products and orders"),
+      N_("Unlimited staff accounts"),
+      N_("Unlimited tables and QR codes"),
+      N_("Custom real-time reports"),
+      N_("Unlimited custom roles"),
+      N_("Priority support")
     ],
     links: {
       monthly: "https://buy.stripe.com/dRm3cxeCZ0gj9uj9Vu7bW0v",
@@ -1207,10 +1273,14 @@ const SGD_TO_IDR = 14163;
 function approxRupiah(sgd) {
   return Math.round(Number(sgd) * SGD_TO_IDR / 1e3) * 1e3;
 }
-function rupiahNote(sgd) {
-  return `about ${formatMoney(approxRupiah(sgd), "IDR")}, charged in Rupiah`;
+const RUPIAH_NOTE = N_("about {amount}, charged in Rupiah");
+function rupiahAmount(sgd) {
+  return formatMoney(approxRupiah(sgd), "IDR");
 }
-const INDONESIA_PAYMENT_NOTE = "Paid by card, in Rupiah: Stripe converts at the day's rate and adds a 2–4% conversion fee. Prices are before PPN (VAT).";
+function rupiahNote(sgd) {
+  return RUPIAH_NOTE.replace("{amount}", rupiahAmount(sgd));
+}
+const INDONESIA_PAYMENT_NOTE = N_("Paid by card, in Rupiah: Stripe converts at the day's rate and adds a 2–4% conversion fee. Prices are before PPN (VAT).");
 Object.fromEntries(BUSINESS_PLANS.map((plan) => [plan.key, plan.noTrialLinks]));
 Object.fromEntries(BUSINESS_PLANS.map((plan) => [plan.key, plan.shopLinks]));
 Object.fromEntries(BUSINESS_PLANS.map((plan) => [plan.key, plan.shopTrialLinks]));
@@ -1468,31 +1538,6 @@ function ChapterTransition({ children, className = "", label }) {
       ]
     }
   );
-}
-const ZONES = {
-  "Asia/Singapore": "Singapore",
-  "Asia/Kuala_Lumpur": "Malaysia",
-  "Asia/Kuching": "Malaysia",
-  "Asia/Jakarta": "Indonesia",
-  "Asia/Pontianak": "Indonesia",
-  "Asia/Makassar": "Indonesia",
-  "Asia/Jayapura": "Indonesia"
-};
-function deviceZone() {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
-  } catch {
-    return "";
-  }
-}
-function deviceLanguages() {
-  const nav = typeof navigator === "undefined" ? null : navigator;
-  return [...(nav == null ? void 0 : nav.languages) || [], nav == null ? void 0 : nav.language].filter(Boolean);
-}
-function visitorCountry({ zone = deviceZone(), languages = deviceLanguages() } = {}) {
-  if (ZONES[zone]) return ZONES[zone];
-  if (languages.some((language) => /^(id|in)(-|_|$)/i.test(language))) return "Indonesia";
-  return null;
 }
 function usePlanRegion(shop = null) {
   const [visitor] = useState(() => typeof window === "undefined" ? null : visitorCountry());

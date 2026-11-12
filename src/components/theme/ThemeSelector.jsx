@@ -4,15 +4,17 @@ import { useTenant } from '../tenant/TenantContext';
 import { COLOR_SETS } from './themeUtils';
 import { Card } from '@/components/ui/card';
 import { Check, Palette } from 'lucide-react';
+import { useAppText } from '@/lib/appText';
 
 /* ── full card swatch ───────────────────────────────────────────── */
 function SwatchCard({ colorSet, isSelected, onSelect, disabled }) {
+  const { t } = useAppText();
   const bc = colorSet.dark;
   return (
     <button
       onClick={() => onSelect(colorSet.name)}
       disabled={disabled}
-      title={colorSet.name}
+      title={t(colorSet.name)}
       style={{
         border: isSelected ? `3px solid ${bc}` : '2px solid #e2e8f0',
         transition: 'border 0.15s, transform 0.15s',
@@ -41,7 +43,7 @@ function SwatchCard({ colorSet, isSelected, onSelect, disabled }) {
               className="text-[10px] sm:text-xs font-medium text-white px-2 py-0.5 rounded-full truncate max-w-[90%] text-center"
               style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
             >
-              {colorSet.name}
+              {t(colorSet.name)}
             </span>
           </div>
         </div>
@@ -63,12 +65,13 @@ function SwatchCard({ colorSet, isSelected, onSelect, disabled }) {
 
 /* ── compact swatch ─────────────────────────────────────────────── */
 function CompactSwatch({ colorSet, isSelected, onSelect, disabled }) {
+  const { t } = useAppText();
   const bc = colorSet.dark;
   return (
     <button
       onClick={() => onSelect(colorSet.name)}
       disabled={disabled}
-      title={colorSet.name}
+      title={t(colorSet.name)}
       style={{
         border: isSelected ? `3px solid ${bc}` : '2px solid #e2e8f0',
         transition: 'border 0.15s, transform 0.15s',
@@ -102,6 +105,7 @@ function CompactSwatch({ colorSet, isSelected, onSelect, disabled }) {
 
 /* ── main export ────────────────────────────────────────────────── */
 export default function ThemeSelector({ variant = 'full' }) {
+  const { t } = useAppText();
   const { currentTheme, setTheme, isSaving } = useTheme();
   const { hasPermission } = useTenant();
   const canEditTheme = hasPermission('theme.edit');
@@ -117,7 +121,7 @@ export default function ThemeSelector({ variant = 'full' }) {
       <div className="space-y-3">
         <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
           <Palette className="w-4 h-4" />
-          <span>Color Theme</span>
+          <span>{t('Color Theme')}</span>
         </div>
         <div className="grid grid-cols-4 gap-2">
           {COLOR_SETS.map((colorSet) => (
@@ -130,7 +134,7 @@ export default function ThemeSelector({ variant = 'full' }) {
             />
           ))}
         </div>
-        {isSaving && <p className="text-xs text-slate-500">Saving theme…</p>}
+        {isSaving && <p className="text-xs text-slate-500">{t('Saving theme…')}</p>}
       </div>
     );
   }
@@ -139,7 +143,7 @@ export default function ThemeSelector({ variant = 'full' }) {
     <Card className="p-6">
       <div className="space-y-4">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-1">Choose Your Brand Colors</h3>
+          <h3 className="text-lg font-semibold text-slate-900 mb-1">{t('Choose Your Brand Colors')}</h3>
           
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -153,8 +157,8 @@ export default function ThemeSelector({ variant = 'full' }) {
             />
           ))}
         </div>
-        {isSaving && <p className="text-sm text-slate-500 pt-2">Saving…</p>}
-        {!canEditTheme && <p className="text-xs text-slate-400 pt-2">You have view-only access to the theme.</p>}
+        {isSaving && <p className="text-sm text-slate-500 pt-2">{t('Saving…')}</p>}
+        {!canEditTheme && <p className="text-xs text-slate-400 pt-2">{t('You have view-only access to the theme.')}</p>}
       </div>
     </Card>
   );

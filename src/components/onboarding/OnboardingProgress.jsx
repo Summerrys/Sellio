@@ -1,10 +1,12 @@
 import React from 'react';
 import { CheckCircle2, Rocket } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAppText } from '@/lib/appText';
 
 const PURPLE_PINK = `linear-gradient(to right, #9333ea, #ec4899)`;
 
 export default function OnboardingProgress({ currentStep = 1, completedSteps = [], steps = [] }) {
+  const { t } = useAppText();
   const displaySteps = steps.length > 0 ? steps.map((s, i) => ({
     number: i + 1,
     label: s.title.replace(/ /g, '\n'),
@@ -19,10 +21,10 @@ export default function OnboardingProgress({ currentStep = 1, completedSteps = [
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
           <Rocket className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
-          <h3 className="text-sm sm:text-base font-bold text-slate-900">Your Progress</h3>
+          <h3 className="text-sm sm:text-base font-bold text-slate-900">{t('Your Progress')}</h3>
         </div>
         <div className="text-white px-2 sm:px-3 py-1 rounded-full text-xs font-semibold" style={{ background: PURPLE_PINK }}>
-          {Math.min(completedSteps.length, displaySteps.length)} / {displaySteps.length} Complete
+          {t('{done} / {total} Complete', { done: Math.min(completedSteps.length, displaySteps.length), total: displaySteps.length })}
         </div>
       </div>
 

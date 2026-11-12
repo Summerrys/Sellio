@@ -11,12 +11,13 @@ import { ArrowRight, ArrowLeft, MapPin, Clock } from 'lucide-react';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 import TimePicker from './TimePicker';
+import { useAppText, N_ } from '@/lib/appText';
 
 
 
 const schema = z.object({
-  branchName: z.string().min(1, 'Branch name is required').max(100),
-  address: z.string().min(1, 'Address is required').max(500),
+  branchName: z.string().min(1, N_('Branch name is required')).max(100),
+  address: z.string().min(1, N_('Address is required')).max(500),
 });
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -24,6 +25,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 
 
 export default function Step2Business({ formData, updateFormData, nextStep, prevStep }) {
+  const { t } = useAppText();
   // Apply theme from Step 1
   useEffect(() => {
     if (formData.customPrimary && formData.customSecondary) {
@@ -87,8 +89,8 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
         <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: themeColor }}>
           <MapPin className="w-8 h-8 text-white" />
         </div>
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1 sm:mb-2">Set up your first branch</h2>
-        <p className="text-sm sm:text-base text-slate-600">Configure your main location and operating hours</p>
+        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1 sm:mb-2">{t('Set up your first branch')}</h2>
+        <p className="text-sm sm:text-base text-slate-600">{t('Configure your main location and operating hours')}</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
@@ -96,15 +98,15 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
         <div>
           <Label className="text-xs sm:text-sm font-medium text-slate-700 flex items-center gap-2 mb-2">
             <MapPin className="w-4 h-4 text-green-500" />
-            Branch Name <span className="text-red-500">*</span>
+            {t('Branch Name')}{' '}<span className="text-red-500">*</span>
           </Label>
           <Input
             {...register('branchName')}
-            placeholder="eg. ION Orchard Outlet"
+            placeholder={t('eg. City Centre Outlet')}
             className="h-10 sm:h-11 text-sm"
           />
           {errors.branchName && (
-            <p className="text-xs text-red-500 mt-1">{errors.branchName.message}</p>
+            <p className="text-xs text-red-500 mt-1">{t(errors.branchName.message)}</p>
           )}
         </div>
 
@@ -112,16 +114,16 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
         <div>
           <Label className="text-xs sm:text-sm font-medium text-slate-700 flex items-center gap-2 mb-2">
             <MapPin className="w-4 h-4 text-blue-500" />
-            Address
+            {t('Address')}
           </Label>
           <Textarea
             {...register('address')}
-            placeholder="Street, building, unit, postcode"
+            placeholder={t('Street, building, unit, postcode')}
             rows={2}
             className="resize-none text-sm"
           />
           {errors.address && (
-            <p className="text-xs text-red-500 mt-1">{errors.address.message}</p>
+            <p className="text-xs text-red-500 mt-1">{t(errors.address.message)}</p>
           )}
         </div>
 
@@ -129,12 +131,12 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
         <div className="rounded-lg sm:rounded-xl p-3 sm:p-5" style={{ background: `linear-gradient(white, white) padding-box, ${themeColor} border-box`, border: '1px solid transparent' }}>
           <h3 className="text-xs sm:text-sm font-semibold text-slate-900 flex items-center gap-2 mb-4">
             <Clock className="w-4 h-4 text-slate-700" />
-            Operating Hours
+            {t('Operating Hours')}
           </h3>
 
           {/* Quick Apply */}
           <div className="mb-4 p-3 bg-white border border-slate-200 rounded-lg">
-            <p className="text-xs font-medium text-slate-700 mb-2">Apply to all days</p>
+            <p className="text-xs font-medium text-slate-700 mb-2">{t('Apply to all days')}</p>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-1 w-full">
                 <TimePicker
@@ -155,7 +157,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
                 className="w-full px-3 py-1.5 text-white rounded-lg text-xs font-medium"
                 style={{ background: themeColor, cursor: 'pointer' }}
               >
-                Apply to All
+                {t('Apply to All')}
               </button>
             </div>
           </div>
@@ -199,7 +201,7 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
                   </div>
                 )}
                 {!operatingHours[day].enabled && (
-                  <span className="text-xs text-slate-400 italic sm:flex-1">Closed</span>
+                  <span className="text-xs text-slate-400 italic sm:flex-1">{t('Closed')}</span>
                 )}
               </div>
             ))}
@@ -214,14 +216,14 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
             variant="outline"
             className="h-10 sm:h-11 px-4 sm:px-6 gap-1 sm:gap-2 text-sm"
           >
-            <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Back</span>
+            <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">{t('Back')}</span>
           </Button>
           <Button
             type="submit"
             className="h-10 sm:h-11 px-4 sm:px-6 text-white gap-1 sm:gap-2 text-sm"
             style={{ background: themeColor }}
           >
-            Next <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
+            {t('Next')}{' '}<ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
         </div>
       </form>

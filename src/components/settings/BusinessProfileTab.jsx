@@ -417,7 +417,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
             </div>
             <div className="flex-1">
               <Label className="text-xs text-slate-600 mb-1 block">Branch Name</Label>
-              <Input className="h-10" value={form.branch_name} onChange={e => set('branch_name', e.target.value)} placeholder="e.g. Orchard Road" />
+              <Input className="h-10" value={form.branch_name} onChange={e => set('branch_name', e.target.value)} placeholder="e.g. City Centre" />
             </div>
           </div>
 

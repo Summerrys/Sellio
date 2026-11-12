@@ -60,7 +60,7 @@ globalThis.fakeClient = {
 };
 const mocks = {
   supabase: 'export const getSupabase = async () => globalThis.fakeClient;',
-  shrink: "export const LOGO_MAX_SIDE = 800; export const LONG_CACHE = '31536000'; export class UnreadablePhotoError extends Error {} export async function checkPhoto() {} export async function shrinkImage(input) { return { blob: input, type: 'image/jpeg', ext: 'jpg' }; }",
+  shrink: "export const LOGO_MAX_SIDE = 800; export const LONG_CACHE = '31536000'; export class UnreadablePhotoError extends Error {} export const UNREADABLE_PHOTO_MESSAGE = 'This photo did not come through in full.'; export async function checkPhoto() {} export async function shrinkImage(input) { return { blob: input, type: 'image/jpeg', ext: 'jpg' }; }",
   toast: 'export const toast = Object.assign(() => {}, { success() {}, error() {}, message() {}, info() {} });',
   tenant: 'export const useTenant = () => ({ hasPermission: () => true, canUseFeature: () => true });',
   refresh: 'export const useAppReloadGuard = () => {};',

@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import ShareSheet from '@/components/explore/ShareSheet';
 import { storeLink } from '@/components/shop/ShareShop';
 import { useTenant } from '@/components/tenant/TenantContext';
+import { useAppText } from '@/lib/appText';
 
 // "Share your shop link": the shop's page on Sellio, straight into WhatsApp, Telegram,
 // Facebook or an email, or copied (the Share to sheet a listing uses). The one next step
@@ -14,6 +15,7 @@ const SIZES = {
 };
 
 export default function ShareShopLinkButton({ size = 'md', className = '' }) {
+  const { t } = useAppText();
   const { tenant } = useTenant();
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
@@ -29,16 +31,16 @@ export default function ShareShopLinkButton({ size = 'md', className = '' }) {
         style={{ background: 'var(--color-primary-gradient, linear-gradient(135deg, #3b82f6 0%, #9333ea 100%))' }}
       >
         <Share2 className="w-4 h-4" aria-hidden="true" />
-        Share your shop link
+        {t('Share your shop link')}
       </button>
       <ShareSheet
         open={open}
         onClose={close}
         url={url}
-        title={tenant.name?.trim() || 'My shop'}
-        shopName="Your shop page"
+        title={tenant.name?.trim() || t('My shop')}
+        shopName={t('Your shop page')}
         image={tenant.logo_url}
-        onCopied={(copied) => (copied ? toast.success('Link copied') : toast.info(url))}
+        onCopied={(copied) => (copied ? toast.success(t('Link copied')) : toast.info(url))}
       />
     </>
   );

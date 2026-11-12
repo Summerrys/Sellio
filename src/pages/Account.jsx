@@ -9,6 +9,8 @@ import { completeAuthNavigation } from '@/lib/authNavigation';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import AuthPricingModal from '@/components/auth/AuthPricingModal';
 import { accountErrorMessage, nextStepFor } from '@/lib/accountFlow';
+import { useAppText } from '@/lib/appText';
+import AppLanguageSwitch from '@/components/ui-custom/AppLanguageSwitch';
 
 const LOGO_URL = '/branding/sellio-logo.webp';
 const BUTTON_STYLE = { background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' };
@@ -36,6 +38,7 @@ function Card({ icon: Icon, iconClass, title, badge, children, highlight }) {
 // The account home for someone without a store yet: open a free personal shop,
 // choose a business plan, or (later) explore and buy.
 export default function Account() {
+  const { t } = useAppText();
   const { setAppUser, clearAppUser } = useAppUser();
   const [status, setStatus] = useState(null);
   const [loadError, setLoadError] = useState('');
@@ -127,7 +130,7 @@ export default function Account() {
   const openFreeShop = async (e) => {
     e.preventDefault();
     const name = shopName.trim();
-    if (name.length < 2) { toast.error('Please give your shop a name.'); return; }
+    if (name.length < 2) { toast.error(t('Please give your shop a name.')); return; }
     setCreating(true);
     try {
       const supabase = await getSupabase();
@@ -151,7 +154,7 @@ export default function Account() {
           <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-3" />
           <p className="text-sm text-slate-700 mb-4">{loadError}</p>
           <button type="button" onClick={() => window.location.reload()}
-            className="w-full py-2.5 rounded-xl text-white text-sm font-semibold" style={BUTTON_STYLE}>Try again</button>
+            className="w-full py-2.5 rounded-xl text-white text-sm font-semibold" style={BUTTON_STYLE}>{t('Try again')}</button>
         </div>
       </div>
     );
@@ -166,82 +169,82 @@ export default function Account() {
       <header className="max-w-2xl mx-auto px-4 pt-5 flex items-center justify-between gap-3">
         <div className="flex items-center gap-1 min-w-0">
           {isNativeApp() ? (
-            <Link to="/explore" aria-label="Sellio home"><img src={LOGO_URL} alt="Sellio" className="h-12 w-auto object-contain" /></Link>
+            <Link to="/explore" aria-label={t('Sellio home')}><img src={LOGO_URL} alt="Sellio" className="h-12 w-auto object-contain" /></Link>
           ) : (
-            <a href="/" aria-label="Sellio home"><img src={LOGO_URL} alt="Sellio" className="h-12 w-auto object-contain" /></a>
+            <a href="/" aria-label={t('Sellio home')}><img src={LOGO_URL} alt="Sellio" className="h-12 w-auto object-contain" /></a>
           )}
         </div>
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-xs text-slate-500 truncate hidden sm:inline">{status.email}</span>
           <button type="button" onClick={() => signOut()} className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 px-3 py-2 rounded-lg hover:bg-white/70">
-            <LogOut className="w-3.5 h-3.5" /> Sign out
+            <LogOut className="w-3.5 h-3.5" />{' '}{t('Sign out')}
           </button>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-4">
         <div className="mb-2">
-          <h1 className="text-2xl font-bold text-slate-900">{firstName ? `Hi ${firstName}!` : 'Welcome!'}</h1>
-          <p className="text-sm text-slate-500 mt-1">What would you like to do on Sellio?</p>
+          <h1 className="text-2xl font-bold text-slate-900">{firstName ? t('Hi {firstName}!', { firstName }) : t('Welcome!')}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t('What would you like to do on Sellio?')}</p>
         </div>
 
         {paymentEmail && (
           <div className="flex items-start gap-2 p-4 bg-amber-50 border border-amber-200 rounded-2xl" role="alert">
             <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-amber-900">
-              <p>This payment was made with <span className="font-semibold break-all">{paymentEmail}</span>, but you’re signed in as <span className="font-semibold break-all">{status.email}</span>.</p>
+              <p>{t('This payment was made with {paymentEmail}, but you’re signed in as {email}.', { paymentEmail: <span className="font-semibold break-all">{paymentEmail}</span>, email: <span className="font-semibold break-all">{status.email}</span> })}</p>
               <button type="button" onClick={() => signOut(`/Auth?token=${encodeURIComponent(token)}`)}
-                className="mt-2 text-sm font-semibold text-orange-600 underline underline-offset-2">Sign out and continue with {paymentEmail}</button>
+                className="mt-2 text-sm font-semibold text-orange-600 underline underline-offset-2">{t('Sign out and continue with {paymentEmail}', { paymentEmail })}</button>
             </div>
           </div>
         )}
 
         {waitingForPlan && !businessReady && (
           <div className="flex items-center gap-2 p-4 bg-white border border-slate-100 rounded-2xl text-sm text-slate-600">
-            <Loader2 className="w-4 h-4 animate-spin" /> Confirming your payment…
+            <Loader2 className="w-4 h-4 animate-spin" />{' '}{t('Confirming your payment…')}
           </div>
         )}
 
         {planNotYet && !businessReady && !paymentEmail && (
           <div className="flex items-start gap-2 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-sm text-amber-900" role="alert">
             <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-            <p>We haven’t received your payment confirmation yet. Please refresh this page in a minute, or email {SUPPORT_EMAIL} if it doesn’t appear.</p>
+            <p>{t('We haven’t received your payment confirmation yet. Please refresh this page in a minute, or email {SUPPORT_EMAIL} if it doesn’t appear.', { SUPPORT_EMAIL })}</p>
           </div>
         )}
 
         {businessReady && (
-          <Card icon={Sparkles} iconClass="bg-orange-50 text-orange-500" title="Your business plan is ready" highlight>
-            <p className="text-sm text-slate-500 mt-1">Set up your business: name, menu, opening hours and tables.</p>
+          <Card icon={Sparkles} iconClass="bg-orange-50 text-orange-500" title={t('Your business plan is ready')} highlight>
+            <p className="text-sm text-slate-500 mt-1">{t('Set up your business: name, menu, opening hours and tables.')}</p>
             <button type="button" onClick={() => completeAuthNavigation('/Onboarding')}
               className="mt-3 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-white text-sm font-semibold" style={BUTTON_STYLE}>
-              Set up my business <ArrowRight className="w-4 h-4" />
+              {t('Set up my business')}{' '}<ArrowRight className="w-4 h-4" />
             </button>
           </Card>
         )}
 
         {!businessReady && (
-          <Card icon={Store} iconClass="bg-green-50 text-green-600" title="Sell from home" badge="Free">
-            <p className="text-sm text-slate-500 mt-1">Your own shop page to share. Up to 10 listings and 100 orders a month. No card needed.</p>
+          <Card icon={Store} iconClass="bg-green-50 text-green-600" title={t('Sell from home')} badge={t('Free')}>
+            <p className="text-sm text-slate-500 mt-1">{t('Your own shop page to share. Up to 10 listings and 100 orders a month. No card needed.')}</p>
             {!freeOpen ? (
               <button type="button" onClick={() => (status.setup_done ? setFreeOpen(true) : window.location.assign('/Join'))}
                 className="mt-3 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-white text-sm font-semibold" style={BUTTON_STYLE}>
-                Open my free shop <ArrowRight className="w-4 h-4" />
+                {t('Open my free shop')}{' '}<ArrowRight className="w-4 h-4" />
               </button>
             ) : (
               <form onSubmit={openFreeShop} className="mt-4 space-y-3" noValidate>
                 <div>
-                  <label htmlFor="shop-name" className="block text-sm font-medium text-slate-700 mb-1">Shop name</label>
-                  <input id="shop-name" type="text" maxLength={60} placeholder="e.g. Jane’s Home Bakes" value={shopName}
+                  <label htmlFor="shop-name" className="block text-sm font-medium text-slate-700 mb-1">{t('Shop name')}</label>
+                  <input id="shop-name" type="text" maxLength={60} placeholder={t('e.g. Jane’s Home Bakes')} value={shopName}
                     onChange={(e) => setShopName(e.target.value)}
                     className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400" />
                 </div>
                 <div className="flex gap-2">
                   <button type="submit" disabled={creating}
                     className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-70" style={BUTTON_STYLE}>
-                    {creating ? 'Opening your shop…' : 'Open my shop'}
+                    {creating ? t('Opening your shop…') : t('Open my shop')}
                   </button>
                   <button type="button" onClick={() => setFreeOpen(false)} disabled={creating}
-                    className="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 border border-slate-200 bg-white">Cancel</button>
+                    className="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 border border-slate-200 bg-white">{t('Cancel')}</button>
                 </div>
               </form>
             )}
@@ -249,12 +252,12 @@ export default function Account() {
         )}
 
         {!businessReady && (
-          <Card icon={Briefcase} iconClass="bg-purple-50 text-purple-600" title="Run my business" badge="Paid plans">
-            <p className="text-sm text-slate-500 mt-1">The counter, kitchen display, tables & QR ordering, staff logins, inventory and reports. Starts with a 7-day free trial.</p>
+          <Card icon={Briefcase} iconClass="bg-purple-50 text-purple-600" title={t('Run my business')} badge={t('Paid plans')}>
+            <p className="text-sm text-slate-500 mt-1">{t('The counter, kitchen display, tables & QR ordering, staff logins, inventory and reports. Starts with a 7-day free trial.')}</p>
             {sellsPlans() ? (
               <button type="button" onClick={() => setShowPlans(true)}
                 className="mt-3 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 border border-slate-200 bg-white hover:bg-slate-50">
-                See plans <ArrowRight className="w-4 h-4" />
+                {t('See plans')}{' '}<ArrowRight className="w-4 h-4" />
               </button>
             ) : (
               // Sellio's apps sell no plans.
@@ -264,17 +267,18 @@ export default function Account() {
         )}
 
         <Link to="/explore" className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-200">
-          <Card icon={Compass} iconClass="bg-pink-50 text-pink-600" title="Explore and buy">
-            <p className="text-sm text-slate-500 mt-1">Discover local shops and order from them, all in one place.</p>
-            <span className="inline-flex items-center gap-1 text-sm font-semibold text-slate-800 mt-2">Start exploring <ArrowRight className="w-4 h-4" /></span>
+          <Card icon={Compass} iconClass="bg-pink-50 text-pink-600" title={t('Explore and buy')}>
+            <p className="text-sm text-slate-500 mt-1">{t('Discover local shops and order from them, all in one place.')}</p>
+            <span className="inline-flex items-center gap-1 text-sm font-semibold text-slate-800 mt-2">{t('Start exploring')}{' '}<ArrowRight className="w-4 h-4" /></span>
           </Card>
         </Link>
 
         <p className="text-center text-xs text-slate-400 pt-2">
-          Need help? <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium text-slate-500 underline underline-offset-2">{SUPPORT_EMAIL}</a>
+          {t('Need help?')}{' '}<a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium text-slate-500 underline underline-offset-2">{SUPPORT_EMAIL}</a>
           <span aria-hidden="true" className="mx-2">·</span>
-          <Link to="/delete-account" className="font-medium text-slate-500 underline underline-offset-2">Delete my account</Link>
+          <Link to="/delete-account" className="font-medium text-slate-500 underline underline-offset-2">{t('Delete my account')}</Link>
         </p>
+        <AppLanguageSwitch />
       </main>
 
       {showPlans && <AuthPricingModal onClose={() => setShowPlans(false)} prefilledEmail={status.email} />}
