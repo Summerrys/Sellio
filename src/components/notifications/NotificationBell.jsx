@@ -7,10 +7,11 @@ import {
 } from '@/components/ui/popover';
 import { Bell, Check, ShoppingBag, AlertTriangle, Users, TrendingUp, Building2, MessageCircle, Star } from 'lucide-react';
 import { useNotifications } from './NotificationProvider';
-import { formatDistanceToNow } from 'date-fns';
+import { appTimeAgo } from '@/lib/appDates';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../../utils';
 import { handOverBackStep } from '@/lib/useBackToClose';
+import { useAppText } from '@/lib/appText';
 
 const NOTIFICATION_ICONS = {
   new_order: ShoppingBag,
@@ -39,6 +40,7 @@ const NOTIFICATION_COLORS = {
 };
 
 export default function NotificationBell() {
+  const { t } = useAppText();
   const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [open, setOpen] = useState(false);
@@ -59,7 +61,7 @@ export default function NotificationBell() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative min-h-[44px] min-w-[44px] text-slate-700" aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}>
+        <Button variant="ghost" size="icon" className="relative min-h-[44px] min-w-[44px] text-slate-700" aria-label={unreadCount ? t('Notifications, {count} unread', { count: unreadCount }) : t('Notifications')}>
           <Bell className="w-5 h-5" />
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white text-xs rounded-full flex items-center justify-center">
@@ -73,7 +75,7 @@ export default function NotificationBell() {
         align="end"
         sideOffset={8}
         collisionPadding={12}
-        aria-label="Recent notifications"
+        aria-label={t('Recent notifications')}
         style={{
           width: 'min(384px, calc(100vw - 24px))',
           maxHeight: 'min(560px, var(--radix-popover-content-available-height, 70dvh))',
@@ -81,18 +83,18 @@ export default function NotificationBell() {
       >
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2">
-          <h3 className="min-w-0 font-semibold [overflow-wrap:anywhere]">Notifications</h3>
+          <h3 className="min-w-0 font-semibold [overflow-wrap:anywhere]">{t('Notifications')}</h3>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
               onClick={markAllAsRead}
               className="min-h-[44px] min-w-[44px] shrink-0 px-2 text-xs"
-              aria-label="Mark all as read"
-              title="Mark all as read"
+              aria-label={t('Mark all as read')}
+              title={t('Mark all as read')}
             >
               <Check className="h-4 w-4" aria-hidden="true" />
-              <span className="hidden sm:inline">Read all</span>
+              <span className="hidden sm:inline">{t('Read all')}</span>
             </Button>
           )}
         </div>
@@ -102,7 +104,7 @@ export default function NotificationBell() {
           {recentNotifications.length === 0 ? (
             <div className="p-6 text-center text-muted-foreground">
               <Bell className="w-12 h-12 mx-auto mb-2 text-slate-300" />
-              <p>No notifications yet</p>
+              <p>{t('No notifications yet')}</p>
             </div>
           ) : (
             <div className="min-w-0 divide-y">
@@ -126,12 +128,12 @@ export default function NotificationBell() {
                         <div className="flex items-start justify-between gap-2 mb-1">
                           <p className="min-w-0 flex-1 text-sm font-semibold text-popover-foreground [overflow-wrap:anywhere]">{notification.title}</p>
                           {!notification.is_read && (
-                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[rgb(var(--color-primary))]" aria-label="Unread" />
+                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[rgb(var(--color-primary))]" aria-label={t('Unread')} />
                           )}
                         </div>
                         <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">{notification.message}</p>
                         <p className="mt-1 text-xs text-muted-foreground [overflow-wrap:anywhere]">
-                          {formatDistanceToNow(new Date(notification.created_date), { addSuffix: true })}
+                          {appTimeAgo(new Date(notification.created_date))}
                         </p>
                       </div>
                     </div>
@@ -153,7 +155,7 @@ export default function NotificationBell() {
                 setOpen(false);
               }}
             >
-              View all notifications
+              {t('View all notifications')}
             </Button>
           </div>
         )}

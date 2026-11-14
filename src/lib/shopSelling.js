@@ -6,6 +6,7 @@
 // nothing here is trusted for prices, fees or dates.
 
 import { formatMoney } from './money';
+import { N_ } from './appText';
 
 export const isShopTenant = (tenant) => tenant?.seller_type === 'individual';
 
@@ -22,13 +23,13 @@ export function shopMethod(order) {
 
 export function shopStatusLabel(status, method, food) {
   switch (status) {
-    case 'pending': return 'New';
-    case 'confirmed': return 'Accepted';
-    case 'preparing': return 'Preparing';
+    case 'pending': return N_('New');
+    case 'confirmed': return N_('Accepted');
+    case 'preparing': return N_('Preparing');
     case 'ready':
-    case 'served': return method === 'delivery' ? 'Out for delivery' : 'Ready for collection';
-    case 'completed': return method === 'delivery' ? 'Delivered' : 'Collected';
-    case 'cancelled': return 'Cancelled';
+    case 'served': return method === 'delivery' ? N_('Out for delivery') : N_('Ready for collection');
+    case 'completed': return method === 'delivery' ? N_('Delivered') : N_('Collected');
+    case 'cancelled': return N_('Cancelled');
     default: return status || '';
   }
 }
@@ -36,11 +37,11 @@ export function shopStatusLabel(status, method, food) {
 // The button that moves an order to its next step.
 export function shopNextAction(status, method, food) {
   switch (status) {
-    case 'pending': return { label: 'Accept', next: 'confirmed' };
-    case 'confirmed': return { label: 'Start preparing', next: 'preparing' };
-    case 'preparing': return { label: method === 'delivery' ? 'Out for delivery' : 'Ready for collection', next: 'ready' };
+    case 'pending': return { label: N_('Accept'), next: 'confirmed' };
+    case 'confirmed': return { label: N_('Start preparing'), next: 'preparing' };
+    case 'preparing': return { label: method === 'delivery' ? N_('Out for delivery') : N_('Ready for collection'), next: 'ready' };
     case 'ready':
-    case 'served': return { label: method === 'delivery' ? 'Mark delivered' : 'Mark collected', next: 'completed' };
+    case 'served': return { label: method === 'delivery' ? N_('Mark delivered') : N_('Mark collected'), next: 'completed' };
     default: return null;
   }
 }
@@ -48,12 +49,12 @@ export function shopNextAction(status, method, food) {
 // Tabs and counters on the Orders page.
 export function shopStatusTabs(food) {
   return [
-    { value: 'all', label: 'All' },
-    { value: 'pending', label: 'New' },
-    { value: 'confirmed', label: 'Accepted' },
-    { value: 'preparing', label: 'Preparing' },
-    { value: 'ready', label: 'Ready / Out' },
-    { value: 'completed', label: 'Done' },
+    { value: 'all', label: N_('All') },
+    { value: 'pending', label: N_('New') },
+    { value: 'confirmed', label: N_('Accepted') },
+    { value: 'preparing', label: N_('Preparing') },
+    { value: 'ready', label: N_('Ready / Out') },
+    { value: 'completed', label: N_('Done') },
   ];
 }
 

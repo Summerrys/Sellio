@@ -3,10 +3,12 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Clock, MapPin, AlertCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatAppDate } from '@/lib/appDates';
 import { formatMoney } from '@/lib/money';
+import { useAppText } from '@/lib/appText';
 
 export default function OrderCard({ order, onStatusChange, onClick, currency }) {
+  const { t } = useAppText();
   const [elapsedTime, setElapsedTime] = useState(0);
 
   useEffect(() => {
@@ -27,10 +29,10 @@ export default function OrderCard({ order, onStatusChange, onClick, currency }) 
   };
 
   const statusActions = {
-    pending: { label: 'Accept', nextStatus: 'confirmed' },
-    confirmed: { label: 'Start Preparing', nextStatus: 'preparing' },
-    preparing: { label: 'Mark Ready', nextStatus: 'ready' },
-    ready: { label: 'Mark Served', nextStatus: 'served' },
+    pending: { label: t('Accept'), nextStatus: 'confirmed' },
+    confirmed: { label: t('Start Preparing'), nextStatus: 'preparing' },
+    preparing: { label: t('Mark Ready'), nextStatus: 'ready' },
+    ready: { label: t('Mark Served'), nextStatus: 'served' },
   };
 
   const action = statusActions[order.status];
@@ -46,7 +48,7 @@ export default function OrderCard({ order, onStatusChange, onClick, currency }) 
         <div>
           <h4 className="font-bold text-lg text-slate-900">{order.order_number}</h4>
           <p className="text-xs text-slate-500">
-            {format(new Date(order.created_date), 'HH:mm')}
+            {formatAppDate(new Date(order.created_date), 'HH:mm')}
           </p>
         </div>
         <div className={`flex items-center gap-1 ${getTimerColor()}`}>
@@ -60,11 +62,11 @@ export default function OrderCard({ order, onStatusChange, onClick, currency }) 
         {order.type === 'dine_in' && order.table_name ? (
           <Badge className="bg-blue-100 text-blue-700">
             <MapPin className="w-3 h-3 mr-1" />
-            Table {order.table_name}
+            {t('Table {table_name}', { table_name: order.table_name })}
           </Badge>
         ) : (
           <Badge className="bg-purple-100 text-purple-700">
-            {order.type === 'takeaway' ? 'Takeaway' : 'Delivery'}
+            {order.type === 'takeaway' ? t('Takeaway') : t('Delivery')}
           </Badge>
         )}
       </div>
@@ -87,14 +89,14 @@ export default function OrderCard({ order, onStatusChange, onClick, currency }) 
           </div>
         ))}
         {order.items?.length > 3 && (
-          <p className="text-xs text-slate-400">+{order.items.length - 3} more items</p>
+          <p className="text-xs text-slate-400">{t('+{count} more items', { count: order.items.length - 3 })}</p>
         )}
       </div>
 
       {/* Special Instructions */}
       {order.notes && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mb-3">
-          <p className="text-xs text-yellow-700 font-medium">Note: {order.notes}</p>
+          <p className="text-xs text-yellow-700 font-medium">{t('Note: {notes}', { notes: order.notes })}</p>
         </div>
       )}
 

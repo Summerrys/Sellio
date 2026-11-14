@@ -1,5 +1,6 @@
 import Joyride, { STATUS } from 'react-joyride';
 import { AlertTriangle } from 'lucide-react';
+import { useAppText } from '@/lib/appText';
 
 const BRAND_GRADIENT = 'linear-gradient(135deg, #fb923c, #e0449a, #8b5cf6)';
 
@@ -8,6 +9,7 @@ const BRAND_GRADIENT = 'linear-gradient(135deg, #fb923c, #e0449a, #8b5cf6)';
 // it opens a confirm modal before actually ending the tour, so a stray tap
 // doesn't silently lose someone's place.
 export default function TourGuide({ steps, run, onFinish, tour }) {
+  const { t } = useAppText();
   const handleCallback = (data) => {
     const { status, action } = data;
     if (status === STATUS.FINISHED) {
@@ -42,7 +44,7 @@ export default function TourGuide({ steps, run, onFinish, tour }) {
         // space for it.
         scrollOffset={80}
         callback={handleCallback}
-        locale={{ back: 'Back', close: 'Close', last: 'Done', next: 'Next', skip: 'Skip' }}
+        locale={{ back: t('Back'), close: t('Close'), last: t('Done'), next: t('Next'), skip: t('Skip') }}
         // FIX: the gradient border only ever applied to the tooltip box itself —
         // Joyride renders the little triangle pointer as a separate element, so
         // it stayed plain white and created a visible seam where the two met.
@@ -80,22 +82,22 @@ export default function TourGuide({ steps, run, onFinish, tour }) {
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
               <AlertTriangle className="w-5 h-5" style={{ color: '#d97706' }} />
             </div>
-            <p style={{ fontWeight: 700, fontSize: 15, margin: '0 0 6px', color: '#0f172a' }}>Skip the tour?</p>
+            <p style={{ fontWeight: 700, fontSize: 15, margin: '0 0 6px', color: '#0f172a' }}>{t('Skip the tour?')}</p>
             <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 18px', lineHeight: 1.5 }}>
-              You can replay it anytime from Settings.
+              {t('You can replay it anytime from Settings.')}
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
               <button
                 onClick={tour.cancelSkip}
                 style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', color: '#475569', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
               >
-                Cancel
+                {t('Cancel')}
               </button>
               <button
                 onClick={tour.confirmSkip}
                 style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#0f172a', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
               >
-                Skip Tour
+                {t('Skip Tour')}
               </button>
             </div>
           </div>

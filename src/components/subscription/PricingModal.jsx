@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useId, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Check, X } from 'lucide-react';
 import TenantContext from '@/components/tenant/TenantContext';
-import { BUSINESS_PLANS, INDONESIA_PAYMENT_NOTE, approxRupiah, plansFor, rupiahNote, shopCheckoutLink } from '@/lib/plans';
+import { BUSINESS_PLANS, INDONESIA_PAYMENT_NOTE, RUPIAH_NOTE, approxRupiah, plansFor, rupiahAmount, shopCheckoutLink } from '@/lib/plans';
 import { formatMoney } from '@/lib/money';
 import { usePlanRegion } from '@/lib/usePlanRegion';
 import { itemWords } from '@/lib/planFeatures';
@@ -10,6 +10,7 @@ import BottomSheet from '@/components/explore/BottomSheet';
 import PlanFootnotes from './PlanFootnotes';
 import PlansOnWebsite from './PlansOnWebsite';
 import { sellsPlans, openOutside } from '@/lib/nativeApp';
+import { useAppText, N_ } from '@/lib/appText';
 
 // The plan window, short (Alvin, 10 Nov 2026: "Redesign the modal with less words. Keep it short
 // and sweet"): one list of plans and one button. Each row says what's compared first (listings or
@@ -30,11 +31,11 @@ import { sellsPlans, openOutside } from '@/lib/nativeApp';
 
 const PLAN_RANK = { starter: 0, growth: 1, pro: 2 };
 const LIMITS = {
-  starter: (words) => `10 ${words.products} · 100 orders a month`,
-  growth: (words) => `50 ${words.products} · 1,000 orders a month`,
-  pro: (words) => `Unlimited ${words.products} and orders`,
+  starter: N_('10 {products} · 100 orders a month'),
+  growth: N_('50 {products} · 1,000 orders a month'),
+  pro: N_('Unlimited {products} and orders'),
 };
-const EVERY_PLAN = 'Every plan: counter, kitchen display, tables & QR, staff logins and printing.';
+const EVERY_PLAN = N_('Every plan: counter, kitchen display, tables & QR, staff logins and printing.');
 const BRAND = 'linear-gradient(135deg, #fb923c, #e0449a 55%, #8b2fc9)';
 const PICKED = '#8b2fc9';
 const money = (amount) => `S$${Number(amount).toLocaleString('en-SG')}`;
@@ -47,12 +48,13 @@ function firstPick(currentTier, personal) {
 }
 
 export default function PricingModal({ open, onOpenChange, tenantId, currentTier = null }) {
+  const { t } = useAppText();
   const [billing, setBilling] = useState('monthly');
   const shop = useContext(TenantContext)?.tenant;
   const isPersonalShop = shop?.seller_type === 'individual';
   const freeTrial = isPersonalShop && shop?.id === tenantId && !shop?.has_used_trial;
   const current = isPersonalShop ? null : currentTier;
-  const words = itemWords(isPersonalShop ? 'individual' : 'merchant');
+  const words = itemWords(isPersonalShop ? 'individual' : 'merchant', t);
   const [picked, setPicked] = useState(() => firstPick(current, isPersonalShop));
   const [compare, setCompare] = useState(false);
   const titleId = useId();
@@ -79,11 +81,11 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-center">Your plan</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-center">{t('Your plan')}</DialogTitle>
           </DialogHeader>
           <PlansOnWebsite
             tier={isPersonalShop ? null : currentTier}
-            note={isPersonalShop ? 'Your personal shop is on the free plan: up to 10 listings and 100 orders a month.' : ''}
+            note={isPersonalShop ? t('Your personal shop is on the free plan: up to 10 listings and 100 orders a month.') : ''}
           />
         </DialogContent>
       </Dialog>
@@ -94,15 +96,16 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
   const plan = plans.find((p) => p.key === picked) || plans[0];
   const price = yearly ? plan.yearly : plan.monthly;
   const isCurrent = !!current && plan.key === current;
-  let action = `Choose ${plan.name}`;
-  if (isPersonalShop) action = freeTrial ? 'Start 7 days free' : `Upgrade to ${plan.name}`;
-  else if (isCurrent) action = 'Your current plan';
-  else if (current) action = (PLAN_RANK[plan.key] ?? 0) > (PLAN_RANK[current] ?? 0) ? `Upgrade to ${plan.name}` : `Move to ${plan.name}`;
+  let action = t('Choose {name}', { name: plan.name });
+  if (isPersonalShop) action = freeTrial ? t('Start 7 days free') : t('Upgrade to {name}', { name: plan.name });
+  else if (isCurrent) action = t('Your current plan');
+  else if (current) action = (PLAN_RANK[plan.key] ?? 0) > (PLAN_RANK[current] ?? 0) ? t('Upgrade to {name}', { name: plan.name }) : t('Move to {name}', { name: plan.name });
+  const rupiah = t(RUPIAH_NOTE, { amount: rupiahAmount(price) });
   const cost = region === 'ID'
-    ? `${money(price)} a ${yearly ? 'year' : 'month'}, ${rupiahNote(price)}.`
-    : `${money(price)} a ${yearly ? 'year' : 'month'}.`;
+    ? (yearly ? t('{price} a year, {rupiah}.', { price: money(price), rupiah }) : t('{price} a month, {rupiah}.', { price: money(price), rupiah }))
+    : (yearly ? t('{price} a year.', { price: money(price) }) : t('{price} a month.', { price: money(price) }));
   const fine = isPersonalShop
-    ? `${freeTrial ? 'Then ' : ''}${cost} If you stop paying, it goes back to a free home shop.`
+    ? (freeTrial ? t('Then {cost} If you stop paying, it goes back to a free home shop.', { cost }) : t('{cost} If you stop paying, it goes back to a free home shop.', { cost }))
     : cost;
 
   const checkout = () => {
@@ -137,22 +140,22 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
         <button
           type="button"
           onClick={close}
-          aria-label="Close"
+          aria-label={t('Close')}
           className="absolute right-0 top-0 w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center"
         >
           <X className="w-4 h-4" />
         </button>
         <h2 id={titleId} className="pr-10 text-xl font-extrabold tracking-tight text-slate-900">
-          {isPersonalShop ? 'Upgrade to Business' : 'Choose your plan'}
+          {isPersonalShop ? t('Upgrade to Business') : t('Choose your plan')}
         </h2>
         <p data-testid="home-shop-upgrade" className="mt-1 pr-6 text-[13px] leading-snug text-slate-500">
           {isPersonalShop
-            ? `${freeTrial ? '7 days free. ' : ''}Your shop keeps its link, listings and orders.`
-            : current ? `You're on ${BUSINESS_PLANS.find((p) => p.key === current)?.name || 'a plan'}.` : 'Pick the plan that fits your shop.'}
+            ? (freeTrial ? t('7 days free. Your shop keeps its link, listings and orders.') : t('Your shop keeps its link, listings and orders.'))
+            : current ? t("You're on {plan}.", { plan: BUSINESS_PLANS.find((p) => p.key === current)?.name || t('a plan') }) : t('Pick the plan that fits your shop.')}
         </p>
 
-        <div role="radiogroup" aria-label="Billing" className="mt-4 grid grid-cols-2 rounded-xl bg-slate-100 p-[3px]">
-          {[['monthly', 'Monthly'], ['annual', 'Yearly']].map(([key, label]) => (
+        <div role="radiogroup" aria-label={t('Billing')} className="mt-4 grid grid-cols-2 rounded-xl bg-slate-100 p-[3px]">
+          {[['monthly', t('Monthly')], ['annual', t('Yearly')]].map(([key, label]) => (
             <button
               key={key}
               type="button"
@@ -162,12 +165,12 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
               className={`h-9 rounded-[9px] text-[13px] font-bold ${billing === key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
             >
               {label}
-              {key === 'annual' && <span className="ml-1 text-[11px] font-bold text-green-600">2 months free</span>}
+              {key === 'annual' && <span className="ml-1 text-[11px] font-bold text-green-600">{t('2 months free')}</span>}
             </button>
           ))}
         </div>
 
-        <div role="radiogroup" aria-label="Plan" className="mt-3 space-y-2">
+        <div role="radiogroup" aria-label={t('Plan')} className="mt-3 space-y-2">
           {plans.map((p) => {
             const on = p.key === picked;
             const thisCurrent = !!current && p.key === current;
@@ -193,16 +196,16 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
                   <span className="flex items-center gap-1.5">
                     <span className="text-[14px] font-bold text-slate-900">{p.name}</span>
                     {thisCurrent ? (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">Current</span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">{t('Current')}</span>
                     ) : p.key === 'growth' && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">Popular</span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">{t('Popular')}</span>
                     )}
                   </span>
-                  <span className="block text-[11.5px] leading-snug text-slate-500">{LIMITS[p.key](words)}</span>
+                  <span className="block text-[11.5px] leading-snug text-slate-500">{t(LIMITS[p.key], { products: words.products })}</span>
                 </span>
                 <span className="text-right flex-shrink-0">
                   <span className="text-[15px] font-extrabold text-slate-900">{money(yearly ? p.yearly : p.monthly)}</span>
-                  <span className="text-[10.5px] font-semibold text-slate-400">/{yearly ? 'yr' : 'mo'}</span>
+                  <span className="text-[10.5px] font-semibold text-slate-400">{yearly ? t('/yr') : t('/mo')}</span>
                   {region === 'ID' && (
                     <span data-testid="plan-rupiah" className="block text-[10.5px] font-semibold text-slate-500">
                       ≈ {formatMoney(approxRupiah(yearly ? p.yearly : p.monthly), 'IDR')}
@@ -215,9 +218,9 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
         </div>
 
         <p className="mt-2 text-[11.5px] leading-snug text-slate-500">
-          {EVERY_PLAN}{' '}
+          {t(EVERY_PLAN)}{' '}
           <button type="button" onClick={() => setCompare((on) => !on)} aria-expanded={compare} className="font-bold text-purple-700 underline-offset-2 hover:underline">
-            {compare ? 'Hide the full list' : 'Compare plans'}
+            {compare ? t('Hide the full list') : t('Compare plans')}
           </button>
         </p>
         {compare && (

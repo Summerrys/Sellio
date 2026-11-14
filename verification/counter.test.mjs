@@ -203,7 +203,7 @@ try{
  const settleCall=requests.filter(r=>r.name==='settle_table').at(-1);assert.deepEqual(settleCall.payload,{p_session_id:'s1',p_method:'qr'});
  const done=tbl.querySelector('[aria-label="Table 1 settled"]');assert.ok(done,'Settling shows a confirmation');
  assert.match(done.textContent,/S\$9\.00 · Paid by QR · PayNow/);assert.equal(__prints.length,printsBefore+1,'Nothing prints unless tapped');
- assert.ok(tbl.querySelector('.ctr-tables'));assert.match(tbl.querySelector('.ctr-tile').textContent,/Free/);
+ assert.ok(tbl.querySelector('.ctr-tables'));assert.match(tbl.querySelector('.ctr-tile').textContent,/Available/);
  await click(button(done,'Print receipt'));assert.equal(__prints.length,printsBefore+2);assert.equal(__lastTableBill.paid,true);assert.deepEqual(__lastTableBill.paidMethods,['qr']);
  await click(button(done,'Done'));assert.equal(tbl.querySelector('[aria-label="Table 1 settled"]'),null);
  pass('Settling pays the whole table, frees it, and prints the paid receipt only when tapped');

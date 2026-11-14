@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAppText, appT } from '@/lib/appText';
 
 export const MAX_TAGS = 10;
 export const MAX_TAG_LENGTH = 30;
@@ -23,6 +24,7 @@ export function addTags(list, texts) {
 // still typed when the box loses focus is added too; draftRef holds it meanwhile, so a Save
 // tapped while typing (some phones keep the box focused) adds it as well.
 export default function TagInput({ id, value, onChange, draftRef = null }) {
+  useAppText();
   const tags = Array.isArray(value) ? value.filter((t) => typeof t === 'string' && t) : [];
   const [text, setTextState] = useState('');
   const full = tags.length >= MAX_TAGS;
@@ -65,7 +67,7 @@ export default function TagInput({ id, value, onChange, draftRef = null }) {
             <button
               type="button"
               onClick={() => onChange(tags.filter((t) => t !== tag))}
-              aria-label={`Remove tag ${tag}`}
+              aria-label={appT('Remove tag {tag}', { tag })}
               className="w-7 h-7 inline-flex items-center justify-center rounded-full text-slate-500 hover:text-slate-800"
             >
               <X className="w-3.5 h-3.5" aria-hidden="true" />
@@ -79,7 +81,7 @@ export default function TagInput({ id, value, onChange, draftRef = null }) {
             onChange={onType}
             onKeyDown={onKeyDown}
             onBlur={() => { if (cleanTag(text)) commit([text]); }}
-            placeholder={tags.length ? 'Add another' : 'Add a tag, e.g. halal'}
+            placeholder={tags.length ? appT('Add another') : appT('Add a tag, e.g. halal')}
             enterKeyHint="enter"
             autoComplete="off"
             maxLength={300}
@@ -95,12 +97,12 @@ export default function TagInput({ id, value, onChange, draftRef = null }) {
             className="h-7 px-3 rounded-full text-white text-[13px] font-semibold"
             style={{ background: 'rgb(var(--color-primary, 59 130 246))' }}
           >
-            Add
+            {appT('Add')}
           </button>
         )}
       </div>
       <p className={cn('text-[11px] mt-1', full ? 'text-amber-700' : 'text-slate-500')}>
-        {full ? `That’s ${MAX_TAGS} tags, the most a listing can have.` : `Separate tags with a comma, or tap Add. Up to ${MAX_TAGS}.`}
+        {full ? appT('That’s {MAX_TAGS} tags, the most a listing can have.', { MAX_TAGS }) : appT('Separate tags with a comma, or tap Add. Up to {MAX_TAGS}.', { MAX_TAGS })}
       </p>
     </div>
   );

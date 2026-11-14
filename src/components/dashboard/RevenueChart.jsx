@@ -7,6 +7,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, subDays, startOfDay } from 'date-fns';
+import { useAppText } from '@/lib/appText';
+import { formatAppDate } from '@/lib/appDates';
 
 // Sales per day: paid, not cancelled, not deleted (the Reports rule), read in pages of
 // 1,000 by lib/salesOrders.js. This used to be db.entities.Order.filter(), which returns
@@ -14,6 +16,7 @@ import { format, subDays, startOfDay } from 'date-fns';
 // was built from old ones and recent days showed $0.
 
 export default function RevenueChart({ tenantId, currency }) {
+  const { t } = useAppText();
   const [period, setPeriod] = useState('7days');
 
   // One fetch covers both views: the last 30 days, from local midnight.
@@ -37,7 +40,7 @@ export default function RevenueChart({ tenantId, currency }) {
     const revenue = dayOrders.reduce((sum, o) => sum + orderTotal(o), 0);
 
     return {
-      date: format(date, 'MMM dd'),
+      date: formatAppDate(date, 'MMM dd'),
       revenue: parseFloat(revenue.toFixed(2)),
     };
   });
@@ -48,7 +51,7 @@ export default function RevenueChart({ tenantId, currency }) {
     <Card className="p-6 border-0 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900">Revenue</h3>
+          <h3 className="text-lg font-semibold text-slate-900">{t('Revenue')}</h3>
           <p className="text-2xl font-bold text-[rgb(var(--color-primary))] mt-1">
             {formatMoney(totalRevenue, currency)}
           </p>
@@ -60,7 +63,7 @@ export default function RevenueChart({ tenantId, currency }) {
             onClick={() => setPeriod('7days')}
             className={period === '7days' ? 'bg-[rgb(var(--color-primary))]' : ''}
           >
-            7 Days
+            {t('7 Days')}
           </Button>
           <Button
             size="sm"
@@ -68,7 +71,7 @@ export default function RevenueChart({ tenantId, currency }) {
             onClick={() => setPeriod('30days')}
             className={period === '30days' ? 'bg-[rgb(var(--color-primary))]' : ''}
           >
-            30 Days
+            {t('30 Days')}
           </Button>
         </div>
       </div>
@@ -79,7 +82,7 @@ export default function RevenueChart({ tenantId, currency }) {
           <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 12 }} />
           <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} />
           <Tooltip
-            formatter={(value) => [formatMoney(value, currency), 'Revenue']}
+            formatter={(value) => [formatMoney(value, currency), t('Revenue')]}
             contentStyle={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '8px' }}
           />
           <Line

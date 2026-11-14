@@ -18,8 +18,10 @@ import { Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { explainError } from '@/lib/plainError';
 import ErrorNote from '@/components/ui-custom/ErrorNote';
+import { useAppText, appT } from '@/lib/appText';
 
 export default function TableFormDialog({ open, onOpenChange, table, tenantId, tenant, allTables = [], canDelete = false, onDelete }) {
+  useAppText();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   // Why the last save didn't go through; stays above the buttons until the next try.
@@ -72,7 +74,7 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
 
   const handleSubmit = async () => {
     if (!tenantId || !tenant?.slug) {
-      toast.error('Store not loaded. Please refresh and try again.');
+      toast.error(appT('Store not loaded. Please refresh and try again.'));
       return;
     }
 
@@ -128,11 +130,11 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
       }
 
       queryClient.invalidateQueries({ queryKey: ['tables', tenantId] });
-      toast.success(table ? 'Table updated' : 'Table created');
+      toast.success(table ? appT('Table updated') : appT('Table created'));
       onOpenChange(false);
     } catch (error) {
       console.error('Table save error:', error);
-      setSaveNote(explainError(error, { title: table ? 'Couldn’t save the table' : 'Couldn’t create the table' }));
+      setSaveNote(explainError(error, { title: table ? appT('Couldn’t save the table') : appT('Couldn’t create the table'), t: appT }));
     } finally {
       setIsLoading(false);
     }
@@ -142,23 +144,23 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{table ? 'Edit Table' : 'Add Table'}</DialogTitle>
+          <DialogTitle>{table ? appT('Edit Table') : appT('Add Table')}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div>
-            <Label>Table Number/Label *</Label>
+            <Label>{appT('Table Number/Label *')}</Label>
             <Input
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g. T1, Patio 1, Window Seat A"
+              placeholder={appT('e.g. T1, Patio 1, Window Seat A')}
               className="mt-1.5"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Capacity (Seats)</Label>
+              <Label>{appT('Capacity (Seats)')}</Label>
               <Input
                 type="number"
                 min="1"
@@ -169,7 +171,7 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
             </div>
 
             <div>
-              <Label>Section/Zone</Label>
+              <Label>{appT('Section/Zone')}</Label>
               <Select
                 value={formData.zone === '__new__' ? '__new__' : (formData.zone || '')}
                 onValueChange={(v) => {
@@ -178,19 +180,19 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
                 }}
               >
                 <SelectTrigger className="mt-1.5">
-                  <SelectValue placeholder="Select or create zone" />
+                  <SelectValue placeholder={appT('Select or create zone')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={null}>No zone</SelectItem>
+                  <SelectItem value={null}>{appT('No zone')}</SelectItem>
                   {existingZones.map(zone => (
                     <SelectItem key={zone} value={zone}>{zone}</SelectItem>
                   ))}
-                  <SelectItem value="__new__">＋ Create new zone</SelectItem>
+                  <SelectItem value="__new__">{appT('＋ Create new zone')}</SelectItem>
                 </SelectContent>
               </Select>
               {formData.zone === '__new__' && (
                 <Input
-                  placeholder="Enter zone name e.g. Outdoor, VIP, Bar"
+                  placeholder={appT('Enter zone name e.g. Outdoor, VIP, Bar')}
                   className="mt-2"
                   value={newZoneName}
                   onChange={e => setNewZoneName(e.target.value)}
@@ -200,26 +202,26 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
           </div>
 
           <div>
-            <Label>Status</Label>
+            <Label>{appT('Status')}</Label>
             <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
               <SelectTrigger className="mt-1.5">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="available">Available</SelectItem>
-                <SelectItem value="occupied">Occupied</SelectItem>
-                <SelectItem value="reserved">Reserved</SelectItem>
-                <SelectItem value="maintenance">Maintenance</SelectItem>
+                <SelectItem value="available">{appT('Available')}</SelectItem>
+                <SelectItem value="occupied">{appT('Occupied')}</SelectItem>
+                <SelectItem value="reserved">{appT('Reserved')}</SelectItem>
+                <SelectItem value="maintenance">{appT('Maintenance')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <Label>Notes (Optional)</Label>
+            <Label>{appT('Notes (Optional)')}</Label>
             <Textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Additional information..."
+              placeholder={appT('Additional information...')}
               className="mt-1.5 h-20"
             />
           </div>
@@ -240,7 +242,7 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
           )}
           <div className="flex flex-1 gap-3">
             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
-              Cancel
+              {appT('Cancel')}
             </Button>
             <Button
               onClick={handleSubmit}
@@ -251,10 +253,10 @@ export default function TableFormDialog({ open, onOpenChange, table, tenantId, t
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
+                  {appT('Saving...')}
                 </>
               ) : (
-                table ? 'Update Table' : 'Create Table'
+                table ? appT('Update Table') : appT('Create Table')
               )}
             </Button>
           </div>

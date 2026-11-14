@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Check, X, Circle, CheckSquare } from 'lucide-react';
 import { formatMoney } from '@/lib/money';
+import { useAppText, N_ } from '@/lib/appText';
 
 // FIX: this used to auto-detect single-vs-multi-select from keywords in the
 // group's name ("size" \u2192 single, "add-on"/"extra" \u2192 multi, anything else \u2192
@@ -12,14 +13,14 @@ import { formatMoney } from '@/lib/money';
 // per group, completely decoupled from whatever the merchant names it.
 const SELECTION_MODES = {
   single: {
-    label: 'Single choice',
-    description: 'Customer picks exactly one (e.g. Small, Medium, or Large)',
+    label: N_('Single choice'),
+    description: N_('Customer picks exactly one (e.g. Small, Medium, or Large)'),
     icon: Circle,
     bg: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8', dot: '#3b82f6',
   },
   multi: {
-    label: 'Multiple choice',
-    description: 'Customer can pick as many as they like (e.g. Extra Egg + Extra Cheese)',
+    label: N_('Multiple choice'),
+    description: N_('Customer can pick as many as they like (e.g. Extra Egg + Extra Cheese)'),
     icon: CheckSquare,
     bg: '#fff7ed', border: '#fed7aa', text: '#c2410c', dot: '#f97316',
   },
@@ -32,6 +33,7 @@ const typeToMode = (type) => (type === 'addon' ? 'multi' : 'single');
 const modeToType = (mode) => (mode === 'multi' ? 'addon' : 'other');
 
 function OptionChip({ option, onEdit, onRemove, currency }) {
+  const { t } = useAppText();
   return (
     <div
       style={{
@@ -53,7 +55,7 @@ function OptionChip({ option, onEdit, onRemove, currency }) {
       onClick={onEdit}
     >
       <span style={{ maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {option.label || 'Untitled'}
+        {option.label || t('Untitled')}
       </span>
       {option.price_modifier !== 0 && (
         <span style={{ fontSize: 11, color: '#64748b', fontWeight: 400, flexShrink: 0 }}>
@@ -68,7 +70,7 @@ function OptionChip({ option, onEdit, onRemove, currency }) {
           border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
           justifyContent: 'center', flexShrink: 0, padding: 0,
         }}
-        aria-label="Remove option"
+        aria-label={t('Remove option')}
       >
         <X style={{ width: 10, height: 10, color: '#94a3b8' }} />
       </button>
@@ -77,6 +79,7 @@ function OptionChip({ option, onEdit, onRemove, currency }) {
 }
 
 function OptionEditor({ option, onSave, onCancel, currency, placeholder }) {
+  const { t } = useAppText();
   const [label, setLabel] = useState(option.label || '');
   const [price, setPrice] = useState(option.price_modifier !== undefined ? String(option.price_modifier) : '0');
 
@@ -91,7 +94,7 @@ function OptionEditor({ option, onSave, onCancel, currency, placeholder }) {
         autoFocus
         value={label}
         onChange={e => setLabel(e.target.value)}
-        placeholder={placeholder || 'Option name'}
+        placeholder={placeholder || t('Option name')}
         style={{
           flex: 1, fontSize: 13, padding: '7px 10px',
           border: '1px solid #e2e8f0', borderRadius: 8,
@@ -123,7 +126,7 @@ function OptionEditor({ option, onSave, onCancel, currency, placeholder }) {
           border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
           justifyContent: 'center', flexShrink: 0,
         }}
-        aria-label="Save option"
+        aria-label={t('Save option')}
       >
         <Check style={{ width: 14, height: 14, color: 'white' }} />
       </button>
@@ -135,7 +138,7 @@ function OptionEditor({ option, onSave, onCancel, currency, placeholder }) {
           border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex',
           alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}
-        aria-label="Cancel"
+        aria-label={t('Cancel')}
       >
         <X style={{ width: 14, height: 14, color: '#94a3b8' }} />
       </button>
@@ -146,6 +149,7 @@ function OptionEditor({ option, onSave, onCancel, currency, placeholder }) {
 // Explicit single/multi toggle \u2014 the one thing that replaces all the old
 // name-based guessing. Two clearly-labeled buttons, only one active at a time.
 function SelectionModeToggle({ mode, onChange }) {
+  const { t } = useAppText();
   return (
     <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
       {Object.entries(SELECTION_MODES).map(([key, cfg]) => {
@@ -165,7 +169,7 @@ function SelectionModeToggle({ mode, onChange }) {
             }}
           >
             <Icon style={{ width: 14, height: 14, color: active ? cfg.dot : '#94a3b8', flexShrink: 0 }} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: active ? cfg.text : '#64748b' }}>{cfg.label}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: active ? cfg.text : '#64748b' }}>{t(cfg.label)}</span>
           </button>
         );
       })}
@@ -174,6 +178,7 @@ function SelectionModeToggle({ mode, onChange }) {
 }
 
 export default function ProductFormVariants({ formData, onChange }) {
+  const { t } = useAppText();
   const variants = formData.variants || [];
   const currency = formData.currency || 'SGD';
   const [editingOption, setEditingOption] = useState(null);
@@ -256,7 +261,7 @@ export default function ProductFormVariants({ formData, onChange }) {
               <input
                 value={group.name}
                 onChange={e => updateGroupName(gi, e.target.value)}
-                placeholder="Group name  (e.g. Size, Temperature, Add-ons…)"
+                placeholder={t('Group name (e.g. Size, Temperature, Add-ons…)')}
                 style={{
                   flex: 1, fontSize: 13, fontWeight: 600,
                   color: colors.text,
@@ -274,7 +279,7 @@ export default function ProductFormVariants({ formData, onChange }) {
                   cursor: 'pointer', display: 'flex', alignItems: 'center',
                   justifyContent: 'center', flexShrink: 0,
                 }}
-                aria-label="Remove group"
+                aria-label={t('Remove group')}
               >
                 <Trash2 style={{ width: 13, height: 13, color: '#ef4444' }} />
               </button>
@@ -284,7 +289,7 @@ export default function ProductFormVariants({ formData, onChange }) {
             <div style={{ padding: '10px 12px 12px' }}>
               <SelectionModeToggle mode={mode} onChange={(m) => updateGroupMode(gi, m)} />
               <p style={{ fontSize: 11, color: '#94a3b8', margin: '-4px 0 10px', lineHeight: 1.4 }}>
-                {colors.description}
+                {t(colors.description)}
               </p>
 
               {(group.options || []).length > 0 && (
@@ -296,7 +301,7 @@ export default function ProductFormVariants({ formData, onChange }) {
                           <OptionEditor
                             option={option}
                             currency={currency}
-                            placeholder={group.name ? `${group.name} name` : 'Option name'}
+                            placeholder={group.name ? t('{name} name', { name: group.name }) : t('Option name')}
                             onSave={(data) => saveOption(gi, oi, data)}
                             onCancel={() => setEditingOption(null)}
                           />
@@ -320,7 +325,7 @@ export default function ProductFormVariants({ formData, onChange }) {
                 <OptionEditor
                   option={{ label: '', price_modifier: 0 }}
                   currency={currency}
-                  placeholder={group.name ? `${group.name} name` : 'Option name'}
+                  placeholder={group.name ? t('{name} name', { name: group.name }) : t('Option name')}
                   onSave={(data) => saveOption(gi, 'new', data)}
                   onCancel={() => setEditingOption(null)}
                 />
@@ -339,7 +344,7 @@ export default function ProductFormVariants({ formData, onChange }) {
                   }}
                 >
                   <Plus style={{ width: 12, height: 12 }} />
-                  Add option
+                  {t('Add option')}
                 </button>
               )}
             </div>
@@ -361,7 +366,7 @@ export default function ProductFormVariants({ formData, onChange }) {
         }}
       >
         <Plus style={{ width: 15, height: 15 }} />
-        Add variant group
+        {t('Add variant group')}
       </button>
     </div>
   );

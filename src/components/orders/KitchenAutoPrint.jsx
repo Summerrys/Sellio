@@ -5,6 +5,7 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { autoPrintKitchenOrder } from '@/lib/orderPrinting';
 import { loadPrinterConfig } from '@/lib/printerUtils';
 import { useAppReloadGuard } from '@/lib/AppRefreshContext';
+import { appT } from '@/lib/appText';
 
 // Lives with the merchant workspace, rather than the Orders/Kitchen page.
 // The toggle belongs to this device's saved printer connection.
@@ -26,7 +27,7 @@ export default function KitchenAutoPrint() {
       catch (error) {
         if (!errors.has(order.id)) {
           errors.add(order.id);
-          toast.error(`Kitchen print needs attention: ${order.order_number || order.id}. Check the printer before manually reprinting. ${error.message}`, { duration: 10000 });
+          toast.error(`${appT('Kitchen print needs attention: {order}. Check the printer before manually reprinting.', { order: order.order_number || order.id })} ${error.message}`, { duration: 10000 });
         }
       } finally { jobs.current -= 1; }
     };

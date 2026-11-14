@@ -22,6 +22,7 @@ import { INDUSTRY_OPTIONS, normalizeIndustry } from '@/lib/industry';
 import { cn } from '@/lib/utils';
 import AddressMap from '@/components/ui-custom/AddressMap';
 import { COUNTRIES, countryNamed, countryForCurrency, taxNameFor } from '@/lib/countries';
+import { useAppText, N_ } from '@/lib/appText';
 
 // FIX: previously had its own local INDUSTRIES + normaliseIndustry copy, separate
 // from onboarding's — the two lists could (and did) drift. Both now import from
@@ -31,16 +32,22 @@ const INDUSTRIES = INDUSTRY_OPTIONS;
 // Sellio's countries (lib/countries.js): each one's currency, phone example, time zones and tax
 // presets. Country and currency go together, and both lock after the shop's first order
 // (changing the currency then would make its old prices and reports wrong).
-const CURRENCY_NAMES = { SGD: 'Singapore Dollar', MYR: 'Malaysian Ringgit', IDR: 'Indonesian Rupiah' };
-const CURRENCIES = COUNTRIES.map((c) => ({ value: c.currency, label: `${c.currency} — ${CURRENCY_NAMES[c.currency]}` }));
+// The time zones' names in lib/countries.js (which can't mark them itself: it comes before
+// lib/appText.js), shown through t().
+N_('Singapore time (UTC+8)'); N_('Malaysia time (UTC+8)');
+N_('WIB, Western Indonesia (UTC+7)'); N_('WITA, Central Indonesia (UTC+8)'); N_('WIT, Eastern Indonesia (UTC+9)');
+// How each country is shown; the value kept is the English name.
+const COUNTRY_SHOWN = { Singapore: N_('Singapore'), Malaysia: N_('Malaysia'), Indonesia: N_('Indonesia') };
+const CURRENCY_NAMES = { SGD: N_('Singapore Dollar'), MYR: N_('Malaysian Ringgit'), IDR: N_('Indonesian Rupiah') };
+const CURRENCIES = COUNTRIES.map((c) => ({ value: c.currency, name: CURRENCY_NAMES[c.currency] || c.currency }));
 const DEFAULT_BUSINESS_HOURS = [
-    { day: 'monday',    label: 'Mon', enabled: true,  open: '09:00', close: '22:00' },
-    { day: 'tuesday',   label: 'Tue', enabled: true,  open: '09:00', close: '22:00' },
-    { day: 'wednesday', label: 'Wed', enabled: true,  open: '09:00', close: '22:00' },
-    { day: 'thursday',  label: 'Thu', enabled: true,  open: '09:00', close: '22:00' },
-    { day: 'friday',    label: 'Fri', enabled: true,  open: '09:00', close: '22:00' },
-    { day: 'saturday',  label: 'Sat', enabled: false, open: '09:00', close: '22:00' },
-    { day: 'sunday',    label: 'Sun', enabled: false, open: '09:00', close: '22:00' },
+    { day: 'monday',    label: N_('Mon'), enabled: true,  open: '09:00', close: '22:00' },
+    { day: 'tuesday',   label: N_('Tue'), enabled: true,  open: '09:00', close: '22:00' },
+    { day: 'wednesday', label: N_('Wed'), enabled: true,  open: '09:00', close: '22:00' },
+    { day: 'thursday',  label: N_('Thu'), enabled: true,  open: '09:00', close: '22:00' },
+    { day: 'friday',    label: N_('Fri'), enabled: true,  open: '09:00', close: '22:00' },
+    { day: 'saturday',  label: N_('Sat'), enabled: false, open: '09:00', close: '22:00' },
+    { day: 'sunday',    label: N_('Sun'), enabled: false, open: '09:00', close: '22:00' },
   ];
 
 function Section({ icon: Icon, title, children }) {
@@ -76,6 +83,7 @@ function GatedFields({ canEdit, onBlocked, children, className }) {
 }
 
 export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 0 }) {
+  const { t } = useAppText();
   const { hasPermission, canUseFeature } = useTenant();
   const canEditSettings = hasPermission('settings.edit');
   // Receipts, printers and kitchen auto-print aren't on a free personal shop's plan.
@@ -227,9 +235,9 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
       await saveLogoUrl(publicUrl);
-      toast.success('Logo saved');
+      toast.success(t('Logo saved'));
     } catch (err) {
-      showError(err, 'Couldn’t save the logo');
+      showError(err, t('Couldn’t save the logo'), { t });
     } finally {
       setIsUploadingLogo(false);
     }
@@ -244,7 +252,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
       await checkPhoto(file);
     } catch (err) {
       if (err?.friendly) {
-        showError(err, 'Couldn’t use that photo');
+        showError(err, t('Couldn’t use that photo'), { t });
         return;
       }
     }
@@ -257,11 +265,11 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
     setIsUploadingLogo(true);
     try {
       await saveLogoUrl('');
-      toast.success('Logo removed', before ? {
-        action: { label: 'Undo', onClick: () => { saveLogoUrl(before).catch((err) => showError(err, 'Couldn’t put the logo back')); } },
+      toast.success(t('Logo removed'), before ? {
+        action: { label: t('Undo'), onClick: () => { saveLogoUrl(before).catch((err) => showError(err, t('Couldn’t put the logo back'), { t })); } },
       } : undefined);
     } catch (err) {
-      showError(err, 'Couldn’t remove the logo');
+      showError(err, t('Couldn’t remove the logo'), { t });
     } finally {
       setIsUploadingLogo(false);
     }
@@ -273,7 +281,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
       const res = await fetch(imageData);
       await saveLogoImage(await res.blob());
     } catch (err) {
-      showError(err, 'Couldn’t save the logo');
+      showError(err, t('Couldn’t save the logo'), { t });
     }
   };
 
@@ -309,9 +317,9 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
       if (error) throw error;
       markFormSaved({ ...form });
       queryClient.invalidateQueries({ queryKey: ['currentTenant'] });
-      toast.success('Business settings saved');
+      toast.success(t('Business settings saved'));
     } catch (err) {
-      setSaveNote(explainError(err, { title: 'Couldn’t save your business settings' }));
+      setSaveNote(explainError(err, { title: t('Couldn’t save your business settings'), t }));
     } finally {
       setIsSaving(false);
     }
@@ -335,9 +343,9 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
       if (error) throw error;
       markHoursSaved(businessHours);
       queryClient.invalidateQueries({ queryKey: ['businessHours', tenantId] });
-      toast.success('Business hours saved');
+      toast.success(t('Business hours saved'));
     } catch (err) {
-      setHoursNote(explainError(err, { title: 'Couldn’t save your opening hours' }));
+      setHoursNote(explainError(err, { title: t('Couldn’t save your opening hours'), t }));
     } finally {
       setIsSavingHours(false);
     }
@@ -349,13 +357,13 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
 
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
 
-  const showNoAccessMessage = () => toast.error("You don't have access to edit these settings.");
+  const showNoAccessMessage = () => toast.error(t('You don\'t have access to edit these settings.'));
 
   return (
     <div className="max-w-2xl space-y-6">
       {/* Business Identity */}
       <Card className="border border-slate-100 shadow-sm p-6 space-y-6">
-        <Section icon={Building2} title="Business Identity">
+        <Section icon={Building2} title={t('Business Identity')}>
         <GatedFields canEdit={canEditSettings} onBlocked={showNoAccessMessage} className="space-y-6">
           <div className="flex flex-col items-center gap-2">
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoSelect} />
@@ -373,14 +381,14 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
                     <>
                       <img
                         src={logoPreview}
-                        alt="Logo"
+                        alt={t('Logo')}
                         onLoad={() => setShownLogo(logoPreview)}
                         onError={() => setBrokenLogo(logoPreview)}
                         style={{ maxWidth: 200, maxHeight: 120, objectFit: 'contain', display: 'block', opacity: shownLogo === logoPreview ? 1 : 0 }}
                       />
                       {shownLogo !== logoPreview && (
                         brokenLogo === logoPreview
-                          ? <span className="absolute inset-0 flex items-center justify-center px-4 text-center text-xs text-slate-500">Couldn’t show the logo. Tap to choose it again.</span>
+                          ? <span className="absolute inset-0 flex items-center justify-center px-4 text-center text-xs text-slate-500">{t('Couldn’t show the logo. Tap to choose it again.')}</span>
                           : <Loader2 data-testid="logo-loading" className="absolute w-6 h-6 text-slate-400 animate-spin" />
                       )}
                     </>
@@ -394,7 +402,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
                   </button>
                 </div>
                 <button onClick={handleRemoveLogo} className="text-xs text-red-500 hover:text-red-700 flex items-center gap-0.5">
-                  <X className="w-3 h-3" /> Remove logo
+                  <X className="w-3 h-3" />{' '}{t('Remove logo')}
                 </button>
               </>
             ) : (
@@ -404,34 +412,34 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Camera className="w-7 h-7 text-slate-400 mb-1.5" />
-                <span className="text-xs font-medium text-slate-500">Upload Logo</span>
-                <span className="text-[10px] text-slate-400 mt-0.5">JPG, PNG up to 10MB</span>
+                <span className="text-xs font-medium text-slate-500">{t('Upload Logo')}</span>
+                <span className="text-[10px] text-slate-400 mt-0.5">{t('JPG, PNG up to 10MB')}</span>
               </div>
             )}
           </div>
 
           <div className="flex flex-col min-[480px]:flex-row gap-3">
             <div className="flex-1">
-              <Label className="text-xs text-slate-600 mb-1 block">Business Name</Label>
-              <Input className="h-10" value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. My Café Pte Ltd" />
+              <Label className="text-xs text-slate-600 mb-1 block">{t('Business Name')}</Label>
+              <Input className="h-10" value={form.name} onChange={e => set('name', e.target.value)} placeholder={t('e.g. My Café')} />
             </div>
             <div className="flex-1">
-              <Label className="text-xs text-slate-600 mb-1 block">Branch Name</Label>
-              <Input className="h-10" value={form.branch_name} onChange={e => set('branch_name', e.target.value)} placeholder="e.g. City Centre" />
+              <Label className="text-xs text-slate-600 mb-1 block">{t('Branch Name')}</Label>
+              <Input className="h-10" value={form.branch_name} onChange={e => set('branch_name', e.target.value)} placeholder={t('e.g. City Centre')} />
             </div>
           </div>
 
           {/* A home seller can sell anything, so their shop has no industry. */}
           {tenant?.seller_type !== 'individual' && (
           <div>
-            <Label className="text-xs text-slate-600 mb-1 block">Industry Type</Label>
+            <Label className="text-xs text-slate-600 mb-1 block">{t('Industry Type')}</Label>
             <Select value={form.industry} onValueChange={v => set('industry', v)}>
-              <SelectTrigger className="h-10"><SelectValue placeholder="Select industry" /></SelectTrigger>
+              <SelectTrigger className="h-10"><SelectValue placeholder={t('Select industry')} /></SelectTrigger>
               <SelectContent>
                 {INDUSTRIES.map(i => (
                   <SelectItem key={i.value} value={i.value} disabled={i.disabled}>
                     <div className="flex items-center gap-2">
-                      <span className={i.disabled ? 'opacity-60' : ''}>{i.label}</span>
+                      <span className={i.disabled ? 'opacity-60' : ''}>{t(i.label)}</span>
                       {i.disabled && (
                         <span
                           className="ml-1 text-[10px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1"
@@ -441,7 +449,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
                             border: '1px solid rgba(139,92,246,0.25)',
                           }}
                         >
-                          ✨ Coming Soon
+                          {t('✨ Coming Soon')}
                         </span>
                       )}
                     </div>
@@ -462,7 +470,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
             <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-primary-gradient, #6366f1)' }}>
               <MapPin className="w-3.5 h-3.5 text-white" />
             </div>
-            <h3 className="text-sm font-semibold text-slate-800">Location & Contact</h3>
+            <h3 className="text-sm font-semibold text-slate-800">{t('Location & Contact')}</h3>
           </div>
           {locationOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </button>
@@ -471,48 +479,48 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
           <GatedFields canEdit={canEditSettings} onBlocked={showNoAccessMessage} className="space-y-4">
             <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label className="text-xs text-slate-600 mb-1 block">Country</Label>
+                <Label className="text-xs text-slate-600 mb-1 block">{t('Country')}</Label>
                 <Select value={form.country} onValueChange={handleCountryChange} disabled={hasOrders}>
-                  <SelectTrigger className="h-10" data-testid="business-country"><SelectValue placeholder="Select country" /></SelectTrigger>
+                  <SelectTrigger className="h-10" data-testid="business-country"><SelectValue placeholder={t('Select country')} /></SelectTrigger>
                   <SelectContent>
-                    {COUNTRIES.map(c => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
+                    {COUNTRIES.map(c => <SelectItem key={c.name} value={c.name}>{t(COUNTRY_SHOWN[c.name] ?? c.name)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-xs text-slate-600 mb-1 block">Currency</Label>
+                <Label className="text-xs text-slate-600 mb-1 block">{t('Currency')}</Label>
                 <Select value={form.currency} onValueChange={handleCurrencyChange} disabled={hasOrders}>
                   <SelectTrigger className="h-10" data-testid="business-currency"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {CURRENCIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                    {CURRENCIES.map(c => <SelectItem key={c.value} value={c.value}>{t('{currency} — {value}', { currency: c.value, value: t(c.name) })}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             {hasOrders && (
               <p className="text-xs text-slate-500 -mt-2" data-testid="country-locked">
-                Country and currency can't change once your shop has orders: its prices and reports are in {form.currency}.
+                {t('Country and currency can\'t change once your shop has orders: its prices and reports are in {currency}.', { currency: form.currency })}
               </p>
             )}
             {(currentCountry?.zones.length || 0) > 1 && (
               <div>
-                <Label className="text-xs text-slate-600 mb-1 block">Time zone</Label>
+                <Label className="text-xs text-slate-600 mb-1 block">{t('Time zone')}</Label>
                 <Select value={form.timezone} onValueChange={v => set('timezone', v)}>
                   <SelectTrigger className="h-10" data-testid="business-timezone"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {currentCountry.zones.map(z => <SelectItem key={z.zone} value={z.zone}>{z.label}</SelectItem>)}
+                    {currentCountry.zones.map(z => <SelectItem key={z.zone} value={z.zone}>{t(z.label)}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-slate-400 mt-1">Your shop's day, reports and limits follow this time.</p>
+                <p className="text-xs text-slate-400 mt-1">{t('Your shop\'s day, reports and limits follow this time.')}</p>
               </div>
             )}
             <div>
-              <Label className="text-xs text-slate-600 mb-1 block">Phone</Label>
+              <Label className="text-xs text-slate-600 mb-1 block">{t('Phone')}</Label>
               <Input className="h-10" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder={currentCountry?.phone.example || '+X XXXX XXXX'} />
             </div>
             <div>
-              <Label className="text-xs text-slate-600 mb-1 block">Address</Label>
-              <Input className="h-10" value={form.address} onChange={e => set('address', e.target.value)} placeholder="123 Street, City" />
+              <Label className="text-xs text-slate-600 mb-1 block">{t('Address')}</Label>
+              <Input className="h-10" value={form.address} onChange={e => set('address', e.target.value)} placeholder={t('123 Street, City')} />
             </div>
           </GatedFields>
           {/* The address on a map, the same place the store page's 📍 opens. Outside the
@@ -520,8 +528,8 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
           <AddressMap
             address={form.address}
             country={form.country}
-            title="Map of your store address"
-            hint="Shown on your store page. Check the pin; wrong spot? Add the postal code."
+            title={t('Map of your store address')}
+            hint={t('Shown on your store page. Check the pin; wrong spot? Add the postal code.')}
             testId="business-address-map"
           />
           </div>
@@ -535,7 +543,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
             <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-primary-gradient, #6366f1)' }}>
               <Clock className="w-3.5 h-3.5 text-white" />
             </div>
-            <h3 className="text-sm font-semibold text-slate-800">Business Hours</h3>
+            <h3 className="text-sm font-semibold text-slate-800">{t('Business Hours')}</h3>
           </div>
           {businessHoursOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </button>
@@ -546,7 +554,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
               {businessHours.map(row => (
                 <div key={row.day} className="flex items-center gap-3">
                   <Switch checked={row.enabled} onCheckedChange={v => updateHour(row.day, 'enabled', v)} />
-                  <span className="text-sm font-medium text-slate-700 w-8 flex-shrink-0">{row.label}</span>
+                  <span className="text-sm font-medium text-slate-700 w-8 flex-shrink-0">{t(row.label)}</span>
                   {row.enabled ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
                       <input
@@ -555,7 +563,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
                         onChange={e => updateHour(row.day, 'open', e.target.value)}
                         style={{ width: 0, flex: 1, height: 36, padding: '0 8px', fontSize: 13, border: '1px solid #e2e8f0', borderRadius: 8, outline: 'none', background: 'white', minWidth: 0 }}
                       />
-                      <span style={{ fontSize: 11, color: '#94a3b8', flexShrink: 0 }}>to</span>
+                      <span style={{ fontSize: 11, color: '#94a3b8', flexShrink: 0 }}>{t('to')}</span>
                       <input
                         type="time"
                         value={row.close}
@@ -564,7 +572,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
                       />
                     </div>
                   ) : (
-                    <span className="text-xs text-slate-400 flex-1">Closed</span>
+                    <span className="text-xs text-slate-400 flex-1">{t('Closed')}</span>
                   )}
                 </div>
               ))}
@@ -576,7 +584,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
               className="mt-4 h-9 gap-2 w-full"
               style={{ background: 'var(--color-primary-gradient)', color: '#fff' }}
             >
-              {isSavingHours ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...</> : <><Save className="w-3.5 h-3.5" /> Save Hours</>}
+              {isSavingHours ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />{' '}{t('Saving...')}</> : <><Save className="w-3.5 h-3.5" />{' '}{t('Save Hours')}</>}
             </Button>
           </GatedFields>
           </div>
@@ -590,7 +598,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
             <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-primary-gradient, #6366f1)' }}>
               <Percent className="w-3.5 h-3.5 text-white" />
             </div>
-            <h3 className="text-sm font-semibold text-slate-800">Tax Settings</h3>
+            <h3 className="text-sm font-semibold text-slate-800">{t('Tax Settings')}</h3>
           </div>
           {taxOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </button>
@@ -598,8 +606,8 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
           <div className="px-6 pb-6 space-y-4 border-t border-slate-100">
           <GatedFields canEdit={canEditSettings} onBlocked={showNoAccessMessage} className="space-y-4">
             <div className="pt-4">
-              <Label className="text-xs text-slate-600 mb-1 block">Tax Rate (%)</Label>
-              <Input className="h-10" type="number" min="0" max="100" step="0.1" value={form.tax_rate} onChange={e => set('tax_rate', e.target.value)} placeholder={`e.g. ${currentCountry?.tax.rate || 0}`} />
+              <Label className="text-xs text-slate-600 mb-1 block">{t('Tax Rate (%)')}</Label>
+              <Input className="h-10" type="number" min="0" max="100" step="0.1" value={form.tax_rate} onChange={e => set('tax_rate', e.target.value)} placeholder={t('e.g. {rate}', { rate: currentCountry?.tax.rate || 0 })} />
               {(currentCountry?.taxPresets.length || 0) > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2" data-testid="tax-presets">
                   {currentCountry.taxPresets.map(p => (
@@ -616,13 +624,13 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
                 </div>
               )}
               {form.country === 'Indonesia' && (
-                <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">PBJT is the regional tax on food and drink (up to 10%, set by your region). PPN is VAT, for VAT-registered sellers.</p>
+                <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">{t('PBJT is the regional tax on food and drink (up to 10%, set by your region). PPN is VAT, for VAT-registered sellers.')}</p>
               )}
             </div>
             <div className="flex items-start justify-between gap-4 py-1">
               <div className="flex-1">
-                <p className="text-sm font-medium text-slate-700">Prices include tax</p>
-                <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">When enabled, product prices shown to customers already include tax. When disabled, tax will be added on top at checkout.</p>
+                <p className="text-sm font-medium text-slate-700">{t('Prices include tax')}</p>
+                <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{t('When enabled, product prices shown to customers already include tax. When disabled, tax will be added on top at checkout.')}</p>
               </div>
               <Switch checked={form.tax_inclusive} onCheckedChange={v => set('tax_inclusive', v)} />
             </div>
@@ -643,7 +651,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
             <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-primary-gradient, #6366f1)' }}>
               <Receipt className="w-3.5 h-3.5 text-white" />
             </div>
-            <h3 className="text-sm font-semibold text-slate-800">Receipt Settings</h3>
+            <h3 className="text-sm font-semibold text-slate-800">{t('Receipt Settings')}</h3>
           </div>
           {receiptOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </button>
@@ -652,11 +660,11 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
           <GatedFields canEdit={canEditSettings} onBlocked={showNoAccessMessage} className="space-y-4">
             {/* Paper Size */}
             <div className="pt-4">
-              <Label className="text-xs text-slate-600 mb-2 block">Paper Size</Label>
+              <Label className="text-xs text-slate-600 mb-2 block">{t('Paper Size')}</Label>
               <div className="flex gap-2">
                 {[
-                  { value: 'thermal_58', label: 'Thermal 58mm' },
-                  { value: 'thermal_80', label: 'Thermal 80mm' },
+                  { value: 'thermal_58', label: t('Thermal 58mm') },
+                  { value: 'thermal_80', label: t('Thermal 80mm') },
                   { value: 'a4', label: 'A4' },
                 ].map(opt => (
                   <button
@@ -677,9 +685,9 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
 
             {/* Toggles */}
             {[
-              { key: 'receipt_show_logo', label: 'Show Logo on receipt' },
-              { key: 'receipt_show_tax', label: 'Show Tax breakdown' },
-              { key: 'receipt_show_order_number', label: 'Show Order Number' },
+              { key: 'receipt_show_logo', label: t('Show Logo on receipt') },
+              { key: 'receipt_show_tax', label: t('Show Tax breakdown') },
+              { key: 'receipt_show_order_number', label: t('Show Order Number') },
             ].map(({ key, label }) => (
               <div key={key} className="flex items-center justify-between py-1">
                 <p className="text-sm font-medium text-slate-700">{label}</p>
@@ -689,11 +697,11 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
 
             {/* Footer message */}
             <div>
-              <Label className="text-xs text-slate-600 mb-1 block">Footer Message</Label>
+              <Label className="text-xs text-slate-600 mb-1 block">{t('Footer Message')}</Label>
               <Textarea
                 value={form.receipt_footer}
                 onChange={e => set('receipt_footer', e.target.value)}
-                placeholder="e.g. Thank you for dining with us!"
+                placeholder={t('e.g. Thank you for dining with us!')}
                 className="resize-none text-sm"
                 rows={2}
               />
@@ -715,7 +723,7 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
             <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-primary-gradient, #6366f1)' }}>
               <Hash className="w-3.5 h-3.5 text-white" />
             </div>
-            <h3 className="text-sm font-semibold text-slate-800">Order Settings</h3>
+            <h3 className="text-sm font-semibold text-slate-800">{t('Order Settings')}</h3>
           </div>
           {orderSettingsOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </button>
@@ -724,19 +732,19 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
           <GatedFields canEdit={canEditSettings} onBlocked={showNoAccessMessage} className="space-y-4">
             <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label className="text-xs text-slate-600 mb-1 block">Order ID Prefix</Label>
-                <Input className="h-10 uppercase" maxLength={6} value={form.order_id_prefix} onChange={e => set('order_id_prefix', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} placeholder="ORD" />
+                <Label className="text-xs text-slate-600 mb-1 block">{t('Order ID Prefix')}</Label>
+                <Input className="h-10 uppercase" maxLength={6} value={form.order_id_prefix} onChange={e => set('order_id_prefix', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} placeholder={t('ORD')} />
               </div>
               <div>
-                <Label className="text-xs text-slate-600 mb-1 block">Starting Number</Label>
+                <Label className="text-xs text-slate-600 mb-1 block">{t('Starting Number')}</Label>
                 <Input className="h-10" type="number" min={1} value={form.order_id_start} onChange={e => set('order_id_start', e.target.value)} placeholder="1" />
-                <p className="text-[11px] text-slate-400 mt-1">New orders will be numbered from this value. Existing order numbers are unaffected.</p>
+                <p className="text-[11px] text-slate-400 mt-1">{t('New orders will be numbered from this value. Existing order numbers are unaffected.')}</p>
               </div>
             </div>
             <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-              <p className="text-xs text-slate-500 mb-1">Preview</p>
+              <p className="text-xs text-slate-500 mb-1">{t('Preview')}</p>
               <p className="text-xl font-bold text-slate-800 font-mono">
-                {(form.order_id_prefix || 'ORD')}-{String(parseInt(form.order_id_start) || 1).padStart(6, '0')}
+                {(form.order_id_prefix || t('ORD'))}-{String(parseInt(form.order_id_start) || 1).padStart(6, '0')}
               </p>
             </div>
           </GatedFields>
@@ -760,10 +768,10 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
           className="h-11 gap-2 w-full sm:w-auto"
           style={{ background: 'var(--color-primary-gradient)', color: '#fff' }}
         >
-          {isSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Save className="w-4 h-4" /> Save Changes</>}
+          {isSaving ? <><Loader2 className="w-4 h-4 animate-spin" />{' '}{t('Saving...')}</> : <><Save className="w-4 h-4" />{' '}{t('Save Changes')}</>}
         </Button>
       ) : (
-        <p className="text-xs text-slate-400">You have view-only access to Settings.</p>
+        <p className="text-xs text-slate-400">{t('You have view-only access to Settings.')}</p>
       )}
     </div>
   );

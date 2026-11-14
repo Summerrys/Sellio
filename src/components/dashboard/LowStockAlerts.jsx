@@ -4,8 +4,10 @@ import db from '@/lib/db';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Package } from 'lucide-react';
+import { useAppText } from '@/lib/appText';
 
 export default function LowStockAlerts({ tenantId }) {
+  const { t } = useAppText();
   const { data: products = [] } = useQuery({
     queryKey: ['lowStockProducts', tenantId],
     queryFn: () => db.entities.Product.filter({ tenant_id: tenantId }),
@@ -23,7 +25,7 @@ export default function LowStockAlerts({ tenantId }) {
     <Card className="p-6 border-0 shadow-sm">
       <div className="flex items-center gap-2 mb-5">
         <AlertTriangle className="w-5 h-5 text-amber-500" />
-        <h3 className="text-lg font-semibold text-slate-900">Low Stock Alerts</h3>
+        <h3 className="text-lg font-semibold text-slate-900">{t('Low Stock Alerts')}</h3>
         {lowStockItems.length > 0 && (
           <span className="ml-auto bg-amber-100 text-amber-700 text-xs font-medium px-2 py-1 rounded-full">
             {lowStockItems.length}
@@ -34,7 +36,7 @@ export default function LowStockAlerts({ tenantId }) {
       {lowStockItems.length === 0 ? (
         <div className="text-center py-8">
           <Package className="w-12 h-12 text-green-500 mx-auto mb-2" />
-          <p className="text-sm text-slate-500">All items well stocked!</p>
+          <p className="text-sm text-slate-500">{t('All items well stocked!')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -43,11 +45,11 @@ export default function LowStockAlerts({ tenantId }) {
               <div className="flex-1">
                 <p className="font-medium text-slate-900">{product.name}</p>
                 <p className="text-sm text-amber-700">
-                  {(product.stock_quantity ?? 0) === 0 ? 'Out of stock' : `Only ${product.stock_quantity} left`}
+                  {(product.stock_quantity ?? 0) === 0 ? t('Out of stock') : t('Only {stock_quantity} left', { stock_quantity: product.stock_quantity })}
                 </p>
               </div>
               <Button size="sm" variant="outline" className="text-xs">
-                Restock
+                {t('Restock')}
               </Button>
             </div>
           ))}

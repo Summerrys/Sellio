@@ -2,6 +2,7 @@ import React from 'react';
 import { useTenant } from '../tenant/TenantContext';
 import { ShieldAlert, Lock } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { useAppText } from '@/lib/appText';
 
 /**
  * RequirePermission - React Component for permission-based rendering
@@ -28,6 +29,7 @@ export default function RequirePermission({
   silent = false,
   children 
 }) {
+  const { t } = useAppText();
   const { hasPermission, hasAnyPermission, isSuperAdmin, isOwner, planAllows } = useTenant();
 
   // Super admins and owners have every permission their store's plan includes
@@ -49,9 +51,9 @@ export default function RequirePermission({
           <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
             <ShieldAlert className="w-8 h-8 text-red-400" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">Access Restricted</h3>
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">{t('Access Restricted')}</h3>
           <p className="text-sm text-slate-500 max-w-md mx-auto">
-            You don't have permission to view this section. Contact your administrator to request access.
+            {t('You don\'t have permission to view this section. Contact your administrator to request access.')}
           </p>
         </Card>
       );
@@ -69,9 +71,9 @@ export default function RequirePermission({
           <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
             <Lock className="w-8 h-8 text-red-400" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">Permission Required</h3>
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">{t('Permission Required')}</h3>
           <p className="text-sm text-slate-500 max-w-md mx-auto">
-            This feature requires special permissions. Please contact your administrator.
+            {t('This feature requires special permissions. Please contact your administrator.')}
           </p>
         </Card>
       );

@@ -1,11 +1,13 @@
 import React from 'react';
 import { Lock, LogOut } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
+import { useAppText } from '@/lib/appText';
 
 // Shown to staff (non-owners) when the store's subscription has ended or its
 // trial has expired. Only the owner can renew, so staff get a clear
 // "ask your owner" message instead of plan cards they can't act on.
 export default function SubscriptionEndedNotice({ subscription, storeName }) {
+  const { t } = useAppText();
   const isTrial = subscription?.status === 'trial';
 
   const handleSignOut = async () => {
@@ -29,11 +31,10 @@ export default function SubscriptionEndedNotice({ subscription, storeName }) {
           <Lock className="w-7 h-7 text-slate-600" />
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-          {isTrial ? 'The free trial has ended' : 'This store’s subscription has ended'}
+          {isTrial ? t('The free trial has ended') : t('This store’s subscription has ended')}
         </h1>
         <p className="text-sm text-slate-500 mt-3 leading-relaxed">
-          Sellio is paused for {storeName || 'this store'}. Please ask the store owner to renew the plan.
-          Your orders, menu and settings are kept safe and come back as soon as it is renewed.
+          {t('Sellio is paused for {store}. Please ask the store owner to renew the plan. Your orders, menu and settings are kept safe and come back as soon as it is renewed.', { store: storeName || t('this store') })}
         </p>
         <button
           type="button"
@@ -41,7 +42,7 @@ export default function SubscriptionEndedNotice({ subscription, storeName }) {
           className="mx-auto mt-8 text-sm text-slate-500 hover:text-slate-700 flex items-center gap-1.5"
         >
           <LogOut className="w-4 h-4" />
-          Sign out
+          {t('Sign out')}
         </button>
       </div>
     </div>

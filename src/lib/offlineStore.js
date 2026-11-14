@@ -111,10 +111,14 @@ if (typeof window !== 'undefined' && !window.__sellioSnapshotFlush) {
 
 // "3:42 pm" today, "8 Nov, 3:42 pm" another day: when what's on screen was loaded.
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-export function loadedAtText(time, now = Date.now()) {
+const ID_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+// language 'id': the 24-hour clock and Indonesian months (14 Nov, 14.30).
+export function loadedAtText(time, now = Date.now(), language = 'en') {
   const at = new Date(time);
   const today = new Date(now);
-  const clock = `${at.getHours() % 12 || 12}:${String(at.getMinutes()).padStart(2, '0')} ${at.getHours() < 12 ? 'am' : 'pm'}`;
+  const clock = language === 'id'
+    ? `${String(at.getHours()).padStart(2, '0')}.${String(at.getMinutes()).padStart(2, '0')}`
+    : `${at.getHours() % 12 || 12}:${String(at.getMinutes()).padStart(2, '0')} ${at.getHours() < 12 ? 'am' : 'pm'}`;
   const sameDay = at.getFullYear() === today.getFullYear() && at.getMonth() === today.getMonth() && at.getDate() === today.getDate();
-  return sameDay ? clock : `${at.getDate()} ${MONTHS[at.getMonth()]}, ${clock}`;
+  return sameDay ? clock : `${at.getDate()} ${(language === 'id' ? ID_MONTHS : MONTHS)[at.getMonth()]}, ${clock}`;
 }

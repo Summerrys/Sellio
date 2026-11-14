@@ -1,3 +1,4 @@
+import { N_ } from './appText.js'; // with .js: Node's own tests load this file as it is
 const currentWindow = () => (typeof window !== 'undefined' ? window : undefined);
 
 // Sellio's own app (Capacitor), on Android and iOS. It carries its own copy of the website
@@ -48,7 +49,8 @@ export function isNativeApp(browser = currentWindow()) {
 export function sellsPlans(browser = currentWindow()) {
   return true;
 }
-export const PLANS_ON_WEBSITE = 'Plans are managed on the Sellio website';
+// Marked for translation (lib/appText.js): a screen shows it as t(PLANS_ON_WEBSITE).
+export const PLANS_ON_WEBSITE = N_('Plans are managed on the Sellio website');
 
 // A link to another app or website (WhatsApp, say). A browser opens it in a new tab. In
 // Sellio's apps the page goes to it in place: the app hands any address outside Sellio to

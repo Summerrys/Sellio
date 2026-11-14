@@ -2,16 +2,18 @@ import React from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import OrderCard from './OrderCard';
 import { Badge } from '@/components/ui/badge';
+import { N_, useAppText } from '@/lib/appText';
 
 const COLUMNS = [
-  { id: 'pending', label: 'New', color: 'bg-amber-100 text-amber-700' },
-  { id: 'confirmed', label: 'Confirmed', color: 'bg-blue-100 text-blue-700' },
-  { id: 'preparing', label: 'Preparing', color: 'bg-purple-100 text-purple-700' },
-  { id: 'ready', label: 'Ready', color: 'bg-green-100 text-green-700' },
-  { id: 'served', label: 'Completed', color: 'bg-slate-100 text-slate-700' },
+  { id: 'pending', label: N_('New'), color: 'bg-amber-100 text-amber-700' },
+  { id: 'confirmed', label: N_('Confirmed'), color: 'bg-blue-100 text-blue-700' },
+  { id: 'preparing', label: N_('Preparing'), color: 'bg-purple-100 text-purple-700' },
+  { id: 'ready', label: N_('Ready'), color: 'bg-green-100 text-green-700' },
+  { id: 'served', label: N_('Completed'), color: 'bg-slate-100 text-slate-700' },
 ];
 
 export default function OrderKanban({ orders, onStatusChange, onOrderClick, currency }) {
+  const { t } = useAppText();
   const handleDragEnd = (result) => {
     const { destination, draggableId } = result;
     if (!destination) return;
@@ -35,7 +37,7 @@ export default function OrderKanban({ orders, onStatusChange, onOrderClick, curr
           return (
             <div key={column.id} className="flex flex-col min-w-[260px] md:min-w-0">
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="font-semibold text-slate-900">{column.label}</h3>
+                <h3 className="font-semibold text-slate-900">{t(column.label)}</h3>
                 <Badge className={column.color}>{columnOrders.length}</Badge>
               </div>
 

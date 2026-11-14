@@ -6,6 +6,7 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { planInfo } from '@/lib/entitlements';
 import { useTenant } from '@/components/tenant/TenantContext';
 import PricingModal from '@/components/subscription/PricingModal';
+import { useAppText } from './appText';
 
 const ProductFormDialog = lazy(() => import('@/components/products/ProductFormDialog.jsx'));
 
@@ -21,6 +22,7 @@ const SellContext = createContext({ openSell: () => {} });
 export const useSell = () => useContext(SellContext);
 
 export function SellProvider({ children }) {
+  const { t } = useAppText();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -50,7 +52,7 @@ export function SellProvider({ children }) {
 
   const openSell = useCallback(() => {
     if (!tenantId) { navigate('/join'); return; }
-    if (!hasPermission('products.create')) { toast.error("You don't have access to add listings."); return; }
+    if (!hasPermission('products.create')) { toast.error(t('You don\'t have access to add listings.')); return; }
     if (maxProducts != null && productCount != null && productCount >= maxProducts) { setLimitOpen(true); return; }
     if (location.state?.sellForm) return;
     savedRef.current = false;

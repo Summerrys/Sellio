@@ -5,6 +5,7 @@ import { useTenant } from '@/components/tenant/TenantContext';
 import { itemWords } from '@/lib/planFeatures';
 import { isShopTenant } from '@/lib/shopSelling';
 import BottomTabBar from './BottomTabBar';
+import { useAppText } from '@/lib/appText';
 
 // A business's phone bottom bar, the same on its workspace pages and on Explore:
 // Home (Explore) · Products · Counter · Orders · Me. Everyone on the team sees all five;
@@ -17,6 +18,7 @@ import BottomTabBar from './BottomTabBar';
 //   staff / onStaffMe: a staff login has no Explore, so its Home is the Dashboard and its
 //   Me opens the menu (its pages, profile and sign out)
 export default function MerchantTabBar({ active = null, onTab, homeClick, meClick, hideFrom = 'lg', bottomInset, zIndex = 'z-30', staff = false, onStaffMe }) {
+  const { t } = useAppText();
   const { user, tenant, isOwner } = useTenant();
   // The getting-started tour: each page still to visit pulses (Settings is under Me).
   const tour = user?.tour_progress || {};
@@ -38,10 +40,10 @@ export default function MerchantTabBar({ active = null, onTab, homeClick, meClic
   const center = {
     to: createPageUrl('Counter'),
     onClick: () => onTab?.('Counter', active === 'Counter'),
-    label: 'Counter',
+    label: t('Counter'),
     icon: Monitor,
     iconClassName: 'w-8 h-8',
-    ariaLabel: 'Counter — take orders',
+    ariaLabel: t('Counter — take orders'),
     dataTour: 'counter-shortcut',
     active: active === 'Counter',
   };
@@ -54,13 +56,13 @@ export default function MerchantTabBar({ active = null, onTab, homeClick, meClic
       center={center}
       tabs={[
         staff
-          ? tab('home', 'Home', House, createPageUrl('Dashboard'))
-          : tab('home', 'Home', House, '/explore', { click: homeClick }),
-        tab('Products', itemWords(tenant?.seller_type).Products, ShoppingBag, createPageUrl('Products'), { pulse: tourActive && !tour.products }),
-        tab('Orders', 'Orders', ClipboardList, createPageUrl('Orders'), { pulse: tourActive && !tour.orders }),
+          ? tab('home', t('Home'), House, createPageUrl('Dashboard'))
+          : tab('home', t('Home'), House, '/explore', { click: homeClick }),
+        tab('Products', itemWords(tenant?.seller_type, t).Products, ShoppingBag, createPageUrl('Products'), { pulse: tourActive && !tour.products }),
+        tab('Orders', t('Orders'), ClipboardList, createPageUrl('Orders'), { pulse: tourActive && !tour.orders }),
         staff
-          ? tab('me', 'Me', CircleUserRound, createPageUrl('Dashboard'), { click: (event) => { event.preventDefault(); onStaffMe?.(); } })
-          : tab('me', 'Me', CircleUserRound, '/explore/me', { click: meClick, pulse: tourActive && !tour.settings }),
+          ? tab('me', t('Me'), CircleUserRound, createPageUrl('Dashboard'), { click: (event) => { event.preventDefault(); onStaffMe?.(); } })
+          : tab('me', t('Me'), CircleUserRound, '/explore/me', { click: meClick, pulse: tourActive && !tour.settings }),
       ]}
     />
   );

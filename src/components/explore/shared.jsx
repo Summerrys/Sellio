@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { isBase44Shell } from '@/lib/nativeApp';
 import { ShopMenuButton } from '@/components/navigation/ShopMenu';
 import { formatMoney } from '@/lib/money';
+import { N_, englishText } from '@/lib/appText';
 
 // Shared by Explore, its listing pages and chats.
 
@@ -33,22 +34,24 @@ export function formatPrice(amount, currency) {
   return formatMoney(value, currency);
 }
 
-export function timeAgo(iso) {
+// t: a translated screen's own (lib/appText.js); without it the words are English.
+export function timeAgo(iso, t) {
   if (!iso) return '';
+  const say = t || englishText;
   const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-  if (seconds < 60) return 'Just now';
+  if (seconds < 60) return say(N_('Just now'));
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 60) return say(N_('{minutes} min ago'), { minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return say(N_('{hours}h ago'), { hours });
   const days = Math.floor(hours / 24);
-  if (days < 7) return days === 1 ? '1 day ago' : `${days} days ago`;
+  if (days < 7) return days === 1 ? say(N_('1 day ago')) : say(N_('{days} days ago'), { days });
   const weeks = Math.floor(days / 7);
-  if (days < 30) return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
+  if (days < 30) return weeks === 1 ? say(N_('1 week ago')) : say(N_('{weeks} weeks ago'), { weeks });
   const months = Math.floor(days / 30);
-  if (days < 365) return months === 1 ? '1 month ago' : `${months} months ago`;
+  if (days < 365) return months === 1 ? say(N_('1 month ago')) : say(N_('{months} months ago'), { months });
   const years = Math.floor(days / 365);
-  return years === 1 ? '1 year ago' : `${years} years ago`;
+  return years === 1 ? say(N_('1 year ago')) : say(N_('{years} years ago'), { years });
 }
 
 // Back within the app when there's somewhere to go back to, otherwise a sensible page.

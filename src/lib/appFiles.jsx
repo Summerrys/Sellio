@@ -5,6 +5,7 @@ import { Download, X } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { isNativeApp } from '@/lib/nativeApp';
 import { useBackToClose } from '@/lib/useBackToClose';
+import { useAppText, appT } from './appText';
 
 // Saving a file Sellio made (a CSV, a report, a QR code) inside Sellio's Android app.
 // The app can't save files straight from a page, so the file goes online first and
@@ -42,7 +43,7 @@ export function storageFileName(name) {
 async function asBlob(src) {
   if (src instanceof Blob) return src;
   const res = await fetch(src);
-  if (!res.ok) throw new Error(`Could not read the file (${res.status})`);
+  if (!res.ok) throw new Error(appT('Could not read the file ({status})', { status: res.status }));
   return res.blob();
 }
 
@@ -80,23 +81,24 @@ export async function clearExpiredFiles(tenantId) {
 let openReady = null;
 
 function FileReady({ url, filename, label, expires, onClose }) {
+  const { t } = useAppText();
   useBackToClose(true, onClose); // phone / browser Back closes this box
   return (
     <div className="fixed inset-0 z-[2147483000] flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={`${label} ready`}
+        aria-label={t('{label} ready', { label })}
         className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
         data-testid="file-ready"
       >
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
-            <p className="text-base font-semibold text-slate-900">{label} ready</p>
+            <p className="text-base font-semibold text-slate-900">{t('{label} ready', { label })}</p>
             <p className="mt-0.5 break-all text-xs text-slate-500">{filename}</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="-mr-1 -mt-1 p-1 text-slate-400 hover:text-slate-600">
+          <button type="button" onClick={onClose} aria-label={t('Close')} className="-mr-1 -mt-1 p-1 text-slate-400 hover:text-slate-600">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -109,11 +111,11 @@ function FileReady({ url, filename, label, expires, onClose }) {
           className="mt-4 flex h-11 items-center justify-center gap-1.5 rounded-xl text-sm font-medium"
           style={GRADIENT}
         >
-          <Download className="h-4 w-4" /> Save to phone
+          <Download className="h-4 w-4" />{' '}{t('Save to phone')}
         </a>
         <p className="mt-2.5 text-xs leading-snug text-slate-400">
-          Opens in your phone’s browser, which saves it to your Downloads.
-          {expires ? ` The link works for ${LINK_MINUTES} minutes.` : ''}
+          {t('Opens in your phone’s browser, which saves it to your Downloads.')}
+          {expires ? ' ' + t('The link works for {LINK_MINUTES} minutes.', { LINK_MINUTES }) : ''}
         </p>
       </div>
     </div>
@@ -141,15 +143,15 @@ function showReady(props) {
 // src: a Blob, or the address of the file (a data: or https: URL).
 // tenantId: the shop the file belongs to. publicQr: a QR code made before the shop
 // exists (business onboarding). Returns true once "Save to phone" is showing.
-export async function saveFileInApp(src, filename, { tenantId, label = 'File', publicQr = false } = {}) {
-  const loadingId = toast.loading('Getting your file ready…');
+export async function saveFileInApp(src, filename, { tenantId, label = appT('File'), publicQr = false } = {}) {
+  const loadingId = toast.loading(appT('Getting your file ready…'));
   try {
-    if (!tenantId && !publicQr) throw new Error('No shop for this file');
+    if (!tenantId && !publicQr) throw new Error(appT('No shop for this file'));
     const blob = await asBlob(src);
     const supabase = await getSupabase();
     const { data: { session } } = await supabase.auth.getSession();
     const uid = session?.user?.id;
-    if (!uid) throw new Error('Not signed in');
+    if (!uid) throw new Error(appT('Not signed in'));
     // The type without parameters ("text/csv", not "text/csv;charset=utf-8"): storage
     // takes the type from the file itself and only accepts the plain types.
     const contentType = (blob.type || 'application/octet-stream').split(';')[0].trim();
@@ -165,7 +167,7 @@ export async function saveFileInApp(src, filename, { tenantId, label = 'File', p
       const { error } = await storage.upload(path, file, { contentType, upsert: false, cacheControl: '0' });
       if (error) throw error;
       const { data, error: linkError } = await storage.createSignedUrl(path, LINK_MINUTES * 60, { download: filename });
-      if (linkError || !data?.signedUrl) throw linkError || new Error('No link');
+      if (linkError || !data?.signedUrl) throw linkError || new Error(appT('No link'));
       url = data.signedUrl;
       expires = true;
       setTimeout(() => { storage.remove([path]).catch(() => {}); }, LINK_MINUTES * 60 * 1000 + 5000);
@@ -182,7 +184,7 @@ export async function saveFileInApp(src, filename, { tenantId, label = 'File', p
   } catch (e) {
     console.warn('Saving the file in the app failed:', e);
     toast.dismiss(loadingId);
-    toast.error('Couldn’t get the file ready. Please try again.');
+    toast.error(appT('Couldn’t get the file ready. Please try again.'));
     return false;
   }
 }

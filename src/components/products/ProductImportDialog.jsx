@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, CheckCircle, AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAppText, appT } from '@/lib/appText';
 
 const toSlug = (str) => (str || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -108,6 +109,7 @@ const parseCSV = (text) => {
 };
 
 export default function ProductImportDialog({ open, onOpenChange, tenantId, categories: initialCategories }) {
+  useAppText();
   const queryClient = useQueryClient();
   const [step, setStep] = useState('upload');
   const [validationResults, setValidationResults] = useState([]);
@@ -118,9 +120,9 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
   const validateRow = (row, index) => {
     const errors = [];
     const warnings = [];
-    if (!row.name?.trim()) errors.push('Name is required');
-    if (!row.price || isNaN(parseFloat(row.price))) errors.push('Valid price is required');
-    if (!row.image_url) warnings.push('No image URL');
+    if (!row.name?.trim()) errors.push(appT('Name is required'));
+    if (!row.price || isNaN(parseFloat(row.price))) errors.push(appT('Valid price is required'));
+    if (!row.image_url) warnings.push(appT('No image URL'));
     return { row, index, status: errors.length ? 'error' : warnings.length ? 'warning' : 'valid', errors, warnings };
   };
 
@@ -134,7 +136,7 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
         setValidationResults(parsed.map((row, idx) => validateRow(row, idx)));
         setStep('preview');
       } catch {
-        toast.error('Couldn’t read that file', { description: 'Check it’s a CSV (comma-separated) file, then try again.' });
+        toast.error(appT('Couldn’t read that file'), { description: appT('Check it’s a CSV (comma-separated) file, then try again.') });
 
       }
     };
@@ -239,7 +241,7 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
     setImporting(false);
     queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
     queryClient.invalidateQueries({ queryKey: ['categories', tenantId] });
-    toast.success(`${imported.length} products imported`);
+    toast.success(appT('{count} products imported', { count: imported.length }));
   };
 
   const reset = () => {
@@ -256,23 +258,22 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Import Products</DialogTitle>
+          <DialogTitle>{appT('Import Products')}</DialogTitle>
         </DialogHeader>
 
         {step === 'upload' && (
           <div className="space-y-4">
             <Alert>
               <AlertDescription>
-                Download the CSV template from the toolbar (↓ Download button), fill in your product data, then upload it here.
-                Required columns: <strong>Name</strong>, <strong>Price</strong>.
+                {appT('Download the CSV template from the toolbar (↓ Download button), fill in your product data, then upload it here. Required columns:')}{' '}<strong>{appT('Name')}</strong>, <strong>{appT('Price')}</strong>.
               </AlertDescription>
             </Alert>
             <div className="border-2 border-dashed rounded-lg p-12 text-center hover:bg-slate-50 cursor-pointer transition-colors">
               <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" id="csv-upload" />
               <label htmlFor="csv-upload" className="cursor-pointer">
                 <Upload className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                <p className="text-lg font-medium mb-2">Upload CSV File</p>
-                <p className="text-sm text-slate-500">Click to browse or drag and drop</p>
+                <p className="text-lg font-medium mb-2">{appT('Upload CSV File')}</p>
+                <p className="text-sm text-slate-500">{appT('Click to browse or drag and drop')}</p>
               </label>
             </div>
           </div>
@@ -284,15 +285,15 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span className="text-sm">{validCount} will import</span>
+                  <span className="text-sm">{appT('{validCount} will import', { validCount })}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-red-600" />
-                  <span className="text-sm">{errorCount} will be skipped</span>
+                  <span className="text-sm">{appT('{errorCount} will be skipped', { errorCount })}</span>
                 </div>
               </div>
               <Button onClick={() => setStep('upload')} variant="outline" size="sm">
-                Upload Different File
+                {appT('Upload Different File')}
               </Button>
             </div>
 
@@ -300,12 +301,12 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 sticky top-0">
                   <tr>
-                    <th className="text-left p-2 font-semibold">Status</th>
-                    <th className="text-left p-2 font-semibold">Name</th>
-                    <th className="text-left p-2 font-semibold">SKU</th>
-                    <th className="text-left p-2 font-semibold">Price</th>
-                    <th className="text-left p-2 font-semibold">Category</th>
-                    <th className="text-left p-2 font-semibold">Issues</th>
+                    <th className="text-left p-2 font-semibold">{appT('Status')}</th>
+                    <th className="text-left p-2 font-semibold">{appT('Name')}</th>
+                    <th className="text-left p-2 font-semibold">{appT('SKU')}</th>
+                    <th className="text-left p-2 font-semibold">{appT('Price')}</th>
+                    <th className="text-left p-2 font-semibold">{appT('Category')}</th>
+                    <th className="text-left p-2 font-semibold">{appT('Issues')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -317,7 +318,7 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
                         {result.status === 'valid' && <CheckCircle className="w-4 h-4 text-green-600" />}
                       </td>
                       <td className="p-2">{result.row.name}</td>
-                      <td className="p-2 text-slate-400 text-xs">{result.row.sku || '(auto)'}</td>
+                      <td className="p-2 text-slate-400 text-xs">{result.row.sku || appT('(auto)')}</td>
                       <td className="p-2">{result.row.price}</td>
                       <td className="p-2">{result.row.category}</td>
                       <td className="p-2">
@@ -331,9 +332,9 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
             </div>
 
             <div className="flex gap-2">
-              <Button onClick={() => setStep('upload')} variant="outline">Cancel</Button>
+              <Button onClick={() => setStep('upload')} variant="outline">{appT('Cancel')}</Button>
               <Button onClick={handleImport} disabled={validCount === 0} className="flex-1">
-                Import {validCount} Products
+                {appT('Import {validCount} Products', { validCount })}
               </Button>
             </div>
           </div>
@@ -342,23 +343,23 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
         {step === 'importing' && (
           <div className="space-y-4 py-8">
             <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto" />
-            <p className="text-center font-medium">Importing products...</p>
+            <p className="text-center font-medium">{appT('Importing products...')}</p>
             <Progress value={importProgress} className="w-full" />
-            <p className="text-center text-sm text-slate-500">{importProgress}% complete</p>
+            <p className="text-center text-sm text-slate-500">{appT('{importProgress}% complete', { importProgress })}</p>
           </div>
         )}
 
         {step === 'complete' && importSummary && (
           <div className="space-y-4 py-8 text-center">
             <CheckCircle className="w-16 h-16 text-green-600 mx-auto" />
-            <h3 className="text-xl font-bold">Import Complete!</h3>
+            <h3 className="text-xl font-bold">{appT('Import Complete!')}</h3>
             <div className="space-y-2">
-              <p className="text-green-600 font-medium">✓ {importSummary.imported.length} products imported successfully</p>
+              <p className="text-green-600 font-medium">{appT('✓ {count} products imported successfully', { count: importSummary.imported.length })}</p>
               {importSummary.skipped.length > 0 && (
-                <p className="text-amber-600">⚠ {importSummary.skipped.length} skipped due to errors</p>
+                <p className="text-amber-600">{appT('⚠ {count} skipped due to errors', { count: importSummary.skipped.length })}</p>
               )}
             </div>
-            <Button onClick={() => { reset(); onOpenChange(false); }} className="mt-4">Done</Button>
+            <Button onClick={() => { reset(); onOpenChange(false); }} className="mt-4">{appT('Done')}</Button>
           </div>
         )}
       </DialogContent>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAppText } from '@/lib/appText';
 
 // The phone bottom bar: Home · Listings · Sell · Chat · Me for Explore and a free shop,
 // Home · Products · Counter · Orders · Me for a business (see MerchantTabBar).
@@ -11,6 +12,7 @@ import { cn } from '@/lib/utils';
 // hideFrom: 'lg' (the workspace) or 'md' (Explore).
 
 function Tab({ tab }) {
+  const { t } = useAppText();
   const Icon = tab.icon;
   const badge = Number(tab.badge) > 0 ? (tab.badge > 99 ? '99+' : String(tab.badge)) : null;
   return (
@@ -18,7 +20,7 @@ function Tab({ tab }) {
       to={tab.to}
       onClick={tab.onClick}
       aria-current={tab.active ? 'page' : undefined}
-      aria-label={badge ? `${tab.label}, ${badge} unread` : tab.label}
+      aria-label={badge ? t('{label}, {badge} unread', { label: tab.label, badge }) : tab.label}
       className={cn(
         'relative flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors min-h-[60px]',
         tab.active ? 'text-[rgb(var(--color-primary))]' : 'text-slate-600', // dark grey, not black
@@ -77,14 +79,15 @@ function CenterButton({ center }) {
 // sell: the Sell button in the middle. center: any other middle button (the Counter).
 // With neither, the four tabs share the bar.
 export default function BottomTabBar({ tabs, sell, center, hideFrom = 'lg', bottomInset, zIndex = 'z-30' }) {
+  const { t } = useAppText();
   const [first, second, third, fourth] = tabs;
   const middle = sell
-    ? { ...sell, label: 'Sell', icon: Plus, ariaLabel: 'Sell — add a listing', dataTour: 'sell-shortcut' }
+    ? { ...sell, label: t('Sell'), icon: Plus, ariaLabel: 'Sell — add a listing', dataTour: 'sell-shortcut' }
     : center || null;
   return (
     <nav
       data-tour="bottom-nav"
-      aria-label="Main"
+      aria-label={t('Main')}
       className={cn(
         hideFrom === 'md' ? 'md:hidden' : 'lg:hidden',
         'fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex items-stretch',

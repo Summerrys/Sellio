@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { format } from 'date-fns';
 import { Loader2, Mail } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { cookieUtils } from '@/lib/AppUserContext';
 import { signInForAccountDeletion } from './AccountDeletionForm';
+import { useAppText, appT } from '@/lib/appText';
+import { formatAppDate } from '@/lib/appDates';
 
 // Deleting a Sellio account (Alvin, 5 Nov 2026), in the app (Me → Delete account, or the
 // account panel) and at sellio.sg/delete-account. The delete-account edge function and
@@ -41,12 +42,12 @@ function accountLabel(user) {
 
 function deletionDate(value) {
   const date = value ? new Date(value) : null;
-  return date && !Number.isNaN(date.getTime()) ? format(date, 'd MMMM yyyy') : null;
+  return date && !Number.isNaN(date.getTime()) ? formatAppDate(date, 'd MMMM yyyy') : null;
 }
 
 function joinNames(names) {
   if (names.length <= 1) return names[0] || '';
-  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  return appT('{list} and {last}', { list: names.slice(0, -1).join(', '), last: names[names.length - 1] });
 }
 
 // This phone or browser: signed out as well (Sellio has signed the account out everywhere).
@@ -60,19 +61,21 @@ async function signOutHere(client) {
 }
 
 export function WhatHappens() {
+  const { t } = useAppText();
   return (
     <ul className="list-disc pl-5 space-y-1.5 text-sm text-slate-600" data-testid="deletion-what-happens">
-      <li>You&apos;re signed out on every device. Signing in again only shows that the account is closed.</li>
-      <li>A shop you own closes straight away: its page shows &ldquo;Store unavailable&rdquo;, it takes no new orders and it leaves Explore. Its staff can&apos;t sign in to it any more.</li>
-      <li>If the shop has a paid plan, it won&apos;t renew. Time already paid for isn&apos;t refunded.</li>
-      <li>If you work in someone else&apos;s shop, you lose access to it. The shop carries on.</li>
-      <li>We keep the account for 6 months if you own a shop, or 30 days if you don&apos;t, in case you change your mind. After that it&apos;s deleted for good, with your shop and its staff logins. Until then, sign in again to keep it (Keep my account: it opens again straight away) or to delete it straight away (Start again).</li>
-      <li>Orders you placed stay with the shops you bought from, and billing records are kept as the law requires.</li>
+      <li>{t('You\'re signed out on every device. Signing in again only shows that the account is closed.')}</li>
+      <li>{t('A shop you own closes straight away: its page shows “Store unavailable”, it takes no new orders and it leaves Explore. Its staff can\'t sign in to it any more.')}</li>
+      <li>{t('If the shop has a paid plan, it won\'t renew. Time already paid for isn\'t refunded.')}</li>
+      <li>{t('If you work in someone else\'s shop, you lose access to it. The shop carries on.')}</li>
+      <li>{t('We keep the account for 6 months if you own a shop, or 30 days if you don\'t, in case you change your mind. After that it\'s deleted for good, with your shop and its staff logins. Until then, sign in again to keep it (Keep my account: it opens again straight away) or to delete it straight away (Start again).')}</li>
+      <li>{t('Orders you placed stay with the shops you bought from, and billing records are kept as the law requires.')}</li>
     </ul>
   );
 }
 
 export default function AccountDeletionRequest({ email = '', shopName = '', onRequested, onFinished }) {
+  const { t } = useAppText();
   const [identity, setIdentity] = useState(undefined); // undefined: checking; null: signed out
   const [reason, setReason] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -110,16 +113,16 @@ export default function AccountDeletionRequest({ email = '', shopName = '', onRe
         try { details = await invokeError.context?.json(); } catch { /* no answer (offline) */ }
         if (details?.code === 'AUTH_REQUIRED' || details?.code === 'REAUTH_REQUIRED') {
           setIdentity(null);
-          throw new Error('Please sign in again, then ask here.');
+          throw new Error(appT('Please sign in again, then ask here.'));
         }
-        throw new Error(details?.error || `Your request didn't go through. Check your connection and try again, or email ${DELETION_EMAIL}.`);
+        throw new Error(details?.error || appT("Your request didn't go through. Check your connection and try again, or email {email}.", { email: DELETION_EMAIL }));
       }
-      if (!data?.requestId) throw new Error(`Your request didn't go through. Please try again, or email ${DELETION_EMAIL}.`);
+      if (!data?.requestId) throw new Error(appT("Your request didn't go through. Please try again, or email {email}.", { email: DELETION_EMAIL }));
       await signOutHere(client);
       setResult(data);
       onRequested?.(data);
     } catch (err) {
-      setError(err?.message || `Your request didn't go through. Please try again, or email ${DELETION_EMAIL}.`);
+      setError(err?.message || t('Your request didn\'t go through. Please try again, or email {DELETION_EMAIL}.', { DELETION_EMAIL }));
     } finally {
       lock.current = false;
       setBusy(false);
@@ -136,11 +139,11 @@ export default function AccountDeletionRequest({ email = '', shopName = '', onRe
     const when = deletionDate(result.deleteAfter);
     return (
       <div role="status" className="space-y-3 text-sm text-slate-600" data-testid="account-deletion-done">
-        <p className="text-base font-semibold text-slate-900">Deletion requested</p>
-        <p>You&apos;re signed out{shops.length ? `, and ${joinNames(shops)} ${shops.length === 1 ? 'is' : 'are'} closed now` : ''}.</p>
+        <p className="text-base font-semibold text-slate-900">{t('Deletion requested')}</p>
+        <p>{shops.length === 0 ? t("You're signed out.") : shops.length === 1 ? t("You're signed out, and {shops} is closed now.", { shops: joinNames(shops) }) : t("You're signed out, and {shops} are closed now.", { shops: joinNames(shops) })}</p>
         <p>
-          The account will be deleted for good{when ? ` on ${when}` : ''}. Changed your mind? Sign in again before then
-          and choose Keep my account: it opens again straight away{shops.length ? ', with your shop' : ''}.
+          {when ? t('The account will be deleted for good on {when}.', { when }) : t('The account will be deleted for good.')}{' '}
+          {shops.length ? t('Changed your mind? Sign in again before then and choose Keep my account: it opens again straight away, with your shop.') : t('Changed your mind? Sign in again before then and choose Keep my account: it opens again straight away.')}
         </p>
         <button
           type="button"
@@ -148,7 +151,7 @@ export default function AccountDeletionRequest({ email = '', shopName = '', onRe
           className="inline-flex items-center justify-center w-full h-11 rounded-lg text-sm font-semibold text-white"
           style={{ background: '#0f172a' }}
         >
-          Continue to Explore
+          {t('Continue to Explore')}
         </button>
       </div>
     );
@@ -159,36 +162,38 @@ export default function AccountDeletionRequest({ email = '', shopName = '', onRe
       <WhatHappens />
 
       {identity === undefined && (
-        <p role="status" className="flex items-center gap-2 text-slate-500"><Loader2 className="w-4 h-4 animate-spin" /> Checking your account…</p>
+        <p role="status" className="flex items-center gap-2 text-slate-500"><Loader2 className="w-4 h-4 animate-spin" />{' '}{t('Checking your account…')}</p>
       )}
 
       {identity === null && (
         <div className="space-y-3">
-          <p>Sign in to the account you want to delete, then ask here.</p>
+          <p>{t('Sign in to the account you want to delete, then ask here.')}</p>
           {error && <p role="alert" className="text-red-600">{error}</p>}
           <button
             type="button"
-            onClick={() => signInForAccountDeletion().catch(() => setError('Sign-in didn’t open. Please try again.'))}
+            onClick={() => signInForAccountDeletion().catch(() => setError(t('Sign-in didn’t open. Please try again.')))}
             className="inline-flex items-center justify-center w-full h-11 rounded-lg text-sm font-semibold text-white"
             style={{ background: '#0f172a' }}
           >
-            Sign in to continue
+            {t('Sign in to continue')}
           </button>
           <p className="text-xs text-slate-500">
-            Can&apos;t sign in? Email{' '}
-            <a className="font-semibold text-slate-700 underline" href={deletionRequestMailto(email, shopName)}>
-              <Mail className="inline w-3.5 h-3.5 mr-0.5 -mt-0.5" />{DELETION_EMAIL}
-            </a>{' '}
-            from the email address on the account, and tell us it&apos;s a deletion request.
+            {t("Can't sign in? Email {email} from the email address on the account, and tell us it's a deletion request.", {
+              email: (
+                <a className="font-semibold text-slate-700 underline" href={deletionRequestMailto(email, shopName)}>
+                  <Mail className="inline w-3.5 h-3.5 mr-0.5 -mt-0.5" />{DELETION_EMAIL}
+                </a>
+              ),
+            })}
           </p>
         </div>
       )}
 
       {identity && (
         <form onSubmit={submit} className="space-y-3" aria-busy={busy} noValidate>
-          <p className="text-xs text-slate-500">Account: <strong className="text-slate-700">{accountLabel(identity) || email}</strong></p>
+          <p className="text-xs text-slate-500">{t('Account: {account}', { account: <strong className="text-slate-700">{accountLabel(identity) || email}</strong> })}</p>
           <div className="space-y-1">
-            <label htmlFor="deletion-reason" className="block text-sm font-medium text-slate-700">Why are you leaving? (optional)</label>
+            <label htmlFor="deletion-reason" className="block text-sm font-medium text-slate-700">{t('Why are you leaving? (optional)')}</label>
             <textarea
               id="deletion-reason"
               value={reason}
@@ -200,7 +205,7 @@ export default function AccountDeletionRequest({ email = '', shopName = '', onRe
             />
           </div>
           <div className="space-y-1">
-            <label htmlFor="deletion-confirmation" className="block text-sm font-medium text-slate-700">Type DELETE to confirm</label>
+            <label htmlFor="deletion-confirmation" className="block text-sm font-medium text-slate-700">{t('Type DELETE to confirm')}</label>
             <input
               id="deletion-confirmation"
               value={confirmation}
@@ -219,7 +224,7 @@ export default function AccountDeletionRequest({ email = '', shopName = '', onRe
             className="inline-flex items-center justify-center gap-2 w-full h-11 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
           >
             {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-            {busy ? 'Requesting…' : 'Request deletion'}
+            {busy ? t('Requesting…') : t('Request deletion')}
           </button>
         </form>
       )}

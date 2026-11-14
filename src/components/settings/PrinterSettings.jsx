@@ -13,6 +13,7 @@ import {
   ALL_BT_SERVICES, setBtDeviceCache,
 } from '@/lib/printerUtils';
 import { isCapacitorApp, appPlatform } from '@/lib/nativeApp';
+import { useAppText } from '@/lib/appText';
 
 // Sellio's apps use the phone's own Bluetooth (src/lib/nativePrinter.js): their web views have
 // no Web Bluetooth. A browser uses Web Bluetooth, where it has it (Chrome).
@@ -31,6 +32,7 @@ const getRSSILabel = (rssi) => {
 
 // currency and tax: the shop's, for the test print's sample amounts (Settings passes them).
 export default function PrinterSettings({ tenantId, merchantName, receiptPaperSize, currency = 'SGD', tax }) {
+  const { t } = useAppText();
   const [mode, setMode] = useState('bluetooth');
   const [btDevice, setBtDevice] = useState(null);
   // Off by default — this changes production behavior (a chit fires for
@@ -114,7 +116,7 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
       } catch (err) {
         setShowScanSheet(false);
         setScanning(false);
-        toast.error(err.message || 'Bluetooth scan failed');
+        toast.error(err.message || t('Bluetooth scan failed'));
       }
       return;
     }
@@ -165,9 +167,9 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
         deviceId: device.id,
         protocol: detectedProtocol,
       });
-      toast.success(`Connected: ${device.name}`);
+      toast.success(t('Connected: {name}', { name: device.name }));
     } catch (err) {
-      if (err.name !== 'NotFoundError') toast.error('Bluetooth scan failed');
+      if (err.name !== 'NotFoundError') toast.error(t('Bluetooth scan failed'));
     } finally {
       setScanning(false);
     }
@@ -192,9 +194,9 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
           deviceId: picked.id,
           protocol: detectedProtocol,
         });
-        toast.success(`Connected: ${deviceName}`);
+        toast.success(t('Connected: {deviceName}', { deviceName }));
       } catch (err) {
-        toast.error(err.message || `Couldn’t connect to ${deviceName}`);
+        toast.error(err.message || t('Couldn’t connect to {deviceName}', { deviceName }));
 
       } finally {
         setConnecting(null);
@@ -217,9 +219,9 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
         deviceId: device.id,
         protocol: detectedProtocol,
       });
-      toast.success(`Connected: ${device.name}`);
+      toast.success(t('Connected: {name}', { name: device.name }));
     } catch (err) {
-      if (err.name !== 'NotFoundError') toast.error(`Couldn’t connect to ${deviceName}`, { description: 'Check the printer is on and close by, then try again.' });
+      if (err.name !== 'NotFoundError') toast.error(t('Couldn’t connect to {deviceName}', { deviceName }), { description: t('Check the printer is on and close by, then try again.') });
 
     }
   };
@@ -232,24 +234,24 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
     setBtDeviceCache(null);
     setBtDevice(null);
     clearPrinterConfig(tenantId);
-    toast.success('Printer disconnected');
+    toast.success(t('Printer disconnected'));
   };
 
   const handleSaveNetwork = async () => {
-    if (!ip.trim()) { toast.error('Please enter an IP address'); return; }
+    if (!ip.trim()) { toast.error(t('Please enter an IP address')); return; }
     setNetTesting(true);
     try {
       const ok = await testNetworkPrinter(ip.trim(), parseInt(port) || 9100, brand);
       if (ok) {
         savePrinterConfig(tenantId, { mode: 'network', ip: ip.trim(), port: parseInt(port) || 9100, brand, tested: true });
         setNetSaved(true);
-        toast.success('Connection successful ✓');
+        toast.success(t('Connection successful ✓'));
       } else {
-        toast.error('Could not reach printer — check IP and network');
+        toast.error(t('Could not reach printer — check IP and network'));
         setNetSaved(false);
       }
     } catch {
-      toast.error('Could not reach printer — check IP and network');
+      toast.error(t('Could not reach printer — check IP and network'));
       setNetSaved(false);
     } finally {
       setNetTesting(false);
@@ -260,7 +262,7 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
     setAutoPrintChit(checked);
     const cfg = loadPrinterConfig(tenantId) || {};
     savePrinterConfig(tenantId, { ...cfg, autoPrintChit: checked, autoPrintSince: checked ? new Date().toISOString() : cfg.autoPrintSince });
-    toast.success(checked ? 'Auto-print enabled' : 'Auto-print disabled');
+    toast.success(checked ? t('Auto-print enabled') : t('Auto-print disabled'));
   };
 
   const handleTestPrint = async () => {
@@ -280,9 +282,9 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
       } else if (cfg?.mode === 'network') {
         await sendViaEpsonEPos(cfg.ip, bytes, merchantName);
       }
-      toast.success('Test print sent ✓');
+      toast.success(t('Test print sent ✓'));
     } catch (err) {
-      toast.error(`Print failed: ${err.message}`);
+      toast.error(t('Print failed: {message}', { message: err.message }));
     } finally {
       setTestPrinting(false);
     }
@@ -295,15 +297,15 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
       <div className="space-y-4 pt-4 border-t border-slate-100">
         <div className="flex items-center gap-2">
           <Printer className="w-4 h-4 text-slate-500" />
-          <p className="text-sm font-semibold text-slate-700">Receipt Printer</p>
-          <span className="text-xs text-slate-400">(device-specific, saved locally)</span>
+          <p className="text-sm font-semibold text-slate-700">{t('Receipt Printer')}</p>
+          <span className="text-xs text-slate-400">{t('(device-specific, saved locally)')}</span>
         </div>
 
         {/* Mode toggle */}
         <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
           {[
-            { value: 'bluetooth', label: 'Bluetooth', icon: Bluetooth },
-            { value: 'network', label: 'Network / IP', icon: Wifi },
+            { value: 'bluetooth', label: t('Bluetooth'), icon: Bluetooth },
+            { value: 'network', label: t('Network / IP'), icon: Wifi },
           ].map(({ value, label, icon: Icon }) => (
             <button
               key={value}
@@ -327,7 +329,7 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
               <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
                 <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-700">
-                  Bluetooth printing is not supported on this browser. Use Network/IP mode or Chrome on Android.
+                  {t('Bluetooth printing is not supported on this browser. Use Network/IP mode or Chrome on Android.')}
                 </p>
               </div>
             ) : btDevice ? (
@@ -337,16 +339,16 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
                     <CheckCircle className="w-4 h-4 text-green-600" />
                     <div>
                       <p className="text-sm font-medium text-green-800">{btDevice.name}</p>
-                      <p className="text-xs text-green-600">Connected · {protocol === 'tspl' ? 'TSPL Label' : 'ESC/POS Receipt'}</p>
+                      <p className="text-xs text-green-600">{t('Connected · {kind}', { kind: protocol === 'tspl' ? t('TSPL Label') : t('ESC/POS Receipt') })}</p>
                       {btDevice.deviceId && (
                         <p className="text-[10px] text-slate-400 font-mono mt-0.5">
-                          ID: {btDevice.deviceId.replace(/[^a-fA-F0-9]/g, '').slice(0, 16).toUpperCase()}
+                          {t('ID:')}{' '}{btDevice.deviceId.replace(/[^a-fA-F0-9]/g, '').slice(0, 16).toUpperCase()}
                         </p>
                       )}
                     </div>
                   </div>
                   <button type="button" onClick={handleDisconnectBt} className="text-xs text-red-500 hover:text-red-700 font-medium">
-                    Disconnect
+                    {t('Disconnect')}
                   </button>
                 </div>
 
@@ -360,13 +362,13 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
                 style={{ background: 'var(--color-primary-gradient, #6366f1)' }}
               >
                 {connecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bluetooth className="w-4 h-4" />}
-                {connecting ? `Connecting to ${connecting}…` : 'Scan for Printers'}
+                {connecting ? t('Connecting to {connecting}…', { connecting }) : t('Scan for Printers')}
               </button>
             )}
             <p className="text-xs text-slate-400">
               {NATIVE_BT
-                ? 'Sellio remembers this printer on this phone and connects to it when it prints.'
-                : "Note: Bluetooth device pairing resets per browser session — you'll need to re-scan each time."}
+                ? t('Sellio remembers this printer on this phone and connects to it when it prints.')
+                : t('Note: Bluetooth device pairing resets per browser session — you\'ll need to re-scan each time.')}
             </p>
           </div>
         )}
@@ -376,28 +378,28 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-2">
               <div className="col-span-2">
-                <Label className="text-xs text-slate-600 mb-1 block">IP Address</Label>
+                <Label className="text-xs text-slate-600 mb-1 block">{t('IP Address')}</Label>
                 <Input className="h-9 text-sm" value={ip} onChange={e => { setIp(e.target.value); setNetSaved(false); }} placeholder="e.g. 192.168.1.100" />
               </div>
               <div>
-                <Label className="text-xs text-slate-600 mb-1 block">Port</Label>
+                <Label className="text-xs text-slate-600 mb-1 block">{t('Port')}</Label>
                 <Input className="h-9 text-sm" value={port} onChange={e => { setPort(e.target.value); setNetSaved(false); }} placeholder="9100" />
               </div>
             </div>
             <div>
-              <Label className="text-xs text-slate-600 mb-1 block">Printer Brand</Label>
+              <Label className="text-xs text-slate-600 mb-1 block">{t('Printer Brand')}</Label>
               <Select value={brand} onValueChange={v => { setBrand(v); setNetSaved(false); }}>
                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="epson">Epson ePOS</SelectItem>
-                  <SelectItem value="star">Star WebPRNT</SelectItem>
-                  <SelectItem value="generic">Generic ESC/POS</SelectItem>
+                  <SelectItem value="epson">{t('Epson ePOS')}</SelectItem>
+                  <SelectItem value="star">{t('Star WebPRNT')}</SelectItem>
+                  <SelectItem value="generic">{t('Generic ESC/POS')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
               <p className="text-[11px] text-slate-500 leading-relaxed">
-                Printer must be on the same WiFi network. For WiFi Direct printers, connect to the printer's hotspot first, then enter its gateway IP (typically <span className="font-mono">192.168.123.100</span>).
+                {t("Printer must be on the same WiFi network. For WiFi Direct printers, connect to the printer's hotspot first, then enter its gateway IP (typically {ip}).", { ip: <span className="font-mono">192.168.123.100</span> })}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -409,7 +411,7 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
                 style={{ background: 'var(--color-primary-gradient, #6366f1)' }}
               >
                 {netTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wifi className="w-3.5 h-3.5" />}
-                {netTesting ? 'Testing...' : 'Save & Test Connection'}
+                {netTesting ? t('Testing...') : t('Save & Test Connection')}
               </button>
               {netSaved && (
                 <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
@@ -429,17 +431,17 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-70"
           >
             {testPrinting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Printer className="w-3.5 h-3.5" />}
-            {testPrinting ? 'Sending...' : 'Test Print'}
+            {testPrinting ? t('Sending...') : t('Test Print')}
           </button>
         )}
 
         {/* Device-specific opt-in; connect a compatible receipt printer first. */}
         <div className="flex items-center justify-between gap-4 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mt-3">
             <div>
-              <p className="text-sm font-medium text-slate-700">Auto-print kitchen chits</p>
-              <p className="text-xs text-slate-500">{isConnected ? "Enable on the kitchen device. Keep Sellio open; new orders print from any page." : "Connect a receipt printer on this kitchen device first."}</p>
+              <p className="text-sm font-medium text-slate-700">{t('Auto-print kitchen chits')}</p>
+              <p className="text-xs text-slate-500">{isConnected ? t('Enable on the kitchen device. Keep Sellio open; new orders print from any page.') : t('Connect a receipt printer on this kitchen device first.')}</p>
             </div>
-            <Switch aria-label="Auto-print kitchen chits" checked={autoPrintChit} disabled={!isConnected || (mode === 'bluetooth' && protocol === 'tspl') || (mode === 'network' && brand !== 'epson')} onCheckedChange={handleToggleAutoPrint} />
+            <Switch aria-label={t('Auto-print kitchen chits')} checked={autoPrintChit} disabled={!isConnected || (mode === 'bluetooth' && protocol === 'tspl') || (mode === 'network' && brand !== 'epson')} onCheckedChange={handleToggleAutoPrint} />
           </div>
       </div>
 
@@ -454,12 +456,12 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
               </div>
               <div style={{ flex: 1 }}>
                 <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
-                  {scanning ? 'Scanning for Printers…' : 'Select a Printer'}
+                  {scanning ? t('Scanning for Printers…') : t('Select a Printer')}
                 </p>
                 <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>
                   {scanning
-                    ? `${discoveredDevices.length} device${discoveredDevices.length !== 1 ? 's' : ''} found — tap to connect`
-                    : `Found ${discoveredDevices.length} device${discoveredDevices.length !== 1 ? 's' : ''}`}
+                    ? (discoveredDevices.length === 1 ? t('1 device found — tap to connect') : t('{count} devices found — tap to connect', { count: discoveredDevices.length }))
+                    : (discoveredDevices.length === 1 ? t('Found 1 device') : t('Found {count} devices', { count: discoveredDevices.length }))}
                 </p>
               </div>
               <button
@@ -478,10 +480,10 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
                     <Loader2 size={24} color="rgb(var(--color-primary))" style={{ animation: 'spin 1s linear infinite' }} />
                   </div>
                   <p style={{ fontSize: 14, color: '#64748b', margin: 0, textAlign: 'center' }}>
-                    Searching for nearby Bluetooth printers…
+                    {t('Searching for nearby Bluetooth printers…')}
                   </p>
                   <p style={{ fontSize: 12, color: '#94a3b8', margin: 0, textAlign: 'center' }}>
-                    Make sure your printer is powered on and in pairing mode.
+                    {t('Make sure your printer is powered on and in pairing mode.')}
                   </p>
                 </div>
               )}
@@ -514,17 +516,17 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
 
               {!scanning && discoveredDevices.length === 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', gap: 12 }}>
-                  <p style={{ fontSize: 14, color: '#64748b', margin: 0 }}>No devices found</p>
+                  <p style={{ fontSize: 14, color: '#64748b', margin: 0 }}>{t('No devices found')}</p>
                   {NATIVE_BT && appPlatform() === 'android' && (
                     <p style={{ fontSize: 12, color: '#94a3b8', margin: 0, textAlign: 'center' }}>
-                      Check the printer is on. On Android 11 or older, Location must be on too.
+                      {t('Check the printer is on. On Android 11 or older, Location must be on too.')}
                     </p>
                   )}
                   <button
                     onClick={handleScanBluetooth}
                     style={{ fontSize: 13, fontWeight: 600, color: 'rgb(var(--color-primary))', background: 'none', border: 'none', cursor: 'pointer' }}
                   >
-                    Scan again
+                    {t('Scan again')}
                   </button>
                 </div>
               )}
@@ -537,7 +539,7 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
                   onClick={() => { stopScan(); }}
                   style={{ width: '100%', padding: '11px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', fontSize: 13, fontWeight: 600, color: '#64748b', cursor: 'pointer' }}
                 >
-                  Stop Scanning
+                  {t('Stop Scanning')}
                 </button>
               </div>
             )}

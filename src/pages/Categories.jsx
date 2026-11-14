@@ -17,6 +17,7 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Grid3X3, Plus, Pencil, Trash2, LayoutGrid, List, Loader2, GripVertical } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { useAppText } from '@/lib/appText';
 
 // How many items each category has: { [category_id]: count }. Only id and category_id,
 // 1,000 rows per request (Supabase's cap per request).
@@ -54,6 +55,7 @@ export default function Categories() {
 }
 
 function CategoriesContent() {
+  const { t } = useAppText();
   const { tenantId, hasPermission } = useTenant();
   const canCreate = hasPermission('categories.create');
   const canEdit = hasPermission('categories.edit');
@@ -106,9 +108,9 @@ function CategoriesContent() {
       ));
       const failed = results.find(r => r.error);
       if (failed) throw failed.error;
-      toast.success('Category order saved');
+      toast.success(t('Category order saved'));
     } catch (e) {
-      showError(e, 'Couldn’t save the new order of categories');
+      showError(e, t('Couldn’t save the new order of categories'), { t });
 
     } finally {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
@@ -152,7 +154,7 @@ function CategoriesContent() {
   // Matches the same no-access message used on the Products page for consistency.
   const handleCardClick = (cat) => {
     if (!canEdit) {
-      toast.error("You don't have access to edit categories.");
+      toast.error(t('You don\'t have access to edit categories.'));
       return;
     }
     open(cat);
@@ -166,7 +168,7 @@ function CategoriesContent() {
 
   return (
     <>
-      <PageHeader title="Categories" description="Organize your products into categories"
+      <PageHeader title={t('Categories')} description={t('Organize your products into categories')}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', borderRadius: 8, padding: 3 }}>
@@ -185,8 +187,8 @@ function CategoriesContent() {
                 style={{ background: 'var(--color-primary-gradient)' }}
               >
                 <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Add Category</span>
-                <span className="sm:hidden">Add</span>
+                <span className="hidden sm:inline">{t('Add Category')}</span>
+                <span className="sm:hidden">{t('Add')}</span>
               </Button>
             )}
           </div>
@@ -194,11 +196,11 @@ function CategoriesContent() {
       />
 
       {categories.length === 0 ? (
-        <Card className="border-0 shadow-sm"><EmptyState icon={Grid3X3} title="No categories" description="Create categories to organize your products." actionLabel={canCreate ? 'Add Category' : undefined} onAction={canCreate ? () => open(null) : undefined} /></Card>
+        <Card className="border-0 shadow-sm"><EmptyState icon={Grid3X3} title={t('No categories')} description={t('Create categories to organize your products.')} actionLabel={canCreate ? t('Add Category') : undefined} onAction={canCreate ? () => open(null) : undefined} /></Card>
       ) : viewMode === 'grid' ? (
         <>
         {canEdit && sortedCategories.length > 1 && (
-          <p className="text-xs text-slate-400 mb-2">Switch to list view to drag categories into the order your menu shows.</p>
+          <p className="text-xs text-slate-400 mb-2">{t('Switch to list view to drag categories into the order your menu shows.')}</p>
         )}
         <div className="grid grid-cols-2 gap-4">
           {sortedCategories.map(cat => {
@@ -208,9 +210,9 @@ function CategoriesContent() {
                 <div className="flex items-start justify-between">
                   <div className="min-w-0">
                     <h3 className="text-sm font-semibold text-slate-800 leading-tight">{cat.name}</h3>
-                    <p className="text-xs text-slate-400 mt-1">{count} product{count !== 1 ? 's' : ''}</p>
+                    <p className="text-xs text-slate-400 mt-1">{count === 1 ? t('1 product') : t('{count} products', { count })}</p>
                     {cat.description && <p className="text-xs text-slate-500 mt-2 line-clamp-2">{cat.description}</p>}
-                    {!cat.is_active && <span className="inline-block mt-2 text-xs text-slate-400 bg-slate-50 px-2 py-0.5 rounded">Inactive</span>}
+                    {!cat.is_active && <span className="inline-block mt-2 text-xs text-slate-400 bg-slate-50 px-2 py-0.5 rounded">{t('Inactive')}</span>}
                   </div>
                   {(canEdit || canDelete) && (
                     <div className="flex items-center gap-1 flex-shrink-0 ml-2">
@@ -238,7 +240,7 @@ function CategoriesContent() {
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
         {canEdit && sortedCategories.length > 1 && (
-          <p className="text-xs text-slate-400 mb-2">Drag the handle to set the order staff and customers see on the menu.</p>
+          <p className="text-xs text-slate-400 mb-2">{t('Drag the handle to set the order staff and customers see on the menu.')}</p>
         )}
         <Droppable droppableId="categories-list">
         {(dropProvided) => (
@@ -254,14 +256,14 @@ function CategoriesContent() {
                   <span
                     {...dragProvided.dragHandleProps}
                     onClick={(e) => e.stopPropagation()}
-                    aria-label={`Drag to reorder ${cat.name}`}
+                    aria-label={t('Drag to reorder {name}', { name: cat.name })}
                     className={canEdit ? 'w-8 h-8 -ml-2 rounded-lg flex items-center justify-center text-slate-300 hover:text-slate-500 hover:bg-slate-50 cursor-grab active:cursor-grabbing flex-shrink-0' : 'hidden'}
                   >
                     <GripVertical className="w-4 h-4" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <h3 className="text-sm font-semibold text-slate-800 leading-tight">{cat.name}</h3>
-                    <p className="text-xs text-slate-400">{count} product{count !== 1 ? 's' : ''}{!cat.is_active ? ' · Inactive' : ''}</p>
+                    <p className="text-xs text-slate-400">{count === 1 ? t('1 product') : t('{count} products', { count })}{!cat.is_active ? ' ' + t('· Inactive') : ''}</p>
                   </div>
                   {(canEdit || canDelete) && (
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -296,11 +298,11 @@ function CategoriesContent() {
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>{editing ? 'Edit Category' : 'New Category'}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? t('Edit Category') : t('New Category')}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
-            <div><Label>Name</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
-            <div><Label>Description</Label><Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} /></div>
-            <div className="flex items-center gap-2"><Switch checked={form.is_active} onCheckedChange={v => setForm({ ...form, is_active: v })} /><Label>Active</Label></div>
+            <div><Label>{t('Name')}</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+            <div><Label>{t('Description')}</Label><Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} /></div>
+            <div className="flex items-center gap-2"><Switch checked={form.is_active} onCheckedChange={v => setForm({ ...form, is_active: v })} /><Label>{t('Active')}</Label></div>
           </div>
           <DialogFooter className="flex flex-row items-center gap-3 pt-2">
             {editing && canDelete && (
@@ -311,11 +313,11 @@ function CategoriesContent() {
                 disabled={deleteMutation.isPending}
               >
                 {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                {confirmDelete ? 'Confirm?' : ''}
+                {confirmDelete ? t('Confirm?') : ''}
               </Button>
             )}
             <div className="flex flex-1 gap-3">
-              <Button variant="outline" className="flex-1" onClick={close}>{(editing ? canEdit : canCreate) ? 'Cancel' : 'Close'}</Button>
+              <Button variant="outline" className="flex-1" onClick={close}>{(editing ? canEdit : canCreate) ? t('Cancel') : t('Close')}</Button>
               {(editing ? canEdit : canCreate) && (
                 <Button
                   className="flex-1 text-white"
@@ -323,7 +325,7 @@ function CategoriesContent() {
                   onClick={() => saveMutation.mutate(form)}
                   disabled={!form.name || saveMutation.isPending}
                 >
-                  {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : editing ? 'Save Changes' : 'Create'}
+                  {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : editing ? t('Save Changes') : t('Create')}
                 </Button>
               )}
             </div>

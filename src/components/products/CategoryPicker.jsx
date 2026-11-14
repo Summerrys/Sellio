@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, Plus, Search } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { useAppText } from '@/lib/appText';
 
 export const MAX_CATEGORY_LENGTH = 40;
 
@@ -41,6 +42,7 @@ export default function CategoryPicker({
   listingName = '',
   error = null,
 }) {
+  const { t } = useAppText();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const wrapRef = useRef(null);
@@ -82,7 +84,7 @@ export default function CategoryPicker({
       <div className="grid grid-cols-2 gap-4">
         {skuColumn}
         <div className="min-w-0">
-          <Label id="category-label" className="text-sm font-medium text-slate-700 mb-1 block">Category</Label>
+          <Label id="category-label" className="text-sm font-medium text-slate-700 mb-1 block">{t('Category')}</Label>
           <button
             type="button"
             data-testid="category-trigger"
@@ -97,22 +99,22 @@ export default function CategoryPicker({
             style={open ? { borderColor: PRIMARY } : undefined}
           >
             <span id="category-value" className={cn('flex-1 min-w-0 truncate text-left', label ? 'text-slate-900' : 'text-slate-500')}>
-              {label || 'Select category'}
+              {label || t('Select category')}
             </span>
             {newName && (
-              <span className="flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={{ background: PRIMARY_TINT, color: PRIMARY }}>New</span>
+              <span className="flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={{ background: PRIMARY_TINT, color: PRIMARY }}>{t('New')}</span>
             )}
             <ChevronDown className="w-4 h-4 flex-shrink-0 text-slate-500" aria-hidden="true" />
           </button>
           {error ? (
             <p className="text-xs text-red-500 mt-1">{error}</p>
           ) : newName ? (
-            <p className="text-[11px] mt-1" style={{ color: PRIMARY }} data-testid="category-new-note">Saved to your categories with this listing</p>
+            <p className="text-[11px] mt-1" style={{ color: PRIMARY }} data-testid="category-new-note">{t('Saved to your categories with this listing')}</p>
           ) : suggestion && !open ? (
             <button
               type="button"
               data-testid="category-suggestion"
-              aria-label={`Use the suggested category ${suggestion.name}`}
+              aria-label={t('Use the suggested category {name}', { name: suggestion.name })}
               onClick={() => onPick(suggestion.id)}
               className="mt-1.5 max-w-full h-7 px-2.5 rounded-full border border-dashed inline-flex items-center gap-1 text-xs font-semibold"
               style={{ borderColor: PRIMARY, color: PRIMARY, background: PRIMARY_TINT }}
@@ -121,25 +123,25 @@ export default function CategoryPicker({
               <span className="truncate">{suggestion.name}</span>
             </button>
           ) : !label && noCategories && canCreate && !open ? (
-            <p className="text-[11px] text-slate-500 mt-1">None yet. Tap to add one.</p>
+            <p className="text-[11px] text-slate-500 mt-1">{t('None yet. Tap to add one.')}</p>
           ) : null}
         </div>
       </div>
 
       {open && (
-        <div ref={panelRef} role="dialog" aria-label="Choose or add a category" data-testid="category-panel" className="mt-2 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+        <div ref={panelRef} role="dialog" aria-label={t('Choose or add a category')} data-testid="category-panel" className="mt-2 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
           <div className="flex items-center gap-2 h-10 rounded-lg border border-slate-300 px-2.5">
             <Search className="w-4 h-4 flex-shrink-0 text-slate-500" aria-hidden="true" />
             <input
               data-testid="category-search"
-              aria-label={canCreate ? 'Find or add a category' : 'Find a category'}
+              aria-label={canCreate ? t('Find or add a category') : t('Find a category')}
               value={query}
               maxLength={MAX_CATEGORY_LENGTH}
               // No categories yet: there's only typing to do, so the keyboard comes up at once.
               autoFocus={noCategories && canCreate}
               autoComplete="off"
               enterKeyHint="done"
-              placeholder={noCategories ? 'Type a category, e.g. Cakes' : canCreate ? 'Find or add a category' : 'Find a category'}
+              placeholder={noCategories ? t('Type a category, e.g. Cakes') : canCreate ? t('Find or add a category') : t('Find a category')}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') { e.preventDefault(); add(); }
@@ -151,7 +153,7 @@ export default function CategoryPicker({
 
           {suggestion && !typed && (
             <>
-              <p className="mt-2.5 mb-0.5 px-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">From the listing name</p>
+              <p className="mt-2.5 mb-0.5 px-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t('From the listing name')}</p>
               <button type="button" data-testid="category-suggested-row" onClick={() => pick(suggestion)} className={cn(rowClass, 'hover:bg-slate-50 text-slate-900')}>
                 <span className="flex-1 truncate">{suggestion.name}</span>
               </button>
@@ -160,7 +162,7 @@ export default function CategoryPicker({
 
           {shown.length > 0 && (
             <>
-              <p className="mt-2.5 mb-0.5 px-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Your categories</p>
+              <p className="mt-2.5 mb-0.5 px-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t('Your categories')}</p>
               <div className="max-h-60 overflow-y-auto">
                 {shown.map((c) => {
                   const selected = c.id === value && !newName;
@@ -185,16 +187,16 @@ export default function CategoryPicker({
 
           {noCategories && !typed && (
             <p className="px-2 pt-2.5 pb-1 text-sm text-slate-500">
-              {canCreate ? 'No categories yet. Type one to add it.' : 'This shop has no categories yet.'}
+              {canCreate ? t('No categories yet. Type one to add it.') : t('This shop has no categories yet.')}
             </p>
           )}
           {typed && !exact && (canCreate ? (
             <button type="button" data-testid="category-add" onClick={add} className={cn(rowClass, 'mt-1.5 font-semibold')} style={{ background: PRIMARY_TINT, color: PRIMARY }}>
               <Plus className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
-              <span className="truncate">Add “{typed}”</span>
+              <span className="truncate">{t('Add “{typed}”', { typed })}</span>
             </button>
           ) : shown.length === 0 && (
-            <p className="px-2 pt-2.5 pb-1 text-sm text-slate-500">No category called “{typed}”.</p>
+            <p className="px-2 pt-2.5 pb-1 text-sm text-slate-500">{t('No category called “{typed}”.', { typed })}</p>
           ))}
         </div>
       )}

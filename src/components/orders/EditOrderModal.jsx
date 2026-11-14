@@ -6,6 +6,7 @@ import { explainError, offlineNote } from '@/lib/plainError';
 import { isOffline } from '@/lib/network';
 import ErrorNote from '@/components/ui-custom/ErrorNote';
 import { formatMoney } from '@/lib/money';
+import { useAppText } from '@/lib/appText';
 
 // products.variants is already stored pre-grouped as [{name, type, options}] by
 // the sync that runs whenever a merchant edits variants in the Products page —
@@ -21,6 +22,7 @@ function normaliseEditVariants(rawVariants) {
 // image_url, quantity, variant) so nothing downstream needs to special-case
 // merchant-edited orders vs customer-placed ones.
 export default function EditOrderModal({ order, tenantId, currency, canCancel = false, onClose, onSaved, onCancelOrder }) {
+  const { t } = useAppText();
   const [items, setItems] = useState(() => (order.items || []).map(i => ({ ...i })));
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [notes, setNotes] = useState(order.notes || '');
@@ -56,7 +58,7 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
           .order('name');
         setProducts(data || []);
       } catch (e) {
-        toast.error('Could not load menu items');
+        toast.error(t('Could not load menu items'));
       } finally {
         setLoadingProducts(false);
       }
@@ -110,10 +112,10 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
 
   const handleSave = async () => {
     if (items.length === 0) {
-      toast.error('An order needs at least one item — cancel it instead if it should be removed entirely.');
+      toast.error(t('An order needs at least one item — cancel it instead if it should be removed entirely.'));
       return;
     }
-    if (isOffline()) { setSaveNote(offlineNote('Couldn’t save the order', 'Changing an order needs the internet.')); return; }
+    if (isOffline()) { setSaveNote(offlineNote(t('Couldn’t save the order'), t('Changing an order needs the internet.'), t)); return; }
     setSaving(true);
     setSaveNote(null);
     try {
@@ -149,10 +151,10 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
       })));
       if (itemsError) console.warn('order_items sync warning:', itemsError.message);
 
-      toast.success('Order updated');
+      toast.success(t('Order updated'));
       onSaved({ ...order, items, notes: notes.trim() || null, subtotal, tax_amount: newTax, total_amount: newTotal });
     } catch (err) {
-      setSaveNote(explainError(err, { title: 'Couldn’t save the order' }));
+      setSaveNote(explainError(err, { title: t('Couldn’t save the order'), t }));
     } finally {
       setSaving(false);
     }
@@ -169,8 +171,8 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', background: 'white', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
           <div>
-            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Edit Order #{order.order_number || order.id?.slice(-6)}</p>
-            <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>Change items or the customer's notes</p>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{t('Edit Order #')}{order.order_number || order.id?.slice(-6)}</p>
+            <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>{t('Change items or the customer\'s notes')}</p>
           </div>
           <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, background: '#f1f5f9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <X className="w-4 h-4 text-slate-500" />
@@ -182,7 +184,7 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
                 {items.length === 0 && (
-                  <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: '16px 0' }}>No items yet — add something below.</p>
+                  <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: '16px 0' }}>{t('No items yet — add something below.')}</p>
                 )}
                 {items.map((item, idx) => (
                   <div key={item.key || idx} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -190,7 +192,7 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
                       <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#0f172a' }}>
                         {item.name}{item.variant ? <span style={{ color: '#94a3b8', fontWeight: 400 }}> ({item.variant})</span> : ''}
                       </p>
-                      <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>{formatMoney(item.price || 0, currency)} each</p>
+                      <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>{formatMoney(item.price || 0, currency)}{' '}{t('each')}</p>
                       {item.notes && (
                         <p style={{ margin: '2px 0 0', fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>📝 {item.notes}</p>
                       )}
@@ -215,15 +217,15 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
                 onClick={() => setShowPicker(true)}
                 style={{ width: '100%', padding: '10px', borderRadius: 10, border: '1.5px dashed #cbd5e1', background: 'white', color: 'rgb(var(--color-primary))', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 16 }}
               >
-                <Plus className="w-4 h-4" /> Add Item
+                <Plus className="w-4 h-4" />{' '}{t('Add Item')}
               </button>
 
               <div style={{ marginBottom: 12 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 6 }}>Customer Notes</label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 6 }}>{t('Customer Notes')}</label>
                 <textarea
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
-                  placeholder="e.g. No onions, extra spicy..."
+                  placeholder={t('e.g. No onions, extra spicy...')}
                   rows={2}
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 13, resize: 'none', fontFamily: 'inherit' }}
                 />
@@ -240,7 +242,7 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
                 onClick={() => setPickingVariantsFor(null)}
                 style={{ fontSize: 12, fontWeight: 600, color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 12 }}
               >
-                ← Back to menu
+                {t('← Back to menu')}
               </button>
               <p style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{pickingVariantsFor.name}</p>
               <p style={{ margin: '0 0 16px', fontSize: 13, color: '#64748b' }}>{formatMoney(pickingVariantsFor.price || 0, currency)}</p>
@@ -250,7 +252,7 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
                 const selectedList = isMultiSelect ? (Array.isArray(selectedForGroup) ? selectedForGroup : []) : null;
                 return (
                   <div key={gi} style={{ marginBottom: 16 }}>
-                    <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 8px', color: '#0f172a' }}>{group.name || (isMultiSelect ? 'Add-ons' : 'Options')}</p>
+                    <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 8px', color: '#0f172a' }}>{group.name || (isMultiSelect ? t('Add-ons') : t('Options'))}</p>
                     {/* FIX: flex-wrap sized pills purely by their own text, and
                         selecting one made it bold (wider) — so two long labels that
                         fit side-by-side unselected could stop fitting once both were
@@ -280,7 +282,7 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
                             onClick={handleClick}
                             style={{ padding: '8px 10px', borderRadius: 14, border: isSelected ? '2px solid rgb(var(--color-primary))' : '1.5px solid #e2e8f0', background: isSelected ? 'rgba(var(--color-primary),0.08)' : 'white', cursor: 'pointer', fontWeight: isSelected ? 700 : 500, color: isSelected ? 'rgb(var(--color-primary))' : '#374151', fontSize: 13, textAlign: 'center', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3, minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           >
-                            {opt.label}{opt.price_modifier > 0 ? ` +${formatMoney(opt.price_modifier, currency)}` : ''}
+                            {opt.label}{opt.price_modifier > 0 ? ' ' + t('+{price_modifier}', { price_modifier: formatMoney(opt.price_modifier, currency) }) : ''}
                           </button>
                         );
                       })}
@@ -289,11 +291,11 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
                 );
               })}
               <div style={{ marginBottom: 16 }}>
-                <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 8px', color: '#0f172a' }}>Note for this item (optional)</p>
+                <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 8px', color: '#0f172a' }}>{t('Note for this item (optional)')}</p>
                 <textarea
                   value={itemNotes}
                   onChange={e => setItemNotes(e.target.value)}
-                  placeholder="e.g. No onions, extra spicy..."
+                  placeholder={t('e.g. No onions, extra spicy...')}
                   rows={2}
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, resize: 'none', fontFamily: 'inherit' }}
                 />
@@ -310,7 +312,7 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
                 }}
                 style={{ width: '100%', padding: '12px', borderRadius: 12, border: 'none', background: 'var(--color-primary-gradient)', color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer', marginTop: 8 }}
               >
-                Add to Order
+                {t('Add to Order')}
               </button>
             </>
           ) : (
@@ -321,7 +323,7 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
                   autoFocus
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder="Search menu..."
+                  placeholder={t('Search menu...')}
                   style={{ width: '100%', padding: '10px 12px 10px 34px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 13 }}
                 />
               </div>
@@ -357,7 +359,7 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
                     </button>
                   ))}
                   {filteredProducts.length === 0 && (
-                    <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: '16px 0' }}>No matching items</p>
+                    <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: '16px 0' }}>{t('No matching items')}</p>
                   )}
                 </div>
               )}
@@ -365,7 +367,7 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
                 onClick={() => { setShowPicker(false); setSearch(''); }}
                 style={{ width: '100%', padding: '10px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginTop: 12 }}
               >
-                Back to order
+                {t('Back to order')}
               </button>
             </>
           )}
@@ -379,7 +381,7 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
               disabled={saving}
               style={{ width: '100%', padding: '12px', borderRadius: 12, border: 'none', background: 'var(--color-primary-gradient)', color: 'white', fontSize: 14, fontWeight: 700, cursor: saving ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}
             >
-              {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Save className="w-4 h-4" /> Save Changes</>}
+              {saving ? <><Loader2 className="w-4 h-4 animate-spin" />{' '}{t('Saving...')}</> : <><Save className="w-4 h-4" />{' '}{t('Save Changes')}</>}
             </button>
 
             {canCancel && (
@@ -388,22 +390,22 @@ export default function EditOrderModal({ order, tenantId, currency, canCancel = 
                   onClick={() => setConfirmCancel(true)}
                   style={{ width: '100%', padding: '10px', marginTop: 8, borderRadius: 10, border: '1px solid #fecaca', background: 'white', color: '#ef4444', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
                 >
-                  Cancel Order
+                  {t('Cancel Order')}
                 </button>
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                  <span style={{ flex: 1, fontSize: 12, color: '#dc2626', fontWeight: 600 }}>Cancel this order?</span>
+                  <span style={{ flex: 1, fontSize: 12, color: '#dc2626', fontWeight: 600 }}>{t('Cancel this order?')}</span>
                   <button
                     onClick={onCancelOrder}
                     style={{ padding: '8px 14px', borderRadius: 10, border: 'none', background: '#ef4444', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
                   >
-                    Yes, cancel
+                    {t('Yes, cancel')}
                   </button>
                   <button
                     onClick={() => setConfirmCancel(false)}
                     style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                   >
-                    No
+                    {t('No')}
                   </button>
                 </div>
               )

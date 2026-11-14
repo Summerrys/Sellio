@@ -12,20 +12,21 @@ import PhotoSourceControl from '../ui-custom/PhotoSourceControl';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { allowanceLine, allowanceSpent, lastSuggestion, functionErrorMessage } from '@/lib/aiAllowance';
 import { formatMoney } from '@/lib/money';
+import { useAppText, appT } from '@/lib/appText';
 
 // An error whose message is meant for the person (from our own functions).
 const friendlyError = (message) => Object.assign(new Error(message), { friendly: true });
 
 // A failed photo upload, in plain words. A photo that didn't come through whole explains
 // itself (see imageShrink.js).
-const uploadFailed = (err) => showError(err, 'Couldn’t upload the photo');
+const uploadFailed = (err) => showError(err, appT('Couldn’t upload the photo'), { t: appT });
 
 // A photo as a data: URL (what the AI function takes).
 const readAsDataUrl = (blob) => new Promise((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = () => resolve(reader.result);
-  reader.onerror = () => reject(new Error('Could not read this photo. Please choose another image.'));
-  reader.onabort = () => reject(new Error('Photo reading was interrupted. Please try again.'));
+  reader.onerror = () => reject(new Error(appT('Could not read this photo. Please choose another image.')));
+  reader.onabort = () => reject(new Error(appT('Photo reading was interrupted. Please try again.')));
   reader.readAsDataURL(blob);
 });
 
@@ -40,6 +41,7 @@ export const cleanupDeletedImages = async (componentRef) => {
 };
 
 function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, onSearched }) {
+  const { t } = useAppText();
   // Free personal shops: 3 photo searches a month ("More options" counts too).
   const searchesSpent = allowanceSpent(allowance, 'photo_search');
   const searchLine = allowanceLine(allowance, 'photo_search');
@@ -66,18 +68,18 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
       const { data, error } = await supabase.functions.invoke('findProductImage', {
         body: { query: q, page: targetPage, tenantId },
       });
-      if (error) throw friendlyError(await functionErrorMessage(error, 'Search failed. Please try again.'));
+      if (error) throw friendlyError(await functionErrorMessage(error, appT('Search failed. Please try again.')));
       if (data?.photos?.length > 0) {
         setPhotos(data.photos);
         setCurrentIndex(0);
         setPage(data.page || targetPage);
         setLastQuery(q);
       } else {
-        onError('No images found. Try a different keyword.');
+        onError(appT('No images found. Try a different keyword.'));
       }
     } catch (e) {
       console.error('StockImageSearch error:', e.message);
-      onError(e.friendly ? e.message : 'Search failed. Please try again.');
+      onError(e.friendly ? e.message : appT('Search failed. Please try again.'));
     } finally {
       setSearching(false);
       onSearched?.();
@@ -100,17 +102,17 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
         const { data, error } = await supabase.functions.invoke('findProductImage', {
           body: { query: lastQuery, page: nextPage, tenantId },
         });
-        if (error) throw friendlyError(await functionErrorMessage(error, 'Search failed. Please try again.'));
+        if (error) throw friendlyError(await functionErrorMessage(error, appT('Search failed. Please try again.')));
         if (data?.photos?.length > 0) {
           setPhotos(data.photos);
           setCurrentIndex(0);
           setPage(data.page || nextPage);
         } else {
-          onError('No more images found. Try a different keyword.');
+          onError(appT('No more images found. Try a different keyword.'));
         }
       } catch (e) {
         console.error('Regenerate error:', e.message);
-        onError(e.friendly ? e.message : 'Search failed. Please try again.');
+        onError(e.friendly ? e.message : appT('Search failed. Please try again.'));
       } finally {
         setSearching(false);
         onSearched?.();
@@ -127,7 +129,7 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
 
       // Fetch full-quality image and upload to Supabase Storage
       const imgRes = await fetch(currentPhoto.downloadUrl);
-      if (!imgRes.ok) throw new Error('Failed to fetch image');
+      if (!imgRes.ok) throw new Error(appT('Couldn’t get that image. Try another one.'));
       const photo = await shrinkImage(await imgRes.blob(), { maxSide: PHOTO_MAX_SIDE });
 
       const supabase = await (await import('@/lib/supabaseClient')).getSupabase();
@@ -144,7 +146,7 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
       setCurrentIndex(0);
     } catch (e) {
       console.error('Accept error:', e.message);
-      onError(explainError(e, { title: 'Couldn’t save the photo' }).description);
+      onError(explainError(e, { title: t('Couldn’t save the photo'), t }).description);
 
     } finally {
       setUploading(false);
@@ -190,7 +192,7 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') doSearch(); }}
-            placeholder="Find a stock image with AI…"
+            placeholder={t('Find a stock image with AI…')}
             style={{ width: '100%', fontSize: 13, padding: '9px 12px 9px 30px', border: '1px solid #e2e8f0', borderRadius: 8, outline: 'none', background: 'white', boxSizing: 'border-box' }}
           />
         </div>
@@ -198,7 +200,7 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
           type="button"
           onClick={() => doSearch()}
           disabled={searching || !query.trim() || searchesSpent}
-          aria-label="Search"
+          aria-label={t('Search')}
           style={{
             width: 36, height: 36, borderRadius: 8, flexShrink: 0,
             background: searching || !query.trim() || searchesSpent ? '#e2e8f0' : themeColor,
@@ -222,13 +224,13 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
         <div style={{ padding: 10, background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {/* Image row with prev/next arrows, centered */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-            <button type="button" onClick={handlePrev} disabled={currentIndex === 0} aria-label="Previous image"
+            <button type="button" onClick={handlePrev} disabled={currentIndex === 0} aria-label={t('Previous image')}
               style={{ width: 28, height: 28, borderRadius: 6, flexShrink: 0, background: currentIndex === 0 ? '#f1f5f9' : 'white', border: '1px solid #e2e8f0', cursor: currentIndex === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: currentIndex === 0 ? 0.4 : 1 }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
 
             <div style={{ position: 'relative', flexShrink: 0 }}>
-              <img src={currentPhoto.previewUrl} alt={currentPhoto.alt || 'Stock image'}
+              <img src={currentPhoto.previewUrl} alt={currentPhoto.alt || t('Stock image')}
                 style={{ width: 84, height: 84, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e2e8f0', display: 'block' }} />
               {uploading && (
                 <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.8)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -237,33 +239,33 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
               )}
             </div>
 
-            <button type="button" onClick={handleNext} disabled={currentIndex === photos.length - 1} aria-label="Next image"
+            <button type="button" onClick={handleNext} disabled={currentIndex === photos.length - 1} aria-label={t('Next image')}
               style={{ width: 28, height: 28, borderRadius: 6, flexShrink: 0, background: currentIndex === photos.length - 1 ? '#f1f5f9' : 'white', border: '1px solid #e2e8f0', cursor: currentIndex === photos.length - 1 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: currentIndex === photos.length - 1 ? 0.4 : 1 }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           </div>
 
           {/* Counter, centered below image */}
-          <p style={{ fontSize: 11, color: '#94a3b8', margin: 0, fontWeight: 500, textAlign: 'center' }}>{currentIndex + 1} / {photos.length} · Set {page}/6</p>
+          <p style={{ fontSize: 11, color: '#94a3b8', margin: 0, fontWeight: 500, textAlign: 'center' }}>{t('{count} / {count2} · Set {page}/6', { count: currentIndex + 1, count2: photos.length, page })}</p>
 
           {/* Regenerate — fetch next set of 5 (cycles 1-6, then loops) */}
-          <button type="button" onClick={handleRegenerate} disabled={searching || uploading || searchesSpent} aria-label="Regenerate more options"
+          <button type="button" onClick={handleRegenerate} disabled={searching || uploading || searchesSpent} aria-label={t('Regenerate more options')}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '7px', borderRadius: 8, background: 'white', border: '1px dashed #cbd5e1', cursor: searching || uploading || searchesSpent ? 'not-allowed' : 'pointer', fontSize: 11.5, fontWeight: 600, color: '#64748b', opacity: searchesSpent ? 0.5 : 1 }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
-            More options
+            {t('More options')}
           </button>
 
           {/* Accept / Discard row, full width, below everything */}
           <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" onClick={handleDiscard} disabled={uploading} aria-label="Discard"
+            <button type="button" onClick={handleDiscard} disabled={uploading} aria-label={t('Discard')}
               style={{ flex: 1, padding: '9px', borderRadius: 8, background: '#f1f5f9', border: '1px solid #e2e8f0', cursor: uploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#64748b' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              Discard
+              {t('Discard')}
             </button>
-            <button type="button" onClick={handleAccept} disabled={uploading} aria-label="Use this image"
+            <button type="button" onClick={handleAccept} disabled={uploading} aria-label={t('Use this image')}
               style={{ flex: 1, padding: '9px', borderRadius: 8, background: uploading ? '#e2e8f0' : themeColor, border: 'none', cursor: uploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'white' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              Use Photo
+              {t('Use Photo')}
             </button>
           </div>
         </div>
@@ -273,6 +275,7 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
 }
 
 function AIProductAssistantComponent({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange, onAdditionalImagesChange, additionalImagesOnOpen, onImageDelete, onCategoriesRefresh, currentProductName }, ref) {
+   const { t } = useAppText();
    const [step, setStep] = useState(currentImageUrl ? 'image_only' : 'idle');
    const [preview, setPreview] = useState(currentImageUrl || null);
    const [additionalImages, setAdditionalImages] = useState(additionalImagesOnOpen || []);
@@ -398,10 +401,10 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
       // Replace temp base64 preview with real URL
       setPreview(publicUrl);
 
-      if (analysis.error) throw new Error(await functionErrorMessage(analysis.error, 'AI analysis failed'));
+      if (analysis.error) throw new Error(await functionErrorMessage(analysis.error, appT('AI analysis failed')));
       const data = analysis.data || {};
       if (!data.confidence || data.confidence < 0.3) {
-        throw new Error("Couldn't identify a product in this image. Try a clearer photo.");
+        throw new Error(appT("Couldn't identify a product in this image. Try a clearer photo."));
       }
       setResult({
         name: data.name,
@@ -414,7 +417,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
       });
       setStep('done');
     } catch (err) {
-      setErrorMsg(err.message || 'AI analysis failed');
+      setErrorMsg(err.message || appT('AI analysis failed'));
       setStep('error');
     } finally {
       refreshAllowance();
@@ -436,14 +439,14 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
         const supabase = await getSupabase();
         const { data: pub } = supabase.storage.from('product-images').getPublicUrl(lastAi.imagePath);
         const res = await fetch(pub.publicUrl);
-        if (!res.ok) throw new Error('The photo of your last suggestion is no longer available.');
+        if (!res.ok) throw new Error(appT('The photo of your last suggestion is no longer available.'));
         const blob = await res.blob();
         const ext = (lastAi.imagePath.split('.').pop() || 'jpg').toLowerCase();
         imageUrl = await uploadToStorage(new File([blob], `ai-suggestion.${ext}`, { type: blob.type || 'image/jpeg' }));
       } catch (err) {
         console.error('Last AI suggestion photo:', err?.message);
         imageUrl = '';
-        toast.message("The photo from your last suggestion couldn't be used. Please add a photo.");
+        toast.message(t('The photo from your last suggestion couldn\'t be used. Please add a photo.'));
       }
     }
     setPreview(imageUrl || null);
@@ -491,7 +494,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
         if (onCategoriesRefresh) await onCategoriesRefresh();
       } catch (err) {
         console.error('Failed to create category:', err);
-        showError(err, 'Couldn’t create the category');
+        showError(err, appT('Couldn’t create the category'), { t: appT });
       }
     }
 
@@ -507,7 +510,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     if (categoryId) patch.category_id = categoryId;
     onApply(patch);
     onImageChange?.(preview || '');
-    toast.success('AI suggestions applied!');
+    toast.success(t('AI suggestions applied!'));
     // No photo (a last suggestion whose photo couldn't be used): back to adding one.
     setStep(preview ? 'applied' : 'idle');
     setResult(null);
@@ -673,25 +676,25 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                 <Wand2 className="w-6 h-6 text-[rgb(var(--color-primary))]" />
               </div>
               <div className="text-center">
-                <p className="text-sm font-semibold text-slate-800">Auto-fill with AI</p>
-                <p className="text-xs text-slate-500 mt-0.5">Upload a photo — AI generates name, price & category</p>
+                <p className="text-sm font-semibold text-slate-800">{t('Auto-fill with AI')}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{t('Upload a photo — AI generates name, price & category')}</p>
               </div>
               <div className="flex gap-2 w-full">
-                <PhotoSourceControl label="Choose photo for AI analysis" inputRef={fileInputRef} onFile={handleFileSelect} disabled={analysesSpent} className={cn('flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-white text-sm font-medium rounded-lg', analysesSpent ? 'cursor-not-allowed' : 'cursor-pointer')} style={{ background: analysesSpent ? '#cbd5e1' : themeColor }}>
+                <PhotoSourceControl label={t('Choose photo for AI analysis')} inputRef={fileInputRef} onFile={handleFileSelect} disabled={analysesSpent} className={cn('flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-white text-sm font-medium rounded-lg', analysesSpent ? 'cursor-not-allowed' : 'cursor-pointer')} style={{ background: analysesSpent ? '#cbd5e1' : themeColor }}>
                   <Upload className="w-4 h-4 flex-shrink-0" />
-                  <span>AI Analyse</span>
+                  <span>{t('AI Analyse')}</span>
                 </PhotoSourceControl>
                 <PhotoSourceControl
-                  label="Upload product photo"
+                  label={t('Upload product photo')}
                   inputRef={plainImageInputRef}
                   onFile={handlePlainImageSelect}
                   className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-medium rounded-lg border border-slate-300 text-slate-600 bg-white hover:bg-slate-50"
                 >
                   <ImagePlus className="w-4 h-4 flex-shrink-0" />
-                  <span>Upload Photo</span>
+                  <span>{t('Upload Photo')}</span>
                 </PhotoSourceControl>
               </div>
-              <p className="text-xs text-slate-400">PNG, JPG up to 5MB</p>
+              <p className="text-xs text-slate-400">{t('PNG, JPG up to 5MB')}</p>
               {analysisLine && (
                 <p data-testid="ai-analysis-allowance" className={cn('text-xs font-medium', analysesSpent ? 'text-amber-600' : 'text-slate-500')}>{analysisLine}</p>
               )}
@@ -703,13 +706,13 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                   className="w-full flex items-center gap-2 text-left text-xs rounded-lg border border-slate-200 bg-white px-3 py-2 hover:bg-slate-50"
                 >
                   <Sparkles className="w-3.5 h-3.5 flex-shrink-0 text-[rgb(var(--color-primary))]" />
-                  <span className="flex-1 min-w-0 truncate">Last AI suggestion: <strong>{lastAi.name}</strong></span>
-                  <span className="font-semibold text-[rgb(var(--color-primary))]">Use</span>
+                  <span className="flex-1 min-w-0 truncate">{t('Last AI suggestion: {name}', { name: <strong>{lastAi.name}</strong> })}</span>
+                  <span className="font-semibold text-[rgb(var(--color-primary))]">{t('Use')}</span>
                 </button>
               )}
             </div>
             <div className="mt-2 pt-2">
-              <p className="text-xs text-slate-400 text-center mb-2">Or find a stock image with AI ✨</p>
+              <p className="text-xs text-slate-400 text-center mb-2">{t('Or find a stock image with AI ✨')}</p>
               <StockImageSearch
                 tenantId={tenantId}
                 allowance={allowance}
@@ -724,7 +727,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                   } catch {}
                 }}
                 onError={(msg) => {
-                  toast.error(msg || 'No image found, try different keywords');
+                  toast.error(msg || t('No image found, try different keywords'));
                 }}
                 themeColor={themeColor}
               />
@@ -735,16 +738,16 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
         {/* ── UPLOADING / ANALYZING ── */}
         {(step === 'uploading' || step === 'analyzing') && (
           <div className="flex items-center gap-4 p-4">
-            {preview && <img src={preview} alt="preview" className="w-16 h-16 rounded-lg object-cover flex-shrink-0 border border-slate-200" />}
+            {preview && <img src={preview} alt={t('preview')} className="w-16 h-16 rounded-lg object-cover flex-shrink-0 border border-slate-200" />}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <Loader2 className="w-4 h-4 animate-spin text-[rgb(var(--color-primary))]" />
                 <p className="text-sm font-semibold text-slate-800">
-                  {step === 'uploading' ? (uploadKind === 'photo' ? 'Uploading photo...' : 'Uploading image...') : 'AI is analyzing your product...'}
+                  {step === 'uploading' ? (uploadKind === 'photo' ? t('Uploading photo...') : t('Uploading image...')) : t('AI is analyzing your product...')}
                 </p>
               </div>
               <p className="text-xs text-slate-500">
-                {step === 'uploading' ? (uploadKind === 'photo' ? 'Making it quick to load' : 'Preparing image for analysis') : 'Generating name, description & suggestions'}
+                {step === 'uploading' ? (uploadKind === 'photo' ? t('Making it quick to load') : t('Preparing image for analysis')) : t('Generating name, description & suggestions')}
               </p>
               <div className="mt-2 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                 <div
@@ -761,7 +764,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
           <div className="flex items-start gap-3 p-4">
             <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-red-700">Analysis failed</p>
+              <p className="text-sm font-semibold text-red-700">{t('Analysis failed')}</p>
               <p className="text-xs text-red-600 mt-0.5">{errorMsg}</p>
             </div>
             <button onClick={reset} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
@@ -772,11 +775,11 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
         {step === 'done' && result && (
           <div className="p-4">
             <div className="flex items-start gap-3 mb-3">
-              {preview && <img src={preview} alt="preview" className="w-14 h-14 rounded-lg object-cover flex-shrink-0 border border-green-200" />}
+              {preview && <img src={preview} alt={t('preview')} className="w-14 h-14 rounded-lg object-cover flex-shrink-0 border border-green-200" />}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 mb-1">
                   <Sparkles className="w-4 h-4 text-green-600" />
-                  <p className="text-sm font-semibold text-green-800">AI suggestions ready</p>
+                  <p className="text-sm font-semibold text-green-800">{t('AI suggestions ready')}</p>
                 </div>
                 <p className="text-base font-bold text-slate-900 truncate">{result.name}</p>
                 <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{result.description}</p>
@@ -796,9 +799,9 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
             </div>
             <div className="flex gap-2">
               <Button type="button" onClick={handleApply} className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-1.5" size="sm">
-                <Check className="w-4 h-4" /> Apply to Form
+                <Check className="w-4 h-4" />{' '}{t('Apply to Form')}
               </Button>
-              <Button type="button" variant="outline" size="sm" onClick={reset}>Discard</Button>
+              <Button type="button" variant="outline" size="sm" onClick={reset}>{t('Discard')}</Button>
             </div>
           </div>
         )}
@@ -813,13 +816,13 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                 style={{ borderColor: 'rgb(var(--color-primary))' }}
                 onClick={() => setEditModalOpen(true)}
               >
-                <img src={preview} alt="product" className="w-full h-full object-cover" />
+                <img src={preview} alt={t('Product photo')} className="w-full h-full object-cover" />
                 {/* Cover badge */}
                 <div
                   className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium"
                   style={{ background: themeColor }}
                 >
-                  Cover
+                  {t('Cover')}
                 </div>
                 {/* Hover overlay */}
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
@@ -837,7 +840,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                     setEditModalOpen(true);
                   }}
                 >
-                  <img src={src} alt={`additional-${idx}`} className="w-full h-full object-cover" />
+                  <img src={src} alt={t('Extra photo {number}', { number: idx + 1 })} className="w-full h-full object-cover" />
                   {/* Hover overlay */}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                     <Pencil className="w-4 h-4 text-white" />
@@ -848,7 +851,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
               {/* "+" add more slot for additional images */}
               {additionalImages.length < 4 && (
                 <PhotoSourceControl
-                  label="Add another photo"
+                  label={t('Add another photo')}
                   inputRef={addImageInputRef}
                   onFile={handleAddImage}
                   disabled={addingImage}

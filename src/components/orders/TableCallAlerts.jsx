@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Bell, Receipt, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAppText } from '@/lib/appText';
 
 export default function TableCallAlerts({ tenantId }) {
+  const { t } = useAppText();
   const queryClient = useQueryClient();
   const [audioPlayed, setAudioPlayed] = useState(false);
 
@@ -33,7 +35,7 @@ export default function TableCallAlerts({ tenantId }) {
       if (event.data?.tenant_id === tenantId) {
         queryClient.invalidateQueries({ queryKey: ['table-calls', tenantId] });
         if (event.type === 'create') {
-          toast.info(`Table ${event.data.table_name} is calling!`, { duration: 5000 });
+          toast.info(t('Table {table_name} is calling!', { table_name: event.data.table_name }), { duration: 5000 });
         }
       }
     }).then(fn => { unsubFn = fn; });
@@ -50,7 +52,7 @@ export default function TableCallAlerts({ tenantId }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['table-calls'] });
-      toast.success('Call acknowledged');
+      toast.success(t('Call acknowledged'));
     },
   });
 
@@ -62,7 +64,7 @@ export default function TableCallAlerts({ tenantId }) {
         <div className="flex items-center gap-2 mb-4">
           <Bell className="w-5 h-5 text-amber-600 animate-pulse" />
           <h3 className="font-semibold text-amber-900">
-            Table Calls ({calls.length})
+            {t('Table Calls ({count})', { count: calls.length })}
           </h3>
         </div>
 
@@ -80,10 +82,10 @@ export default function TableCallAlerts({ tenantId }) {
                 )}
                 <div>
                   <p className="font-semibold text-slate-900">
-                    Table {call.table_name}
+                    {t('Table {table_name}', { table_name: call.table_name })}
                   </p>
                   <p className="text-sm text-slate-600">
-                    {call.type === 'bill' ? 'Requesting bill' : 'Calling waiter'}
+                    {call.type === 'bill' ? t('Requesting bill') : t('Calling waiter')}
                   </p>
                 </div>
               </div>
@@ -93,7 +95,7 @@ export default function TableCallAlerts({ tenantId }) {
                 className="gap-2"
               >
                 <Check className="w-4 h-4" />
-                Acknowledge
+                {t('Acknowledge')}
               </Button>
             </div>
           ))}

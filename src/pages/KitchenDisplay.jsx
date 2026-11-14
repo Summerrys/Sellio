@@ -12,6 +12,7 @@ import { loadPrinterConfig, buildOrderChit, sendViaBluetooth, sendViaEpsonEPos }
 import ChitPreviewSheet from '@/components/orders/ChitPreviewSheet';
 import RequirePermission from '../components/auth/RequirePermission';
 import { useBackToClose } from '@/lib/useBackToClose';
+import { useAppText, N_ } from '@/lib/appText';
 
 function ElapsedTimer({ createdDate }) {
   const [elapsed, setElapsed] = useState(0);
@@ -25,10 +26,10 @@ function ElapsedTimer({ createdDate }) {
 }
 
 const STATUS_CONFIG = {
-  pending:   { label: 'New Order',  bg: 'bg-amber-600 border-amber-400',   btnLabel: '▶  Accept' },
-  confirmed: { label: 'Confirmed',  bg: 'bg-blue-700 border-blue-500',     btnLabel: '▶  Start Preparing' },
-  preparing: { label: 'Preparing',  bg: 'bg-purple-700 border-purple-500', btnLabel: '✓  Mark Ready' },
-  ready:     { label: 'Ready',      bg: 'bg-green-700 border-green-500',   btnLabel: '✓  Mark Served' },
+  pending:   { label: N_('New Order'),  bg: 'bg-amber-600 border-amber-400',   btnLabel: N_('▶  Accept') },
+  confirmed: { label: N_('Confirmed'),  bg: 'bg-blue-700 border-blue-500',     btnLabel: N_('▶  Start Preparing') },
+  preparing: { label: N_('Preparing'),  bg: 'bg-purple-700 border-purple-500', btnLabel: N_('✓  Mark Ready') },
+  ready:     { label: N_('Ready'),      bg: 'bg-green-700 border-green-500',   btnLabel: N_('✓  Mark Served') },
 };
 
 const NEXT_STATUS = {
@@ -39,6 +40,7 @@ const NEXT_STATUS = {
 };
 
 function KDSOrderCard({ order, onBump }) {
+  const { t } = useAppText();
   const { hasPermission, tenant } = useTenant();
   const canPrintChit = hasPermission('orders.print_chit');
   const [chitPrinting, setChitPrinting] = useState(false);
@@ -53,7 +55,7 @@ function KDSOrderCard({ order, onBump }) {
   const handlePrintChit = async () => {
     const printerCfg = loadPrinterConfig(tenant?.id);
     if (!printerCfg) {
-      toast.error('No printer connected — set one up in Settings → Printer');
+      toast.error(t('No printer connected — set one up in Settings → Printer'));
       return;
     }
     setChitPrinting(true);
@@ -64,13 +66,13 @@ function KDSOrderCard({ order, onBump }) {
       } else if (printerCfg.mode === 'network') {
         await sendViaEpsonEPos(printerCfg.ip, bytes, tenant?.name);
       } else {
-        toast.error('No printer connected — set one up in Settings → Printer');
+        toast.error(t('No printer connected — set one up in Settings → Printer'));
         return;
       }
-      toast.success('Chit printed ✓');
+      toast.success(t('Chit printed ✓'));
       setShowChit(false);
     } catch (err) {
-      toast.error(`Print failed: ${err.message}`);
+      toast.error(t('Print failed: {message}', { message: err.message }));
     } finally {
       setChitPrinting(false);
     }
@@ -83,7 +85,7 @@ function KDSOrderCard({ order, onBump }) {
     >
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">{cfg.label}</p>
+          <p className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">{t(cfg.label)}</p>
           <p className="text-4xl font-black leading-none">{order.order_number || `#${order.id?.slice(-4)}`}</p>
         </div>
         <div className={`text-right ${isCritical ? 'text-red-200' : isUrgent ? 'text-yellow-200' : 'text-white/70'}`}>
@@ -126,16 +128,16 @@ function KDSOrderCard({ order, onBump }) {
           <Button
             onClick={() => setShowChit(true)}
             className="h-14 px-4 flex-shrink-0 bg-white/20 hover:bg-white/30 text-white text-base font-bold gap-2"
-            title="Print kitchen order chit"
+            title={t('Print kitchen order chit')}
           >
-            <Printer className="w-5 h-5" /> Order
+            <Printer className="w-5 h-5" />{' '}{t('Order')}
           </Button>
         )}
         <Button
           onClick={() => onBump(order.id, order.status)}
           className="flex-1 min-w-[8rem] h-auto min-h-14 py-3 px-3 text-lg xl:text-base 2xl:text-xl leading-tight whitespace-normal break-words font-bold bg-white text-slate-900 hover:bg-slate-100"
         >
-          {cfg.btnLabel}
+          {t(cfg.btnLabel)}
         </Button>
       </div>
 
@@ -182,6 +184,7 @@ function KDSCompactCard({ order, onExpand }) {
 // full desktop card (no giant buttons, no per-item cards) and still requires
 // a tap to open the expand overlay and actually advance the order's status.
 function KDSMediumCard({ order, onExpand }) {
+  const { t } = useAppText();
   const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.preparing;
   const elapsed = Math.floor((Date.now() - new Date(order.created_date)) / 60000);
   const isCritical = elapsed > 20;
@@ -205,7 +208,7 @@ function KDSMediumCard({ order, onExpand }) {
         {(order.items || []).map((item, idx) => (
           <div key={idx}>
             <p className="text-sm font-medium leading-snug">
-              {item.quantity}× {item.name}{item.variant ? ` (${item.variant})` : ''}
+              {item.quantity}× {item.name}{item.variant ? ' ' + t('({variant})', { variant: item.variant }) : ''}
             </p>
             {item.notes && (
               <p className="text-xs italic opacity-80 pl-3">📝 {item.notes}</p>
@@ -233,6 +236,7 @@ export default function KitchenDisplay() {
 }
 
 function KitchenDisplayScreen() {
+  const { t } = useAppText();
   const { tenantId, tenant } = useTenant();
   const { appUser } = useAppUser();
   const [orders, setOrders] = useState([]);
@@ -352,13 +356,13 @@ function KitchenDisplayScreen() {
   const handleBump = async (orderId, currentStatus) => {
     const nextStatus = NEXT_STATUS[currentStatus];
     if (!nextStatus) return;
-    if (blockedOffline('Couldn’t update the order', 'Updating an order needs the internet.')) return;
+    if (blockedOffline(t('Couldn’t update the order'), t('Updating an order needs the internet.'), t)) return;
     const supabase = await getSupabase();
     const { error } = await supabase
       .from('orders')
       .update({ status: nextStatus, updated_date: new Date().toISOString() })
       .eq('id', orderId);
-    if (error) { showError(error, 'Couldn’t update the order'); return; }
+    if (error) { showError(error, t('Couldn’t update the order'), { t }); return; }
 
     if (nextStatus === 'completed') {
       setOrders(prev => prev.filter(o => o.id !== orderId));
@@ -377,7 +381,7 @@ function KitchenDisplayScreen() {
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-          <p className="text-white text-xl">Loading orders...</p>
+          <p className="text-white text-xl">{t('Loading orders...')}</p>
         </div>
       </div>
     );
@@ -405,10 +409,10 @@ function KitchenDisplayScreen() {
               onClick={handleExit}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-white/40 text-white bg-transparent hover:bg-white/10 transition-colors flex-shrink-0"
             >
-              <ArrowLeft className="w-4 h-4" /> Exit
+              <ArrowLeft className="w-4 h-4" />{' '}{t('Exit')}
             </button>
           )}
-          <h1 className="text-xl sm:text-3xl font-black truncate flex-1">{tenant?.name || 'Kitchen'} — Kitchen Display</h1>
+          <h1 className="text-xl sm:text-3xl font-black truncate flex-1">{tenant?.name || t('Kitchen')}{' '}{t('— Kitchen Display')}</h1>
           <div className="flex items-center gap-2">
             {alerts.on && (
               <div className="flex items-center gap-1">
@@ -417,7 +421,7 @@ function KitchenDisplayScreen() {
                     key={s}
                     onClick={() => alerts.setEvery(s)}
                     aria-pressed={alerts.every === s}
-                    aria-label={`Remind every ${s === 30 ? '30 seconds' : s === 60 ? 'minute' : '2 minutes'}`}
+                    aria-label={t('Remind every {interval}', { interval: s === 30 ? t('30 seconds') : s === 60 ? t('minute') : t('2 minutes') })}
                     className={`text-[10px] px-1.5 py-0.5 rounded font-medium transition-colors ${alerts.every === s ? 'bg-white text-slate-900' : 'border border-white/40 text-white/70'}`}
                   >
                     {s === 30 ? '30s' : s === 60 ? '1m' : '2m'}
@@ -428,7 +432,7 @@ function KitchenDisplayScreen() {
             <button
               onClick={() => alerts.setOn(!alerts.on)}
               aria-pressed={alerts.on}
-              aria-label={alerts.on ? 'Sound alerts on' : 'Sound alerts off'}
+              aria-label={alerts.on ? t('Sound alerts on') : t('Sound alerts off')}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-white/40 text-white bg-transparent hover:bg-white/10 transition-colors flex-shrink-0"
             >
               {alerts.on ? '🔔' : '🔕'}
@@ -446,10 +450,10 @@ function KitchenDisplayScreen() {
         {/* Stat cards — equal width, single row, no overflow */}
         <div className="flex gap-2">
           {[
-            { label: 'New',       count: pendingOrders.length,   color: 'text-amber-400',  bg: 'bg-amber-400/10' },
-            { label: 'Confirmed', count: confirmedOrders.length, color: 'text-blue-400',   bg: 'bg-blue-400/10' },
-            { label: 'Preparing', count: preparingOrders.length, color: 'text-purple-400', bg: 'bg-purple-400/10' },
-            { label: 'Ready',     count: readyOrders.length,     color: 'text-green-400',  bg: 'bg-green-400/10' },
+            { label: t('New'),       count: pendingOrders.length,   color: 'text-amber-400',  bg: 'bg-amber-400/10' },
+            { label: t('Confirmed'), count: confirmedOrders.length, color: 'text-blue-400',   bg: 'bg-blue-400/10' },
+            { label: t('Preparing'), count: preparingOrders.length, color: 'text-purple-400', bg: 'bg-purple-400/10' },
+            { label: t('Ready'),     count: readyOrders.length,     color: 'text-green-400',  bg: 'bg-green-400/10' },
           ].map(s => (
             <div key={s.label} className={`flex-1 rounded-xl py-2 text-center ${s.bg}`}>
               <p className={`text-[20px] font-black leading-tight ${s.color}`}>{s.count}</p>
@@ -462,8 +466,8 @@ function KitchenDisplayScreen() {
       {orders.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-32 gap-4 text-slate-500">
           <ChefHat className="w-20 h-20" />
-          <p className="text-3xl font-bold">No active orders</p>
-          <p className="text-lg">New orders will appear here automatically</p>
+          <p className="text-3xl font-bold">{t('No active orders')}</p>
+          <p className="text-lg">{t('New orders will appear here automatically')}</p>
         </div>
       ) : (
         <>
@@ -474,10 +478,10 @@ function KitchenDisplayScreen() {
             further down, unchanged. */}
         <div className="md:hidden grid grid-cols-4 gap-1.5">
           {[
-            { label: 'New', color: 'text-amber-400', list: pendingOrders },
-            { label: 'Confirmed', color: 'text-blue-400', list: confirmedOrders },
-            { label: 'Preparing', color: 'text-purple-400', list: preparingOrders },
-            { label: 'Ready', color: 'text-green-400', list: readyOrders },
+            { label: t('New'), color: 'text-amber-400', list: pendingOrders },
+            { label: t('Confirmed'), color: 'text-blue-400', list: confirmedOrders },
+            { label: t('Preparing'), color: 'text-purple-400', list: preparingOrders },
+            { label: t('Ready'), color: 'text-green-400', list: readyOrders },
           ].map(col => (
             <div key={col.label} className="space-y-1.5">
               <p className={`text-[10px] font-bold uppercase tracking-wide text-center ${col.color}`}>{col.label}</p>
@@ -494,10 +498,10 @@ function KitchenDisplayScreen() {
             (order ID, items, notes) since there's enough width for it here. */}
         <div className="hidden md:grid xl:hidden grid-cols-4 gap-2">
           {[
-            { label: 'New', color: 'text-amber-400', list: pendingOrders },
-            { label: 'Confirmed', color: 'text-blue-400', list: confirmedOrders },
-            { label: 'Preparing', color: 'text-purple-400', list: preparingOrders },
-            { label: 'Ready', color: 'text-green-400', list: readyOrders },
+            { label: t('New'), color: 'text-amber-400', list: pendingOrders },
+            { label: t('Confirmed'), color: 'text-blue-400', list: confirmedOrders },
+            { label: t('Preparing'), color: 'text-purple-400', list: preparingOrders },
+            { label: t('Ready'), color: 'text-green-400', list: readyOrders },
           ].map(col => (
             <div key={col.label} className="space-y-2">
               <p className={`text-xs font-bold uppercase tracking-wide text-center ${col.color}`}>{col.label} ({col.list.length})</p>
@@ -514,10 +518,10 @@ function KitchenDisplayScreen() {
           {/* New Orders */}
           <div>
             <h2 className="text-xl font-bold text-amber-400 uppercase tracking-widest mb-4">
-              🟡 New ({pendingOrders.length})
+              {t('🟡 New ({count})', { count: pendingOrders.length })}
             </h2>
             {pendingOrders.length === 0 ? (
-              <div className="rounded-2xl border-2 border-dashed border-slate-700 p-8 text-center text-slate-600">No new orders</div>
+              <div className="rounded-2xl border-2 border-dashed border-slate-700 p-8 text-center text-slate-600">{t('No new orders')}</div>
             ) : (
               <div className="space-y-4">
                 {pendingOrders.map(order => <KDSOrderCard key={order.id} order={order} onBump={handleBump} />)}
@@ -528,10 +532,10 @@ function KitchenDisplayScreen() {
           {/* Confirmed */}
           <div>
             <h2 className="text-xl font-bold text-blue-400 uppercase tracking-widest mb-4">
-              🔵 Confirmed ({confirmedOrders.length})
+              {t('🔵 Confirmed ({count})', { count: confirmedOrders.length })}
             </h2>
             {confirmedOrders.length === 0 ? (
-              <div className="rounded-2xl border-2 border-dashed border-slate-700 p-8 text-center text-slate-600">No confirmed orders</div>
+              <div className="rounded-2xl border-2 border-dashed border-slate-700 p-8 text-center text-slate-600">{t('No confirmed orders')}</div>
             ) : (
               <div className="space-y-4">
                 {confirmedOrders.map(order => <KDSOrderCard key={order.id} order={order} onBump={handleBump} />)}
@@ -542,10 +546,10 @@ function KitchenDisplayScreen() {
           {/* Preparing */}
           <div>
             <h2 className="text-xl font-bold text-purple-400 uppercase tracking-widest mb-4">
-              🟣 Preparing ({preparingOrders.length})
+              {t('🟣 Preparing ({count})', { count: preparingOrders.length })}
             </h2>
             {preparingOrders.length === 0 ? (
-              <div className="rounded-2xl border-2 border-dashed border-slate-700 p-8 text-center text-slate-600">No orders being prepared</div>
+              <div className="rounded-2xl border-2 border-dashed border-slate-700 p-8 text-center text-slate-600">{t('No orders being prepared')}</div>
             ) : (
               <div className="space-y-4">
                 {preparingOrders.map(order => <KDSOrderCard key={order.id} order={order} onBump={handleBump} />)}
@@ -556,10 +560,10 @@ function KitchenDisplayScreen() {
           {/* Ready */}
           <div>
             <h2 className="text-xl font-bold text-green-400 uppercase tracking-widest mb-4">
-              🟢 Ready ({readyOrders.length})
+              {t('🟢 Ready ({count})', { count: readyOrders.length })}
             </h2>
             {readyOrders.length === 0 ? (
-              <div className="rounded-2xl border-2 border-dashed border-slate-700 p-8 text-center text-slate-600">No ready orders</div>
+              <div className="rounded-2xl border-2 border-dashed border-slate-700 p-8 text-center text-slate-600">{t('No ready orders')}</div>
             ) : (
               <div className="space-y-4">
                 {readyOrders.map(order => <KDSOrderCard key={order.id} order={order} onBump={handleBump} />)}

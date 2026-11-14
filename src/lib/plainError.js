@@ -138,17 +138,18 @@ export function showError(error, title, { fallback, id, duration = ERROR_TOAST_M
 }
 
 // Words for a change that needs the internet, while the phone is offline.
-export const offlineNote = (title, needs) => ({
+const OFFLINE_NEEDS = N_('You’re offline. {needs} Connect to the internet, then try again.');
+export const offlineNote = (title, needs, t) => ({
   kind: 'offline',
   title,
-  description: `You’re offline. ${needs ? `${needs} ` : ''}Connect to the internet, then try again.`,
+  description: needs ? (t || english)(OFFLINE_NEEDS, { needs }) : (t || english)(SAYS.offline),
 });
 
 // Before a change that needs the internet: when the phone is offline, says so and returns
 // true (the caller stops there). "needs": what needs it, e.g. "Updating an order needs the internet."
-export function blockedOffline(title, needs) {
+export function blockedOffline(title, needs, t) {
   if (!isOffline()) return false;
-  const note = offlineNote(title, needs);
+  const note = offlineNote(title, needs, t);
   toast.error(note.title, { description: note.description, duration: ERROR_TOAST_MS, closeButton: true, id: 'sellio-offline-blocked' });
   return true;
 }

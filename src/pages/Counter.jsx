@@ -21,6 +21,7 @@ import { fetchStorefrontCatalog } from '@/lib/storefrontCatalog';
 import { createPageUrl } from '@/utils';
 import { formatMoney } from '@/lib/money';
 import { paymentQrName } from '@/lib/countries';
+import { useAppText, appT, appLocale } from '@/lib/appText';
 
 // Counter: staff order entry for the counter tablet (adapts to phones).
 // Pick a table (or Takeaway) -> one tap per dish -> Send. Prices, order numbers
@@ -86,7 +87,7 @@ async function moreSoldLines(supabase, tenantId, since) {
 
 const roundTime = value => {
   const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' });
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString(appLocale(), { hour: 'numeric', minute: '2-digit' });
 };
 
 export default function Counter() {
@@ -98,6 +99,7 @@ export default function Counter() {
 }
 
 function CounterScreen() {
+  useAppText();
   const navigate = useNavigate();
   const { tenantId, tenant, user, hasPermission } = useTenant();
   const draftKey = `sellio_counter_drafts:${tenantId}:${user?.id || 'staff'}`;
@@ -210,7 +212,7 @@ function CounterScreen() {
     let cancelled = false;
     setLoading(true);
     loadCatalog(() => !cancelled)
-      .catch(() => { if (!cancelled) toast.error('Could not load the menu. Check your connection and try again.'); })
+      .catch(() => { if (!cancelled) toast.error(appT('Could not load the menu. Check your connection and try again.')); })
       .finally(() => { if (!cancelled) setLoading(false); });
     loadSessions();
     const timer = setInterval(loadSessions, 20000);
@@ -295,7 +297,7 @@ function CounterScreen() {
   const zones = useMemo(() => {
     const m = new Map();
     tables.forEach(t => {
-      const z = t.zone || 'Tables';
+      const z = t.zone || ''; // no zone: headed "Tables" in the screen's language
       if (!m.has(z)) m.set(z, []);
       m.get(z).push(t);
     });
@@ -304,7 +306,7 @@ function CounterScreen() {
   const tableLabel = t => {
     let n = t.name || '';
     if (t.zone && n.toLowerCase().startsWith(t.zone.toLowerCase())) n = n.slice(t.zone.length).replace(/^[\s\-–:]+/, '');
-    return n || t.name || 'Table';
+    return n || t.name || appT('Table');
   };
 
   const openTarget = t => {
@@ -399,13 +401,13 @@ function CounterScreen() {
   const send = async (anyway = false) => {
     if (!lines.length || sendingRef.current || sending || !target) return;
     if (lines.some(line => !byId[line.pid] || !validCounterOptions(groupsById[line.pid] || [], line.sel))) {
-      toast.error('Check each item’s options before sending. A menu option may have changed.');
+      toast.error(appT('Check each item’s options before sending. A menu option may have changed.'));
       setTicketOpen(true);
       return;
     }
     const ticketKey = target.key;
     if (isOffline()) {
-      setSendNote({ key: ticketKey, note: offlineNote('Couldn’t send the order', 'Sending to the kitchen needs the internet. The ticket is kept here.') });
+      setSendNote({ key: ticketKey, note: offlineNote(appT('Couldn’t send the order'), appT('Sending to the kitchen needs the internet. The ticket is kept here.'), appT) });
       return;
     }
     if (anyway === true) forgetCheckout(`counter:${tenantId}:${ticketKey}`);
@@ -427,7 +429,7 @@ function CounterScreen() {
         p_notes: null,
         p_customer_id: null,
       }, `counter:${tenantId}:${target.key}`);
-      toast.success(`${data.order_number} sent to kitchen · ${money(data.total_amount)}`);
+      toast.success(appT('{order_number} sent to kitchen · {total_amount}', { order_number: data.order_number, total_amount: money(data.total_amount) }));
       setTickets(prev => ({ ...prev, [target.key]: [] }));
       backToTables();
       setTarget(null);
@@ -435,7 +437,7 @@ function CounterScreen() {
       loadSessions();
     } catch (e) {
       // It stays on the ticket (which is kept) until the next send: what happened, in plain words.
-      setSendNote({ key: ticketKey, note: counterSendNote(e), earlier: !!e?.checkoutEarlier });
+      setSendNote({ key: ticketKey, note: counterSendNote(e, appT), earlier: !!e?.checkoutEarlier });
     } finally {
       sendingRef.current = false;
       setSending(false);
@@ -454,7 +456,7 @@ function CounterScreen() {
       if (error) throw error;
       const settledLabel = target.label;
       const settledSessionId = session.id;
-      if (data?.already_closed) toast.info(`${settledLabel} was already settled.`);
+      if (data?.already_closed) toast.info(appT('{settledLabel} was already settled.', { settledLabel }));
       else setSettled({ sessionId: settledSessionId, label: settledLabel, amount: data?.amount ?? session.total_amount, method, bill: null });
       setSettleOpen(false);
       await loadSessions();
@@ -466,7 +468,7 @@ function CounterScreen() {
           .catch(() => setSettled(s => (s && s.sessionId === settledSessionId ? { ...s, billFailed: true } : s)));
       }
     } catch (e) {
-      toast.error('Could not settle the bill. Please try again.');
+      toast.error(appT('Could not settle the bill. Please try again.'));
     } finally {
       setSettling(false);
     }
@@ -478,9 +480,9 @@ function CounterScreen() {
     setPrinting(true);
     try {
       await printTableBill(printable, tenantId, tenant);
-      toast.success(printable.paid ? 'Receipt sent to printer' : 'Bill sent to printer');
+      toast.success(printable.paid ? appT('Receipt sent to printer') : appT('Bill sent to printer'));
     } catch (error) {
-      toast.error(error.message || 'Printing failed. Check the printer and try again.');
+      toast.error(error.message || appT('Printing failed. Check the printer and try again.'));
     } finally {
       billPrintRef.current = false;
       setPrinting(false);
@@ -491,15 +493,15 @@ function CounterScreen() {
     return (
       <div className="ctr-root">
         <style>{CSS}</style>
-        <div className="ctr-loading"><Loader2 className="w-6 h-6 animate-spin" /> Loading the counter…</div>
+        <div className="ctr-loading"><Loader2 className="w-6 h-6 animate-spin" />{' '}{appT('Loading the counter…')}</div>
       </div>
     );
   }
 
   const tabs = [
-    ...(hasPopular ? [{ id: 'popular', main: nameMode === 'cjk' ? '最常点' : 'Most ordered', sub: nameMode === 'cjk' ? 'Most ordered' : '最常点' }] : []),
+    ...(hasPopular ? [{ id: 'popular', main: nameMode === 'cjk' ? '最常点' : appT('Most ordered'), sub: nameMode === 'cjk' ? appT('Most ordered') : '最常点' }] : []),
     ...cats.map(c => ({ id: c.id, ...nameParts(c.name) })),
-    ...(uncategorized.length ? [{ id: 'other', main: 'Other', sub: '' }] : []),
+    ...(uncategorized.length ? [{ id: 'other', main: appT('Other'), sub: '' }] : []),
   ];
   const q = query.trim().toLowerCase();
   const visibleItems = q
@@ -518,19 +520,19 @@ function CounterScreen() {
       onChangeCapture={event => { if (sendingRef.current) { event.preventDefault(); event.stopPropagation(); } }}
       onKeyDownCapture={event => { if (sendingRef.current) { event.preventDefault(); event.stopPropagation(); } }}>
       <style>{CSS}</style>
-      {sending && <div role="status" className="fixed inset-0 z-[80] flex items-center justify-center bg-black/30"><div className="rounded-xl bg-background text-foreground px-5 py-4 shadow-xl">Sending order…</div></div>}
+      {sending && <div role="status" className="fixed inset-0 z-[80] flex items-center justify-center bg-black/30"><div className="rounded-xl bg-background text-foreground px-5 py-4 shadow-xl">{appT('Sending order…')}</div></div>}
 
       <header className="ctr-top">
         {view === 'tables'
-          ? <button className="ctr-back" onClick={() => goBack(navigate, createPageUrl('Dashboard'))}>← Exit</button>
-          : <button className="ctr-back" onClick={backToTables}>← Tables</button>}
+          ? <button className="ctr-back" onClick={() => goBack(navigate, createPageUrl('Dashboard'))}>{appT('← Exit')}</button>
+          : <button className="ctr-back" onClick={backToTables}>{appT('← Tables')}</button>}
         <div className="ctr-title">
           {view === 'tables' || !target
-            ? <>{tenant?.logo_url ? <img className="ctr-logo" src={tenant.logo_url} alt="" /> : null}<span className="ctr-brand">{tenant?.name || 'Counter'}</span><span className="ctr-store">Counter</span></>
+            ? <>{tenant?.logo_url ? <img className="ctr-logo" src={tenant.logo_url} alt="" /> : null}<span className="ctr-brand">{tenant?.name || appT('Counter')}</span><span className="ctr-store">{appT('Counter')}</span></>
             : <span className="ctr-target">{target.label}{target.zone ? <span className="ctr-zone-tag"> · {target.zone}</span> : null}</span>}
         </div>
-        <button className="ctr-lang" onClick={toggleNameMode} aria-label="Switch which dish-name language is shown large">
-          <span className={nameMode === 'cjk' ? 'on' : ''}>中</span>/<span className={nameMode === 'latin' ? 'on' : ''}>EN</span>
+        <button className="ctr-lang" onClick={toggleNameMode} aria-label={appT('Switch which dish-name language is shown large')}>
+          <span className={nameMode === 'cjk' ? 'on' : ''}>中</span>/<span className={nameMode === 'latin' ? 'on' : ''}>{appT('EN')}</span>
         </button>
       </header>
 
@@ -538,23 +540,23 @@ function CounterScreen() {
         <div className="ctr-tables">
           <div className="ctr-tables-inner">
             <div className="ctr-head">
-              <h1>Pick a table</h1>
-              <p>Tap a table to take its order. Amber tables have a running bill.</p>
+              <h1>{appT('Pick a table')}</h1>
+              <p>{appT('Tap a table to take its order. Amber tables have a running bill.')}</p>
             </div>
             <button
               className="ctr-takeaway"
-              onClick={() => openTarget({ key: 'takeaway', type: 'takeaway', tableId: null, label: 'Takeaway', zone: '' })}
+              onClick={() => openTarget({ key: 'takeaway', type: 'takeaway', tableId: null, label: appT('Takeaway'), zone: '' })}
             >
               <span className="ctr-tw-icon"><ShoppingBag className="w-6 h-6" /></span>
               <span className="ctr-tw-text">
-                <b>Takeaway</b>
-                <span>{draftCount('takeaway') ? `${draftCount('takeaway')} items not sent yet` : 'No table needed'}</span>
+                <b>{appT('Takeaway')}</b>
+                <span>{draftCount('takeaway') ? (draftCount('takeaway') === 1 ? appT('1 item not sent yet') : appT('{count} items not sent yet', { count: draftCount('takeaway') })) : appT('No table needed')}</span>
               </span>
-              <span className="ctr-go">Start →</span>
+              <span className="ctr-go">{appT('Start →')}</span>
             </button>
             {zones.map(([z, list]) => (
-              <section key={z} className="ctr-zone">
-                <h2>{z} <span>{list.filter(t => sessions[t.id]).length} of {list.length} with a running bill</span></h2>
+              <section key={z || '-'} className="ctr-zone">
+                <h2>{z || appT('Tables')} <span>{appT('{busy} of {count} with a running bill', { busy: list.filter(t => sessions[t.id]).length, count: list.length })}</span></h2>
                 <div className="ctr-table-grid">
                   {list.map(t => {
                     const s = sessions[t.id];
@@ -568,8 +570,8 @@ function CounterScreen() {
                         className={`ctr-tile ${s ? 'busy' : d ? 'draft' : ''}`}
                         onClick={() => openTarget({ key: `table:${t.id}`, type: 'dine_in', tableId: t.id, label: lbl, zone: t.zone || '' })}
                       >
-                        <span className="ctr-tnum">{num ? <><small>{word || 'Table'}</small>{num}</> : lbl}</span>
-                        <span className="ctr-tstate">{s ? money(s.total_amount) : d ? 'Not sent yet' : 'Free'}</span>
+                        <span className="ctr-tnum">{num ? <><small>{word || appT('Table')}</small>{num}</> : lbl}</span>
+                        <span className="ctr-tstate">{s ? money(s.total_amount) : d ? appT('Not sent yet') : appT('Available')}</span>
                       </button>
                     );
                   })}
@@ -577,14 +579,14 @@ function CounterScreen() {
               </section>
             ))}
             {!tables.length && (
-              <p className="ctr-empty">No tables yet. Takeaway works without them; add tables under Tables &amp; QR.</p>
+              <p className="ctr-empty">{appT('No tables yet. Takeaway works without them; add tables under Tables & QR.')}</p>
             )}
           </div>
         </div>
       ) : (
         <div className={`ctr-order ${ticketOpen ? 'ticket-open' : ''}`}>
           <section className="ctr-menu" aria-label="Menu">
-            <div className="ctr-cats" role="tablist" aria-label="Menu categories">
+            <div className="ctr-cats" role="tablist" aria-label={appT('Menu categories')}>
               {tabs.map(tab => (
                 <button key={tab.id} role="tab" aria-selected={!q && cat === tab.id} className="ctr-cat" onClick={() => { setCat(tab.id); setQuery(''); }}>
                   <span className="m">{tab.main}</span>{tab.sub ? <span className="s">{tab.sub}</span> : null}
@@ -598,14 +600,14 @@ function CounterScreen() {
                   type="search"
                   value={query}
                   onChange={e => setQuery(e.target.value)}
-                  placeholder="Search dishes…"
-                  aria-label="Search dishes"
+                  placeholder={appT('Search dishes…')}
+                  aria-label={appT('Search dishes')}
                 />
-                {query && <button className="ctr-search-clear" onClick={() => setQuery('')} aria-label="Clear search">×</button>}
+                {query && <button className="ctr-search-clear" onClick={() => setQuery('')} aria-label={appT('Clear search')}>×</button>}
               </div>
               {q
-                ? <p className="ctr-note">{visibleItems.length} dish{visibleItems.length === 1 ? '' : 'es'} match “{query.trim()}”. Tap to add.</p>
-                : cat === 'popular' && <p className="ctr-note">Most ordered here in the last 90 days. One tap adds a dish.</p>}
+                ? <p className="ctr-note">{visibleItems.length === 1 ? appT('1 dish matches “{query}”. Tap to add.', { query: query.trim() }) : appT('{count} dishes match “{query}”. Tap to add.', { count: visibleItems.length, query: query.trim() })}</p>
+                : cat === 'popular' && <p className="ctr-note">{appT('Most ordered here in the last 90 days. One tap adds a dish.')}</p>}
               <div className="ctr-grid">
                 {visibleItems.map(p => {
                   const n = nameParts(p.name);
@@ -614,7 +616,7 @@ function CounterScreen() {
 
                   return (
                     <article key={p.id} className={`ctr-item ${q ? 'in' : ''}`} aria-label={p.name}>
-                      <button className="ctr-item-add" onClick={() => addProduct(p)} aria-label={`Add ${p.name}, ${money(p.price)}`}>
+                      <button className="ctr-item-add" onClick={() => addProduct(p)} aria-label={appT('Add {name}, {price}', { name: p.name, price: money(p.price) })}>
                       {q ? <span className="ctr-qty">×{q}</span> : null}
                       <span className="ctr-i-media">
                         {p.image_url
@@ -628,54 +630,54 @@ function CounterScreen() {
                       <span className="ctr-i-foot">
                         <span className="ctr-i-price">{money(p.price)}</span>
                         <span className="ctr-i-hint">
-                          {groups.length ? 'Choose options' : (cat === 'popular' && sold[p.id] ? `${sold[p.id]} sold` : '')}
+                          {groups.length ? appT('Choose options') : (cat === 'popular' && sold[p.id] ? appT('{value} sold', { value: sold[p.id] }) : '')}
                         </span>
                       </span>
                       </button>
-                      <div className="ctr-card-stepper" aria-label={`Quantity for ${p.name}`}>
-                        <button disabled={!q} onClick={() => reduceProduct(p)} aria-label={`Remove one ${p.name}`}>−</button>
+                      <div className="ctr-card-stepper" aria-label={appT('Quantity for {name}', { name: p.name })}>
+                        <button disabled={!q} onClick={() => reduceProduct(p)} aria-label={appT('Remove one {name}', { name: p.name })}>−</button>
                         <span aria-live="polite">{q || 0}</span>
-                        <button onClick={() => addProduct(p)} aria-label={`Add one ${p.name}`}>+</button>
+                        <button onClick={() => addProduct(p)} aria-label={appT('Add one {name}', { name: p.name })}>+</button>
                       </div>
                     </article>
                   );
                 })}
               </div>
-              {!visibleItems.length && <p className="ctr-empty">No active dishes here.</p>}
+              {!visibleItems.length && <p className="ctr-empty">{appT('No active dishes here.')}</p>}
             </div>
             <div className="ctr-review">
               {count
-                ? <button className="ctr-review-bar" onClick={() => setTicketOpen(true)}><span>{count} item{count > 1 ? 's' : ''} · {money(total)}</span><span>Review &amp; send →</span></button>
+                ? <button className="ctr-review-bar" onClick={() => setTicketOpen(true)}><span>{count === 1 ? appT('1 item') : appT('{count} items', { count })} · {money(total)}</span><span>{appT('Review & send →')}</span></button>
                 : session
-                  ? <button className="ctr-review-bar ctr-bill-bar" onClick={() => setTicketOpen(true)}><span>Bill {money(shownBill ? shownBill.total : session.total_amount)} · {liveRounds} order{liveRounds === 1 ? '' : 's'}</span><span>View &amp; settle →</span></button>
-                  : <p className="ctr-review-hint">Tap dishes to add them to this order</p>}
+                  ? <button className="ctr-review-bar ctr-bill-bar" onClick={() => setTicketOpen(true)}><span>{appT('Bill')}{' '}{money(shownBill ? shownBill.total : session.total_amount)}{' '}{liveRounds === 1 ? appT('· 1 order') : appT('· {liveRounds} orders', { liveRounds })}</span><span>{appT('View & settle →')}</span></button>
+                  : <p className="ctr-review-hint">{appT('Tap dishes to add them to this order')}</p>}
             </div>
           </section>
 
-          <aside className="ctr-ticket" aria-label="Current order">
+          <aside className="ctr-ticket" aria-label={appT('Current order')}>
             <div className="ctr-ticket-head">
               <div className="ctr-row">
                 <div>
-                  <div className="ctr-eyebrow">{target.type === 'takeaway' ? 'Takeaway' : (target.zone || 'Dine-in')}</div>
+                  <div className="ctr-eyebrow">{target.type === 'takeaway' ? appT('Takeaway') : (target.zone || appT('Dine-in'))}</div>
                   <h2>{target.label}</h2>
                 </div>
-                <button className="ctr-close-ticket" onClick={() => setTicketOpen(false)}>← Menu</button>
+                <button className="ctr-close-ticket" onClick={() => setTicketOpen(false)}>{appT('← Menu')}</button>
               </div>
               {session && (
                 <div className="ctr-running">
-                  <span>Already sent <b>{money(shownBill ? shownBill.total : session.total_amount)}</b> · {liveRounds} order{liveRounds === 1 ? '' : 's'}</span>
-                  <button className="ctr-settle" onClick={() => setSettleOpen(true)}>Settle bill</button>
+                  <span>{appT('Already sent')}{' '}<b>{money(shownBill ? shownBill.total : session.total_amount)}</b>{' '}{liveRounds === 1 ? appT('· 1 order') : appT('· {liveRounds} orders', { liveRounds })}</span>
+                  <button className="ctr-settle" onClick={() => setSettleOpen(true)}>{appT('Settle bill')}</button>
                 </div>
               )}
             </div>
             <ul className="ctr-lines">
               {shownBill && shownBill.rounds.length > 0 && (
-                <li className="ctr-sent" aria-label="Already ordered">
-                  <div className="ctr-sent-head"><span>Already ordered</span><b>{money(shownBill.total)}</b></div>
+                <li className="ctr-sent" aria-label={appT('Already ordered')}>
+                  <div className="ctr-sent-head"><span>{appT('Already ordered')}</span><b>{money(shownBill.total)}</b></div>
                   {shownBill.rounds.map((round, i) => (
                     <div key={round.id} className={`ctr-round${round.status === 'cancelled' ? ' void' : ''}`}>
                       <div className="ctr-round-head">
-                        <span>Round {i + 1} · {round.order_number || ''} · {roundTime(round.created_date)}</span>
+                        <span>{appT('Round {count} · {number} · {time}', { count: i + 1, number: round.order_number || '', time: roundTime(round.created_date) })}</span>
                         <span className={`ctr-st st-${round.status}`}>{ROUND_STATUS[round.status] || round.status}</span>
                       </div>
                       {(round.items || []).map((item, k) => (
@@ -692,7 +694,7 @@ function CounterScreen() {
                   ))}
                 </li>
               )}
-              {shownBill && shownBill.rounds.length > 0 && <li className="ctr-new-head">Not sent yet</li>}
+              {shownBill && shownBill.rounds.length > 0 && <li className="ctr-new-head">{appT('Not sent yet')}</li>}
               {lines.length ? lines.map(line => {
                 const p = byId[line.pid];
                 if (!p) return null;
@@ -707,17 +709,17 @@ function CounterScreen() {
                       {line.note && !line.noteOpen && <span className="ctr-l-note">“{line.note}”</span>}
                       <div className="ctr-l-tools">
                         {groups.length > 0 && (
-                          <button className="ctr-chip" onClick={() => setSheet({ mode: 'edit', uid: line.uid, pid: line.pid, sel: line.sel })}>Options</button>
+                          <button className="ctr-chip" onClick={() => setSheet({ mode: 'edit', uid: line.uid, pid: line.pid, sel: line.sel })}>{appT('Options')}</button>
                         )}
-                        <button className="ctr-chip" onClick={() => toggleNote(line.uid)}>{line.noteOpen ? 'Done' : 'Note'}</button>
+                        <button className="ctr-chip" onClick={() => toggleNote(line.uid)}>{line.noteOpen ? appT('Done') : appT('Note')}</button>
                       </div>
                       {line.noteOpen && (
                         <input
                           className="ctr-note-input"
                           autoFocus
                           value={line.note}
-                          placeholder="e.g. less oil, no ginger"
-                          aria-label={`Note for ${p.name}`}
+                          placeholder={appT('e.g. less oil, no ginger')}
+                          aria-label={appT('Note for {name}', { name: p.name })}
                           onChange={e => updateNote(line.uid, e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter') toggleNote(line.uid); }}
                         />
@@ -725,31 +727,31 @@ function CounterScreen() {
                     </div>
                     <div className="ctr-line-side">
                       <div className="ctr-stepper">
-                        <button onClick={() => changeQty(line.uid, -1)} aria-label="One less">−</button>
+                        <button onClick={() => changeQty(line.uid, -1)} aria-label={appT('One less')}>−</button>
                         <span>{line.qty}</span>
-                        <button onClick={() => changeQty(line.uid, 1)} aria-label="One more">+</button>
+                        <button onClick={() => changeQty(line.uid, 1)} aria-label={appT('One more')}>+</button>
                       </div>
                       <span className="ctr-l-total">{money(unitPrice(line) * line.qty)}</span>
                     </div>
                   </li>
                 );
               }) : (
-                <li className="ctr-empty">Add dishes from the menu. Use + and − to adjust quantities.</li>
+                <li className="ctr-empty">{appT('Add dishes from the menu. Use + and − to adjust quantities.')}</li>
               )}
             </ul>
             <div className="ctr-foot">
               {sendNote && sendNote.key === target?.key && (
                 <ErrorNote note={sendNote.note} onDismiss={() => setSendNote(null)}>
                   {sendNote.earlier && (
-                    <button type="button" className="ctr-send-anyway" onClick={() => send(true)} disabled={sending}>Send anyway</button>
+                    <button type="button" className="ctr-send-anyway" onClick={() => send(true)} disabled={sending}>{appT('Send anyway')}</button>
                   )}
                 </ErrorNote>
               )}
-              <div className="ctr-total"><span>This order</span><b>{money(total)}</b></div>
+              <div className="ctr-total"><span>{appT('This order')}</span><b>{money(total)}</b></div>
               <button className="ctr-send" disabled={!lines.length || sending} onClick={send}>
-                {sending ? 'Sending…' : 'Send to kitchen'}
+                {sending ? appT('Sending…') : appT('Send to kitchen')}
               </button>
-              {lines.length > 0 && <button className="ctr-clear" onClick={() => setLines([])}>Clear order</button>}
+              {lines.length > 0 && <button className="ctr-clear" onClick={() => setLines([])}>{appT('Clear order')}</button>}
             </div>
           </aside>
         </div>
@@ -764,19 +766,19 @@ function CounterScreen() {
         const line = sheet.mode === 'edit' ? lines.find(l => l.uid === sheet.uid) : null;
         return (
           <div className="ctr-sheet-back" onClick={() => setSheet(null)}>
-            <div className="ctr-sheet" role="dialog" aria-modal="true" aria-label={`Options for ${p.name}`} onClick={e => e.stopPropagation()}>
+            <div className="ctr-sheet" role="dialog" aria-modal="true" aria-label={appT('Options for {name}', { name: p.name })} onClick={e => e.stopPropagation()}>
               <div className="ctr-sheet-heading">
                 <div>
                 <h3>{n.main} {n.sub ? <span className="ctr-sheet-alt">{n.sub}</span> : null}</h3>
                 <p className="ctr-sheet-sub">
-                  {sheet.mode === 'new' ? 'Choose the options, then add.' : line && line.qty > 1 ? `Applies to all ${line.qty} on this line.` : 'Tap to add or remove.'}
+                  {sheet.mode === 'new' ? appT('Choose the options, then add.') : line && line.qty > 1 ? appT('Applies to all {qty} on this line.', { qty: line.qty }) : appT('Tap to add or remove.')}
                 </p>
                 </div>
-                <button className="ctr-sheet-close" aria-label="Close options" onClick={() => setSheet(null)}><X size={22} /></button>
+                <button className="ctr-sheet-close" aria-label={appT('Close options')} onClick={() => setSheet(null)}><X size={22} /></button>
               </div>
               {groups.map(g => (
                 <div key={g.name} className="ctr-opt-group">
-                  <h4>{g.name} · {g.multiple ? 'pick any' : 'pick one'}</h4>
+                  <h4>{g.name} · {g.multiple ? appT('pick any') : appT('pick one')}</h4>
                   <div className="ctr-opts">
                     {g.options.map(o => {
                       const on = sheet.sel.some(x => x.group === g.name && x.label === o.label);
@@ -784,7 +786,7 @@ function CounterScreen() {
                       return (
                         <button key={o.label} className="ctr-opt" aria-pressed={on} onClick={() => toggleOption(g, o.label)}>
                           <span><span className="m">{on2.main}</span>{on2.sub ? <span className="s">{on2.sub}</span> : null}</span>
-                          <span className="ctr-o-price">{o.price ? `+${money(o.price)}` : 'Free'}</span>
+                          <span className="ctr-o-price">{o.price ? appT('+{price}', { price: money(o.price) }) : appT('Free')}</span>
                         </button>
                       );
                     })}
@@ -792,7 +794,7 @@ function CounterScreen() {
                 </div>
               ))}
               <button className="ctr-sheet-done" disabled={!ready} onClick={confirmSheet}>
-                {sheet.mode === 'new' ? `Add · ${money(unit)}` : `Done · ${money(unit)} each`}
+                {sheet.mode === 'new' ? appT('Add · {unit}', { unit: money(unit) }) : appT('Done · {unit} each', { unit: money(unit) })}
               </button>
             </div>
           </div>
@@ -801,19 +803,19 @@ function CounterScreen() {
 
       {quantityProduct && byId[quantityProduct] && (
         <div className="ctr-sheet-back" onClick={() => setQuantityProduct(null)}>
-          <div className="ctr-sheet" role="dialog" aria-modal="true" aria-label={`Quantities for ${byId[quantityProduct].name}`} onClick={e => e.stopPropagation()}>
-            <div className="ctr-sheet-heading"><h3>{byId[quantityProduct].name}</h3><button className="ctr-sheet-close" aria-label="Close quantities" onClick={() => setQuantityProduct(null)}><X size={22} /></button></div>
+          <div className="ctr-sheet" role="dialog" aria-modal="true" aria-label={appT('Quantities for {name}', { name: byId[quantityProduct].name })} onClick={e => e.stopPropagation()}>
+            <div className="ctr-sheet-heading"><h3>{byId[quantityProduct].name}</h3><button className="ctr-sheet-close" aria-label={appT('Close quantities')} onClick={() => setQuantityProduct(null)}><X size={22} /></button></div>
             {lines.filter(l => l.pid === quantityProduct).map(line => (
               <div className="ctr-row" key={line.uid}>
-                <span>{line.sel.map(x => x.label).join(', ') || 'Standard'}{line.note ? ` · ${line.note}` : ''}</span>
+                <span>{line.sel.map(x => x.label).join(', ') || appT('Standard')}{line.note ? ' ' + appT('· {note}', { note: line.note }) : ''}</span>
                 <div className="ctr-stepper">
-                  <button onClick={() => changeQty(line.uid, -1)} aria-label={`Remove one ${line.sel.map(x => x.label).join(', ') || 'standard'}`}>−</button>
+                  <button onClick={() => changeQty(line.uid, -1)} aria-label={appT('Remove one {item}', { item: line.sel.map(x => x.label).join(', ') || appT('standard') })}>−</button>
                   <span>{line.qty}</span>
-                  <button disabled={line.qty >= 99} onClick={() => changeQty(line.uid, 1)} aria-label="Add one of these options">+</button>
+                  <button disabled={line.qty >= 99} onClick={() => changeQty(line.uid, 1)} aria-label={appT('Add one of these options')}>+</button>
                 </div>
               </div>
             ))}
-            <button className="ctr-sheet-done" onClick={() => setQuantityProduct(null)}>Done</button>
+            <button className="ctr-sheet-done" onClick={() => setQuantityProduct(null)}>{appT('Done')}</button>
           </div>
         </div>
       )}
@@ -821,13 +823,13 @@ function CounterScreen() {
 
       {settleOpen && session && target && (
         <div className="ctr-sheet-back" onClick={() => !settling && !printing && setSettleOpen(false)}>
-          <div className="ctr-sheet" role="dialog" aria-modal="true" aria-label={`Settle ${target.label}`} onClick={e => e.stopPropagation()}>
+          <div className="ctr-sheet" role="dialog" aria-modal="true" aria-label={appT('Settle {label}', { label: target.label })} onClick={e => e.stopPropagation()}>
             <div>
-              <h3>Settle {target.label}</h3>
-              <p className="ctr-sheet-sub">Marks {liveRounds} order{liveRounds === 1 ? '' : 's'} as paid and frees the table.</p>
+              <h3>{appT('Settle {label}', { label: target.label })}</h3>
+              <p className="ctr-sheet-sub">{liveRounds === 1 ? appT('Marks 1 order as paid and frees the table.') : appT('Marks {liveRounds} orders as paid and frees the table.', { liveRounds })}</p>
             </div>
             {shownBill && shownBill.items.length > 0 && (
-              <ul className="ctr-bill-items" aria-label={`${target.label} bill`}>
+              <ul className="ctr-bill-items" aria-label={appT('{label} bill', { label: target.label })}>
                 {shownBill.items.map((item, k) => (
                   <li key={k}>
                     <span>{item.quantity}× {nameParts(item.name).main}{item.variant ? <small> · {item.variant}</small> : null}</span>
@@ -838,34 +840,34 @@ function CounterScreen() {
             )}
             <div className="ctr-settle-total">{money(shownBill ? shownBill.total : session.total_amount)}</div>
             <div className="ctr-pay-grid">
-              {[['cash', 'Cash'], ['qr', qrLabel], ['card', 'Card']].map(([m, l]) => (
+              {[['cash', appT('Cash')], ['qr', qrLabel], ['card', appT('Card')]].map(([m, l]) => (
                 <button key={m} className="ctr-pay" disabled={settling || printing} onClick={() => settle(m)}>{settling ? '…' : l}</button>
               ))}
             </div>
             <button className="ctr-print-bill" disabled={settling || printing || !shownBill} onClick={() => printBill(shownBill)}>
               {printing ? <Loader2 size={18} className="animate-spin" /> : <Printer size={18} />}
-              {printing ? 'Sending to printer…' : 'Print bill'}
+              {printing ? appT('Sending to printer…') : appT('Print bill')}
             </button>
-            <button className="ctr-cancel" disabled={settling || printing} onClick={() => setSettleOpen(false)}>Cancel</button>
+            <button className="ctr-cancel" disabled={settling || printing} onClick={() => setSettleOpen(false)}>{appT('Cancel')}</button>
           </div>
         </div>
       )}
 
       {settled && (
         <div className="ctr-sheet-back" onClick={() => !printing && setSettled(null)}>
-          <div className="ctr-sheet" role="dialog" aria-modal="true" aria-label={`${settled.label} settled`} onClick={e => e.stopPropagation()}>
+          <div className="ctr-sheet" role="dialog" aria-modal="true" aria-label={appT('{label} settled', { label: settled.label })} onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3">
               <CheckCircle2 size={32} style={{ color: 'rgb(var(--color-primary))', flexShrink: 0 }} />
               <div>
-                <h3>{settled.label} settled</h3>
-                <p className="ctr-sheet-sub">{money(settled.amount)} · Paid by {settled.method === 'qr' ? qrLabel : settled.method === 'card' ? 'Card' : 'Cash'}</p>
+                <h3>{appT('{label} settled', { label: settled.label })}</h3>
+                <p className="ctr-sheet-sub">{appT('{amount} · Paid by {method}', { amount: money(settled.amount), method: settled.method === 'qr' ? qrLabel : settled.method === 'card' ? appT('Card') : appT('Cash') })}</p>
               </div>
             </div>
             <button className="ctr-sheet-done flex items-center justify-center gap-2" disabled={printing || !settled.bill} onClick={() => printBill(settled.bill)}>
               {printing ? <Loader2 size={22} className="animate-spin" /> : <Printer size={22} />}
-              {printing ? 'Sending to printer…' : settled.bill ? 'Print receipt' : settled.billFailed ? 'Receipt unavailable' : 'Preparing receipt…'}
+              {printing ? appT('Sending to printer…') : settled.bill ? appT('Print receipt') : settled.billFailed ? appT('Receipt unavailable') : appT('Preparing receipt…')}
             </button>
-            <button className="ctr-cancel min-h-11" disabled={printing} onClick={() => setSettled(null)}>Done</button>
+            <button className="ctr-cancel min-h-11" disabled={printing} onClick={() => setSettled(null)}>{appT('Done')}</button>
           </div>
         </div>
       )}

@@ -30,6 +30,7 @@ import useSettingsDraft from '@/hooks/useSettingsDraft';
 import SellingSettingsForm from '../components/shop/SellingSettingsForm';
 import { currencyPrefix } from '@/lib/money';
 import { paymentQrName } from '@/lib/countries';
+import { useAppText } from '@/lib/appText';
 
 export default function TenantSettings() {
   return (
@@ -41,6 +42,7 @@ export default function TenantSettings() {
 
 // Also used in a free shop's setup steps (ShopSetup.jsx).
 export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
+  const { t } = useAppText();
   const { hasPermission } = useTenant();
   // Payment QR changes follow the "Modify Payments" permission; everyone who
   // can open Settings can still see the QR (view-only).
@@ -75,14 +77,14 @@ export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
     const supabase = await getSupabase();
     const path = `${tenantId}/payment-qr/${Date.now()}-${file.name}`;
     const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true });
-    if (error) { showError(error, 'Couldn’t upload the QR code'); setIsUploadingQR(false); return; }
+    if (error) { showError(error, t('Couldn’t upload the QR code'), { t }); setIsUploadingQR(false); return; }
     const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
     const { error: saveError } = await supabase.from('tenants').update({ payment_qr_url: publicUrl }).eq('id', tenantId);
-    if (saveError) { showError(saveError, 'Couldn’t save the QR code'); setIsUploadingQR(false); return; }
+    if (saveError) { showError(saveError, t('Couldn’t save the QR code'), { t }); setIsUploadingQR(false); return; }
     setPaymentQRPreview(publicUrl);
     setIsUploadingQR(false);
     queryClient.invalidateQueries({ queryKey: ['currentTenant'] });
-    toast.success('QR uploaded');
+    toast.success(t('QR uploaded'));
   };
 
   const handleRemovePaymentQR = async () => {
@@ -106,9 +108,9 @@ export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
       if (error) throw error;
       markPaymentSaved(paymentDraft);
       queryClient.invalidateQueries({ queryKey: ['currentTenant'] });
-      toast.success('Payment settings saved');
+      toast.success(t('Payment settings saved'));
     } catch (err) {
-      setSaveNote(explainError(err, { title: 'Couldn’t save your payment settings' }));
+      setSaveNote(explainError(err, { title: t('Couldn’t save your payment settings'), t }));
     } finally {
       setIsSavingQR(false);
     }
@@ -119,10 +121,10 @@ export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
       <Card className="border border-slate-100 shadow-sm p-6">
         <div className="flex flex-col items-center gap-5">
           <div className="w-full text-center">
-            <p className="text-sm font-semibold text-slate-800 mb-1">Payment QR Code</p>
+            <p className="text-sm font-semibold text-slate-800 mb-1">{t('Payment QR Code')}</p>
             <p className="text-xs text-slate-400">
-              Upload the QR code customers scan to pay you, for example your {paymentQrName(tenant)} QR.<br />
-              Shown to customers after they place an order.
+              {t('Upload the QR code customers scan to pay you, for example your {paymentQrName} QR.', { paymentQrName: paymentQrName(tenant) })}<br />
+              {t('Shown to customers after they place an order.')}
             </p>
           </div>
 
@@ -149,7 +151,7 @@ export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
                 ) : (
                   <img
                     src={paymentQRPreview}
-                    alt="Payment QR"
+                    alt={t('Payment QR')}
                     className="rounded-2xl border border-slate-200 bg-white object-contain"
                     style={{ width: 200, height: 200, padding: 8 }}
                   />
@@ -180,7 +182,7 @@ export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
                   </button>
                 )}
               </div>
-              <p className="text-xs text-slate-400">QR uploaded ✓</p>
+              <p className="text-xs text-slate-400">{t('QR uploaded ✓')}</p>
             </div>
           ) : (
             <div
@@ -193,13 +195,13 @@ export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
               ) : canEditPayments ? (
                 <>
                   <QrCode className="w-10 h-10 text-slate-300 mb-2" />
-                  <p className="text-xs font-medium text-slate-500">Click to upload</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">PNG, JPG supported</p>
+                  <p className="text-xs font-medium text-slate-500">{t('Click to upload')}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">{t('PNG, JPG supported')}</p>
                 </>
               ) : (
                 <>
                   <QrCode className="w-10 h-10 text-slate-300 mb-2" />
-                  <p className="text-xs font-medium text-slate-400">No QR uploaded</p>
+                  <p className="text-xs font-medium text-slate-400">{t('No QR uploaded')}</p>
                 </>
               )}
             </div>
@@ -207,22 +209,22 @@ export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
 
           <div className="w-full space-y-3">
             <div>
-              <Label className="text-xs text-slate-600 mb-1 block">Payment label (shown to customer)</Label>
+              <Label className="text-xs text-slate-600 mb-1 block">{t('Payment label (shown to customer)')}</Label>
               <Input
                 className="h-10"
                 value={paymentQRLabel}
                 onChange={e => setPaymentQRLabel(e.target.value)}
-                placeholder="e.g. Scan to pay"
+                placeholder={t('e.g. Scan to pay')}
                 disabled={!canEditPayments}
               />
             </div>
             <div>
-              <Label className="text-xs text-slate-600 mb-1 block">Payment reference (optional)</Label>
+              <Label className="text-xs text-slate-600 mb-1 block">{t('Payment reference (optional)')}</Label>
               <Input
                 className="h-10"
                 value={paymentReference}
                 onChange={e => setPaymentReference(e.target.value)}
-                placeholder="e.g. account name or number"
+                placeholder={t('e.g. account name or number')}
                 disabled={!canEditPayments}
               />
             </div>
@@ -236,10 +238,10 @@ export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
               className="h-11 gap-2 w-full"
               style={{ background: 'var(--color-primary-gradient)', color: '#fff' }}
             >
-              {isSavingQR ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Save className="w-4 h-4" /> Save Changes</>}
+              {isSavingQR ? <><Loader2 className="w-4 h-4 animate-spin" />{' '}{t('Saving...')}</> : <><Save className="w-4 h-4" />{' '}{t('Save Changes')}</>}
             </Button>
           ) : (
-            <p className="text-xs text-slate-400 text-center">You have view-only access to Settings.</p>
+            <p className="text-xs text-slate-400 text-center">{t('You have view-only access to Settings.')}</p>
           )}
         </div>
       </Card>
@@ -248,6 +250,7 @@ export function PaymentQRTab({ tenant, tenantId, refreshVersion = 0 }) {
 }
 
 function TenantSettingsContent() {
+  const { t } = useAppText();
   const { tenantId, tenant, subscription } = useTenant();
   const settingsTour = useProductTour('settings');
   const queryClient = useQueryClient();
@@ -265,7 +268,7 @@ function TenantSettingsContent() {
   return (
     <PermissionGate permission="settings.view">
       <>
-      <PageHeader title="Settings" description="Configure your business and manage roles" />
+      <PageHeader title={t('Settings')} description={t('Configure your business and manage roles')} />
 
       {settingsTour.isOwner && (
         <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl border border-slate-100 bg-slate-50/70 mb-5">
@@ -274,12 +277,12 @@ function TenantSettingsContent() {
               <RefreshCw className="w-4 h-4 text-slate-500" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-800">Need a refresher?</p>
-              <p className="text-xs text-slate-500 truncate">Replay the onboarding tour anytime.</p>
+              <p className="text-sm font-semibold text-slate-800">{t('Need a refresher?')}</p>
+              <p className="text-xs text-slate-500 truncate">{t('Replay the onboarding tour anytime.')}</p>
             </div>
           </div>
           <Button size="sm" variant="outline" className="flex-shrink-0" onClick={settingsTour.replayTour}>
-            Replay Tour
+            {t('Replay Tour')}
           </Button>
         </div>
       )}
@@ -292,7 +295,7 @@ function TenantSettingsContent() {
             className="flex-1 h-9 rounded-lg text-[11px] sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5"
             style={settingsTab === 'business' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
           >
-            <Building2 className="w-4 h-4" /> Business
+            <Building2 className="w-4 h-4" />{' '}{t('Business')}
           </button>
           {showSellingTab && (
           <button
@@ -301,7 +304,7 @@ function TenantSettingsContent() {
             className="flex-1 h-9 rounded-lg text-[11px] sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5"
             style={settingsTab === 'selling' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
           >
-            <Truck className="w-4 h-4" /> Selling
+            <Truck className="w-4 h-4" />{' '}{t('Selling')}
           </button>
           )}
           <button
@@ -310,7 +313,7 @@ function TenantSettingsContent() {
             className="flex-1 h-9 rounded-lg text-[11px] sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5"
             style={settingsTab === 'payment_qr' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
           >
-            <QrCode className="w-4 h-4" /> Payment QR
+            <QrCode className="w-4 h-4" />{' '}{t('Payment QR')}
           </button>
           <button
             data-tour="settings-theme-tab"
@@ -318,7 +321,7 @@ function TenantSettingsContent() {
             className="flex-1 h-9 rounded-lg text-[11px] sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5"
             style={settingsTab === 'theme' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
           >
-            <Palette className="w-4 h-4" /> Theme
+            <Palette className="w-4 h-4" />{' '}{t('Theme')}
           </button>
           {canSeeUsersTab && (
           <button
@@ -327,7 +330,7 @@ function TenantSettingsContent() {
             className="flex-1 h-9 rounded-lg text-[11px] sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5"
             style={settingsTab === 'users' ? { background: 'var(--color-primary-gradient)', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
           >
-            <Users className="w-4 h-4" /> Users
+            <Users className="w-4 h-4" />{' '}{t('Users')}
           </button>
           )}
         </div>

@@ -6,20 +6,22 @@ import { Edit2, AlertCircle, Package, CheckCircle2, Circle, Layers } from 'lucid
 import { cn } from '@/lib/utils';
 import PriceDisplay from './PriceDisplay';
 import { ItemImage, formatPrice, timeAgo } from '@/components/explore/shared';
+import { useAppText } from '@/lib/appText';
 
 function StockBadge({ product }) {
+  const { t } = useAppText();
   if (product.track_inventory !== true) {
-    return <Badge variant="outline" className="text-slate-500 border-slate-300">Unlimited</Badge>;
+    return <Badge variant="outline" className="text-slate-500 border-slate-300">{t('Unlimited')}</Badge>;
   }
   const stock = product.current_stock ?? product.stock_quantity ?? 0;
   const threshold = product.low_stock_threshold ?? 10;
   if (stock === 0) {
-    return <Badge className="bg-red-100 text-red-700 border-red-300 gap-1"><AlertCircle className="w-3 h-3" />Out of Stock</Badge>;
+    return <Badge className="bg-red-100 text-red-700 border-red-300 gap-1"><AlertCircle className="w-3 h-3" />{t('Out of Stock')}</Badge>;
   }
   if (stock > 0 && stock < threshold) {
-    return <Badge className="bg-amber-100 text-amber-700 border-amber-300">Low Stock ({stock})</Badge>;
+    return <Badge className="bg-amber-100 text-amber-700 border-amber-300">{t('Low Stock ({stock})', { stock })}</Badge>;
   }
-  return <Badge className="bg-green-100 text-green-700 border-green-300" style={{ color: '#166534' }}>{stock} in stock</Badge>;
+  return <Badge className="bg-green-100 text-green-700 border-green-300" style={{ color: '#166534' }}>{t('{stock} in stock', { stock })}</Badge>;
 }
 
 // Counts variant GROUPS (not raw array length).
@@ -34,6 +36,7 @@ const countVariantGroups = (variants) => {
 // variant 'listing': My listings' cards in the grid (what buyers see: photo, name, price,
 // when it was listed, Hidden / Sold out).
 export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMode = 'list', selectionMode = false, selectedIds = new Set(), onLongPress, onToggleSelect, tourTagFirstCard = false, variant = 'product' }) {
+  const { t } = useAppText();
 
   const lpState = React.useRef({ timer: null, moved: false, longPressed: false, activeId: null });
 
@@ -117,8 +120,8 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <p style={{ fontWeight: 600, fontSize: 14, margin: 0, minWidth: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</p>
-                {product.is_featured && <Badge className="bg-amber-500 text-white border-0 text-[10px] px-1.5 py-0">Featured</Badge>}
-                {product.is_active === false && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Inactive</Badge>}
+                {product.is_featured && <Badge className="bg-amber-500 text-white border-0 text-[10px] px-1.5 py-0">{t('Featured')}</Badge>}
+                {product.is_active === false && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{t('Inactive')}</Badge>}
               </div>
               <p style={{ fontSize: 12, color: '#6b7280', margin: '2px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.description}</p>
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 4, gap: 4 }}>
@@ -129,7 +132,7 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
                   {countVariantGroups(product.variants) > 0 && (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 999, background: 'rgba(var(--color-primary), 0.08)', color: 'rgb(var(--color-primary))', border: '1px solid rgba(var(--color-primary), 0.2)', whiteSpace: 'nowrap', flexShrink: 0 }}>
                       <Layers size={9} />
-                      {countVariantGroups(product.variants)} {countVariantGroups(product.variants) === 1 ? 'VARIANT' : 'VARIANTS'}
+                      {countVariantGroups(product.variants)} {countVariantGroups(product.variants) === 1 ? t('VARIANT') : t('VARIANTS')}
                     </span>
                   )}
                   <StockBadge product={product} />
@@ -154,7 +157,7 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
               key={product.id}
               role="button"
               tabIndex={0}
-              aria-label={`Edit ${product.name}`}
+              aria-label={t('Edit {name}', { name: product.name })}
               {...(index === 0 && tourTagFirstCard ? { 'data-tour': 'product-card' } : {})}
               {...makeLongPressProps(product.id, () => onEdit(product))}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (selectionMode) onToggleSelect?.(product.id); else onEdit(product); } }}
@@ -167,7 +170,7 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
                 <ItemImage src={product.image_url} name={product.name} className={`w-full h-full text-4xl ${hidden ? 'opacity-50' : ''}`} />
                 {(hidden || soldOut) && (
                   <span className="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/95 text-slate-700 shadow-sm">
-                    {hidden ? 'Hidden' : 'Sold out'}
+                    {hidden ? t('Hidden') : t('Sold out')}
                   </span>
                 )}
                 {selectionMode && (
@@ -181,7 +184,7 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
               <div className="px-2.5 pt-2 pb-3">
                 <p className="text-sm text-slate-800 leading-snug line-clamp-2 min-h-[2.5rem]">{product.name}</p>
                 <p className="mt-1 text-sm font-bold text-slate-900">{formatPrice(product.price, currency)}</p>
-                <p className="text-[11px] text-slate-400">{timeAgo(product.created_date)}</p>
+                <p className="text-[11px] text-slate-400">{timeAgo(product.created_date, t)}</p>
               </div>
             </div>
           );
@@ -215,11 +218,11 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
             )}
             {!product.is_active && (
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                <Badge variant="secondary" className="bg-white text-slate-700">Inactive</Badge>
+                <Badge variant="secondary" className="bg-white text-slate-700">{t('Inactive')}</Badge>
               </div>
             )}
             {product.is_featured && (
-              <span style={{ position: 'absolute', top: 8, left: 8, background: '#fbbf24', color: 'white', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 999, zIndex: 1 }}>⭐ Featured</span>
+              <span style={{ position: 'absolute', top: 8, left: 8, background: '#fbbf24', color: 'white', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 999, zIndex: 1 }}>{t('⭐ Featured')}</span>
             )}
             {selectionMode && (
               <div style={{ position: 'absolute', top: 6, right: 6, zIndex: 2 }}>
@@ -242,7 +245,7 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
                 {countVariantGroups(product.variants) > 0 && (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 999, background: 'rgba(var(--color-primary), 0.08)', color: 'rgb(var(--color-primary))', border: '1px solid rgba(var(--color-primary), 0.2)', whiteSpace: 'nowrap', flexShrink: 0 }}>
                     <Layers size={9} />
-                    {countVariantGroups(product.variants)} {countVariantGroups(product.variants) === 1 ? 'VARIANT' : 'VARIANTS'}
+                    {countVariantGroups(product.variants)} {countVariantGroups(product.variants) === 1 ? t('VARIANT') : t('VARIANTS')}
                   </span>
                 )}
                 <StockBadge product={product} />

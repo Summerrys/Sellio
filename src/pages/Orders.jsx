@@ -28,7 +28,7 @@ import { toast } from 'sonner';
 import { blockedOffline, showError } from '@/lib/plainError';
 import { createPageUrl } from '../utils';
 import { useNavigate } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
+import { appTimeAgo } from '@/lib/appDates';
 import ShopOrderInfo, { ShopMethodBadge } from '@/components/shop/ShopOrderInfo';
 import { isShopTenant, shopMethod, shopNextAction, shopStatusLabel, shopStatusTabs } from '@/lib/shopSelling';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
@@ -38,17 +38,18 @@ import { keepSnapshot, loadSnapshot } from '@/lib/offlineStore';
 import OfflineNote, { listNoteWords } from '@/components/ui-custom/OfflineNote';
 import { currencyDecimals, formatMoney } from '@/lib/money';
 import { paymentQrName } from '@/lib/countries';
+import { useAppText, appT, N_, appLocale } from '@/lib/appText';
 
 // The latest orders kept on the phone, for opening Orders with no connection (UX states, 4).
 const KEPT_ORDERS = 100;
 
 const STATUS_TABS = [
-  { value: 'all',       label: 'All' },
-  { value: 'pending',   label: 'New' },
-  { value: 'confirmed', label: 'Confirmed' },
-  { value: 'preparing', label: 'Preparing' },
-  { value: 'ready',     label: 'Ready' },
-  { value: 'completed', label: 'Done' },
+  { value: 'all',       label: N_('All') },
+  { value: 'pending',   label: N_('New') },
+  { value: 'confirmed', label: N_('Confirmed') },
+  { value: 'preparing', label: N_('Preparing') },
+  { value: 'ready',     label: N_('Ready') },
+  { value: 'completed', label: N_('Done') },
 ];
 
 const STATUS_ACCENT = {
@@ -61,10 +62,10 @@ const STATUS_ACCENT = {
 };
 
 const STATUS_NEXT = {
-  pending:   { label: 'Accept',          next: 'confirmed' },
-  confirmed: { label: 'Start Preparing', next: 'preparing' },
-  preparing: { label: 'Mark Ready',      next: 'ready' },
-  ready:     { label: 'Mark Served',     next: 'completed' },
+  pending:   { label: N_('Accept'),          next: 'confirmed' },
+  confirmed: { label: N_('Start Preparing'), next: 'preparing' },
+  preparing: { label: N_('Mark Ready'),      next: 'ready' },
+  ready:     { label: N_('Mark Served'),     next: 'completed' },
 };
 
 // Buttons that use theme color vs neutral
@@ -119,12 +120,13 @@ function printReceipt(order, currency, merchantName) {
 // Browser print of a whole table bill, for shops without a receipt printer.
 function printTableReceipt(bill, currency, merchantName) {
   const win = window.open('', '_blank', 'width=400,height=600');
-  if (!win) { toast.error('Allow pop-ups to print, or connect a receipt printer in Settings.'); return; }
+  if (!win) { toast.error(appT('Allow pop-ups to print, or connect a receipt printer in Settings.')); return; }
   win.document.write(tableReceiptHtml(bill, currency, merchantName));
   win.document.close();
 }
 
 function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel, tenantId, onStatusUpdate, onMarkPaid, onOrderUpdated, tourTag = false }) {
+  const { t } = useAppText();
   const { hasPermission, tenant, canUseFeature } = useTenant();
   const canPrintReceipts = !canUseFeature || canUseFeature('can_print');
   const canEditOrders = hasPermission('orders.edit');
@@ -140,7 +142,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
   const shopFood = isFnBIndustry(tenant?.industry);
   const action = isShop ? shopNextAction(order.status, shopMethod(order), shopFood) : STATUS_NEXT[order.status];
   const accent = STATUS_ACCENT[order.status] || STATUS_ACCENT.completed;
-  const elapsed = formatDistanceToNow(new Date(order.created_date || order.created_at), { addSuffix: true });
+  const elapsed = appTimeAgo(new Date(order.created_date || order.created_at));
   const customerName = order.customer_name && order.customer_name.toLowerCase() !== 'nil' ? order.customer_name : null;
   const useThemeButton = THEME_BUTTON_STATUSES.has(order.status);
   const showPrint = order.status === 'ready' || order.status === 'completed';
@@ -201,7 +203,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
     e?.stopPropagation();
     const cfg = loadPrinterConfig(tenantId);
     if (!cfg) {
-      toast.error('No printer connected — set one up in Settings → Printer');
+      toast.error(t('No printer connected — set one up in Settings → Printer'));
       return;
     }
     setChitPrinting(true);
@@ -212,13 +214,13 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
       } else if (cfg.mode === 'network') {
         await sendViaEpsonEPos(cfg.ip, bytes, merchantName);
       } else {
-        toast.error('No printer connected — set one up in Settings → Printer');
+        toast.error(t('No printer connected — set one up in Settings → Printer'));
         return;
       }
-      toast.success('Chit printed ✓');
+      toast.success(t('Chit printed ✓'));
       setShowChit(false);
     } catch (err) {
-      toast.error(`Print failed: ${err.message}`);
+      toast.error(t('Print failed: {message}', { message: err.message }));
     } finally {
       setChitPrinting(false);
     }
@@ -245,10 +247,10 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
       } else {
         browserPrint();
       }
-      toast.success('Printed ✓');
+      toast.success(t('Printed ✓'));
       setShowReceipt(false);
     } catch (err) {
-      toast.error(`Print failed: ${err.message}`);
+      toast.error(t('Print failed: {message}', { message: err.message }));
     } finally {
       setReceiptPrinting(false);
     }
@@ -270,7 +272,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
               <span className="font-bold text-slate-900 text-sm">#{order.order_number || order.id?.slice(-6)}</span>
               {isShop && <ShopMethodBadge order={order} />}
               {isShop && order.payment_status === 'paid' && (
-                <span className="text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">Paid</span>
+                <span className="text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">{t('Paid')}</span>
               )}
               {!isShop && order.table_name && (
                 <span className="text-xs bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-medium">
@@ -279,7 +281,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
               )}
               {order.order_type && (
                 <span className="text-xs text-slate-500">
-                  {order.order_type === 'dine_in' ? 'Dine In' : order.order_type === 'takeaway' ? 'Takeaway' : order.order_type}
+                  {order.order_type === 'dine_in' ? t('Dine In') : order.order_type === 'takeaway' ? t('Takeaway') : order.order_type}
                 </span>
               )}
             </div>
@@ -324,10 +326,10 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-bold text-slate-900">{formatMoney(parseFloat(order.total_amount || 0), currency)}</span>
             {order.status === 'completed' && (
-              <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">✓ {isShop ? shopStatusLabel('completed', shopMethod(order), shopFood) : 'Completed'}</span>
+              <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">✓ {isShop ? t(shopStatusLabel('completed', shopMethod(order), shopFood)) : t('Completed')}</span>
             )}
             {isShop && order.status === 'cancelled' && (
-              <span className="text-xs font-semibold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">Cancelled</span>
+              <span className="text-xs font-semibold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">{t('Cancelled')}</span>
             )}
           </div>
 
@@ -345,7 +347,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                   onClick={(e) => { e.stopPropagation(); setShowPaymentQR(true); }}
                   className="flex-1 h-11 flex items-center justify-center rounded-lg transition-colors"
                   style={{ border: '1.5px solid #16a34a', color: '#16a34a', background: '#f0fdf4' }}
-                  title="Show payment QR"
+                  title={t('Show payment QR')}
                 >
                   <QrCode className="w-5 h-5" />
                 </button>
@@ -357,7 +359,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                   onMouseEnter={e => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.color = '#fff'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = '#f0fdf4'; e.currentTarget.style.color = '#16a34a'; }}
                 >
-                  💳 Mark as Paid
+                  {t('💳 Mark as Paid')}
                 </button>
               )
             )}
@@ -369,27 +371,27 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(var(--color-primary),0.08)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
               >
-                <Printer className="w-3.5 h-3.5" /> Receipt
+                <Printer className="w-3.5 h-3.5" />{' '}{t('Receipt')}
               </button>
             )}
             {canPrintChit && !isFinal && (
               <button
                 onClick={(e) => { e.stopPropagation(); setShowChit(true); }}
-                title="Print kitchen order chit"
+                title={t('Print kitchen order chit')}
                 className="h-11 px-3 flex-shrink-0 flex items-center justify-center gap-1.5 rounded-lg text-sm font-semibold transition-colors border border-slate-300 text-slate-600"
                 onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
               >
-                <Printer className="w-4 h-4" /> Order
+                <Printer className="w-4 h-4" />{' '}{t('Order')}
               </button>
             )}
             {isShop && order.status === 'pending' && canEditOrders && canCancelOrders && (
               <button
-                onClick={(e) => { e.stopPropagation(); if (window.confirm('Decline this order? The buyer will see it as cancelled.')) onStatusUpdate(order.id, 'cancelled'); }}
+                onClick={(e) => { e.stopPropagation(); if (window.confirm(t('Decline this order? The buyer will see it as cancelled.'))) onStatusUpdate(order.id, 'cancelled'); }}
                 className="h-11 px-3 flex-shrink-0 rounded-lg text-sm font-semibold border border-red-200 text-red-600 bg-white"
                 data-testid="shop-decline"
               >
-                Decline
+                {t('Decline')}
               </button>
             )}
             {action && canEditOrders && (
@@ -404,7 +406,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                   animation: 'orderActionPulse 2s ease-in-out infinite',
                 }}
               >
-                {action.label}
+                {t(action.label)}
               </button>
             )}
           </div>
@@ -448,7 +450,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', background: 'white', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
-              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{receiptBill ? `${receiptBill.tableName} bill` : 'Receipt Preview'}</p>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{receiptBill ? t('{tableName} bill', { tableName: receiptBill.tableName }) : t('Receipt Preview')}</p>
               <button
                 onClick={() => setShowReceipt(false)}
                 style={{ width: 32, height: 32, borderRadius: 8, background: '#f1f5f9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#64748b' }}
@@ -456,20 +458,20 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px' }}>
               {receiptBillState === 'loading' && (
-                <p style={{ textAlign: 'center', color: '#64748b', fontSize: 13, margin: '0 0 12px' }}>Loading the whole table's bill…</p>
+                <p style={{ textAlign: 'center', color: '#64748b', fontSize: 13, margin: '0 0 12px' }}>{t('Loading the whole table\'s bill…')}</p>
               )}
               {receiptBillState === 'failed' && (
-                <p style={{ textAlign: 'center', color: '#b45309', fontSize: 13, margin: '0 0 12px' }}>Couldn't load the whole table's bill, so this shows this order only.</p>
+                <p style={{ textAlign: 'center', color: '#b45309', fontSize: 13, margin: '0 0 12px' }}>{t('Couldn\'t load the whole table\'s bill, so this shows this order only.')}</p>
               )}
               {receiptBill ? (
               <div style={{ background: 'white', color: '#0f172a', borderRadius: 12, padding: '24px 20px', fontFamily: '"Courier New", Courier, monospace', fontSize: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', maxWidth: 360, margin: '0 auto' }}>
-                <p style={{ textAlign: 'center', fontWeight: 700, fontSize: 15, margin: '0 0 2px', letterSpacing: '0.02em' }}>{merchantName || 'Receipt'}</p>
+                <p style={{ textAlign: 'center', fontWeight: 700, fontSize: 15, margin: '0 0 2px', letterSpacing: '0.02em' }}>{merchantName || t('Receipt')}</p>
                 <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '0 0 12px' }}>
-                  {new Date().toLocaleString('en-SG', { dateStyle: 'medium', timeStyle: 'short' })}
+                  {new Date().toLocaleString(appLocale(), { dateStyle: 'medium', timeStyle: 'short' })}
                 </p>
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
-                <p style={{ margin: '5px 0', fontSize: 12 }}><strong>Table:</strong> {receiptBill.tableName}</p>
-                <p style={{ margin: '5px 0', fontSize: 12 }}><strong>Orders:</strong> {receiptBill.orderNumbers.map(n => `#${n}`).join(', ') || '-'}</p>
+                <p style={{ margin: '5px 0', fontSize: 12 }}><strong>{t('Table:')}</strong> {receiptBill.tableName}</p>
+                <p style={{ margin: '5px 0', fontSize: 12 }}><strong>{t('Orders:')}</strong> {receiptBill.orderNumbers.map(n => `#${n}`).join(', ') || '-'}</p>
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
                 {receiptBill.items.map((item, i) => (
                   <div key={i} style={{ marginBottom: 6 }}>
@@ -488,33 +490,33 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 )}
                 {receiptBill.tax > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                    <span>Tax</span><span>{formatMoney(receiptBill.tax, currency)}</span>
+                    <span>{t('Tax')}</span><span>{formatMoney(receiptBill.tax, currency)}</span>
                   </div>
                 )}
                 {receiptBill.discount > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                    <span>Discount</span><span>-{formatMoney(receiptBill.discount, currency)}</span>
+                    <span>{t('Discount')}</span><span>-{formatMoney(receiptBill.discount, currency)}</span>
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 13, marginTop: 6, padding: '6px 0', borderTop: '1px solid #e2e8f0' }}>
-                  <span>TOTAL</span><span>{formatMoney(receiptBill.total, currency)}</span>
+                  <span>{t('TOTAL')}</span><span>{formatMoney(receiptBill.total, currency)}</span>
                 </div>
                 <p style={{ margin: '4px 0', fontSize: 12, fontWeight: 700 }}>{paymentText(receiptBill)}</p>
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
-                <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '4px 0' }}>Thank you for your visit!</p>
-                <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: 10, margin: '4px 0' }}>Powered by Sellio</p>
+                <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '4px 0' }}>{t('Thank you for your visit!')}</p>
+                <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: 10, margin: '4px 0' }}>{t('Powered by Sellio')}</p>
               </div>
               ) : (
               <div style={{ background: 'white', color: '#0f172a', borderRadius: 12, padding: '24px 20px', fontFamily: '"Courier New", Courier, monospace', fontSize: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', maxWidth: 360, margin: '0 auto' }}>
-                <p style={{ textAlign: 'center', fontWeight: 700, fontSize: 15, margin: '0 0 2px', letterSpacing: '0.02em' }}>{merchantName || 'Receipt'}</p>
+                <p style={{ textAlign: 'center', fontWeight: 700, fontSize: 15, margin: '0 0 2px', letterSpacing: '0.02em' }}>{merchantName || t('Receipt')}</p>
                 <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '0 0 12px' }}>
-                  {new Date(order.created_date || Date.now()).toLocaleString('en-SG', { dateStyle: 'medium', timeStyle: 'short' })}
+                  {new Date(order.created_date || Date.now()).toLocaleString(appLocale(), { dateStyle: 'medium', timeStyle: 'short' })}
                 </p>
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
-                <p style={{ margin: '5px 0', fontSize: 12 }}><strong>Order:</strong> #{order.order_number || order.id?.slice(-6)}</p>
-                {order.table_name && <p style={{ margin: '5px 0', fontSize: 12 }}><strong>Table:</strong> {order.table_name}</p>}
+                <p style={{ margin: '5px 0', fontSize: 12 }}><strong>{t('Order:')}</strong> #{order.order_number || order.id?.slice(-6)}</p>
+                {order.table_name && <p style={{ margin: '5px 0', fontSize: 12 }}><strong>{t('Table:')}</strong> {order.table_name}</p>}
                 {order.customer_name && order.customer_name.toLowerCase() !== 'nil' && (
-                  <p style={{ margin: '5px 0', fontSize: 12 }}><strong>Customer:</strong> {order.customer_name}</p>
+                  <p style={{ margin: '5px 0', fontSize: 12 }}><strong>{t('Customer:')}</strong> {order.customer_name}</p>
                 )}
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
                 {(order.items || []).map((item, i) => {
@@ -537,15 +539,15 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 )}
                 {order.tax_amount && parseFloat(order.tax_amount) > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                    <span>Tax</span><span>{formatMoney(parseFloat(order.tax_amount || 0), currency)}</span>
+                    <span>{t('Tax')}</span><span>{formatMoney(parseFloat(order.tax_amount || 0), currency)}</span>
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 13, marginTop: 6, padding: '6px 0', borderTop: '1px solid #e2e8f0' }}>
-                  <span>TOTAL</span><span>{formatMoney(parseFloat(order.total_amount || 0), currency)}</span>
+                  <span>{t('TOTAL')}</span><span>{formatMoney(parseFloat(order.total_amount || 0), currency)}</span>
                 </div>
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
-                <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '4px 0' }}>Thank you for your visit!</p>
-                <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: 10, margin: '4px 0' }}>Powered by Sellio</p>
+                <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '4px 0' }}>{t('Thank you for your visit!')}</p>
+                <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: 10, margin: '4px 0' }}>{t('Powered by Sellio')}</p>
               </div>
               )}
             </div>
@@ -553,15 +555,15 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
               <button
                 onClick={() => setShowReceipt(false)}
                 style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', fontSize: 13, fontWeight: 600, color: '#64748b', cursor: 'pointer' }}
-              >Close</button>
+              >{t('Close')}</button>
               <button
                 onClick={handleActualPrint}
                 disabled={receiptPrinting || receiptBillState === 'loading'}
                 style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: receiptPrinting ? '#e2e8f0' : 'var(--color-primary-gradient, rgb(var(--color-primary)))', fontSize: 13, fontWeight: 600, color: receiptPrinting ? '#94a3b8' : 'white', cursor: receiptPrinting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
               >
                 {receiptPrinting
-                  ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Sending…</>
-                  : <><Printer size={14} /> Print Receipt</>
+                  ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />{' '}{t('Sending…')}</>
+                  : <><Printer size={14} />{' '}{t('Print Receipt')}</>
                 }
               </button>
             </div>
@@ -593,30 +595,30 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
           <div
             role="dialog"
             aria-modal="true"
-            aria-label={tableBill ? `Settle ${order.table_name || 'table'}` : 'Take payment'}
+            aria-label={tableBill ? `Settle ${order.table_name || 'table'}` : t('Take payment')}
             style={{ background: 'white', borderRadius: 20, padding: '24px 22px', maxWidth: 340, width: '100%', textAlign: 'center' }}
             onClick={e => e.stopPropagation()}
           >
             <p style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
-              {tableBill ? `Settle ${order.table_name || 'table'}` : (paymentQrUrl ? (paymentQrLabel || 'Scan to Pay') : 'Take payment')}
+              {tableBill ? `Settle ${order.table_name || 'table'}` : (paymentQrUrl ? (paymentQrLabel || t('Scan to Pay')) : t('Take payment'))}
             </p>
             <p style={{ margin: '0 0 4px', fontSize: 13, color: '#64748b' }}>
               {tableBill
-                ? `Whole table bill · ${formatMoney(tableBill.total, currency)}`
+                ? t('Whole table bill · {total}', { total: formatMoney(tableBill.total, currency) })
                 : `#${order.order_number || order.id?.slice(-6)} · ${formatMoney(parseFloat(order.total_amount || 0), currency)}`}
             </p>
             <p style={{ margin: '0 0 16px', fontSize: 12, color: '#94a3b8' }}>
-              {tableBill ? 'Pays every order on this table and frees the table.' : 'How did the customer pay?'}
+              {tableBill ? t('Pays every order on this table and frees the table.') : t('How did the customer pay?')}
             </p>
             {paymentQrUrl && (
               <img
                 src={paymentQrUrl}
-                alt="Payment QR"
+                alt={t('Payment QR')}
                 style={{ width: '100%', maxWidth: 240, aspectRatio: '1', objectFit: 'contain', borderRadius: 12, border: '1px solid #f1f5f9', margin: '0 auto 20px' }}
               />
             )}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: 8 }}>
-              {[['cash', 'Cash'], ['qr', qrPayLabel], ['card', 'Card']].map(([m, l]) => (
+              {[['cash', t('Cash')], ['qr', qrPayLabel], ['card', t('Card')]].map(([m, l]) => (
                 <button
                   key={m}
                   disabled={payBusy}
@@ -632,7 +634,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
               onClick={() => setShowPaymentQR(false)}
               style={{ width: '100%', padding: '11px', borderRadius: 12, border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
             >
-              Close
+              {t('Close')}
             </button>
           </div>
         </div>
@@ -642,6 +644,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
 }
 
 export default function Orders() {
+  const { t } = useAppText();
   const { tenantId, tenant, hasPermission, subscription, canUseFeature } = useTenant();
   const ordersTour = useProductTour('orders');
   const { appUser } = useAppUser();
@@ -751,41 +754,41 @@ export default function Orders() {
   }, [tenantId, fetchOrders, ringAlert, seenOrder]);
 
   const handleStatusUpdate = async (orderId, newStatus) => {
-    if (blockedOffline('Couldn’t update the order', 'Updating an order needs the internet.')) return;
+    if (blockedOffline(t('Couldn’t update the order'), t('Updating an order needs the internet.'), t)) return;
     const supabase = await getSupabase();
     const { error } = await supabase
       .from('orders')
       .update({ status: newStatus, updated_date: new Date().toISOString() })
       .eq('id', orderId);
-    if (error) { showError(error, 'Couldn’t update the order'); return; }
+    if (error) { showError(error, t('Couldn’t update the order'), { t }); return; }
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-    toast.success('Order updated');
+    toast.success(t('Order updated'));
   };
 
   // One bill per table: paying a table order settles the whole table (mark_order_paid
   // calls settle_table on the server). Other orders are paid on their own, as before.
   // Free shops keep the order's step (it still has to be collected or delivered).
   const handleMarkPaid = async (order, keepStep = false, method = 'cash') => {
-    if (blockedOffline('Couldn’t mark it as paid', 'Updating an order needs the internet.')) return false;
+    if (blockedOffline(t('Couldn’t mark it as paid'), t('Updating an order needs the internet.'), t)) return false;
     const supabase = await getSupabase();
     const { data, error } = await supabase.rpc('mark_order_paid', {
       p_order_id: order.id, p_method: method, p_keep_step: keepStep,
     });
     if (error) {
       // mark_order_paid's own reasons (22023, P0002) are shown as they are.
-      showError(error, 'Couldn’t mark it as paid');
+      showError(error, t('Couldn’t mark it as paid'), { t });
       return false;
     }
 
     if (data?.scope === 'table') {
-      if (data.already_closed) toast.info('This table was already settled.');
-      else toast.success(`${order.table_name || 'Table'} settled · ${formatMoney(Number(data.amount || 0), currency)}`);
+      if (data.already_closed) toast.info(t('This table was already settled.'));
+      else toast.success(t('{label} settled · {amount}', { label: order.table_name || t('Table'), amount: formatMoney(Number(data.amount || 0), currency) }));
       await fetchOrders();
     } else {
       setOrders(prev => prev.map(o =>
         o.id === order.id ? { ...o, payment_status: 'paid', payment_method: method, ...(keepStep ? {} : { status: 'completed' }) } : o
       ));
-      toast.success(data?.already_paid ? 'Already marked as paid' : 'Marked as paid ✓');
+      toast.success(data?.already_paid ? t('Already marked as paid') : t('Marked as paid ✓'));
     }
     return true;
   };
@@ -832,7 +835,7 @@ export default function Orders() {
       const shopCsv = '\uFEFF' + ['order_number,status,method,date,buyer,mobile,address,items,delivery_charge,total_amount,payment,created_date', ...shopRows].join('\n');
       const shopBlob = new Blob([shopCsv], { type: 'text/csv;charset=utf-8;' });
       if (inAppFiles()) {
-        saveFileInApp(shopBlob, `orders_${new Date().toISOString().split('T')[0]}.csv`, { tenantId, label: 'Orders file' });
+        saveFileInApp(shopBlob, `orders_${new Date().toISOString().split('T')[0]}.csv`, { tenantId, label: t('Orders file') });
         return;
       }
       const shopUrl = URL.createObjectURL(shopBlob);
@@ -857,7 +860,7 @@ export default function Orders() {
     const csv = '\uFEFF' + ['order_number,status,table_name,items,total_amount,created_date', ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     if (inAppFiles()) {
-      saveFileInApp(blob, `orders_${new Date().toISOString().split('T')[0]}.csv`, { tenantId, label: 'Orders file' });
+      saveFileInApp(blob, `orders_${new Date().toISOString().split('T')[0]}.csv`, { tenantId, label: t('Orders file') });
       return;
     }
     const url = URL.createObjectURL(blob);
@@ -874,15 +877,15 @@ export default function Orders() {
   const readyCount     = countFor('ready');
 
   const STAT_CARDS = isShop ? [
-    { label: 'New',       count: pendingCount,   status: 'pending',   bg: 'bg-amber-50',  border: 'border-amber-200',  activeBorder: '#f59e0b', text: 'text-amber-900',  sub: 'text-amber-700' },
-    { label: 'Accepted',  count: confirmCount,   status: 'confirmed', bg: 'bg-blue-50',   border: 'border-blue-200',   activeBorder: '#3b82f6', text: 'text-blue-900',   sub: 'text-blue-700' },
-    { label: 'Preparing', count: preparingCount, status: 'preparing', bg: 'bg-purple-50', border: 'border-purple-200', activeBorder: '#8b5cf6', text: 'text-purple-900', sub: 'text-purple-700' },
-    { label: 'Ready / Out', count: readyCount,   status: 'ready',     bg: 'bg-green-50',  border: 'border-green-200',  activeBorder: '#10b981', text: 'text-green-900',  sub: 'text-green-700' },
+    { label: t('New'),       count: pendingCount,   status: 'pending',   bg: 'bg-amber-50',  border: 'border-amber-200',  activeBorder: '#f59e0b', text: 'text-amber-900',  sub: 'text-amber-700' },
+    { label: t('Accepted'),  count: confirmCount,   status: 'confirmed', bg: 'bg-blue-50',   border: 'border-blue-200',   activeBorder: '#3b82f6', text: 'text-blue-900',   sub: 'text-blue-700' },
+    { label: t('Preparing'), count: preparingCount, status: 'preparing', bg: 'bg-purple-50', border: 'border-purple-200', activeBorder: '#8b5cf6', text: 'text-purple-900', sub: 'text-purple-700' },
+    { label: t('Ready / Out'), count: readyCount,   status: 'ready',     bg: 'bg-green-50',  border: 'border-green-200',  activeBorder: '#10b981', text: 'text-green-900',  sub: 'text-green-700' },
   ] : [
-    { label: 'New',       count: pendingCount,   status: 'pending',   bg: 'bg-amber-50',  border: 'border-amber-200',  activeBorder: '#f59e0b', text: 'text-amber-900',  sub: 'text-amber-700' },
-    { label: 'Confirmed', count: confirmCount,   status: 'confirmed', bg: 'bg-blue-50',   border: 'border-blue-200',   activeBorder: '#3b82f6', text: 'text-blue-900',   sub: 'text-blue-700' },
-    { label: 'Preparing', count: preparingCount, status: 'preparing', bg: 'bg-purple-50', border: 'border-purple-200', activeBorder: '#8b5cf6', text: 'text-purple-900', sub: 'text-purple-700' },
-    { label: 'Ready',     count: readyCount,     status: 'ready',     bg: 'bg-green-50',  border: 'border-green-200',  activeBorder: '#10b981', text: 'text-green-900',  sub: 'text-green-700' },
+    { label: t('New'),       count: pendingCount,   status: 'pending',   bg: 'bg-amber-50',  border: 'border-amber-200',  activeBorder: '#f59e0b', text: 'text-amber-900',  sub: 'text-amber-700' },
+    { label: t('Confirmed'), count: confirmCount,   status: 'confirmed', bg: 'bg-blue-50',   border: 'border-blue-200',   activeBorder: '#3b82f6', text: 'text-blue-900',   sub: 'text-blue-700' },
+    { label: t('Preparing'), count: preparingCount, status: 'preparing', bg: 'bg-purple-50', border: 'border-purple-200', activeBorder: '#8b5cf6', text: 'text-purple-900', sub: 'text-purple-700' },
+    { label: t('Ready'),     count: readyCount,     status: 'ready',     bg: 'bg-green-50',  border: 'border-green-200',  activeBorder: '#10b981', text: 'text-green-900',  sub: 'text-green-700' },
   ];
 
   return (
@@ -890,14 +893,14 @@ export default function Orders() {
         <div className="space-y-4">
           {pendingCheckouts.length > 0 && (
             <div role="status" aria-live="polite" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-              {pendingCheckouts.map(item => <p key={item.requestId}>{item.count} item(s): {item.state === 'sending' ? 'Sending order…' : 'Submission unconfirmed. Check the order list, then retry the same cart.'}</p>)}
+              {pendingCheckouts.map(item => <p key={item.requestId}>{t('{count} item(s):', { count: item.count })}{' '}{item.state === 'sending' ? t('Sending order…') : t('Submission unconfirmed. Check the order list, then retry the same cart.')}</p>)}
             </div>
           )}
           {/* Header */}
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h1 className="text-xl font-bold text-slate-900">Orders</h1>
-              <p className="text-sm text-slate-500">Manage incoming and active orders</p>
+              <h1 className="text-xl font-bold text-slate-900">{t('Orders')}</h1>
+              <p className="text-sm text-slate-500">{t('Manage incoming and active orders')}</p>
             </div>
             <div className="flex flex-col items-end gap-2 flex-shrink-0">
               {isFnB && canUseFeature('can_use_kitchen_display') && (
@@ -909,7 +912,7 @@ export default function Orders() {
                   onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-primary-gradient)'; e.currentTarget.style.color = '#fff'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'rgba(var(--color-primary), 0.08)'; e.currentTarget.style.color = 'rgb(var(--color-primary))'; }}
                 >
-                  <Monitor className="w-4 h-4" /> Kitchen Display
+                  <Monitor className="w-4 h-4" />{' '}{t('Kitchen Display')}
                 </button>
               )}
               <div data-tour="sound-alerts-toggle" className="flex flex-col items-end gap-1.5">
@@ -917,12 +920,12 @@ export default function Orders() {
                   <Switch id="sound" checked={alerts.on} onCheckedChange={alerts.setOn} className="scale-90" />
                   <Label htmlFor="sound" className="flex items-center gap-1 cursor-pointer text-xs text-slate-600">
                     {alerts.on ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
-                    Sound Alerts
+                    {t('Sound Alerts')}
                   </Label>
                 </div>
                 {alerts.on && (
                   <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-slate-400">Repeat:</span>
+                    <span className="text-[10px] text-slate-400">{t('Repeat:')}</span>
                     {REMIND_EVERY.map(s => (
                       <button
                         key={s}
@@ -948,7 +951,7 @@ export default function Orders() {
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder={isShop ? 'Search orders, buyers, items...' : 'Search orders, table, items...'}
+                placeholder={isShop ? t('Search orders, buyers, items...') : t('Search orders, table, items...')}
                 className="w-full pl-9 pr-3 h-9 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2"
                 style={{ '--tw-ring-color': 'rgba(var(--color-primary),0.3)' }}
               />
@@ -958,7 +961,7 @@ export default function Orders() {
               className="flex items-center gap-1.5 px-3 h-9 text-sm font-medium rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors flex-shrink-0"
             >
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Download</span>
+              <span className="hidden sm:inline">{t('Download')}</span>
             </button>
           </div>
 
@@ -973,7 +976,7 @@ export default function Orders() {
                 <button
                   key={card.status}
                   onClick={() => setActiveTab(isActive ? 'all' : card.status)}
-                  className={`${card.bg} rounded-xl p-3 text-center cursor-pointer transition-all active:scale-95 border-2 ${isActive ? '' : card.border}`}
+                  className={`${card.bg} rounded-xl py-3 px-1.5 text-center cursor-pointer transition-all active:scale-95 border-2 ${isActive ? '' : card.border}`}
                   style={isActive ? { borderColor: card.activeBorder, boxShadow: `0 0 0 1px ${card.activeBorder}` } : {}}
                 >
                   <p className={`text-[20px] font-bold leading-tight ${card.text}`}>{card.count}</p>
@@ -997,7 +1000,7 @@ export default function Orders() {
                   }`}
                   style={isActive ? { background: 'var(--color-primary-gradient, rgb(var(--color-primary)))' } : {}}
                 >
-                  {tab.label}
+                  {t(tab.label)}
                   {count > 0 && (
                     <span className={`text-[10px] font-bold px-1 py-0 rounded-full min-w-[16px] text-center leading-4 ${
                       isActive ? 'bg-white/25 text-white' : 'bg-slate-200 text-slate-700'
@@ -1013,15 +1016,15 @@ export default function Orders() {
           {/* Shown without a fresh load: when the list is from, and what still works. */}
           {!isLoading && orders.length > 0 && listAt && (!online || loadFailed || keptLatest) && (
             <OfflineNote {...listNoteWords({
-              online, what: 'orders', at: listAt, latest: keptLatest?.latest,
-              offlineText: 'You can look through them. Updating an order needs the internet.',
-              failedText: 'Pull down to try again.',
-            })} />
+              online, what: t('orders'), at: listAt, latest: keptLatest?.latest,
+              offlineText: t('You can look through them. Updating an order needs the internet.'),
+              failedText: t('Pull down to try again.'),
+            }, undefined, t)} />
           )}
 
           {/* Orders list */}
           {isLoading ? (
-            <LoadingShapes label="Loading orders"><SkeletonList count={4} lines={3} imageSize={0} /></LoadingShapes>
+            <LoadingShapes label={t('Loading orders')}><SkeletonList count={4} lines={3} imageSize={0} /></LoadingShapes>
           ) : filteredOrders.length === 0 ? (
             <div>
               <OrdersEmpty

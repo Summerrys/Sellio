@@ -4,10 +4,12 @@ import db from '@/lib/db';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '@/components/tenant/TenantContext';
 import { toast } from 'sonner';
+import { useAppText } from '@/lib/appText';
 
 const NotificationContext = createContext();
 
 export function NotificationProvider({ children }) {
+  const { t } = useAppText();
   const queryClient = useQueryClient();
   // Only for a real sign-in (the Supabase session, looked up by TenantProvider).
   // The saved profile cookie outlives some sign-outs, and a signed-out visitor
@@ -90,7 +92,7 @@ export function NotificationProvider({ children }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      toast.success('All notifications marked as read');
+      toast.success(t('All notifications marked as read'));
     },
   });
 

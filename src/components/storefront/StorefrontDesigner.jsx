@@ -36,17 +36,18 @@ import {
   getStorefrontTypographyPersonality,
   getStorefrontTypographyScale,
 } from '@/lib/storefrontTypography';
+import { useAppText, N_, appT } from '@/lib/appText';
 
 const TABS = [
-  { id: 'banner', label: 'Banner' },
-  { id: 'menu', label: 'Menu' },
-  { id: 'style', label: 'Style' },
+  { id: 'banner', label: N_('Banner') },
+  { id: 'menu', label: N_('Menu') },
+  { id: 'style', label: N_('Style') },
 ];
 
 const PREVIEW_DEVICES = [
-  { id: 'desktop', label: 'Desktop', width: 1280, height: 800, icon: Monitor },
-  { id: 'tablet', label: 'Tablet', width: 834, height: 1112, icon: Tablet },
-  { id: 'mobile', label: 'Mobile', width: 390, height: 844, icon: Smartphone },
+  { id: 'desktop', label: N_('Desktop'), width: 1280, height: 800, icon: Monitor },
+  { id: 'tablet', label: N_('Tablet'), width: 834, height: 1112, icon: Tablet },
+  { id: 'mobile', label: N_('Mobile'), width: 390, height: 844, icon: Smartphone },
 ];
 
 const PREVIEW_BROWSER_BAR_HEIGHT = 36;
@@ -88,6 +89,7 @@ function SectionLabel({ children }) {
 }
 
 function PillToggle({ options, value, onChange }) {
+  const { t } = useAppText();
   return (
     <div style={{ display: 'flex', gap: 6, padding: 4, background: '#f1f5f9', borderRadius: 12, width: 'fit-content' }}>
       {options.map(opt => (
@@ -104,7 +106,7 @@ function PillToggle({ options, value, onChange }) {
             boxShadow: value === opt.value ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
           }}
         >
-          {opt.label}
+          {t(opt.label)}
         </button>
       ))}
     </div>
@@ -142,6 +144,7 @@ const COLOR_PRESETS = [
 ];
 
 function PremiumColorPicker({ value, onChange }) {
+  const { t } = useAppText();
   const [showPicker, setShowPicker] = useState(false);
   const [hue, setHue] = useState(0);
   const [saturation, setSaturation] = useState(70);
@@ -250,7 +253,7 @@ function PremiumColorPicker({ value, onChange }) {
         }}
       >
         <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em' }}>
-          {showPicker ? 'Close picker ↑' : 'Tap to pick colour ↓'}
+          {showPicker ? t('Close picker ↑') : t('Tap to pick colour ↓')}
         </span>
       </div>
 
@@ -346,13 +349,14 @@ function PremiumColorPicker({ value, onChange }) {
 
 // Banner tab content — colour + promotional ticker controls only.
 function BannerTabContent({ form, onChange }) {
+  const { t } = useAppText();
   const currentColor = form.banner_bg_color || '#6366f1';
   const tickerEnabled = form.show_promo_ticker !== false;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
-        <SectionLabel>Brand Colour</SectionLabel>
+        <SectionLabel>{t('Brand Colour')}</SectionLabel>
         <PremiumColorPicker value={currentColor} onChange={v => onChange('banner_bg_color', v)} />
       </div>
 
@@ -360,17 +364,17 @@ function BannerTabContent({ form, onChange }) {
         <Toggle
           checked={tickerEnabled}
           onChange={v => onChange('show_promo_ticker', v)}
-          label="Show Headline & Tagline"
+          label={t('Show Headline & Tagline')}
         />
         {tickerEnabled && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 8 }}>
             <div>
-              <SectionLabel>Headline</SectionLabel>
-              <Input value={form.banner_headline || ''} onChange={e => onChange('banner_headline', e.target.value)} placeholder="e.g. Order fresh, eat happy" />
+              <SectionLabel>{t('Headline')}</SectionLabel>
+              <Input value={form.banner_headline || ''} onChange={e => onChange('banner_headline', e.target.value)} placeholder={t('e.g. Order fresh, eat happy')} />
             </div>
             <div>
-              <SectionLabel>Tagline</SectionLabel>
-              <Input value={form.banner_tagline || ''} onChange={e => onChange('banner_tagline', e.target.value)} placeholder="e.g. Fast delivery · Fresh daily" />
+              <SectionLabel>{t('Tagline')}</SectionLabel>
+              <Input value={form.banner_tagline || ''} onChange={e => onChange('banner_tagline', e.target.value)} placeholder={t('e.g. Fast delivery · Fresh daily')} />
             </div>
           </div>
         )}
@@ -396,13 +400,14 @@ function readImageFileDimensions(file) {
     };
     image.onerror = () => {
       URL.revokeObjectURL(objectUrl);
-      reject(new Error('Unable to inspect image dimensions.'));
+      reject(new Error(appT('Couldn’t read that photo. Try a different one.')));
     };
     image.src = objectUrl;
   });
 }
 
 function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
+  const { t } = useAppText();
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [hovering, setHovering] = useState(false);
@@ -627,7 +632,7 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!tenantId) { toast.error('Tenant not loaded yet'); return; }
+    if (!tenantId) { toast.error(t('Tenant not loaded yet')); return; }
 
     try {
       const dimensions = await readImageFileDimensions(file);
@@ -636,7 +641,7 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
       const isRecommendedResolution = dimensions.width >= 2400 && dimensions.height >= 800;
       if (!isThreeToOne || !isRecommendedResolution) {
         toast.warning(
-          `For the most consistent banner, use 2400 × 800 px (3:1). This image is ${dimensions.width} × ${dimensions.height} px and will still be uploaded.`
+          t('For the most consistent banner, use 2400 × 800 px (3:1). This image is {width} × {height} px and will still be uploaded.', { width: dimensions.width, height: dimensions.height })
         );
       }
     } catch {
@@ -650,7 +655,7 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
       banner = await shrinkImage(file, { maxSide: BANNER_MAX_SIDE });
     } catch (err) {
       // A photo that didn't come through whole (see imageShrink.js): nothing is uploaded.
-      showError(err, 'Couldn’t use that photo', { fallback: 'Try a different photo.' });
+      showError(err, appT('Couldn’t use that photo'), { fallback: appT('Try a different photo.'), t: appT });
 
       setUploading(false);
       if (e.target) e.target.value = '';
@@ -658,7 +663,7 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
     }
     const path = `${tenantId}/storefront/banner-bg.${banner.ext}`;
     const { error } = await supabase.storage.from('product-images').upload(path, banner.blob, { upsert: true, contentType: banner.type });
-    if (error) { showError(error, 'Couldn’t upload the photo'); setUploading(false); return; }
+    if (error) { showError(error, appT('Couldn’t upload the photo'), { t: appT }); setUploading(false); return; }
     const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
     const nextImageUrl = publicUrl.split('?')[0] + '?t=' + Date.now();
     onChange('banner_bg_image_url', nextImageUrl);
@@ -669,7 +674,7 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
     onChange('banner_zoom', STOREFRONT_BANNER_DEFAULT_ZOOM);
     await applyBannerEdgeColors(nextImageUrl);
     setUploading(false);
-    toast.success('Banner image uploaded');
+    toast.success(t('Banner image uploaded'));
     if (e.target) e.target.value = '';
   };
 
@@ -689,7 +694,7 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
     onChange('banner_position_x', 50);
     onChange('banner_position_y', 50);
     onChange('banner_zoom', STOREFRONT_BANNER_DEFAULT_ZOOM);
-    toast.success('Banner image removed');
+    toast.success(t('Banner image removed'));
   };
 
   const handleEditSave = async (dataUrl) => {
@@ -711,9 +716,9 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
       onChange('banner_position_y', 50);
       onChange('banner_zoom', STOREFRONT_BANNER_DEFAULT_ZOOM);
       await applyBannerEdgeColors(nextImageUrl);
-      toast.success('Banner updated');
+      toast.success(t('Banner updated'));
     } catch (err) {
-      showError(err, 'Couldn’t save the banner');
+      showError(err, appT('Couldn’t save the banner'), { t: appT });
     }
     setUploading(false);
   };
@@ -757,11 +762,11 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
           }}>
             <ImagePlus size={22} color="white" />
             <span style={{ color: 'white', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
-              {uploading ? 'Uploading...' : 'Banner image'}
+              {uploading ? t('Uploading...') : t('Banner image')}
             </span>
             {!uploading && (
               <span style={{ color: 'rgba(255,255,255,0.82)', fontSize: 10, fontWeight: 500, whiteSpace: 'nowrap' }}>
-                Recommended 2400 × 800 px · 3:1
+                {t('Recommended 2400 × 800 px · 3:1')}
               </span>
             )}
           </div>
@@ -790,13 +795,13 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
             </button>
             {/* Zoom controls work with a mouse as well as touch pinch. */}
             <div data-no-drag="true" style={{ position: 'absolute', top: 8, right: 8, display: 'flex', alignItems: 'center', gap: 4, padding: 4, borderRadius: 999, background: 'rgba(0,0,0,0.58)', backdropFilter: 'blur(6px)', zIndex: 20 }}>
-              <button data-no-drag="true" type="button" aria-label="Zoom out" onClick={(e) => { e.stopPropagation(); adjustZoom(-0.1); }} style={{ width: 26, height: 26, border: 'none', borderRadius: '50%', background: 'rgba(255,255,255,0.14)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button data-no-drag="true" type="button" aria-label={t('Zoom out')} onClick={(e) => { e.stopPropagation(); adjustZoom(-0.1); }} style={{ width: 26, height: 26, border: 'none', borderRadius: '50%', background: 'rgba(255,255,255,0.14)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ZoomOut size={13} />
               </button>
-              <button data-no-drag="true" type="button" aria-label="Reset banner position and zoom" onClick={(e) => { e.stopPropagation(); resetTransform(); }} style={{ minWidth: 50, height: 26, border: 'none', borderRadius: 999, background: 'transparent', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 10, fontWeight: 700 }}>
+              <button data-no-drag="true" type="button" aria-label={t('Reset banner position and zoom')} onClick={(e) => { e.stopPropagation(); resetTransform(); }} style={{ minWidth: 50, height: 26, border: 'none', borderRadius: 999, background: 'transparent', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 10, fontWeight: 700 }}>
                 <RotateCcw size={11} /> {Math.round(displayZoom * 100)}%
               </button>
-              <button data-no-drag="true" type="button" aria-label="Zoom in" onClick={(e) => { e.stopPropagation(); adjustZoom(0.1); }} style={{ width: 26, height: 26, border: 'none', borderRadius: '50%', background: 'rgba(255,255,255,0.14)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button data-no-drag="true" type="button" aria-label={t('Zoom in')} onClick={(e) => { e.stopPropagation(); adjustZoom(0.1); }} style={{ width: 26, height: 26, border: 'none', borderRadius: '50%', background: 'rgba(255,255,255,0.14)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ZoomIn size={13} />
               </button>
             </div>
@@ -808,15 +813,15 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
                 onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
                 style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', border: 'none', borderRadius: 8, padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: 'white', fontSize: 12, fontWeight: 600, zIndex: 20 }}
               >
-                <Upload size={13} /> {uploading ? 'Uploading...' : 'Replace'}
+                <Upload size={13} /> {uploading ? t('Uploading...') : t('Replace')}
               </button>
             )}
             <div style={{ position: 'absolute', bottom: 6, left: 8, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', borderRadius: 6, padding: '3px 8px', color: 'white', fontSize: 10, fontWeight: 500, pointerEvents: 'none' }}>
-              2400 × 800 · 3:1 recommended
+              {t('2400 × 800 · 3:1 recommended')}
             </div>
             {/* Drag hint */}
             <div style={{ position: 'absolute', bottom: 6, right: 8, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', borderRadius: 6, padding: '3px 8px', color: 'white', fontSize: 10, fontWeight: 500, pointerEvents: 'none' }}>
-              ✥ Drag · Pinch to zoom
+              {t('✥ Drag · Pinch to zoom')}
             </div>
           </>
         )}
@@ -830,8 +835,8 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
           themeColor={form.banner_bg_color || '#6366f1'}
           cropAspectRatio={3}
           preserveResolution={true}
-          title="Edit Banner"
-          recommendation="Recommended size: 2400 × 800 px (3:1)"
+          title={t('Edit Banner')}
+          recommendation={t('Recommended size: 2400 × 800 px (3:1)')}
           onSave={handleEditSave}
           onClose={() => setEditModalOpen(false)}
         />
@@ -841,9 +846,9 @@ function BannerCanvasOverlay({ form, onChange, tenantId, scaleFactor = 1 }) {
 }
 
 const MENU_LAYOUTS = [
-  { value: 'grid', label: 'Grid', description: 'Image-focused cards' },
-  { value: 'list', label: 'List', description: 'More product detail' },
-  { value: 'split', label: 'Split', description: 'Category sidebar' },
+  { value: 'grid', label: N_('Grid'), description: N_('Image-focused cards') },
+  { value: 'list', label: N_('List'), description: N_('More product detail') },
+  { value: 'split', label: N_('Split'), description: N_('Category sidebar') },
 ];
 
 // Theme variables store RGB channels; wrap them in rgb() for CSS colours.
@@ -861,6 +866,7 @@ function getDesignerChoiceStyle(selected) {
 }
 
 function DesignerSelectionBadge({ selected }) {
+  const { t } = useAppText();
   return (
     <span aria-hidden="true" style={{ display: 'flex', justifyContent: 'center', minHeight: 22, marginTop: 8 }}>
       {selected && (
@@ -870,7 +876,7 @@ function DesignerSelectionBadge({ selected }) {
           fontSize: 11, fontWeight: 700, lineHeight: '16px', maxWidth: '100%', boxSizing: 'border-box', flexWrap: 'wrap',
         }}>
           <Check size={12} strokeWidth={3} />
-          <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>Selected</span>
+          <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{t('Selected')}</span>
         </span>
       )}
     </span>
@@ -926,11 +932,12 @@ function LayoutPreview({ type, active }) {
 }
 
 function LayoutChoiceCard({ option, selected, onSelect }) {
+  const { t } = useAppText();
   return (
     <button
       type="button"
       className="sellio-designer-choice"
-      aria-label={option.label}
+      aria-label={t(option.label)}
       aria-pressed={selected}
       onClick={onSelect}
       style={{
@@ -941,17 +948,18 @@ function LayoutChoiceCard({ option, selected, onSelect }) {
       <div style={{ height: 52, padding: 7, borderRadius: 8, background: selected ? 'rgb(var(--color-primary, 124 58 237) / 0.10)' : '#f8fafc', display: 'flex', alignItems: 'center', marginBottom: 8 }}>
         <LayoutPreview type={option.value} active={selected} />
       </div>
-      <div style={{ fontSize: 14, fontWeight: 700, color: '#334155', lineHeight: 1.3 }}>{option.label}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: '#334155', lineHeight: 1.3 }}>{t(option.label)}</div>
       <DesignerSelectionBadge selected={selected} />
     </button>
   );
 }
 
 function MenuTabContent({ form, onChange }) {
+  const { t } = useAppText();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       <div style={{ paddingBottom: 16 }}>
-        <SectionLabel>Layout</SectionLabel>
+        <SectionLabel>{t('Layout')}</SectionLabel>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
           {MENU_LAYOUTS.map(option => (
             <LayoutChoiceCard
@@ -968,14 +976,14 @@ function MenuTabContent({ form, onChange }) {
         <Toggle
           checked={form.show_category_tabs !== false}
           onChange={v => onChange('show_category_tabs', v)}
-          label="Category navigation"
+          label={t('Category navigation')}
         />
         <div style={{ paddingTop: 10, paddingBottom: 8 }}>
-          <SectionLabel>Product density</SectionLabel>
+          <SectionLabel>{t('Product density')}</SectionLabel>
           <PillToggle
             options={[
-              { value: 'comfortable', label: 'Comfortable' },
-              { value: 'compact', label: 'Compact' },
+              { value: 'comfortable', label: t('Comfortable') },
+              { value: 'compact', label: t('Compact') },
             ]}
             value={form.menu_density || 'comfortable'}
             onChange={v => onChange('menu_density', v)}
@@ -987,27 +995,27 @@ function MenuTabContent({ form, onChange }) {
         <Toggle
           checked={form.show_featured !== false}
           onChange={v => onChange('show_featured', v)}
-          label="Featured section"
+          label={t('Featured section')}
         />
         {form.show_featured !== false && (
           <div style={{ paddingBottom: 8 }}>
-            <SectionLabel>Title</SectionLabel>
-            <Input value={form.featured_section_title || ''} onChange={e => onChange('featured_section_title', e.target.value)} placeholder="e.g. Today's Picks" className="text-sm" />
+            <SectionLabel>{t('Title')}</SectionLabel>
+            <Input value={form.featured_section_title || ''} onChange={e => onChange('featured_section_title', e.target.value)} placeholder={t('e.g. Today\'s Picks')} className="text-sm" />
           </div>
         )}
       </div>
 
       <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 12, paddingBottom: 8 }}>
-        <SectionLabel>Product cards</SectionLabel>
+        <SectionLabel>{t('Product cards')}</SectionLabel>
         <Toggle
           checked={form.show_product_description !== false}
           onChange={v => onChange('show_product_description', v)}
-          label="Descriptions"
+          label={t('Descriptions')}
         />
         <Toggle
           checked={form.show_stock_badge !== false}
           onChange={v => onChange('show_stock_badge', v)}
-          label="Stock status"
+          label={t('Stock status')}
         />
       </div>
     </div>
@@ -1015,12 +1023,13 @@ function MenuTabContent({ form, onChange }) {
 }
 
 function StyleTabContent({ form, onChange }) {
+  const { t } = useAppText();
   const selectedPersonality = getStorefrontTypographyPersonality(form.font_family);
   const selectedScale = getStorefrontTypographyScale(form.typography_scale);
 
   return (
     <div>
-      <SectionLabel>Font</SectionLabel>
+      <SectionLabel>{t('Font')}</SectionLabel>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
         {STOREFRONT_TYPOGRAPHY_PERSONALITIES.map(personality => {
           const selected = selectedPersonality.value === personality.value;
@@ -1039,7 +1048,7 @@ function StyleTabContent({ form, onChange }) {
               }}
             >
               <div style={{ fontSize: 14, lineHeight: 1.3, fontWeight: 700, color: '#1e293b' }}>{personality.fontName}</div>
-              <div style={{ fontFamily: personality.stack, color: '#0f172a', fontSize: 22, fontWeight: 700, lineHeight: 1.25, marginTop: 8 }}>Sample</div>
+              <div style={{ fontFamily: personality.stack, color: '#0f172a', fontSize: 22, fontWeight: 700, lineHeight: 1.25, marginTop: 8 }}>{t('Sample')}</div>
               <DesignerSelectionBadge selected={selected} />
             </button>
           );
@@ -1047,7 +1056,7 @@ function StyleTabContent({ form, onChange }) {
       </div>
 
       <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 16, paddingTop: 14 }}>
-        <SectionLabel>Text size</SectionLabel>
+        <SectionLabel>{t('Text size')}</SectionLabel>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 7 }}>
           {STOREFRONT_TYPOGRAPHY_SCALES.map(option => {
             const selected = (form.typography_scale || 'balanced') === option.value;
@@ -1056,7 +1065,7 @@ function StyleTabContent({ form, onChange }) {
                 key={option.value}
                 type="button"
                 className="sellio-designer-choice"
-                aria-label={option.label}
+                aria-label={t(option.label)}
                 aria-pressed={selected}
                 onClick={() => onChange('typography_scale', option.value)}
                 style={{
@@ -1066,7 +1075,7 @@ function StyleTabContent({ form, onChange }) {
                 }}
               >
                 <div style={{ fontFamily: selectedPersonality.stack, fontSize: 20 * option.multiplier, fontWeight: 700, lineHeight: 1.2 }}>Aa</div>
-                <div style={{ fontSize: 12, fontWeight: 700, marginTop: 7, lineHeight: 1.3 }}>{option.label}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, marginTop: 7, lineHeight: 1.3 }}>{t(option.label)}</div>
                 <DesignerSelectionBadge selected={selected} />
               </button>
             );
@@ -1075,7 +1084,7 @@ function StyleTabContent({ form, onChange }) {
       </div>
 
       <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 16, paddingTop: 14 }}>
-        <SectionLabel>Preview</SectionLabel>
+        <SectionLabel>{t('Preview')}</SectionLabel>
         <div
           aria-live="polite"
           style={{
@@ -1085,7 +1094,7 @@ function StyleTabContent({ form, onChange }) {
             boxShadow: '0 5px 16px rgba(15,23,42,0.05)',
           }}
         >
-          <div style={{ fontSize: 22 * selectedScale, fontWeight: 700, color: '#0f172a', lineHeight: 1.25 }}>Sample</div>
+          <div style={{ fontSize: 22 * selectedScale, fontWeight: 700, color: '#0f172a', lineHeight: 1.25 }}>{t('Sample')}</div>
         </div>
       </div>
     </div>
@@ -1094,6 +1103,7 @@ function StyleTabContent({ form, onChange }) {
 
 // Desktop editor panel (left side, ≥1024px)
 function DesktopEditorControls({ form, onChange }) {
+  const { t } = useAppText();
   const [activeTab, setActiveTab] = useState('banner');
 
   return (
@@ -1113,7 +1123,7 @@ function DesktopEditorControls({ form, onChange }) {
                 : { background: '#f1f5f9', color: '#64748b', fontWeight: 400, border: 'none' }),
             }}
           >
-            {tab.label}
+            {t(tab.label)}
           </button>
         ))}
       </div>
@@ -1130,6 +1140,7 @@ function DesktopEditorControls({ form, onChange }) {
 
 // Mobile full-canvas layout with floating drawer
 function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave, saving }) {
+  const { t } = useAppText();
   const [drawerTab, setDrawerTab] = useState('banner');
   const [drawerHeight, setDrawerHeight] = useState(DRAWER_HANDLE_ONLY);
   const [jumpAnimating, setJumpAnimating] = useState(true);
@@ -1308,7 +1319,7 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
         {/* The line stays small; the full-width touch target is 48px tall. */}
         <button
           type="button"
-          aria-label={drawerExpanded ? 'Close design controls' : 'Open design controls'}
+          aria-label={drawerExpanded ? t('Close design controls') : t('Open design controls')}
           aria-expanded={drawerExpanded}
           aria-controls="sellio-mobile-design-controls"
           onPointerDown={startDrawerDrag}
@@ -1355,7 +1366,7 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
                   boxShadow: drawerTab === tab.id ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
                 }}
               >
-                {tab.label}
+                {t(tab.label)}
               </button>
             ))}
           </div>
@@ -1378,7 +1389,7 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
                 cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1,
               }}
             >
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? t('Saving...') : t('Save Changes')}
             </button>
           </div>
         </div>
@@ -1388,6 +1399,7 @@ function MobileCanvasLayout({ form, onChange, tenantId, previewData, handleSave,
 }
 
 function DesktopPreviewWorkspace({ form, onChange, tenantId, previewData }) {
+  const { t } = useAppText();
   const [deviceId, setDeviceId] = useState('desktop');
   const [zoomMode, setZoomMode] = useState('fit');
   const [previewScale, setPreviewScale] = useState(1);
@@ -1444,11 +1456,11 @@ function DesktopPreviewWorkspace({ form, onChange, tenantId, previewData }) {
         flexShrink: 0,
       }}>
         <div>
-          <p style={{ margin: 0, color: '#0f172a', fontSize: 13, fontWeight: 700 }}>Live storefront</p>
-          <p style={{ margin: '2px 0 0', color: '#94a3b8', fontSize: 11 }}>Preview uses the exact selected viewport</p>
+          <p style={{ margin: 0, color: '#0f172a', fontSize: 13, fontWeight: 700 }}>{t('Live storefront')}</p>
+          <p style={{ margin: '2px 0 0', color: '#94a3b8', fontSize: 11 }}>{t('Preview uses the exact selected viewport')}</p>
         </div>
 
-        <div role="group" aria-label="Preview device" style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 12, background: '#f1f5f9' }}>
+        <div role="group" aria-label={t('Preview device')} style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 12, background: '#f1f5f9' }}>
           {PREVIEW_DEVICES.map(option => {
             const Icon = option.icon;
             const selected = option.id === device.id;
@@ -1467,15 +1479,15 @@ function DesktopPreviewWorkspace({ form, onChange, tenantId, previewData }) {
                 }}
               >
                 <Icon size={14} />
-                {option.label}
+                {t(option.label)}
               </button>
             );
           })}
         </div>
 
-        <div role="group" aria-label="Preview zoom" style={{ display: 'flex', alignItems: 'center', gap: 4, padding: 4, borderRadius: 10, background: '#f1f5f9' }}>
+        <div role="group" aria-label={t('Preview zoom')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: 4, borderRadius: 10, background: '#f1f5f9' }}>
           {[
-            { id: 'fit', label: `Fit · ${Math.round(previewScale * 100)}%` },
+            { id: 'fit', label: t('Fit · {round}%', { round: Math.round(previewScale * 100) }) },
             { id: 'actual', label: '100%' },
           ].map(option => {
             const selected = option.id === zoomMode;
@@ -1492,7 +1504,7 @@ function DesktopPreviewWorkspace({ form, onChange, tenantId, previewData }) {
                   fontSize: 11, fontWeight: selected ? 700 : 500, cursor: 'pointer',
                 }}
               >
-                {option.label}
+                {t(option.label)}
               </button>
             );
           })}
@@ -1618,6 +1630,7 @@ function sameDesign(a, b) {
 }
 
 function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
+  const { t } = useAppText();
   const [form, setForm] = useState({ ...DEFAULTS });
   // The design as last loaded or saved: the form differs from it = unsaved changes.
   const [savedForm, setSavedForm] = useState(null);
@@ -1696,7 +1709,7 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
       setPreviewCategories(catalog.categories);
       setPreviewTenant(tenantRes.data);
     } catch (error) {
-      showError(error, 'Couldn’t refresh the preview');
+      showError(error, appT('Couldn’t refresh the preview'), { t: appT });
     }
   };
 
@@ -1820,12 +1833,12 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
 
     setSaving(false);
     if (error) {
-      showError(error, 'Couldn’t save your shop page');
+      showError(error, appT('Couldn’t save your shop page'), { t: appT });
     } else {
 
       // Saved: nothing is unsaved any more (changes made while it saved still are).
       setSavedForm(savingForm);
-      toast.success('Storefront saved ✓');
+      toast.success(t('Storefront saved ✓'));
     }
   };
 
@@ -1839,19 +1852,19 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
           className="z-[211] w-[calc(100%-2rem)] max-w-sm rounded-2xl border-slate-200 bg-white p-6 text-slate-900"
         >
           <AlertDialogHeader className="text-left">
-            <AlertDialogTitle>Unsaved changes</AlertDialogTitle>
+            <AlertDialogTitle>{t('Unsaved changes')}</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-600">
-              Your store design has unsaved changes. Keep editing to save them, or discard them and leave.
+              {t('Your store design has unsaved changes. Keep editing to save them, or discard them and leave.')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-3 sm:space-x-0">
-            <AlertDialogCancel className="sellio-designer-dialog-button mt-0 rounded-xl focus-visible:ring-0">Keep editing</AlertDialogCancel>
+            <AlertDialogCancel className="sellio-designer-dialog-button mt-0 rounded-xl focus-visible:ring-0">{t('Keep editing')}</AlertDialogCancel>
             <AlertDialogAction
               className="sellio-designer-dialog-button rounded-xl text-white hover:brightness-95 focus-visible:ring-0"
               style={{ background: DESIGNER_SELECTION_FILL }}
               onClick={handleDiscardAndClose}
             >
-              Discard &amp; leave
+              {t('Discard & leave')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1881,14 +1894,14 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
           <button type="button" onClick={handleClose}
             style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#64748b', fontSize: 13, fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer' }}>
             <ArrowLeft style={{ width: 14, height: 14 }} />
-            Back
+            {t('Back')}
           </button>
-          <h2 style={{ fontWeight: 600, color: '#0f172a', fontSize: 14, margin: 0 }}>Design your store</h2>
+          <h2 style={{ fontWeight: 600, color: '#0f172a', fontSize: 14, margin: 0 }}>{t('Design your store')}</h2>
           <a href={storeUrl} target="_blank" rel="noopener noreferrer"
             style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 500, color: 'var(--color-primary)', border: '1.5px solid var(--color-primary)', borderRadius: 999, padding: '4px 12px', textDecoration: 'none', transition: 'opacity 0.15s' }}
             onMouseEnter={e => e.currentTarget.style.opacity = '0.75'}
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
-            Open Store
+            {t('Open Store')}
             <ExternalLink style={{ width: 12, height: 12 }} />
           </a>
         </div>
@@ -1916,7 +1929,7 @@ function StorefrontDesignerInner({ open, onClose, tenantId, tenantSlug }) {
               <div className="flex gap-2 p-4 border-t border-slate-100 bg-white flex-shrink-0">
                 <Button onClick={handleSave} disabled={saving} className="flex-1 rounded-full"
                   style={{ background: 'var(--color-primary-gradient)', color: 'white', border: 'none', fontWeight: 600 }}>
-                  {saving ? 'Saving...' : 'Save Changes'}
+                  {saving ? t('Saving...') : t('Save Changes')}
                 </Button>
               </div>
             </div>

@@ -1,5 +1,6 @@
 import { getSupabase } from '@/lib/supabaseClient';
 import { isNativeApp } from '@/lib/nativeApp';
+import { appLocale } from '@/lib/appText';
 
 // Where Stripe's billing page sends its "Return" link. In Sellio's app that page opens in the
 // phone's browser, where the app's own address (https://localhost) isn't Sellio: the same page
@@ -53,7 +54,8 @@ export function formatBillingDate(value) {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat('en-SG', {
+  // In the app's language (14 Nov 2026, 2:30 pm / 14 Nov 2026, 14.30); Stripe bills in Singapore time.
+  return new Intl.DateTimeFormat(appLocale(), {
     dateStyle: 'medium',
     timeStyle: 'short',
     timeZone: 'Asia/Singapore',

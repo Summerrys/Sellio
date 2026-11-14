@@ -14,7 +14,7 @@
 // the shop's country, then where the person is (their time zone). Anyone can switch, and the
 // choice is remembered on that device.
 import { cloneElement, isValidElement, useSyncExternalStore } from 'react';
-import { visitorCountry } from './countries';
+import { visitorCountry } from './countries.js';
 
 // Groups of screens a native speaker has signed off. The others show only in a preview.
 export const LIVE_GROUPS = [];
@@ -134,6 +134,12 @@ function fill(text, vars) {
   }
   if (last < text.length) parts.push(text.slice(last));
   return parts;
+}
+
+// The English phrase with its {blanks} filled: what a shared helper gives a screen that isn't
+// translated yet, while a translated screen passes its t.
+export function englishText(phrase, vars) {
+  return fill(phrase, vars);
 }
 
 // A phrase in the app's language, its {blanks} filled in. English when there is no Indonesian.

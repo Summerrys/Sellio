@@ -1036,7 +1036,7 @@ export default function Auth() {
                     {t('View Plans')}
                   </button>
                 ) : (
-                  <p className="text-center text-sm text-slate-500">{PLANS_ON_WEBSITE}</p>
+                  <p className="text-center text-sm text-slate-500">{t(PLANS_ON_WEBSITE)}</p>
                 )}
               </div>
             )}

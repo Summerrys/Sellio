@@ -1,40 +1,41 @@
 import { loadExtraFonts } from './extraFonts';
+import { N_ } from './appText';
 
 export const STOREFRONT_TYPOGRAPHY_PERSONALITIES = [
   {
     value: 'Inter',
-    label: 'Clean & Modern',
+    label: N_('Clean & Modern'),
     fontName: 'Inter',
-    description: 'Crisp and versatile',
+    description: N_('Crisp and versatile'),
     stack: 'Inter, "Noto Sans SC", "Noto Sans", system-ui, sans-serif',
   },
   {
     value: 'Nunito',
-    label: 'Warm & Friendly',
+    label: N_('Warm & Friendly'),
     fontName: 'Nunito',
-    description: 'Soft and approachable',
+    description: N_('Soft and approachable'),
     stack: 'Nunito, "Noto Sans SC", "Noto Sans", system-ui, sans-serif',
   },
   {
     value: 'Georgia',
-    label: 'Elegant & Premium',
+    label: N_('Elegant & Premium'),
     fontName: 'Georgia',
-    description: 'Refined and editorial',
+    description: N_('Refined and editorial'),
     stack: 'Georgia, "Noto Serif SC", "Songti SC", serif',
   },
   {
     value: 'Poppins',
-    label: 'Bold & Expressive',
+    label: N_('Bold & Expressive'),
     fontName: 'Poppins',
-    description: 'Confident and energetic',
+    description: N_('Confident and energetic'),
     stack: 'Poppins, "Noto Sans SC", "Noto Sans", system-ui, sans-serif',
   },
 ];
 
 export const STOREFRONT_TYPOGRAPHY_SCALES = [
-  { value: 'compact', label: 'Compact', description: 'More on screen', multiplier: 0.92 },
-  { value: 'balanced', label: 'Balanced', description: 'Recommended', multiplier: 1 },
-  { value: 'large', label: 'Large', description: 'Easier to read', multiplier: 1.1 },
+  { value: 'compact', label: N_('Compact'), description: N_('More on screen'), multiplier: 0.92 },
+  { value: 'balanced', label: N_('Balanced'), description: N_('Recommended'), multiplier: 1 },
+  { value: 'large', label: N_('Large'), description: N_('Easier to read'), multiplier: 1.1 },
 ];
 
 export function getStorefrontTypographyPersonality(value) {

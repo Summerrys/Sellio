@@ -276,7 +276,7 @@ try {
     assert.equal(blanks(indonesian), blanks(english), `"${english}" keeps its blanks`);
     assert.ok(!notIndonesian.test(indonesian), `"${indonesian}": Indonesian, formal "Anda" (not Malay, not "kamu")`);
   }
-  assert.deepEqual(Object.keys(app.ID_GROUPS), ['signup'], 'Group 1 is the sign-up and onboarding screens');
+  assert.deepEqual(Object.keys(app.ID_GROUPS), ['signup', 'shop'], 'Group 1 is the sign-up and onboarding screens (group 2, the shop screens: app-text-shop.dom.mjs)');
   passed(`The catalog: ${Object.keys(catalog).length} phrases, each with its blanks, in Indonesian (formal "Anda", no Malay words)`);
 
   // 7. Ending a preview with the link, as another device would (a fresh copy of the module)

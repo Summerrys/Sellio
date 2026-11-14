@@ -2,12 +2,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import PhotoPickerControl from './PhotoPickerControl';
 import { isBase44Shell } from '@/lib/nativeApp';
+import { useAppText, appT } from '@/lib/appText';
 
 // capture=environment delegates photography to the phone's camera app.
 // Only Base44's Android wrapper needs a grant first. (Sellio's Capacitor app asks for the
 // camera itself when the camera opens.)
 // `action` is the button's name in its hints ("tap Scan again").
-export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen, children, disabled, action = 'Scan', ...props }) {
+export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen, children, disabled, action: actionName, ...props }) {
+  // Read when a hint is shown, so the default follows the language at that moment.
+  const actionLabel = () => actionName || appT('Scan');
+  const { t } = useAppText();
   const nativeAndroid = typeof window !== 'undefined' && /Android/i.test(navigator.userAgent) && isBase44Shell();
   const granted = useRef(!nativeAndroid);
   const mounted = useRef(false);
@@ -27,7 +31,7 @@ export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen,
     if (granted.current) { granted.current = false; return; }
     if (!navigator.mediaDevices?.getUserMedia) {
       event.preventDefault();
-      onError?.(`Allow Camera in your phone’s Sellio permissions, then try ${action} again.`);
+      onError?.(appT('Allow Camera in your phone’s Sellio permissions, then try {action} again.', { action: actionLabel() }));
       return;
     }
     event.preventDefault();
@@ -53,7 +57,7 @@ export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen,
         if (typeof input.showPicker === 'function') { input.showPicker(); granted.current = false; }
         else input.click();
       } catch {
-        onError?.(`Camera access enabled. Tap ${action} again to open your camera.`);
+        onError?.(appT('Camera access enabled. Tap {action} again to open your camera.', { action: actionLabel() }));
       }
     }).catch(error => {
       if (!mounted.current || id !== request.current) return;
@@ -61,8 +65,8 @@ export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen,
       setPreparing(false);
       granted.current = false;
       onError?.(error.name === 'NotAllowedError' || error.name === 'SecurityError'
-        ? `Camera access is off. Allow Camera in your phone’s Sellio permissions, then tap ${action} again.`
-        : `Could not open the camera. Close other camera apps and try ${action} again.`);
+        ? appT('Camera access is off. Allow Camera in your phone’s Sellio permissions, then tap {action} again.', { action: actionLabel() })
+        : appT('Could not open the camera. Close other camera apps and try {action} again.', { action: actionLabel() }));
     });
   };
 
@@ -75,7 +79,7 @@ export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen,
       onFile={onFile}
       aria-busy={preparing}
     >
-      {preparing ? <><Loader2 className="w-4 h-4 animate-spin" /><span>Opening camera…</span></> : children}
+      {preparing ? <><Loader2 className="w-4 h-4 animate-spin" /><span>{t('Opening camera…')}</span></> : children}
     </PhotoPickerControl>
   );
 }

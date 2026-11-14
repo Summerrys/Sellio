@@ -28,18 +28,19 @@ import ShopSetupCard from '@/components/shop/ShopSetupCard';
 import { isFnBIndustry } from '@/lib/industry';
 import LoadingShapes, { DashboardShapes } from '@/components/ui-custom/LoadingShapes';
 import { useFirstLoad } from '@/lib/useFirstLoad';
+import { useAppText, N_ } from '@/lib/appText';
 
 const featureCards = [
-  { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view', color: 'bg-blue-50 text-blue-600 border-blue-100' },
-  { label: 'Ratings', icon: Star, page: 'Ratings', permission: 'orders.view', color: 'bg-yellow-50 text-yellow-600 border-yellow-100' },
-  { label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view', color: 'bg-teal-50 text-teal-600 border-teal-100' },
-  { label: 'Products', icon: ShoppingBag, page: 'Products', permission: 'products.view', color: 'bg-purple-50 text-purple-600 border-purple-100' },
-  { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view', color: 'bg-pink-50 text-pink-600 border-pink-100' },
-  { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view', color: 'bg-amber-50 text-amber-600 border-amber-100' },
-  { label: 'Staff', icon: Users, page: 'UserManagement', permission: 'staff.view', color: 'bg-green-50 text-green-600 border-green-100' },
-  { label: 'Roles', icon: Shield, page: 'UserManagement', permission: 'roles.view', color: 'bg-indigo-50 text-indigo-600 border-indigo-100' },
-  { label: 'Reports', icon: BarChart2, page: 'Reports', permission: 'reports.view', color: 'bg-rose-50 text-rose-600 border-rose-100' },
-  { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view', color: 'bg-slate-50 text-slate-600 border-slate-200' },
+  { label: N_('Orders'), icon: ClipboardList, page: 'Orders', permission: 'orders.view', color: 'bg-blue-50 text-blue-600 border-blue-100' },
+  { label: N_('Ratings'), icon: Star, page: 'Ratings', permission: 'orders.view', color: 'bg-yellow-50 text-yellow-600 border-yellow-100' },
+  { label: N_('Tables & QR'), icon: QrCode, page: 'Tables', permission: 'tables.view', color: 'bg-teal-50 text-teal-600 border-teal-100' },
+  { label: N_('Products'), icon: ShoppingBag, page: 'Products', permission: 'products.view', color: 'bg-purple-50 text-purple-600 border-purple-100' },
+  { label: N_('Categories'), icon: Grid3X3, page: 'Categories', permission: 'categories.view', color: 'bg-pink-50 text-pink-600 border-pink-100' },
+  { label: N_('Inventory'), icon: Package, page: 'Inventory', permission: 'inventory.view', color: 'bg-amber-50 text-amber-600 border-amber-100' },
+  { label: N_('Staff'), icon: Users, page: 'UserManagement', permission: 'staff.view', color: 'bg-green-50 text-green-600 border-green-100' },
+  { label: N_('Roles'), icon: Shield, page: 'UserManagement', permission: 'roles.view', color: 'bg-indigo-50 text-indigo-600 border-indigo-100' },
+  { label: N_('Reports'), icon: BarChart2, page: 'Reports', permission: 'reports.view', color: 'bg-rose-50 text-rose-600 border-rose-100' },
+  { label: N_('Settings'), icon: Settings, page: 'TenantSettings', permission: 'settings.view', color: 'bg-slate-50 text-slate-600 border-slate-200' },
 ];
 
 function StatCard({ icon: Icon, label, value, subtext, color, onClick, transparent, compact }) {
@@ -110,6 +111,7 @@ function FeatureCard({ icon: Icon, label, color, onClick }) {
 }
 
 export default function Dashboard() {
+  const { t, language } = useAppText();
   const { tenantId, tenant, hasPermission } = useTenant();
   const dashboardTour = useProductTour('dashboard');
   const navigate = useNavigate();
@@ -144,7 +146,7 @@ export default function Dashboard() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('upgraded') === '1') {
-      toast.success('Your plan has been upgraded successfully.');
+      toast.success(t('Your plan has been upgraded successfully.'));
       window.history.replaceState(window.history.state, '', window.location.pathname);
       queryClient.invalidateQueries({ queryKey: ['subscription'] });
       queryClient.invalidateQueries({ queryKey: ['entitlements'] });
@@ -229,10 +231,10 @@ export default function Dashboard() {
   const trackedCount = products.filter(p => p.track_inventory).length;
 
   const stockStatus = outOfStockCount > 0
-    ? { value: outOfStockCount, subtext: 'Out of stock', cardClass: 'rounded-2xl border border-red-200 bg-red-50', iconColor: 'bg-red-100 text-red-600', icon: AlertTriangle }
+    ? { value: outOfStockCount, subtext: t('Out of stock'), cardClass: 'rounded-2xl border border-red-200 bg-red-50', iconColor: 'bg-red-100 text-red-600', icon: AlertTriangle }
     : lowStockCount > 0
-    ? { value: lowStockCount, subtext: 'Low stock', cardClass: 'rounded-2xl border border-amber-200 bg-amber-50', iconColor: 'bg-amber-100 text-amber-600', icon: AlertTriangle }
-    : { value: trackedCount, subtext: 'Well stocked', cardClass: 'rounded-2xl border border-green-200 bg-green-50', iconColor: 'bg-green-100 text-green-600', icon: Package };
+    ? { value: lowStockCount, subtext: t('Low stock'), cardClass: 'rounded-2xl border border-amber-200 bg-amber-50', iconColor: 'bg-amber-100 text-amber-600', icon: AlertTriangle }
+    : { value: trackedCount, subtext: t('Well stocked'), cardClass: 'rounded-2xl border border-green-200 bg-green-50', iconColor: 'bg-green-100 text-green-600', icon: Package };
 
   const { data: allStaff = [] } = useQuery({
     queryKey: ['dashboardStaff', tenantId],
@@ -262,12 +264,12 @@ export default function Dashboard() {
 
   const getGreeting = () => {
     const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 18) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return t('Good morning');
+    if (h < 18) return t('Good afternoon');
+    return t('Good evening');
   };
 
-  const todayLabel = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  const todayLabel = new Date().toLocaleDateString(language === 'id' ? 'id-ID' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
   return (
     <div className="space-y-6 pb-8">
       {/* Header */}
@@ -275,17 +277,17 @@ export default function Dashboard() {
         <div>
           <h1 className="text-xl font-bold text-slate-900 leading-snug">
             {getGreeting()}<br />
-            {tenant?.name || 'there'}!{' '}
+            {tenant?.name || t('there')}!{' '}
               {hasPermission('dashboard.ai_assistant') && (
               <button
                 data-tour="ai-assistant-btn"
                 onClick={() => setAiOpen(true)}
                 style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-block', verticalAlign: 'middle', marginLeft: 4, position: 'relative' }}
-                title="Ask Sellio AI"
+                title={t('Ask Sellio AI')}
               >
                 <img
                   src="https://assets.apptelier.sg/sellio/Logo_AISellio_Assistant.png"
-                  alt="Sellio AI"
+                  alt={t('Sellio AI')}
                   style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.18))', display: 'block' }}
                 />
                 <span style={{
@@ -306,11 +308,11 @@ export default function Dashboard() {
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
                   lineHeight: 1.4,
-                }}>Ask me anything ✨</span>
+                }}>{t('Ask me anything ✨')}</span>
               </button>
               )}
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">Today's overview</p>
+          <p className="text-sm text-slate-500 mt-0.5">{t('Today\'s overview')}</p>
           <p className="text-xs text-slate-400 mt-0.5">{todayLabel}</p>
         </div>
         {tenant?.slug && hasPermission('dashboard.design_store') && (
@@ -344,7 +346,7 @@ export default function Dashboard() {
             }}
           >
             <Paintbrush size={14} color="white" />
-            Design Store
+            {t('Design Store')}
           </button>
         )}
       </div>
@@ -372,7 +374,7 @@ export default function Dashboard() {
       )}
 
       {loading && (
-        <LoadingShapes label="Loading your dashboard"><DashboardShapes /></LoadingShapes>
+        <LoadingShapes label={t('Loading your dashboard')}><DashboardShapes /></LoadingShapes>
       )}
       {/* Mounted while loading (so the cards load their numbers), shown when all are in. */}
       <div hidden={loading} data-testid="dashboard-content" className="space-y-6">
@@ -385,7 +387,7 @@ export default function Dashboard() {
           <StatCard
             compact
             icon={DollarSign}
-            label="Today's Revenue"
+            label={t('Today\'s Revenue')}
             value={formatMoney(todayRevenue, currency)}
             color="bg-blue-50 text-blue-600"
             onClick={() => navigate(createPageUrl('Reports'))}
@@ -396,9 +398,9 @@ export default function Dashboard() {
           <StatCard
             compact
             icon={ShoppingCart}
-            label="Orders Today"
+            label={t('Orders Today')}
             value={todayStats.count}
-            subtext={pendingOrders > 0 ? `${pendingOrders} pending` : undefined}
+            subtext={pendingOrders > 0 ? t('{count} pending', { count: pendingOrders }) : undefined}
             color="bg-purple-50 text-purple-600"
             onClick={() => navigate(createPageUrl('Orders'))}
           />
@@ -408,7 +410,7 @@ export default function Dashboard() {
           <StatCard
             compact
             icon={stockStatus.icon}
-            label="Stock"
+            label={t('Stock')}
             value={stockStatus.value}
             subtext={stockStatus.subtext}
             color={stockStatus.iconColor}
@@ -420,7 +422,7 @@ export default function Dashboard() {
           <StatCard
             compact
             icon={Users}
-            label="Active Staff"
+            label={t('Active Staff')}
             value={staff.length}
             color="bg-teal-50 text-teal-600"
             onClick={() => navigate(createPageUrl('UserManagement'))}
@@ -435,7 +437,7 @@ export default function Dashboard() {
 
       {/* Feature Grid */}
       <div data-tour="quick-access">
-        <h2 className="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wide">Quick Access</h2>
+        <h2 className="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wide">{t('Quick Access')}</h2>
         <div
           className="no-scrollbar"
           style={{ display: 'flex', flexDirection: 'row', gap: 10, overflowX: 'auto', overflowY: 'hidden', padding: '4px 2px' }}
@@ -444,7 +446,7 @@ export default function Dashboard() {
             <FeatureCard
               key={f.page}
               icon={f.icon}
-              label={f.page === 'Products' ? (tenant?.seller_type === 'individual' ? 'Manage listings' : itemWords(tenant?.seller_type).Products) : f.label}
+              label={f.page === 'Products' ? (tenant?.seller_type === 'individual' ? t('Manage listings') : itemWords(tenant?.seller_type, t).Products) : t(f.label)}
               color={f.color}
               onClick={() => navigate(createPageUrl(f.page))}
             />

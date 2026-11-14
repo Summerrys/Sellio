@@ -37,7 +37,7 @@ QRIS, PayNow, DuitNow, Stripe, Google and WhatsApp stay as they are. Rupiah is w
 | dine in | makan di tempat |
 | takeaway | bawa pulang |
 | collection (the buyer collects) | ambil sendiri |
-| delivery | pengantaran (diantar) |
+| delivery | pengiriman (dikirim) |
 | delivery charge | ongkos kirim |
 | free delivery | gratis ongkir |
 | pre-order | pre-order |
@@ -94,3 +94,31 @@ QRIS, PayNow, DuitNow, Stripe, Google and WhatsApp stay as they are. Rupiah is w
 - The verification email is in English, so the sign-up hint names its button in English: Ketuk **Verify my email** di email terbaru dari Sellio.
 - Examples are Indonesian in the Indonesian text (Budi Santoso, Sri Wahyuni, Warung Makan Bu Sri, Nasi Goreng Spesial); the English examples are neutral, with no one country's names.
 - Plan names (Starter, Growth, Pro), SGD and QR stay as they are.
+
+## Settled in group 2 (Dashboard, Orders, Counter, Kitchen, Products, Settings)
+
+| English | Bahasa Indonesia |
+| --- | --- |
+| Kitchen Display | Layar Dapur |
+| chit (kitchen ticket) | tiket (tiket dapur, tiket pesanan) |
+| bill (a table's running bill), settle, settled | tagihan, lunasi, lunas |
+| Round 2 (a table's next order) | Pesanan ke-2 |
+| New, Accept / Accepted (a shop's order) | Baru, Terima / Diterima |
+| out for delivery, delivered | sedang dikirim, terkirim |
+| ready for collection, collected | siap diambil, sudah diambil |
+| Available, In use, Reserved (a table) | Tersedia, Dipakai, Dipesan |
+| Maintenance (a table; the short badge) | Perbaikan (Servis) |
+| listing (a home seller's item) | produk |
+| featured | unggulan |
+| single choice, multiple choice | pilih satu, pilih banyak |
+| cost price, compare-at price | harga modal, harga coret |
+| track inventory, low stock, stock take | lacak stok, stok menipis, stok opname |
+| invoice, billing, past due | tagihan, penagihan, lewat jatuh tempo |
+| Sellio Explore | Jelajahi Sellio |
+| per month, per year (prices) | per bulan, per tahun (S$18/bln, /thn) |
+| time zones | WIB, Indonesia Barat (UTC+7); WITA, Indonesia Tengah (UTC+8); WIT, Indonesia Timur (UTC+9) |
+| dates and times | 14 Nov 2026, Sab, 14.30: day first, Indonesian names, the 24-hour clock with a dot (`src/lib/appDates.js`) |
+
+- Printed receipts and kitchen chits, the CSV template and exports stay in English for now: they belong with the server's own text (push alerts, receipts, emails), a later step.
+- Store pages are in English, so a sentence about one quotes its words in English: halamannya menampilkan “Store unavailable”.
+- A phrase both groups show has the same Indonesian in both files (`scripts/check-app-text.mjs` checks), so either group can go live first.

@@ -9,22 +9,24 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Users, QrCode, Edit, Trash2, MoreVertical, Download } from 'lucide-react';
+import { useAppText, N_ } from '@/lib/appText';
 
 const STATUS_CONFIG = {
-  available: { label: 'Available', color: 'bg-green-100 text-green-700 border-green-300' },
-  occupied: { label: 'Occupied', color: 'bg-amber-100 text-amber-700 border-amber-300' },
-  reserved: { label: 'Reserved', color: 'bg-slate-100 text-slate-700 border-slate-300' },
-  maintenance: { label: 'Maintenance', color: 'bg-red-100 text-red-700 border-red-300' },
+  available: { label: N_('Available'), color: 'bg-green-100 text-green-700 border-green-300' },
+  occupied: { label: N_('Occupied'), color: 'bg-amber-100 text-amber-700 border-amber-300' },
+  reserved: { label: N_('Reserved'), color: 'bg-slate-100 text-slate-700 border-slate-300' },
+  maintenance: { label: N_('Maintenance'), color: 'bg-red-100 text-red-700 border-red-300' },
 };
 
 export default function TableCard({ table, qrDataUrl, onEdit, onQR, onDelete }) {
+  const { t } = useAppText();
   const status = STATUS_CONFIG[table.status] || STATUS_CONFIG.available;
 
   return (
     <Card className="p-5 hover:shadow-md transition-all border-0 shadow-sm relative">
       {/* Status Badge - Top Right */}
       <div className="absolute top-4 right-4">
-        <Badge className={status.color}>{status.label}</Badge>
+        <Badge className={status.color}>{t(status.label)}</Badge>
       </div>
 
       {/* Table Info */}
@@ -38,7 +40,7 @@ export default function TableCard({ table, qrDataUrl, onEdit, onQR, onDelete }) 
       {/* Capacity */}
       <div className="flex items-center gap-2 text-slate-600 mb-4">
         <Users className="w-4 h-4" />
-        <span className="text-sm">{table.capacity} seats</span>
+        <span className="text-sm">{t('{capacity} seats', { capacity: table.capacity })}</span>
       </div>
 
       {/* QR Code Preview */}
@@ -46,7 +48,7 @@ export default function TableCard({ table, qrDataUrl, onEdit, onQR, onDelete }) 
         {qrDataUrl ? (
           <img
             src={qrDataUrl}
-            alt={`QR code for ${table.name}`}
+            alt={t('QR code for {name}', { name: table.name })}
             className="w-20 h-20"
           />
         ) : (
@@ -63,7 +65,7 @@ export default function TableCard({ table, qrDataUrl, onEdit, onQR, onDelete }) 
           className="flex-1 gap-2"
         >
           <QrCode className="w-4 h-4" />
-          QR Code
+          {t('QR Code')}
         </Button>
 
         <DropdownMenu>
@@ -75,15 +77,15 @@ export default function TableCard({ table, qrDataUrl, onEdit, onQR, onDelete }) 
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={onEdit}>
               <Edit className="w-4 h-4 mr-2" />
-              Edit
+              {t('Edit')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onQR}>
               <Download className="w-4 h-4 mr-2" />
-              Download QR
+              {t('Download QR')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onDelete} className="text-red-600">
               <Trash2 className="w-4 h-4 mr-2" />
-              Delete
+              {t('Delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

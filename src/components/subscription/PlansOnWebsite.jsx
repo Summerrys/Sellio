@@ -18,7 +18,7 @@ export default function PlansOnWebsite({ tier = null, note = '', className = '' 
     <div className={`space-y-2 text-sm text-slate-600 ${className}`} data-testid="plans-on-website">
       {name && <p>{t('Your plan: {name}', { name: <span className="font-semibold text-slate-800">{name}</span> })}</p>}
       {note && <p>{note}</p>}
-      <p>{PLANS_ON_WEBSITE}</p>
+      <p>{t(PLANS_ON_WEBSITE)}</p>
     </div>
   );
 }

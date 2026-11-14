@@ -1,11 +1,13 @@
 import React from 'react';
 import { TriangleAlert, WifiOff, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAppText } from '@/lib/appText';
 
 // An error that stays where the person is working (a form's footer, a checkout), until they
 // try again or close it: what went wrong, then whose side it's on and what to do
 // (lib/plainError.js explainError / offlineNote give the words).
 export default function ErrorNote({ note, onDismiss, className, children }) {
+  const { t } = useAppText();
   if (!note) return null;
   const Icon = note.kind === 'offline' || note.kind === 'network' ? WifiOff : TriangleAlert;
   return (
@@ -25,7 +27,7 @@ export default function ErrorNote({ note, onDismiss, className, children }) {
         <button
           type="button"
           onClick={onDismiss}
-          aria-label="Close this message"
+          aria-label={t('Close this message')}
           className="-mr-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-rose-500 hover:bg-rose-100"
         >
           <X className="h-4 w-4" aria-hidden="true" />

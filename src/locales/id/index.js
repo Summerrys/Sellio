@@ -2,5 +2,8 @@
 // this only for people who see Indonesian). English phrase -> Indonesian; the words follow
 // GLOSSARY.md.
 import signup from './signup.json';
+import shop from './shop.json';
 
-export const ID_GROUPS = { signup };
+// signup: sign-up and onboarding. shop: Dashboard, Orders, Counter, Kitchen, Products, Settings
+// and what they open (a phrase both show has the same Indonesian in both).
+export const ID_GROUPS = { signup, shop };

@@ -2,6 +2,7 @@ import React from 'react';
 import { WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { loadedAtText } from '@/lib/offlineStore';
+import { N_, appLanguage, englishText } from '@/lib/appText';
 
 // The words for a list shown without a fresh load: when it's from, and what still works.
 //   online  — the phone's connection now
@@ -9,12 +10,16 @@ import { loadedAtText } from '@/lib/offlineStore';
 //   at      — when the list on screen was loaded
 //   latest  — how many were kept on the phone, when that's fewer than there were
 //   offlineText / failedText — what still works / what to do
-export function listNoteWords({ online, what, at, latest, offlineText, failedText }, now = Date.now()) {
-  const when = loadedAtText(at, now);
-  const showing = latest ? `Showing your latest ${latest} ${what} from ${when}.` : `Showing ${what} from ${when}.`;
+//   t       — a translated screen's own (lib/appText.js); without it the words are English
+export function listNoteWords({ online, what, at, latest, offlineText, failedText }, now = Date.now(), t) {
+  const say = t || englishText;
+  const when = loadedAtText(at, now, t ? appLanguage() : 'en');
+  const showing = latest
+    ? say(N_('Showing your latest {latest} {what} from {when}.'), { latest, what, when })
+    : say(N_('Showing {what} from {when}.'), { what, when });
   return online
-    ? { title: `Couldn’t update the ${what}. ${showing}`, text: failedText }
-    : { title: `You’re offline. ${showing}`, text: offlineText };
+    ? { title: say(N_('Couldn’t update the {what}. {showing}'), { what, showing }), text: failedText }
+    : { title: say(N_('You’re offline. {showing}'), { showing }), text: offlineText };
 }
 
 // A list kept on screen while there's no connection (UX states, 4). action: { label, onClick }.

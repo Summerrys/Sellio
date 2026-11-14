@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSupabase } from '@/lib/supabaseClient';
 import { X, UtensilsCrossed, ShoppingBag, Loader2, ChevronLeft } from 'lucide-react';
+import { useAppText, N_ } from '@/lib/appText';
 
 const STATUS_STYLES = {
-  available: { bg: '#f0fdf4', border: '#bbf7d0', text: '#16a34a', label: 'Available' },
-  occupied:  { bg: '#fef2f2', border: '#fecaca', text: '#ef4444', label: 'Occupied' },
-  reserved:  { bg: '#fffbeb', border: '#fde68a', text: '#d97706', label: 'Reserved' },
-  maintenance: { bg: '#f8fafc', border: '#e2e8f0', text: '#94a3b8', label: 'Maintenance' },
+  available: { bg: '#f0fdf4', border: '#bbf7d0', text: '#16a34a', label: N_('Available') },
+  occupied:  { bg: '#fef2f2', border: '#fecaca', text: '#ef4444', label: N_('Occupied') },
+  reserved:  { bg: '#fffbeb', border: '#fde68a', text: '#d97706', label: N_('Reserved') },
+  maintenance: { bg: '#f8fafc', border: '#e2e8f0', text: '#94a3b8', label: N_('Maintenance') },
 };
 
 // Staff-facing "take an order on behalf of a customer" launcher. Deliberately
@@ -17,6 +18,7 @@ const STATUS_STYLES = {
 // into it (it normally gets that context from which QR code was scanned), so
 // this modal supplies that missing first step before handing off.
 export default function TakeOrdersModal({ open, onClose, tenantId, tenantSlug }) {
+  const { t } = useAppText();
   const navigate = useNavigate();
   const [step, setStep] = useState('type'); // 'type' | 'tables'
   const [tables, setTables] = useState([]);
@@ -72,10 +74,10 @@ export default function TakeOrdersModal({ open, onClose, tenantId, tenantSlug })
           )}
           <div style={{ flex: 1 }}>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
-              {step === 'type' ? 'Take an Order' : 'Select a Table'}
+              {step === 'type' ? t('Take an Order') : t('Select a Table')}
             </p>
             <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>
-              {step === 'type' ? "Ordering on a customer's behalf" : 'Any table can be used, even if occupied'}
+              {step === 'type' ? t('Ordering on a customer\'s behalf') : t('Any table can be used, even if occupied')}
             </p>
           </div>
           <button onClick={reset} style={{ width: 32, height: 32, borderRadius: 8, background: '#f1f5f9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -94,8 +96,8 @@ export default function TakeOrdersModal({ open, onClose, tenantId, tenantSlug })
                   <UtensilsCrossed className="w-5 h-5" style={{ color: '#3b82f6' }} />
                 </div>
                 <div>
-                  <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Dine In</p>
-                  <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>Choose a table for this order</p>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{t('Dine In')}</p>
+                  <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>{t('Choose a table for this order')}</p>
                 </div>
               </button>
               <button
@@ -106,8 +108,8 @@ export default function TakeOrdersModal({ open, onClose, tenantId, tenantSlug })
                   <ShoppingBag className="w-5 h-5" style={{ color: '#8b5cf6' }} />
                 </div>
                 <div>
-                  <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Takeaway</p>
-                  <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>No table needed</p>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{t('Takeaway')}</p>
+                  <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>{t('No table needed')}</p>
                 </div>
               </button>
             </div>
@@ -116,7 +118,7 @@ export default function TakeOrdersModal({ open, onClose, tenantId, tenantSlug })
               <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
             </div>
           ) : tables.length === 0 ? (
-            <p style={{ textAlign: 'center', fontSize: 13, color: '#94a3b8', padding: '32px 0' }}>No tables have been set up yet.</p>
+            <p style={{ textAlign: 'center', fontSize: 13, color: '#94a3b8', padding: '32px 0' }}>{t('No tables have been set up yet.')}</p>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
               {tables.map(table => {
@@ -129,7 +131,7 @@ export default function TakeOrdersModal({ open, onClose, tenantId, tenantSlug })
                   >
                     <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{table.name}</p>
                     {table.zone && <p style={{ margin: 0, fontSize: 11, color: '#94a3b8' }}>{table.zone}</p>}
-                    <span style={{ display: 'inline-block', marginTop: 6, fontSize: 10, fontWeight: 700, color: s.text }}>{s.label}</span>
+                    <span style={{ display: 'inline-block', marginTop: 6, fontSize: 10, fontWeight: 700, color: s.text }}>{t(s.label)}</span>
                   </button>
                 );
               })}

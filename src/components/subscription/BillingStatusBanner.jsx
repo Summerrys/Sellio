@@ -3,8 +3,10 @@ import { AlertTriangle, CreditCard, ExternalLink, Loader2 } from 'lucide-react';
 import { openBillingPortal, formatBillingAmount, formatBillingDate } from '@/lib/billing';
 import { showError } from '@/lib/plainError';
 import { sellsPlans, PLANS_ON_WEBSITE, outsideLinkProps } from '@/lib/nativeApp';
+import { useAppText } from '@/lib/appText';
 
 export default function BillingStatusBanner({ subscription, tenantId, isOwner }) {
+  const { t } = useAppText();
   const [openingPortal, setOpeningPortal] = useState(false);
   if (subscription?.status !== 'past_due') return null;
 
@@ -20,7 +22,7 @@ export default function BillingStatusBanner({ subscription, tenantId, isOwner })
     try {
       if (await openBillingPortal(tenantId)) setOpeningPortal(false); // the app stays here
     } catch (error) {
-      showError(error, 'Couldn’t open billing');
+      showError(error, t('Couldn’t open billing'), { t });
 
       setOpeningPortal(false);
     }
@@ -35,18 +37,18 @@ export default function BillingStatusBanner({ subscription, tenantId, isOwner })
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-amber-950">
-              Payment needs attention{amount ? ` · ${amount} due` : ''}
+              {amount ? t('Payment needs attention · {amount} due', { amount }) : t('Payment needs attention')}
             </p>
             <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
-              {retryAt ? `Stripe will retry on ${retryAt}.` : (sellsPlans() ? 'Please update the payment method or pay the open invoice.' : '')}
-              {graceEnds ? ` Store access remains available until ${graceEnds}.` : ''}
+              {retryAt ? t('Stripe will retry on {retryAt}.', { retryAt }) : (sellsPlans() ? t('Please update the payment method or pay the open invoice.') : '')}
+              {graceEnds ? ' ' + t('Store access remains available until {graceEnds}.', { graceEnds }) : ''}
             </p>
           </div>
         </div>
 
         {isOwner && !sellsPlans() ? (
           // Sellio's apps don't take payments for plans.
-          <p className="text-xs font-medium text-amber-900">{PLANS_ON_WEBSITE}</p>
+          <p className="text-xs font-medium text-amber-900">{t(PLANS_ON_WEBSITE)}</p>
         ) : isOwner ? (
           <div className="flex gap-2 flex-shrink-0">
             {subscription.invoice_hosted_url && (
@@ -54,7 +56,7 @@ export default function BillingStatusBanner({ subscription, tenantId, isOwner })
                 {...outsideLinkProps(subscription.invoice_hosted_url)}
                 className="h-10 px-3 rounded-xl bg-amber-900 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-amber-950"
               >
-                Pay invoice
+                {t('Pay invoice')}
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             )}
@@ -65,11 +67,11 @@ export default function BillingStatusBanner({ subscription, tenantId, isOwner })
               className="h-10 px-3 rounded-xl border border-amber-300 bg-white text-amber-900 text-xs font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-amber-100 disabled:opacity-60"
             >
               {openingPortal ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5" />}
-              Billing
+              {t('Billing')}
             </button>
           </div>
         ) : (
-          <p className="text-xs font-medium text-amber-900">Please ask the store owner to update billing.</p>
+          <p className="text-xs font-medium text-amber-900">{t('Please ask the store owner to update billing.')}</p>
         )}
       </div>
     </div>

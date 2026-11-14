@@ -31,6 +31,7 @@ import { applyCanonicalProductOrder } from '@/lib/storefrontCatalog';
 import { useSubscription } from '@/hooks/useSubscription';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
 import { sellsPlans } from '@/lib/nativeApp';
+import { useAppText, appT } from '@/lib/appText';
 
 const CSV_HEADERS = ['Name', 'SKU', 'Description', 'Category', 'Price', 'Cost Price', 'Compare At Price', 'Stock Quantity', 'Low Stock Threshold', 'Track Inventory', 'Active', 'Featured', 'Tags', 'Variants', 'Image URL', 'Additional Images'];
 
@@ -54,6 +55,7 @@ const TEMPLATE_ROWS = [
 ];
 
 export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, categories, onSuccess, maxProducts, currentProductCount, onLimitExceeded }) {
+  const { t } = useAppText();
   const [imagePreview, setImagePreview] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [scannedItems, setScannedItems] = useState([]);
@@ -85,17 +87,17 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
     const current = () => activeScan.current.id === id && !controller.signal.aborted;
     setScanning(true); setError(null); setStep('scan'); setImagePreview(null); setScannedItems([]);
     try {
-      if (!file.size || (file.type && !file.type.startsWith('image/'))) throw new Error('Please take a clear photo of your menu.');
+      if (!file.size || (file.type && !file.type.startsWith('image/'))) throw new Error(appT('Please take a clear photo of your menu.'));
       const reader = new FileReader();
       activeScan.current.reader = reader;
       const dataUrl = await new Promise((resolve, reject) => {
         reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error('Could not read this photo. Please take another one.'));
+        reader.onerror = () => reject(new Error(appT('Could not read this photo. Please take another one.')));
         reader.onabort = () => reject(new DOMException('Scan cancelled', 'AbortError'));
         reader.readAsDataURL(file);
       });
       if (!current()) return;
-      if (typeof dataUrl !== 'string' || !dataUrl.includes(',')) throw new Error('Could not read this photo. Please take another one.');
+      if (typeof dataUrl !== 'string' || !dataUrl.includes(',')) throw new Error(appT('Could not read this photo. Please take another one.'));
       setImagePreview(dataUrl);
       const { data: { session } } = await (await getSupabase()).auth.getSession();
       if (!current()) return;
@@ -110,12 +112,12 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
       });
       const data = await res.json();
       if (!current()) return;
-      if (!res.ok) throw new Error(data.error || 'Scan failed. Please try again.');
-      if (!data.items?.length) throw new Error('No items found. Try a clearer photo.');
+      if (!res.ok) throw new Error(data.error || appT('Scan failed. Please try again.'));
+      if (!data.items?.length) throw new Error(appT('No items found. Try a clearer photo.'));
       setScannedItems(data.items.map((item, i) => ({ ...item, _id: i, _selected: true, image_url: null })));
       setStep('review');
     } catch (err) {
-      if (current() && err.name !== 'AbortError') setError(err.message || 'Scan failed. Please try again.');
+      if (current() && err.name !== 'AbortError') setError(err.message || t('Scan failed. Please try again.'));
     } finally {
       if (current()) setScanning(false);
     }
@@ -137,7 +139,9 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
     // Enforce the plan's product limit — don't let a scan push the merchant over their cap.
     if (maxProducts != null && (currentProductCount + selected.length) > maxProducts) {
       const remaining = Math.max(maxProducts - currentProductCount, 0);
-      setError(`Your plan allows up to ${maxProducts} products (${remaining} slot${remaining === 1 ? '' : 's'} left). Deselect some items or upgrade your plan to add all ${selected.length}.`);
+      setError(remaining === 1
+        ? appT('Your plan allows up to {max} products (1 slot left). Deselect some items or upgrade your plan to add all {count}.', { max: maxProducts, count: selected.length })
+        : appT('Your plan allows up to {max} products ({remaining} slots left). Deselect some items or upgrade your plan to add all {count}.', { max: maxProducts, remaining, count: selected.length }));
       return;
     }
     setSaving(true); setError(null);
@@ -188,14 +192,14 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
             <ScanLine size={18} color="rgb(var(--color-primary))" />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p id="scan-menu-title" style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Scan Menu</p>
+            <p id="scan-menu-title" style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{t('Scan Menu')}</p>
             <p style={{ margin: '1px 0 0', fontSize: 12, color: '#64748b' }}>
-              {step === 'scan' && (scanning ? 'Reading your menu…' : 'Try again or take another photo')}
-              {step === 'review' && `${scannedItems.length} items found — review before saving`}
-              {step === 'done' && 'Products added successfully!'}
+              {step === 'scan' && (scanning ? t('Reading your menu…') : t('Try again or take another photo'))}
+              {step === 'review' && t('{count} items found — review before saving', { count: scannedItems.length })}
+              {step === 'done' && t('Products added successfully!')}
             </p>
           </div>
-          <button type="button" aria-label="Close menu scan" disabled={saving} autoFocus onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4, display: 'flex', alignItems: 'center' }}>
+          <button type="button" aria-label={t('Close menu scan')} disabled={saving} autoFocus onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4, display: 'flex', alignItems: 'center' }}>
             <X size={20} />
           </button>
         </div>
@@ -206,14 +210,14 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
           {/* Extraction starts as soon as the native camera returns a photo. */}
           {step === 'scan' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {imagePreview && <img src={imagePreview} alt="Menu being scanned" style={{ maxHeight: 220, maxWidth: '100%', borderRadius: 12, objectFit: 'contain', margin: '0 auto' }} />}
-              {scanning && <div role="status" aria-live="polite" className="flex items-center justify-center gap-3 py-8 text-slate-600"><Loader2 size={22} className="animate-spin" /><span>Reading your menu…</span></div>}
+              {imagePreview && <img src={imagePreview} alt={t('Menu being scanned')} style={{ maxHeight: 220, maxWidth: '100%', borderRadius: 12, objectFit: 'contain', margin: '0 auto' }} />}
+              {scanning && <div role="status" aria-live="polite" className="flex items-center justify-center gap-3 py-8 text-slate-600"><Loader2 size={22} className="animate-spin" /><span>{t('Reading your menu…')}</span></div>}
               {error && (
                 <>
                   <div role="alert" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#dc2626', display: 'flex', alignItems: 'center', gap: 8 }}><AlertCircle size={16} />{error}</div>
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => handleScan(photo)} className="flex-1 rounded-lg px-3 py-3 text-sm font-semibold text-white" style={{ background: primaryGradient }}>Try Again</button>
-                    <NativeCameraScanControl label="Retake menu photo" onFile={onPhoto} onError={message => toast.message(message)} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-3 text-sm font-semibold text-slate-600 cursor-pointer"><ScanLine size={16} />Retake</NativeCameraScanControl>
+                    <button type="button" onClick={() => handleScan(photo)} className="flex-1 rounded-lg px-3 py-3 text-sm font-semibold text-white" style={{ background: primaryGradient }}>{t('Try Again')}</button>
+                    <NativeCameraScanControl label={t('Retake menu photo')} onFile={onPhoto} onError={message => toast.message(message)} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-3 text-sm font-semibold text-slate-600 cursor-pointer"><ScanLine size={16} />{t('Retake')}</NativeCameraScanControl>
                   </div>
                 </>
               )}
@@ -225,9 +229,9 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
                 <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>
-                  {`${selectedCount} of ${scannedItems.length} selected`}
+                  {t('{selectedCount} of {count} selected', { selectedCount, count: scannedItems.length })}
                 </p>
-                <button onClick={() => setScannedItems(prev => prev.map(i => ({ ...i, _selected: true })))} style={{ fontSize: 12, color: 'rgb(var(--color-primary))', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Select all</button>
+                <button onClick={() => setScannedItems(prev => prev.map(i => ({ ...i, _selected: true })))} style={{ fontSize: 12, color: 'rgb(var(--color-primary))', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>{t('Select all')}</button>
               </div>
 
               {scannedItems.map(item => (
@@ -251,7 +255,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
                       value={item.name}
                       onChange={e => updateItem(item._id, 'name', e.target.value)}
                       style={{ width: '100%', fontWeight: 600, fontSize: 13, color: '#0f172a', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', outline: 'none', background: 'white', boxSizing: 'border-box' }}
-                      placeholder="Product name"
+                      placeholder={t('Product name')}
                     />
                     {/* Price + Category row */}
                     <div style={{ display: 'flex', gap: 6 }}>
@@ -259,10 +263,10 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
                         <span style={{ fontSize: 11, color: '#94a3b8', padding: '0 4px 0 6px', fontWeight: 500 }}>$</span>
                         <input type="number" value={item.price} onChange={e => updateItem(item._id, 'price', e.target.value)} style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'rgb(var(--color-primary))', border: 'none', outline: 'none', padding: '4px 6px 4px 0', background: 'transparent', width: '100%' }} />
                       </div>
-                      <input value={item.category || ''} onChange={e => updateItem(item._id, 'category', e.target.value)} placeholder="Category" style={{ flex: 1, fontSize: 11, color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', background: 'white', outline: 'none', minWidth: 0 }} />
+                      <input value={item.category || ''} onChange={e => updateItem(item._id, 'category', e.target.value)} placeholder={t('Category')} style={{ flex: 1, fontSize: 11, color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', background: 'white', outline: 'none', minWidth: 0 }} />
                     </div>
                     {/* Description row */}
-                    <input value={item.description || ''} onChange={e => updateItem(item._id, 'description', e.target.value)} placeholder="Description (optional)" style={{ width: '100%', fontSize: 11, color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', background: 'white', outline: 'none', boxSizing: 'border-box' }} />
+                    <input value={item.description || ''} onChange={e => updateItem(item._id, 'description', e.target.value)} placeholder={t('Description (optional)')} style={{ width: '100%', fontSize: 11, color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', background: 'white', outline: 'none', boxSizing: 'border-box' }} />
                   </div>
 
                   {/* Delete */}
@@ -280,7 +284,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
                       onClick={() => { handleClose(); onLimitExceeded?.(); }}
                       style={{ alignSelf: 'flex-start', padding: '6px 12px', borderRadius: 8, border: 'none', background: '#dc2626', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
                     >
-                      Upgrade Plan
+                      {t('Upgrade Plan')}
                     </button>
                   )}
                 </div>
@@ -292,8 +296,8 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
           {step === 'done' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 0', gap: 16 }}>
               <CheckCircle2 size={56} color="#10b981" />
-              <p style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: 0 }}>Products Added!</p>
-              <p style={{ fontSize: 14, color: '#64748b', margin: 0, textAlign: 'center' }}>{selectedCount} products have been added to your catalog.</p>
+              <p style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: 0 }}>{t('Products Added!')}</p>
+              <p style={{ fontSize: 14, color: '#64748b', margin: 0, textAlign: 'center' }}>{t('{selectedCount} products have been added to your catalog.', { selectedCount })}</p>
             </div>
           )}
         </div>
@@ -301,17 +305,17 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
         {/* Footer */}
         {step === 'review' && (
           <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10, flexShrink: 0 }}>
-            <NativeCameraScanControl label="Scan another menu photo" disabled={saving} onFile={onPhoto} onError={message => toast.message(message)} style={{ flex: 1, padding: 11, borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', fontSize: 13, fontWeight: 600, color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <ScanLine size={14} /> Retake
+            <NativeCameraScanControl label={t('Scan another menu photo')} disabled={saving} onFile={onPhoto} onError={message => toast.message(message)} style={{ flex: 1, padding: 11, borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', fontSize: 13, fontWeight: 600, color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <ScanLine size={14} />{' '}{t('Retake')}
             </NativeCameraScanControl>
             <button onClick={handleSave} disabled={saving || !selectedCount} style={{ flex: 2, padding: 11, borderRadius: 10, border: 'none', background: saving || !selectedCount ? '#cbd5e1' : primaryGradient, color: 'white', fontSize: 13, fontWeight: 700, cursor: saving || !selectedCount ? 'not-allowed' : 'pointer' }}>
-              {saving ? 'Saving...' : `Add ${selectedCount} Products`}
+              {saving ? t('Saving...') : t('Add {selectedCount} Products', { selectedCount })}
             </button>
           </div>
         )}
         {step === 'done' && (
           <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', flexShrink: 0 }}>
-            <button onClick={handleClose} style={{ width: '100%', padding: 11, borderRadius: 10, border: 'none', background: primaryGradient, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Done</button>
+            <button onClick={handleClose} style={{ width: '100%', padding: 11, borderRadius: 10, border: 'none', background: primaryGradient, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{t('Done')}</button>
           </div>
         )}
       </div>
@@ -322,11 +326,12 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
 // embedded: inside My listings (Explore), which has its own title, Orders and bell.
 // A free shop has only My listings: its old Manage listings address opens it.
 export default function Products({ embedded = false } = {}) {
+  const { t } = useAppText();
   const { tenantId, tenant, subscription, hasPermission, canUseFeature } = useTenant();
   const toMyListings = !embedded && isShopTenant(tenant);
   const isListings = tenant?.seller_type === 'individual';
   // A free personal shop: "Listings" and no menu scan (its plan); Inventory when its plan has it.
-  const words = itemWords(tenant?.seller_type);
+  const words = itemWords(tenant?.seller_type, t);
   const canScanMenu = !canUseFeature || canUseFeature('can_scan_menu');
   const canUseInventory = !canUseFeature || canUseFeature('can_use_inventory');
   const productsTour = useProductTour('products');
@@ -434,7 +439,7 @@ export default function Products({ embedded = false } = {}) {
     // but the dialog itself still opened, which read as "I can almost edit this" rather
     // than a clean no-access state. Block the click entirely for view-only users instead.
     if (!hasPermission('products.edit')) {
-      toast.error("You don't have access to edit products.");
+      toast.error(t('You don\'t have access to edit products.'));
       return;
     }
     setEditingProduct(product);
@@ -497,7 +502,7 @@ export default function Products({ embedded = false } = {}) {
     const csv = [CSV_HEADERS.join(','), ...TEMPLATE_ROWS].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     if (inAppFiles()) {
-      saveFileInApp(blob, 'product_import_template.csv', { tenantId, label: 'Template' });
+      saveFileInApp(blob, 'product_import_template.csv', { tenantId, label: t('Template') });
       return;
     }
     const url = window.URL.createObjectURL(blob);
@@ -531,7 +536,7 @@ export default function Products({ embedded = false } = {}) {
     const csv = [CSV_HEADERS.join(','), ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     if (inAppFiles()) {
-      saveFileInApp(blob, `products_export_${new Date().toISOString().split('T')[0]}.csv`, { tenantId, label: 'Product list' });
+      saveFileInApp(blob, `products_export_${new Date().toISOString().split('T')[0]}.csv`, { tenantId, label: t('Product list') });
       return;
     }
     const url = window.URL.createObjectURL(blob);
@@ -595,7 +600,7 @@ export default function Products({ embedded = false } = {}) {
         <div className={embedded ? 'flex flex-col gap-3' : 'flex flex-col gap-3 mb-6'}>
           {!embedded && (<>
           <div data-tour="products-header" className="flex items-center justify-between mb-1">
-            <h1 className="text-2xl font-bold text-slate-900">{tenant?.seller_type === 'individual' ? 'Manage listings' : words.Products}</h1>
+            <h1 className="text-2xl font-bold text-slate-900">{tenant?.seller_type === 'individual' ? t('Manage listings') : words.Products}</h1>
             {canUseInventory && (
             <button
               onClick={() => navigate('/Inventory')}
@@ -610,50 +615,50 @@ export default function Products({ embedded = false } = {}) {
                 e.currentTarget.style.color = 'rgb(var(--color-primary))';
               }}
             >
-              <Package className="w-4 h-4" /> Inventory
+              <Package className="w-4 h-4" />{' '}{t('Inventory')}
             </button>
             )}
           </div>
-          <p className="text-sm text-slate-500 -mt-3">{tenant?.seller_type === 'individual' ? 'Add, edit and hide what you sell' : 'Manage your product catalog'}</p>
+          <p className="text-sm text-slate-500 -mt-3">{tenant?.seller_type === 'individual' ? t('Add, edit and hide what you sell') : t('Manage your product catalog')}</p>
           </>)}
           <div {...(embedded ? { 'data-tour': 'products-header' } : {})} className="flex flex-wrap items-center gap-2">
               <RequirePermission permission="products.create" silent>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   {/* My listings: icons only. Manage products: icons on phones, words on wider screens. */}
-                  <Button variant="outline" size="sm" aria-label={`Download ${words.products}`} title={`Download ${words.products}`} className={embedded ? 'w-9 px-0' : undefined}>
+                  <Button variant="outline" size="sm" aria-label={t('Download {products}', { products: words.products })} title={t('Download {products}', { products: words.products })} className={embedded ? 'w-9 px-0' : undefined}>
                     <Download className={embedded ? 'w-4 h-4' : 'w-4 h-4 sm:mr-2'} />
-                    {!embedded && <span className="hidden sm:inline">Download</span>}
+                    {!embedded && <span className="hidden sm:inline">{t('Download')}</span>}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handleDownloadTemplate}>
                     <FileDown className="w-4 h-4 mr-2" />
-                    Download Template
+                    {t('Download Template')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleExport}>
                     <FileSpreadsheet className="w-4 h-4 mr-2" />
-                    Export All {words.Products}
+                    {t('Export All {Products}', { Products: words.Products })}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm" aria-label={`Import ${words.products}`} title={`Import ${words.products}`} className={embedded ? 'w-9 px-0' : undefined}>
+              <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm" aria-label={t('Import {products}', { products: words.products })} title={t('Import {products}', { products: words.products })} className={embedded ? 'w-9 px-0' : undefined}>
                   <Upload className={embedded ? 'w-4 h-4' : 'w-4 h-4 sm:mr-2'} />
-                  {!embedded && <span className="hidden sm:inline">Import</span>}
+                  {!embedded && <span className="hidden sm:inline">{t('Import')}</span>}
                 </Button>
                 {canScanMenu && (
                 <NativeCameraScanControl
                   data-tour="scan-menu-btn"
-                  label="Scan menu with camera"
+                  label={t('Scan menu with camera')}
                   onBeforeOpen={canOpenScan}
                   onFile={handleScanPhoto}
                   onError={message => toast.message(message)}
                   className={`inline-flex h-9 items-center justify-center rounded-md border px-3 text-sm font-medium cursor-pointer transition-colors ${atProductLimit ? 'gap-1.5 border-slate-300 text-slate-400' : 'gap-1.5 border-orange-300 text-orange-600 hover:bg-orange-50'}`}
-                  title={atProductLimit ? `${words.Product} limit reached (${maxProducts}) — upgrade to add more` : undefined}
+                  title={atProductLimit ? t('{Product} limit reached ({maxProducts}) — upgrade to add more', { Product: words.Product, maxProducts }) : undefined}
                 >
                   <ScanLine className="w-4 h-4 sm:mr-1" />
-                  <span className="hidden sm:inline">Scan Menu</span>
-                  <span className="sm:hidden">Scan</span>
+                  <span className="hidden sm:inline">{t('Scan Menu')}</span>
+                  <span className="sm:hidden">{t('Scan')}</span>
                 </NativeCameraScanControl>
                 )}
                 {/* My listings: Download · Upload · + Add, with Inventory on the right. */}
@@ -661,23 +666,23 @@ export default function Products({ embedded = false } = {}) {
                   data-tour="add-product-btn"
                   onClick={handleAdd}
                   size="sm"
-                  aria-label={embedded && !atProductLimit ? `Add ${words.product}` : undefined}
+                  aria-label={embedded && !atProductLimit ? t('Add {product}', { product: words.product }) : undefined}
                   className="text-white gap-1.5"
                   style={{ background: atProductLimit ? '#cbd5e1' : 'var(--color-primary-gradient)' }}
-                  title={atProductLimit ? `${words.Product} limit reached (${maxProducts}) — upgrade to add more` : undefined}
+                  title={atProductLimit ? t('{Product} limit reached ({maxProducts}) — upgrade to add more', { Product: words.Product, maxProducts }) : undefined}
                 >
                   <Plus className="w-4 h-4" />
                   {embedded ? (
-                    <span>{atProductLimit ? 'Limit reached' : 'Add'}</span>
+                    <span>{atProductLimit ? t('Limit reached') : t('Add')}</span>
                   ) : (<>
-                  <span className="hidden sm:inline">{atProductLimit ? 'Limit Reached' : `Add ${words.Product}`}</span>
-                  <span className="sm:hidden">{atProductLimit ? 'Limit' : 'Add'}</span>
+                  <span className="hidden sm:inline">{atProductLimit ? t('Limit Reached') : t('Add {Product}', { Product: words.Product })}</span>
+                  <span className="sm:hidden">{atProductLimit ? t('Limit') : t('Add')}</span>
                   </>)}
                 </Button>
               </RequirePermission>
               {embedded && canUseInventory && hasPermission('inventory.view') && (
                 <Button onClick={() => navigate('/Inventory')} variant="outline" size="sm" className="ml-auto">
-                  <Package className="w-4 h-4 mr-1.5" /> Inventory
+                  <Package className="w-4 h-4 mr-1.5" />{' '}{t('Inventory')}
                 </Button>
               )}
           </div>
@@ -701,10 +706,10 @@ export default function Products({ embedded = false } = {}) {
               }
             >
             <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'rgb(var(--color-primary))' }}>
-              {selectedIds.size} selected
+              {t('{size} selected', { size: selectedIds.size })}
             </span>
             <button onClick={handleSelectAll} style={{ fontSize: 12, fontWeight: 600, color: 'rgb(var(--color-primary))', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}>
-              Select all ({filteredProducts.length})
+              {t('Select all ({count})', { count: filteredProducts.length })}
             </button>
             {!deleteConfirm ? (
               <button
@@ -712,13 +717,13 @@ export default function Products({ embedded = false } = {}) {
                 disabled={!selectedIds.size}
                 style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 8, border: 'none', background: selectedIds.size ? '#ef4444' : '#cbd5e1', color: 'white', fontSize: 12, fontWeight: 700, cursor: selectedIds.size ? 'pointer' : 'not-allowed' }}
               >
-                <Trash2 size={13} /> Delete
+                <Trash2 size={13} />{' '}{t('Delete')}
               </button>
             ) : (
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>Delete {selectedIds.size}?</span>
-                <button onClick={handleBulkDelete} style={{ padding: '5px 10px', borderRadius: 7, border: 'none', background: '#ef4444', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Yes</button>
-                <button onClick={() => setDeleteConfirm(false)} style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid #e2e8f0', background: 'white', fontSize: 12, fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>No</button>
+                <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>{t('Delete {size}?', { size: selectedIds.size })}</span>
+                <button onClick={handleBulkDelete} style={{ padding: '5px 10px', borderRadius: 7, border: 'none', background: '#ef4444', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{t('Yes')}</button>
+                <button onClick={() => setDeleteConfirm(false)} style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid #e2e8f0', background: 'white', fontSize: 12, fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>{t('No')}</button>
               </div>
             )}
             <button onClick={handleCancelSelection} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center' }}>
@@ -736,7 +741,7 @@ export default function Products({ embedded = false } = {}) {
           <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
-              placeholder={`Search ${words.products}...`}
+              placeholder={t('Search {products}...', { products: words.products })}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 h-11"
@@ -746,7 +751,7 @@ export default function Products({ embedded = false } = {}) {
             <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', borderRadius: 8, padding: 3, flexShrink: 0 }}>
               <button
                 onClick={() => handleViewToggle('grid')}
-                aria-label="Show as a grid"
+                aria-label={t('Show as a grid')}
                 aria-pressed={viewMode === 'grid'}
                 style={{ width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer', background: viewMode === 'grid' ? 'white' : 'transparent', boxShadow: viewMode === 'grid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: viewMode === 'grid' ? '#6366f1' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
@@ -754,7 +759,7 @@ export default function Products({ embedded = false } = {}) {
               </button>
               <button
                 onClick={() => handleViewToggle('list')}
-                aria-label="Show as a list"
+                aria-label={t('Show as a list')}
                 aria-pressed={viewMode === 'list'}
                 style={{ width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer', background: viewMode === 'list' ? 'white' : 'transparent', boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: viewMode === 'list' ? '#6366f1' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
@@ -771,7 +776,7 @@ export default function Products({ embedded = false } = {}) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="all">{t('All Categories')}</SelectItem>
                 {categories.map(cat => (
                   <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                 ))}
@@ -785,10 +790,10 @@ export default function Products({ embedded = false } = {}) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{isListings ? 'All listings' : 'All Status'}</SelectItem>
-                <SelectItem value="active">{isListings ? 'Showing' : 'Active'}</SelectItem>
-                <SelectItem value="inactive">{isListings ? 'Hidden' : 'Inactive'}</SelectItem>
-                <SelectItem value="low_stock">{isListings ? 'Low stock' : 'Low Stock'}</SelectItem>
+                <SelectItem value="all">{isListings ? t('All listings') : t('All Status')}</SelectItem>
+                <SelectItem value="active">{isListings ? t('Showing') : t('Active')}</SelectItem>
+                <SelectItem value="inactive">{isListings ? t('Hidden') : t('Inactive')}</SelectItem>
+                <SelectItem value="low_stock">{isListings ? t('Low stock') : t('Low Stock')}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -797,45 +802,45 @@ export default function Products({ embedded = false } = {}) {
 
         {/* Products Display */}
         {isLoading ? (
-          <LoadingShapes label="Loading products"><SkeletonList count={5} lines={2} imageSize={64} /></LoadingShapes>
+          <LoadingShapes label={t('Loading products')}><SkeletonList count={5} lines={2} imageSize={64} /></LoadingShapes>
         ) : filteredProducts.length === 0 && products.length > 0 && searchText ? (
           hiddenByFilters > 0 ? (
             <NoMatches
-              title={`No ${words.products} match “${searchText}”`}
-              text={`Your filters hide ${hiddenByFilters === 1 ? `one ${words.product} that matches` : `${hiddenByFilters} ${words.products} that match`}.`}
-              actionLabel={`Show all ${words.products}`}
+              title={t('No {products} match “{searchText}”', { products: words.products, searchText })}
+              text={hiddenByFilters === 1 ? t('Your filters hide one {product} that matches.', { product: words.product }) : t('Your filters hide {count} {products} that match.', { count: hiddenByFilters, products: words.products })}
+              actionLabel={t('Show all {products}', { products: words.products })}
               onAction={showAllProducts}
             />
           ) : searchSuggestion ? (
             <NoMatches
-              title={`No ${words.products} match “${searchText}”`}
+              title={t('No {products} match “{searchText}”', { products: words.products, searchText })}
               text={<DidYouMean suggestion={searchSuggestion} onPick={setSearchQuery} />}
-              actionLabel={`Search “${searchSuggestion}”`}
+              actionLabel={t('Search “{searchSuggestion}”', { searchSuggestion })}
               onAction={() => setSearchQuery(searchSuggestion)}
             />
           ) : (
             <NoMatches
-              title={`No ${words.products} match “${searchText}”`}
-              text="Search looks at names and descriptions."
-              actionLabel="Clear search"
+              title={t('No {products} match “{searchText}”', { products: words.products, searchText })}
+              text={t('Search looks at names and descriptions.')}
+              actionLabel={t('Clear search')}
               onAction={() => setSearchQuery('')}
             />
           )
         ) : filteredProducts.length === 0 && products.length > 0 && filtersOn ? (
           <NoMatches
-            title={`No ${words.products} match these filters`}
-            text="Try another category or status."
-            actionLabel={`Show all ${words.products}`}
+            title={t('No {products} match these filters', { products: words.products })}
+            text={t('Try another category or status.')}
+            actionLabel={t('Show all {products}', { products: words.products })}
             onAction={showAllProducts}
           />
         ) : filteredProducts.length === 0 ? (
           <>
             <EmptyState
               icon={ShoppingBag}
-              title={`No ${words.products} yet`}
-              description={isListings ? 'Add a photo, a name and a price. It shows on Explore straight away.'
-                : `Start building your catalog by adding your first ${words.product}`}
-              actionLabel={`Add ${words.Product}`}
+              title={t('No {products} yet', { products: words.products })}
+              description={isListings ? t('Add a photo, a name and a price. It shows on Explore straight away.')
+                : t('Start building your catalog by adding your first {product}', { product: words.product })}
+              actionLabel={t('Add {Product}', { Product: words.Product })}
               onAction={handleAdd}
             />
             {/* Tour needs a card to point at even with zero real products yet */}
@@ -862,8 +867,8 @@ export default function Products({ embedded = false } = {}) {
           const count = embedded ? (
             <p className="text-sm text-slate-500 -mb-1">
               {filteredProducts.length === products.length
-                ? `${products.length} ${products.length === 1 ? words.product : words.products}`
-                : `${filteredProducts.length} of ${products.length} ${words.products}`}
+                ? (products.length === 1 ? t('1 {product}', { product: words.product }) : t('{count} {products}', { count: products.length, products: words.products }))
+                : t('{count} of {count2} {products}', { count: filteredProducts.length, count2: products.length, products: words.products })}
             </p>
           ) : null;
           if (categoryFilter !== 'all' || searchQuery) {
@@ -872,7 +877,7 @@ export default function Products({ embedded = false } = {}) {
           const knownIds = new Set(categories.map(c => c.id));
           const groups = [
             ...categories.map(c => ({ key: c.id, name: c.name, items: filteredProducts.filter(p => p.category_id === c.id) })),
-            { key: 'uncategorized', name: 'Uncategorized', items: filteredProducts.filter(p => !p.category_id || !knownIds.has(p.category_id)) },
+            { key: 'uncategorized', name: t('Uncategorized'), items: filteredProducts.filter(p => !p.category_id || !knownIds.has(p.category_id)) },
           ].filter(g => g.items.length > 0);
           // Nothing grouped (a shop without categories): one plain list in My listings.
           if (embedded && groups.length === 1 && groups[0].key === 'uncategorized') {

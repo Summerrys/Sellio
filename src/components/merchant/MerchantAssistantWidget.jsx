@@ -3,14 +3,15 @@ import { X, Send } from 'lucide-react';
 import { useTenant } from '@/components/tenant/TenantContext';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useBackToClose } from '@/lib/useBackToClose';
+import { useAppText, N_, appT } from '@/lib/appText';
 
 const SUPABASE_URL = 'https://gzktuteedbtnaxfdylyu.supabase.co';
 
 const SUGGESTIONS = [
-  "What's my revenue today? 💰",
-  "Top selling products this month 🏆",
-  "Any low stock items? 📦",
-  "How many orders today? 📋",
+  N_("What's my revenue today? 💰"),
+  N_("Top selling products this month 🏆"),
+  N_("Any low stock items? 📦"),
+  N_("How many orders today? 📋"),
 ];
 
 const renderMarkdown = (text) => {
@@ -23,6 +24,7 @@ const renderMarkdown = (text) => {
 };
 
 export default function MerchantAssistantWidget({ externalOpen, onExternalClose }) {
+  const { t } = useAppText();
   const { tenantId } = useTenant();
   const [open, setOpen] = useState(false);
   useBackToClose(open, () => setOpen(false)); // phone / browser Back closes the assistant
@@ -64,7 +66,7 @@ export default function MerchantAssistantWidget({ externalOpen, onExternalClose 
     setOpen(true);
     setShowBalloon(false);
     if (messages.length === 0) {
-      setMessages([{ role: 'assistant', content: "Hi! 👋 I'm your Sellio AI Assistant. Ask me about your sales, orders, inventory, or any business insights!" }]);
+      setMessages([{ role: 'assistant', content: t('Hi! 👋 I\'m your Sellio AI Assistant. Ask me about your sales, orders, inventory, or any business insights!') }]);
     }
   };
 
@@ -88,11 +90,11 @@ export default function MerchantAssistantWidget({ externalOpen, onExternalClose 
         body: JSON.stringify({ messages: updatedHistory, tenantId }),
       });
       const data = await res.json();
-      const aiText = data.text || "Sorry, I couldn't process that. Please try again.";
+      const aiText = data.text || appT("Sorry, I couldn't process that. Please try again.");
       setMessages(prev => [...prev, { role: 'assistant', content: aiText }]);
       setConversationHistory([...updatedHistory, { role: 'assistant', content: aiText }]);
     } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I'm having trouble connecting. Please try again." }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: t('Sorry, I\'m having trouble connecting. Please try again.') }]);
     } finally {
       setLoading(false);
     }
@@ -127,10 +129,10 @@ export default function MerchantAssistantWidget({ externalOpen, onExternalClose 
         }}>
           {/* Header */}
           <div style={{ padding: '14px 16px', background: 'linear-gradient(135deg, #fb923c, #e0449a, #8b2fc9)', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <img src="https://assets.apptelier.sg/sellio/Logo_AISellio_Assistant.png" alt="Sellio AI" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(255,255,255,0.3)' }} />
+            <img src="https://assets.apptelier.sg/sellio/Logo_AISellio_Assistant.png" alt={t('Sellio AI')} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(255,255,255,0.3)' }} />
             <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'white' }}>Sellio AI Assistant</p>
-              <p style={{ margin: '1px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>Your business insights partner</p>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'white' }}>{t('Sellio AI Assistant')}</p>
+              <p style={{ margin: '1px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>{t('Your business insights partner')}</p>
             </div>
             <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'white', display: 'flex', alignItems: 'center' }}>
               <X size={20} color="rgba(255,255,255,0.8)" />
@@ -168,7 +170,7 @@ export default function MerchantAssistantWidget({ externalOpen, onExternalClose 
             {messages.length === 1 && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
                 {SUGGESTIONS.map((s, idx) => (
-                  <button key={idx} onClick={() => sendMessage(s)} style={{ padding: '7px 12px', borderRadius: 20, border: '1px solid #e0449a', background: 'white', color: '#e0449a', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                  <button key={idx} onClick={() => sendMessage(t(s))} style={{ padding: '7px 12px', borderRadius: 20, border: '1px solid #e0449a', background: 'white', color: '#e0449a', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
                     {s}
                   </button>
                 ))}
@@ -185,7 +187,7 @@ export default function MerchantAssistantWidget({ externalOpen, onExternalClose 
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !loading) sendMessage(input); }}
-              placeholder="Ask about sales, orders, inventory..."
+              placeholder={t('Ask about sales, orders, inventory...')}
               disabled={loading}
               style={{ flex: 1, padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, outline: 'none', fontFamily: 'inherit' }}
             />

@@ -2,15 +2,17 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingBag, Plus, X } from 'lucide-react';
 import { createPageUrl } from '@/utils';
+import { useAppText } from '@/lib/appText';
 
 export default function SellActionSheet({ open, onClose, onNewProduct }) {
+  const { t } = useAppText();
   if (!open) return null;
 
   const actions = [
     {
       icon: ShoppingBag,
-      label: 'New Product',
-      description: 'Add a product to your catalog',
+      label: t('New Product'),
+      description: t('Add a product to your catalog'),
       onClick: () => {
         onClose();
         onNewProduct();
@@ -35,7 +37,7 @@ export default function SellActionSheet({ open, onClose, onNewProduct }) {
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-          <span className="text-base font-semibold text-slate-900">Quick Actions</span>
+          <span className="text-base font-semibold text-slate-900">{t('Quick Actions')}</span>
           <button
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500"

@@ -68,6 +68,7 @@ import { isBase44Shell, sellsPlans } from '@/lib/nativeApp';
 import { useBackToClose, handOverBackStep } from '@/lib/useBackToClose';
 import { isStaffAccount } from '@/lib/staffAccess';
 import { rememberThisPhone } from '@/lib/deviceKey';
+import { useAppText } from '@/lib/appText';
 
 
 const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth', 'Join', 'Account', 'World', 'Explore'];
@@ -75,6 +76,7 @@ const publicPages = ['CustomerMenu', 'CustomerOrder', 'Auth', 'Join', 'Account',
 const BUSINESS_TAB_PAGES = ['Products', 'Counter', 'Orders'];
 
 function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin, isRealSuperAdmin, hasPermission, clearAppUser, onNavigate, subscription, onOpenProfile, onToggleCollapse, onClose, staff = false }) {
+  const { t } = useAppText();
   const navigate = useNavigate();
   const location = useLocation();
   const [linkCopied, setLinkCopied] = useState(false);
@@ -95,23 +97,23 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
 
   // Tenant menu with permission requirements
   const allTenantItems = [
-    { label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard', permission: null },
+    { label: t('Dashboard'), icon: LayoutDashboard, page: 'Dashboard', permission: null },
     // A home shop's Manage listings is its bottom bar's Listings: /Products sends a home shop
     // there (pages/Products.jsx), so the menu goes there itself and is lit up while it's open
     // (Alvin, 10 Nov 2026), as its Chats is the bottom bar's Chat.
-    { label: isShopTenant(tenant) ? 'Manage listings' : itemWords(tenant?.seller_type).Products, icon: ShoppingBag, page: 'Products', to: isShopTenant(tenant) ? '/explore/listings' : null, permission: 'products.view' },
-    { label: 'Categories', icon: Grid3X3, page: 'Categories', permission: 'categories.view' },
-    { label: 'Orders', icon: ClipboardList, page: 'Orders', permission: 'orders.view' },
+    { label: isShopTenant(tenant) ? t('Manage listings') : itemWords(tenant?.seller_type, t).Products, icon: ShoppingBag, page: 'Products', to: isShopTenant(tenant) ? '/explore/listings' : null, permission: 'products.view' },
+    { label: t('Categories'), icon: Grid3X3, page: 'Categories', permission: 'categories.view' },
+    { label: t('Orders'), icon: ClipboardList, page: 'Orders', permission: 'orders.view' },
     // A free home shop's Chats is its bottom bar's Chat: Explore's, chats it buys and sells in
     // (Alvin, 10 Nov 2026: "Sidebar menu Chat should be the same as the bottom Chat").
-    { label: 'Chats', icon: MessageCircle, page: 'Chats', to: homeShop ? '/explore/chats' : null, permission: 'orders.view' },
-    { label: 'Ratings', icon: Star, page: 'Ratings', permission: 'orders.view' },
-    { label: 'Inventory', icon: Package, page: 'Inventory', permission: 'inventory.view' },
-    ...(isFnBIndustry(tenant?.industry) ? [{ label: 'Tables & QR', icon: QrCode, page: 'Tables', permission: 'tables.view' }] : []),
-    { label: 'User Management', icon: Users, page: 'UserManagement', permission: ['staff.view', 'roles.view'] },
-    { label: 'Reports', icon: BarChart3, page: 'Reports', permission: 'reports.view' },
-    { label: 'Settings', icon: Settings, page: 'TenantSettings', permission: 'settings.view' },
-    { label: 'Explore', icon: Compass, page: 'Explore', permission: null },
+    { label: t('Chats'), icon: MessageCircle, page: 'Chats', to: homeShop ? '/explore/chats' : null, permission: 'orders.view' },
+    { label: t('Ratings'), icon: Star, page: 'Ratings', permission: 'orders.view' },
+    { label: t('Inventory'), icon: Package, page: 'Inventory', permission: 'inventory.view' },
+    ...(isFnBIndustry(tenant?.industry) ? [{ label: t('Tables & QR'), icon: QrCode, page: 'Tables', permission: 'tables.view' }] : []),
+    { label: t('User Management'), icon: Users, page: 'UserManagement', permission: ['staff.view', 'roles.view'] },
+    { label: t('Reports'), icon: BarChart3, page: 'Reports', permission: 'reports.view' },
+    { label: t('Settings'), icon: Settings, page: 'TenantSettings', permission: 'settings.view' },
+    { label: t('Explore'), icon: Compass, page: 'Explore', permission: null },
   ];
 
   // Filter tenant items based on permissions
@@ -139,8 +141,8 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
             <button
               type="button"
               onClick={onToggleCollapse}
-              aria-label={collapsed ? 'Expand menu' : 'Collapse menu'}
-              title={collapsed ? 'Expand menu' : 'Collapse menu'}
+              aria-label={collapsed ? t('Expand menu') : t('Collapse menu')}
+              title={collapsed ? t('Expand menu') : t('Collapse menu')}
               className="w-9 h-9 flex-shrink-0 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors"
             >
               <Menu className="w-5 h-5" />
@@ -160,7 +162,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
           )}
         </div>
         {onClose && (
-          <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0" aria-label="Close menu" onClick={onClose}>
+          <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0" aria-label={t('Close menu')} onClick={onClose}>
             <X className="w-4 h-4" />
           </Button>
         )}
@@ -191,13 +193,13 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
                     }}
                   >
                     <Clock className="w-2.5 h-2.5" />
-                    {hoursLeft <= 24 ? `${hoursLeft}h left` : `${daysLeft}d left`}
+                    {hoursLeft <= 24 ? t('{hoursLeft}h left', { hoursLeft }) : t('{daysLeft}d left', { daysLeft })}
                   </span>
                 );
               }
               return (
                 <span className="flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/25 text-white capitalize">
-                  {subscription?.tier || tenant.plan || 'Free'}
+                  {subscription?.tier || tenant.plan || t('Free')}
                 </span>
               );
             })()}
@@ -207,7 +209,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
             <button
               onClick={copyStorefrontLink}
               className="flex-shrink-0 w-6 h-6 rounded-md bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
-              title="Copy link"
+              title={t('Copy link')}
             >
               {linkCopied ? <Check className="w-3 h-3 text-white" /> : <Copy className="w-3 h-3 text-white" />}
             </button>
@@ -255,7 +257,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
               <Icon className="w-4.5 h-4.5 flex-shrink-0" style={{ width: 18, height: 18 }} />
               {!collapsed && <span>{item.label}</span>}
               {item.page === 'Chats' && chatsWaiting > 0 && (collapsed ? (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500" aria-label={`${chatsWaiting} waiting`} />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500" aria-label={t('{chatsWaiting} waiting', { chatsWaiting })} />
               ) : (
                 <span className={cn("ml-auto min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold leading-5 text-center", isActive ? "bg-white/90 text-slate-900" : "bg-rose-500 text-white")}>
                   {chatsWaiting > 99 ? '99+' : chatsWaiting}
@@ -281,7 +283,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
                 fallbackClassName="bg-slate-100 text-slate-600 text-xs font-medium"
               />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-900 truncate">{user?.full_name || 'User'}</p>
+                <p className="text-sm font-medium text-slate-900 truncate">{user?.full_name || t('User')}</p>
                 <p className="text-xs text-slate-400 truncate">{user?.email}</p>
               </div>
             </button>
@@ -320,6 +322,7 @@ function SidebarContent({ collapsed, currentPageName, tenant, user, isSuperAdmin
 }
 
 function AppLayout({ children, currentPageName }) {
+  const { t } = useAppText();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [subscription, setSubscription] = useState(null);
@@ -509,9 +512,9 @@ function AppLayout({ children, currentPageName }) {
     reconcileBilling(tenantId)
       .then((result) => {
         if (result?.subscription) setSubscription(result.subscription);
-        toast.success('Billing status refreshed');
+        toast.success(t('Billing status refreshed'));
       })
-      .catch((error) => showError(error, 'Couldn’t check your billing'))
+      .catch((error) => showError(error, t('Couldn’t check your billing'), { t }))
 
       .finally(() => {
         params.delete('billing');
@@ -715,7 +718,7 @@ function AppLayout({ children, currentPageName }) {
       {/* Desktop workspace controls share the mobile notification provider. */}
       {!setupScreen && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (
         <header
-          aria-label="Desktop workspace controls"
+          aria-label={t('Desktop workspace controls')}
           className="hidden lg:flex fixed right-0 top-0 h-16 items-center justify-end border-b border-slate-100 bg-white z-30 transition-[left] duration-300"
           style={{ left: collapsed ? '72px' : '260px' }}
         >
@@ -724,12 +727,12 @@ function AppLayout({ children, currentPageName }) {
               <Link
                 to={createPageUrl('Counter')}
                 data-tour="take-orders-btn"
-                aria-label="Take Orders"
+                aria-label={t('Take Orders')}
                 className="inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-semibold text-white shadow-sm transition-transform active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgb(var(--color-primary))]"
                 style={{ background: 'var(--color-primary-gradient)' }}
               >
                 <PointOfSaleIcon className="h-5 w-5" aria-hidden="true" />
-                Take Orders
+                {t('Take Orders')}
               </Link>
             )}
             {displayUser && tenantId && hasPermission('orders.view') && <ChatHeaderButton tenantId={tenantId} />}
@@ -745,12 +748,12 @@ function AppLayout({ children, currentPageName }) {
         {/* No on-screen back arrow: the phone's own Back (button or swipe) goes back. */}
         <div className="flex items-center gap-2">
           {tenant?.logo_url ? (
-            <button onClick={() => setMobileOpen(true)} data-tour="avatar-menu-btn" aria-label="Open menu" className="flex items-center gap-2 h-11 active:opacity-70 transition-opacity">
+            <button onClick={() => setMobileOpen(true)} data-tour="avatar-menu-btn" aria-label={t('Open menu')} className="flex items-center gap-2 h-11 active:opacity-70 transition-opacity">
               <Menu className="w-6 h-6 text-slate-700 flex-shrink-0" />
               <img src={tenant.logo_url} alt={tenant.name} className="h-8 w-auto object-contain rounded" />
             </button>
           ) : (
-            <button onClick={() => setMobileOpen(true)} data-tour="avatar-menu-btn" aria-label="Open menu" className="flex items-center gap-2 h-11 active:opacity-70 transition-opacity">
+            <button onClick={() => setMobileOpen(true)} data-tour="avatar-menu-btn" aria-label={t('Open menu')} className="flex items-center gap-2 h-11 active:opacity-70 transition-opacity">
               <Menu className="w-6 h-6 text-slate-700 flex-shrink-0" />
               <img src="/branding/sellio-logo.webp" alt="Sellio" className="h-10 w-auto object-contain" />
             </button>
@@ -803,10 +806,10 @@ function AppLayout({ children, currentPageName }) {
           bottomInset={bottomSafeAreaInset}
           sell={{ to: '/explore/listings?new=1', onClick: (event) => { event.preventDefault(); openSell(); }, pulse: navPulse.products }}
           tabs={[
-            { page: 'Explore', to: '/explore', label: 'Home', icon: House },
-            { page: 'Listings', to: '/explore/listings', label: 'Listings', icon: LayoutGrid, pulse: navPulse.products || navPulse.orders },
-            { page: 'Chats', to: '/explore/chats', label: 'Chat', icon: MessageCircle, badge: shopChatsWaiting },
-            { page: 'Me', to: '/explore/me', label: 'Me', icon: CircleUserRound, pulse: navPulse.settings },
+            { page: 'Explore', to: '/explore', label: t('Home'), icon: House },
+            { page: 'Listings', to: '/explore/listings', label: t('Listings'), icon: LayoutGrid, pulse: navPulse.products || navPulse.orders },
+            { page: 'Chats', to: '/explore/chats', label: t('Chat'), icon: MessageCircle, badge: shopChatsWaiting },
+            { page: 'Me', to: '/explore/me', label: t('Me'), icon: CircleUserRound, pulse: navPulse.settings },
           ].map((tab) => ({
             ...tab,
             key: tab.page,

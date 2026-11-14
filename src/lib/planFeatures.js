@@ -1,3 +1,4 @@
+import { N_ } from './appText';
 // Which parts of the merchant app a store's plan includes, from its entitlements
 // (get_tenant_entitlements). Business plans (Starter, Growth, Pro) include all of
 // these; a free Personal Seller shop does not. Plain functions with no imports,
@@ -28,14 +29,14 @@ export const PAGE_FEATURES = {
 };
 
 export const FEATURE_LABELS = {
-  can_use_pos: 'The Counter',
-  can_use_inventory: 'Inventory and stock takes',
-  can_use_table_ordering: 'Tables & QR ordering',
-  can_use_kitchen_display: 'The kitchen display',
-  can_manage_staff: 'Staff logins and roles',
-  can_use_ai_assistant: 'The Sellio AI assistant',
-  can_customize_storefront: 'Store design',
-  can_print: 'Printing',
+  can_use_pos: N_('The Counter'),
+  can_use_inventory: N_('Inventory and stock takes'),
+  can_use_table_ordering: N_('Tables & QR ordering'),
+  can_use_kitchen_display: N_('The kitchen display'),
+  can_manage_staff: N_('Staff logins and roles'),
+  can_use_ai_assistant: N_('The Sellio AI assistant'),
+  can_customize_storefront: N_('Store design'),
+  can_print: N_('Printing'),
 };
 
 export function featureForPermission(permission) {
@@ -65,8 +66,10 @@ export function planAllowsPermission(permission, ent, sellerType) {
 
 // Words for what a store sells: a free personal shop has "listings", a business
 // store "products".
-export function itemWords(sellerType) {
-  return sellerType === 'individual'
-    ? { Products: 'Listings', products: 'listings', Product: 'Listing', product: 'listing' }
-    : { Products: 'Products', products: 'products', Product: 'Product', product: 'product' };
+// t: a translated screen's own (lib/appText.js); without it the words are English.
+export function itemWords(sellerType, t) {
+  const words = sellerType === 'individual'
+    ? { Products: N_('Listings'), products: N_('listings'), Product: N_('Listing'), product: N_('listing') }
+    : { Products: N_('Products'), products: N_('products'), Product: N_('Product'), product: N_('product') };
+  return t ? Object.fromEntries(Object.entries(words).map(([key, word]) => [key, t(word)])) : words;
 }

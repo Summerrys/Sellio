@@ -2,18 +2,19 @@ import React, { useState } from 'react';
 import { Lock, Check } from 'lucide-react';
 import { useTenant } from '../tenant/TenantContext';
 import { getSupabase } from '@/lib/supabaseClient';
-import { plansFor, rupiahNote, shopCheckoutLink } from '@/lib/plans';
+import { RUPIAH_NOTE, plansFor, rupiahAmount, shopCheckoutLink } from '@/lib/plans';
 import { usePlanRegion } from '@/lib/usePlanRegion';
 import PlanFootnotes from './PlanFootnotes';
 import PlansOnWebsite from './PlansOnWebsite';
 import { sellsPlans, openOutside } from '@/lib/nativeApp';
+import { useAppText, N_ } from '@/lib/appText';
 
 // Presentation only: prices, Stripe links and features come from lib/plans.js (an Indonesian
 // shop gets Indonesia's, with about what they come to in rupiah).
 const PLAN_STYLE = {
-  starter: { description: 'Perfect for small businesses just getting started', color: 'blue' },
-  growth: { description: 'For growing businesses with higher demands', color: 'purple', badge: 'Most Popular' },
-  pro: { description: 'Enterprise-grade solution for maximum scalability', color: 'gold' },
+  starter: { description: N_('Perfect for small businesses just getting started'), color: 'blue' },
+  growth: { description: N_('For growing businesses with higher demands'), color: 'purple', badge: N_('Most Popular') },
+  pro: { description: N_('Enterprise-grade solution for maximum scalability'), color: 'gold' },
 };
 
 // Sellio platform screen: same palette for every tenant, never the tenant theme.
@@ -25,6 +26,7 @@ const SIGNUP_ORANGE = 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)';
 const PLAN_RANK = { starter: 0, growth: 1, pro: 2 };
 
 export default function UpgradeWall({ currentTier: currentTierProp = null }) {
+  const { t } = useAppText();
   const [annual, setAnnual] = useState(false);
   const { tenantId, subscription, user, tenant } = useTenant();
   const region = usePlanRegion(tenant);
@@ -54,15 +56,15 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
   const isFocus = (plan) => isLockedAccount && plan.key === previousTier;
 
   const getButtonLabel = (plan) => {
-    if (isLockedAccount) return isFocus(plan) ? 'Resubscribe →' : 'Choose plan →';
-    if (currentTier === null) return 'Get Started →';
-    if (plan.key === currentTier) return 'Current Plan';
-    return (PLAN_RANK[plan.key] ?? 0) > (PLAN_RANK[currentTier] ?? 0) ? 'Upgrade →' : 'Downgrade →';
+    if (isLockedAccount) return isFocus(plan) ? t('Resubscribe →') : t('Choose plan →');
+    if (currentTier === null) return t('Get Started →');
+    if (plan.key === currentTier) return t('Current Plan');
+    return (PLAN_RANK[plan.key] ?? 0) > (PLAN_RANK[currentTier] ?? 0) ? t('Upgrade →') : t('Downgrade →');
   };
 
   const isCurrentPlan = (plan) => currentTier !== null && plan.key === currentTier;
 
-  const heading = subStatus === 'cancelled' ? 'Your subscription has ended' : 'Your trial has ended';
+  const heading = subStatus === 'cancelled' ? t('Your subscription has ended') : t('Your trial has ended');
   const previousPlanName = PLANS.find(p => p.key === previousTier)?.name;
 
   const handleSignOut = async () => {
@@ -90,30 +92,30 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
         <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', textAlign: 'center', marginBottom: 4 }}>{heading}</h1>
         {!sellsPlans() ? (
           // Sellio's apps sell no plans.
-          <PlansOnWebsite className="text-center" note="Your data is safe and comes back as soon as your plan is active again." />
+          <PlansOnWebsite className="text-center" note={t('Your data is safe and comes back as soon as your plan is active again.')} />
         ) : (
         <>
         <p style={{ fontSize: 13, color: '#64748b', textAlign: 'center', marginBottom: 20, maxWidth: 460, marginLeft: 'auto', marginRight: 'auto' }}>
           {previousPlanName
-            ? `Resubscribe to ${previousPlanName} or choose another plan to continue. Your data is safe and returns as soon as you subscribe.`
-            : 'Choose a plan to continue using Sellio. Your data is safe and returns as soon as you subscribe.'}
+            ? t('Resubscribe to {previousPlanName} or choose another plan to continue. Your data is safe and returns as soon as you subscribe.', { previousPlanName })
+            : t('Choose a plan to continue using Sellio. Your data is safe and returns as soon as you subscribe.')}
         </p>
 
         {/* Monthly / Annual switch — same as the sign-up pricing card */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24 }}>
-          <span onClick={() => setAnnual(false)} style={{ fontSize: 13, fontWeight: 500, color: !annual ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}>Monthly</span>
+          <span onClick={() => setAnnual(false)} style={{ fontSize: 13, fontWeight: 500, color: !annual ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}>{t('Monthly')}</span>
           <button
             type="button"
             role="switch"
             aria-checked={annual}
-            aria-label="Bill annually"
+            aria-label={t('Bill annually')}
             onClick={() => setAnnual(v => !v)}
             style={{ position: 'relative', width: 44, height: 24, borderRadius: 12, background: annual ? '#16a34a' : '#cbd5e1', border: 'none', cursor: 'pointer', flexShrink: 0, transition: 'background 0.2s' }}
           >
             <span style={{ position: 'absolute', top: 2, width: 20, height: 20, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s', left: annual ? 22 : 2 }} />
           </button>
-          <span onClick={() => setAnnual(true)} style={{ fontSize: 13, fontWeight: 500, color: annual ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}>Annual</span>
-          {annual && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#dcfce7', color: '#15803d' }}>2 months free</span>}
+          <span onClick={() => setAnnual(true)} style={{ fontSize: 13, fontWeight: 500, color: annual ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}>{t('Annual')}</span>
+          {annual && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#dcfce7', color: '#15803d' }}>{t('2 months free')}</span>}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 16 }}>
@@ -136,27 +138,27 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
                 <div style={{ padding: '20px 20px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
                     <span style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{plan.name}</span>
-                    {focus && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#fce7f3', color: '#be185d', whiteSpace: 'nowrap' }}>Your previous plan</span>}
-                    {current && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#dcfce7', color: '#15803d', whiteSpace: 'nowrap' }}>Current plan</span>}
+                    {focus && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#fce7f3', color: '#be185d', whiteSpace: 'nowrap' }}>{t('Your previous plan')}</span>}
+                    {current && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#dcfce7', color: '#15803d', whiteSpace: 'nowrap' }}>{t('Current plan')}</span>}
                   </div>
                   <div style={{ margin: '10px 0 2px' }}>
                     <span style={{ fontSize: 26, fontWeight: 800, color: '#0f172a' }}>SGD {price}</span>
-                    <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 4 }}>/{annual ? 'year' : 'month'}</span>
+                    <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 4 }}>/{annual ? t('year') : t('month')}</span>
                   </div>
-                  {region === 'ID' && <p data-testid="plan-rupiah" style={{ fontSize: 11, color: '#475569', fontWeight: 500, marginBottom: 2 }}>{rupiahNote(price)}</p>}
-                  {annual && <p style={{ fontSize: 11, color: '#16a34a', fontWeight: 500, marginBottom: 4 }}>Save SGD {saving}</p>}
-                  <p style={{ fontSize: 11, color: '#64748b', marginBottom: 12 }}>{plan.description}</p>
+                  {region === 'ID' && <p data-testid="plan-rupiah" style={{ fontSize: 11, color: '#475569', fontWeight: 500, marginBottom: 2 }}>{t(RUPIAH_NOTE, { amount: rupiahAmount(price) })}</p>}
+                  {annual && <p style={{ fontSize: 11, color: '#16a34a', fontWeight: 500, marginBottom: 4 }}>{t('Save SGD {saving}', { saving })}</p>}
+                  <p style={{ fontSize: 11, color: '#64748b', marginBottom: 12 }}>{t(plan.description)}</p>
                   <ul style={{ flex: 1, marginBottom: 16, listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {plan.features.map((f) => (
                       <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 11, color: '#475569' }}>
                         <Check style={{ width: 13, height: 13, color: '#22c55e', marginTop: 1, flexShrink: 0 }} />
-                        {f}
+                        {t(f)}
                       </li>
                     ))}
                   </ul>
                   {current ? (
                     <div style={{ width: '100%', padding: '10px 0', borderRadius: 12, fontSize: 13, fontWeight: 600, textAlign: 'center', background: '#e2e8f0', color: '#94a3b8' }}>
-                      Current Plan
+                      {t('Current Plan')}
                     </div>
                   ) : (
                     <button
@@ -181,13 +183,13 @@ export default function UpgradeWall({ currentTier: currentTierProp = null }) {
       </div>
 
       <p className="mt-8 text-sm text-slate-500">
-        Wrong account?{' '}
+        {t('Wrong account?')}{' '}
         <button
           type="button"
           onClick={handleSignOut}
           className="font-semibold text-slate-700 hover:text-slate-900 underline underline-offset-2 bg-transparent border-none cursor-pointer p-0"
         >
-          Sign out
+          {t('Sign out')}
         </button>
       </p>
     </div>

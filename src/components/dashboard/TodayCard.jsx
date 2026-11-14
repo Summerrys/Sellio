@@ -1,8 +1,10 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { useAppText } from '@/lib/appText';
 
 export default function TodayCard({ icon: Icon, label, value, subtext, trend, color = 'primary' }) {
+  const { t } = useAppText();
   const colorClasses = {
     primary: 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary))]',
     green: 'bg-green-50 text-green-600',
@@ -21,7 +23,7 @@ export default function TodayCard({ icon: Icon, label, value, subtext, trend, co
           )}
           {trend && (
             <p className={cn("text-xs font-medium mt-2", trend > 0 ? 'text-green-600' : 'text-red-600')}>
-              {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}% vs yesterday
+              {trend > 0 ? '↑' : '↓'}{' '}{t('{abs}% vs yesterday', { abs: Math.abs(trend) })}
             </p>
           )}
         </div>

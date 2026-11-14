@@ -178,7 +178,7 @@ try {
   assert.match(layout, /!\(staff && item\.page === 'Explore'\)/);
   assert.equal((layout.match(/staff=\{staffAccount\}/g) || []).length, 3);
   const tabBar = await read('src/components/navigation/MerchantTabBar.jsx');
-  assert.match(tabBar, /staff\n\s*\? tab\('home', 'Home', House, createPageUrl\('Dashboard'\)\)/);
+  assert.match(tabBar, /staff\n\s*\? tab\('home', t\('Home'\), House, createPageUrl\('Dashboard'\)\)/);
   assert.match(tabBar, /onStaffMe\?\.\(\)/);
   passed('Sign-in lands on Explore (staff: Dashboard) and never stays behind in Back; staff are kept out of Explore and its menu and bar links');
 
@@ -197,7 +197,7 @@ try {
   const products = await read('src/pages/Products.jsx');
   const searchRow = products.slice(products.indexOf('{/* Search */}'), products.indexOf('{/* Category Filter */}'));
   assert.match(searchRow, /flex-1 min-w-0/);
-  assert.match(searchRow, /aria-label="Show as a list"/, 'the grid/list switch sits beside the search');
+  assert.match(searchRow, /aria-label=\{t\('Show as a list'\)\}/, 'the grid/list switch sits beside the search');
   assert.doesNotMatch(products, /min-w-\[130px\]|min-w-\[120px\]|min-w-\[110px\]/);
   const grid2 = await read('src/components/products/ProductGrid.jsx');
   assert.match(grid2, /fontWeight: 600, fontSize: 14, margin: 0, minWidth: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis'/);

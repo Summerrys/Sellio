@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import db from '@/lib/db';
 import { Card } from '@/components/ui/card';
 import { Trophy, ShoppingBag } from 'lucide-react';
+import { useAppText } from '@/lib/appText';
 
 export default function TopProducts({ tenantId }) {
+  const { t } = useAppText();
   const { data: orders = [] } = useQuery({
     queryKey: ['topProductsOrders', tenantId],
     queryFn: () => db.entities.Order.filter({ tenant_id: tenantId }),
@@ -36,11 +38,11 @@ export default function TopProducts({ tenantId }) {
     <Card className="p-6 border-0 shadow-sm">
       <div className="flex items-center gap-2 mb-5">
         <Trophy className="w-5 h-5 text-amber-500" />
-        <h3 className="text-lg font-semibold text-slate-900">Top Selling Products</h3>
+        <h3 className="text-lg font-semibold text-slate-900">{t('Top Selling Products')}</h3>
       </div>
 
       {topProducts.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-8">No sales data yet</p>
+        <p className="text-sm text-slate-400 text-center py-8">{t('No sales data yet')}</p>
       ) : (
         <div className="space-y-4">
           {topProducts.map((product, idx) => (
@@ -50,7 +52,7 @@ export default function TopProducts({ tenantId }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-slate-900 truncate">{product.name}</p>
-                <p className="text-sm text-slate-500">{product.quantity} sold</p>
+                <p className="text-sm text-slate-500">{t('{quantity} sold', { quantity: product.quantity })}</p>
               </div>
               <p className="font-semibold text-[rgb(var(--color-primary))]">
                 ${product.revenue.toFixed(2)}

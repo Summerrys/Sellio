@@ -25,14 +25,15 @@ import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
 import { useBackToClose } from '@/lib/useBackToClose';
 import LoadingShapes, { TableShapes } from '@/components/ui-custom/LoadingShapes';
 import { formatMoney } from '@/lib/money';
+import { useAppText, appT, N_ } from '@/lib/appText';
 
 const NO_TABLES = [];
 
 const STATUS_CONFIG = {
-  available: { label: 'Available', color: 'bg-green-100 text-green-700 border-green-300' },
-  occupied: { label: 'Occupied', color: 'bg-amber-100 text-amber-700 border-amber-300' },
-  reserved: { label: 'Reserved', color: 'bg-slate-100 text-slate-700 border-slate-300' },
-  maintenance: { label: 'Maintenance', color: 'bg-red-100 text-red-700 border-red-300' },
+  available: { label: N_('Available'), color: 'bg-green-100 text-green-700 border-green-300' },
+  occupied: { label: N_('Occupied'), color: 'bg-amber-100 text-amber-700 border-amber-300' },
+  reserved: { label: N_('Reserved'), color: 'bg-slate-100 text-slate-700 border-slate-300' },
+  maintenance: { label: N_('Maintenance'), color: 'bg-red-100 text-red-700 border-red-300' },
 };
 
 // ── QR helpers ──────────────────────────────────────────────────────────────
@@ -74,6 +75,7 @@ const saveQRToStorage = async (supabase, tableId, tableName, orderingUrl, tenant
 // ────────────────────────────────────────────────────────────────────────────
 
 export default function Tables() {
+  useAppText();
   const { tenantId, tenant, hasPermission } = useTenant();
   const canCreate = hasPermission('tables.create');
   const canEdit = hasPermission('tables.edit');
@@ -240,11 +242,11 @@ export default function Tables() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tables', tenantId] });
-      toast.success('Table deleted');
+      toast.success(appT('Table deleted'));
       setTableToDelete(null);
     },
     onError: (error) => {
-      showError(error, 'Couldn’t delete the table');
+      showError(error, appT('Couldn’t delete the table'), { t: appT });
     },
   });
 
@@ -277,11 +279,11 @@ export default function Tables() {
   const handleDownloadQR = async (table) => {
     const imageUrl = table.qr_image_url || qrCodes[table.id];
     if (!imageUrl) {
-      toast.error('QR code not ready yet. Please wait a moment.');
+      toast.error(appT('QR code not ready yet. Please wait a moment.'));
       return;
     }
     if (inAppFiles()) {
-      saveFileInApp(imageUrl, `QR-${table.name}.png`, { tenantId, label: 'QR code' });
+      saveFileInApp(imageUrl, `QR-${table.name}.png`, { tenantId, label: appT('QR code') });
       return;
     }
     if (imageUrl.startsWith('data:')) {
@@ -311,25 +313,25 @@ export default function Tables() {
     if (saved) {
       setQrCodes(prev => ({ ...prev, [table.id]: saved }));
       setLocalTables(prev => prev.map(t => t.id === table.id ? { ...t, qr_image_url: saved } : t));
-      toast.success(`QR regenerated for ${table.name}`);
+      toast.success(appT('QR regenerated for {name}', { name: table.name }));
     } else {
-      showError(null, `Couldn’t make a new QR code for ${table.name}`);
+      showError(null, appT('Couldn’t make a new QR code for {name}', { name: table.name }), { t: appT });
 
     }
   };
 
   const STATUS_OPTIONS = [
-    { key: 'available',   label: 'Available', Icon: CheckCircle2, activeBg: '#16A34A', inactiveBg: '#F0FDF4', inactiveColor: '#86EFAC' },
-    { key: 'occupied',    label: 'Occupied',  Icon: Users,        activeBg: '#DC2626', inactiveBg: '#FEF2F2', inactiveColor: '#FCA5A5' },
-    { key: 'reserved',    label: 'Reserved',  Icon: Clock,        activeBg: '#D97706', inactiveBg: '#FFFBEB', inactiveColor: '#FCD34D' },
-    { key: 'maintenance', label: 'Maint.',    Icon: Wrench,       activeBg: '#475569', inactiveBg: '#F8FAFC', inactiveColor: '#CBD5E1' },
+    { key: 'available',   label: appT('Available'), Icon: CheckCircle2, activeBg: '#16A34A', inactiveBg: '#F0FDF4', inactiveColor: '#86EFAC' },
+    { key: 'occupied',    label: appT('Occupied'),  Icon: Users,        activeBg: '#DC2626', inactiveBg: '#FEF2F2', inactiveColor: '#FCA5A5' },
+    { key: 'reserved',    label: appT('Reserved'),  Icon: Clock,        activeBg: '#D97706', inactiveBg: '#FFFBEB', inactiveColor: '#FCD34D' },
+    { key: 'maintenance', label: appT('Maint.'),    Icon: Wrench,       activeBg: '#475569', inactiveBg: '#F8FAFC', inactiveColor: '#CBD5E1' },
   ];
 
   const QR_STATUS_BADGE = {
-    available:   { label: '✓ Scan to order', bg: '#F0FDF4', color: '#16A34A', Icon: CheckCircle2 },
-    occupied:    { label: 'In use',           bg: '#FEF2F2', color: '#DC2626', Icon: Users },
-    reserved:    { label: 'Reserved',         bg: '#FFFBEB', color: '#D97706', Icon: Clock },
-    maintenance: { label: 'Unavailable',      bg: '#F8FAFC', color: '#475569', Icon: Wrench },
+    available:   { label: appT('✓ Scan to order'), bg: '#F0FDF4', color: '#16A34A', Icon: CheckCircle2 },
+    occupied:    { label: appT('In use'),           bg: '#FEF2F2', color: '#DC2626', Icon: Users },
+    reserved:    { label: appT('Reserved'),         bg: '#FFFBEB', color: '#D97706', Icon: Clock },
+    maintenance: { label: appT('Unavailable'),      bg: '#F8FAFC', color: '#475569', Icon: Wrench },
   };
 
   const handleZoneRename = async (oldZone, newZone) => {
@@ -380,8 +382,8 @@ export default function Tables() {
       <div style={{ padding: '0 0 100px' }}>
         {/* Header */}
         <PageHeader
-          title="Tables & QR Codes"
-          description="Manage your dining tables and QR code ordering"
+          title={appT('Tables & QR Codes')}
+          description={appT('Manage your dining tables and QR code ordering')}
           actions={
             canCreate ? (
               <Button
@@ -390,7 +392,7 @@ export default function Tables() {
                 className="text-white gap-1.5"
                 style={{ background: 'var(--color-primary-gradient)' }}
               >
-                <Plus className="w-4 h-4" /> Add Table
+                <Plus className="w-4 h-4" />{' '}{appT('Add Table')}
               </Button>
             ) : undefined
           }
@@ -400,9 +402,9 @@ export default function Tables() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px', marginTop: '16px' }}>
           {[
             { label: 'Total', value: tables.length, color: 'rgb(var(--color-primary))', bg: '#f1f5f9' },
-            { label: 'Available', value: tables.filter(t => t.status === 'available').length, color: '#16a34a', bg: '#dcfce7' },
-            { label: 'Occupied', value: tables.filter(t => t.status === 'occupied').length, color: '#92400e', bg: '#fef3c7' },
-            { label: 'Reserved', value: tables.filter(t => t.status === 'reserved').length, color: '#1d4ed8', bg: '#dbeafe' },
+            { label: appT('Available'), value: tables.filter(t => t.status === 'available').length, color: '#16a34a', bg: '#dcfce7' },
+            { label: appT('Occupied'), value: tables.filter(t => t.status === 'occupied').length, color: '#92400e', bg: '#fef3c7' },
+            { label: appT('Reserved'), value: tables.filter(t => t.status === 'reserved').length, color: '#1d4ed8', bg: '#dbeafe' },
           ].map(stat => (
             <div key={stat.label} style={{ background: stat.bg, borderRadius: '10px', padding: '10px 8px', textAlign: 'center' }}>
               <p style={{ fontSize: '20px', fontWeight: '700', margin: '0 0 2px', color: stat.color }}>{stat.value}</p>
@@ -417,7 +419,7 @@ export default function Tables() {
           <Input
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search tables..."
+            placeholder={appT('Search tables...')}
             className="pl-9"
           />
         </div>
@@ -429,7 +431,7 @@ export default function Tables() {
             onChange={e => setZoneFilter(e.target.value)}
             style={{ flex: 1, fontSize: '13px', height: '36px', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '0 8px', background: 'white' }}
           >
-            <option value="all">All Zones</option>
+            <option value="all">{appT('All Zones')}</option>
             {zones.map(zone => <option key={zone} value={zone}>{zone}</option>)}
           </select>
           <select
@@ -437,11 +439,11 @@ export default function Tables() {
             onChange={e => setStatusFilter(e.target.value)}
             style={{ flex: 1, fontSize: '13px', height: '36px', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '0 8px', background: 'white' }}
           >
-            <option value="">All Status</option>
-            <option value="available">Available</option>
-            <option value="occupied">Occupied</option>
-            <option value="reserved">Reserved</option>
-            <option value="maintenance">Maintenance</option>
+            <option value="">{appT('All Status')}</option>
+            <option value="available">{appT('Available')}</option>
+            <option value="occupied">{appT('Occupied')}</option>
+            <option value="reserved">{appT('Reserved')}</option>
+            <option value="maintenance">{appT('Maintenance')}</option>
           </select>
           <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', borderRadius: '8px', padding: '3px', flexShrink: 0 }}>
             <button
@@ -461,26 +463,26 @@ export default function Tables() {
 
         {/* Tables display */}
         {isLoading ? (
-          <LoadingShapes label="Loading tables"><TableShapes /></LoadingShapes>
+          <LoadingShapes label={appT('Loading tables')}><TableShapes /></LoadingShapes>
         ) : filteredTables.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 16px' }} data-testid="tables-empty">
             <QrCode style={{ width: '48px', height: '48px', color: '#cbd5e1', margin: '0 auto 12px' }} />
             {searchQuery.trim() || zoneFilter !== 'all' || statusFilter !== 'all' ? (
               <>
-                <p className="text-base font-semibold text-slate-900">No tables match</p>
-                <p className="mt-1 text-sm text-slate-500">No table has that name, zone or status.</p>
+                <p className="text-base font-semibold text-slate-900">{appT('No tables match')}</p>
+                <p className="mt-1 text-sm text-slate-500">{appT('No table has that name, zone or status.')}</p>
                 <button
                   type="button"
                   onClick={() => { setSearchQuery(''); setZoneFilter('all'); setStatusFilter('all'); }}
                   className="mt-5 h-10 px-5 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 active:scale-95 transition-transform"
                 >
-                  Show all tables
+                  {appT('Show all tables')}
                 </button>
               </>
             ) : (
               <>
-                <p className="text-base font-semibold text-slate-900">No tables yet</p>
-                <p className="mt-1 text-sm text-slate-500 max-w-xs mx-auto">Add your tables to get a QR code for each one. Customers scan it to order from their table.</p>
+                <p className="text-base font-semibold text-slate-900">{appT('No tables yet')}</p>
+                <p className="mt-1 text-sm text-slate-500 max-w-xs mx-auto">{appT('Add your tables to get a QR code for each one. Customers scan it to order from their table.')}</p>
                 {canCreate && (
                   <button
                     type="button"
@@ -488,7 +490,7 @@ export default function Tables() {
                     className="mt-5 h-11 px-5 rounded-full text-sm font-semibold text-white inline-flex items-center gap-2 active:scale-95 transition-transform"
                     style={{ background: 'var(--color-primary-gradient, linear-gradient(135deg, #3b82f6 0%, #9333ea 100%))' }}
                   >
-                    <Plus className="w-4 h-4" /> Add a table
+                    <Plus className="w-4 h-4" />{' '}{appT('Add a table')}
                   </button>
                 )}
               </>
@@ -541,7 +543,7 @@ export default function Tables() {
                   </>
                 )}
                 <div className="flex-1 h-px bg-slate-200" />
-                <span className="text-xs text-slate-400">{tables.filter(t => (t.zone || 'Unassigned') === zone).length} tables</span>
+                <span className="text-xs text-slate-400">{tables.filter(t => (t.zone || 'Unassigned') === zone).length}{' '}{appT('tables')}</span>
               </div>
 
               {viewMode === 'grid' ? (
@@ -557,7 +559,7 @@ export default function Tables() {
                         >
                           {qrCodes[table.id] ? (
                             <div className="relative w-20 h-20">
-                              <img src={qrCodes[table.id]} className="w-full h-full object-contain" alt={`QR ${table.name}`}
+                              <img src={qrCodes[table.id]} className="w-full h-full object-contain" alt={appT('QR {name}', { name: table.name })}
                                 style={{ opacity: table.status === 'available' ? 1 : 0.45 }} />
                               <div className="absolute bottom-0 left-0 right-0 flex justify-center">
                                 {(() => {
@@ -580,7 +582,7 @@ export default function Tables() {
                         <div style={{ padding: '10px 12px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
                             <p style={{ fontWeight: '700', fontSize: '14px', margin: 0, color: '#0f172a' }}>{table.name}</p>
-                            <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{table.capacity} seats</p>
+                            <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{appT('{capacity} seats', { capacity: table.capacity })}</p>
                           </div>
                           {table.status === 'occupied' && (() => {
                             const activeSession = activeSessions.find(s => s.table_id === table.id);
@@ -611,14 +613,14 @@ export default function Tables() {
                               onClick={() => handleDownloadQR(localTable)}
                               style={{ flex: 1, padding: '6px', borderRadius: '8px', border: '0.5px solid #e2e8f0', background: 'none', fontSize: '11px', fontWeight: '600', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                             >
-                              <Download style={{ width: '13px', height: '13px' }} /> QR
+                              <Download style={{ width: '13px', height: '13px' }} />{' '}{appT('QR')}
                             </button>
                             {canEdit && (
                               <button
                                 onClick={() => handleEdit(table)}
                                 style={{ flex: 1, padding: '6px', borderRadius: '8px', border: '0.5px solid #e2e8f0', background: 'none', fontSize: '11px', fontWeight: '600', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                               >
-                                <Pencil style={{ width: '13px', height: '13px' }} /> Edit
+                                <Pencil style={{ width: '13px', height: '13px' }} />{' '}{appT('Edit')}
                               </button>
                             )}
                             {canDelete && (
@@ -648,7 +650,7 @@ export default function Tables() {
                         >
                           {qrCodes[table.id] ? (
                             <>
-                              <img src={qrCodes[table.id]} style={{ width: '56px', height: '56px', objectFit: 'contain', opacity: table.status === 'available' ? 1 : 0.45 }} alt={`QR ${table.name}`} />
+                              <img src={qrCodes[table.id]} style={{ width: '56px', height: '56px', objectFit: 'contain', opacity: table.status === 'available' ? 1 : 0.45 }} alt={appT('QR {name}', { name: table.name })} />
                               <div className="absolute bottom-0 left-0 right-0 flex justify-center">
                                 {(() => {
                                   const badge = QR_STATUS_BADGE[table.status] || QR_STATUS_BADGE.available;
@@ -672,7 +674,7 @@ export default function Tables() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
                             <p style={{ fontWeight: '600', fontSize: '14px', margin: 0, color: '#0f172a' }}>{table.name}</p>
-                            <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{table.capacity} seats</p>
+                            <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{appT('{capacity} seats', { capacity: table.capacity })}</p>
                             {table.status === 'occupied' && (() => {
                               const activeSession = activeSessions.find(s => s.table_id === table.id);
                               return activeSession ? (
@@ -757,7 +759,7 @@ export default function Tables() {
             >
               {/* Header */}
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-slate-900 text-base">{qrModalTable.name} — QR Code</h3>
+                <h3 className="font-bold text-slate-900 text-base">{appT('{name} — QR Code', { name: qrModalTable.name })}</h3>
                 <button onClick={() => setQrModalTable(null)} className="text-slate-400 hover:text-slate-600">
                   <X className="w-5 h-5" />
                 </button>
@@ -768,15 +770,15 @@ export default function Tables() {
                   {(qrModalTable.qr_code_url && qrCodes[qrModalTable.id]) || qrModalTable.qr_image_url ? (
                     <img
                       src={qrCodes[qrModalTable.id] || qrModalTable.qr_image_url}
-                      alt={`QR ${qrModalTable.name}`}
+                      alt={appT('QR {name}', { name: qrModalTable.name })}
                       style={{ width: 256, height: 256, objectFit: 'contain', borderRadius: 8 }}
                     />
                   ) : (
                     <QrCode className="w-24 h-24 text-slate-200" />
                   )}
                 </div>
-                <p className="text-sm text-slate-500">{qrModalTable.capacity} pax</p>
-                <p className="text-xs text-slate-400">Scan to order</p>
+                <p className="text-sm text-slate-500">{appT('{capacity} pax', { capacity: qrModalTable.capacity })}</p>
+                <p className="text-xs text-slate-400">{appT('Scan to order')}</p>
               </div>
               {/* Action buttons */}
               <div className="flex gap-2">
@@ -785,20 +787,20 @@ export default function Tables() {
                   className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
                   style={{ background: 'var(--color-primary-gradient)' }}
                 >
-                  <Download className="w-4 h-4" /> Download
+                  <Download className="w-4 h-4" />{' '}{appT('Download')}
                 </button>
                 <button
                   onClick={() => {
                     const imgSrc = qrCodes[qrModalTable.id] || qrModalTable.qr_image_url;
                     const w = window.open();
-                    w.document.write(`<html><head><title>${qrModalTable.name}</title></head><body style="text-align:center;font-family:Arial;padding:24px"><h2>${qrModalTable.name}</h2><p>${qrModalTable.capacity} pax</p><img src="${imgSrc}" style="max-width:400px;" /><p>Scan to order</p></body></html>`);
+                    w.document.write(`<html><head><title>${qrModalTable.name}</title></head><body style="text-align:center;font-family:Arial;padding:24px"><h2>${qrModalTable.name}</h2><p>${appT('{capacity} pax', { capacity: qrModalTable.capacity })}</p><img src="${imgSrc}" style="max-width:400px;" /><p>${appT('Scan to order')}</p></body></html>`);
                     w.document.close();
                     setTimeout(() => w.print(), 300);
                   }}
                   className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
                   style={{ background: 'var(--color-primary-gradient)' }}
                 >
-                  <Printer className="w-4 h-4" /> Print
+                  <Printer className="w-4 h-4" />{' '}{appT('Print')}
                 </button>
               </div>
             </div>
@@ -808,18 +810,18 @@ export default function Tables() {
         <AlertDialog open={!!tableToDelete} onOpenChange={() => setTableToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete Table</AlertDialogTitle>
+              <AlertDialogTitle>{appT('Delete Table')}</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete <strong>{tableToDelete?.name}</strong>? This will invalidate its QR code.
+                {appT('Are you sure you want to delete {name}? This will invalidate its QR code.', { name: <strong>{tableToDelete?.name}</strong> })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{appT('Cancel')}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => deleteMutation.mutate(tableToDelete.id)}
                 className="bg-red-600 hover:bg-red-700"
               >
-                Delete
+                {appT('Delete')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

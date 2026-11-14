@@ -123,12 +123,12 @@ try {
   // a business keeps its own Chats page. And /Chats itself sends a home shop there.
   const layout = await readFile(path.join(process.cwd(), 'src/Layout.jsx'), 'utf8');
   assert.match(layout, /const homeShop = isShopTenant\(tenant\) && !hasPermission\?\.\('orders\.create'\);/);
-  assert.match(layout, /\{ label: 'Chats', icon: MessageCircle, page: 'Chats', to: homeShop \? '\/explore\/chats' : null, permission: 'orders\.view' \}/);
+  assert.match(layout, /\{ label: t\('Chats'\), icon: MessageCircle, page: 'Chats', to: homeShop \? '\/explore\/chats' : null, permission: 'orders\.view' \}/);
   assert.match(layout, /const chatsWaiting = homeShop\s*\? \(Number\(chatUnread\.buying\) \|\| 0\) \+ \(Number\(chatUnread\.selling\) \|\| 0\)\s*: Number\(chatUnread\.by_tenant\?\.\[tenant\?\.id\]\) \|\| 0;/);
   assert.match(layout, /const to = item\.to \|\| createPageUrl\(item\.page\);[\s\S]{0,140}const isActive = item\.to \? location\.pathname\.startsWith\(item\.to\)\s*: item\.page === 'Explore' \? location\.pathname === '\/explore'\s*: currentPageName === item\.page;/);
   assert.match(layout, /<Link\s+key=\{item\.page\}\s+to=\{to\}/);
   assert.match(layout, /if \(to !== window\.location\.pathname \+ window\.location\.search\) navigate\(to, \{ replace: handOverBackStep\(\) \}\);/);
-  assert.match(layout, /\{ page: 'Chats', to: '\/explore\/chats', label: 'Chat', icon: MessageCircle, badge: shopChatsWaiting \}/, 'the bottom bar: the same place');
+  assert.match(layout, /\{ page: 'Chats', to: '\/explore\/chats', label: t\('Chat'\), icon: MessageCircle, badge: shopChatsWaiting \}/, 'the bottom bar: the same place');
   const chats = await readFile(path.join(process.cwd(), 'src/pages/Chats.jsx'), 'utf8');
   assert.match(chats, /if \(isShopTenant\(tenant\) && !hasPermission\('orders\.create'\)\) \{\s*const to = selected \? chatUrl\(selected\) : archived \? '\/explore\/chats\/archived' : '\/explore\/chats';\s*return <Navigate to=\{to\} replace \/>;/);
   passed("a free home shop's side-menu Chats is the bottom bar's Chat (same place, same count); /Chats goes there too");

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { useAppText } from '@/lib/appText';
 
 export default function ProductFormInventory({ formData, onChange }) {
+  const { t } = useAppText();
   const trackInventory = formData.track_inventory === true;
 
   const [stockInput, setStockInput] = useState(String(formData.stock_quantity ?? 0));
@@ -46,8 +48,8 @@ export default function ProductFormInventory({ formData, onChange }) {
 
       <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
         <div>
-          <Label className="text-sm font-medium">Track Inventory</Label>
-          <p className="text-xs text-slate-500">Monitor stock levels for this product</p>
+          <Label className="text-sm font-medium">{t('Track Inventory')}</Label>
+          <p className="text-xs text-slate-500">{t('Monitor stock levels for this product')}</p>
         </div>
         <Switch
          checked={trackInventory}
@@ -64,7 +66,7 @@ export default function ProductFormInventory({ formData, onChange }) {
       {trackInventory && (
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label>Current Stock *</Label>
+            <Label>{t('Current Stock *')}</Label>
             <input
               type="number"
               inputMode="numeric"
@@ -83,7 +85,7 @@ export default function ProductFormInventory({ formData, onChange }) {
           </div>
 
           <div>
-            <Label>Low Stock Threshold</Label>
+            <Label>{t('Low Stock Threshold')}</Label>
             <input
               type="number"
               inputMode="numeric"
@@ -99,14 +101,14 @@ export default function ProductFormInventory({ formData, onChange }) {
               }}
               className="mt-1.5 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
-            <p className="text-xs text-slate-500 mt-1">Alert when below this number</p>
+            <p className="text-xs text-slate-500 mt-1">{t('Alert when below this number')}</p>
           </div>
         </div>
       )}
 
       {!trackInventory && (
         <div className="text-center py-4 text-sm text-slate-500">
-          Inventory tracking disabled - product treated as unlimited stock
+          {t('Inventory tracking disabled - product treated as unlimited stock')}
         </div>
       )}
     </div>

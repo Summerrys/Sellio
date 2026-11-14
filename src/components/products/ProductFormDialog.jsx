@@ -29,7 +29,7 @@ const uploadImageIfBase64 = async (imageData, tenantId, productName) => {
   const photo = await shrinkImage(new Blob([bytes], { type: mimeType }), { maxSide: PHOTO_MAX_SIDE });
   const filename = `${tenantId}/products/${Date.now()}-${toSlug(productName)}.${photo.ext}`;
   const { error } = await supabase.storage.from('product-images').upload(filename, photo.blob, { contentType: photo.type, upsert: true, cacheControl: LONG_CACHE });
-  if (error) throw new Error(`Image upload failed: ${error.message}`);
+  if (error) throw new Error(appT('Image upload failed: {message}', { message: error.message }));
   const { data } = supabase.storage.from('product-images').getPublicUrl(filename);
   return data.publicUrl;
 };
@@ -94,6 +94,7 @@ import ProductFormVariants from './ProductFormVariants';
 import AIProductAssistant, { cleanupDeletedImages } from './AIProductAssistant';
 import StockAdjustmentPanel from '../inventory/StockAdjustmentPanel';
 import { Pencil, Plus } from 'lucide-react';
+import { useAppText, appT } from '@/lib/appText';
 
 const VARIANT_TYPE_MAP = {
   size: 'size', sizes: 'size',
@@ -211,6 +212,7 @@ function Section({ title, children, defaultOpen = true }) {
 }
 
 export default function ProductFormDialog({ open, onOpenChange, product, tenantId, onSaved }) {
+    const { t } = useAppText();
     const { tenant, hasPermission } = useTenant();
     // Granular gating: editing an existing product needs products.edit, creating a
     // new one needs products.create (already gated upstream at the buttons that open
@@ -352,12 +354,12 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
 
   const validate = () => {
     const errs = {};
-    if (!formData.name?.trim()) errs.name = tenant?.seller_type === 'individual' ? 'Listing name is required' : 'Product name is required';
-    if (!formData.price && formData.price !== 0) errs.price = 'Price is required';
+    if (!formData.name?.trim()) errs.name = tenant?.seller_type === 'individual' ? t('Listing name is required') : t('Product name is required');
+    if (!formData.price && formData.price !== 0) errs.price = t('Price is required');
     // A business's new product goes in a category (its menu is by category); a home seller's
     // listing doesn't need one.
     if (tenant?.seller_type !== 'individual' && !product?.id && !formData.category_id && !newCategory) {
-      errs.category = 'Choose or type a category';
+      errs.category = t('Choose or type a category');
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -401,7 +403,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         if (error) throw error;
 
         await syncProductVariants(supabase, product.id, tenantId, formData.variants, formData.sku || product.sku);
-        toast.success(tenant?.seller_type === 'individual' ? 'Listing updated' : 'Product updated');
+        toast.success(tenant?.seller_type === 'individual' ? t('Listing updated') : t('Product updated'));
         queryClient.setQueryData(['products', tenantId], (old) => {
           if (!Array.isArray(old)) return old;
           return old.map(p => p.id === product.id ? { ...p, ...payload } : p);
@@ -440,7 +442,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         // Show the trigger-generated SKU briefly before closing
         setSavedSku(inserted.sku || '');
         await syncProductVariants(supabase, inserted.id, tenantId, formData.variants, inserted.sku);
-        toast.success(tenant?.seller_type === 'individual' ? 'Listing added' : 'Product created');
+        toast.success(tenant?.seller_type === 'individual' ? t('Listing added') : t('Product created'));
         queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
         // Keep the Layout's Sell-FAB product-count (used for the plan-limit gate) in sync too.
         queryClient.invalidateQueries({ queryKey: ['productCount', tenantId] });
@@ -454,7 +456,8 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
     } catch (err) {
       const individual = tenant?.seller_type === 'individual';
       setSaveNote(explainError(err, {
-        title: product?.id ? 'Couldn’t save your changes' : individual ? 'Couldn’t add the listing' : 'Couldn’t create the product',
+        title: product?.id ? t('Couldn’t save your changes') : individual ? t('Couldn’t add the listing') : t('Couldn’t create the product'),
+        t,
       }));
     } finally {
       setSaving(false);
@@ -469,12 +472,12 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
       const supabase = await getSupabase();
       await supabase.from('inventory_items').delete().eq('product_id', product.id);
       await db.entities.Product.delete(product.id);
-      toast.success(tenant?.seller_type === 'individual' ? 'Listing deleted' : 'Product deleted');
+      toast.success(tenant?.seller_type === 'individual' ? t('Listing deleted') : t('Product deleted'));
       queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
       queryClient.invalidateQueries({ queryKey: ['productCount', tenantId] });
       onOpenChange(false);
     } catch (err) {
-      setSaveNote(explainError(err, { title: tenant?.seller_type === 'individual' ? 'Couldn’t delete the listing' : 'Couldn’t delete the product' }));
+      setSaveNote(explainError(err, { title: tenant?.seller_type === 'individual' ? t('Couldn’t delete the listing') : t('Couldn’t delete the product'), t }));
     } finally {
       setDeleting(false);
       setConfirmDelete(false);
@@ -519,7 +522,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100 flex-shrink-0">
           <div>
             <h2 className="text-base font-semibold text-slate-900">
-              {product?.id ? `Edit ${itemWords(tenant?.seller_type).Product}` : `New ${itemWords(tenant?.seller_type).Product}`}
+              {product?.id ? t('Edit {Product}', { Product: itemWords(tenant?.seller_type, t).Product }) : t('New {Product}', { Product: itemWords(tenant?.seller_type, t).Product })}
             </h2>
             {product?.id && formData.price > 0 && (
               <p className="text-sm mt-0.5">
@@ -537,7 +540,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
                 className="mt-1 inline-flex items-center gap-1 text-xs font-semibold"
                 style={{ color: 'rgb(var(--color-primary))' }}
               >
-                <Eye className="w-3.5 h-3.5" /> See it as buyers do
+                <Eye className="w-3.5 h-3.5" />{' '}{t('See it as buyers do')}
               </button>
             )}
           </div>
@@ -547,7 +550,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
                 checked={formData.is_active}
                 onCheckedChange={(v) => update({ is_active: v })}
               />
-              <Label className="text-sm text-slate-600">{formData.is_active ? 'Active' : 'Inactive'}</Label>
+              <Label className="text-sm text-slate-600">{formData.is_active ? t('Active') : t('Inactive')}</Label>
             </div>
             <button
               onClick={handleCancel}
@@ -601,7 +604,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
 
 
           {/* Basic Info */}
-          <Section title="Basic Info" defaultOpen={true}>
+          <Section title={t('Basic Info')} defaultOpen={true}>
             <ProductFormBasic
               formData={formData}
               onChange={update}
@@ -641,7 +644,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
           </Section>
 
           {/* Pricing */}
-          <Section title="Pricing" defaultOpen={true}>
+          <Section title={t('Pricing')} defaultOpen={true}>
             <ProductFormPricing
               formData={formData}
               onChange={update}
@@ -650,7 +653,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
           </Section>
 
           {/* Variants */}
-          <Section title="Variants & Add-ons" defaultOpen={!!formData.variants?.length}>
+          <Section title={t('Variants & Add-ons')} defaultOpen={!!formData.variants?.length}>
             <ProductFormVariants formData={{ ...formData, currency: tenant?.currency || 'SGD' }} onChange={update} />
           </Section>
         </div>
@@ -671,16 +674,16 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
              disabled={deleting}
            >
              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-             {confirmDelete ? 'Confirm?' : ''}
+             {confirmDelete ? t('Confirm?') : ''}
            </Button>
           ) : (!product?.id &&
            <Button variant="outline" className="flex-1" onClick={handleCancel}>
-             Cancel
+             {t('Cancel')}
            </Button>
           )}
           {product?.id && (
            <Button variant="outline" className="flex-1" onClick={() => { setConfirmDelete(false); handleCancel(); }}>
-             {canEdit ? 'Cancel' : 'Close'}
+             {canEdit ? t('Cancel') : t('Close')}
            </Button>
           )}
           {canEdit && (
@@ -690,7 +693,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
               onClick={handleSave}
               disabled={saving}
             >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (product?.id ? 'Save Changes' : tenant?.seller_type === 'individual' ? 'Add listing' : 'Create Product')}
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (product?.id ? t('Save Changes') : tenant?.seller_type === 'individual' ? t('Add listing') : t('Create Product'))}
             </Button>
           )}
         </div>

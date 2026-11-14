@@ -5,6 +5,7 @@
  */
 import { useState, useEffect } from 'react';
 import { holdLaunch } from '@/lib/appLaunch';
+import { appT } from '@/lib/appText';
 
 const CSS = `
 @keyframes sellio-bounce {
@@ -46,6 +47,9 @@ function injectCSS() {
 // While the Android app starts, the Sellio splash covers this and stays up as long
 // as a loader is showing (lib/appLaunch.js); websites see this loader as before.
 export default function AppLoader({ visible = true }) {
+  // appT without following changes: this also shows while a store page loads, and a buyer's
+  // phone shouldn't download the owner app's words for it (lib/appText.js loads them for screens
+  // that use useAppText). Owner pages have them before the first screen (main.jsx).
   injectCSS();
   const [show, setShow] = useState(false);
   const [slow, setSlow] = useState(false);
@@ -71,7 +75,7 @@ export default function AppLoader({ visible = true }) {
   return (
     <div
       role="status"
-      aria-label="Loading Sellio"
+      aria-label={appT('Loading Sellio')}
       style={{
         position: 'fixed', inset: 0,
         background: '#ffffff',
@@ -99,16 +103,16 @@ export default function AppLoader({ visible = true }) {
       </div>
 
       {/* Text */}
-      <p style={{ color: '#9ca3af', fontSize: 13, margin: 0 }}>Loading...</p>
+      <p style={{ color: '#9ca3af', fontSize: 13, margin: 0 }}>{appT('Loading...')}</p>
       {slow && (
         <div style={{ marginTop: 20, textAlign: 'center' }}>
-          <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 10px' }}>This is taking longer than usual.</p>
+          <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 10px' }}>{appT('This is taking longer than usual.')}</p>
           <button
             type="button"
             onClick={() => window.location.reload()}
             style={{ minHeight: 44, padding: '0 20px', borderRadius: 12, border: 'none', background: 'var(--color-primary-gradient, linear-gradient(135deg, #3b82f6 0%, #9333ea 100%))', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
           >
-            Reload
+            {appT('Reload')}
           </button>
         </div>
       )}

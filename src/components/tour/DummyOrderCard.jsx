@@ -1,21 +1,23 @@
 import { Pencil, Trash2 } from 'lucide-react';
+import { useAppText } from '@/lib/appText';
 
 // Rendered only when the merchant has zero real orders yet (almost always true
 // this early), for the duration of the tour steps that need an order card to
 // point at. Not saved anywhere, inert on tap, clearly marked "Sample" so it's
 // never mistaken for a real order.
 export default function DummyOrderCard({ currency = 'SGD' }) {
+  const { t } = useAppText();
   return (
     <div
       data-tour="order-card"
       style={{ position: 'relative', borderRadius: 16, border: '1px solid #e2e8f0', background: 'white', padding: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
     >
       <span style={{ position: 'absolute', top: 10, right: 10, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: '#f59e0b', color: 'white' }}>
-        Sample
+        {t('Sample')}
       </span>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#0f172a' }}>#ORD-SAMPLE</p>
-      <p style={{ margin: '2px 0 10px', fontSize: 12, color: '#64748b' }}>Table 1</p>
-      <p style={{ margin: '0 0 10px', fontSize: 13, color: '#334155' }}>2× Sample Latte</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#0f172a' }}>{t('#ORD-SAMPLE')}</p>
+      <p style={{ margin: '2px 0 10px', fontSize: 12, color: '#64748b' }}>{t('Table 1')}</p>
+      <p style={{ margin: '0 0 10px', fontSize: 13, color: '#334155' }}>{t('2× Sample Latte')}</p>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{currency} 9.00</span>
         <div style={{ display: 'flex', gap: 6 }}>
@@ -26,7 +28,7 @@ export default function DummyOrderCard({ currency = 'SGD' }) {
             <Trash2 className="w-3 h-3 text-red-400" />
           </div>
           <div data-tour="order-status-btn" style={{ padding: '6px 14px', borderRadius: 8, background: '#8b5cf6', color: 'white', fontSize: 12, fontWeight: 700 }}>
-            Mark Ready
+            {t('Mark Ready')}
           </div>
         </div>
       </div>

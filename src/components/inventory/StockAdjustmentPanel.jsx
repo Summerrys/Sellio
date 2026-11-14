@@ -6,8 +6,10 @@ import ErrorNote from '@/components/ui-custom/ErrorNote';
 import { getSupabase } from '@/lib/supabaseClient';
 import { BellRing, X } from 'lucide-react';
 import { useBackToClose } from '@/lib/useBackToClose';
+import { useAppText, appT } from '@/lib/appText';
 
 export default function StockAdjustmentPanel({ open, onOpenChange, product, tenantId, onSuccess, onClose, initialThreshold }) {
+  useAppText();
   const queryClient = useQueryClient();
 
   const observedStock = product?.current_stock ?? product?.inventory?.[0]?.current_stock ?? product?.stock_quantity ?? 0;
@@ -76,7 +78,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
           row._pendingAdjustmentId === variables.p_request_id ? item : row
         ) : rows);
       });
-      setStockNote(explainError(error, { title: 'Couldn’t save the stock' }));
+      setStockNote(explainError(error, { title: appT('Couldn’t save the stock'), t: appT }));
     },
     onSuccess: (saved, variables) => {
       inventoryKeys.forEach(key => queryClient.setQueryData([key, variables.p_tenant_id], rows => Array.isArray(rows) ? rows.map(row => {
@@ -84,7 +86,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
         const { _pendingAdjustmentId, ...clean } = row;
         return { ...clean, current_stock: saved.current_stock, stock_quantity: saved.stock_quantity, low_stock_threshold: saved.low_stock_threshold };
       }) : rows));
-      toast.success('Stock saved');
+      toast.success(appT('Stock saved'));
       onSuccess?.();
       onOpenChange(false);
       onClose?.();
@@ -99,7 +101,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
   const handleSubmit = async () => {
     if (submittingRef.current || queryClient.isMutating({ mutationKey }) || noChange) return;
     if (!Number.isSafeInteger(newStock) || newStock < 0 || !Number.isSafeInteger(threshold) || threshold < 0) {
-      toast.error('Enter whole, non-negative stock and threshold values.');
+      toast.error(appT('Enter whole, non-negative stock and threshold values.'));
       return;
     }
     submittingRef.current = true;
@@ -191,7 +193,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
           </div>
 
           {/* Scrollable body */}
-          <fieldset disabled={isSubmitting} aria-label="Stock adjustment" aria-busy={isSubmitting} className="flex-1 min-w-0 min-h-0 border-0 overflow-y-auto px-6 py-6 flex flex-col items-center gap-6">
+          <fieldset disabled={isSubmitting} aria-label={appT('Stock adjustment')} aria-busy={isSubmitting} className="flex-1 min-w-0 min-h-0 border-0 overflow-y-auto px-6 py-6 flex flex-col items-center gap-6">
 
             {/* Main counter */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
@@ -224,7 +226,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
                     WebkitAppearance: 'none', MozAppearance: 'textfield', appearance: 'none',
                   }}
                 />
-                <p style={{ fontSize: '12px', color: '#6b7280', margin: '2px 0 0' }}>units</p>
+                <p style={{ fontSize: '12px', color: '#6b7280', margin: '2px 0 0' }}>{appT('units')}</p>
               </div>
 
               <button
@@ -251,21 +253,21 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
                   borderRadius: '999px', padding: '4px 14px',
                 }}>
                   <span style={{ fontSize: '13px', fontWeight: '700', color: newStock > currentStock ? '#166534' : '#991b1b' }}>
-                    {newStock > currentStock ? `+${newStock - currentStock}` : `−${currentStock - newStock}`}
+                    {newStock > currentStock ? appT('+{count}', { count: newStock - currentStock }) : appT('−{count}', { count: currentStock - newStock })}
                   </span>
                   <span style={{ fontSize: '12px', color: newStock > currentStock ? '#16a34a' : '#dc2626' }}>
-                    from {currentStock}
+                    {appT('from {currentStock}', { currentStock })}
                   </span>
                 </div>
               ) : (
-                <span style={{ fontSize: '12px', color: '#6b7280' }}>No change</span>
+                <span style={{ fontSize: '12px', color: '#6b7280' }}>{appT('No change')}</span>
               )}
             </div>
 
             {/* Quick shortcuts */}
             <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
               {[
-                { label: 'Reset', value: 0, color: '#dc2626', bg: '#fee2e2' },
+                { label: appT('Reset'), value: 0, color: '#dc2626', bg: '#fee2e2' },
                 { label: '+5', value: currentStock + 5, color: '#166534', bg: '#dcfce7' },
                 { label: '+10', value: currentStock + 10, color: '#166534', bg: '#dcfce7' },
                 { label: '+20', value: currentStock + 20, color: '#166534', bg: '#dcfce7' },
@@ -290,7 +292,7 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
               <textarea
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
-                placeholder="Notes e.g. Weekly restock, damaged goods..."
+                placeholder={appT('Notes e.g. Weekly restock, damaged goods...')}
                 rows={2}
                 style={{
                   width: '100%', borderRadius: '10px', fontSize: '13px', resize: 'none',
@@ -306,8 +308,8 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
                 <div className="flex items-center gap-2">
                   <BellRing className="w-4 h-4" style={{ color: 'rgb(var(--color-primary))' }} />
                   <div>
-                    <p className="text-sm font-medium" style={{ color: 'rgb(var(--color-primary))' }}>Low stock alert</p>
-                    <p className="text-xs text-slate-400">Notify when stock falls below</p>
+                    <p className="text-sm font-medium" style={{ color: 'rgb(var(--color-primary))' }}>{appT('Low stock alert')}</p>
+                    <p className="text-xs text-slate-400">{appT('Notify when stock falls below')}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -337,11 +339,11 @@ export default function StockAdjustmentPanel({ open, onOpenChange, product, tena
                 cursor: noChange ? 'not-allowed' : 'pointer',
                 transition: 'all 0.15s ease'
               }}>
-              {isSubmitting ? 'Saving...'
-               : noChange ? 'No changes made'
-               : stockIncreased ? `Save — add ${newStock - currentStock} units`
-               : stockDecreased ? `Save — remove ${currentStock - newStock} units`
-               : 'Save changes'}
+              {isSubmitting ? appT('Saving...')
+               : noChange ? appT('No changes made')
+               : stockIncreased ? appT('Save — add {count} units', { count: newStock - currentStock })
+               : stockDecreased ? appT('Save — remove {count} units', { count: currentStock - newStock })
+               : appT('Save changes')}
             </button>
           </div>
         </div>

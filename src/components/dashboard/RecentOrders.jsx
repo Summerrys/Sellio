@@ -3,24 +3,26 @@ import { useQuery } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { ChevronRight, Clock } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatAppDate } from '@/lib/appDates';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { shopMethod, shopStatusLabel } from '@/lib/shopSelling';
 import { formatMoney } from '@/lib/money';
 import ShareShopLinkButton from '@/components/shop/ShareShopLink';
+import { useAppText, N_ } from '@/lib/appText';
 
 const STATUS_LABEL = {
-  pending:   { text: 'New',        cls: 'bg-amber-100 text-amber-700' },
-  confirmed: { text: 'Confirmed',  cls: 'bg-blue-100 text-blue-700' },
-  preparing: { text: 'Preparing',  cls: 'bg-purple-100 text-purple-700' },
-  ready:     { text: 'Ready',      cls: 'bg-green-100 text-green-700' },
-  completed: { text: 'Completed',  cls: 'bg-green-600 text-white' },
-  cancelled: { text: 'Cancelled',  cls: 'bg-red-100 text-red-600' },
+  pending:   { text: N_('New'),        cls: 'bg-amber-100 text-amber-700' },
+  confirmed: { text: N_('Confirmed'),  cls: 'bg-blue-100 text-blue-700' },
+  preparing: { text: N_('Preparing'),  cls: 'bg-purple-100 text-purple-700' },
+  ready:     { text: N_('Ready'),      cls: 'bg-green-100 text-green-700' },
+  completed: { text: N_('Completed'),  cls: 'bg-green-600 text-white' },
+  cancelled: { text: N_('Cancelled'),  cls: 'bg-red-100 text-red-600' },
 };
 
 // shop: a free shop's order words (step 15); food: it sells food; currency: tenants.currency.
 export default function RecentOrders({ tenantId, currency, shop = false, food = false }) {
+  const { t } = useAppText();
   const navigate = useNavigate();
 
   const { data: orders = [] } = useQuery({
@@ -43,15 +45,15 @@ export default function RecentOrders({ tenantId, currency, shop = false, food = 
   return (
     <Card className="p-6 border-0 shadow-sm">
       <div className="flex items-center justify-between mb-5">
-        <h3 className="text-lg font-semibold text-slate-900">Recent Orders</h3>
+        <h3 className="text-lg font-semibold text-slate-900">{t('Recent Orders')}</h3>
         <Clock className="w-5 h-5 text-slate-400" />
       </div>
 
       {orders.length === 0 ? (
         // Its last five orders, whenever they were: none means none at all yet.
         <div className="text-center py-6" data-testid="recent-orders-empty">
-          <p className="text-sm font-semibold text-slate-900">No orders yet</p>
-          <p className="mt-1 text-sm text-slate-500">Your newest orders show up here as they come in.</p>
+          <p className="text-sm font-semibold text-slate-900">{t('No orders yet')}</p>
+          <p className="mt-1 text-sm text-slate-500">{t('Your newest orders show up here as they come in.')}</p>
           <div className="mt-4"><ShareShopLinkButton size="sm" /></div>
         </div>
       ) : (
@@ -73,15 +75,15 @@ export default function RecentOrders({ tenantId, currency, shop = false, food = 
                   <div className="flex items-center gap-2 mb-0.5">
                     <p className="font-medium text-slate-900 text-sm">#{order.order_number || order.id?.slice(-6)}</p>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusInfo.cls}`}>
-                      {statusInfo.text}
+                      {t(statusInfo.text)}
                     </span>
                   </div>
                   <p className="text-xs text-slate-500">
-                    {(order.items || []).length} {(order.items || []).length === 1 ? 'item' : 'items'} · {formatMoney(order.total_amount, currency) || '—'}
+                    {(order.items || []).length} {(order.items || []).length === 1 ? t('item') : t('items')} · {formatMoney(order.total_amount, currency) || '—'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                  <p className="text-xs text-slate-400">{order.created_date ? format(new Date(order.created_date), 'h:mm a') : ''}</p>
+                  <p className="text-xs text-slate-400">{order.created_date ? formatAppDate(new Date(order.created_date), 'h:mm a') : ''}</p>
                   <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
                 </div>
               </div>

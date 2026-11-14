@@ -7,9 +7,11 @@ import { CheckCircle2, Circle, ChevronRight } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { isShopTenant } from '@/lib/shopSelling';
 import { showError } from '@/lib/plainError';
+import { useAppText } from '@/lib/appText';
 
 // Dashboard card for a free shop that hasn't finished its setup steps.
 export default function ShopSetupCard() {
+  const { t } = useAppText();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { tenant, tenantId, isOwner } = useTenant();
@@ -32,10 +34,10 @@ export default function ShopSetupCard() {
   if (!enabled || !data || data.selling?.setup_finished_at) return null;
 
   const items = [
-    { label: 'Add a logo', done: !!tenant?.logo_url },
-    { label: 'Choose how you sell', done: !!data.selling?.saved },
-    { label: 'Add your payment QR', done: !!tenant?.payment_qr_url },
-    { label: 'Add your first listing', done: data.listings > 0 },
+    { label: t('Add a logo'), done: !!tenant?.logo_url },
+    { label: t('Choose how you sell'), done: !!data.selling?.saved },
+    { label: t('Add your payment QR'), done: !!tenant?.payment_qr_url },
+    { label: t('Add your first listing'), done: data.listings > 0 },
   ];
   const doneCount = items.filter(i => i.done).length;
 
@@ -46,7 +48,7 @@ export default function ShopSetupCard() {
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['shop-setup-status', tenantId] });
     } catch (err) {
-      showError(err, 'Couldn’t hide this card');
+      showError(err, t('Couldn’t hide this card'), { t });
 
     }
   };
@@ -55,10 +57,10 @@ export default function ShopSetupCard() {
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" data-testid="shop-setup-card">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
-          <p className="text-sm font-semibold text-slate-900">Finish setting up your shop</p>
-          <p className="text-xs text-slate-500">{doneCount} of {items.length} done</p>
+          <p className="text-sm font-semibold text-slate-900">{t('Finish setting up your shop')}</p>
+          <p className="text-xs text-slate-500">{t('{doneCount} of {count} done', { doneCount, count: items.length })}</p>
         </div>
-        <button type="button" onClick={hide} className="text-[11px] text-slate-400 underline flex-shrink-0">Hide</button>
+        <button type="button" onClick={hide} className="text-[11px] text-slate-400 underline flex-shrink-0">{t('Hide')}</button>
       </div>
       <div className="space-y-1.5 mb-3">
         {items.map(item => (
@@ -75,7 +77,7 @@ export default function ShopSetupCard() {
         style={{ background: 'var(--color-primary-gradient, rgb(var(--color-primary)))' }}
         data-testid="shop-setup-continue"
       >
-        Continue setup <ChevronRight className="w-4 h-4" />
+        {t('Continue setup')}{' '}<ChevronRight className="w-4 h-4" />
       </button>
     </div>
   );

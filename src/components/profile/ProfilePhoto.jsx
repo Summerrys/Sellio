@@ -8,6 +8,7 @@ import NativeCameraScanControl from '@/components/ui-custom/NativeCameraScanCont
 import { BRAND_GRADIENT } from '@/components/explore/shared';
 import { isAndroid, isIOS } from '@/lib/pwaInstall';
 import { chooseProfilePhoto, uploadProfilePhoto, useProfilePhoto } from '@/lib/profilePhoto';
+import { useAppText } from '@/lib/appText';
 
 // The person's photo in place of the letter (lib/profilePhoto.js): their Google photo, one they
 // chose, or the letter when there's none (or it won't load).
@@ -53,6 +54,7 @@ function OptionText({ title, detail, danger = false }) {
 // The photo with a camera badge; a tap opens "Profile photo": take one or choose one (on a
 // computer: choose one), go back to the Google photo, or remove it.
 export function ProfilePhotoEditor({ email, initial, size = 72, fallbackStyle }) {
+  const { t } = useAppText();
   const { answer } = useProfilePhoto(email);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -71,12 +73,12 @@ export function ProfilePhotoEditor({ email, initial, size = 72, fallbackStyle })
     } catch (error) {
       // Plain words: the reason when it's written for people (the photo can't be used, the
       // upload failed), otherwise what kind of problem it was.
-      showError(error, 'Couldn’t change your photo');
+      showError(error, t('Couldn’t change your photo'), { t });
     } finally {
       setBusy(false);
     }
   };
-  const picked = (file) => { if (file) run(() => uploadProfilePhoto(email, file), 'Photo updated'); };
+  const picked = (file) => { if (file) run(() => uploadProfilePhoto(email, file), t('Photo updated')); };
   const canUseGoogle = !!answer?.google && answer?.source !== 'google';
   const canRemove = !!answer?.source;
 
@@ -86,7 +88,7 @@ export function ProfilePhotoEditor({ email, initial, size = 72, fallbackStyle })
         type="button"
         onClick={() => setOpen(true)}
         disabled={busy}
-        aria-label="Change profile photo"
+        aria-label={t('Change profile photo')}
         aria-haspopup="dialog"
         data-testid="profile-photo-button"
         className="relative rounded-full flex-shrink-0"
@@ -98,40 +100,40 @@ export function ProfilePhotoEditor({ email, initial, size = 72, fallbackStyle })
       </button>
       <BottomSheet open={open} onClose={close} labelledBy={titleId}>
         <div className="flex items-center">
-          <h2 id={titleId} className="flex-1 text-base font-bold text-slate-900">Profile photo</h2>
-          <button type="button" onClick={close} aria-label="Close" className="w-11 h-11 -mr-2.5 rounded-full flex items-center justify-center text-slate-700 hover:bg-slate-50">
+          <h2 id={titleId} className="flex-1 text-base font-bold text-slate-900">{t('Profile photo')}</h2>
+          <button type="button" onClick={close} aria-label={t('Close')} className="w-11 h-11 -mr-2.5 rounded-full flex items-center justify-center text-slate-700 hover:bg-slate-50">
             <X className="w-[22px] h-[22px]" />
           </button>
         </div>
         <div data-testid="profile-photo-options" className="mt-1 space-y-2.5">
           {phone && (
-            <NativeCameraScanControl label="Take photo" action="Take photo" onFile={picked} onError={(message) => toast.message(message)} className={OPTION}>
+            <NativeCameraScanControl label={t('Take photo')} action={t('Take photo')} onFile={picked} onError={(message) => toast.message(message)} className={OPTION}>
               <span className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 text-white" style={{ background: BRAND_GRADIENT }}>
                 <Camera className="w-[22px] h-[22px]" />
               </span>
-              <OptionText title="Take photo" detail="Use your phone’s camera" />
+              <OptionText title={t('Take photo')} detail={t('Use your phone’s camera')} />
             </NativeCameraScanControl>
           )}
-          <PhotoPickerControl label={phone ? 'Choose from gallery' : 'Choose a photo'} onFile={picked} className={OPTION}>
+          <PhotoPickerControl label={phone ? t('Choose from gallery') : t('Choose a photo')} onFile={picked} className={OPTION}>
             <span className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 bg-slate-100 text-slate-700">
               <ImageIcon className="w-[22px] h-[22px]" />
             </span>
-            <OptionText title={phone ? 'Choose from gallery' : 'Choose a photo'} detail="Pick a photo you already have" />
+            <OptionText title={phone ? t('Choose from gallery') : t('Choose a photo')} detail={t('Pick a photo you already have')} />
           </PhotoPickerControl>
           {canUseGoogle && (
-            <button type="button" className={OPTION} onClick={() => run(() => chooseProfilePhoto(email, 'google'), 'Using your Google photo')}>
+            <button type="button" className={OPTION} onClick={() => run(() => chooseProfilePhoto(email, 'google'), t('Using your Google photo'))}>
               <span className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 bg-slate-100 text-slate-700">
                 <UserRound className="w-[22px] h-[22px]" />
               </span>
-              <OptionText title="Use my Google photo" detail="The photo on your Google account" />
+              <OptionText title={t('Use my Google photo')} detail={t('The photo on your Google account')} />
             </button>
           )}
           {canRemove && (
-            <button type="button" className={OPTION} onClick={() => run(() => chooseProfilePhoto(email, 'none'), 'Photo removed')}>
+            <button type="button" className={OPTION} onClick={() => run(() => chooseProfilePhoto(email, 'none'), t('Photo removed'))}>
               <span className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 bg-rose-50 text-rose-600">
                 <Trash2 className="w-[20px] h-[20px]" />
               </span>
-              <OptionText title="Remove photo" detail="Show your initial instead" danger />
+              <OptionText title={t('Remove photo')} detail={t('Show your initial instead')} danger />
             </button>
           )}
         </div>

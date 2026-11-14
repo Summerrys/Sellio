@@ -266,10 +266,10 @@ try {
       assert.match(note.description, words);
     }
     const counter = await readFile('src/pages/Counter.jsx', 'utf8');
-    assert.match(counter, /if \(isOffline\(\)\) \{\s*setSendNote\(\{ key: ticketKey, note: offlineNote\('Couldn’t send the order', 'Sending to the kitchen needs the internet\. The ticket is kept here\.'\) \}\);\s*return;\s*\}\s*if \(anyway === true\) forgetCheckout/, 'offline: nothing is sent, and the ticket says why');
-    assert.match(counter, /setSendNote\(\{ key: ticketKey, note: counterSendNote\(e\), earlier: !!e\?\.checkoutEarlier \}\)/);
+    assert.match(counter, /if \(isOffline\(\)\) \{\s*setSendNote\(\{ key: ticketKey, note: offlineNote\(appT\('Couldn’t send the order'\), appT\('Sending to the kitchen needs the internet\. The ticket is kept here\.'\), appT\) \}\);\s*return;\s*\}\s*if \(anyway === true\) forgetCheckout/, 'offline: nothing is sent, and the ticket says why');
+    assert.match(counter, /setSendNote\(\{ key: ticketKey, note: counterSendNote\(e, appT\), earlier: !!e\?\.checkoutEarlier \}\)/);
     assert.match(counter, /sendNote && sendNote\.key === target\?\.key && \(\s*<ErrorNote note=\{sendNote\.note\}/, 'shown on the ticket it belongs to');
-    assert.match(counter, /onClick=\{\(\) => send\(true\)\}[^>]*>Send anyway<\/button>/, 'a different ticket after an unconfirmed send: Send anyway');
+    assert.match(counter, /onClick=\{\(\) => send\(true\)\}[^>]*>\{appT\('Send anyway'\)\}<\/button>/, 'a different ticket after an unconfirmed send: Send anyway');
     assert.doesNotMatch(counter, /Could not send the order\. Check your connection and try again\./, 'the old vanishing message is gone');
     passed('Counter: the reason stays on the ticket in plain words; offline sends nothing; Send anyway after an unconfirmed send');
   }
@@ -290,14 +290,14 @@ try {
 
     // Each save keeps its reason in its form, from explainError, instead of a vanishing toast.
     const forms = {
-      'src/components/products/ProductFormDialog.jsx': [/setSaveNote\(explainError\(err, \{\s*title: product\?\.id \? 'Couldn’t save your changes'/, /setSaveNote\(explainError\(err, \{ title: tenant\?\.seller_type === 'individual' \? 'Couldn’t delete the listing' : 'Couldn’t delete the product' \}\)\)/, /<ErrorNote note=\{saveNote\}/, /useEffect\(\(\) => \{ if \(!open\) setSaveNote\(null\); \}, \[open\]\)/],
-      'src/components/orders/EditOrderModal.jsx': [/setSaveNote\(explainError\(err, \{ title: 'Couldn’t save the order' \}\)\)/, /<ErrorNote note=\{saveNote\}/, /if \(isOffline\(\)\) \{ setSaveNote\(offlineNote\('Couldn’t save the order', 'Changing an order needs the internet\.'\)\); return; \}/],
-      'src/components/tables/TableFormDialog.jsx': [/setSaveNote\(explainError\(error, \{ title: table \? 'Couldn’t save the table' : 'Couldn’t create the table' \}\)\)/, /<ErrorNote note=\{saveNote\}/],
+      'src/components/products/ProductFormDialog.jsx': [/setSaveNote\(explainError\(err, \{\s*title: product\?\.id \? t\('Couldn’t save your changes'\)[^\n]*\n\s*t,\n\s*\}\)\)/, /setSaveNote\(explainError\(err, \{ title: tenant\?\.seller_type === 'individual' \? t\('Couldn’t delete the listing'\) : t\('Couldn’t delete the product'\), t \}\)\)/, /<ErrorNote note=\{saveNote\}/, /useEffect\(\(\) => \{ if \(!open\) setSaveNote\(null\); \}, \[open\]\)/],
+      'src/components/orders/EditOrderModal.jsx': [/setSaveNote\(explainError\(err, \{ title: t\('Couldn’t save the order'\), t \}\)\)/, /<ErrorNote note=\{saveNote\}/, /if \(isOffline\(\)\) \{ setSaveNote\(offlineNote\(t\('Couldn’t save the order'\), t\('Changing an order needs the internet\.'\), t\)\); return; \}/],
+      'src/components/tables/TableFormDialog.jsx': [/setSaveNote\(explainError\(error, \{ title: table \? appT\('Couldn’t save the table'\) : appT\('Couldn’t create the table'\), t: appT \}\)\)/, /<ErrorNote note=\{saveNote\}/],
       'src/components/staff/EditStaffDialog.jsx': [/setStaffNote\(explainError\(error, \{ title: 'Couldn’t save the changes' \}\)\)/, /setStaffNote\(explainError\(error, \{ title: 'Couldn’t remove this person' \}\)\)/, /<ErrorNote note=\{staffNote\}/],
       'src/components/shop/SellingSettingsForm.jsx': [/setSaveNote\(explainError\(err, \{ title: t\('Couldn’t save your selling settings'\), t \}\)\)/, /<ErrorNote note=\{saveNote\}/],
-      'src/components/inventory/StockAdjustmentPanel.jsx': [/setStockNote\(explainError\(error, \{ title: 'Couldn’t save the stock' \}\)\)/, /<ErrorNote note=\{stockNote\}/],
-      'src/components/settings/BusinessProfileTab.jsx': [/setSaveNote\(explainError\(err, \{ title: 'Couldn’t save your business settings' \}\)\)/, /setHoursNote\(explainError\(err, \{ title: 'Couldn’t save your opening hours' \}\)\)/, /<ErrorNote note=\{saveNote\}/, /<ErrorNote note=\{hoursNote\}/],
-      'src/pages/TenantSettings.jsx': [/setSaveNote\(explainError\(err, \{ title: 'Couldn’t save your payment settings' \}\)\)/, /<ErrorNote note=\{saveNote\}/],
+      'src/components/inventory/StockAdjustmentPanel.jsx': [/setStockNote\(explainError\(error, \{ title: appT\('Couldn’t save the stock'\), t: appT \}\)\)/, /<ErrorNote note=\{stockNote\}/],
+      'src/components/settings/BusinessProfileTab.jsx': [/setSaveNote\(explainError\(err, \{ title: t\('Couldn’t save your business settings'\), t \}\)\)/, /setHoursNote\(explainError\(err, \{ title: t\('Couldn’t save your opening hours'\), t \}\)\)/, /<ErrorNote note=\{saveNote\}/, /<ErrorNote note=\{hoursNote\}/],
+      'src/pages/TenantSettings.jsx': [/setSaveNote\(explainError\(err, \{ title: t\('Couldn’t save your payment settings'\), t \}\)\)/, /<ErrorNote note=\{saveNote\}/],
     };
     for (const [file, patterns] of Object.entries(forms)) {
       const source = await readFile(file, 'utf8');
@@ -314,15 +314,15 @@ try {
       .split('\n').filter(Boolean)
       // Left as they are: the sign-in page (auth), printing (the printer's own words, about a
       // device on the counter) and a photo's own explanation (UnreadablePhotoError, friendly).
-      .filter((line) => !/^src\/pages\/Auth\.jsx|Print failed|Printing failed|Kitchen print|Bluetooth scan|Couldn’t connect to \$\{deviceName\}|err\?\.friendly|UnreadablePhotoError/.test(line));
+      .filter((line) => !/^src\/pages\/Auth\.jsx|Print failed|Printing failed|Kitchen print|Bluetooth scan|Couldn’t connect to \$?\{deviceName\}|err\?\.friendly|UnreadablePhotoError/.test(line));
     assert.deepEqual(raw, [], 'error toasts show plain words, not the error’s own text');
     const failed = execSync("grep -rnE \"toast\\.error\\(['\\\"\\`]Failed to\" src --include=*.jsx --include=*.js || true", { encoding: 'utf8' }).split('\n').filter(Boolean);
     assert.deepEqual(failed, [], 'no "Failed to …"');
     const orders = await readFile('src/pages/Orders.jsx', 'utf8');
-    assert.match(orders, /if \(blockedOffline\('Couldn’t update the order', 'Updating an order needs the internet\.'\)\) return;/);
-    assert.match(orders, /if \(blockedOffline\('Couldn’t mark it as paid', 'Updating an order needs the internet\.'\)\) return false;/);
+    assert.match(orders, /if \(blockedOffline\(t\('Couldn’t update the order'\), t\('Updating an order needs the internet\.'\), t\)\) return;/);
+    assert.match(orders, /if \(blockedOffline\(t\('Couldn’t mark it as paid'\), t\('Updating an order needs the internet\.'\), t\)\) return false;/);
     const kds = await readFile('src/pages/KitchenDisplay.jsx', 'utf8');
-    assert.match(kds, /if \(blockedOffline\('Couldn’t update the order', 'Updating an order needs the internet\.'\)\) return;/);
+    assert.match(kds, /if \(blockedOffline\(t\('Couldn’t update the order'\), t\('Updating an order needs the internet\.'\), t\)\) return;/);
     const queryClient = await readFile('src/lib/query-client.js', 'utf8');
     assert.match(queryClient, /mutations: \{\s*networkMode: 'always',\s*\}/, 'a change made offline fails and says so, rather than waiting unseen');
     passed('No raw error text or "Failed to …" in error toasts; order updates stop offline and say so; changes are never queued unseen');

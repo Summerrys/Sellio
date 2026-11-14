@@ -5,11 +5,13 @@ import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '@/components/tenant/TenantContext';
+import { useAppText, appT } from '@/lib/appText';
 
 // "Show my shop on Sellio Explore" (tenants.is_public; listed by default).
 // Read and saved directly with Supabase: the column isn't in the Base44 entity
 // layer. Saving needs the settings.edit permission (tenants update policy).
 export default function ExploreListingSetting({ tenantId }) {
+  const { t } = useAppText();
   const { hasPermission } = useTenant();
   const canEdit = !!hasPermission?.('settings.edit');
   const [listed, setListed] = useState(undefined); // undefined = loading, null = could not load
@@ -43,13 +45,13 @@ export default function ExploreListingSetting({ tenantId }) {
         .eq('id', tenantId)
         .select('is_public')
         .maybeSingle();
-      if (error || !data) throw error || new Error('Not saved');
+      if (error || !data) throw error || new Error(appT('Not saved'));
       setListed(!!data.is_public);
-      toast.success(next ? 'Your shop is listed on Sellio Explore' : 'Your shop is hidden from Sellio Explore');
+      toast.success(next ? t('Your shop is listed on Sellio Explore') : t('Your shop is hidden from Sellio Explore'));
     } catch (e) {
       console.warn('Explore listing update failed:', e);
       setListed(previous);
-      toast.error('Could not update your Explore listing. Please try again.');
+      toast.error(t('Could not update your Explore listing. Please try again.'));
     } finally {
       setSaving(false);
     }
@@ -62,14 +64,14 @@ export default function ExploreListingSetting({ tenantId }) {
           <Compass className="w-5 h-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-slate-900">Show my shop on Sellio Explore</h3>
+          <h3 className="text-sm font-semibold text-slate-900">{t('Show my shop on Sellio Explore')}</h3>
           <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-            People browsing{' '}
-            <a href="/explore" target="_blank" rel="noopener noreferrer" className="font-semibold text-slate-700 underline underline-offset-2">Sellio Explore</a>
-            {' '}can find your items and open your storefront. Turn this off to hide your shop there; your storefront link keeps working.
+            {t('People browsing {explore} can find your items and open your storefront. Turn this off to hide your shop there; your storefront link keeps working.', {
+              explore: <a href="/explore" target="_blank" rel="noopener noreferrer" className="font-semibold text-slate-700 underline underline-offset-2">{t('Sellio Explore')}</a>,
+            })}
           </p>
-          {listed === null && <p className="text-xs text-red-500 mt-1">Couldn't load this setting. Refresh to try again.</p>}
-          {!canEdit && <p className="text-xs text-slate-400 mt-1">Only staff who can edit business settings can change this.</p>}
+          {listed === null && <p className="text-xs text-red-500 mt-1">{t('Couldn\'t load this setting. Refresh to try again.')}</p>}
+          {!canEdit && <p className="text-xs text-slate-400 mt-1">{t('Only staff who can edit business settings can change this.')}</p>}
         </div>
         {listed === undefined ? (
           <Loader2 className="w-5 h-5 text-slate-400 animate-spin flex-shrink-0" />
@@ -78,7 +80,7 @@ export default function ExploreListingSetting({ tenantId }) {
             checked={!!listed}
             onCheckedChange={toggle}
             disabled={!canEdit || saving || listed === null}
-            aria-label="Show my shop on Sellio Explore"
+            aria-label={t('Show my shop on Sellio Explore')}
           />
         )}
       </div>

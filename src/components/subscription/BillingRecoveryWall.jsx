@@ -4,8 +4,10 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { openBillingPortal, formatBillingAmount, formatBillingDate } from '@/lib/billing';
 import { showError } from '@/lib/plainError';
 import { sellsPlans, PLANS_ON_WEBSITE, outsideLinkProps } from '@/lib/nativeApp';
+import { useAppText } from '@/lib/appText';
 
 export default function BillingRecoveryWall({ subscription, tenantId, isOwner }) {
+  const { t } = useAppText();
   const [openingPortal, setOpeningPortal] = useState(false);
   const amount = formatBillingAmount(
     subscription?.invoice_amount_due_minor,
@@ -18,7 +20,7 @@ export default function BillingRecoveryWall({ subscription, tenantId, isOwner })
     try {
       if (await openBillingPortal(tenantId)) setOpeningPortal(false); // the app stays here
     } catch (error) {
-      showError(error, 'Couldn’t open billing');
+      showError(error, t('Couldn’t open billing'), { t });
 
       setOpeningPortal(false);
     }
@@ -45,32 +47,32 @@ export default function BillingRecoveryWall({ subscription, tenantId, isOwner })
           <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-5">
             <AlertTriangle className="w-7 h-7 text-amber-700" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Payment required</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{t('Payment required')}</h1>
           <p className="text-sm text-slate-500 mt-2 leading-relaxed">
-            The latest subscription payment was not completed. Your store data is safe and access will resume automatically after Stripe confirms payment.
+            {t('The latest subscription payment was not completed. Your store data is safe and access will resume automatically after Stripe confirms payment.')}
           </p>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 space-y-4">
           <div className="flex items-center justify-between gap-4 pb-4 border-b border-slate-100">
             <div>
-              <p className="text-xs uppercase tracking-wider text-slate-400 font-semibold">Outstanding invoice</p>
-              <p className="text-lg font-bold text-slate-900 mt-1">{amount || 'Payment overdue'}</p>
+              <p className="text-xs uppercase tracking-wider text-slate-400 font-semibold">{t('Outstanding invoice')}</p>
+              <p className="text-lg font-bold text-slate-900 mt-1">{amount || t('Payment overdue')}</p>
             </div>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-700">Past due</span>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-700">{t('Past due')}</span>
           </div>
 
           {nextAttempt && (
             <div className="flex items-start gap-2 text-xs text-slate-600">
               <ShieldCheck className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
-              <p>Stripe's next automatic attempt is scheduled for {nextAttempt}.</p>
+              <p>{t('Stripe\'s next automatic attempt is scheduled for {nextAttempt}.', { nextAttempt })}</p>
             </div>
           )}
 
           {isOwner && !sellsPlans() ? (
             // Sellio's apps don't take payments for plans.
             <p className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 text-xs text-slate-700">
-              {PLANS_ON_WEBSITE}
+              {t(PLANS_ON_WEBSITE)}
             </p>
           ) : isOwner ? (
             <div className="space-y-2 pt-1">
@@ -79,7 +81,7 @@ export default function BillingRecoveryWall({ subscription, tenantId, isOwner })
                   {...outsideLinkProps(subscription.invoice_hosted_url)}
                   className="w-full h-11 rounded-xl bg-slate-900 text-white font-semibold text-sm flex items-center justify-center gap-2 hover:bg-slate-800"
                 >
-                  Pay outstanding invoice
+                  {t('Pay outstanding invoice')}
                   <ExternalLink className="w-4 h-4" />
                 </a>
               )}
@@ -90,12 +92,12 @@ export default function BillingRecoveryWall({ subscription, tenantId, isOwner })
                 className="w-full h-11 rounded-xl border border-slate-200 text-slate-700 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-60"
               >
                 {openingPortal ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                Update payment method
+                {t('Update payment method')}
               </button>
             </div>
           ) : (
             <p className="rounded-xl bg-amber-50 border border-amber-100 px-3 py-2.5 text-xs text-amber-900">
-              Please contact the store owner to resolve the outstanding invoice.
+              {t('Please contact the store owner to resolve the outstanding invoice.')}
             </p>
           )}
         </div>
@@ -106,7 +108,7 @@ export default function BillingRecoveryWall({ subscription, tenantId, isOwner })
           className="mx-auto mt-6 text-sm text-slate-500 hover:text-slate-700 flex items-center gap-1.5"
         >
           <LogOut className="w-4 h-4" />
-          Sign out
+          {t('Sign out')}
         </button>
       </div>
     </div>
