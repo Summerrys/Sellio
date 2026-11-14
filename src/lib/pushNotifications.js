@@ -21,7 +21,7 @@ export const PUSH_CHANGED_EVENT = 'sellio:push-changed';
 
 const CHANNELS = [
   { id: 'orders', name: 'Orders', description: 'New orders for your shop, and updates on orders you placed', importance: 4 },
-  { id: 'messages', name: 'Messages', description: 'Buyers writing to your shop', importance: 4 },
+  { id: 'messages', name: 'Messages', description: 'Chat messages from buyers and shops', importance: 4 },
   { id: 'updates', name: 'Other updates', description: 'Ratings and other news from Sellio', importance: 3 },
 ];
 const REREGISTER_MS = 6 * 60 * 60 * 1000;
