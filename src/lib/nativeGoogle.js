@@ -14,6 +14,24 @@ export class GoogleSignInCancelled extends Error {
   }
 }
 
+// Google refused to sign this account in to this copy of the app, after the person picked it.
+// The plugin's own wording (GoogleProvider.java, @capgo/capacitor-social-login 8.7.4): the copy's
+// package and signing certificate aren't one of the Android clients in Google Cloud ("not
+// configured for this installed build", "Developer console", 28444), or Google's "[16] Account
+// reauth failed", which the plugin has already retried once by opening the picker again. It
+// happens with every account on a copy Google doesn't know (an APK signed with the upload key),
+// and with accounts Google won't release to apps (a child's Family Link account, a work account
+// whose admin blocks it). Picking the account again can't help, so the person is told to use
+// their phone number or email instead of being sent round the picker again.
+const GOOGLE_REFUSED = /Account reauth failed|not configured for this installed build|Developer console|28444/i;
+
+export class GoogleSignInRefused extends Error {
+  constructor() {
+    super('Google sign-in isn’t working for this account in the app. Please sign in with your phone number or email instead.');
+    this.name = 'GoogleSignInRefused';
+  }
+}
+
 // Supabase refused the sign-in because the login is locked: a closed account (its deletion is
 // pending). The Auth page shows the closed-account screen, whose server checks this same ID
 // token and the raw nonce whose SHA-256 is in it (closed-account, google-id-token.ts).
@@ -54,8 +72,15 @@ export async function signInWithNativeGoogle() {
   try {
     response = await SocialLogin.login({ provider: 'google', options: { nonce: hashedNonce } });
   } catch (error) {
-    if (error?.code === 'USER_CANCELLED' || /cancel/i.test(error?.message || '')) throw new GoogleSignInCancelled();
+    const message = String(error?.message || '');
+    // Only the person closing the picker is a quiet cancel: the plugin marks it USER_CANCELLED.
+    // Any other failure says what happened (a failure mistaken for a cancel left the page as it
+    // was, so tapping Google again went round the same picker).
+    if (error?.code === 'USER_CANCELLED' || /cancel+ed by (the )?user|user cancel+ed/i.test(message)) {
+      throw new GoogleSignInCancelled();
+    }
     console.error('Google sign-in (app) failed:', error);
+    if (GOOGLE_REFUSED.test(message)) throw new GoogleSignInRefused();
     throw new Error('Google sign-in could not start. Please try again, or sign in with your email or phone.');
   }
   const idToken = response?.result?.idToken;
