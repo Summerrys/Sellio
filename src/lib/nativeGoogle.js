@@ -6,6 +6,7 @@
 import { SocialLogin } from '@capgo/capacitor-social-login';
 import { getSupabase } from './supabaseClient';
 import { GOOGLE_WEB_CLIENT_ID } from './googleSignIn';
+import { N_ } from './appText.js';
 
 export class GoogleSignInCancelled extends Error {
   constructor() {
@@ -27,7 +28,8 @@ const GOOGLE_REFUSED = /Account reauth failed|not configured for this installed 
 
 export class GoogleSignInRefused extends Error {
   constructor() {
-    super('Google sign-in isn’t working for this account in the app. Please sign in with your phone number or email instead.');
+    // English here; the sign-in pages show it in the app's language (Auth.jsx, accountFlow.js).
+    super(N_('Google sign-in isn’t working for this account in the app. Please sign in with your phone number or email instead.'));
     this.name = 'GoogleSignInRefused';
   }
 }

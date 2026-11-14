@@ -470,7 +470,8 @@ export default function Auth() {
         await openGoogleClosedAccount(err);
         return;
       }
-      toast.error(err.message || t('Google Sign-In failed. Please try again.'));
+      // Google refusing the account says what to do instead, in the page's language.
+      toast.error(err?.name === 'GoogleSignInRefused' ? t(err.message) : err.message || t('Google Sign-In failed. Please try again.'));
       setGoogleLoading(false);
     }
   };

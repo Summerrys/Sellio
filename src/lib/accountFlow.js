@@ -165,6 +165,7 @@ export function accountErrorMessage(error) {
   if (!error) return '';
   if (error.hint && MESSAGES[error.hint]) return appT(MESSAGES[error.hint]);
   const text = String(error.message || '');
+  if (error.name === 'GoogleSignInRefused') return appT(text); // lib/nativeGoogle.js: use phone or email instead
   if (error.code === '23505' && /phone/i.test(`${text} ${error.details || ''}`)) return appT(MESSAGES.phone_taken);
   if (/rate limit/i.test(text)) return appT('We’re sending a lot of emails right now. Please try again in a few minutes.');
   const wait = text.match(/after (\d+) seconds?/i);
