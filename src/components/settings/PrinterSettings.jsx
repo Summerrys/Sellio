@@ -13,6 +13,7 @@ import {
   ALL_BT_SERVICES, setBtDeviceCache,
 } from '@/lib/printerUtils';
 import { isCapacitorApp, appPlatform } from '@/lib/nativeApp';
+import { helpWithPrinterError } from '@/lib/permissionHelp';
 import { useAppText } from '@/lib/appText';
 
 // Sellio's apps use the phone's own Bluetooth (src/lib/nativePrinter.js): their web views have
@@ -116,7 +117,8 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
       } catch (err) {
         setShowScanSheet(false);
         setScanning(false);
-        toast.error(err.message || t('Bluetooth scan failed'));
+        // Bluetooth refused for Sellio: why, and Open Settings (PermissionHelp), not a pop-up.
+        if (!helpWithPrinterError(err, { action: t('Scan for Printers') })) toast.error(err.message || t('Bluetooth scan failed'));
       }
       return;
     }
@@ -196,7 +198,7 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
         });
         toast.success(t('Connected: {deviceName}', { deviceName }));
       } catch (err) {
-        toast.error(err.message || t('Couldn’t connect to {deviceName}', { deviceName }));
+        if (!helpWithPrinterError(err, { action: t('Scan for Printers') })) toast.error(err.message || t('Couldn’t connect to {deviceName}', { deviceName }));
 
       } finally {
         setConnecting(null);

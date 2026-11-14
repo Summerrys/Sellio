@@ -188,6 +188,12 @@ export function startPushNotifications() {
       registerPhone({ force: true });
     }
   }).catch(() => {});
+  // Back from the phone's Settings (Open Settings, 14 Nov 2026) with notifications allowed now:
+  // register this phone straight away, not at the next start. registerPhone() does nothing
+  // while they're still off, or when it registered a moment ago.
+  try {
+    Promise.resolve(App.addListener('resume', () => { registerPhone(); })).catch(() => {});
+  } catch { /* no App plugin: the next start registers it */ }
 
   getSupabase().then((supabase) => {
     supabase.auth.onAuthStateChange((event, session) => {

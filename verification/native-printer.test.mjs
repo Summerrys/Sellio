@@ -165,12 +165,29 @@ await check('Forgetting the printer: disconnected and no longer remembered', asy
   assert.equal(printer.savedPrinterId('Kitchen'), 'AA:02');
 });
 
-await check('Permission refused: says where to allow it, and asks again next time', async () => {
+await check('Permission refused: marked for the Open Settings sheet (also when connecting), and asks again next time', async () => {
   const fresh = await import('../src/lib/nativePrinter.js?fresh');
   ble.permission = false;
-  await assert.rejects(fresh.startPrinterScan(() => {}), /Settings: Apps → Sellio → Permissions/);
+  // The sheet (PermissionHelp, 14 Nov 2026) has the steps; the error is short and marked.
+  await assert.rejects(fresh.startPrinterScan(() => {}), (error) => {
+    assert.equal(error.code, 'BLUETOOTH_PERMISSION');
+    assert.equal(error.message, 'Bluetooth permission is off for Sellio.');
+    return true;
+  });
+  await assert.rejects(fresh.choosePrinter('AA:09', 'Bar'), (error) => error.code === 'BLUETOOTH_PERMISSION');
   ble.permission = true;
   await fresh.startPrinterScan(() => {});
+});
+
+await check('Other failures are not marked as a permission', async () => {
+  const fresh = await import('../src/lib/nativePrinter.js?fresh2');
+  const enabled = ble.isEnabled;
+  ble.isEnabled = async () => false;
+  const requestEnable = ble.requestEnable;
+  ble.requestEnable = async () => { throw new Error('User cancelled'); };
+  await assert.rejects(fresh.startPrinterScan(() => {}), (error) => error.code === undefined && /Bluetooth is off/.test(error.message));
+  ble.isEnabled = enabled;
+  ble.requestEnable = requestEnable;
 });
 
 console.log(`${passed} app Bluetooth printer checks passed (no phone, no printer).`);

@@ -71,7 +71,15 @@ const supabase = {
     };
   },
 };
-globalThis.__push = { firebase, app: { async getInfo() { return { version: '2.0', build: '110' }; } }, supabase };
+const appListeners = {};
+globalThis.__push = {
+  firebase,
+  app: {
+    async getInfo() { return { version: '2.0', build: '110' }; },
+    addListener(name, fn) { appListeners[name] = fn; return Promise.resolve({ remove() {} }); },
+  },
+  supabase,
+};
 
 const tick = (ms = 5) => new Promise((resolve) => setTimeout(resolve, ms));
 const auth = async (event, s) => { session = s; authCallback(event, s); await tick(20); };
@@ -166,6 +174,23 @@ await check('Android told no: Turn on reports off; Sellio stops asking once Andr
   assert.equal(await push.askAndroid(), false);
   assert.equal(await push.pushStatus(), 'blocked');
   assert.equal(await push.shouldAsk(), false);
+});
+
+await check('Back from Settings (Open Settings) with alerts allowed: registered then, not at the next start', async () => {
+  assert.equal(typeof appListeners.resume, 'function');
+  const before = rpcs.length;
+  await auth('SIGNED_IN', user('u3', 'x@example.com'));
+  firebase.permission = 'denied';
+  appListeners.resume();
+  await tick(20);
+  assert.equal(rpcs.length, before, 'still off in Settings: nothing registered');
+  firebase.permission = 'granted';
+  appListeners.resume();
+  await tick(20);
+  assert.deepEqual(rpcs.slice(before).map((r) => r.name), ['register_push_device']);
+  appListeners.resume();
+  await tick(20);
+  assert.equal(rpcs.length, before + 1, 'not again a moment later');
 });
 
 await check('A build without Firebase: unavailable, never asks, nothing registered', async () => {

@@ -1,6 +1,7 @@
 // ESC/POS receipt builder utility
 import { paymentText } from './tableBill';
 import { isCapacitorApp } from './nativeApp.js';
+import { helpWithPrinterError } from './permissionHelp.js';
 import { currencyDecimals, formatMoney, roundMoney } from './money';
 
 // Known BLE thermal/label printer GATT service+characteristic UUID pairs.
@@ -438,7 +439,13 @@ export async function sendViaBluetooth(deviceName, bytes, deviceId = null) {
     const { printNative, savedPrinterId } = await import('./nativePrinter');
     const id = deviceId || savedPrinterId(deviceName);
     if (!id) throw new Error('Printer not connected. Please go to Settings → Receipt → Printer and reconnect.');
-    return printNative(id, bytes);
+    try {
+      return await printNative(id, bytes);
+    } catch (error) {
+      // Bluetooth refused for Sellio: the sheet with Open Settings, on whichever page printed.
+      helpWithPrinterError(error);
+      throw error;
+    }
   }
   if (!navigator.bluetooth) throw new Error('Web Bluetooth not supported');
 

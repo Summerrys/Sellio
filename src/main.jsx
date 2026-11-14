@@ -9,8 +9,13 @@ import { isCapacitorApp } from '@/lib/nativeApp'
 import { startAdsMeasurement } from '@/lib/adsPixel'
 import { appTextReady } from '@/lib/appText'
 import { alertsKind, takeOpenedAlert } from '@/lib/pushAlerts'
+import { startSignOutWatch } from '@/lib/signOutWatch'
 
 removeAppReloadParam()
+
+// Sign-outs nobody asked for (SignedOutNotice says so): watched from before the first screen,
+// while Sellio's record still says who was signed in.
+startSignOutWatch()
 
 // Browser alerts (src/lib/webPush.js: the website, not the apps). An alert opened from the
 // browser comes with ?sellio_alert=<id> (taken off the address before the app reads it), or as a

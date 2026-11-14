@@ -1,18 +1,55 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import PhotoPickerControl from './PhotoPickerControl';
-import { isBase44Shell } from '@/lib/nativeApp';
+import { appPlatform, isBase44Shell } from '@/lib/nativeApp';
 import { useAppText, appT } from '@/lib/appText';
+import { showPermissionHelp } from '@/lib/permissionHelp';
+
+// Sellio's Android app: the camera was allowed here before, so a tap goes straight to it.
+const CAMERA_ALLOWED_KEY = 'sellio.cameraAllowed';
+function cameraAllowedBefore() {
+  try { return window.localStorage.getItem(CAMERA_ALLOWED_KEY) === '1'; } catch { return false; }
+}
+function rememberCamera(allowed) {
+  try {
+    if (allowed) window.localStorage.setItem(CAMERA_ALLOWED_KEY, '1');
+    else window.localStorage.removeItem(CAMERA_ALLOWED_KEY);
+  } catch { /* storage unavailable: every tap checks first */ }
+}
+
+// The camera closed without a photo (the file input's "cancel"): maybe backed out of, maybe
+// refused in Settings since. The next tap checks again either way, and a refusal shows then.
+function checkAgainIfNoPhoto() {
+  const isPicker = (target) => target instanceof HTMLInputElement && target.type === 'file';
+  const done = () => {
+    document.removeEventListener('cancel', onCancel, true);
+    document.removeEventListener('change', onChange, true);
+    clearTimeout(timer);
+  };
+  const onCancel = (event) => { if (isPicker(event.target)) { rememberCamera(false); done(); } };
+  const onChange = (event) => { if (isPicker(event.target)) done(); };
+  const timer = setTimeout(done, 10 * 60 * 1000);
+  document.addEventListener('cancel', onCancel, true);
+  document.addEventListener('change', onChange, true);
+}
 
 // capture=environment delegates photography to the phone's camera app.
-// Only Base44's Android wrapper needs a grant first. (Sellio's Capacitor app asks for the
-// camera itself when the camera opens.)
+// Two apps need a grant first:
+// - Base44's Android wrapper.
+// - Sellio's Android app (14 Nov 2026): its web view asks Android for the camera as the camera
+//   opens, but a "Don't allow" there just closes it without a word to the page (Capacitor's
+//   BridgeWebChromeClient), so the button seemed to do nothing. Asking first, the same way,
+//   tells Sellio, which then shows why it needs the camera and opens Settings (PermissionHelp).
+//   Once the camera was allowed, taps go straight to it (a check would start the camera twice).
+// Sellio's iPhone app and websites let the camera ask for itself.
 // `action` is the button's name in its hints ("tap Scan again").
 export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen, children, disabled, action: actionName, ...props }) {
   // Read when a hint is shown, so the default follows the language at that moment.
   const actionLabel = () => actionName || appT('Scan');
   const { t } = useAppText();
-  const nativeAndroid = typeof window !== 'undefined' && /Android/i.test(navigator.userAgent) && isBase44Shell();
+  const base44Android = typeof window !== 'undefined' && /Android/i.test(navigator.userAgent) && isBase44Shell();
+  const sellioAndroid = typeof window !== 'undefined' && appPlatform() === 'android';
+  const nativeAndroid = base44Android || sellioAndroid;
   const granted = useRef(!nativeAndroid);
   const mounted = useRef(false);
   const pending = useRef(false);
@@ -29,6 +66,7 @@ export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen,
     if (pending.current) { event.preventDefault(); return; }
     if (!nativeAndroid) return;
     if (granted.current) { granted.current = false; return; }
+    if (sellioAndroid && cameraAllowedBefore()) { checkAgainIfNoPhoto(); return; }
     if (!navigator.mediaDevices?.getUserMedia) {
       event.preventDefault();
       onError?.(appT('Allow Camera in your phone’s Sellio permissions, then try {action} again.', { action: actionLabel() }));
@@ -46,6 +84,7 @@ export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen,
       audio: false,
     }).then(stream => {
       stream.getTracks().forEach(track => track.stop());
+      if (sellioAndroid) rememberCamera(true);
       if (!mounted.current || id !== request.current) return;
       granted.current = true;
       pending.current = false;
@@ -64,7 +103,13 @@ export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen,
       pending.current = false;
       setPreparing(false);
       granted.current = false;
-      onError?.(error.name === 'NotAllowedError' || error.name === 'SecurityError'
+      const refused = error.name === 'NotAllowedError' || error.name === 'SecurityError';
+      if (refused && sellioAndroid) {
+        rememberCamera(false);
+        showPermissionHelp('camera', { action: actionLabel() });
+        return;
+      }
+      onError?.(refused
         ? appT('Camera access is off. Allow Camera in your phone’s Sellio permissions, then tap {action} again.', { action: actionLabel() })
         : appT('Could not open the camera. Close other camera apps and try {action} again.', { action: actionLabel() }));
     });

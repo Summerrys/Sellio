@@ -40,11 +40,12 @@ const mocks = {
   ].join('\n'),
   profile: 'export const cookieUtils = { clear() {} }; export const useAppUser = () => ({});',
   toast: 'export const toast = { error() {}, success() {} };',
-  push: "export const pushStatus = async () => 'unavailable'; export const askAndroid = async () => false; export const ask = askAndroid;",
+  push: "export const pushStatus = async () => globalThis.pushState || 'unavailable'; export const askAndroid = async () => false; export const ask = askAndroid;",
+  ble: 'export const BluetoothLe = { openAppSettings: async () => { globalThis.settingsOpened = (globalThis.settingsOpened || 0) + 1; } };',
 };
 const plugin = { name: 'account-panel-fixtures', setup(builder) {
   for (const [filter, key] of [[/TenantContext$/, 'tenant'], [/useSubscription$/, 'subscription'], [/supabaseClient$/, 'clients'],
-    [/AppUserContext$/, 'profile'], [/^sonner$/, 'toast'], [/pushNotifications$/, 'push']]) {
+    [/AppUserContext$/, 'profile'], [/^sonner$/, 'toast'], [/pushNotifications$/, 'push'], [/^@capacitor-community\/bluetooth-le$/, 'ble']]) {
     builder.onResolve({ filter }, () => ({ path: key, namespace: 'mock' }));
   }
   builder.onLoad({ filter: /.*/, namespace: 'mock' }, args => ({ loader: 'js', contents: mocks[args.path] }));
@@ -157,6 +158,44 @@ try {
   assert.equal(lastPanel.buttons.includes('Upgrade Plan'), false);
   delete win.Capacitor;
   passed("A free home shop's owner: Upgrade to Business (trial or not)");
+
+  // Phone alerts off for Sellio in Android's settings (UX state 7, 14 Nov 2026): the row says
+  // what that means and opens Sellio's page in Settings; checked again on coming back.
+  win.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'android' };
+  globalThis.tenantState = { tenantId: 'shop-1', isOwner: true, tenant: { id: 'shop-1', name: 'Kopi', seller_type: 'merchant' }, noStore: false, isLoading: false };
+  globalThis.subscriptionState = { subscription: { tier: 'starter', status: 'active', billing_cycle: 'monthly' }, tier: 'starter' };
+  globalThis.pushState = 'blocked';
+  globalThis.settingsOpened = 0;
+  {
+    const host = document.createElement('div'); document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(MemoryRouter, null,
+        React.createElement(AccountProfileModal, { open: true, onClose() {}, user, subscription: null })));
+    });
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 30)));
+    assert.match(document.body.textContent, /Phone alerts/);
+    assert.match(document.body.textContent, /Off for Sellio on this phone, so new orders won’t ring here\./);
+    const open = document.body.querySelector('[data-testid="alerts-open-settings"]');
+    assert.ok(open, 'Open Settings in the row');
+    assert.equal(open.textContent.trim(), 'Open Settings');
+    await act(async () => { open.click(); await new Promise((resolve) => setTimeout(resolve, 20)); });
+    assert.equal(globalThis.settingsOpened, 1, "Sellio's page in the phone's Settings");
+    // Allowed there; Sellio comes back to the front.
+    globalThis.pushState = 'on';
+    await act(async () => { document.dispatchEvent(new win.Event('visibilitychange')); await new Promise((resolve) => setTimeout(resolve, 30)); });
+    assert.match(document.body.textContent, /On for this phone/);
+    assert.equal(document.body.querySelector('[data-testid="alerts-open-settings"]'), null);
+    await act(async () => root.unmount());
+    host.remove();
+  }
+  globalThis.pushState = 'off';
+  await panel();
+  assert.ok(lastPanel.buttons.includes('Turn on'), 'still askable: Turn on, as before');
+  assert.equal(lastPanel.buttons.includes('Open Settings'), false);
+  delete globalThis.pushState;
+  delete win.Capacitor;
+  passed('Phone alerts off for Sellio: Open Settings in the row, and the row follows on coming back');
 
   console.log(passes + ' account-panel checks passed');
 } finally {

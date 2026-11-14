@@ -118,6 +118,10 @@ QRIS, PayNow, DuitNow, Stripe, Google and WhatsApp stay as they are. Rupiah is w
 | per month, per year (prices) | per bulan, per tahun (S$18/bln, /thn) |
 | time zones | WIB, Indonesia Barat (UTC+7); WITA, Indonesia Tengah (UTC+8); WIT, Indonesia Timur (UTC+9) |
 | dates and times | 14 Nov 2026, Sab, 14.30: day first, Indonesian names, the 24-hour clock with a dot (`src/lib/appDates.js`) |
+| the phone's Settings for Sellio (Android's own words) | Pengaturan; Aplikasi → Sellio → Izin; Kamera, Perangkat di sekitar, Lokasi, Notifikasi; Izinkan |
+| Open Settings, Not now | Buka Pengaturan, Nanti saja |
+| signed out (Sellio ended the sign-in) | Anda sudah keluar dari akun |
+| cart | keranjang |
 
 - Printed receipts and kitchen chits, the CSV template and exports stay in English for now: they belong with the server's own text (push alerts, receipts, emails), a later step.
 - Store pages are in English, so a sentence about one quotes its words in English: halamannya menampilkan “Store unavailable”.

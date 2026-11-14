@@ -16,6 +16,7 @@ import { createPageUrl } from '@/utils';
 import { openBillingPortal, formatBillingAmount } from '@/lib/billing';
 import { sellsPlans, PLANS_ON_WEBSITE, outsideLinkProps } from '@/lib/nativeApp';
 import { alertsKind, loadAlerts } from '@/lib/pushAlerts';
+import { canOpenAppSettings, openAppSettings } from '@/lib/appSettings';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { ORDER_ALERTS_EVENT } from '@/lib/useOrderAlerts';
 import { ProfilePhotoEditor } from './ProfilePhoto';
@@ -26,7 +27,8 @@ import { formatAppDate } from '@/lib/appDates';
 // Whether this phone (the Android app, src/lib/pushNotifications.js) or this browser (the
 // website, src/lib/webPush.js) gets alerts, with Turn on while Sellio can still ask. The phone's
 // settings for Sellio, or the browser's for the site, turn them off, or back on once they've
-// been told no. Checked again when Sellio comes back from them.
+// been told no: in Sellio's app, Open Settings goes straight there (UX state 7, 14 Nov 2026).
+// Checked again when Sellio comes back from them.
 function DeviceAlertsRow({ kind }) {
   const { t } = useAppText();
   const [status, setStatus] = useState(null); // 'on' | 'off' | 'blocked' | 'unavailable'
@@ -68,7 +70,9 @@ function DeviceAlertsRow({ kind }) {
   } : {
     on: t("On for this phone. Change them in your phone's settings for Sellio."),
     off: t('Off on this phone'),
-    blocked: t("Off. Turn them on in your phone's Settings: Apps → Sellio → Notifications."),
+    blocked: canOpenAppSettings()
+      ? t('Off for Sellio on this phone, so new orders won’t ring here.')
+      : t("Off. Turn them on in your phone's Settings: Apps → Sellio → Notifications."),
   })[status];
   return (
     <div className="flex items-center justify-between gap-3">
@@ -79,6 +83,11 @@ function DeviceAlertsRow({ kind }) {
       {status === 'off' && (
         <Button size="sm" variant="outline" className="shrink-0" disabled={asking} onClick={turnOn}>
           {asking ? <Loader2 className="w-4 h-4 animate-spin" /> : t('Turn on')}
+        </Button>
+      )}
+      {status === 'blocked' && !web && canOpenAppSettings() && (
+        <Button size="sm" variant="outline" className="shrink-0" data-testid="alerts-open-settings" onClick={() => openAppSettings()}>
+          {t('Open Settings')}
         </Button>
       )}
     </div>

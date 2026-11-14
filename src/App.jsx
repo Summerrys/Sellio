@@ -27,6 +27,8 @@ import PushPrompt from '@/components/notifications/PushPrompt';
 import OfflineKeeper from '@/components/ui-custom/OfflineKeeper';
 import PresencePing from '@/components/chat/PresencePing';
 import ConnectionStatus from '@/components/ui-custom/ConnectionStatus';
+import PermissionHelp from '@/components/ui-custom/PermissionHelp';
+import SignedOutNotice from '@/components/ui-custom/SignedOutNotice';
 
 // Pages the app never starts on load on demand, so its first download stays small.
 const LandingPage = lazy(() => import('@/components/landing/LandingPage'));
@@ -206,6 +208,8 @@ function App() {
         <Router>
           <RouteIndexingGuard />
           <NavigationTracker />
+          {/* "You've been signed out" when Sellio's sign-in ended by itself (src/lib/signOutWatch.js). */}
+          <SignedOutNotice />
           <Suspense fallback={null}>
             <Routes>
               <Route path="/" element={<RootRoute />} />
@@ -219,6 +223,8 @@ function App() {
         <SonnerToaster />
         {/* "You're offline. Reconnecting…" above the bottom bar, on every page. */}
         <ConnectionStatus />
+        {/* "Camera is off for Sellio" and the like: why, and Open Settings (src/lib/permissionHelp.js). */}
+        <PermissionHelp />
         {/* "Welcome back!" on the page a sign-in opens (the sign-in page itself is gone by then). */}
         <SignInWelcome />
         {/* A reviewer's preview of the app in Bahasa Indonesia, and how to end it. */}

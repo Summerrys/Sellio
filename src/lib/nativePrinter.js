@@ -11,6 +11,7 @@
 //   characteristic: one of the known printer profiles, or else the first one that takes writes.
 import { BleClient } from '@capacitor-community/bluetooth-le';
 import { BLE_PRINTER_PROFILES } from './printerUtils';
+import { BLUETOOTH_PERMISSION } from './permissionHelp.js'; // with .js: its test runs it in Node
 
 const SAVED_KEY = 'sellio.btPrinters'; // { [printer name]: device id }
 // Standard parts of every Bluetooth device, never where prints go.
@@ -42,11 +43,13 @@ export function savedPrinterId(name) {
   return typeof id === 'string' && id ? id : null;
 }
 
-// What the person can act on, in place of the plugin's wording.
+// What the person can act on, in place of the plugin's wording. A refused permission is marked
+// (code BLUETOOTH_PERMISSION): the screens show PermissionHelp's sheet for it, with the steps and
+// Open Settings, so its own words stay short.
 function plain(error, fallback) {
   const text = String(error?.message || error || '');
   if (/permission|not authorized|unauthorized|denied/i.test(text)) {
-    return new Error("Sellio needs Bluetooth permission to use your printer. Allow it in your phone's Settings: Apps → Sellio → Permissions (Nearby devices).");
+    return Object.assign(new Error('Bluetooth permission is off for Sellio.'), { code: BLUETOOTH_PERMISSION });
   }
   if (/disabled|not enabled|powered off|turned off/i.test(text)) {
     return new Error('Bluetooth is off. Turn it on and try again.');
