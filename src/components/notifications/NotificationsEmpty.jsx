@@ -1,40 +1,39 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { appPlatform } from '@/lib/nativeApp';
+import { alertsKind, alertWords, loadAlerts } from '@/lib/pushAlerts';
 
-// The words PushPrompt uses when alerts stay off.
-const SETTINGS_HINT = "You can turn them on later in your phone's Settings: Apps → Sellio → Notifications.";
-
-// No notifications at all yet: what turns up here, and (in the Android app, while its
-// alerts are off and Sellio may still ask) the one next step: turn on phone alerts.
+// No notifications at all yet: what turns up here, and (in the Android app or a browser that
+// can show alerts, while they're off and Sellio may still ask) the one next step: turn them on.
 export default function NotificationsEmpty() {
   const [canAsk, setCanAsk] = useState(false);
+  const push = useRef(null);
+  const device = alertsKind();
+  const words = alertWords(device);
 
   useEffect(() => {
-    if (appPlatform() !== 'android') return undefined;
+    if (!device) return undefined;
     let cancelled = false;
-    import('@/lib/pushNotifications')
-      .then((push) => push.pushStatus())
+    loadAlerts(device)
+      .then((module) => { push.current = module; return module.pushStatus(); })
       .then((state) => { if (!cancelled) setCanAsk(state === 'off'); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, []);
+  }, [device]);
 
+  // Straight from the click (the module is loaded already): a browser only asks during one.
   const turnOn = async () => {
     setCanAsk(false);
-    let push = null;
     let allowed = false;
     try {
-      push = await import('@/lib/pushNotifications');
-      allowed = await push.askAndroid();
+      allowed = await push.current.ask();
     } catch { allowed = false; }
     if (allowed) {
-      toast.success('Alerts are on for this phone');
+      toast.success(words.on);
     } else {
-      push?.askLater?.(30);
-      toast('Alerts stay off', { description: SETTINGS_HINT });
+      push.current?.askLater?.(30);
+      toast('Alerts stay off', { description: words.settings });
     }
   };
 
@@ -45,7 +44,7 @@ export default function NotificationsEmpty() {
       <p className="mt-1 text-sm text-muted-foreground">Sellio lets you know here when something needs you, like a new order.</p>
       {canAsk && (
         <Button onClick={turnOn} className="mt-4 min-h-[44px] text-white border-0" style={{ background: 'var(--color-primary-gradient)' }}>
-          Turn on phone alerts
+          {words.button}
         </Button>
       )}
     </div>

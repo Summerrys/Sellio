@@ -1,39 +1,42 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { OFFER_PUSH_EVENT } from '@/lib/pushOffer';
+import { alertsKind, alertWords, loadAlerts } from '@/lib/pushAlerts';
 
-// Sellio's own question before Android's: "Get alerts for new orders" (a shop's people, in
-// their workspace) or "Know when your order is ready" (a signed-in buyer, after an order),
-// with Not now and Turn on. Offered with offerPushAlerts (src/lib/pushOffer.js); shown only in
-// the Android app when it can help (pushNotifications.js shouldAsk). Not now: asked again in
-// 30 days; unanswered, it goes after 15 seconds and asks again in 3 days. Turn on: Android's
-// own question, then the phone is registered for the account.
+// Sellio's own question before the phone's or the browser's: "Get alerts for new orders" (a
+// shop's people, in their workspace), "Know when your order is ready" (a signed-in buyer, after
+// an order) or "Know when they reply" (after sending a chat message), with Not now and Turn on.
+// Offered with offerPushAlerts (src/lib/pushOffer.js); shown in the Android app and in browsers
+// that can show alerts, when it can help (shouldAsk of pushNotifications.js or webPush.js).
+// Not now: asked again in 30 days; unanswered, it goes after 15 seconds and asks again in 3
+// days. Turn on: the phone's or browser's own question, then it is registered for the account.
 const COPY = {
-  shop: { title: 'Get alerts for new orders', detail: 'On this phone, even when Sellio is closed' },
-  order: { title: 'Know when your order is ready', detail: 'Alerts on this phone from the shop' },
+  shop: { title: 'Get alerts for new orders', android: 'On this phone, even when Sellio is closed', web: 'In this browser, even when Sellio is closed' },
+  order: { title: 'Know when your order is ready', android: 'Alerts on this phone from the shop', web: 'Alerts in this browser from the shop' },
+  chat: { title: 'Know when they reply', android: 'Alerts on this phone, even when Sellio is closed', web: 'Alerts in this browser, even when Sellio is closed' },
 };
 const SHOW_MS = 15000;
-const SETTINGS_HINT = "You can turn them on later in your phone's Settings: Apps → Sellio → Notifications.";
 
 export default function PushPrompt() {
   const [kind, setKind] = useState(null);
   const push = useRef(null);
   const timer = useRef(null);
+  const device = alertsKind();
 
   useEffect(() => {
     const onOffer = async (event) => {
       const next = event?.detail?.kind;
       if (!COPY[next]) return;
       try {
-        push.current = push.current || await import('@/lib/pushNotifications');
+        push.current = push.current || await loadAlerts(device);
         if (await push.current.shouldAsk()) setKind((current) => current || next);
       } catch {
-        // no push in this build
+        // no alerts on this device
       }
     };
     window.addEventListener(OFFER_PUSH_EVENT, onOffer);
     return () => window.removeEventListener(OFFER_PUSH_EVENT, onOffer);
-  }, []);
+  }, [device]);
 
   useEffect(() => {
     if (!kind) return undefined;
@@ -55,22 +58,27 @@ export default function PushPrompt() {
   }, [kind]);
 
   if (!kind) return null;
-  const { title, detail } = COPY[kind];
+  const { title } = COPY[kind];
+  const detail = COPY[kind][device === 'web' ? 'web' : 'android'];
+  const words = alertWords(device);
 
   const notNow = () => {
     clearTimeout(timer.current);
     push.current?.askLater(30);
     setKind(null);
   };
+  // Straight from the click: a browser only asks while the click is still going on.
   const turnOn = async () => {
     clearTimeout(timer.current);
     setKind(null);
-    const allowed = push.current ? await push.current.askAndroid().catch(() => false) : false;
+    const allowed = push.current ? await push.current.ask().catch(() => false) : false;
     if (allowed) {
-      toast.success('Alerts are on for this phone');
+      toast.success(words.on);
+    } else if ((await push.current?.permission?.().catch(() => '')) === 'granted') {
+      toast(words.failed);
     } else {
       push.current?.askLater(30);
-      toast('Alerts stay off', { description: SETTINGS_HINT });
+      toast('Alerts stay off', { description: words.settings });
     }
   };
 

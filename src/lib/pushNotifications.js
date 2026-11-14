@@ -240,6 +240,10 @@ export async function askAndroid() {
   return true;
 }
 
+// The same question by the name the browser's module has too (webPush.js): PushPrompt, the
+// account panel and the empty notifications list call ask() (pushAlerts.js picks the module).
+export const ask = askAndroid;
+
 // 'on', 'off' (Sellio can ask), 'blocked' (only Android's settings can turn them on), or
 // 'unavailable' (push doesn't work in this build or on this phone).
 export async function pushStatus() {

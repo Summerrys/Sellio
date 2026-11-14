@@ -40,7 +40,7 @@ const mocks = {
   ].join('\n'),
   profile: 'export const cookieUtils = { clear() {} }; export const useAppUser = () => ({});',
   toast: 'export const toast = { error() {}, success() {} };',
-  push: "export const pushStatus = async () => 'unavailable'; export const askAndroid = async () => false;",
+  push: "export const pushStatus = async () => 'unavailable'; export const askAndroid = async () => false; export const ask = askAndroid;",
 };
 const plugin = { name: 'account-panel-fixtures', setup(builder) {
   for (const [filter, key] of [[/TenantContext$/, 'tenant'], [/useSubscription$/, 'subscription'], [/supabaseClient$/, 'clients'],

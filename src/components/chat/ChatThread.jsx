@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import PhotoPickerControl from '@/components/ui-custom/PhotoPickerControl';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { rememberReturnPath } from '@/lib/authNavigation';
+import { offerPushAlerts } from '@/lib/pushOffer';
 import {
   ONLINE_GREEN, chatThread, chatSend, chatMarkRead, chatErrorMessage, chatPhotoUrls, exploreItem,
   lastSeenText, uploadChatPhoto, useChatLive, useChatUser,
@@ -282,6 +283,8 @@ export default function ChatThread({ conversationId = null, productId = null, va
       setPending((list) => list.filter((p) => p.tempId !== item.tempId));
       refreshLists();
       if (!conversationId && res.conversation_id) onCreated?.(res.conversation_id);
+      // Sent: Sellio may offer alerts for the reply (PushPrompt decides).
+      offerPushAlerts('chat');
     } catch (err) {
       const message = chatErrorMessage(err);
       setPending((list) => list.map((p) => (p.tempId === item.tempId ? { ...p, status: 'failed', error: message } : p)));

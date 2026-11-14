@@ -14,7 +14,8 @@ import { toast } from 'sonner';
 import { showError } from '@/lib/plainError';
 import { createPageUrl } from '@/utils';
 import { openBillingPortal, formatBillingAmount } from '@/lib/billing';
-import { sellsPlans, PLANS_ON_WEBSITE, appPlatform, outsideLinkProps } from '@/lib/nativeApp';
+import { sellsPlans, PLANS_ON_WEBSITE, outsideLinkProps } from '@/lib/nativeApp';
+import { alertsKind, loadAlerts } from '@/lib/pushAlerts';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { ORDER_ALERTS_EVENT } from '@/lib/useOrderAlerts';
 import { ProfilePhotoEditor } from './ProfilePhoto';
@@ -22,22 +23,23 @@ import { AppLanguageRow } from '@/components/ui-custom/AppLanguageSwitch';
 import { useAppText } from '@/lib/appText';
 import { formatAppDate } from '@/lib/appDates';
 
-// Sellio's Android app: whether this phone gets push alerts (src/lib/pushNotifications.js),
-// with Turn on while Sellio can still ask. Android's own settings for Sellio turn them off, or
-// back on once Android has been told no. Checked again when Sellio comes back from them.
-function PhoneAlertsRow() {
+// Whether this phone (the Android app, src/lib/pushNotifications.js) or this browser (the
+// website, src/lib/webPush.js) gets alerts, with Turn on while Sellio can still ask. The phone's
+// settings for Sellio, or the browser's for the site, turn them off, or back on once they've
+// been told no. Checked again when Sellio comes back from them.
+function DeviceAlertsRow({ kind }) {
   const { t } = useAppText();
   const [status, setStatus] = useState(null); // 'on' | 'off' | 'blocked' | 'unavailable'
   const [asking, setAsking] = useState(false);
   const push = useRef(null);
   const refresh = useCallback(async () => {
     try {
-      push.current = push.current || await import('@/lib/pushNotifications');
+      push.current = push.current || await loadAlerts(kind);
       setStatus(await push.current.pushStatus());
     } catch {
       setStatus('unavailable');
     }
-  }, []);
+  }, [kind]);
   useEffect(() => {
     refresh();
     const again = () => { if (document.visibilityState === 'visible') refresh(); };
@@ -50,22 +52,28 @@ function PhoneAlertsRow() {
   }, [refresh]);
 
   if (!status || status === 'unavailable') return null;
+  const web = kind === 'web';
+  // Straight from the click: a browser only asks while the click is still going on.
   const turnOn = async () => {
     setAsking(true);
-    const allowed = await push.current.askAndroid().catch(() => false);
+    const allowed = await push.current.ask().catch(() => false);
     setAsking(false);
-    if (allowed) toast.success(t('Alerts are on for this phone'));
+    if (allowed) toast.success(web ? t('Alerts are on for this browser') : t('Alerts are on for this phone'));
     refresh();
   };
-  const detail = {
+  const detail = (web ? {
+    on: t("On for this browser. Change them in your browser's settings for this site."),
+    off: t('Off in this browser'),
+    blocked: t("Off. Allow notifications for this site in your browser's settings."),
+  } : {
     on: t("On for this phone. Change them in your phone's settings for Sellio."),
     off: t('Off on this phone'),
     blocked: t("Off. Turn them on in your phone's Settings: Apps → Sellio → Notifications."),
-  }[status];
+  })[status];
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="min-w-0">
-        <p className="text-sm text-slate-700">{t('Phone alerts')}</p>
+        <p className="text-sm text-slate-700">{web ? t('Browser alerts') : t('Phone alerts')}</p>
         <p className="text-[11px] text-slate-400">{detail}</p>
       </div>
       {status === 'off' && (
@@ -551,7 +559,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
               </div>
               <Switch checked={orderAlerts} disabled={savingPrefs} onCheckedChange={handleOrderAlertsToggle} />
             </div>
-            {appPlatform() === 'android' && <PhoneAlertsRow />}
+            {alertsKind() && <DeviceAlertsRow kind={alertsKind()} />}
             <AppLanguageRow />
           </SectionCard>
 

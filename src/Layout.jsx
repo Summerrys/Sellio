@@ -432,8 +432,8 @@ function AppLayout({ children, currentPageName }) {
     return () => clearTimeout(timer);
   }, [installHere, plainSignIn, currentPageName]);
 
-  // Sellio's Android app: a shop's people who can see orders are offered alerts for new
-  // orders on their phone (PushPrompt asks, once Sellio has settled on the page).
+  // A shop's people who can see orders are offered alerts for new orders on their phone (the
+  // Android app) or in their browser (PushPrompt asks, once Sellio has settled on the page).
   const offersOrderAlerts = !!user && !!tenant?.id && hasPermission('orders.view');
   useEffect(() => {
     if (!offersOrderAlerts) return undefined;

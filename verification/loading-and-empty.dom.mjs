@@ -87,6 +87,7 @@ const mock = { name: 'loading-empty-fixtures', setup(b) {
     push: [
       'export const pushStatus = async () => globalThis.pushFixture.status;',
       'export const askAndroid = async () => { globalThis.pushFixture.asked += 1; return globalThis.pushFixture.allowed; };',
+      'export const ask = askAndroid;',
       'export const askLater = (days) => { globalThis.pushFixture.later.push(days); };',
     ].join('\n'),
     supabase: 'export const getSupabase = async () => globalThis.supabaseFixture; export const SUPABASE_URL = "https://project.example.invalid";',

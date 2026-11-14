@@ -46,7 +46,7 @@ const mocks = {
   ].join('\n'),
   profile: 'export const cookieUtils = { clear() {} }; export const useAppUser = () => globalThis.appUserState;',
   toast: 'export const toast = { error() {}, success() {} };',
-  push: "export const pushStatus = async () => 'unavailable'; export const askAndroid = async () => false;",
+  push: "export const pushStatus = async () => 'unavailable'; export const askAndroid = async () => false; export const ask = askAndroid;",
   ratings: 'export const amIModerator = async () => false; export const moderationQueue = async () => []; export const ratingReviewQueue = async () => []; export const ratingText = () => ""; export const shopRatingOverview = async () => null;',
   purchases: 'export const purchaseSummary = async () => null;',
   nothing: 'export default function Nothing() { return null; } export const TAB_BAR_SPACE = "80px"; export const markExploreHome = () => {};',

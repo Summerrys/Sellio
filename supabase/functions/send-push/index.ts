@@ -1,12 +1,12 @@
-// send-push: sends one Sellio notification to its recipient's phones with Firebase Cloud
-// Messaging (FCM HTTP v1 API).
+// send-push: sends one Sellio notification to its recipient's phones (the Android app) and
+// browsers (the website, src/lib/webPush.js) with Firebase Cloud Messaging (FCM HTTP v1 API).
 //
 // Only the database calls it: app.notification_push (migration
 // 20261104090000_sellio_push_alerts.sql) posts {"notification_id": "..."} through pg_net right
-// after a notification is saved for someone with a registered phone, with the shared secret
-// from Vault in the x-sellio-push header. public.push_notification_payload checks the secret
-// and returns the notification and the phones. Deployed with verify_jwt off: the secret is the
-// check.
+// after a notification is saved for someone with a registered phone or browser, with the shared
+// secret from Vault in the x-sellio-push header. public.push_notification_payload checks the
+// secret and returns the notification and the devices. Deployed with verify_jwt off: the secret
+// is the check.
 //
 // Needs the Firebase project's service account key in the FIREBASE_SERVICE_ACCOUNT secret (the
 // JSON file's contents, or that JSON in base64). Without it: 503, nothing sent.
@@ -131,6 +131,18 @@ const clip = (text: unknown, max: number) => {
   return value.length > max ? `${value.slice(0, max - 1)}…` : value;
 };
 
+// Whether the notification's person is on Sellio right now (user_presence, as a chat shows
+// "Online": a ping within 2 minutes, not left). Their browsers get nothing then: the page they
+// have open shows it. Decided here because a browser must show every push it gets (Safari stops
+// a site's alerts after three it doesn't show). Unknown counts as not on Sellio.
+async function onSellioNow(notificationId: string): Promise<boolean> {
+  const { data: row } = await admin.from('notifications').select('user_email').eq('id', notificationId).maybeSingle();
+  const email = String(row?.user_email ?? '').trim().toLowerCase();
+  if (!email) return false;
+  const { data: seen } = await admin.from('user_presence').select('online, last_seen_at').eq('email', email).maybeSingle();
+  return seen?.online === true && Date.parse(String(seen.last_seen_at)) > Date.now() - 2 * 60 * 1000;
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
@@ -217,9 +229,22 @@ Deno.serve(async (req) => {
     },
   };
 
-  const results = await Promise.all(devices.slice(0, 10).map(async (device) => {
+  // Browsers (public/sw.js shows it): data only, so the site shows every alert the same way.
+  const webMessage = {
+    data: { ...message.data, title: message.notification.title, body: message.notification.body, tag },
+    webpush: {
+      headers: { Urgency: urgent ? 'high' : 'normal', TTL: type === 'new_order' ? '3600' : '86400' },
+    },
+  };
+  const skipBrowsers = devices.some((d) => d.platform === 'web') &&
+    await onSellioNow(String(n.id)).catch(() => false);
+  const targets = devices.slice(0, 10).filter((d) => !(skipBrowsers && d.platform === 'web'));
+  if (!targets.length) return json({ sent: 0, reason: 'on_sellio' });
+
+  const results = await Promise.all(targets.map(async (device) => {
     try {
-      return { device, result: await fcmSend(account, { ...message, token: device.token }) };
+      const outgoing = device.platform === 'web' ? webMessage : message;
+      return { device, result: await fcmSend(account, { ...outgoing, token: device.token }) };
     } catch (error) {
       return { device, result: { ok: false, status: 0, code: 'EXCEPTION', message: String((error as Error).message), gone: false } as FcmResult };
     }
@@ -235,6 +260,6 @@ Deno.serve(async (req) => {
     const f = r.result as Exclude<FcmResult, { ok: true }>;
     return `${f.code}${f.status ? ` (${f.status})` : ''}`;
   });
-  console.log('send-push', JSON.stringify({ type, devices: devices.length, sent, failed: failures, removed: gone.length }));
+  console.log('send-push', JSON.stringify({ type, devices: devices.length, sent, failed: failures, removed: gone.length, browsers_left_out: skipBrowsers }));
   return json({ sent, failed: failures.length, removed: gone.length });
 });

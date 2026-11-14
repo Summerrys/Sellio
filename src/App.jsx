@@ -21,7 +21,8 @@ import SignInWelcome from '@/components/auth/SignInWelcome';
 import { AppLanguagePreviewBadge } from '@/components/ui-custom/AppLanguageSwitch';
 import { startLaunch } from '@/lib/appLaunch';
 import { GOOGLE_RELAY_PATH } from '@/lib/googleRelay';
-import { isNativeApp as inSellioApp, isBase44Shell, appPlatform } from '@/lib/nativeApp';
+import { isNativeApp as inSellioApp, isBase44Shell } from '@/lib/nativeApp';
+import { alertsKind } from '@/lib/pushAlerts';
 import PushPrompt from '@/components/notifications/PushPrompt';
 import OfflineKeeper from '@/components/ui-custom/OfflineKeeper';
 import PresencePing from '@/components/chat/PresencePing';
@@ -224,8 +225,9 @@ function App() {
         <AppLanguagePreviewBadge />
         {/* Online and last seen in Chats, while Sellio is on screen. */}
         <PresencePing />
-        {/* Sellio's question before Android's about push alerts (the Android app only). */}
-        {appPlatform() === 'android' && <PushPrompt />}
+        {/* Sellio's question before the phone's or browser's about alerts (the Android app, and
+            browsers that can show them: src/lib/pushAlerts.js). */}
+        {alertsKind() && <PushPrompt />}
         <LaunchSplash />
         </AppRefreshProvider>
       </QueryClientProvider>

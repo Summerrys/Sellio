@@ -9,8 +9,10 @@
 //   Pages' _worker.js, _routes.json, _headers and 404.html, robots.txt, sitemap.xml, llms.txt,
 //   the share image), the prerendered /privacy and /terms copies, store.html and explore.html
 //   (the web host's shells for those addresses; the app shows those pages itself, from its own
-//   index.html), sw.js (the app registers no service worker), and app-updates/ (these
-//   files themselves, published for the apps by scripts/app-update.mjs).
+//   index.html), sw.js (the app registers no service worker), web-push.json (browser alerts'
+//   settings, which only Cloudflare's build has: leaving it out keeps the apps' files the same
+//   wherever they're built), and app-updates/ (these files themselves, published for the apps
+//   by scripts/app-update.mjs).
 // Its index.html is dist/app.html: the same page and scripts without the landing page's
 // prerendered markup, which the app would only hide, and without the ChatGPT ads Pixel
 // (index.html's #sellio-openai-pixel script): the apps measure no ads, and Apple and Google
@@ -33,6 +35,7 @@ const LEFT_OUT = new Set([
   'robots.txt',
   'sitemap.xml',
   'llms.txt',
+  'web-push.json', // browser alerts' settings, the website's only (scripts/web-push-config.mjs)
   'og',
   'privacy',
   'terms',

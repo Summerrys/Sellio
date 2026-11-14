@@ -8,8 +8,27 @@ import { installEdgeSwipeBack } from '@/lib/edgeSwipeBack'
 import { isCapacitorApp } from '@/lib/nativeApp'
 import { startAdsMeasurement } from '@/lib/adsPixel'
 import { appTextReady } from '@/lib/appText'
+import { alertsKind, takeOpenedAlert } from '@/lib/pushAlerts'
 
 removeAppReloadParam()
+
+// Browser alerts (src/lib/webPush.js: the website, not the apps). An alert opened from the
+// browser comes with ?sellio_alert=<id> (taken off the address before the app reads it), or as a
+// message from public/sw.js to a window already on its page: that notification is marked read.
+// Where notifications are allowed for the site already, this browser stays registered for
+// whoever signs in.
+const openedAlert = takeOpenedAlert()
+if (alertsKind() === 'web') {
+  const markRead = (id) => import('@/lib/webPush').then((webPush) => webPush.markAlertRead(id)).catch(() => {})
+  if (openedAlert) markRead(openedAlert)
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    const id = event.data?.type === 'sellio:alert-opened' ? event.data.id : null
+    if (typeof id === 'string' && id) markRead(id)
+  })
+  if (Notification.permission === 'granted') {
+    import('@/lib/webPush').then((webPush) => webPush.startWebPush()).catch(() => {})
+  }
+}
 
 // ChatGPT ads on the website (index.html's OpenAI Pixel; the apps have none): the cookie choice,
 // and trial_started when a free trial from the website comes back from Stripe.

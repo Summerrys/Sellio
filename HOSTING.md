@@ -143,6 +143,36 @@ phone never downloads it again.
   (`.github/scripts/android-emulator-check.sh`, step 7) tests a good and a broken update this
   way on every build.
 
+## Browser alerts
+
+The website can send Sellio's alerts (new orders, chat messages, order updates) to browsers that
+allow them, even with the Sellio tab closed: `src/lib/webPush.js` registers the browser,
+`supabase/functions/send-push` sends through Firebase Cloud Messaging, and `public/sw.js` shows
+them. It needs two settings in Cloudflare Pages (**Settings → Variables and Secrets**,
+Production), both from the same Firebase project as the Android app:
+
+- `FIREBASE_WEB_CONFIG`: Firebase console → **Project settings → General → Your apps → Web
+  app** (add one, e.g. "Sellio website", without Hosting) → **SDK setup and configuration →
+  Config**: paste the whole `firebaseConfig` block.
+- `FIREBASE_WEB_PUSH_KEY`: **Project settings → Cloud Messaging → Web configuration → Web Push
+  certificates → Generate key pair**: the public key it shows.
+
+Both are public by design (every visitor's browser gets them). Settings take effect from the next
+build: retry the latest deployment, or push a commit. The build writes them to
+`/web-push.json` (`scripts/web-push-config.mjs`; it logs `Browser alerts: on (Firebase project
+…)`, and stops with what's wrong when a value is). Without them, no browser is offered alerts. The
+apps never carry that file. Firebase's web SDK also needs the **FCM Registration API** on in the
+project's Google Cloud console (APIs & Services); a browser that can't get a token logs `Sellio
+browser alerts: no token from Firebase` in its console.
+
+- **Who gets them:** a browser is offered alerts after its person sends a chat message, places an
+  order, or (a shop's people) opens their workspace; the account panel and an empty notifications
+  list have **Turn on browser alerts** too. iPhones and iPads get them only for Sellio added to
+  the Home Screen (iOS 16.4 and later): Apple gives Safari tabs none.
+- **No doubles:** while the person is on Sellio (a chat's "Online"), their browsers get nothing:
+  the page they have open shows the alert. Every push a browser gets is shown, because Safari
+  stops a site's alerts after three it doesn't show.
+
 ## Limits on Cloudflare's free plan
 
 - Page requests run the worker. The free plan has 100,000 worker runs a day. Files (scripts,
