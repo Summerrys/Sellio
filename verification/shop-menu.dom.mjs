@@ -66,7 +66,7 @@ const routes = [
   [/components\/theme\/ThemeProvider$|components\/notifications\/NotificationProvider$/, 'passthrough'],
   [/lib\/AppUserContext$/, 'appUser'], [/lib\/AppRefreshContext$/, 'refresh'], [/lib\/chat$/, 'chat'], [/lib\/sell$/, 'sell'],
   [/lib\/supabaseClient$/, 'clients'], [/lib\/billing$/, 'billing'], [/lib\/pwaInstall$/, 'pwa'], [/lib\/pushOffer$/, 'push'],
-  [/lib\/appFiles$/, 'files'], [/lib\/deviceKey$/, 'device'], [/^sonner$/, 'toast'],
+  [/lib\/appFiles$/, 'files'], [/lib\/deviceKey$/, 'device'], [/^sonner$/, 'toast'], [/ExploreChatCount$/, 'nothing'],
   [/notifications\/NotificationBell$|orders\/KitchenAutoPrint$|dev\/RoleSwitcher$|onboarding\/InstallBanner$|chat\/ChatHeaderButton$|subscription\/(UpgradeWall|BillingRecoveryWall|SubscriptionEndedNotice|BillingStatusBanner|TrialReminderModal|PlanFeatureNotice|PricingModal)$|profile\/AccountProfileModal$|ui-custom\/AppLoader$|navigation\/(BottomTabBar|MerchantTabBar)$/, 'nothing'],
 ];
 const plugin = { name: 'shop-menu-fixtures', setup(builder) {

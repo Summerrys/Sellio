@@ -56,13 +56,14 @@ const mocks = {
   supabase: 'export const getSupabase = async () => globalThis.fakeClient;',
   appUser: 'export const useAppUser = () => ({ appUser: null });',
   tabbar: 'export default function ExploreTabBar() { return null; } export const markExploreHome = () => {};',
+  chatCount: 'export default function ExploreChatCount() { return null; }',
   bell: 'export default function ShopBell() { return null; }',
   ratings: 'export const useRatingSummaries = () => [{}];',
   ratingParts: 'export const RatingPill = () => null;',
   sell: 'export const useSell = () => ({ openSell() {} });',
 };
 const mock = { name: 'explore-typeahead-mocks', setup(b) {
-  const map = [[/supabaseClient$/, 'supabase'], [/AppUserContext$/, 'appUser'], [/explore\/ExploreTabBar$/, 'tabbar'],
+  const map = [[/supabaseClient$/, 'supabase'], [/AppUserContext$/, 'appUser'], [/explore\/ExploreTabBar$/, 'tabbar'], [/ExploreChatCount$/, 'chatCount'],
     [/explore\/ShopBell$/, 'bell'], [/lib\/ratings$/, 'ratings'], [/ratings\/RatingParts$/, 'ratingParts'], [/lib\/sell$/, 'sell']];
   for (const [filter, key] of map) b.onResolve({ filter }, () => ({ path: key, namespace: 'mock' }));
   b.onLoad({ filter: /.*/, namespace: 'mock' }, (args) => ({ loader: 'js', contents: mocks[args.path] }));

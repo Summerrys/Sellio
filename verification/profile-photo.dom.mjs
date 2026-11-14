@@ -76,11 +76,12 @@ const mocks = {
     '}',
   ].join('\n'),
   pwa: 'export const isAndroid = () => !!globalThis.onPhone; export const isIOS = () => false;',
+  chatCount: 'export default function ExploreChatCount() { return null; }',
   toast: 'export const toast = { error: (m, o) => globalThis.toasts.push(["error", m, o?.description]), success: (m) => globalThis.toasts.push(["success", m]), message: (m) => globalThis.toasts.push(["message", m]) };',
   camera: 'import React from "react"; export default function Camera({ children, className }) { return React.createElement("span", { className, "data-testid": "take-photo" }, children); }',
 };
 const plugin = { name: 'profile-photo-fixtures', setup(builder) {
-  for (const [filter, key] of [[/supabaseClient$/, 'supabase'], [/lib\/imageShrink$/, 'shrink'], [/lib\/pwaInstall$/, 'pwa'], [/^sonner$/, 'toast'], [/NativeCameraScanControl$/, 'camera']]) {
+  for (const [filter, key] of [[/supabaseClient$/, 'supabase'], [/lib\/imageShrink$/, 'shrink'], [/lib\/pwaInstall$/, 'pwa'], [/^sonner$/, 'toast'], [/NativeCameraScanControl$/, 'camera'], [/ExploreChatCount$/, 'chatCount']]) {
     builder.onResolve({ filter }, () => ({ path: key, namespace: 'mock' }));
   }
   builder.onLoad({ filter: /.*/, namespace: 'mock' }, (args) => ({ loader: 'js', contents: mocks[args.path], resolveDir: process.cwd() }));

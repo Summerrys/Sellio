@@ -54,7 +54,7 @@ const mocks = {
 const plugin = { name: 'me-upgrade-fixtures', setup(builder) {
   for (const [filter, key] of [[/tenant\/TenantContext$/, 'tenant'], [/useSubscription$/, 'subscription'], [/supabaseClient$/, 'clients'],
     [/AppUserContext$/, 'profile'], [/^sonner$/, 'toast'], [/pushNotifications$/, 'push'], [/lib\/ratings$/, 'ratings'],
-    [/lib\/purchases$/, 'purchases'], [/(^|\/)ExploreTabBar$|(^|\/)ShopBell$/, 'nothing']]) {
+    [/lib\/purchases$/, 'purchases'], [/(^|\/)ExploreTabBar$|(^|\/)ShopBell$|(^|\/)ExploreChatCount$/, 'nothing']]) {
     builder.onResolve({ filter }, () => ({ path: key, namespace: 'mock' }));
   }
   builder.onLoad({ filter: /.*/, namespace: 'mock' }, (args) => ({ loader: 'js', contents: mocks[args.path], resolveDir: process.cwd() }));

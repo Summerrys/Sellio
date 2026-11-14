@@ -126,6 +126,7 @@ const mock = { name: 'offline-states-fixtures', setup(b) {
   route(/lib\/tableBill$/, 'tableBill');
   route(/lib\/useOrderAlerts$/, 'alerts');
   route(/orders\/(TableCallAlerts|EditOrderModal|ChitPreviewSheet)$|tour\/(TourGuide|DummyOrderCard)$|shop\/ShopOrderInfo$|ui-custom\/AppLoader$|explore\/(ExploreTabBar|ShopBell|CartButton)$|ratings\/RatingParts$/, 'nothing');
+  route(/ExploreChatCount$/, 'nothing');
   route(/ui-custom\/LoadingShapes$/, 'loading');
   route(/hooks\/useProductTour$|tour\/tourSteps$/, 'tour');
   route(/lib\/appFiles$/, 'appFiles');

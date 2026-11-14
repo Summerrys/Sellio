@@ -8,6 +8,17 @@ import { useAppText } from '@/lib/appText';
 
 const NotificationContext = createContext();
 
+// The chat with this id is open and on screen: Explore's chat page (/explore/chats/<id>) or the
+// shop's Chats beside its list (/Chats?c=<id>).
+export function chatOnScreen(conversationId, browser = window) {
+  if (!conversationId || browser.document.visibilityState !== 'visible') return false;
+  const { pathname, search } = browser.location;
+  let path = pathname;
+  try { path = decodeURIComponent(pathname); } catch { /* keep it as it is */ }
+  if (path === `/explore/chats/${conversationId}`) return true;
+  return pathname.toLowerCase() === '/chats' && new URLSearchParams(search).get('c') === conversationId;
+}
+
 export function NotificationProvider({ children }) {
   const { t } = useAppText();
   const queryClient = useQueryClient();
@@ -45,15 +56,22 @@ export function NotificationProvider({ children }) {
     let cancelled = false;
     let unsubscribeFn;
     db.entities.Notification.subscribe((event) => {
-      if (event.type === 'create' && event.data?.user_email === email) {
+      if (event.data?.user_email !== email) return;
+      // Marked read elsewhere too (reading a chat marks its alerts read): keep the bell's count right.
+      if (event.type === 'update') {
         queryClient.invalidateQueries({ queryKey: ['notifications'] });
-        toast.info(event.data.title, {
-          description: event.data.message,
-          duration: 5000,
-        });
-        if (event.data.priority === 'high' || event.data.priority === 'critical') {
-          playNotificationSound();
-        }
+        return;
+      }
+      if (event.type !== 'create') return;
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      // A new message in the chat that's open on screen: the chat shows it already.
+      if (event.data.type === 'chat_message' && chatOnScreen(event.data.data?.conversation_id)) return;
+      toast.info(event.data.title, {
+        description: event.data.message,
+        duration: 5000,
+      });
+      if (event.data.priority === 'high' || event.data.priority === 'critical') {
+        playNotificationSound();
       }
     }).then(fn => { if (cancelled) fn(); else unsubscribeFn = fn; });
 
