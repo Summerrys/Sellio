@@ -74,9 +74,13 @@ globalThis.supabaseFixture = {
     globalThis.rpcCalls.push({ name, args });
     if (name === 'get_storefront_tenant') return chain({ data: TENANT, error: null });
     if (name === 'place_order_once') return chain({ data: order(), error: null });
-    if (name === 'get_storefront_orders' || name === 'get_shop_orders') {
+    if (/^get_(storefront|shop)_orders(_v2)?$/.test(name)) {
+      // As the database: the _v2 lookups give each order's note, the old ones don't.
+      if (name.endsWith('_v2') && globalThis.v2Missing) return chain({ data: null, error: { code: 'PGRST202', message: 'Could not find the function' } });
       const ids = args?.p_order_ids || [];
-      const rows = [order({ status: globalThis.orderStatus }), order({ id: 'order-0', order_number: 'A09', status: 'completed' })].filter((row) => ids.includes(row.id));
+      const rows = [order({ status: globalThis.orderStatus }), order({ id: 'order-0', order_number: 'A09', status: 'completed', notes: null })]
+        .filter((row) => ids.includes(row.id))
+        .map((row) => (name.endsWith('_v2') ? row : (({ notes, ...rest }) => rest)(row)));
       return chain({ data: rows, error: null });
     }
     return chain({ data: null, error: null });
@@ -96,6 +100,7 @@ await writeFile(entry, [
   "export { default as OrderTracker, orderStatusLine, useOrderStatus } from '@/components/storefront/OrderTracker';",
   "export { default as OrderPlacedCheck, launchConfetti } from '@/components/storefront/OrderPlacedCheck';",
   "export { __DICTIONARY as DICTIONARY } from '@/lib/LanguageContext';",
+  "export { ShopOrderHistory } from '@/components/shop/ShopStorefront';",
 ].join('\n'));
 const stubs = {
   sonner: 'const note = () => {}; export const toast = Object.assign(note, { success: note, error: note, info: note, custom: note, message: note, dismiss() {} }); export const Toaster = () => null;',
@@ -306,7 +311,38 @@ try {
     assert.deepEqual(statuses, ['Preparing', 'Done'], 'not the database’s own words');
     assert.ok([...document.body.querySelectorAll('p')].some((p) => text(p) === 'Your orders'), 'titled Your orders');
     assert.equal(text(document.body.querySelector('[data-testid="history-item-note"]')), 'Note: Less sugar, extra crispy');
-    passed('Your orders: titled so, the same status words, and what was asked for each item');
+    assert.ok(globalThis.rpcCalls.some((c) => c.name === 'get_storefront_orders_v2' && c.args.p_order_ids.length === 2), 'Your orders asks the lookup with notes');
+    const orderNotes = [...document.body.querySelectorAll('[data-testid="history-order-note"]')];
+    assert.equal(orderNotes.length, 1, 'only the order with a note shows one');
+    assert.deepEqual([...orderNotes[0].querySelectorAll('p')].map(text), ['Your note', 'Please pack the sauce separately.'], "the whole order's note");
+    passed('Your orders: titled so, the same status words, what was asked for each item, and the note for the whole order');
+
+    // Without the lookup with notes (an older database): the orders still show, without the note.
+    await click(buttonMatching(/^✕$/));
+    globalThis.v2Missing = true;
+    globalThis.rpcCalls = [];
+    await click(buttonMatching(/^Your orders$/));
+    await wait(30);
+    assert.ok(globalThis.rpcCalls.some((c) => c.name === 'get_storefront_orders' && c.args.p_order_ids.length === 2), 'falls back to the old lookup');
+    assert.deepEqual([...document.body.querySelectorAll('[data-testid="history-status"]')].map((s) => text(s)), ['Preparing', 'Done']);
+    assert.equal(document.body.querySelector('[data-testid="history-order-note"]'), null);
+    globalThis.v2Missing = false;
+    passed('Your orders: if the lookup with notes fails, the old lookup still lists the orders');
+  }
+
+  // ── A home shop's Your orders: the whole order's note too, in the buyer's language ────────
+  {
+    const shopOrder = (over = {}) => ({ id: 'shop-1', order_number: 'S01', status: 'confirmed', payment_status: 'unpaid', total_amount: 12, created_date: '2026-11-15T03:30:00Z',
+      fulfilment: { method: 'collection', area: 'Woodlands' }, items: [{ name: 'Brownies', price: 6, quantity: 2, notes: null }], notes: 'Leave at the guardhouse please', ...over });
+    const words = { en: 'Your note', zh: '您的备注', ms: 'Nota anda', id: 'Catatan Anda' };
+    for (const [lang, label] of Object.entries(words)) {
+      await mount(h(app.ShopOrderHistory, { orders: [shopOrder(), shopOrder({ id: 'shop-2', order_number: 'S02', notes: null })], currency: 'SGD', lang, food: true, primaryColor: '#4f46e5' }));
+      const notes = [...document.body.querySelectorAll('[data-testid="shop-history-order-note"]')];
+      assert.equal(notes.length, 1, `${lang}: only the order with a note`);
+      assert.deepEqual([...notes[0].querySelectorAll('p')].map(text), [label, 'Leave at the guardhouse please'], lang);
+      await unmountAll();
+    }
+    passed("A home shop's Your orders shows the whole order's note, in all four languages");
   }
 
   console.log(`${passes} order-placed checks passed`);

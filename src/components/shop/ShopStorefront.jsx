@@ -243,6 +243,13 @@ export function ShopOrderHistory({ orders, currency, lang, food, primaryColor, p
             {item.notes && <p style={{ margin: '1px 0 3px', fontSize: 11.5, color: '#475569', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{T('itemNote').replace('{note}', item.notes)}</p>}
           </div>
         ))}
+        {/* The note for the whole order (get_shop_orders_v2, 16 Nov 2026). */}
+        {order.notes && (
+          <div data-testid="shop-history-order-note" style={{ marginTop: 8, padding: '8px 10px', background: '#fff', borderRadius: 8, border: '1px solid #f1f5f9' }}>
+            <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, color: '#64748b', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{T('yourNote')}</p>
+            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#0f172a', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{order.notes}</p>
+          </div>
+        )}
         <div style={{ margin: '8px 0' }}><ShopOrderDetails order={{ ...order, status: null }} currency={currency} lang={lang} food={food} /></div>
         <div style={{ borderTop: '0.5px solid #e5e7eb', paddingTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 700, fontSize: 13 }}>
           <span>{T('total')} <span style={{ fontWeight: 500, fontSize: 11, color: order.payment_status === 'paid' ? '#16a34a' : '#b45309' }}>· {order.payment_status === 'paid' ? T('paid') : T('notPaid')}</span></span>

@@ -659,13 +659,17 @@ function StorefrontInner() {
     });
   }, [tenant?.id]);
 
-  // The orders placed from this phone (their ids are kept here).
+  // The orders placed from this phone (their ids are kept here), with the note written for
+  // each whole order (the _v2 lookups, 16 Nov 2026; the old ones, without notes, if they fail).
   const fetchSavedOrders = async () => {
     if (!tenant) return [];
     const currentSessionOrders = (() => { try { const s = localStorage.getItem(SESSION_ORDERS_KEY); return s ? JSON.parse(s) : []; } catch { return []; } })();
     if (!currentSessionOrders.length) return [];
     const supabase = await getSupabase();
-    const { data } = await supabase.rpc(shopSelling ? 'get_shop_orders' : 'get_storefront_orders', { p_tenant_id: tenant.id, p_order_ids: currentSessionOrders });
+    const lookup = shopSelling ? 'get_shop_orders' : 'get_storefront_orders';
+    const params = { p_tenant_id: tenant.id, p_order_ids: currentSessionOrders };
+    let { data, error } = await supabase.rpc(`${lookup}_v2`, params);
+    if (error) ({ data } = await supabase.rpc(lookup, params));
     return data || [];
   };
 
@@ -1109,6 +1113,12 @@ function StorefrontInner() {
                         )}
                       </div>
                     ))}
+                    {order.notes && (
+                      <div data-testid="history-order-note" style={{ marginTop: 8, padding: '8px 10px', background: '#fff', borderRadius: 8, border: '1px solid #f1f5f9' }}>
+                        <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, color: '#64748b', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{t('yourNote')}</p>
+                        <p style={{ margin: '2px 0 0', fontSize: 12, color: '#0f172a', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{order.notes}</p>
+                      </div>
+                    )}
                     <div style={{ borderTop: '0.5px solid #e5e7eb', marginTop: 8, paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 13 }}>
                       <span>{t('total')}</span>
                       <span style={{ color: primaryColor }}>{money(order.total_amount)}</span>
