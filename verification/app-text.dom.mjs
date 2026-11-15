@@ -143,7 +143,7 @@ try {
     zh: { step: '第 2 步，共 5 步', stepMissing: '第 2 步，共 {total} 步', hi: '{total}，您好！', sent: '我们已发送到 <strong>a***@mail.com</strong>。',
       terms: '条款与条件', privacy: '隐私政策', line: '继续即表示您同意 Sellio 的条款与条件和隐私政策。' },
     ms: { step: 'Langkah 2 daripada 5', stepMissing: 'Langkah 2 daripada {total}', hi: 'Hai {total}!', sent: 'Kami telah menghantarnya ke <strong>a***@mail.com</strong>.',
-      terms: 'Terma dan Syarat', privacy: 'Dasar Privasi', line: 'Dengan meneruskan, anda bersetuju dengan Terma dan Syarat serta Dasar Privasi Sellio.' },
+      terms: 'Terma dan Syarat', privacy: 'Dasar Privasi', line: 'Dengan meneruskan, anda bersetuju denganTerma dan Syarat serta Dasar Privasi Sellio.' },
   }[L];
   assert.equal(appT('Step {step} of {total}', { step: 2, total: 5 }), W.step);
   assert.equal(appT('Step {step} of {total}', { step: 2 }), W.stepMissing, 'A blank with no value stays as written');

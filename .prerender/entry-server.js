@@ -1062,6 +1062,7 @@ const APP_LANGUAGES = [
 Object.fromEntries(APP_LANGUAGES.map(({ code, locale }) => [code, locale]));
 const LOADERS = {
   zh: () => import("./assets/index-sk-2S93Z.js"),
+  ms: () => import("./assets/index-DgFJTYeY.js"),
   id: () => import("./assets/index-B9Z8TIsV.js")
 };
 const TRANSLATED = Object.keys(LOADERS);

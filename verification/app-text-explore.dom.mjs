@@ -9,6 +9,7 @@ process.env.TZ = 'UTC';
 // The language under test: Indonesian, or 中文 / Malay (APP_TEXT_LANGUAGE=zh|ms, as
 // app-text-explore-zh.dom.mjs and app-text-explore-ms.dom.mjs run it): the same screens, no English left.
 const L = process.env.APP_TEXT_LANGUAGE || 'id';
+const LANGUAGE_NAME = { id: 'Indonesian', zh: '中文', ms: 'Malay' }[L];
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { build } from 'esbuild';
@@ -281,7 +282,7 @@ try {
   checkScreen(page.host, 'Explore', ['Toko di Sellio', 'Temuan terbaru', 'Nasi Goreng Spesial', 'Penjual rumahan', '5 menit lalu', '2 hari lalu', 'Masuk', 'Daftar',
     'Cari produk atau toko', 'Semua', 'Makanan & minuman', 'Barang', 'Merchant', 'Didukung oleh', 'Beranda', 'Produk', 'Saya', 'Sukai Nasi Goreng Spesial (3 suka)', 'Rp25.000']);
   await page.unmount();
-  passed('Explore: the feed, its chips, cards (time, hearts, prices), the header and tab bar in Indonesian');
+  passed(`Explore: the feed, its chips, cards (time, hearts, prices), the header and tab bar in ${LANGUAGE_NAME}`);
 
   // 4. A listing
   page = await mount(h(app.ListingPage), { at: '/listing/p-nasi', path: '/listing/:productId' });
@@ -289,7 +290,7 @@ try {
   checkScreen(page.host, 'A listing', ['Rp25.000', '3 suka', 'Diunggah 5 menit lalu', 'Penjual rumahan · 4 item', 'Di Sellio sejak', 'Lihat toko', 'Opsi transaksi',
     'Ambil sendiri', 'Kebayoran Baru', 'Ongkir Rp10.000 · gratis di atas Rp100.000', 'Pesan minimal 2 hari sebelumnya', 'Deskripsi', 'Suka', 'Chat', 'Beli sekarang', 'Tambah ke keranjang']);
   await page.unmount();
-  passed('A listing: likes, when it was listed, the shop, delivery and pre-order terms, the buyer’s bar in Indonesian');
+  passed(`A listing: likes, when it was listed, the shop, delivery and pre-order terms, the buyer’s bar in ${LANGUAGE_NAME}`);
 
   // 5. The cart
   app.addToShopCart('warung-bu-sri', { id: 'p-nasi', name: 'Nasi Goreng Spesial', price: 25000, image_url: null }, null, 'Tanpa bawang', 2, { name: 'Warung Bu Sri', currency: 'IDR' });
@@ -298,7 +299,7 @@ try {
   checkScreen(page.host, 'The cart', ['Keranjang', '2 item', 'Catatan: Tanpa bawang', 'Rp25.000 per item', 'Subtotal', 'Rp50.000', 'Checkout', 'Kurangi satu Nasi Goreng Spesial',
     'Tambah satu Nasi Goreng Spesial', 'Lanjut belanja']);
   await page.unmount();
-  passed('The cart: its counts, prices, note, steppers and checkout in Indonesian');
+  passed(`The cart: its counts, prices, note, steppers and checkout in ${LANGUAGE_NAME}`);
 
   // 6. Signed out: My likes, My purchases, Me
   page = await mount(h(app.ExploreLikes));
@@ -310,7 +311,7 @@ try {
   page = await mount(h(app.ExploreMe));
   checkScreen(page.host, 'Me, signed out', ['Saya', 'Beli dan jual di Sellio', 'Masuk untuk chat dengan penjual dan memantau produk Anda.', 'Privasi', 'Ketentuan']);
   await page.unmount();
-  passed('Signed out: My likes, My purchases and Me ask to log in, in Indonesian');
+  passed(`Signed out: My likes, My purchases and Me ask to log in, in ${LANGUAGE_NAME}`);
 
   // 7. Signed in: an order, chats, a chat
   globalThis.signedIn = true;
@@ -321,7 +322,7 @@ try {
     'Untuk Min, 15 Nov', 'Kebayoran Baru.', 'Penjual akan memberikan alamat lengkap setelah menerima pesanan Anda.', 'Pedas', 'Tanpa bawang', 'Total', 'Belum dibayar',
     'Chat dengan penjual', 'Kunjungi Warung Bu Sri']);
   await page.unmount();
-  passed('An order: its status and steps, collection details, items, total and actions in Indonesian, dates day first');
+  passed(`An order: its status and steps, collection details, items, total and actions in ${LANGUAGE_NAME}${L === 'zh' ? '' : ', dates day first'}`);
 
   page = await mount(h(app.ChatInbox, { box: 'all', hrefFor: (c) => `/explore/chats/${c.id}`, emptyText: appT('Chats you start about listings show up here.') }));
   await settle(200);
@@ -334,7 +335,7 @@ try {
   checkScreen(page.host, 'A new chat', ['Terakhir dilihat 12 menit lalu', 'Penjual', 'Tanyakan produk ini ke Warung Bu Sri.', 'Apakah ini masih tersedia?', 'Bisa saya ambil hari ini?',
     'Bisa dikirim?', 'Tulis pesan']);
   await page.unmount();
-  passed('Chats and a chat: who, when they were last on Sellio, the listing and the quick questions in Indonesian');
+  passed(`Chats and a chat: who, when they were last on Sellio, the listing and the quick questions in ${LANGUAGE_NAME}`);
 
   // 8. Ratings: the shop's page, the sheets
   globalThis.tenantFixture = { tenant: { id: 't-sri', name: 'Warung Bu Sri', seller_type: 'individual' }, tenantId: 't-sri', user: null, hasPermission: () => true, isOwner: true, noStore: false, subscription: null };
@@ -357,7 +358,7 @@ try {
   const store = [visible(page.host), ...labels(page.host)].join(' | ');
   assert.ok(store.includes('12 ratings') && store.includes('Rated 4.6 out of 5 by 12 buyers') && store.includes('How was your order?'), `On a store page (no t): English: ${store}`);
   await page.unmount();
-  passed('Ratings: the shop’s page, the rating window and rating an order in Indonesian; on a store page (no t) the same parts stay English');
+  passed(`Ratings: the shop’s page, the rating window and rating an order in ${LANGUAGE_NAME}; on a store page (no t) the same parts stay English`);
 
   // 9. Sheets
   page = await mount(h(app.ShareSheet, { open: true, onClose() {}, url: 'https://sellio.sg/listing/p-nasi', title: 'Nasi Goreng Spesial', priceText: 'Rp25.000', shopName: 'Warung Bu Sri', t: appT }));

@@ -31,6 +31,7 @@ const LOCALE = Object.fromEntries(APP_LANGUAGES.map(({ code, locale }) => [code,
 // Each language's words: one file per group of screens, loaded the first time someone sees it.
 const LOADERS = {
   zh: () => import('../locales/zh/index.js'),
+  ms: () => import('../locales/ms/index.js'),
   id: () => import('../locales/id/index.js'),
 };
 const TRANSLATED = Object.keys(LOADERS);
@@ -41,7 +42,7 @@ const TRANSLATED = Object.keys(LOADERS);
 // Malay wait for their reviews (Xie Lao Ma, the Wellness shop). Switch a language's groups on
 // together: a shop screen of a group that isn't on would show the phrases it shares with one
 // that is.
-export const LIVE_GROUPS = { zh: [], id: ['signup', 'shop'] };
+export const LIVE_GROUPS = { zh: [], ms: [], id: ['signup', 'shop'] };
 const liveGroups = (language) => LIVE_GROUPS[language] || [];
 
 // Shops whose team gets a language before everyone else, on every screen while they work in
