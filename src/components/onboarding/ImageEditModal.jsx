@@ -20,6 +20,13 @@ export default function ImageEditModal({
   preserveResolution = true,
   title,
   recommendation = '',
+  // Optional (Scan Menu, 16 Nov 2026): open with this part of the photo already boxed for
+  // cropping ({ x, y, width, height } in the photo's own pixels), and a taller view than 300px.
+  // Cancel on that box closes the editor with nothing changed. onSave gets, after the picture,
+  // { crop }: the part of the photo it was given that the picture is (in the same pixels), when
+  // it is just that (not turned, not another photo), else null.
+  initialCrop = null,
+  canvasMaxHeight = 300,
 }) {
   const { t } = useAppText();
   const canvasRef = useRef(null);
@@ -56,6 +63,8 @@ export default function ImageEditModal({
   const [dragMode, setDragMode] = useState(null);
   const [dragOffset, setDragOffset] = useState(null);
   const [dragDimensions, setDragDimensions] = useState(null);
+  // Still on the box it opened with (initialCrop): Cancel closes the editor.
+  const [onOpeningBox, setOnOpeningBox] = useState(false);
 
   const imgRef = useRef(new Image());
   // The photo on screen, once it has opened: Save, Rotate and Crop wait for it, and for a photo
@@ -91,7 +100,7 @@ export default function ImageEditModal({
     const img = imgRef.current;
     const container = containerRef.current;
     const maxW = container ? container.offsetWidth - 32 : 320;
-    const maxH = 300;
+    const maxH = canvasMaxHeight;
     const w = img.naturalWidth, h = img.naturalHeight;
     const swapped = current.rotation % 180 !== 0;
     const dW = swapped ? h : w, dH = swapped ? w : h;
@@ -110,11 +119,31 @@ export default function ImageEditModal({
     ctx.restore();
   }, [ready, current]);
 
+  // The box it opens with (initialCrop), once the photo it was given is on screen as it came.
+  const initialCropShown = useRef(false);
+  useEffect(() => {
+    if (!ready || !initialCrop || initialCropShown.current || history.length !== 1 || current.rotation !== 0) return;
+    const canvas = canvasRef.current;
+    const naturalWidth = imgRef.current?.naturalWidth;
+    if (!canvas?.width || !naturalWidth) return;
+    initialCropShown.current = true;
+    const scale = canvas.width / naturalWidth;
+    const inside = (n, max) => Math.max(0, Math.min(max, n));
+    const x1 = inside(initialCrop.x * scale, canvas.width), y1 = inside(initialCrop.y * scale, canvas.height);
+    const x2 = inside((initialCrop.x + initialCrop.width) * scale, canvas.width), y2 = inside((initialCrop.y + initialCrop.height) * scale, canvas.height);
+    if (x2 - x1 < 5 || y2 - y1 < 5) return;
+    setTool(TOOLS.CROP);
+    setCropStart({ x: x1, y: y1 });
+    setCropEnd({ x: x2, y: y2 });
+    setOnOpeningBox(true);
+  }, [ready, current, history.length]);
+
   const pushHistory = (newState) => {
     setHistory(prev => [...prev, newState]);
     setCurrent(newState);
     setTool(TOOLS.NONE);
     setCropStart(null); setCropEnd(null);
+    setOnOpeningBox(false);
   };
 
   const handleRotateByDegree = (degrees) => pushHistory({ ...current, rotation: (degrees + 360) % 360 });
@@ -261,12 +290,38 @@ export default function ImageEditModal({
     return output;
   };
 
+  // The crop box in the pixels of the photo on screen, as that photo came (not turned).
+  const boxInPhoto = () => {
+    const canvas = canvasRef.current;
+    const image = imgRef.current;
+    const naturalWidth = image?.naturalWidth || 0, naturalHeight = image?.naturalHeight || 0;
+    if (!cropStart || !cropEnd || !canvas?.width || !canvas?.height || !naturalWidth || !naturalHeight || current.rotation !== 0) return null;
+    const kx = naturalWidth / canvas.width, ky = naturalHeight / canvas.height;
+    const x = Math.min(cropStart.x, cropEnd.x), y = Math.min(cropStart.y, cropEnd.y);
+    return { x: x * kx, y: y * ky, width: Math.abs(cropEnd.x - cropStart.x) * kx, height: Math.abs(cropEnd.y - cropStart.y) * ky };
+  };
+
   const renderCrop = (useNativeResolution) => {
     const x = Math.min(cropStart.x, cropEnd.x);
     const y = Math.min(cropStart.y, cropEnd.y);
     const w = Math.abs(cropEnd.x - cropStart.x);
     const h = Math.abs(cropEnd.y - cropStart.y);
     if (w < 5 || h < 5) return null;
+
+    // Straight from the photo when it isn't turned, so a small part of a big photo (a dish on a
+    // menu) keeps its own pixels, up to MAX_SAVED_SIDE, rather than being cut from a copy of
+    // the whole photo made MAX_SAVED_SIDE on its long side.
+    const box = useNativeResolution ? boxInPhoto() : null;
+    if (box) {
+      const fit = Math.min(1, MAX_SAVED_SIDE / Math.max(box.width, box.height));
+      const output = document.createElement('canvas');
+      output.width = Math.max(1, Math.round(box.width * fit));
+      output.height = Math.max(1, Math.round(box.height * fit));
+      const context = output.getContext('2d');
+      context.imageSmoothingQuality = 'high';
+      context.drawImage(imgRef.current, box.x, box.y, box.width, box.height, 0, 0, output.width, output.height);
+      return output;
+    }
 
     const source = useNativeResolution ? renderCurrentAtNativeResolution() : canvasRef.current;
     const scaleX = source.width / canvasRef.current.width;
@@ -292,7 +347,9 @@ export default function ImageEditModal({
     if (!ready || !cropStart || !cropEnd) return;
     const output = renderCrop(preserveResolution);
     if (!output) return;
-    pushHistory({ imageSrc: output.toDataURL('image/jpeg', 0.92), rotation: 0 });
+    // A crop of the photo it was given: which part (for onSave).
+    const crop = history.length === 1 ? boxInPhoto() : null;
+    pushHistory({ imageSrc: output.toDataURL('image/jpeg', 0.92), rotation: 0, crop });
   };
 
   const handleSave = () => {
@@ -304,7 +361,10 @@ export default function ImageEditModal({
         ? renderCurrentAtNativeResolution()
         : canvasRef.current;
     if (!output) return;
-    onSave(output.toDataURL('image/jpeg', 0.92));
+    const crop = isActiveCrop
+      ? (history.length === 1 ? boxInPhoto() : null)
+      : (current.rotation === 0 && current.crop) || null;
+    onSave(output.toDataURL('image/jpeg', 0.92), { crop });
     onClose();
   };
 
@@ -420,7 +480,7 @@ export default function ImageEditModal({
         <div className="flex gap-3 px-4 py-4 border-t border-slate-100">
           <button
             onClick={() => {
-              if (isCropping) {
+              if (isCropping && !onOpeningBox) {
                 setTool(TOOLS.NONE);
                 setCropStart(null);
                 setCropEnd(null);

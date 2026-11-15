@@ -269,8 +269,24 @@ try {
     builder.onResolve({ filter: /base44Client$/ }, () => ({ path: 'client', namespace: 'scan-fixture' }));
     builder.onLoad({ filter: /.*/, namespace: 'scan-fixture' }, () => ({ contents: 'export const base44 = {};', loader: 'js' }));
   } };
-  const { ScanMenuDialog } = await loadComponent('src/pages/Products.jsx', [mock, scanMocks]);
+  // The photo is prepared on a canvas (src/lib/menuScan.js), which jsdom can't draw: these
+  // stand in for preparing it and cutting pictures; the rest of menuScan.js is the real one.
+  const scanPhotoStandIn = { name: 'scan-photo', setup(builder) {
+    builder.onResolve({ filter: /lib\/menuScan(\.js)?$/ }, args => (args.namespace === 'scan-photo' ? undefined : { path: 'menuScan', namespace: 'scan-photo' }));
+    builder.onLoad({ filter: /.*/, namespace: 'scan-photo' }, () => ({ resolveDir: path.join(app, 'src/lib'), loader: 'js', contents: [
+      "export * from './menuScan.js';",
+      'export const prepareMenuPhoto = (file) => globalThis.__scanPhoto(file);',
+      'export const cutPicture = (img, rect) => globalThis.__cutPicture(img, rect);',
+    ].join('\n') }));
+  } };
+  const { ScanMenuDialog } = await loadComponent('src/pages/Products.jsx', [mock, scanMocks, scanPhotoStandIn]);
   let scanReadFails = false;
+  globalThis.__scanPhoto = async () => {
+    await next();
+    if (scanReadFails) throw new Error('unreadable');
+    return { base64: 'cGhvdG8=', mediaType: 'image/jpeg', width: 2236, height: 1677, full: null };
+  };
+  globalThis.__cutPicture = async () => null;
   globalThis.FileReader = class {
     readAsDataURL() {
       this.readyState = 1;
@@ -296,9 +312,11 @@ try {
   let scanFails = true;
   globalThis.fetch = async (url, options) => {
     scanRequests.push({ url, options });
-    return { ok: !scanFails, json: async () => scanFails ? ({ error: 'Try a clearer menu photo.' }) : ({
+    const answer = scanFails ? ({ error: 'Try a clearer menu photo.' }) : ({
       items: [{ name: 'Fixture Latte', price: 4, category: 'Drinks' }, { name: 'Fixture Tea', price: 3, category: 'Drinks' }],
-    }) };
+    });
+    // scanMenu v21 starts its reply at once: spaces, then the answer.
+    return { ok: !scanFails, text: async () => '  ' + JSON.stringify(answer) };
   };
   const closeCalls = [];
   const scanProps = { open: false, photo: fixturePhoto, onPhoto() {}, tenantId: 'scan-fixture', categories: [{ id: 'fixture-drinks', name: 'Drinks' }], maxProducts: 2, currentProductCount: 1, onOpenChange: value => closeCalls.push(value) };
@@ -311,6 +329,8 @@ try {
   assert.equal(scan.container.querySelector('input[aria-label="Upload menu photo"]'), null, 'No upload/take-photo choice sheet');
   assert.equal(scanRequests[0].options.headers.Authorization, 'Bearer scan-test-fixture');
   assert.equal(JSON.parse(scanRequests[0].options.body).tenantId, 'scan-fixture');
+  assert.deepEqual((({ imageBase64, mediaType, imageWidth, imageHeight, version }) => ({ imageBase64, mediaType, imageWidth, imageHeight, version }))(JSON.parse(scanRequests[0].options.body)),
+    { imageBase64: 'cGhvdG8=', mediaType: 'image/jpeg', imageWidth: 2236, imageHeight: 1677, version: 2 }, 'The photo goes at the size the AI reads it, with its size');
   assert.match(scan.container.textContent, /Try a clearer menu photo/);
   scanFails = false;
   await act(async () => { click([...scan.container.querySelectorAll('button')].find(button => button.textContent === 'Try Again')); await next(); });
@@ -342,12 +362,12 @@ try {
   await stale.render({ ...scanProps, open: true, photo: new window.File(['new'], 'retake.jpg', { type: 'image/jpeg' }) });
   await act(async () => next());
   await act(async () => {
-    responses[0].resolve({ ok: true, json: async () => ({ items: [{ name: 'Stale capture', price: 1 }] }) });
+    responses[0].resolve({ ok: true, text: async () => JSON.stringify({ items: [{ name: 'Stale capture', price: 1 }] }) });
     await next();
   });
   assert.equal(stale.container.querySelector('input[placeholder="Product name"]'), null);
   await act(async () => {
-    responses[1].resolve({ ok: true, json: async () => ({ items: [{ name: 'Fresh capture', price: 2 }] }) });
+    responses[1].resolve({ ok: true, text: async () => JSON.stringify({ items: [{ name: 'Fresh capture', price: 2 }] }) });
     await next();
   });
   assert.equal(stale.container.querySelector('input[placeholder="Product name"]').value, 'Fresh capture');
