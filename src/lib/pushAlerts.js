@@ -1,4 +1,5 @@
 import { appPlatform, isNativeApp } from './nativeApp.js'; // with .js, as pushOffer.js
+import { englishText } from './appText.js';
 
 // Sellio's alerts outside the page (a phone or browser notification): which kind this device
 // can get, and the module that handles them. Both modules have the same functions:
@@ -29,19 +30,20 @@ export function loadAlerts(kind = alertsKind()) {
 }
 
 // The words for this phone or this browser (PushPrompt and the empty notifications list).
-export function alertWords(kind = alertsKind()) {
+// In English unless the screen passes its words (t), as the other shared helpers do.
+export function alertWords(kind = alertsKind(), t = englishText) {
   return kind === 'web'
     ? {
-      on: 'Alerts are on for this browser',
-      settings: "You can allow them later in your browser's settings for this site.",
-      failed: "Alerts couldn't be turned on just now. Sellio tries again next time you open it.",
-      button: 'Turn on browser alerts',
+      on: t('Alerts are on for this browser'),
+      settings: t("You can allow them later in your browser's settings for this site."),
+      failed: t("Alerts couldn't be turned on just now. Sellio tries again next time you open it."),
+      button: t('Turn on browser alerts'),
     }
     : {
-      on: 'Alerts are on for this phone',
-      settings: "You can turn them on later in your phone's Settings: Apps → Sellio → Notifications.",
-      failed: "Alerts couldn't be turned on just now. Sellio tries again next time you open it.",
-      button: 'Turn on phone alerts',
+      on: t('Alerts are on for this phone'),
+      settings: t("You can turn them on later in your phone's Settings: Apps → Sellio → Notifications."),
+      failed: t("Alerts couldn't be turned on just now. Sellio tries again next time you open it."),
+      button: t('Turn on phone alerts'),
     };
 }
 

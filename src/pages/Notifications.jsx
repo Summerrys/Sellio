@@ -5,12 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Bell, ShoppingBag, AlertTriangle, Users, Search, Check, SlidersHorizontal, X } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatAppDate } from '@/lib/appDates';
 import { useNavigate } from 'react-router-dom';
 import { useTenant } from '@/components/tenant/TenantContext';
 import { useFirstLoad } from '@/lib/useFirstLoad';
 import LoadingShapes, { ListShapes } from '@/components/ui-custom/LoadingShapes';
 import NotificationsEmpty from '@/components/notifications/NotificationsEmpty';
+import { useAppText, N_ } from '@/lib/appText';
 
 const NOTIFICATION_ICONS = {
   new_order: ShoppingBag,
@@ -33,14 +34,15 @@ const NOTIFICATION_COLORS = {
 };
 
 const TYPE_FILTERS = [
-  { value: 'all', label: 'All types' },
-  { value: 'new_order', label: 'New orders' },
-  { value: 'low_stock', label: 'Low stock' },
-  { value: 'staff_joined', label: 'Staff' },
-  { value: 'system', label: 'Announcements' },
+  { value: 'all', label: N_('All types') },
+  { value: 'new_order', label: N_('New orders') },
+  { value: 'low_stock', label: N_('Low stock') },
+  { value: 'staff_joined', label: N_('Staff') },
+  { value: 'system', label: N_('Announcements') },
 ];
 
 export default function Notifications() {
+  const { t } = useAppText();
   const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   // NotificationProvider's list, on its first load (its key: ['notifications', email]).
@@ -77,26 +79,26 @@ export default function Notifications() {
   return (
     <div className="min-w-0 space-y-3">
       <header className="flex items-center justify-between gap-2">
-        <h1 className="min-w-0 text-xl font-bold tracking-tight text-foreground [overflow-wrap:anywhere]">Notifications</h1>
+        <h1 className="min-w-0 text-xl font-bold tracking-tight text-foreground [overflow-wrap:anywhere]">{t('Notifications')}</h1>
         {unreadCount > 0 && (
           <Button
             onClick={markAllAsRead}
             variant="outline"
             className="min-h-[44px] min-w-[44px] shrink-0 px-2 text-xs sm:px-3"
-            aria-label="Mark all as read"
-            title="Mark all as read"
+            aria-label={t('Mark all as read')}
+            title={t('Mark all as read')}
           >
             <Check className="h-4 w-4" aria-hidden="true" />
-            <span className="hidden sm:inline">Read all</span>
+            <span className="hidden sm:inline">{t('Read all')}</span>
           </Button>
         )}
       </header>
 
-      <div className="grid grid-cols-3 gap-2" aria-label="Filter notifications by read status">
+      <div className="grid grid-cols-3 gap-2" aria-label={t('Filter notifications by read status')}>
         {[
-          { value: 'all', label: 'Total', count: notifications.length },
-          { value: 'unread', label: 'Unread', count: unreadCount },
-          { value: 'read', label: 'Read', count: notifications.length - unreadCount },
+          { value: 'all', label: t('Total'), count: notifications.length },
+          { value: 'unread', label: t('Unread'), count: unreadCount },
+          { value: 'read', label: t('Read'), count: notifications.length - unreadCount },
         ].map(({ value, label, count }) => (
           <button
             key={value}
@@ -121,8 +123,8 @@ export default function Notifications() {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
           <Input
             type="search"
-            aria-label="Search notifications"
-            placeholder="Search notifications"
+            aria-label={t('Search notifications')}
+            placeholder={t('Search notifications')}
             value={searchQuery}
             onChange={event => setSearchQuery(event.target.value)}
             className="h-11 min-w-0 rounded-xl pl-9 pr-9"
@@ -130,7 +132,7 @@ export default function Notifications() {
           {searchQuery && (
             <button
               type="button"
-              aria-label="Clear search"
+              aria-label={t('Clear search')}
               onClick={() => setSearchQuery('')}
               className="absolute right-0 top-0 flex h-full w-9 items-center justify-center rounded-r-xl text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary))]"
             >
@@ -143,8 +145,8 @@ export default function Notifications() {
             <Button
               variant="outline"
               className="relative h-11 w-11 shrink-0 rounded-xl p-0"
-              aria-label={`Filter notification type: ${TYPE_FILTERS.find(filter => filter.value === typeFilter)?.label}`}
-              title="Filter by type"
+              aria-label={t('Filter notification type: {type}', { type: t(TYPE_FILTERS.find(filter => filter.value === typeFilter)?.label || 'All types') })}
+              title={t('Filter by type')}
               style={typeFilter !== 'all' ? { borderColor: 'rgb(var(--color-primary))', color: 'rgb(var(--color-primary))' } : undefined}
             >
               <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
@@ -160,8 +162,8 @@ export default function Notifications() {
               maxHeight: 'min(400px, var(--radix-popover-content-available-height, 70dvh))',
             }}
           >
-            <p className="px-2 py-1 text-xs font-semibold text-muted-foreground">Type</p>
-            <div role="group" aria-label="Notification type">
+            <p className="px-2 py-1 text-xs font-semibold text-muted-foreground">{t('Type')}</p>
+            <div role="group" aria-label={t('Notification type')}>
               {TYPE_FILTERS.map(({ value, label }) => (
                 <button
                   type="button"
@@ -171,7 +173,7 @@ export default function Notifications() {
                   className="flex min-h-[44px] w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary))]"
                   style={typeFilter === value ? { backgroundColor: 'rgb(var(--color-primary) / 0.08)', color: 'rgb(var(--color-primary))' } : undefined}
                 >
-                  <span className="min-w-0 [overflow-wrap:anywhere]">{label}</span>
+                  <span className="min-w-0 [overflow-wrap:anywhere]">{t(label)}</span>
                   {typeFilter === value && <Check className="h-4 w-4 shrink-0" aria-hidden="true" />}
                 </button>
               ))}
@@ -182,15 +184,15 @@ export default function Notifications() {
 
       <div className="min-w-0 space-y-2">
         {loading ? (
-          <LoadingShapes label="Loading notifications"><ListShapes rows={6} picture="round" side={false} /></LoadingShapes>
+          <LoadingShapes label={t('Loading notifications')}><ListShapes rows={6} picture="round" side={false} /></LoadingShapes>
         ) : !notifications.length ? (
           <NotificationsEmpty />
         ) : filteredNotifications.length === 0 ? (
           <div className="rounded-xl border bg-card p-6 text-center">
             <Bell className="mx-auto mb-2 h-8 w-8 text-muted-foreground" aria-hidden="true" />
-            <p className="text-sm text-muted-foreground">No matching notifications</p>
+            <p className="text-sm text-muted-foreground">{t('No matching notifications')}</p>
             {(query || typeFilter !== 'all' || statusFilter !== 'all') && (
-              <Button variant="ghost" onClick={resetFilters} className="mt-2 min-h-[44px]">Clear filters</Button>
+              <Button variant="ghost" onClick={resetFilters} className="mt-2 min-h-[44px]">{t('Clear filters')}</Button>
             )}
           </div>
         ) : filteredNotifications.map(notification => {
@@ -211,14 +213,14 @@ export default function Notifications() {
                 <span className="min-w-0 flex-1">
                   <span className="flex items-start gap-2">
                     <span className="min-w-0 flex-1 text-sm font-semibold leading-snug text-foreground [overflow-wrap:anywhere]">{notification.title}</span>
-                    {!notification.is_read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[rgb(var(--color-primary))]" aria-label="Unread" />}
+                    {!notification.is_read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[rgb(var(--color-primary))]" aria-label={t('Unread')} />}
                   </span>
                   <span className="mt-1 block text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">{notification.message}</span>
                   <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                     <time dateTime={notification.created_date} className="text-xs text-muted-foreground [overflow-wrap:anywhere]">
-                      {format(new Date(notification.created_date), 'MMM d, HH:mm')}
+                      {formatAppDate(new Date(notification.created_date), 'MMM d, HH:mm')}
                     </time>
-                    {notification.priority === 'high' && <Badge variant="destructive" className="px-1.5 py-0 text-[11px]">High priority</Badge>}
+                    {notification.priority === 'high' && <Badge variant="destructive" className="px-1.5 py-0 text-[11px]">{t('High priority')}</Badge>}
                   </span>
                 </span>
               </span>

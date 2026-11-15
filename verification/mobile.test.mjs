@@ -108,6 +108,12 @@ try {
   };
   // Nothing in this check may reach the network.
   globalThis.fetch = async url => { throw new Error('Unexpected network request: ' + url); };
+  // jsdom opens no images, and imageShrink.js takes a JPEG it can't open as one that didn't come
+  // through whole (UnreadablePhotoError). As on a phone, the fixture photo opens here (with no
+  // size, so it's uploaded as it is) and the upload path runs.
+  URL.createObjectURL = () => 'blob:photo-fixture';
+  URL.revokeObjectURL = () => {};
+  globalThis.Image = class { set src(value) { this.url = value; queueMicrotask(() => this.onload?.()); } get src() { return this.url; } };
   const { default: AIProductAssistant } = await loadComponent('src/components/products/AIProductAssistant.jsx');
   const assistantProps = { tenantId: 'photo-fixture', currency: 'SGD', categories: [], onApply: () => {}, onImageChange: value => appliedPhotos.push(value) };
   const plain = mount(AIProductAssistant, assistantProps);

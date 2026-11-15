@@ -1,6 +1,7 @@
 // The owner app in Bahasa Indonesia, Phase 2 (Alvin, 12 Nov 2026: "proceed with phase 2"):
 // lib/appText.js and the sign-up and onboarding screens (group 1). English stays the default;
-// Indonesian shows once a group is signed off (LIVE_GROUPS) or in a reviewer's preview
+// Indonesian shows once a group is switched on (LIVE_GROUPS: sign-up and the shop screens since
+// 15 Nov 2026) or in a reviewer's preview
 // (?preview_language=id). Covers: who gets which language, {blanks} (also links and bold names),
 // the language switch and the preview badge, and real sign-up screens in Indonesian with no
 // English phrase left on them.
@@ -128,7 +129,7 @@ try {
   assert.equal(appT('Save'), 'Save', 'Nothing is downloaded until a screen uses the words (store pages never do)');
   await appText.appTextReady();
   assert.equal(appT('Save'), 'Simpan', 'Loaded when asked for');
-  assert.deepEqual(appText.LIVE_GROUPS, [], 'No group is switched on for everyone yet (waiting for a native speaker)');
+  assert.deepEqual(appText.LIVE_GROUPS, ['signup', 'shop'], 'Groups 1 and 2 are switched on for everyone (Alvin, 15 Nov 2026)');
   passed('A preview link: on for this device, the address cleaned up, and the words load only when a screen wants them');
 
   // 2. Blanks
@@ -171,15 +172,20 @@ try {
   process.env.TZ = 'UTC';
   setPhoneLanguages(['en-US']);
   await act(async () => { await appText.resetAppTextForTests({ preview: false, choice: 'id' }); });
-  assert.equal(appText.appLanguageAvailable(), false);
-  assert.equal(appText.appLanguage(), 'en', 'Before sign-off, even someone who picked Indonesian sees English');
-  assert.equal(appT('Save'), 'Save');
-  passed("Who gets Indonesian: their choice, else the phone's language, else the shop's country; nobody before sign-off but a reviewer");
+  assert.equal(appText.appLanguageAvailable(), true, 'Switched on: no preview needed');
+  assert.equal(appText.appLanguage(), 'id', 'Someone who picked Indonesian sees it');
+  await appText.appTextReady();
+  assert.equal(appT('Save'), 'Simpan', 'The words of the live groups load');
+  assert.equal(appT('Kitchen Display'), 'Layar Dapur');
+  await act(async () => { await appText.resetAppTextForTests({ preview: false }); });
+  assert.equal(appText.appLanguage(), 'en', 'Nothing points to Indonesian: English');
+  passed("Who gets Indonesian: their choice, else the phone's language, else the shop's country, else an Indonesian time zone (live for everyone)");
 
   // 4. The switch and the preview badge
   await act(async () => { await appText.resetAppTextForTests({ preview: false }); });
-  page = await mount(h(React.Fragment, null, h(app.AppLanguageSwitch), h(app.AppLanguageRow), h(app.AppLanguagePreviewBadge)));
-  assert.equal(page.host.innerHTML, '', 'Nothing shows before sign-off');
+  page = await mount(h(React.Fragment, null, h(app.AppLanguageSwitch), h(app.AppLanguagePreviewBadge)));
+  assert.ok(page.host.querySelector('[data-testid="app-language-switch"]'), 'Switched on: everyone can pick a language');
+  assert.equal(page.host.querySelector('[data-testid="app-language-preview"]'), null, 'and no preview badge outside a preview');
   await page.unmount();
   await act(async () => { await appText.resetAppTextForTests({ preview: true, choice: 'id' }); });
   localStorage.setItem('sellio_app_language_preview', '1'); localStorage.setItem('sellio_app_language', 'id');
@@ -199,7 +205,7 @@ try {
   assert.notEqual(languageBefore, appText.appLanguage());
   await click(buttonNamed('End preview', page.host), 'End preview');
   assert.equal(badge(), null, 'The badge goes');
-  assert.equal(page.host.querySelector('[data-testid="app-language-switch"]'), null, 'and so does the switch, before sign-off');
+  assert.ok(page.host.querySelector('[data-testid="app-language-switch"]'), 'The switch stays: the groups are live');
   assert.equal(appText.isAppLanguagePreview(), false);
   assert.equal(localStorage.getItem('sellio_app_language_preview'), null);
   assert.equal(localStorage.getItem('sellio_app_language'), null);

@@ -15,6 +15,7 @@ const INDONESIAN_ORDER = {
   'h:mm a': 'HH.mm',
   'HH:mm': 'HH.mm',
   'MMM d, h:mm a': 'd MMM, HH.mm',
+  'MMM d, HH:mm': 'd MMM, HH.mm',
 };
 
 export function formatAppDate(date, pattern) {

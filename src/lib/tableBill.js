@@ -3,18 +3,19 @@
 // the printed receipt, so all three always show the same items and total.
 
 import { formatMoney } from './money';
+import { englishText, N_ } from './appText.js';
 
 const ROUND_FIELDS = 'id, order_number, status, payment_status, payment_method, created_date, items, subtotal, tax_amount, discount_amount, total_amount, table_id, table_name, is_deleted';
 const SESSION_FIELDS = 'id, table_id, table_name, status, order_ids, total_amount, started_at, ended_at';
 
 const round2 = n => Math.round((Number(n) || 0) * 100) / 100;
 
-export const PAYMENT_NAMES = { cash: 'Cash', qr: 'QR', card: 'Card', digital_wallet: 'E-wallet' };
+export const PAYMENT_NAMES = { cash: N_('Cash'), qr: N_('QR'), card: N_('Card'), digital_wallet: N_('E-wallet') };
 
 // How a round's kitchen status reads to counter staff.
 export const ROUND_STATUS = {
-  pending: 'New', confirmed: 'Accepted', preparing: 'Preparing', ready: 'Ready',
-  served: 'Served', completed: 'Served', cancelled: 'Cancelled',
+  pending: N_('New'), confirmed: N_('Accepted'), preparing: N_('Preparing'), ready: N_('Ready'),
+  served: N_('Served'), completed: N_('Served'), cancelled: N_('Cancelled'),
 };
 
 export const itemName = item => item?.name || item?.product_name || 'Item';
@@ -73,10 +74,11 @@ export function summarizeTableBill(session, orders) {
   };
 }
 
-export function paymentText(bill) {
-  if (!bill?.paid) return 'Not paid yet';
-  const how = (bill.paidMethods || []).map(m => PAYMENT_NAMES[m] || m).join(' + ');
-  return how ? `Paid by ${how}` : 'Paid';
+// How the bill was paid, in the words given (a receipt passes the shop's; English without).
+export function paymentText(bill, t = englishText) {
+  if (!bill?.paid) return t('Not paid yet');
+  const how = (bill.paidMethods || []).map(m => (PAYMENT_NAMES[m] ? t(PAYMENT_NAMES[m]) : m)).join(' + ');
+  return how ? t('Paid by {how}', { how }) : t('Paid');
 }
 
 async function loadRounds(supabase, tenantId, session) {
@@ -117,19 +119,20 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => (
 ));
 
 // Browser-print version of the table receipt, for shops without a receipt printer.
-export function tableReceiptHtml(bill, currency, merchantName) {
+export function tableReceiptHtml(bill, currency, merchantName, words = { t: englishText, locale: 'en-SG' }) {
+  const { t } = words;
   const money = n => escapeHtml(formatMoney(Number(n) || 0, currency));
   const rows = (bill.items || []).map(item => `<tr>
       <td style="padding:4px 8px 4px 0">${item.quantity}× ${escapeHtml(item.name)}${item.variant ? ` (${escapeHtml(item.variant)})` : ''}</td>
       <td style="padding:4px 0;text-align:right">${money(item.total)}</td>
     </tr>`).join('');
   const extra = [
-    bill.subtotal > 0 ? `<tr><td>Subtotal</td><td style="text-align:right">${money(bill.subtotal)}</td></tr>` : '',
-    bill.tax > 0 ? `<tr><td>Tax</td><td style="text-align:right">${money(bill.tax)}</td></tr>` : '',
-    bill.discount > 0 ? `<tr><td>Discount</td><td style="text-align:right">-${money(bill.discount)}</td></tr>` : '',
+    bill.subtotal > 0 ? `<tr><td>${escapeHtml(t('Subtotal'))}</td><td style="text-align:right">${money(bill.subtotal)}</td></tr>` : '',
+    bill.tax > 0 ? `<tr><td>${escapeHtml(t('Tax'))}</td><td style="text-align:right">${money(bill.tax)}</td></tr>` : '',
+    bill.discount > 0 ? `<tr><td>${escapeHtml(t('Discount'))}</td><td style="text-align:right">-${money(bill.discount)}</td></tr>` : '',
   ].join('');
   const orders = (bill.orderNumbers || []).map(n => `#${escapeHtml(n)}`).join(', ') || '-';
-  return `<!DOCTYPE html><html><head><title>Receipt</title>
+  return `<!DOCTYPE html><html lang="${words.locale === 'id-ID' ? 'id' : 'en'}"><head><title>${escapeHtml(t('Receipt'))}</title>
   <style>
     body{font-family:monospace;font-size:13px;margin:0;padding:16px;max-width:320px}
     h2{margin:0 0 4px;font-size:16px;text-align:center}
@@ -138,21 +141,21 @@ export function tableReceiptHtml(bill, currency, merchantName) {
     .total{font-weight:bold;font-size:14px} .small{font-size:11px;color:#555}
     @media print{body{padding:0}button{display:none}}
   </style></head><body>
-  <h2>${escapeHtml(merchantName || 'Receipt')}</h2>
-  <p class="center small">${escapeHtml(new Date().toLocaleString('en-SG', { dateStyle: 'medium', timeStyle: 'short' }))}</p>
+  <h2>${escapeHtml(merchantName || t('Receipt'))}</h2>
+  <p class="center small">${escapeHtml(new Date().toLocaleString(words.locale, { dateStyle: 'medium', timeStyle: 'short' }))}</p>
   <div class="divider"></div>
-  <p><strong>Table:</strong> ${escapeHtml(bill.tableName)}</p>
-  <p><strong>Orders:</strong> ${orders}</p>
+  <p><strong>${escapeHtml(t('Table:'))}</strong> ${escapeHtml(bill.tableName)}</p>
+  <p><strong>${escapeHtml(t('Orders:'))}</strong> ${orders}</p>
   <div class="divider"></div>
   <table>${rows}</table>
   <div class="divider"></div>
   <table>${extra}
-    <tr class="total"><td>Total</td><td style="text-align:right">${money(bill.total)}</td></tr>
+    <tr class="total"><td>${escapeHtml(t('Total'))}</td><td style="text-align:right">${money(bill.total)}</td></tr>
   </table>
-  <p><strong>${escapeHtml(paymentText(bill))}</strong></p>
+  <p><strong>${escapeHtml(paymentText(bill, t))}</strong></p>
   <div class="divider"></div>
-  <p class="center small">Thank you for your visit!</p>
-  <p class="center small" style="color:#94a3b8">Powered by Sellio</p>
+  <p class="center small">${escapeHtml(t('Thank you for your visit!'))}</p>
+  <p class="center small" style="color:#94a3b8">${escapeHtml(t('Powered by Sellio'))}</p>
   <script>window.onload=()=>window.print();<\/script>
   </body></html>`;
 }

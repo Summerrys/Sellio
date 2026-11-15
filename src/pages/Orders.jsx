@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { loadPrinterConfig, buildOrderReceipt, buildOrderChit, buildTableReceipt, sendViaBluetooth, sendViaEpsonEPos } from '@/lib/printerUtils';
+import { usePrintWords, readyPrintWords, ENGLISH_PRINT } from '@/lib/printWords';
 import { loadTableBillForOrder, paymentText, tableReceiptHtml } from '@/lib/tableBill';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useTenant } from '../components/tenant/TenantContext';
@@ -38,7 +39,7 @@ import { keepSnapshot, loadSnapshot } from '@/lib/offlineStore';
 import OfflineNote, { listNoteWords } from '@/components/ui-custom/OfflineNote';
 import { currencyDecimals, formatMoney } from '@/lib/money';
 import { paymentQrName } from '@/lib/countries';
-import { useAppText, appT, N_, appLocale } from '@/lib/appText';
+import { useAppText, appT, N_ } from '@/lib/appText';
 
 // The latest orders kept on the phone, for opening Orders with no connection (UX states, 4).
 const KEPT_ORDERS = 100;
@@ -72,7 +73,8 @@ const STATUS_NEXT = {
 const THEME_BUTTON_STATUSES = new Set(['pending', 'confirmed', 'preparing', 'ready']);
 
 
-function printReceipt(order, currency, merchantName) {
+function printReceipt(order, currency, merchantName, words = ENGLISH_PRINT) {
+  const { t } = words;
   const itemsHtml = (order.items || []).map(item => {
     const lineTotal = (item.price || item.unit_price || 0) * (item.quantity || 1);
     return `<tr>
@@ -83,10 +85,10 @@ function printReceipt(order, currency, merchantName) {
   const subtotal = formatMoney(parseFloat(order.subtotal || order.total_amount || 0), currency);
   const tax = formatMoney(parseFloat(order.tax_amount || 0), currency);
   const total = formatMoney(parseFloat(order.total_amount || 0), currency);
-  const date = new Date(order.created_date || Date.now()).toLocaleString();
+  const date = new Date(order.created_date || Date.now()).toLocaleString(words.locale);
 
   const win = window.open('', '_blank', 'width=400,height=600');
-  win.document.write(`<!DOCTYPE html><html><head><title>Receipt</title>
+  win.document.write(`<!DOCTYPE html><html lang="${words.locale === 'id-ID' ? 'id' : 'en'}"><head><title>${t('Receipt')}</title>
   <style>
     body{font-family:monospace;font-size:13px;margin:0;padding:16px;max-width:320px}
     h2{margin:0 0 4px;font-size:16px;text-align:center}
@@ -95,39 +97,42 @@ function printReceipt(order, currency, merchantName) {
     .total{font-weight:bold;font-size:14px} .small{font-size:11px;color:#555}
     @media print{body{padding:0}button{display:none}}
   </style></head><body>
-  <h2>${merchantName || 'Receipt'}</h2>
+  <h2>${merchantName || t('Receipt')}</h2>
   <p class="center small">${date}</p>
   <div class="divider"></div>
-  <p><strong>Order:</strong> ${order.order_number || order.id?.slice(-6)}</p>
-  ${order.table_name ? `<p><strong>Table:</strong> ${order.table_name}</p>` : ''}
-  ${order.customer_name && order.customer_name.toLowerCase() !== 'nil' ? `<p><strong>Customer:</strong> ${order.customer_name}</p>` : ''}
+  <p><strong>${t('Order:')}</strong> ${order.order_number || order.id?.slice(-6)}</p>
+  ${order.table_name ? `<p><strong>${t('Table:')}</strong> ${order.table_name}</p>` : ''}
+  ${order.customer_name && order.customer_name.toLowerCase() !== 'nil' ? `<p><strong>${t('Customer:')}</strong> ${order.customer_name}</p>` : ''}
   <div class="divider"></div>
   <table>${itemsHtml}</table>
   <div class="divider"></div>
   <table>
-    <tr><td>Subtotal</td><td style="text-align:right">${subtotal}</td></tr>
-    <tr><td>Tax</td><td style="text-align:right">${tax}</td></tr>
-    <tr class="total"><td>Total</td><td style="text-align:right">${total}</td></tr>
+    <tr><td>${t('Subtotal')}</td><td style="text-align:right">${subtotal}</td></tr>
+    <tr><td>${t('Tax')}</td><td style="text-align:right">${tax}</td></tr>
+    <tr class="total"><td>${t('Total')}</td><td style="text-align:right">${total}</td></tr>
   </table>
   <div class="divider"></div>
-  <p class="center small">Thank you for your visit!</p>
-  <p class="center small" style="color:#94a3b8">Powered by Sellio</p>
+  <p class="center small">${t('Thank you for your visit!')}</p>
+  <p class="center small" style="color:#94a3b8">${t('Powered by Sellio')}</p>
   <script>window.onload=()=>window.print();<\/script>
   </body></html>`);
   win.document.close();
 }
 
 // Browser print of a whole table bill, for shops without a receipt printer.
-function printTableReceipt(bill, currency, merchantName) {
+function printTableReceipt(bill, currency, merchantName, words = ENGLISH_PRINT) {
   const win = window.open('', '_blank', 'width=400,height=600');
   if (!win) { toast.error(appT('Allow pop-ups to print, or connect a receipt printer in Settings.')); return; }
-  win.document.write(tableReceiptHtml(bill, currency, merchantName));
+  win.document.write(tableReceiptHtml(bill, currency, merchantName, words));
   win.document.close();
 }
 
 function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel, tenantId, onStatusUpdate, onMarkPaid, onOrderUpdated, tourTag = false }) {
   const { t } = useAppText();
   const { hasPermission, tenant, canUseFeature } = useTenant();
+  // A receipt and a chit are in the shop's language (printWords.js), and so are their previews.
+  const printed = usePrintWords(tenant);
+  const pt = printed.t;
   const canPrintReceipts = !canUseFeature || canUseFeature('can_print');
   const canEditOrders = hasPermission('orders.edit');
   const canCancelOrders = hasPermission('orders.cancel');
@@ -207,7 +212,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
       return;
     }
     setChitPrinting(true);
-    const bytes = buildOrderChit(order, merchantName, tenant?.receipt_paper_size);
+    const bytes = buildOrderChit(order, merchantName, tenant?.receipt_paper_size, await readyPrintWords(tenant, printed));
     try {
       if (cfg.mode === 'bluetooth' && cfg.deviceName) {
         await sendViaBluetooth(cfg.deviceName, bytes, cfg.deviceId);
@@ -229,16 +234,18 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
   const handleActualPrint = async () => {
     if (receiptBillState === 'loading') return;
     const cfg = loadPrinterConfig(tenantId);
-    const browserPrint = () => (receiptBill ? printTableReceipt(receiptBill, currency, merchantName) : printReceipt(order, currency, merchantName));
+    // A pop-up opens only straight from the tap, so the browser print takes the words already loaded.
+    const browserPrint = () => (receiptBill ? printTableReceipt(receiptBill, currency, merchantName, printed) : printReceipt(order, currency, merchantName, printed));
     if (!cfg) {
       browserPrint();
       setShowReceipt(false);
       return;
     }
     setReceiptPrinting(true);
+    const words = await readyPrintWords(tenant, printed);
     const bytes = receiptBill
-      ? buildTableReceipt(receiptBill, currency, merchantName, tenant?.receipt_paper_size)
-      : buildOrderReceipt(order, currency, merchantName, tenant?.receipt_paper_size);
+      ? buildTableReceipt(receiptBill, currency, merchantName, tenant?.receipt_paper_size, words)
+      : buildOrderReceipt(order, currency, merchantName, tenant?.receipt_paper_size, words);
     try {
       if (cfg.mode === 'bluetooth' && cfg.deviceName) {
         await sendViaBluetooth(cfg.deviceName, bytes, cfg.deviceId);
@@ -465,13 +472,13 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
               )}
               {receiptBill ? (
               <div style={{ background: 'white', color: '#0f172a', borderRadius: 12, padding: '24px 20px', fontFamily: '"Courier New", Courier, monospace', fontSize: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', maxWidth: 360, margin: '0 auto' }}>
-                <p style={{ textAlign: 'center', fontWeight: 700, fontSize: 15, margin: '0 0 2px', letterSpacing: '0.02em' }}>{merchantName || t('Receipt')}</p>
+                <p style={{ textAlign: 'center', fontWeight: 700, fontSize: 15, margin: '0 0 2px', letterSpacing: '0.02em' }}>{merchantName || pt('Receipt')}</p>
                 <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '0 0 12px' }}>
-                  {new Date().toLocaleString(appLocale(), { dateStyle: 'medium', timeStyle: 'short' })}
+                  {new Date().toLocaleString(printed.locale, { dateStyle: 'medium', timeStyle: 'short' })}
                 </p>
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
-                <p style={{ margin: '5px 0', fontSize: 12 }}><strong>{t('Table:')}</strong> {receiptBill.tableName}</p>
-                <p style={{ margin: '5px 0', fontSize: 12 }}><strong>{t('Orders:')}</strong> {receiptBill.orderNumbers.map(n => `#${n}`).join(', ') || '-'}</p>
+                <p style={{ margin: '5px 0', fontSize: 12 }}><strong>{pt('Table:')}</strong> {receiptBill.tableName}</p>
+                <p style={{ margin: '5px 0', fontSize: 12 }}><strong>{pt('Orders:')}</strong> {receiptBill.orderNumbers.map(n => `#${n}`).join(', ') || '-'}</p>
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
                 {receiptBill.items.map((item, i) => (
                   <div key={i} style={{ marginBottom: 6 }}>
@@ -485,38 +492,38 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
                 {receiptBill.subtotal > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                    <span>Subtotal</span><span>{formatMoney(receiptBill.subtotal, currency)}</span>
+                    <span>{pt('Subtotal')}</span><span>{formatMoney(receiptBill.subtotal, currency)}</span>
                   </div>
                 )}
                 {receiptBill.tax > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                    <span>{t('Tax')}</span><span>{formatMoney(receiptBill.tax, currency)}</span>
+                    <span>{pt('Tax')}</span><span>{formatMoney(receiptBill.tax, currency)}</span>
                   </div>
                 )}
                 {receiptBill.discount > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                    <span>{t('Discount')}</span><span>-{formatMoney(receiptBill.discount, currency)}</span>
+                    <span>{pt('Discount')}</span><span>-{formatMoney(receiptBill.discount, currency)}</span>
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 13, marginTop: 6, padding: '6px 0', borderTop: '1px solid #e2e8f0' }}>
-                  <span>{t('TOTAL')}</span><span>{formatMoney(receiptBill.total, currency)}</span>
+                  <span>{pt('TOTAL')}</span><span>{formatMoney(receiptBill.total, currency)}</span>
                 </div>
-                <p style={{ margin: '4px 0', fontSize: 12, fontWeight: 700 }}>{paymentText(receiptBill)}</p>
+                <p style={{ margin: '4px 0', fontSize: 12, fontWeight: 700 }}>{paymentText(receiptBill, pt)}</p>
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
-                <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '4px 0' }}>{t('Thank you for your visit!')}</p>
-                <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: 10, margin: '4px 0' }}>{t('Powered by Sellio')}</p>
+                <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '4px 0' }}>{pt('Thank you for your visit!')}</p>
+                <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: 10, margin: '4px 0' }}>{pt('Powered by Sellio')}</p>
               </div>
               ) : (
               <div style={{ background: 'white', color: '#0f172a', borderRadius: 12, padding: '24px 20px', fontFamily: '"Courier New", Courier, monospace', fontSize: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', maxWidth: 360, margin: '0 auto' }}>
-                <p style={{ textAlign: 'center', fontWeight: 700, fontSize: 15, margin: '0 0 2px', letterSpacing: '0.02em' }}>{merchantName || t('Receipt')}</p>
+                <p style={{ textAlign: 'center', fontWeight: 700, fontSize: 15, margin: '0 0 2px', letterSpacing: '0.02em' }}>{merchantName || pt('Receipt')}</p>
                 <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '0 0 12px' }}>
-                  {new Date(order.created_date || Date.now()).toLocaleString(appLocale(), { dateStyle: 'medium', timeStyle: 'short' })}
+                  {new Date(order.created_date || Date.now()).toLocaleString(printed.locale, { dateStyle: 'medium', timeStyle: 'short' })}
                 </p>
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
-                <p style={{ margin: '5px 0', fontSize: 12 }}><strong>{t('Order:')}</strong> #{order.order_number || order.id?.slice(-6)}</p>
-                {order.table_name && <p style={{ margin: '5px 0', fontSize: 12 }}><strong>{t('Table:')}</strong> {order.table_name}</p>}
+                <p style={{ margin: '5px 0', fontSize: 12 }}><strong>{pt('Order:')}</strong> #{order.order_number || order.id?.slice(-6)}</p>
+                {order.table_name && <p style={{ margin: '5px 0', fontSize: 12 }}><strong>{pt('Table:')}</strong> {order.table_name}</p>}
                 {order.customer_name && order.customer_name.toLowerCase() !== 'nil' && (
-                  <p style={{ margin: '5px 0', fontSize: 12 }}><strong>{t('Customer:')}</strong> {order.customer_name}</p>
+                  <p style={{ margin: '5px 0', fontSize: 12 }}><strong>{pt('Customer:')}</strong> {order.customer_name}</p>
                 )}
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
                 {(order.items || []).map((item, i) => {
@@ -534,20 +541,20 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
                 {order.subtotal && parseFloat(order.subtotal) > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                    <span>Subtotal</span><span>{formatMoney(parseFloat(order.subtotal || 0), currency)}</span>
+                    <span>{pt('Subtotal')}</span><span>{formatMoney(parseFloat(order.subtotal || 0), currency)}</span>
                   </div>
                 )}
                 {order.tax_amount && parseFloat(order.tax_amount) > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                    <span>{t('Tax')}</span><span>{formatMoney(parseFloat(order.tax_amount || 0), currency)}</span>
+                    <span>{pt('Tax')}</span><span>{formatMoney(parseFloat(order.tax_amount || 0), currency)}</span>
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 13, marginTop: 6, padding: '6px 0', borderTop: '1px solid #e2e8f0' }}>
-                  <span>{t('TOTAL')}</span><span>{formatMoney(parseFloat(order.total_amount || 0), currency)}</span>
+                  <span>{pt('TOTAL')}</span><span>{formatMoney(parseFloat(order.total_amount || 0), currency)}</span>
                 </div>
                 <div style={{ borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
-                <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '4px 0' }}>{t('Thank you for your visit!')}</p>
-                <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: 10, margin: '4px 0' }}>{t('Powered by Sellio')}</p>
+                <p style={{ textAlign: 'center', color: '#64748b', fontSize: 11, margin: '4px 0' }}>{pt('Thank you for your visit!')}</p>
+                <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: 10, margin: '4px 0' }}>{pt('Powered by Sellio')}</p>
               </div>
               )}
             </div>

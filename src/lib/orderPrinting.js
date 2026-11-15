@@ -1,4 +1,6 @@
 import { loadPrinterConfig, buildOrderReceipt, buildOrderChit, buildTableReceipt, sendViaBluetooth, sendViaEpsonEPos } from '@/lib/printerUtils';
+import { printWords } from '@/lib/printWords';
+import { appT } from '@/lib/appText';
 
 let queue = Promise.resolve();
 function serialPrint(tenantId, work) {
@@ -16,10 +18,12 @@ export function hasKitchenPrinter(config) {
 }
 
 async function sendOrder(order, tenant, config, kind) {
-  if (!hasKitchenPrinter(config)) throw new Error('Connect a compatible receipt printer in Settings → Business → Receipt Printer.');
+  if (!hasKitchenPrinter(config)) throw new Error(appT('Connect a compatible receipt printer in Settings → Business → Receipt Printer.'));
+  // In the shop's language (printWords.js), whatever language the person printing has picked.
+  const words = await printWords(tenant);
   const bytes = kind === 'chit'
-    ? buildOrderChit(order, tenant?.name, tenant?.receipt_paper_size)
-    : buildOrderReceipt(order, tenant?.currency || 'SGD', tenant?.name, tenant?.receipt_paper_size);
+    ? buildOrderChit(order, tenant?.name, tenant?.receipt_paper_size, words)
+    : buildOrderReceipt(order, tenant?.currency || 'SGD', tenant?.name, tenant?.receipt_paper_size, words);
   if (config.mode === 'bluetooth') await sendViaBluetooth(config.deviceName, bytes, config.deviceId);
   else await sendViaEpsonEPos(config.ip, bytes, tenant?.name);
 }
@@ -32,8 +36,8 @@ export function printCounterOrder(order, tenantId, tenant, kind = 'receipt') {
 export function printTableBill(bill, tenantId, tenant) {
   return serialPrint(tenantId, async () => {
     const config = loadPrinterConfig(tenantId);
-    if (!hasKitchenPrinter(config)) throw new Error('Connect a compatible receipt printer in Settings → Business → Receipt Printer.');
-    const bytes = buildTableReceipt(bill, tenant?.currency || 'SGD', tenant?.name, tenant?.receipt_paper_size);
+    if (!hasKitchenPrinter(config)) throw new Error(appT('Connect a compatible receipt printer in Settings → Business → Receipt Printer.'));
+    const bytes = buildTableReceipt(bill, tenant?.currency || 'SGD', tenant?.name, tenant?.receipt_paper_size, await printWords(tenant));
     if (config.mode === 'bluetooth') await sendViaBluetooth(config.deviceName, bytes, config.deviceId);
     else await sendViaEpsonEPos(config.ip, bytes, tenant?.name);
   });
@@ -57,7 +61,7 @@ export function autoPrintKitchenOrder(order, tenantId, tenant) {
       ledger[order.id] = { at: Date.now(), state: 'attempted' };
       localStorage.setItem(key, JSON.stringify(ledger));
     } catch {
-      throw new Error('Device storage is unavailable. Auto-print stopped to prevent duplicate chits.');
+      throw new Error(appT('Device storage is unavailable. Auto-print stopped to prevent duplicate chits.'));
     }
     try {
       await sendOrder(order, tenant, config, 'chit');

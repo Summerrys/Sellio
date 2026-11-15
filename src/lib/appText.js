@@ -5,9 +5,9 @@
 // English is written in the code and is the key: t('Save changes'), with {name} blanks for
 // values, t('{count} orders today', { count }). Indonesian lives in src/locales/id/<group>.json,
 // one group of screens at a time, drafted by Claude from the glossary (src/locales/id/GLOSSARY.md)
-// and loaded only for people who see it, so nobody else downloads it. A group shows once a
-// native speaker has signed it off (LIVE_GROUPS); until then only a reviewer sees it, in a
-// preview (open any app page once with ?preview_language=id; ?preview_language=off ends it).
+// and loaded only for people who see it, so nobody else downloads it. A group shows once it is
+// switched on (LIVE_GROUPS); until then only a reviewer sees it, in a preview (open any app page
+// once with ?preview_language=id; ?preview_language=off ends it).
 // scripts/check-app-text.mjs fails the build if a phrase has no Indonesian.
 //
 // English stays the default. Bahasa Indonesia switches on from the phone's language first, then
@@ -16,8 +16,10 @@
 import { cloneElement, isValidElement, useSyncExternalStore } from 'react';
 import { visitorCountry } from './countries.js';
 
-// Groups of screens a native speaker has signed off. The others show only in a preview.
-export const LIVE_GROUPS = [];
+// Groups of screens that show in Bahasa Indonesia for everyone it's for; the others only in a
+// preview. Alvin, 15 Nov 2026: "Switch groups 1 and 2 on together" (Iman's review continues in
+// the review sheet; corrections go into the .json files).
+export const LIVE_GROUPS = ['signup', 'shop'];
 
 const CHOICE_KEY = 'sellio_app_language';
 const PREVIEW_KEY = 'sellio_app_language_preview';
@@ -151,6 +153,27 @@ export function appT(phrase, vars) {
 // Marks a phrase written outside a component (a list of tabs, say) for translation; the screen
 // that shows it passes it through t() then.
 export const N_ = (phrase) => phrase;
+
+// A shop's own language: Bahasa Indonesia for a shop in Indonesia (once it's switched on), else
+// English. Printed receipts and kitchen chits use it, for the shop's customers and its kitchen,
+// whatever language the person printing has picked.
+export function shopLanguage(tenant) {
+  return tenant?.country === 'Indonesia' && LIVE_GROUPS.length > 0 ? 'id' : 'en';
+}
+
+// The words in one language whatever the app shows now: a t() for that language. English needs
+// nothing; Indonesian loads the live groups' words once (the same file the app loads).
+let wordsInIndonesian = null;
+export async function wordsIn(language) {
+  if (language !== 'id' || LIVE_GROUPS.length === 0) return englishText;
+  if (!wordsInIndonesian) {
+    const { ID_GROUPS } = await import('../locales/id/index.js');
+    const catalog = {};
+    for (const group of LIVE_GROUPS) Object.assign(catalog, ID_GROUPS[group] || {});
+    wordsInIndonesian = (phrase, vars) => fill(String(catalog[phrase] ?? phrase ?? ''), vars);
+  }
+  return wordsInIndonesian;
+}
 
 export function setAppLanguage(language) {
   if (!LANGUAGES.includes(language)) return;

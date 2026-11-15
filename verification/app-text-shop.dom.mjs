@@ -85,6 +85,9 @@ await writeFile(entry, [
   "export { default as PlanFeatureNotice } from '@/components/subscription/PlanFeatureNotice';",
   "export { default as BillingStatusBanner } from '@/components/subscription/BillingStatusBanner';",
   "export { default as SubscriptionEndedNotice } from '@/components/subscription/SubscriptionEndedNotice';",
+  "export { buildOrderReceipt, buildTableReceipt, buildOrderChit, buildTestReceipt } from '@/lib/printerUtils';",
+  "export { paymentText } from '@/lib/tableBill';",
+  "export { printWords } from '@/lib/printWords';",
 ].join('\n'));
 const mock = { name: 'app-text-shop-fixtures', setup(b) {
   b.onResolve({ filter: /tenant\/TenantContext$/ }, () => ({ path: 'tenant', namespace: 'mock' }));
@@ -255,7 +258,43 @@ try {
   assert.ok(!reactWarnings.some((line) => /unique "key"/.test(line)), 'Links and bold names in a sentence have keys: ' + reactWarnings.join('\n'));
   passed('Orders, an order card, Tables, tags, pricing, variants, the trial reminder, plan and billing notices in Indonesian, with no English left');
 
-  // 5. Back to English, at once
+  // 5. Printed receipts and kitchen chits: the shop's language (an Indonesian shop prints in
+  // Bahasa Indonesia, whatever the person printing picked), in plain letters a printer prints.
+  const idWords = await app.printWords({ country: 'Indonesia' });
+  const sgWords = await app.printWords({ country: 'Singapore' });
+  assert.deepEqual([idWords.language, idWords.locale, sgWords.language, sgWords.locale], ['id', 'id-ID', 'en', 'en-SG']);
+  const printedText = (bytes) => Buffer.from(bytes).toString('latin1');
+  const plainLetters = (bytes) => !bytes.includes(0x1c); // FS &: the printer's double-byte mode, for letters outside ASCII
+  const sample = { order_number: 'ORD-000123', created_date: '2026-11-14T06:30:00Z', table_name: 'Meja 5', customer_name: 'Budi', order_type: 'dine_in', notes: 'Tanpa sambal',
+    items: [{ name: 'Nasi Goreng', quantity: 2, price: 25000, notes: 'Pedas' }], subtotal: 50000, tax_amount: 5000, total_amount: 55000 };
+  let bytes = app.buildOrderReceipt(sample, 'IDR', 'Warung Bu Sri', 'thermal_80', idWords);
+  let printed = printedText(bytes);
+  for (const words of ['Warung Bu Sri', '14 Nov 2026, 06.30', 'Pesanan: #ORD-000123', 'Meja: Meja 5', 'Pelanggan: Budi', '2x Nasi Goreng', 'Rp50.000', 'Subtotal', 'Pajak', 'TOTAL', 'Rp55.000', 'Terima kasih atas kunjungan Anda!', 'Didukung oleh Sellio']) {
+    assert.ok(printed.includes(words), `The Indonesian receipt says "${words}": ${printed}`);
+  }
+  assert.ok(plainLetters(bytes), 'Nothing the printer would print as ??');
+  printed = printedText(app.buildOrderReceipt(sample, 'SGD', 'Kopi Corner', 'thermal_80'));
+  for (const words of ['Order: #ORD-000123', 'Table: Meja 5', 'Customer: Budi', 'Tax', 'Thank you for your visit!', 'Powered by Sellio']) assert.ok(printed.includes(words), `English as before: "${words}"`);
+  assert.equal(printedText(app.buildOrderReceipt(sample, 'SGD', 'Kopi Corner', 'thermal_80', sgWords)), printed, "A Singapore shop's words are the English ones");
+  bytes = app.buildOrderChit(sample, 'Warung Bu Sri', 'thermal_80', idWords);
+  printed = printedText(bytes);
+  for (const words of ['#ORD-000123', 'MEJA 5', 'MAKAN DI TEMPAT', '14 Nov 2026, 06.30', '2x Nasi Goreng', '*** Pedas ***', 'CATATAN PESANAN:', 'Tanpa sambal']) assert.ok(printed.includes(words), `The chit says "${words}"`);
+  assert.ok(plainLetters(bytes));
+  const bill = { tableName: 'Meja 5', orderNumbers: ['ORD-000121', 'ORD-000123'], items: [{ name: 'Nasi Goreng', quantity: 3, total: 75000 }], subtotal: 75000, tax: 0, discount: 5000, total: 70000, paid: true, paidMethods: ['cash', 'qr'] };
+  bytes = app.buildTableReceipt(bill, 'IDR', 'Warung Bu Sri', 'thermal_58', idWords);
+  printed = printedText(bytes);
+  for (const words of ['Meja: Meja 5', 'Pesanan: #ORD-000121,', '#ORD-000123', 'Diskon', '-Rp5.000', 'Dibayar dengan Tunai + QR']) assert.ok(printed.includes(words), `The table bill says "${words}": ${printed}`);
+  assert.ok(plainLetters(bytes));
+  assert.equal(app.paymentText({ paid: false }), 'Not paid yet');
+  assert.equal(app.paymentText({ paid: false }, idWords.t), 'Belum dibayar');
+  assert.equal(app.paymentText({ paid: true, paidMethods: ['card'] }, idWords.t), 'Dibayar dengan Kartu');
+  bytes = app.buildTestReceipt('Warung Bu Sri', 'thermal_80', { currency: 'IDR', tax: { name: 'PBJT', rate: 10 }, words: idWords });
+  printed = printedText(bytes);
+  for (const words of ['** CETAK UJI **', 'Meja: T-01', 'Pesanan: ORD-000001', 'Kasir: Staf', 'Subtotal:', 'PBJT (10%):', 'TOTAL:', 'Pembayaran: Tunai']) assert.ok(printed.includes(words), `The test print says "${words}"`);
+  assert.ok(plainLetters(bytes));
+  passed("Receipts, table bills, kitchen chits and the test print in the shop's language, in letters every printer has (English as before for other shops)");
+
+  // 6. Back to English, at once
   page = await mount(withQueries(h(app.OrdersEmpty, { kind: 'tab', tab: 'pending', onSeeAll() {} })));
   await act(async () => { appText.setAppLanguage('en'); });
   assert.match(text(page.host), /No new orders\s*New orders wait here until you accept them\./);

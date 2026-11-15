@@ -123,6 +123,8 @@ QRIS, PayNow, DuitNow, Stripe, Google and WhatsApp stay as they are. Rupiah is w
 | signed out (Sellio ended the sign-in) | Anda sudah keluar dari akun |
 | cart | keranjang |
 
-- Printed receipts and kitchen chits, the CSV template and exports stay in English for now: they belong with the server's own text (push alerts, receipts, emails), a later step.
+- Printed receipts, table bills, kitchen chits and the test print, and new-order alerts, are in the shop's language (15 Nov 2026): Bahasa Indonesia for a shop in Indonesia, English for the others, whatever the person printing picked (`src/lib/printWords.js`; the alerts: `app.order_new_alert`). Printed words stay plain letters a receipt printer has: Struk, Pesanan:, Meja:, Pelanggan:, Pajak, Diskon, TOTAL, Belum dibayar, Dibayar dengan Tunai/QR/Kartu, Terima kasih atas kunjungan Anda!, Didukung oleh Sellio; on the chit MAKAN DI TEMPAT, BAWA PULANG, PENGIRIMAN, AMBIL SENDIRI, CATATAN PESANAN:. An alert reads "Pesanan baru #ORD-000123" / "Meja 5 · Budi · 3 item · Rp55.000".
+- The password-reset email is in both languages, each line with its Indonesian under it (`scripts/email-templates.py`).
+- The CSV template and exports keep English column names: an import matches its columns by them.
 - Store pages are in English, so a sentence about one quotes its words in English: halamannya menampilkan “Store unavailable”.
 - A phrase both groups show has the same Indonesian in both files (`scripts/check-app-text.mjs` checks), so either group can go live first.

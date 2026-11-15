@@ -52,6 +52,7 @@ try {
       "export { default as UpgradeWall } from '@/components/subscription/UpgradeWall';",
       "export { default as TenantContext } from '@/components/tenant/TenantContext';",
       "export { BUSINESS_PLANS, INDONESIA_PLANS } from '@/lib/plans';",
+      "export * as appText from '@/lib/appText';",
     ].join('\n') },
     outfile: path.join(tmp, 'pricing.mjs'), bundle: true, packages: 'external', format: 'esm', platform: 'node', jsx: 'automatic',
     alias: { '@': path.join(process.cwd(), 'src') }, logLevel: 'silent',
@@ -61,7 +62,10 @@ try {
     } }],
   });
   await copyFile(path.join(tmp, 'pricing.mjs'), local);
-  const { AuthPricingModal, UpgradeWall, TenantContext, BUSINESS_PLANS, INDONESIA_PLANS } = await import(pathToFileURL(local));
+  const { AuthPricingModal, UpgradeWall, TenantContext, BUSINESS_PLANS, INDONESIA_PLANS, appText } = await import(pathToFileURL(local));
+  // The prices and links in English first: someone who picked English (Bahasa Indonesia is live,
+  // and a phone in Jakarta would get it); the same sheet in Indonesian is checked at the end.
+  await act(async () => { await appText.resetAppTextForTests({ choice: 'en' }); });
 
   const opened = [];
   win.open = (url) => { opened.push(url); return null; };
@@ -118,6 +122,18 @@ try {
   await click([...document.querySelectorAll('button')].find((b) => text(b) === 'Resubscribe →'));
   assert.equal(opened.at(-1).split('?')[0], BUSINESS_PLANS[0].shopLinks.monthly);
   passed("a shop's own country decides, not where its owner's phone is");
+
+  // The same visitor in Jakarta with no language picked: the sheet in Bahasa Indonesia (live
+  // since 15 Nov 2026), on the same prices and links.
+  await fresh();
+  process.env.TZ = 'Asia/Jakarta';
+  await act(async () => { await appText.resetAppTextForTests(); });
+  await appText.appTextReady();
+  await act(async () => root.render(React.createElement(AuthPricingModal, { onClose: () => {}, prefilledEmail: 'sri@warung.id' })));
+  assert.deepEqual(trialLinks(), INDONESIA_PLANS.map((p) => `${p.links.monthly}?locked_prefilled_email=sri%40warung.id`));
+  assert.match(bodyText(), /Starter SGD 18 \/ bulan sekitar Rp255\.000, ditagih dalam Rupiah/);
+  assert.match(bodyText(), /Pilih paket untuk memulai/);
+  passed('the same visitor in Jakarta sees the sheet in Bahasa Indonesia, on the same prices and links');
 
   await act(async () => root.unmount());
   console.log(passes + ' indonesia-pricing checks passed');

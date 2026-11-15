@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { OFFER_PUSH_EVENT } from '@/lib/pushOffer';
 import { alertsKind, alertWords, loadAlerts } from '@/lib/pushAlerts';
+import { appT, N_ } from '@/lib/appText';
 
 // Sellio's own question before the phone's or the browser's: "Get alerts for new orders" (a
 // shop's people, in their workspace), "Know when your order is ready" (a signed-in buyer, after
@@ -10,10 +11,12 @@ import { alertsKind, alertWords, loadAlerts } from '@/lib/pushAlerts';
 // that can show alerts, when it can help (shouldAsk of pushNotifications.js or webPush.js).
 // Not now: asked again in 30 days; unanswered, it goes after 15 seconds and asks again in 3
 // days. Turn on: the phone's or browser's own question, then it is registered for the account.
+// Read with appT, which subscribes to nothing: store pages show this prompt too, and they load
+// no owner-app words (so a buyer sees it in English unless Sellio's words were loaded already).
 const COPY = {
-  shop: { title: 'Get alerts for new orders', android: 'On this phone, even when Sellio is closed', web: 'In this browser, even when Sellio is closed' },
-  order: { title: 'Know when your order is ready', android: 'Alerts on this phone from the shop', web: 'Alerts in this browser from the shop' },
-  chat: { title: 'Know when they reply', android: 'Alerts on this phone, even when Sellio is closed', web: 'Alerts in this browser, even when Sellio is closed' },
+  shop: { title: N_('Get alerts for new orders'), android: N_('On this phone, even when Sellio is closed'), web: N_('In this browser, even when Sellio is closed') },
+  order: { title: N_('Know when your order is ready'), android: N_('Alerts on this phone from the shop'), web: N_('Alerts in this browser from the shop') },
+  chat: { title: N_('Know when they reply'), android: N_('Alerts on this phone, even when Sellio is closed'), web: N_('Alerts in this browser, even when Sellio is closed') },
 };
 const SHOW_MS = 15000;
 
@@ -58,9 +61,9 @@ export default function PushPrompt() {
   }, [kind]);
 
   if (!kind) return null;
-  const { title } = COPY[kind];
-  const detail = COPY[kind][device === 'web' ? 'web' : 'android'];
-  const words = alertWords(device);
+  const title = appT(COPY[kind].title);
+  const detail = appT(COPY[kind][device === 'web' ? 'web' : 'android']);
+  const words = alertWords(device, appT);
 
   const notNow = () => {
     clearTimeout(timer.current);
@@ -78,7 +81,7 @@ export default function PushPrompt() {
       toast(words.failed);
     } else {
       push.current?.askLater(30);
-      toast('Alerts stay off', { description: words.settings });
+      toast(appT('Alerts stay off'), { description: words.settings });
     }
   };
 
@@ -115,8 +118,8 @@ export default function PushPrompt() {
           </div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4, marginTop: 4 }}>
-          <button type="button" onClick={notNow} style={{ ...button, color: '#64748b', fontWeight: 600 }}>Not now</button>
-          <button type="button" onClick={turnOn} style={{ ...button, color: '#8b2fc9' }}>Turn on</button>
+          <button type="button" onClick={notNow} style={{ ...button, color: '#64748b', fontWeight: 600 }}>{appT('Not now')}</button>
+          <button type="button" onClick={turnOn} style={{ ...button, color: '#8b2fc9' }}>{appT('Turn on')}</button>
         </div>
       </div>
     </div>

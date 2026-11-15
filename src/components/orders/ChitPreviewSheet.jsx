@@ -1,8 +1,10 @@
 import React from 'react';
 import { Printer, Loader2 } from 'lucide-react';
-import { useAppText, appT } from '@/lib/appText';
+import { useAppText, appT, N_ } from '@/lib/appText';
+import { useTenant } from '@/components/tenant/TenantContext';
+import { usePrintWords } from '@/lib/printWords';
 
-const TYPE_LABELS = { dine_in: 'DINE IN', takeaway: 'TAKEAWAY', delivery: 'DELIVERY', pickup: 'PICKUP' };
+const TYPE_LABELS = { dine_in: N_('DINE IN'), takeaway: N_('TAKEAWAY'), delivery: N_('DELIVERY'), pickup: N_('PICKUP') };
 
 // Bottom-sheet preview of the kitchen order chit — mirrors buildOrderChit()
 // in printerUtils.js field-for-field (merchant name, big order number/table,
@@ -13,9 +15,14 @@ const TYPE_LABELS = { dine_in: 'DINE IN', takeaway: 'TAKEAWAY', delivery: 'DELIV
 // chit content changes.
 export default function ChitPreviewSheet({ order, merchantName, printing, onClose, onPrint }) {
   useAppText();
+  // What the chit says is in the shop's language, as it prints (printWords.js); the sheet around
+  // it is in the app's.
+  const { tenant } = useTenant();
+  const printed = usePrintWords(tenant);
+  const pt = printed.t;
   if (!order) return null;
   const t = order.order_type || order.type;
-  const typeLabel = TYPE_LABELS[t] || (t ? String(t).toUpperCase() : '');
+  const typeLabel = TYPE_LABELS[t] ? pt(TYPE_LABELS[t]) : (t ? String(t).toUpperCase() : '');
   const dash = { borderTop: '1px dashed #cbd5e1', margin: '10px 0' };
   return (
     <div
@@ -39,7 +46,7 @@ export default function ChitPreviewSheet({ order, merchantName, printing, onClos
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px' }}>
           <div style={{ background: 'white', borderRadius: 12, padding: '24px 20px', fontFamily: '"Courier New", Courier, monospace', fontSize: 12, color: '#0f172a', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', maxWidth: 360, margin: '0 auto' }}>
-            <p style={{ textAlign: 'center', fontWeight: 600, fontSize: 13, margin: 0 }}>{merchantName || appT('Order Chit')}</p>
+            <p style={{ textAlign: 'center', fontWeight: 600, fontSize: 13, margin: 0 }}>{merchantName || pt('Order Chit')}</p>
             <div style={dash} />
             <p style={{ textAlign: 'center', fontWeight: 800, fontSize: 26, margin: '4px 0', letterSpacing: '0.02em' }}>#{order.order_number || order.id?.slice(-6)}</p>
             {order.table_name && (
@@ -49,7 +56,7 @@ export default function ChitPreviewSheet({ order, merchantName, printing, onClos
               <p style={{ textAlign: 'center', fontWeight: 700, fontSize: 13, margin: '4px 0' }}>{typeLabel}</p>
             )}
             <p style={{ textAlign: 'center', fontSize: 14, fontWeight: 600, margin: '4px 0' }}>
-              {new Date(order.created_date || Date.now()).toLocaleString('en-SG', { dateStyle: 'medium', timeStyle: 'short' })}
+              {new Date(order.created_date || Date.now()).toLocaleString(printed.locale, { dateStyle: 'medium', timeStyle: 'short' })}
             </p>
             <div style={dash} />
             {(order.items || []).map((item, i) => (
@@ -62,7 +69,7 @@ export default function ChitPreviewSheet({ order, merchantName, printing, onClos
             {order.notes && (
               <>
                 <div style={dash} />
-                <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: 12 }}>{appT('ORDER NOTE:')}</p>
+                <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: 12 }}>{pt('ORDER NOTE:')}</p>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: 12 }}>{order.notes}</p>
               </>
             )}

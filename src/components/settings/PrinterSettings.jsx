@@ -15,6 +15,8 @@ import {
 import { isCapacitorApp, appPlatform } from '@/lib/nativeApp';
 import { helpWithPrinterError } from '@/lib/permissionHelp';
 import { useAppText } from '@/lib/appText';
+import { useTenant } from '@/components/tenant/TenantContext';
+import { printWords } from '@/lib/printWords';
 
 // Sellio's apps use the phone's own Bluetooth (src/lib/nativePrinter.js): their web views have
 // no Web Bluetooth. A browser uses Web Bluetooth, where it has it (Chrome).
@@ -34,6 +36,7 @@ const getRSSILabel = (rssi) => {
 // currency and tax: the shop's, for the test print's sample amounts (Settings passes them).
 export default function PrinterSettings({ tenantId, merchantName, receiptPaperSize, currency = 'SGD', tax }) {
   const { t } = useAppText();
+  const { tenant } = useTenant();
   const [mode, setMode] = useState('bluetooth');
   const [btDevice, setBtDevice] = useState(null);
   // Off by default — this changes production behavior (a chit fires for
@@ -275,9 +278,11 @@ export default function PrinterSettings({ tenantId, merchantName, receiptPaperSi
     // lives on the tenant record (Business Profile), passed in as a prop.
     const paperSize = receiptPaperSize || 'thermal_80';
     const activeProtocol = cfg?.protocol || protocol;
+    // The shop's language, as its receipts print (printWords.js).
+    const words = await printWords(tenant);
     const bytes = activeProtocol === 'tspl'
-      ? buildTSPLTestReceipt(merchantName)
-      : buildTestReceipt(merchantName, paperSize, { currency, tax });
+      ? buildTSPLTestReceipt(merchantName, words)
+      : buildTestReceipt(merchantName, paperSize, { currency, tax, words });
     try {
       if (cfg?.mode === 'bluetooth' && cfg.deviceName) {
         await sendViaBluetooth(cfg.deviceName, bytes, cfg.deviceId);

@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { blockedOffline, showError } from '@/lib/plainError';
 import { useOrderAlerts, REMIND_EVERY } from '@/lib/useOrderAlerts';
 import { loadPrinterConfig, buildOrderChit, sendViaBluetooth, sendViaEpsonEPos } from '@/lib/printerUtils';
+import { printWords } from '@/lib/printWords';
 import ChitPreviewSheet from '@/components/orders/ChitPreviewSheet';
 import RequirePermission from '../components/auth/RequirePermission';
 import { useBackToClose } from '@/lib/useBackToClose';
@@ -59,7 +60,7 @@ function KDSOrderCard({ order, onBump }) {
       return;
     }
     setChitPrinting(true);
-    const bytes = buildOrderChit(order, tenant?.name, tenant?.receipt_paper_size);
+    const bytes = buildOrderChit(order, tenant?.name, tenant?.receipt_paper_size, await printWords(tenant));
     try {
       if (printerCfg.mode === 'bluetooth' && printerCfg.deviceName) {
         await sendViaBluetooth(printerCfg.deviceName, bytes, printerCfg.deviceId);

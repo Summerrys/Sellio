@@ -3,6 +3,12 @@ import { paymentText } from './tableBill';
 import { isCapacitorApp } from './nativeApp.js';
 import { helpWithPrinterError } from './permissionHelp.js';
 import { currencyDecimals, formatMoney, roundMoney } from './money';
+import { appT, englishText } from './appText.js';
+
+// What a receipt says, in the shop's language (printWords.js): { t, locale }. English if none is
+// given, as before.
+const ENGLISH_WORDS = { t: englishText, locale: 'en-SG' };
+const when = (date, words, style = { dateStyle: 'medium', timeStyle: 'short' }) => new Date(date).toLocaleString(words.locale, style);
 
 // Known BLE thermal/label printer GATT service+characteristic UUID pairs.
 // Different chipsets use different UUIDs — we try each in order until one works.
@@ -75,7 +81,7 @@ function encodeMixedText(text) {
   const gbkMap = getGbkEncodeMap();
   const bytes = [];
   let mode = 'ascii'; // 'ascii' | 'kanji'
-  for (const ch of String(text)) {
+  for (const ch of String(text).replace(/[\u00a0\u2007\u202f]/g, ' ')) {
     const code = ch.codePointAt(0);
     if (code < 0x80) {
       if (mode === 'kanji') { bytes.push(...FS_KANJI_OFF); mode = 'ascii'; }
@@ -154,19 +160,20 @@ export function buildReceipt(lines) {
 // ignored paperSize entirely and always used a hardcoded 32-char separator,
 // which is also part of why long/CJK item lines were overflowing and
 // colliding with the next line on an 80mm roll.
-export function buildOrderReceipt(order, currency, merchantName, paperSize = 'thermal_80') {
+export function buildOrderReceipt(order, currency, merchantName, paperSize = 'thermal_80', words = ENGLISH_WORDS) {
+  const { t } = words;
   const wide = paperSize === 'thermal_80' || paperSize === 'a4';
   const width = wide ? 48 : 32;
   const sep = '-'.repeat(width);
   const lines = [
-    { text: merchantName || 'Receipt', bold: true, align: 'center' },
-    { text: new Date(order.created_date || Date.now()).toLocaleString('en-SG', { dateStyle: 'medium', timeStyle: 'short' }), align: 'center' },
+    { text: merchantName || t('Receipt'), bold: true, align: 'center' },
+    { text: when(order.created_date || Date.now(), words), align: 'center' },
     { text: sep, align: 'center' },
-    { text: `Order: #${order.order_number || order.id?.slice(-6)}`, bold: false, align: 'left' },
+    { text: `${t('Order:')} #${order.order_number || order.id?.slice(-6)}`, bold: false, align: 'left' },
   ];
-  if (order.table_name) lines.push({ text: `Table: ${order.table_name}`, align: 'left' });
+  if (order.table_name) lines.push({ text: `${t('Table:')} ${order.table_name}`, align: 'left' });
   if (order.customer_name && order.customer_name.toLowerCase() !== 'nil') {
-    lines.push({ text: `Customer: ${order.customer_name}`, align: 'left' });
+    lines.push({ text: `${t('Customer:')} ${order.customer_name}`, align: 'left' });
   }
   lines.push({ text: sep, align: 'center' });
   (order.items || []).forEach(item => {
@@ -178,13 +185,13 @@ export function buildOrderReceipt(order, currency, merchantName, paperSize = 'th
   });
   lines.push({ text: sep, align: 'center' });
   const subtotal = parseFloat(order.subtotal || 0);
-  if (subtotal > 0) lines.push({ text: padLine('Subtotal', formatMoney(subtotal, currency), width), align: 'left' });
+  if (subtotal > 0) lines.push({ text: padLine(t('Subtotal'), formatMoney(subtotal, currency), width), align: 'left' });
   const tax = parseFloat(order.tax_amount || 0);
-  if (tax > 0) lines.push({ text: padLine('Tax', formatMoney(tax, currency), width), align: 'left' });
-  lines.push({ text: padLine('TOTAL', formatMoney(parseFloat(order.total_amount || 0), currency), width), bold: true, align: 'left' });
+  if (tax > 0) lines.push({ text: padLine(t('Tax'), formatMoney(tax, currency), width), align: 'left' });
+  lines.push({ text: padLine(t('TOTAL'), formatMoney(parseFloat(order.total_amount || 0), currency), width), bold: true, align: 'left' });
   lines.push({ text: sep, align: 'center' });
-  lines.push({ text: 'Thank you for your visit!', align: 'center' });
-  lines.push({ text: 'Powered by Sellio', align: 'center' });
+  lines.push({ text: t('Thank you for your visit!'), align: 'center' });
+  lines.push({ text: t('Powered by Sellio'), align: 'center' });
   return buildReceipt(lines);
 }
 
@@ -204,33 +211,34 @@ function wrapText(text, width) {
 // One receipt for a whole table bill (from tableBill.js): every round merged, so the
 // same dish shows once (2x Latte), cancelled rounds left out, one total, and whether
 // the bill is paid. Same layout and paper widths as buildOrderReceipt above.
-export function buildTableReceipt(bill, currency, merchantName, paperSize = 'thermal_80') {
+export function buildTableReceipt(bill, currency, merchantName, paperSize = 'thermal_80', words = ENGLISH_WORDS) {
+  const { t } = words;
   const wide = paperSize === 'thermal_80' || paperSize === 'a4';
   const width = wide ? 48 : 32;
   const sep = '-'.repeat(width);
   const money = n => formatMoney(Number(n) || 0, currency);
   const lines = [
-    { text: merchantName || 'Receipt', bold: true, align: 'center' },
-    { text: new Date().toLocaleString('en-SG', { dateStyle: 'medium', timeStyle: 'short' }), align: 'center' },
+    { text: merchantName || t('Receipt'), bold: true, align: 'center' },
+    { text: when(Date.now(), words), align: 'center' },
     { text: sep, align: 'center' },
-    { text: `Table: ${bill.tableName || 'Table'}`, bold: true, align: 'left' },
+    { text: `${t('Table:')} ${bill.tableName || t('Table')}`, bold: true, align: 'left' },
   ];
   const orders = (bill.orderNumbers || []).map(n => `#${n}`).join(', ') || '-';
-  wrapText(`Orders: ${orders}`, width).forEach(text => lines.push({ text, align: 'left' }));
+  wrapText(`${t('Orders:')} ${orders}`, width).forEach(text => lines.push({ text, align: 'left' }));
   lines.push({ text: sep, align: 'center' });
   (bill.items || []).forEach(item => {
     itemLine(`${item.quantity}x ${item.name}`, money(item.total), width).forEach(text => lines.push({ text, align: 'left' }));
     if (item.variant) lines.push({ text: `  (${item.variant})`, align: 'left' });
   });
   lines.push({ text: sep, align: 'center' });
-  if (bill.subtotal > 0) lines.push({ text: padLine('Subtotal', money(bill.subtotal), width), align: 'left' });
-  if (bill.tax > 0) lines.push({ text: padLine('Tax', money(bill.tax), width), align: 'left' });
-  if (bill.discount > 0) lines.push({ text: padLine('Discount', `-${money(bill.discount)}`, width), align: 'left' });
-  lines.push({ text: padLine('TOTAL', money(bill.total), width), bold: true, align: 'left' });
-  lines.push({ text: paymentText(bill), bold: !bill.paid, align: 'left' });
+  if (bill.subtotal > 0) lines.push({ text: padLine(t('Subtotal'), money(bill.subtotal), width), align: 'left' });
+  if (bill.tax > 0) lines.push({ text: padLine(t('Tax'), money(bill.tax), width), align: 'left' });
+  if (bill.discount > 0) lines.push({ text: padLine(t('Discount'), `-${money(bill.discount)}`, width), align: 'left' });
+  lines.push({ text: padLine(t('TOTAL'), money(bill.total), width), bold: true, align: 'left' });
+  lines.push({ text: paymentText(bill, t), bold: !bill.paid, align: 'left' });
   lines.push({ text: sep, align: 'center' });
-  lines.push({ text: 'Thank you for your visit!', align: 'center' });
-  lines.push({ text: 'Powered by Sellio', align: 'center' });
+  lines.push({ text: t('Thank you for your visit!'), align: 'center' });
+  lines.push({ text: t('Powered by Sellio'), align: 'center' });
   return buildReceipt(lines);
 }
 
@@ -240,7 +248,8 @@ export function buildTableReceipt(bill, currency, merchantName, paperSize = 'the
 // detail staff are most likely to miss when moving fast (allergies, special
 // requests). Reuses the same buildReceipt byte-builder and GBK/width helpers
 // as the receipt, so Chinese item names print correctly here too.
-export function buildOrderChit(order, merchantName, paperSize = 'thermal_80') {
+export function buildOrderChit(order, merchantName, paperSize = 'thermal_80', words = ENGLISH_WORDS) {
+  const { t } = words;
   const wide = paperSize === 'thermal_80' || paperSize === 'a4';
   const width = wide ? 48 : 32;
   const sep = '-'.repeat(width);
@@ -248,20 +257,20 @@ export function buildOrderChit(order, merchantName, paperSize = 'thermal_80') {
   // DINE IN / TAKEAWAY line silently never printed); keep .type as fallback.
   const orderType = order.order_type || order.type;
   const orderTypeLabel = {
-    dine_in: 'DINE IN',
-    takeaway: 'TAKEAWAY',
-    delivery: 'DELIVERY',
-    pickup: 'PICKUP',
+    dine_in: t('DINE IN'),
+    takeaway: t('TAKEAWAY'),
+    delivery: t('DELIVERY'),
+    pickup: t('PICKUP'),
   }[orderType] || (orderType ? String(orderType).toUpperCase() : '');
 
   const lines = [
-    { text: merchantName || 'Order Chit', align: 'center' },
+    { text: merchantName || t('Order Chit'), align: 'center' },
     { text: sep, align: 'center' },
     { text: `#${order.order_number || order.id?.slice(-6)}`, bold: true, large: true, align: 'center' },
   ];
   if (order.table_name) lines.push({ text: order.table_name.toUpperCase(), bold: true, large: true, align: 'center' });
   if (orderTypeLabel) lines.push({ text: orderTypeLabel, bold: true, align: 'center' });
-  lines.push({ text: new Date(order.created_date || Date.now()).toLocaleString('en-SG', { dateStyle: 'medium', timeStyle: 'short' }), large: true, align: 'center' });
+  lines.push({ text: when(order.created_date || Date.now(), words), large: true, align: 'center' });
   lines.push({ text: sep, align: 'center' });
 
   (order.items || []).forEach(item => {
@@ -273,7 +282,7 @@ export function buildOrderChit(order, merchantName, paperSize = 'thermal_80') {
 
   if (order.notes) {
     lines.push({ text: sep, align: 'center' });
-    lines.push({ text: 'ORDER NOTE:', bold: true, align: 'left' });
+    lines.push({ text: t('ORDER NOTE:'), bold: true, align: 'left' });
     lines.push({ text: order.notes, bold: true, align: 'left' });
   }
 
@@ -283,36 +292,37 @@ export function buildOrderChit(order, merchantName, paperSize = 'thermal_80') {
 
 // A sample receipt in the shop's own money and tax (tax: { name, rate }, e.g. GST 9%, SST 6%,
 // none in Indonesia by default). Rupiah samples are 10,000 times the dollar ones.
-export function buildTestReceipt(merchantName, paperSize = 'thermal_80', { currency = 'SGD', tax = { name: 'GST', rate: 9 } } = {}) {
+export function buildTestReceipt(merchantName, paperSize = 'thermal_80', { currency = 'SGD', tax = { name: 'GST', rate: 9 }, words = ENGLISH_WORDS } = {}) {
+  const { t } = words;
   const wide = paperSize === 'thermal_80' || paperSize === 'a4';
   const width = wide ? 48 : 32;
   const sep = '-'.repeat(width);
-  const now = new Date().toLocaleString('en-SG', { dateStyle: 'medium', timeStyle: 'short' });
+  const now = when(Date.now(), words);
   const scale = currencyDecimals(currency) === 0 ? 10000 : 1;
   const items = [[1, 'Kopi O', 1.5], [2, 'Nasi Lemak', 3.5], [1, 'Teh Tarik', 1.8]];
   const subtotal = roundMoney(items.reduce((sum, [qty, , price]) => sum + qty * price * scale, 0), currency);
   const rate = Number(tax?.rate) || 0;
   const taxAmount = roundMoney(subtotal * rate / 100, currency);
   return buildReceipt([
-    { text: merchantName || 'My Store', bold: true, align: 'center' },
-    { text: '** TEST PRINT **', bold: false, align: 'center' },
+    { text: merchantName || t('My Store'), bold: true, align: 'center' },
+    { text: t('** TEST PRINT **'), bold: false, align: 'center' },
     { text: now, align: 'center' },
     { text: sep, align: 'center' },
-    { text: 'Table: T-01', align: 'left' },
-    { text: 'Order: ORD-000001', align: 'left' },
-    { text: 'Cashier: Staff', align: 'left' },
+    { text: `${t('Table:')} T-01`, align: 'left' },
+    { text: `${t('Order:')} ORD-000001`, align: 'left' },
+    { text: `${t('Cashier:')} ${t('Staff')}`, align: 'left' },
     { text: sep, align: 'center' },
     ...items.map(([qty, name, price]) => ({ text: padLine(`${qty}x ${name}`, formatMoney(qty * price * scale, currency), width), align: 'left' })),
     { text: sep, align: 'center' },
-    { text: padLine('Subtotal:', formatMoney(subtotal, currency), width), align: 'left' },
-    ...(rate > 0 ? [{ text: padLine(`${tax.name || 'Tax'} (${rate}%):`, formatMoney(taxAmount, currency), width), align: 'left' }] : []),
+    { text: padLine(t('Subtotal:'), formatMoney(subtotal, currency), width), align: 'left' },
+    ...(rate > 0 ? [{ text: padLine(`${tax.name || t('Tax')} (${rate}%):`, formatMoney(taxAmount, currency), width), align: 'left' }] : []),
     { text: sep, align: 'center' },
-    { text: padLine('TOTAL:', formatMoney(subtotal + taxAmount, currency), width), bold: true, align: 'left' },
+    { text: padLine(t('TOTAL:'), formatMoney(subtotal + taxAmount, currency), width), bold: true, align: 'left' },
     { text: sep, align: 'center' },
-    { text: 'Payment: Cash', align: 'left' },
+    { text: `${t('Payment:')} ${t('Cash')}`, align: 'left' },
     { text: sep, align: 'center' },
-    { text: 'Thank you for your visit!', align: 'center' },
-    { text: 'Powered by Sellio', align: 'center' },
+    { text: t('Thank you for your visit!'), align: 'center' },
+    { text: t('Powered by Sellio'), align: 'center' },
   ]);
 }
 
@@ -408,25 +418,26 @@ export function buildTSPLReceipt(lines, labelWidthMM = 76, labelHeightMM = 130, 
   return result;
 }
 
-export function buildTSPLTestReceipt(merchantName) {
-  const now = new Date().toLocaleString('en-SG', { dateStyle: 'short', timeStyle: 'short' });
+export function buildTSPLTestReceipt(merchantName, words = ENGLISH_WORDS) {
+  const { t } = words;
+  const now = when(Date.now(), words, { dateStyle: 'short', timeStyle: 'short' });
   const sep = '--------------------------------';
   return buildTSPLReceipt([
-    { text: merchantName || 'My Store' },
-    { text: '** TEST PRINT **' },
+    { text: merchantName || t('My Store') },
+    { text: t('** TEST PRINT **') },
     { text: now },
     { text: sep },
-    { text: 'Table: T-01' },
-    { text: 'Order: ORD-000001' },
+    { text: `${t('Table:')} T-01` },
+    { text: `${t('Order:')} ORD-000001` },
     { text: sep },
     { text: '1x Kopi O              SGD 1.50' },
     { text: '2x Nasi Lemak          SGD 7.00' },
     { text: '1x Teh Tarik           SGD 1.80' },
     { text: sep },
-    { text: 'TOTAL:         SGD 10.30' },
+    { text: `${t('TOTAL:')}         SGD 10.30` },
     { text: sep },
-    { text: 'Thank you for your visit!' },
-    { text: 'Powered by Sellio' },
+    { text: t('Thank you for your visit!') },
+    { text: t('Powered by Sellio') },
   ]);
 }
 
@@ -438,7 +449,7 @@ export async function sendViaBluetooth(deviceName, bytes, deviceId = null) {
   if (isCapacitorApp()) {
     const { printNative, savedPrinterId } = await import('./nativePrinter');
     const id = deviceId || savedPrinterId(deviceName);
-    if (!id) throw new Error('Printer not connected. Please go to Settings → Receipt → Printer and reconnect.');
+    if (!id) throw new Error(appT('Printer not connected. Please go to Settings → Receipt → Printer and reconnect.'));
     try {
       return await printNative(id, bytes);
     } catch (error) {
@@ -447,7 +458,7 @@ export async function sendViaBluetooth(deviceName, bytes, deviceId = null) {
       throw error;
     }
   }
-  if (!navigator.bluetooth) throw new Error('Web Bluetooth not supported');
+  if (!navigator.bluetooth) throw new Error(appT('Web Bluetooth not supported'));
 
   let device = window.__sellioBtDevice;
 
@@ -461,7 +472,7 @@ export async function sendViaBluetooth(deviceName, bytes, deviceId = null) {
   }
 
   if (!device) {
-    throw new Error('Printer not connected. Please go to Settings → Receipt → Printer and reconnect.');
+    throw new Error(appT('Printer not connected. Please go to Settings → Receipt → Printer and reconnect.'));
   }
 
   const server = await device.gatt.connect();
@@ -500,10 +511,9 @@ export async function sendViaBluetooth(deviceName, bytes, deviceId = null) {
     }
   }
 
-  throw new Error(
-    `No compatible printer service found. Tried ${BLE_PRINTER_PROFILES.length} profiles. ` +
-    `Last error: ${lastError?.message}. Try Network/IP mode if issue persists.`
-  );
+  throw new Error(appT('No compatible printer service found. Tried {count} profiles. Last error: {error}. Try Network/IP mode if issue persists.', {
+    count: BLE_PRINTER_PROFILES.length, error: lastError?.message,
+  }));
 }
 
 // Send ESC/POS via Epson ePOS HTTP
@@ -523,11 +533,12 @@ export async function sendViaEpsonEPos(ip, bytes, merchantName) {
     body: xml,
     signal: AbortSignal.timeout(12000),
   });
-  if (!res.ok) throw new Error(`ePOS error: ${res.status}`);
+  if (!res.ok) throw new Error(appT('ePOS error: {status}', { status: res.status }));
   const response = await res.text();
   const success = new DOMParser().parseFromString(response, 'application/xml').getElementsByTagNameNS('*', 'response')[0];
   if (!success || success.getAttribute('success') !== 'true') {
-    throw new Error(`Printer did not confirm the print${success?.getAttribute('code') ? ': ' + success.getAttribute('code') : ''}`);
+    const code = success?.getAttribute('code');
+    throw new Error(code ? appT('Printer did not confirm the print: {code}', { code }) : appT('Printer did not confirm the print'));
   }
 }
 

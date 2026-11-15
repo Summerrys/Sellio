@@ -1,13 +1,21 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { readFile, writeFile, rm } from 'node:fs/promises';
+import { readFile, readdir, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { build } from 'esbuild';
 
 const taskRoot = process.argv[2] || '/tmp/sellio-verification';
 const require = createRequire(path.join(taskRoot, 'package.json'));
 const { chromium } = require('playwright');
-const css = await readFile(path.join(taskRoot, 'appearance.css'), 'utf8');
+// The app's own styles, from the last build (npm run build writes dist/assets/index-<hash>.css).
+// An appearance.css in the task folder, if one is there, is used instead.
+const builtCss = async () => {
+  const assets = path.join(process.cwd(), 'dist', 'assets');
+  const name = (await readdir(assets).catch(() => [])).find((file) => /^index-.*\.css$/.test(file));
+  if (!name) throw new Error('No built styles: run npm run build first (dist/assets/index-*.css).');
+  return readFile(path.join(assets, name), 'utf8');
+};
+const css = await readFile(path.join(taskRoot, 'appearance.css'), 'utf8').catch(builtCss);
 const app = process.cwd();
 const bundlePath = path.join(taskRoot, 'browser-harness.js');
 await build({

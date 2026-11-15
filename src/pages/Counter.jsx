@@ -678,7 +678,7 @@ function CounterScreen() {
                     <div key={round.id} className={`ctr-round${round.status === 'cancelled' ? ' void' : ''}`}>
                       <div className="ctr-round-head">
                         <span>{appT('Round {count} · {number} · {time}', { count: i + 1, number: round.order_number || '', time: roundTime(round.created_date) })}</span>
-                        <span className={`ctr-st st-${round.status}`}>{ROUND_STATUS[round.status] || round.status}</span>
+                        <span className={`ctr-st st-${round.status}`}>{ROUND_STATUS[round.status] ? appT(ROUND_STATUS[round.status]) : round.status}</span>
                       </div>
                       {(round.items || []).map((item, k) => (
                         <div key={k} className="ctr-round-item">

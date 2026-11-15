@@ -12,6 +12,7 @@
 import { BleClient } from '@capacitor-community/bluetooth-le';
 import { BLE_PRINTER_PROFILES } from './printerUtils';
 import { BLUETOOTH_PERMISSION } from './permissionHelp.js'; // with .js: its test runs it in Node
+import { appT } from './appText.js'; // the messages in the app's language (English until it loads)
 
 const SAVED_KEY = 'sellio.btPrinters'; // { [printer name]: device id }
 // Standard parts of every Bluetooth device, never where prints go.
@@ -49,15 +50,15 @@ export function savedPrinterId(name) {
 function plain(error, fallback) {
   const text = String(error?.message || error || '');
   if (/permission|not authorized|unauthorized|denied/i.test(text)) {
-    return Object.assign(new Error('Bluetooth permission is off for Sellio.'), { code: BLUETOOTH_PERMISSION });
+    return Object.assign(new Error(appT('Bluetooth permission is off for Sellio.')), { code: BLUETOOTH_PERMISSION });
   }
   if (/disabled|not enabled|powered off|turned off/i.test(text)) {
-    return new Error('Bluetooth is off. Turn it on and try again.');
+    return new Error(appT('Bluetooth is off. Turn it on and try again.'));
   }
   if (/unsupported|not supported|unavailable/i.test(text)) {
-    return new Error("This phone doesn't have Bluetooth printing.");
+    return new Error(appT("This phone doesn't have Bluetooth printing."));
   }
-  return new Error(fallback || text || 'Bluetooth printing failed.');
+  return new Error(fallback || text || appT('Bluetooth printing failed.'));
 }
 
 // Bluetooth permission (asked the first time) and Bluetooth switched on.
@@ -74,7 +75,7 @@ async function bluetoothReady() {
   if (on) return;
   try { await BleClient.requestEnable(); } catch { /* iPhone: can't be asked */ }
   try { on = await BleClient.isEnabled(); } catch { on = false; }
-  if (!on) throw new Error('Bluetooth is off. Turn it on and try again.');
+  if (!on) throw new Error(appT('Bluetooth is off. Turn it on and try again.'));
 }
 
 // Looks for nearby Bluetooth devices with a name; onPrinter({ id, name, rssi }) for each.
@@ -90,7 +91,7 @@ export async function startPrinterScan(onPrinter) {
       onPrinter({ id, name, rssi: result.rssi });
     });
   } catch (error) {
-    throw plain(error, "Couldn't look for printers.");
+    throw plain(error, appT("Couldn't look for printers."));
   }
 }
 
@@ -138,11 +139,11 @@ export async function choosePrinter(deviceId, name) {
   try {
     await connect(deviceId);
   } catch (error) {
-    throw plain(error, `Couldn't connect to ${name}. Check it's on and nearby, then try again.`);
+    throw plain(error, appT("Couldn't connect to {name}. Check it's on and nearby, then try again.", { name }));
   }
   if (!(await printTarget(deviceId))) {
     await forgetPrinter(deviceId);
-    throw new Error(`${name} doesn't take prints. Choose your receipt printer.`);
+    throw new Error(appT("{name} doesn't take prints. Choose your receipt printer.", { name }));
   }
   writeSaved({ ...readSaved(), [name]: deviceId });
 }
@@ -161,10 +162,10 @@ async function send(deviceId, bytes) {
   try {
     await connect(deviceId);
   } catch (error) {
-    throw plain(error, "Couldn't reach the printer. Check it's on and nearby.");
+    throw plain(error, appT("Couldn't reach the printer. Check it's on and nearby."));
   }
   const target = await printTarget(deviceId);
-  if (!target) throw new Error("This Bluetooth device doesn't take prints. Choose your printer in Settings → Receipt → Printer.");
+  if (!target) throw new Error(appT("This Bluetooth device doesn't take prints. Choose your printer in Settings → Receipt → Printer."));
   let mtu = 23;
   try { mtu = await BleClient.getMtu(deviceId); } catch { /* the smallest */ }
   const size = Math.max(20, Math.min(mtu - 3, 180));
@@ -181,7 +182,7 @@ async function send(deviceId, bytes) {
       }
     } catch (error) {
       connected.delete(deviceId);
-      throw plain(error, 'The printer stopped part way. Check it has paper and is on, then print again.');
+      throw plain(error, appT('The printer stopped part way. Check it has paper and is on, then print again.'));
     }
   }
 }
