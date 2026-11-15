@@ -192,14 +192,17 @@ try {
   page = await mount(h(React.Fragment, null, h(app.AppLanguageSwitch), h(app.AppLanguagePreviewBadge)));
   const group = page.host.querySelector('[data-testid="app-language-switch"]');
   assert.equal(group?.getAttribute('aria-label'), 'Bahasa');
-  assert.equal(buttonNamed('Bahasa Indonesia', page.host)?.getAttribute('aria-pressed'), 'true');
-  assert.equal(buttonNamed('English', page.host)?.getAttribute('aria-pressed'), 'false');
+  // Short labels (Alvin, 16 Nov 2026: EN, 中文, MY, ID), named in full for screen readers.
+  assert.deepEqual([...page.host.querySelectorAll('[data-testid="app-language-switch"] button')].map((b) => [text(b), b.getAttribute('aria-label')]),
+    [['EN', 'English'], ['ID', 'Bahasa Indonesia']]);
+  assert.equal(buttonNamed('ID', page.host)?.getAttribute('aria-pressed'), 'true');
+  assert.equal(buttonNamed('EN', page.host)?.getAttribute('aria-pressed'), 'false');
   const badge = () => page.host.querySelector('[data-testid="app-language-preview"]');
   const badgeWords = () => [text(badge()?.querySelector('span')), text(badge()?.querySelector('button'))];
   assert.deepEqual(badgeWords(), ['Pratinjau Bahasa Indonesia', 'Akhiri pratinjau']);
   const languageBefore = appText.appLanguage();
-  await click(buttonNamed('English', page.host), 'English');
-  assert.equal(buttonNamed('English', page.host)?.getAttribute('aria-pressed'), 'true');
+  await click(buttonNamed('EN', page.host), 'EN');
+  assert.equal(buttonNamed('EN', page.host)?.getAttribute('aria-pressed'), 'true');
   assert.equal(localStorage.getItem('sellio_app_language'), 'en', 'The choice is remembered');
   assert.deepEqual(badgeWords(), ['Indonesian preview', 'End preview'], 'Still a preview, in English now');
   assert.notEqual(languageBefore, appText.appLanguage());
@@ -236,7 +239,7 @@ try {
 
   page = await mount(h(MemoryRouter, null, h(app.Auth)));
   let shown = checkScreen(page.host, 'Sign in');
-  for (const words of ['Nomor Ponsel', 'Lupa kata sandi?', 'Masuk dengan Google', 'Dengan melanjutkan, Anda menyetujui', 'Bahasa Indonesia']) {
+  for (const words of ['Nomor Ponsel', 'Lupa kata sandi?', 'Masuk dengan Google', 'Dengan melanjutkan, Anda menyetujui', 'EN', 'ID']) {
     assert.ok(shown.includes(words), `Sign in shows "${words}": ${shown}`);
   }
   await click(buttonNamed('Lupa kata sandi?', page.host), 'Lupa kata sandi?');

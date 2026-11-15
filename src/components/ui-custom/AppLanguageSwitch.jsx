@@ -3,9 +3,10 @@ import { Globe } from 'lucide-react';
 import { useAppText } from '@/lib/appText';
 
 // The owner app's language (lib/appText.js). Shown only once Bahasa Indonesia can be picked: a
-// group of screens is signed off, or this is a reviewer's preview. Each language is named in
-// itself, so anyone can find theirs; the choice is remembered on this device.
-const CHOICES = [['en', 'English'], ['id', 'Bahasa Indonesia']];
+// group of screens is signed off, or this is a reviewer's preview. Short labels in the store
+// page's order (Alvin, 16 Nov 2026: EN, 中文, MY, ID), each named in full in its own language for
+// screen readers; the choice is remembered on this device. A language joins once the app has it.
+const CHOICES = [['en', 'EN', 'English'], ['id', 'ID', 'Bahasa Indonesia']];
 
 function Choices({ label }) {
   const { language, setLanguage } = useAppText();
@@ -13,10 +14,10 @@ function Choices({ label }) {
     <div role="group" aria-label={label} data-testid="app-language-switch"
       className="inline-flex items-center gap-0.5 rounded-full border border-slate-200 bg-white p-0.5 text-xs">
       <Globe aria-hidden="true" className="ml-1.5 mr-0.5 h-3.5 w-3.5 text-slate-400" />
-      {CHOICES.map(([code, name]) => (
-        <button key={code} type="button" lang={code} aria-pressed={language === code} onClick={() => setLanguage(code)}
-          className={'rounded-full px-2.5 py-1 font-medium transition-colors ' + (language === code ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100')}>
-          {name}
+      {CHOICES.map(([code, short, name]) => (
+        <button key={code} type="button" lang={code} aria-pressed={language === code} onClick={() => setLanguage(code)} aria-label={name} title={name}
+          className={'rounded-full px-2.5 py-1 font-semibold transition-colors ' + (language === code ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100')}>
+          {short}
         </button>
       ))}
     </div>

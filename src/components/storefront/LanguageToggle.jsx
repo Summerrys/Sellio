@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLanguage, SUPPORTED_LANGUAGES } from '@/lib/LanguageContext';
 
-// Short collapsed labels per the merchant's request: EN / 中 / MY, and ID for Bahasa Indonesia
-const SHORT_LABEL = { en: 'EN', zh: '中', ms: 'MY', id: 'ID' };
+// Short labels, in this order (Alvin, 16 Nov 2026): EN, 中文, MY, ID
+const SHORT_LABEL = { en: 'EN', zh: '中文', ms: 'MY', id: 'ID' };
 // Flag shown to the left of each label for quick visual identification
 const FLAG = { en: '🇬🇧', zh: '🇨🇳', ms: '🇲🇾', id: '🇮🇩' };
 
