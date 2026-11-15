@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload, Plus, Pencil, Loader2 } from 'lucide-react';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { X, Upload, Plus, Pencil, Loader2, Move } from 'lucide-react';
+import PhotoOrderGrid from '@/components/ui-custom/PhotoOrderGrid';
+import { moveItem } from '@/lib/photoOrder';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -154,57 +155,52 @@ export default function EditItemModal({ item, categories, themeColor, primaryCol
                   <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
                 </label>
               ) : (
-                <DragDropContext onDragEnd={(result) => {
-                  if (!result.destination) return;
-                  const from = result.source.index;
-                  const to = result.destination.index;
-                  const updated = [...imagePreviews];
-                  const [moved] = updated.splice(from, 1);
-                  updated.splice(to, 0, moved);
-                  setImagePreviews(updated);
-                }}>
-                  <Droppable droppableId="edit-images" direction="horizontal">
-                    {(provided) => (
-                      <div ref={provided.innerRef} {...provided.droppableProps} className="grid grid-cols-4 gap-3">
-                        {imagePreviews.map((src, idx) => (
-                            <Draggable key={`edit-img-${idx}`} draggableId={`edit-img-${idx}`} index={idx}>
-                              {(provided, snapshot) => (
-                                <div
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                  className={`relative w-full aspect-square rounded-lg overflow-hidden border-2 group cursor-grab ${snapshot.isDragging ? 'shadow-lg scale-105' : ''}`}
-                                  style={{ borderColor: idx === 0 ? primaryColor : '#e2e8f0', ...provided.draggableProps.style }}
-                                  onClick={() => setEditingImageIdx(idx)}
-                                >
-                                  <img src={src} alt={t('preview')} className="w-full h-full object-cover" />
-                                  {idx === 0 && (
-                                    <div className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium" style={{ background: themeColor }}>{t('Cover')}</div>
-                                  )}
-                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                    <Pencil className="w-4 h-4 text-white" />
-                                  </div>
-                                  <button
-                                    className="absolute top-0.5 right-0.5 bg-red-500 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={(e) => { e.stopPropagation(); setImagePreviews(prev => prev.filter((_, i) => i !== idx)); }}
-                                  >
-                                    <X className="w-2.5 h-2.5 text-white" />
-                                  </button>
-                                </div>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                          {imagePreviews.length < MAX_IMAGES && (
-                            <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors">
-                              {additionalUploading ? <Loader2 className="w-5 h-5 text-slate-400 animate-spin" /> : <Plus className="w-5 h-5 text-slate-400" />}
-                              <input ref={addMoreInputRef} type="file" accept="image/*" onChange={handleAddMoreSelect} className="hidden" disabled={additionalUploading} />
-                            </label>
-                          )}
-                      </div>
+                <>
+                  {/* The photos in order (press and hold, then drag); the first is the cover. */}
+                  <PhotoOrderGrid
+                    testId="edit-item-photos"
+                    className="grid grid-cols-4 gap-3"
+                    count={imagePreviews.length}
+                    keyOf={(idx) => imagePreviews[idx]}
+                    disabled={uploading || additionalUploading}
+                    onMove={(from, to) => setImagePreviews(prev => moveItem(prev, from, to))}
+                    onTap={(idx) => setEditingImageIdx(idx)}
+                    tileLabel={(idx, place) => (place === 0 ? t('Cover photo') : t('Photo {number}', { number: place + 1 }))}
+                    tileClassName={() => 'relative w-full aspect-square rounded-lg overflow-hidden border-2 group'}
+                    tileStyle={(idx, { isCover }) => ({ borderColor: isCover ? primaryColor : '#e2e8f0' })}
+                    renderTile={(idx, { isCover }) => (
+                      <>
+                        <img src={imagePreviews[idx]} alt="" draggable={false} className="w-full h-full object-cover" />
+                        {isCover && (
+                          <div className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium" style={{ background: themeColor }}>{t('Cover')}</div>
+                        )}
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity pointer-events-none">
+                          <Pencil className="w-4 h-4 text-white" />
+                        </div>
+                        <button
+                          type="button"
+                          aria-label={t('Remove photo')}
+                          className="absolute top-0.5 right-0.5 bg-red-500 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => { e.stopPropagation(); setImagePreviews(prev => prev.filter((_, i) => i !== idx)); }}
+                        >
+                          <X className="w-2.5 h-2.5 text-white" />
+                        </button>
+                      </>
                     )}
-                  </Droppable>
-                </DragDropContext>
+                    trailing={imagePreviews.length < MAX_IMAGES && (
+                      <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors">
+                        {additionalUploading ? <Loader2 className="w-5 h-5 text-slate-400 animate-spin" /> : <Plus className="w-5 h-5 text-slate-400" />}
+                        <input ref={addMoreInputRef} type="file" accept="image/*" onChange={handleAddMoreSelect} className="hidden" disabled={additionalUploading} />
+                      </label>
+                    )}
+                  />
+                  {imagePreviews.length > 1 && (
+                    <p data-testid="edit-item-photos-hint" className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+                      <Move className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
+                      {t('Press and hold a photo to move it. The first one is the cover.')}
+                    </p>
+                  )}
+                </>
               )}
             </div>
 

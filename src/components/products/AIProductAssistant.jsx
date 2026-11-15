@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useImperativeHandle } from 'react';
-import { Sparkles, Upload, Loader2, Check, AlertCircle, X, Wand2, ImagePlus, Pencil, Plus } from 'lucide-react';
+import { Sparkles, Upload, Loader2, Check, AlertCircle, X, Wand2, ImagePlus, Pencil, Plus, Move } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { explainError, showError } from '@/lib/plainError';
@@ -9,6 +9,8 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { shrinkImage, withExt, PHOTO_MAX_SIDE, LONG_CACHE } from '@/lib/imageShrink';
 import { deleteImageFromStorage } from '@/lib/imageStorage';
 import PhotoSourceControl from '../ui-custom/PhotoSourceControl';
+import PhotoOrderGrid from '../ui-custom/PhotoOrderGrid';
+import { moveItem } from '@/lib/photoOrder';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { allowanceLine, allowanceSpent, lastSuggestion, functionErrorMessage } from '@/lib/aiAllowance';
 import { formatMoney } from '@/lib/money';
@@ -315,10 +317,18 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
 
   // Track previous value to detect real changes from parent (new product opened)
   const prevImageUrlRef = useRef(currentImageUrl);
+  // The cover photo this window picked (a new photo, an edit, a photo put first): the form
+  // keeps it as image_url and passes it back as currentImageUrl. That isn't another product
+  // opening, so the photos here stay as they are (until 16 Nov 2026 the extra photos went back
+  // to the ones the product opened with).
+  const reportCover = (url) => {
+    prevImageUrlRef.current = url || '';
+    onImageChange?.(url || '');
+  };
   useEffect(() => {
     const prev = prevImageUrlRef.current;
     prevImageUrlRef.current = currentImageUrl;
-    if (currentImageUrl === prev) return;
+    if ((currentImageUrl || '') === (prev || '')) return;
 
     if (currentImageUrl) {
       setStep('image_only');
@@ -508,8 +518,8 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
       suggested_category: result.suggested_category || '',
     };
     if (categoryId) patch.category_id = categoryId;
+    reportCover(preview || '');
     onApply(patch);
-    onImageChange?.(preview || '');
     toast.success(t('AI suggestions applied!'));
     // No photo (a last suggestion whose photo couldn't be used): back to adding one.
     setStep(preview ? 'applied' : 'idle');
@@ -522,7 +532,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
     setStep('uploading');
     try {
       const publicUrl = await uploadToStorage(file);
-      onImageChange?.(publicUrl);
+      reportCover(publicUrl);
       setPreview(publicUrl);
       setStep('image_only');
     } catch (err) {
@@ -552,8 +562,15 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
         onImageDelete?.(oldUrl);
       }
 
-      if (isCover) {
-        onImageChange?.('');
+      if (isCover && additionalImages.length) {
+        // The first photo is the cover: the next one takes its place.
+        const [nextCover, ...rest] = additionalImages;
+        setPreview(nextCover);
+        setAdditionalImages(rest);
+        reportCover(nextCover);
+        onAdditionalImagesChange?.(rest);
+      } else if (isCover) {
+        reportCover('');
         reset();
       } else {
         setAdditionalImages(prev => {
@@ -570,7 +587,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
         const publicUrl = await uploadBase64ToStorage(newDataUrl);
         if (isCover) {
           setPreview(publicUrl);
-          onImageChange?.(publicUrl);
+          reportCover(publicUrl);
           setStep(prev => prev === 'applied' ? 'applied' : 'image_only');
         } else {
           setAdditionalImages(prev => {
@@ -590,7 +607,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
 
       if (isCover) {
         setPreview(newDataUrl);
-        onImageChange?.(newDataUrl);
+        reportCover(newDataUrl);
         setStep(prev => prev === 'applied' ? 'applied' : 'image_only');
       } else {
         setAdditionalImages(prev => {
@@ -603,6 +620,16 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
       setEditModalOpen(false);
     }
     setEditingImageIndex(null);
+  };
+
+  // Press and hold a photo, drag it to another place (components/ui-custom/PhotoOrderGrid.jsx).
+  const movePhoto = (from, to) => {
+    const photos = [preview, ...additionalImages];
+    const next = moveItem(photos, from, to);
+    setPreview(next[0]);
+    setAdditionalImages(next.slice(1));
+    if (next[0] !== photos[0]) reportCover(next[0]);
+    onAdditionalImagesChange?.(next.slice(1));
   };
 
   const handleAddImage = async (file) => {
@@ -630,7 +657,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
       const publicUrl = await uploadToStorage(file);
       if (editingImageIndex === null) {
         setPreview(publicUrl);
-        onImageChange?.(publicUrl);
+        reportCover(publicUrl);
       } else {
         setAdditionalImages(prev => {
           const updated = [...prev];
@@ -718,7 +745,7 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                 allowance={allowance}
                 onSearched={refreshAllowance}
                 onResult={(imageUrl) => {
-                  onImageChange?.(imageUrl);
+                  reportCover(imageUrl);
                   setPreview(imageUrl);
                   setStep('image_only');
                   try {
@@ -806,50 +833,41 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
           </div>
         )}
 
-        {/* ── APPLIED / IMAGE_ONLY: Step3-style grid ── */}
+        {/* ── APPLIED / IMAGE_ONLY: the photos in order, the first is the cover ── */}
         {hasImage && (
           <div className="p-3">
-            <div className="grid grid-cols-4 gap-3">
-              {/* Main image cell — exactly like Step3 */}
-              <div
-                className="relative w-full aspect-square rounded-lg overflow-hidden border-2 group cursor-pointer col-span-1"
-                style={{ borderColor: 'rgb(var(--color-primary))' }}
-                onClick={() => setEditModalOpen(true)}
-              >
-                <img src={preview} alt={t('Product photo')} className="w-full h-full object-cover" />
-                {/* Cover badge */}
-                <div
-                  className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium"
-                  style={{ background: themeColor }}
-                >
-                  {t('Cover')}
-                </div>
-                {/* Hover overlay */}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <Pencil className="w-4 h-4 text-white" />
-                </div>
-              </div>
-
-              {/* Additional images from array */}
-              {additionalImages.map((src, idx) => (
-                <div
-                  key={`additional-${idx}`}
-                  className="relative w-full aspect-square rounded-lg overflow-hidden border-2 border-slate-300 group cursor-pointer col-span-1"
-                  onClick={() => {
-                    setEditingImageIndex(idx);
-                    setEditModalOpen(true);
-                  }}
-                >
-                  <img src={src} alt={t('Extra photo {number}', { number: idx + 1 })} className="w-full h-full object-cover" />
+            <PhotoOrderGrid
+              testId="product-photos"
+              className="grid grid-cols-4 gap-3"
+              count={1 + additionalImages.length}
+              keyOf={(i) => (i === 0 ? preview : additionalImages[i - 1])}
+              disabled={addingImage}
+              onMove={movePhoto}
+              onTap={(i) => {
+                setEditingImageIndex(i === 0 ? null : i - 1);
+                setEditModalOpen(true);
+              }}
+              tileLabel={(i, place) => (place === 0 ? t('Cover photo') : t('Photo {number}', { number: place + 1 }))}
+              tileClassName={(i, { isCover }) => cn('relative w-full aspect-square rounded-lg overflow-hidden border-2 group col-span-1', !isCover && 'border-slate-300')}
+              tileStyle={(i, { isCover }) => (isCover ? { borderColor: 'rgb(var(--color-primary))' } : undefined)}
+              renderTile={(i, { isCover }) => (
+                <>
+                  <img src={i === 0 ? preview : additionalImages[i - 1]} alt="" draggable={false} className="w-full h-full object-cover" />
+                  {isCover && (
+                    <div
+                      className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium"
+                      style={{ background: themeColor }}
+                    >
+                      {t('Cover')}
+                    </div>
+                  )}
                   {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity pointer-events-none">
                     <Pencil className="w-4 h-4 text-white" />
                   </div>
-                </div>
-              ))}
-
-              {/* "+" add more slot for additional images */}
-              {additionalImages.length < 4 && (
+                </>
+              )}
+              trailing={additionalImages.length < 4 && (
                 <PhotoSourceControl
                   label={t('Add another photo')}
                   inputRef={addImageInputRef}
@@ -860,7 +878,13 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                   {addingImage ? <Loader2 className="w-5 h-5 text-slate-400 animate-spin" /> : <Plus className="w-5 h-5 text-slate-400" />}
                 </PhotoSourceControl>
               )}
-            </div>
+            />
+            {additionalImages.length > 0 && (
+              <p data-testid="product-photos-hint" className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+                <Move className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
+                {t('Press and hold a photo to move it. The first one is the cover.')}
+              </p>
+            )}
           </div>
         )}
 

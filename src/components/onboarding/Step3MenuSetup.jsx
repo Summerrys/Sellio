@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, ArrowLeft, Sparkles, Upload, Menu, X, Pencil, Trash2, Plus, Wand2, Loader2, AlertCircle, Check } from 'lucide-react';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { ArrowRight, ArrowLeft, Sparkles, Upload, Menu, X, Pencil, Trash2, Plus, Wand2, Loader2, AlertCircle, Check, Move } from 'lucide-react';
+import PhotoOrderGrid from '@/components/ui-custom/PhotoOrderGrid';
+import { moveItem } from '@/lib/photoOrder';
 import ImageEditModal from './ImageEditModal';
 import EditItemModal from './EditItemModal';
 import { getSupabase } from '@/lib/supabaseClient';
@@ -160,6 +161,15 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
       const supabase = await getSupabase();
       await supabase.storage.from('product-images').remove([pathToDelete]).catch(console.error);
     }
+  };
+
+  // A photo put in another place (press and hold, then drag): the others shift along, the
+  // first is the cover. Every list keeps the same order (16 Nov 2026; it swapped two photos).
+  const moveImage = (from, to) => {
+    setImagePreviews(prev => moveItem(prev, from, to));
+    setImageFiles(prev => moveItem(prev, from, to));
+    setImageUrls(prev => moveItem(prev, from, to));
+    setImageStoragePaths(prev => moveItem(prev, from, to));
   };
 
   // Handle clicking "+" to add additional images (multiple at once)
@@ -570,82 +580,63 @@ export default function Step3MenuSetup({ formData, updateFormData, nextStep, pre
             </label>
           ) : (
             <>
-              <DragDropContext onDragEnd={(result) => {
-                if (!result.destination || result.source.index === result.destination.index) return;
-                const from = result.source.index;
-                const to = result.destination.index;
-                const newPreviews = [...imagePreviews];
-                const newFiles = [...imageFiles];
-                const newUrls = [...imageUrls];
-                const newPaths = [...imageStoragePaths];
-                [newPreviews[from], newPreviews[to]] = [newPreviews[to], newPreviews[from]];
-                [newFiles[from], newFiles[to]] = [newFiles[to], newFiles[from]];
-                [newUrls[from], newUrls[to]] = [newUrls[to], newUrls[from]];
-                [newPaths[from], newPaths[to]] = [newPaths[to], newPaths[from]];
-                setImagePreviews(newPreviews);
-                setImageFiles(newFiles);
-                setImageUrls(newUrls);
-                setImageStoragePaths(newPaths);
-              }}>
-                <Droppable droppableId="images" direction="horizontal">
-                  {(provided) => (
-                    <div ref={provided.innerRef} {...provided.droppableProps} className="grid grid-cols-4 gap-3 w-full auto-rows-max transition-all duration-200">
-                      {imagePreviews.map((src, idx) => (
-                        <Draggable key={src + idx} draggableId={`img-${idx}`} index={idx}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className={`relative w-full aspect-square rounded-lg overflow-hidden border-2 group transition-all duration-150 ${snapshot.isDragging ? 'shadow-lg opacity-70 scale-95' : 'opacity-100'} col-span-1`}
-                              style={idx === 0 ? { ...provided.draggableProps.style, borderColor: primaryColor, cursor: 'grab' } : provided.draggableProps.style}
-                            >
-                              <img src={src} alt={t('preview')} className="w-full h-full object-cover" />
-                              {idx === 0 && (
-                                <div className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium" style={{ background: themeColor }}>{t('Cover')}</div>
-                              )}
-                              {/* Hover overlay with edit pencil — same for all slots */}
-                              <div
-                                className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer"
-                                onClick={() => setEditingImageIdx(idx)}
-                              >
-                                <Pencil className="w-4 h-4 text-white" />
-                              </div>
-                              {/* Delete button for all slots */}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  removeImageSlot(idx);
-                                }}
-                                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-500 transition-colors z-10"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                      {/* "+" slot — only show if under max; multiple allows selecting several at once */}
-                      {imagePreviews.length < MAX_IMAGES ? (
-                        <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors relative">
-                          {additionalUploading ? (
-                            <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
-                          ) : (
-                            <Plus className="w-5 h-5 text-slate-400" />
-                          )}
-                          <input ref={addMoreInputRef} type="file" accept="image/*" multiple onChange={handleAddMoreSelect} className="hidden" disabled={additionalUploading} />
-                        </label>
-                      ) : (
-                        <div className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center">
-                          <span className="text-[9px] text-slate-400 text-center px-1">{t('Max 10 images')}</span>
-                        </div>
-                      )}
+              {/* The photos in order; uploads fill their own places, so nothing moves meanwhile. */}
+              <PhotoOrderGrid
+                testId="step3-photos"
+                className="grid grid-cols-4 gap-3 w-full auto-rows-max"
+                count={imagePreviews.length}
+                keyOf={(idx) => imageUrls[idx] || `pending-${idx}`}
+                disabled={additionalUploading || uploading || aiStep === 'analyzing'}
+                onMove={moveImage}
+                onTap={(idx) => setEditingImageIdx(idx)}
+                tileLabel={(idx, place) => (place === 0 ? t('Cover photo') : t('Photo {number}', { number: place + 1 }))}
+                tileClassName={() => 'relative w-full aspect-square rounded-lg overflow-hidden border-2 group transition-all duration-150 col-span-1'}
+                tileStyle={(idx, { isCover }) => (isCover ? { borderColor: primaryColor } : undefined)}
+                renderTile={(idx, { isCover }) => (
+                  <>
+                    <img src={imagePreviews[idx]} alt="" draggable={false} className="w-full h-full object-cover" />
+                    {isCover && (
+                      <div className="absolute bottom-0 left-0 right-0 text-white text-[9px] text-center py-0.5 font-medium" style={{ background: themeColor }}>{t('Cover')}</div>
+                    )}
+                    {/* Hover overlay with edit pencil — same for all slots */}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity pointer-events-none">
+                      <Pencil className="w-4 h-4 text-white" />
                     </div>
-                  )}
-                </Droppable>
-              </DragDropContext>
+                    {/* Delete button for all slots */}
+                    <button
+                      type="button"
+                      aria-label={t('Remove photo')}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeImageSlot(idx);
+                      }}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-500 transition-colors z-10"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </>
+                )}
+                trailing={imagePreviews.length < MAX_IMAGES ? (
+                  <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 transition-colors relative">
+                    {additionalUploading ? (
+                      <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
+                    ) : (
+                      <Plus className="w-5 h-5 text-slate-400" />
+                    )}
+                    <input ref={addMoreInputRef} type="file" accept="image/*" multiple onChange={handleAddMoreSelect} className="hidden" disabled={additionalUploading} />
+                  </label>
+                ) : (
+                  <div className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center">
+                    <span className="text-[9px] text-slate-400 text-center px-1">{t('Max 10 images')}</span>
+                  </div>
+                )}
+              />
+              {imagePreviews.length > 1 && (
+                <p data-testid="step3-photos-hint" className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+                  <Move className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
+                  {t('Press and hold a photo to move it. The first one is the cover.')}
+                </p>
+              )}
 
               {/* AI status banner — shown after images are present */}
               {aiStep === 'analyzing' && (
