@@ -59,11 +59,12 @@ export function shopStatusTabs(food) {
 }
 
 // ── Dates (a shop's day as YYYY-MM-DD, shown as it is: no time zone involved) ─────────
-export function formatShopDate(ymd) {
+// locale: the owner app's (id-ID for Bahasa Indonesia); the shop's page keeps English dates.
+export function formatShopDate(ymd, locale = 'en-SG') {
   if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return '';
   const [y, m, d] = ymd.split('-').map(Number);
   const date = new Date(Date.UTC(y, m - 1, d));
-  return date.toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+  return date.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 
 // ── Phone numbers (same rules as the server, place_shop_order) ───────────────────────

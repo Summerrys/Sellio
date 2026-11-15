@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Search, Store } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
+import { useAppText } from '@/lib/appText';
 
 // Suggestions while typing in Explore's search (Alvin, 10 Nov 2026: "Dum > words that have dum
 // will be suggested, nas > nasi lemak"). From the second letter, Sellio's server
@@ -65,11 +66,12 @@ function Marked({ text, typed }) {
 // The list under the search box. Taps don't take the focus from the box (onMouseDown), so the
 // keyboard stays up until something is picked.
 export function SuggestionList({ id, items, typed, active, onPick, onHover }) {
+  const { t } = useAppText('explore');
   return (
     <div
       id={id}
       role="listbox"
-      aria-label="Suggestions"
+      aria-label={t('Suggestions')}
       data-testid="explore-suggestions"
       onMouseDown={(e) => e.preventDefault()}
       className="absolute left-3 right-3 sm:left-4 sm:right-4 top-full -mt-1 z-[3] bg-white rounded-[14px] overflow-hidden"
@@ -93,7 +95,7 @@ export function SuggestionList({ id, items, typed, active, onPick, onHover }) {
             {s.type === 'shop' ? <Store className="w-3.5 h-3.5" /> : <Search className="w-3.5 h-3.5" />}
           </span>
           <span className="min-w-0 flex-1 truncate"><Marked text={s.text} typed={typed} /></span>
-          {s.type === 'shop' && <span className="text-[11px] font-semibold text-slate-400 flex-shrink-0">{' '}Shop</span>}
+          {s.type === 'shop' && <span className="text-[11px] font-semibold text-slate-400 flex-shrink-0">{' '}{t('Shop')}</span>}
         </button>
       ))}
     </div>

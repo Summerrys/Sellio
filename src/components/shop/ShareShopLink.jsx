@@ -41,6 +41,7 @@ export default function ShareShopLinkButton({ size = 'md', className = '' }) {
         shopName={t('Your shop page')}
         image={tenant.logo_url}
         onCopied={(copied) => (copied ? toast.success(t('Link copied')) : toast.info(url))}
+        t={t}
       />
     </>
   );

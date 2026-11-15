@@ -12,7 +12,7 @@ Subject, paste the file's whole contents into the message body (Source), and Sav
 |---------------------------|----------------------------------------------|----------------------------|
 | Magic Link                | [Sellio] Please verify your email address    | `verify-email.html`        |
 | Confirm signup            | [Sellio] Please verify your email address    | `verify-email-signup.html` |
-| Reset Password            | Reset your Sellio password / Atur ulang kata sandi Sellio | `reset-password.html` |
+| Reset Password            | Reset your Sellio password                   | `reset-password.html`      |
 
 Who gets which:
 
@@ -22,9 +22,7 @@ Who gets which:
   account is signed in by the same link; one whose account is closed gets the closed-account
   screen (Keep my account / Start again).
 - **Confirm signup**: the same email, only sent if "Confirm email" is ever turned on.
-- **Reset Password**: Forgot password (phone sign-in), sent to the account's email. In English
-  and Bahasa Indonesia, each line with its Indonesian under it (15 Nov 2026): Supabase sends one
-  template to everyone, whatever their language.
+- **Reset Password**: Forgot password (phone sign-in), sent to the account's email.
 
 The emails say the link is valid for 1 hour: Supabase's Email OTP Expiration must be 3600
 seconds (Authentication → Sign In / Providers → Email), which is also what the closed-account

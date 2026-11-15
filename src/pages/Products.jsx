@@ -802,7 +802,7 @@ export default function Products({ embedded = false } = {}) {
 
         {/* Products Display */}
         {isLoading ? (
-          <LoadingShapes label={t('Loading products')}><SkeletonList count={5} lines={2} imageSize={64} /></LoadingShapes>
+          <LoadingShapes label={t('Loading products')} t={t}><SkeletonList count={5} lines={2} imageSize={64} /></LoadingShapes>
         ) : filteredProducts.length === 0 && products.length > 0 && searchText ? (
           hiddenByFilters > 0 ? (
             <NoMatches
@@ -814,7 +814,7 @@ export default function Products({ embedded = false } = {}) {
           ) : searchSuggestion ? (
             <NoMatches
               title={t('No {products} match “{searchText}”', { products: words.products, searchText })}
-              text={<DidYouMean suggestion={searchSuggestion} onPick={setSearchQuery} />}
+              text={<DidYouMean suggestion={searchSuggestion} onPick={setSearchQuery} t={t} />}
               actionLabel={t('Search “{searchSuggestion}”', { searchSuggestion })}
               onAction={() => setSearchQuery(searchSuggestion)}
             />

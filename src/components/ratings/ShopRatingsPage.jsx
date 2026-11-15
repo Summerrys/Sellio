@@ -6,6 +6,7 @@ import RequirePermission from '@/components/auth/RequirePermission';
 import { ReportCommentSheet, StarIcon, Stars } from '@/components/ratings/RatingParts';
 import { STAR_COLOR, ratingText, shopRatingOverview, shopRatings } from '@/lib/ratings';
 import { timeAgo } from '@/components/explore/shared';
+import { useAppText } from '@/lib/appText';
 
 // Ratings: what buyers think of the shop. Its average and count (buyers see them once
 // 3 buyers have rated), and each rating with the buyer's comment: public (on the shop
@@ -14,6 +15,7 @@ import { timeAgo } from '@/components/explore/shared';
 const PAGE = 30;
 
 export default function ShopRatings() {
+  const { t, textKey } = useAppText('explore');
   const { tenantId, tenant } = useTenant();
   const [overview, setOverview] = useState(null);
   const [rows, setRows] = useState([]);
@@ -26,9 +28,9 @@ export default function ShopRatings() {
 
   useEffect(() => {
     const previous = document.title;
-    document.title = 'Ratings · Sellio';
+    document.title = `${t('Ratings')} · Sellio`;
     return () => { document.title = previous; };
-  }, []);
+  }, [textKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!tenantId) return undefined;
@@ -61,14 +63,16 @@ export default function ShopRatings() {
 
   const count = Number(overview?.rating_count) || 0;
   const hiddenOnStore = !home && tenant?.settings?.show_rating_on_store === false;
-  const doneWords = home ? 'Collected or Delivered' : 'Done';
+  // The Orders screen's last step, by its name there.
+  const doneWords = home ? t('Collected or Delivered') : t('Done');
+  const week = overview?.last_7_days;
 
   return (
     <RequirePermission permission="orders.view">
       <div className="max-w-2xl mx-auto space-y-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Ratings</h1>
-          <p className="text-sm text-slate-500">What buyers think of {tenant?.name || 'your shop'}</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('Ratings')}</h1>
+          <p className="text-sm text-slate-500">{tenant?.name ? t('What buyers think of {name}', { name: tenant.name }) : t('What buyers think of your shop')}</p>
         </div>
 
         {status === 'loading' && (
@@ -77,9 +81,9 @@ export default function ShopRatings() {
 
         {status === 'error' && (
           <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
-            <p className="text-sm text-slate-600">We couldn't load your ratings just now.</p>
+            <p className="text-sm text-slate-600">{t('We couldn\'t load your ratings just now.')}</p>
             <button type="button" onClick={() => setReloadKey((k) => k + 1)} className="mt-3 h-9 px-4 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 inline-flex items-center gap-1.5">
-              <RefreshCw className="w-4 h-4" /> Try again
+              <RefreshCw className="w-4 h-4" />{' '}{t('Try again')}
             </button>
           </div>
         )}
@@ -93,20 +97,24 @@ export default function ShopRatings() {
               </div>
               <div className="flex-1 min-w-0 text-sm text-slate-600 leading-relaxed">
                 {count === 0 ? (
-                  <p>No ratings yet. Buyers can rate an order once you mark it {doneWords}.</p>
+                  <p>{t('No ratings yet. Buyers can rate an order once you mark it {doneWords}.', { doneWords })}</p>
                 ) : (
                   <>
-                    <p>{count} {count === 1 ? 'buyer has' : 'buyers have'} rated you{overview.last_7_days ? ` (${overview.last_7_days} this week)` : ''}.</p>
+                    <p>
+                      {count === 1
+                        ? (week ? t('1 buyer has rated you ({week} this week).', { week }) : t('1 buyer has rated you.'))
+                        : (week ? t('{count} buyers have rated you ({week} this week).', { count, week }) : t('{count} buyers have rated you.', { count }))}
+                    </p>
                     <p className="text-xs text-slate-400 mt-0.5">
                       {overview.shown
                         ? hiddenOnStore
-                          ? 'Shown on Explore and your listings. Hidden on your ordering page.'
-                          : 'Shown on Explore, your listings and your shop page.'
-                        : `Buyers see your average once 3 buyers have rated you (${count} so far).`}
+                          ? t('Shown on Explore and your listings. Hidden on your ordering page.')
+                          : t('Shown on Explore, your listings and your shop page.')
+                        : t('Buyers see your average once 3 buyers have rated you ({count} so far).', { count })}
                     </p>
                     {!home && (
                       <Link to="/TenantSettings" className="text-xs font-semibold mt-1 inline-block" style={{ color: 'rgb(var(--color-primary))' }}>
-                        {hiddenOnStore ? 'Show it on your ordering page' : 'Hide it on your ordering page'}
+                        {hiddenOnStore ? t('Show it on your ordering page') : t('Hide it on your ordering page')}
                       </Link>
                     )}
                   </>
@@ -129,41 +137,41 @@ export default function ShopRatings() {
                     </div>
                   );
                 })}
-                <p className="text-[11px] text-slate-400 mt-2">Each buyer counts once: their latest rating.</p>
+                <p className="text-[11px] text-slate-400 mt-2">{t('Each buyer counts once: their latest rating.')}</p>
               </section>
             )}
 
             {rows.length > 0 && (
               <>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide px-1 pt-1">Latest</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide px-1 pt-1">{t('Latest')}</p>
                 <section className="bg-white rounded-2xl border border-slate-100 overflow-hidden divide-y divide-slate-100">
                   {rows.map((r) => (
                     <div key={r.id} className="px-4 py-3" data-testid="shop-rating">
                       <div className="flex items-center justify-between gap-2">
                         <Stars value={r.stars} size={13} />
-                        <span className="text-[11px] text-slate-400">{timeAgo(r.updated_at || r.created_at)}</span>
+                        <span className="text-[11px] text-slate-400">{timeAgo(r.updated_at || r.created_at, t)}</span>
                       </div>
                       <p className="text-sm font-semibold text-slate-800 mt-1">
-                        {r.rater_name || 'A buyer'}
+                        {r.rater_name || t('A buyer')}
                         {r.order_number && <span className="font-normal text-slate-400"> · {r.order_number}</span>}
                       </p>
                       {r.note && (
                         <p className="text-sm text-slate-600 mt-0.5 break-words">
                           “{r.note}”{' '}
-                          {!r.note_public && <span className="text-[11px] text-slate-400">(only you see this)</span>}
+                          {!r.note_public && <span className="text-[11px] text-slate-400">{t('(only you see this)')}</span>}
                         </p>
                       )}
                       {r.note && r.note_public && r.note_state === 'visible' && (
                         <p className="text-[11px] text-slate-400 mt-0.5">
-                          Shown on your shop page ·{' '}
-                          <button type="button" onClick={() => setReporting({ id: r.id, note: r.note, rater_name: r.rater_name || 'A buyer' })} className="underline" data-testid="shop-report-comment">Report</button>
+                          {t('Shown on your shop page')} ·{' '}
+                          <button type="button" onClick={() => setReporting({ id: r.id, note: r.note, rater_name: r.rater_name || t('A buyer') })} className="underline" data-testid="shop-report-comment">{t('Report')}</button>
                         </p>
                       )}
                       {r.note && r.note_public && r.note_state === 'reported' && (
-                        <p className="text-[11px] text-amber-700 mt-0.5">Hidden from your shop page while Sellio looks at a report</p>
+                        <p className="text-[11px] text-amber-700 mt-0.5">{t('Hidden from your shop page while Sellio looks at a report')}</p>
                       )}
                       {r.note_state === 'removed' && (
-                        <p className="text-[11px] text-slate-400 mt-0.5">Comment removed by Sellio</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">{t('Comment removed by Sellio')}</p>
                       )}
                     </div>
                   ))}
@@ -171,7 +179,7 @@ export default function ShopRatings() {
                 {hasMore && (
                   <div className="flex justify-center">
                     <button type="button" onClick={loadMore} disabled={loadingMore} className="h-10 px-5 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700 inline-flex items-center gap-2 disabled:opacity-60">
-                      {loadingMore && <Loader2 className="w-4 h-4 animate-spin" />} Show more
+                      {loadingMore && <Loader2 className="w-4 h-4 animate-spin" />}{' '}{t('Show more')}
                     </button>
                   </div>
                 )}
@@ -183,6 +191,7 @@ export default function ShopRatings() {
       <ReportCommentSheet
         open={!!reporting}
         comment={reporting}
+        t={t}
         onClose={() => setReporting(null)}
         onReported={() => { setReporting(null); setReloadKey((k) => k + 1); }}
       />

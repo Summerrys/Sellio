@@ -38,12 +38,16 @@ const blanks = (text) => [...String(text).matchAll(/\{([a-zA-Z0-9_]+)\}/g)].map(
 
 const phrases = new Map(); // phrase -> [{ file, line }]
 const problems = [];
+const groupsNamed = []; // useAppText('group') calls: { group, file, line }
 for (const file of await walk(SRC)) {
   const code = await readFile(file, 'utf8');
   if (!USES.test(code)) continue;
   const rel = path.relative(root, file);
   // A store page file has the buyers' own t('key') too: only appT() and N_() are the app's there.
   const buyersToo = /\buseLanguage\b/.test(code);
+  for (const match of code.matchAll(/\buseAppText\(\s*'([^']*)'/g)) {
+    groupsNamed.push({ group: match[1], file: rel, line: code.slice(0, match.index).split('\n').length });
+  }
   for (const match of code.matchAll(CALL)) {
     if (buyersToo && match[1] === 't') continue;
     const line = code.slice(0, match.index).split('\n').length;
@@ -65,6 +69,10 @@ for (const name of (await readdir(LOCALES)).filter((n) => n.endsWith('.json')).s
 const indexCode = await readFile(path.join(LOCALES, 'index.js'), 'utf8');
 for (const group of Object.keys(groups)) {
   if (!new RegExp(`\\b${group}\\b`).test(indexCode)) problems.push(`src/locales/id/${group}.json is not loaded by src/locales/id/index.js`);
+}
+
+for (const { group, file, line } of groupsNamed) {
+  if (!groups[group]) problems.push(`${file}:${line}: useAppText('${group}') names no group (src/locales/id/${group}.json)`);
 }
 
 const translationOf = new Map(); // phrase -> { text, group }

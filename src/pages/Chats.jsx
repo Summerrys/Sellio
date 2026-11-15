@@ -6,6 +6,7 @@ import ChatInbox from '@/components/chat/ChatInbox';
 import ChatThread from '@/components/chat/ChatThread';
 import { chatUrl } from '@/components/explore/shared';
 import { isShopTenant } from '@/lib/shopSelling';
+import { useAppText } from '@/lib/appText';
 
 // The shop's chats with buyers. Wide screens: the list and the open chat side by side.
 // Phones: the list; a chat opens full screen (the same screen as in Explore).
@@ -29,6 +30,7 @@ function useWide() {
 const ARCHIVED_HREF = '/Chats?archived=1';
 
 export default function Chats() {
+  const { t, textKey } = useAppText('explore');
   const { tenant, tenantId, hasPermission } = useTenant();
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -38,9 +40,9 @@ export default function Chats() {
 
   useEffect(() => {
     const previous = document.title;
-    document.title = archived ? 'Archived chats · Sellio' : 'Chats · Sellio';
+    document.title = `${archived ? t('Archived chats') : t('Chats')} · Sellio`;
     return () => { document.title = previous; };
-  }, [archived]);
+  }, [archived, textKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isShopTenant(tenant) && !hasPermission('orders.create')) {
     const to = selected ? chatUrl(selected) : archived ? '/explore/chats/archived' : '/explore/chats';
@@ -50,8 +52,8 @@ export default function Chats() {
   if (!hasPermission('orders.view')) {
     return (
       <div className="max-w-xl mx-auto mt-10 bg-white rounded-2xl border border-slate-100 p-6 text-center">
-        <p className="text-base font-semibold text-slate-900">Chats aren't part of your role</p>
-        <p className="mt-1 text-sm text-slate-500">Ask the shop owner if you need to answer buyers.</p>
+        <p className="text-base font-semibold text-slate-900">{t('Chats aren\'t part of your role')}</p>
+        <p className="mt-1 text-sm text-slate-500">{t('Ask the shop owner if you need to answer buyers.')}</p>
       </div>
     );
   }
@@ -61,8 +63,8 @@ export default function Chats() {
 
   const hrefFor = (chat) => (wide ? `/Chats?${archived ? 'archived=1&' : ''}c=${encodeURIComponent(chat.id)}` : chatUrl(chat.id));
   const emptyText = archived
-    ? 'No archived chats. Chats you archive show up here.'
-    : 'When buyers message you about your listings on Explore, the chats show up here.';
+    ? t('No archived chats. Chats you archive show up here.')
+    : t('When buyers message you about your listings on Explore, the chats show up here.');
   // A chat deleted while it's open beside the list: the list alone again.
   const onRemoved = (id) => { if (id === selected) navigate(archived ? ARCHIVED_HREF : '/Chats', { replace: true }); };
   const inbox = (extra) => (
@@ -81,11 +83,11 @@ export default function Chats() {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-4 px-2 sm:px-0">
-        <h1 className="text-2xl font-bold text-slate-900">{archived ? 'Archived chats' : 'Chats'}</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{archived ? t('Archived chats') : t('Chats')}</h1>
         <p className="text-sm text-slate-500">
           {archived
-            ? 'Chats you\'ve archived (just for you).'
-            : <>Buyers' questions about {tenant?.name ? `${tenant.name}'s` : 'your'} listings.</>}
+            ? t('Chats you\'ve archived (just for you).')
+            : tenant?.name ? t('Buyers’ questions about {name}’s listings.', { name: tenant.name }) : t('Buyers’ questions about your listings.')}
         </p>
       </div>
       {wide ? (
@@ -99,7 +101,7 @@ export default function Chats() {
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-center px-6 text-slate-500">
                 <MessageCircle className="w-10 h-10 text-slate-300" />
-                <p className="mt-3 text-sm">Choose a chat to read and reply.</p>
+                <p className="mt-3 text-sm">{t('Choose a chat to read and reply.')}</p>
               </div>
             )}
           </div>

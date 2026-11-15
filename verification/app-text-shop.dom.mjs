@@ -149,7 +149,7 @@ const checkScreen = (host, what, mustShow = []) => {
 
 try {
   // 1. The catalogs
-  assert.deepEqual(Object.keys(app.ID_GROUPS), ['signup', 'shop'], 'Group 1 (sign-up) and group 2 (the shop screens)');
+  assert.deepEqual(Object.keys(app.ID_GROUPS), ['signup', 'shop', 'explore'], 'Group 1 (sign-up), group 2 (the shop screens) and group 3 (Explore: app-text-explore.dom.mjs)');
   const blanks = (s) => (s.match(/\{[a-zA-Z0-9_]+\}/g) || []).sort().join(',');
   const notIndonesian = /\b(kamu|kau|sila|percuma|kedai|kata laluan|telefon|bimbit|anda)\b/;
   let shared = 0;

@@ -1664,5 +1664,15 @@
   "New orders won’t show or ring on this phone until you sign in again.": "Pesanan baru tidak akan muncul atau berbunyi di ponsel ini sampai Anda masuk lagi.",
   "New orders won’t show or ring in this browser until you sign in again.": "Pesanan baru tidak akan muncul atau berbunyi di browser ini sampai Anda masuk lagi.",
   "Sign in again": "Masuk lagi",
-  "Signed out": "Sudah keluar"
+  "Signed out": "Sudah keluar",
+  "{title} · {price} on Sellio": "{title} · {price} di Sellio",
+  "{title} on Sellio": "{title} di Sellio",
+  "Share to": "Bagikan ke",
+  "More": "Lainnya",
+  "Sell — add a listing": "Jual — tambah produk",
+  "Loading": "Memuat",
+  "Did you mean {suggestion}?": "Maksud Anda {suggestion}?",
+  "This photo can’t be used. Please choose a JPG, PNG or WebP photo.": "Foto ini tidak bisa dipakai. Silakan pilih foto JPG, PNG, atau WebP.",
+  "Please sign in again to change your photo.": "Silakan masuk lagi untuk mengganti foto Anda.",
+  "Couldn’t upload the photo. Please try again.": "Foto tidak bisa diunggah. Silakan coba lagi."
 }

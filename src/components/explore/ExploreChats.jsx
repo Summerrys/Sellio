@@ -9,18 +9,19 @@ import ChatThread from '@/components/chat/ChatThread';
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
 import ShopBell from './ShopBell';
 import { BRAND_COLOR, BRAND_GRADIENT, ExploreTabHeader, chatUrl, goBack } from './shared';
+import { useAppText, N_ } from '@/lib/appText';
 
 // Explore → Chat: chats as a buyer and about your own listings.
 
 const BOXES = [
-  { key: 'all', label: 'All' },
-  { key: 'buying', label: 'Buying' },
-  { key: 'selling', label: 'Selling' },
+  { key: 'all', label: N_('All') },
+  { key: 'buying', label: N_('Buying') },
+  { key: 'selling', label: N_('Selling') },
 ];
 const EMPTY = {
-  all: 'No chats yet. Tap Chat on any listing to ask the seller a question.',
-  buying: 'Chats you start about listings show up here.',
-  selling: 'When buyers message you about your listings, the chats show up here.',
+  all: N_('No chats yet. Tap Chat on any listing to ask the seller a question.'),
+  buying: N_('Chats you start about listings show up here.'),
+  selling: N_('When buyers message you about your listings, the chats show up here.'),
 };
 const BOX_KEY = 'sellio_chat_box';
 export const ARCHIVED_CHATS_URL = '/explore/chats/archived';
@@ -35,35 +36,37 @@ function savedBox() {
 }
 
 function LogInToChat() {
+  const { t } = useAppText('explore');
   return (
     <div className="m-4 bg-white rounded-2xl border border-slate-100 p-6 text-center">
       <span className="mx-auto w-12 h-12 rounded-full flex items-center justify-center text-white" style={{ background: BRAND_GRADIENT }}>
         <MessageCircle className="w-6 h-6" />
       </span>
-      <p className="mt-3 text-base font-bold text-slate-900">Chat with sellers</p>
-      <p className="mt-1 text-sm text-slate-500">Log in to ask about listings and see your chats.</p>
+      <p className="mt-3 text-base font-bold text-slate-900">{t('Chat with sellers')}</p>
+      <p className="mt-1 text-sm text-slate-500">{t('Log in to ask about listings and see your chats.')}</p>
       <Link
         to="/Auth"
         onClick={() => rememberReturnPath('/explore/chats')}
         className="mt-4 h-10 px-5 rounded-full text-sm font-semibold text-white inline-flex items-center"
         style={{ background: BRAND_GRADIENT }}
       >
-        Log in
+        {t('Log in')}
       </Link>
     </div>
   );
 }
 
 export default function ExploreChats() {
+  const { t, textKey } = useAppText('explore');
   const { appUser } = useAppUser() || {};
   const unread = useChatUnread(!!appUser);
   const [box, setBox] = useState(savedBox);
 
   useEffect(() => {
     const previous = document.title;
-    document.title = 'Chats · Sellio';
+    document.title = `${t('Chats')} · Sellio`;
     return () => { document.title = previous; };
-  }, []);
+  }, [textKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const choose = (key) => {
     setBox(key);
@@ -72,9 +75,9 @@ export default function ExploreChats() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <ExploreTabHeader title="Chats" shopMenu right={<ShopBell withChat={false} />}>
+      <ExploreTabHeader title={t('Chats')} shopMenu right={<ShopBell withChat={false} />}>
         {appUser && (
-          <div className="max-w-6xl mx-auto px-4 pb-2 flex gap-2" role="tablist" aria-label="Chats">
+          <div className="max-w-6xl mx-auto px-4 pb-2 flex gap-2" role="tablist" aria-label={t('Chats')}>
             {BOXES.map(({ key, label }) => {
               const active = box === key;
               const count = key === 'buying' ? unread.buying : key === 'selling' ? unread.selling : 0;
@@ -88,7 +91,7 @@ export default function ExploreChats() {
                   className={`h-8 px-3.5 rounded-full text-sm font-semibold border inline-flex items-center gap-1.5 ${active ? 'text-white border-transparent' : 'bg-white text-slate-700 border-slate-200'}`}
                   style={active ? { background: BRAND_GRADIENT } : undefined}
                 >
-                  {label}
+                  {t(label)}
                   {Number(count) > 0 && (
                     <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold leading-[18px] ${active ? 'bg-white/90' : 'bg-rose-500 text-white'}`} style={active ? { color: BRAND_COLOR } : undefined}>
                       {count}
@@ -103,7 +106,7 @@ export default function ExploreChats() {
       <main className="max-w-3xl mx-auto" style={{ paddingBottom: TAB_BAR_SPACE }}>
         {appUser ? (
           <div className="bg-white md:mt-4 md:rounded-2xl md:border md:border-slate-100 overflow-hidden">
-            <ChatInbox box={box} hrefFor={(chat) => chatUrl(chat.id)} emptyText={EMPTY[box]} archivedHref={ARCHIVED_CHATS_URL} />
+            <ChatInbox box={box} hrefFor={(chat) => chatUrl(chat.id)} emptyText={t(EMPTY[box])} archivedHref={ARCHIVED_CHATS_URL} />
           </div>
         ) : <LogInToChat />}
       </main>
@@ -115,22 +118,23 @@ export default function ExploreChats() {
 // /explore/chats/archived: the chats this person archived, for the list chosen in Chats (All,
 // Buying or Selling). The phone's Back returns to Chats.
 export function ExploreArchivedChats() {
+  const { t, textKey } = useAppText('explore');
   const { appUser } = useAppUser() || {};
   const [box] = useState(savedBox);
 
   useEffect(() => {
     const previous = document.title;
-    document.title = 'Archived chats · Sellio';
+    document.title = `${t('Archived chats')} · Sellio`;
     return () => { document.title = previous; };
-  }, []);
+  }, [textKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <ExploreTabHeader title="Archived chats" right={<ShopBell withChat={false} />} />
+      <ExploreTabHeader title={t('Archived chats')} right={<ShopBell withChat={false} />} />
       <main className="max-w-3xl mx-auto" style={{ paddingBottom: TAB_BAR_SPACE }}>
         {appUser ? (
           <div className="bg-white md:mt-4 md:rounded-2xl md:border md:border-slate-100 overflow-hidden">
-            <ChatInbox box={box} archived hrefFor={(chat) => chatUrl(chat.id)} emptyText="No archived chats. Chats you archive show up here." />
+            <ChatInbox box={box} archived hrefFor={(chat) => chatUrl(chat.id)} emptyText={t('No archived chats. Chats you archive show up here.')} />
           </div>
         ) : <LogInToChat />}
       </main>
@@ -141,6 +145,7 @@ export function ExploreArchivedChats() {
 
 // /explore/chats/:conversationId, or /explore/chats/new?listing=<id> for a first message.
 export function ExploreChatThread() {
+  const { t, textKey } = useAppText('explore');
   const { conversationId } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -149,9 +154,9 @@ export function ExploreChatThread() {
 
   useEffect(() => {
     const previous = document.title;
-    document.title = 'Chat · Sellio';
+    document.title = `${t('Chat')} · Sellio`;
     return () => { document.title = previous; };
-  }, []);
+  }, [textKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <ChatThread

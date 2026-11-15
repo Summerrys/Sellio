@@ -124,7 +124,34 @@ QRIS, PayNow, DuitNow, Stripe, Google and WhatsApp stay as they are. Rupiah is w
 | cart | keranjang |
 
 - Printed receipts, table bills, kitchen chits and the test print, and new-order alerts, are in the shop's language (15 Nov 2026): Bahasa Indonesia for a shop in Indonesia, English for the others, whatever the person printing picked (`src/lib/printWords.js`; the alerts: `app.order_new_alert`). Printed words stay plain letters a receipt printer has: Struk, Pesanan:, Meja:, Pelanggan:, Pajak, Diskon, TOTAL, Belum dibayar, Dibayar dengan Tunai/QR/Kartu, Terima kasih atas kunjungan Anda!, Didukung oleh Sellio; on the chit MAKAN DI TEMPAT, BAWA PULANG, PENGIRIMAN, AMBIL SENDIRI, CATATAN PESANAN:. An alert reads "Pesanan baru #ORD-000123" / "Meja 5 · Budi · 3 item · Rp55.000".
-- The password-reset email is in both languages, each line with its Indonesian under it (`scripts/email-templates.py`).
+- The emails Supabase sends (verify, password reset) stay in English (Alvin, 16 Nov 2026).
 - The CSV template and exports keep English column names: an import matches its columns by them.
 - Store pages are in English, so a sentence about one quotes its words in English: halamannya menampilkan “Store unavailable”.
 - A phrase both groups show has the same Indonesian in both files (`scripts/check-app-text.mjs` checks), so either group can go live first.
+
+## Settled in group 3 (Explore, Me, chat and ratings)
+
+| English | Bahasa Indonesia |
+| --- | --- |
+| like, liked, unlike (a listing) | suka, disukai, batal suka (as the store page's words) |
+| My likes | Produk Disukai |
+| My purchases, My listings | Pembelian Saya, Produk Saya |
+| Ongoing, Past (purchases) | Berjalan, Riwayat |
+| Home seller(s), Merchant(s), Goods, Services | Penjual rumahan, Merchant, Barang, Jasa |
+| Fresh finds | Temuan terbaru |
+| cart, add to cart, buy now, checkout | keranjang, tambah ke keranjang, beli sekarang, checkout (as the store page's words) |
+| delivery fee, delivery included | ongkir, termasuk ongkir |
+| Deal options | Opsi transaksi |
+| listed (a listing, 5 min ago) | diunggah |
+| rating, rate, stars | penilaian, beri nilai, bintang |
+| star words: Terrible, Not good, Okay, Good, Great | Sangat buruk, Kurang baik, Cukup, Baik, Sangat baik |
+| comment, report | komentar, laporkan |
+| archive, archived | arsipkan, diarsipkan |
+| Buying, Selling (the chat lists) | Pembelian, Penjualan (Selling is the Settings tab's word too) |
+| Online, Last seen …, Seen | Online, Terakhir dilihat …, Dibaca |
+| Buyer, Seller | Pembeli, Penjual |
+
+- The group's screens name it, `useAppText('explore')`: English until `explore` is in `LIVE_GROUPS`, but in a preview. Pieces other screens share (the loading shapes, "Did you mean", the share sheet, the rating parts) take the screen's own t, so a store page still never loads the app's words.
+- What Sellio's database says to people (a `raise … hint`) is a phrase too: each file that calls it lists them word for word (`DATABASE_SAYS` in `lib/likes.js`, `lib/ratings.js`, `lib/chat.js`, `lib/purchases.js`), and the screen shows them through its t.
+- The buyer's canned chat questions go in the buyer's language: they are sent as they read on screen.
+- The store page's own dictionary still says "Me › My likes" in its Indonesian; once this group is live it should say "Saya › Produk Disukai".

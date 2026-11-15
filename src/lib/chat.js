@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
 import { checkDrawn, UNREADABLE_PHOTO_MESSAGE } from '@/lib/imageShrink';
+import { englishText, N_ } from '@/lib/appText';
 
 export const CHAT_PHOTO_BUCKET = 'chat-images';
 export const ONLINE_GREEN = '#16a34a'; // online now: the dot on a chat, and "Online"
@@ -64,23 +65,25 @@ export const chatDelete = (conversationId) => call('chat_delete', { p_conversati
 export const presencePing = (leaving = false) => call('presence_ping', { p_leaving: !!leaving });
 
 // Under a chat's name: "Online", or when the other side was last on Sellio (always shown,
-// Alvin 9 Nov 2026). '' when they've never been seen.
-export function lastSeenText({ online = false, last_seen_at: lastSeenAt = null } = {}, now = new Date()) {
-  if (online) return 'Online';
+// Alvin 9 Nov 2026). '' when they've never been seen. t, locale: the screen's own
+// (lib/appText.js); English without them.
+export function lastSeenText({ online = false, last_seen_at: lastSeenAt = null } = {}, now = new Date(), t = englishText, locale = 'en-SG') {
+  if (online) return t('Online');
   if (!lastSeenAt) return '';
   const seen = new Date(lastSeenAt);
   if (Number.isNaN(seen.getTime())) return '';
   const minutes = Math.floor((now - seen) / 60000);
-  if (minutes < 1) return 'Last seen just now';
-  if (minutes < 60) return `Last seen ${minutes} min ago`;
-  const time = seen.toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' }).toLowerCase();
-  if (seen.toDateString() === now.toDateString()) return `Last seen today at ${time}`;
+  if (minutes < 1) return t('Last seen just now');
+  if (minutes < 60) return t('Last seen {minutes} min ago', { minutes });
+  // 6:30 am in English; 06.30 in Indonesian, as the rest of the app writes times.
+  const time = seen.toLocaleTimeString(locale, { hour: locale === 'id-ID' ? '2-digit' : 'numeric', minute: '2-digit' }).toLowerCase();
+  if (seen.toDateString() === now.toDateString()) return t('Last seen today at {time}', { time });
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
-  if (seen.toDateString() === yesterday.toDateString()) return `Last seen yesterday at ${time}`;
-  return `Last seen ${seen.toLocaleDateString('en-SG', {
+  if (seen.toDateString() === yesterday.toDateString()) return t('Last seen yesterday at {time}', { time });
+  return t('Last seen {date}', { date: seen.toLocaleDateString(locale, {
     day: 'numeric', month: 'short', ...(seen.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}),
-  })}`;
+  }) });
 }
 
 // How many chats sit in Archived for a list (box 'all' | 'buying' | 'selling', or one shop's
@@ -96,11 +99,19 @@ export function archivedCount(unread, box, tenantId = null) {
 }
 
 // The database's own wording for problems people can act on; a plain fallback otherwise.
+// t: the screen's own (lib/appText.js); the database's words, and this file's, are phrases.
 const FRIENDLY = new Set(['sign_in', 'empty', 'too_long', 'bad_image', 'not_found', 'listing_unavailable', 'own_listing', 'rate_limited', 'no_chat']);
-export function chatErrorMessage(error, fallback = "Couldn't send that. Check your connection and try again.") {
-  if (error?.friendly) return error.message;
-  if (FRIENDLY.has(error?.hint) && error?.message) return error.message;
-  return fallback;
+export const DATABASE_SAYS = [ // chat_send, chat_thread, chat_list, chat_archive and chat_delete, word for word
+  N_("This chat isn't available."), N_('Sign in to see your chats.'), N_("That photo couldn't be sent. Try adding it again."),
+  N_('Type a message or add a photo.'), N_("This listing isn't available any more."), N_('Choose a chat first.'),
+  N_('This is your own listing.'), N_("You're sending messages very quickly. Wait a moment and try again."),
+  N_("You've started a lot of chats. Try again a little later."), N_('Sign in to send messages.'),
+  N_('Messages can be up to 2,000 characters.'),
+];
+export function chatErrorMessage(error, { t = englishText, fallback } = {}) {
+  if (error?.friendly) return t(error.message);
+  if (FRIENDLY.has(error?.hint) && error?.message) return t(error.message);
+  return fallback ?? t("Couldn't send that. Check your connection and try again.");
 }
 
 // ── Live updates ──
@@ -211,28 +222,28 @@ const toBlob = (canvas, type, quality) => new Promise((resolve) => canvas.toBlob
 // Smaller photos send faster: at most 1600px on the long side, WebP (or JPEG).
 export async function prepareChatPhoto(file) {
   const friendly = (message) => Object.assign(new Error(message), { friendly: true });
-  if (!file || !/^image\//.test(file.type || '')) throw friendly('Choose a photo (JPG, PNG or WebP).');
+  if (!file || !/^image\//.test(file.type || '')) throw friendly(N_('Choose a photo (JPG, PNG or WebP).'));
   let img;
-  try { img = await loadImage(file); } catch { throw friendly("That photo couldn't be opened. Try another one."); }
+  try { img = await loadImage(file); } catch { throw friendly(N_("That photo couldn't be opened. Try another one.")); }
   const scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
   const canvas = document.createElement('canvas');
   canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
   canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
   const context = canvas.getContext('2d');
-  if (!context) throw friendly("That photo couldn't be prepared. Try again.");
+  if (!context) throw friendly(N_("That photo couldn't be prepared. Try again."));
   context.drawImage(img, 0, 0, canvas.width, canvas.height);
   // A photo that didn't come through whole draws as nothing, and would send as a white
   // square (see imageShrink.js).
   const drawn = await checkDrawn(context, canvas.width, canvas.height, file);
   if (drawn === 'cut-off') throw friendly(UNREADABLE_PHOTO_MESSAGE);
-  if (drawn === 'not-drawn') throw friendly("That photo couldn't be prepared. Try again.");
+  if (drawn === 'not-drawn') throw friendly(N_("That photo couldn't be prepared. Try again."));
   context.globalCompositeOperation = 'destination-over'; // white behind see-through parts
   context.fillStyle = '#fff';
   context.fillRect(0, 0, canvas.width, canvas.height);
   let blob = await toBlob(canvas, 'image/webp', 0.82);
   if (!blob || blob.type !== 'image/webp') blob = await toBlob(canvas, 'image/jpeg', 0.85);
-  if (!blob) throw friendly("That photo couldn't be prepared. Try again.");
-  if (blob.size > MAX_UPLOAD) throw friendly('That photo is too large to send.');
+  if (!blob) throw friendly(N_("That photo couldn't be prepared. Try again."));
+  if (blob.size > MAX_UPLOAD) throw friendly(N_('That photo is too large to send.'));
   return blob;
 }
 

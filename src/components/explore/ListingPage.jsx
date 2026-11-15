@@ -23,6 +23,7 @@ import {
 import ZoomableImage from '@/components/ui-custom/ZoomableImage';
 import { applyPageMeta, SITE, snippet } from '@/lib/pageMeta';
 import LoadingShapes from '@/components/ui-custom/LoadingShapes';
+import { useAppText, N_ } from '@/lib/appText';
 
 // One Explore listing. The photo fills the screen from the very top (behind the
 // phone's status bar); scrolling down turns the floating buttons into a solid header
@@ -35,42 +36,49 @@ const LIKE_RED = '#e11d48';
 
 const clamp = (n) => Math.min(1, Math.max(0, n));
 
-function listedLabel(iso) {
-  const ago = timeAgo(iso);
-  return ago ? `Listed ${ago.charAt(0).toLowerCase()}${ago.slice(1)}` : '';
+// t, locale: the screen's own (lib/appText.js).
+function listedLabel(iso, t) {
+  const ago = timeAgo(iso, t);
+  return ago ? t('Listed {ago}', { ago: `${ago.charAt(0).toLowerCase()}${ago.slice(1)}` }) : '';
 }
 
-function sinceLabel(iso) {
+function sinceLabel(iso, t, locale) {
   if (!iso) return '';
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '' : `On Sellio since ${d.toLocaleDateString('en-SG', { month: 'short', year: 'numeric' })}`;
+  return Number.isNaN(d.getTime()) ? '' : t('On Sellio since {date}', { date: d.toLocaleDateString(locale, { month: 'short', year: 'numeric' }) });
 }
 
+// Marked here (N_), shown through t().
 function shopKind(shop) {
-  if (shop?.type === 'individual') return 'Home seller';
+  if (shop?.type === 'individual') return N_('Home seller');
   const v = String(shop?.industry || '').toLowerCase();
-  if (/f.?b|cafe|restaurant|food|beverage/.test(v)) return 'Food & drinks';
-  if (/retail|fashion|electronics/.test(v)) return 'Retail';
-  return 'Merchant';
+  if (/f.?b|cafe|restaurant|food|beverage/.test(v)) return N_('Food & drinks');
+  if (/retail|fashion|electronics/.test(v)) return N_('Retail');
+  return N_('Merchant');
 }
 
-function dealOptions(selling, currency) {
+function dealOptions(selling, currency, t) {
   if (!selling) return [];
   const out = [];
   if (selling.collection?.enabled) {
-    out.push({ icon: MapPin, title: 'Collection', detail: selling.collection.area || 'Arrange with the seller' });
+    out.push({ icon: MapPin, title: t('Collection'), detail: selling.collection.area || t('Arrange with the seller') });
   }
   if (selling.delivery?.enabled) {
     const fee = Number(selling.delivery.fee) || 0;
-    let detail = selling.delivery.fee_mode === 'extra' && fee > 0 ? `${formatPrice(fee, currency)} delivery fee` : 'Delivery included';
-    if (selling.delivery.fee_mode === 'extra' && Number(selling.delivery.free_above) > 0) {
-      detail += ` · free above ${formatPrice(selling.delivery.free_above, currency)}`;
+    const extra = selling.delivery.fee_mode === 'extra';
+    const freeAbove = extra && Number(selling.delivery.free_above) > 0 ? formatPrice(selling.delivery.free_above, currency) : null;
+    let detail;
+    if (extra && fee > 0) {
+      const vars = { fee: formatPrice(fee, currency), amount: freeAbove };
+      detail = freeAbove ? t('{fee} delivery fee · free above {amount}', vars) : t('{fee} delivery fee', vars);
+    } else {
+      detail = freeAbove ? t('Delivery included · free above {amount}', { amount: freeAbove }) : t('Delivery included');
     }
-    out.push({ icon: Truck, title: 'Delivery', detail });
+    out.push({ icon: Truck, title: t('Delivery'), detail });
   }
   if (selling.preorder?.enabled) {
     const days = Number(selling.preorder.min_days) || 1;
-    out.push({ icon: CalendarClock, title: 'Pre-order', detail: `Order at least ${days} ${days === 1 ? 'day' : 'days'} ahead` });
+    out.push({ icon: CalendarClock, title: t('Pre-order'), detail: days === 1 ? t('Order at least 1 day ahead') : t('Order at least {days} days ahead', { days }) });
   }
   return out;
 }
@@ -135,6 +143,7 @@ function useNotice() {
 }
 
 function PhotoViewer({ images, start, name, onClose }) {
+  const { t } = useAppText('explore');
   const scroller = useRef(null);
   const [index, setIndex] = useState(start);
   const [zoomed, setZoomed] = useState(false); // a zoomed photo is dragged around, not swiped past
@@ -144,10 +153,10 @@ function PhotoViewer({ images, start, name, onClose }) {
     if (el) el.scrollLeft = start * el.clientWidth;
   }, [start]);
   return (
-    <div role="dialog" aria-modal="true" aria-label={`Photos of ${name}`} className="fixed inset-0 z-[60] bg-black flex flex-col" data-pull-refresh-block>
+    <div role="dialog" aria-modal="true" aria-label={t('Photos of {name}', { name })} className="fixed inset-0 z-[60] bg-black flex flex-col" data-pull-refresh-block>
       <div className="flex items-center justify-between px-3 text-white" style={{ paddingTop: 'env(safe-area-inset-top, 0px)', height: 'calc(56px + env(safe-area-inset-top, 0px))' }}>
         <span className="text-sm font-semibold pl-2">{images.length > 1 ? `${index + 1} / ${images.length}` : ''}</span>
-        <button type="button" onClick={onClose} aria-label="Close photos" autoFocus className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/10">
+        <button type="button" onClick={onClose} aria-label={t('Close photos')} autoFocus className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/10">
           <X className="w-6 h-6" />
         </button>
       </div>
@@ -169,6 +178,7 @@ function PhotoViewer({ images, start, name, onClose }) {
 }
 
 function Gallery({ images, name, onOpen }) {
+  const { t } = useAppText('explore');
   const scroller = useRef(null);
   const [index, setIndex] = useState(0);
   const go = (step) => {
@@ -190,7 +200,7 @@ function Gallery({ images, name, onOpen }) {
             key={src}
             type="button"
             onClick={() => onOpen(i)}
-            aria-label={`Open photo ${i + 1} of ${images.length}`}
+            aria-label={t('Open photo {number} of {total}', { number: i + 1, total: images.length })}
             className="w-full flex-shrink-0 snap-center aspect-square block"
           >
             <img src={src} alt={i === 0 ? name : ''} loading={i === 0 ? 'eager' : 'lazy'} decoding="async" className="sellio-photo w-full h-full object-cover" />
@@ -210,12 +220,12 @@ function Gallery({ images, name, onOpen }) {
             {index + 1}/{images.length}
           </span>
           <div className="hidden md:flex absolute inset-y-0 left-2 items-center">
-            <button type="button" onClick={() => go(-1)} disabled={index === 0} aria-label="Previous photo" className="w-9 h-9 rounded-full bg-white/90 shadow flex items-center justify-center disabled:opacity-0">
+            <button type="button" onClick={() => go(-1)} disabled={index === 0} aria-label={t('Previous photo')} className="w-9 h-9 rounded-full bg-white/90 shadow flex items-center justify-center disabled:opacity-0">
               <ChevronLeft className="w-5 h-5" />
             </button>
           </div>
           <div className="hidden md:flex absolute inset-y-0 right-2 items-center">
-            <button type="button" onClick={() => go(1)} disabled={index === images.length - 1} aria-label="Next photo" className="w-9 h-9 rounded-full bg-white/90 shadow flex items-center justify-center disabled:opacity-0">
+            <button type="button" onClick={() => go(1)} disabled={index === images.length - 1} aria-label={t('Next photo')} className="w-9 h-9 rounded-full bg-white/90 shadow flex items-center justify-center disabled:opacity-0">
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
@@ -246,6 +256,7 @@ export default function ListingPage() {
 }
 
 function Listing({ productId }) {
+  const { t, locale, textKey } = useAppText('explore');
   const navigate = useNavigate();
   const location = useLocation();
   const [state, setState] = useState({ status: 'loading', data: null });
@@ -284,13 +295,13 @@ function Listing({ productId }) {
   useEffect(() => {
     if (state.status === 'missing') return applyPageMeta({ robots: 'noindex, nofollow' });
     if (!item) return undefined;
-    const from = shop?.name ? ` from ${shop.name}` : '';
     return applyPageMeta({
       title: `${item.name} · ${shop?.name || 'Sellio'}`,
-      description: snippet(item.description) || `${item.name}${from} on Sellio.`,
+      description: snippet(item.description)
+        || (shop?.name ? t('{name} from {shop} on Sellio.', { name: item.name, shop: shop.name }) : t('{name} on Sellio.', { name: item.name })),
       canonical: `${SITE}/listing/${encodeURIComponent(productId)}`,
     });
-  }, [item, shop, state.status, productId]);
+  }, [item, shop, state.status, productId, textKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Photo → header as the photo scrolls away.
   useEffect(() => {
@@ -319,7 +330,7 @@ function Listing({ productId }) {
     const user = await getChatUser().catch(() => null);
     if (!user) {
       rememberReturnPath(`${listingUrl(item.id)}?chat=1`);
-      toast.info('Sign in to chat with the seller.');
+      toast.info(t('Sign in to chat with the seller.'));
       navigate('/Auth');
       return;
     }
@@ -344,7 +355,7 @@ function Listing({ productId }) {
   const signInToLike = useCallback(() => {
     if (!item) return;
     rememberReturnPath(`${listingUrl(item.id)}?like=1`);
-    toast.info('Sign in to like listings.');
+    toast.info(t('Sign in to like listings.'));
     navigate('/Auth');
   }, [item, navigate]);
 
@@ -356,12 +367,12 @@ function Listing({ productId }) {
     try {
       const result = await setListingLike(item.id, liked);
       setLike({ liked: !!result?.liked, likes: Number(result?.likes) || 0 });
-      if (result?.liked) showNotice('Liked. Find it in Me › My likes.', { label: 'See all', onClick: () => navigate('/explore/likes') });
-      else showNotice('Removed from My likes');
+      if (result?.liked) showNotice(t('Liked. Find it in Me › My likes.'), { label: t('See all'), onClick: () => navigate('/explore/likes') });
+      else showNotice(t('Removed from My likes'));
     } catch (err) {
       setLike(before);
       if (needsSignIn(err)) signInToLike();
-      else toast.error(likeErrorMessage(err));
+      else toast.error(likeErrorMessage(err, { t }));
     } finally {
       likeBusy.current = false;
     }
@@ -403,10 +414,10 @@ function Listing({ productId }) {
       <div className="min-h-screen bg-slate-50">
         <div className="fixed top-0 inset-x-0 z-40" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
           <div className="max-w-2xl mx-auto h-14 px-3 flex items-center">
-            <RoundButton label="Back" onClick={back} solid={1}><ArrowLeft className="w-5 h-5" /></RoundButton>
+            <RoundButton label={t('Back')} onClick={back} solid={1}><ArrowLeft className="w-5 h-5" /></RoundButton>
           </div>
         </div>
-        <LoadingShapes label="Loading this listing"><Skeleton /></LoadingShapes>
+        <LoadingShapes label={t('Loading this listing')} t={t}><Skeleton /></LoadingShapes>
       </div>
     );
   }
@@ -416,22 +427,22 @@ function Listing({ productId }) {
       <div className="min-h-screen bg-slate-50 flex flex-col">
         <div className="bg-white border-b border-slate-100" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
           <div className="max-w-2xl mx-auto h-14 px-3 flex items-center">
-            <RoundButton label="Back" onClick={back} solid={0}><ArrowLeft className="w-5 h-5" /></RoundButton>
+            <RoundButton label={t('Back')} onClick={back} solid={0}><ArrowLeft className="w-5 h-5" /></RoundButton>
           </div>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
           <p className="text-base font-semibold text-slate-900">
-            {state.status === 'missing' ? "This listing isn't available" : "We couldn't load this listing"}
+            {state.status === 'missing' ? t('This listing isn\'t available') : t('We couldn\'t load this listing')}
           </p>
           <p className="mt-1 text-sm text-slate-500">
-            {state.status === 'missing' ? 'It may have been sold or removed.' : 'Check your connection and try again.'}
+            {state.status === 'missing' ? t('It may have been sold or removed.') : t('Check your connection and try again.')}
           </p>
           <div className="mt-4 flex gap-2">
             {state.status === 'error' && (
-              <button type="button" onClick={load} className="h-10 px-4 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700">Try again</button>
+              <button type="button" onClick={load} className="h-10 px-4 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700">{t('Try again')}</button>
             )}
             <Link to="/explore" replace className="h-10 px-4 rounded-full text-sm font-semibold text-white inline-flex items-center" style={{ background: BRAND_GRADIENT }}>
-              Browse Explore
+              {t('Browse Explore')}
             </Link>
           </div>
         </div>
@@ -444,7 +455,7 @@ function Listing({ productId }) {
   const hasDiscount = item.compare_at_price != null && Number(item.compare_at_price) > Number(item.price);
   const percentOff = hasDiscount ? Math.round((1 - Number(item.price) / Number(item.compare_at_price)) * 100) : 0;
   const isOwn = !!viewer?.is_own;
-  const deals = dealOptions(state.data.selling, currency);
+  const deals = dealOptions(state.data.selling, currency, t);
   const description = String(item.description || '').trim();
   const longText = description.length > 280 || description.split('\n').length > 6;
   const more = state.data.more || [];
@@ -459,10 +470,10 @@ function Listing({ productId }) {
 
   const putInCart = (variant, notes, quantity) => {
     if (addToShopCart(shop.slug, cartProduct, variant, notes, quantity, cartShop)) {
-      showNotice('Added to cart', { label: 'View cart', onClick: () => navigate('/explore/cart') });
+      showNotice(t('Added to cart'), { label: t('View cart'), onClick: () => navigate('/explore/cart') });
     } else {
       // This phone won't keep it (storage blocked or full): order on the shop's page instead.
-      toast.error('Couldn’t add it to the cart on this phone.', { action: { label: 'Open shop', onClick: () => navigate(buyHref) } });
+      toast.error(t('Couldn’t add it to the cart on this phone.'), { action: { label: t('Open shop'), onClick: () => navigate(buyHref) } });
     }
   };
   // Straight to the shop's checkout (its page opens it, or its cart while it's closed).
@@ -499,12 +510,12 @@ function Listing({ productId }) {
         }}
       >
         <div className="max-w-2xl mx-auto h-14 px-3 flex items-center gap-2">
-          <RoundButton label="Back" onClick={back} solid={1 - progress}><ArrowLeft className="w-5 h-5" /></RoundButton>
+          <RoundButton label={t('Back')} onClick={back} solid={1 - progress}><ArrowLeft className="w-5 h-5" /></RoundButton>
           <p className="flex-1 min-w-0 truncate text-[15px] font-semibold text-slate-900" style={{ opacity: progress }} aria-hidden={progress < 0.5}>
             {item.name}
           </p>
-          <RoundButton label="Share" onClick={() => setShareOpen(true)} solid={1 - progress}><Share2 className="w-5 h-5" /></RoundButton>
-          <RoundButton label={cartLabel(cartItems)} onClick={() => navigate('/explore/cart')} solid={1 - progress}>
+          <RoundButton label={t('Share')} onClick={() => setShareOpen(true)} solid={1 - progress}><Share2 className="w-5 h-5" /></RoundButton>
+          <RoundButton label={cartLabel(cartItems, t)} onClick={() => navigate('/explore/cart')} solid={1 - progress}>
             <ShoppingCart className="w-5 h-5" />
             <CartBadge count={cartItems} />
           </RoundButton>
@@ -519,7 +530,7 @@ function Listing({ productId }) {
         {isOwn && state.data.visible === false && (
           <div className="mx-4 mt-4 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 flex gap-2 text-sm text-amber-900">
             <EyeOff className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span>Only you can see this. It shows on Explore once your shop is listed and the item is active.</span>
+            <span>{t('Only you can see this. It shows on Explore once your shop is listed and the item is active.')}</span>
           </div>
         )}
 
@@ -535,14 +546,14 @@ function Listing({ productId }) {
           </div>
           <h1 className="mt-1.5 text-lg font-semibold text-slate-900 leading-snug break-words">{item.name}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
-            {item.sold_out && <span className="font-semibold text-red-700 bg-red-50 rounded-full px-2.5 py-1">Sold out</span>}
+            {item.sold_out && <span className="font-semibold text-red-700 bg-red-50 rounded-full px-2.5 py-1">{t('Sold out')}</span>}
             {like.likes > 0 && (
               <span className="inline-flex items-center gap-1 font-semibold text-slate-700" data-testid="like-count">
                 <Heart className="w-3.5 h-3.5" fill={LIKE_RED} color={LIKE_RED} aria-hidden="true" />
-                {likesText(like.likes)}
+                {likesText(like.likes, t)}
               </span>
             )}
-            <span className="text-slate-500">{listedLabel(item.listed_at)}</span>
+            <span className="text-slate-500">{listedLabel(item.listed_at, t)}</span>
           </div>
           {isOwn && (
             <div className="mt-3 flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200" data-testid="seller-likes">
@@ -551,8 +562,8 @@ function Listing({ productId }) {
               </span>
               <span className="text-[13px] text-slate-700 leading-snug">
                 {like.likes > 0
-                  ? <><b className="text-slate-900">{like.likes} {like.likes === 1 ? 'person' : 'people'}</b> liked this listing</>
-                  : 'No likes yet. Share it so more buyers see it.'}
+                  ? t('{who} liked this listing', { who: <b className="text-slate-900">{like.likes === 1 ? t('1 person') : t('{count} people', { count: like.likes })}</b> })
+                  : t('No likes yet. Share it so more buyers see it.')}
               </span>
             </div>
           )}
@@ -566,12 +577,12 @@ function Listing({ productId }) {
             <div className="min-w-0 flex-1">
               <p className="text-[15px] font-bold text-slate-900 truncate">{shop.name}</p>
               <p className="text-xs text-slate-500 truncate">
-                {shopKind(shop)} · {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                {t(shopKind(shop))} · {itemCount === 1 ? t('1 item') : t('{count} items', { count: itemCount })}
               </p>
-              {sinceLabel(shop.since) && <p className="text-xs text-slate-400 truncate">{sinceLabel(shop.since)}</p>}
+              {sinceLabel(shop.since, t, locale) && <p className="text-xs text-slate-400 truncate">{sinceLabel(shop.since, t, locale)}</p>}
             </div>
             <span className="h-9 px-3 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 inline-flex items-center gap-1 group-hover:bg-slate-50">
-              <Store className="w-4 h-4" /> View shop
+              <Store className="w-4 h-4" />{' '}{t('View shop')}
             </span>
           </Link>
           {shopRating && (
@@ -580,18 +591,18 @@ function Listing({ productId }) {
               onClick={() => setRatingOpen(true)}
               className="mt-2 ml-[60px] inline-flex items-center gap-1 rounded-full px-2 py-1 -mx-2 hover:bg-slate-50"
             >
-              <RatingPill summary={shopRating} size={13} variant="long" />
+              <RatingPill summary={shopRating} size={13} variant="long" t={t} />
               <span className="text-slate-400 text-sm" aria-hidden="true">›</span>
             </button>
           )}
-          <RatingSheet open={ratingOpen} onClose={() => setRatingOpen(false)} shopName={shop.name} summary={shopRating} shopId={shop.id} />
+          <RatingSheet open={ratingOpen} onClose={() => setRatingOpen(false)} shopName={shop.name} summary={shopRating} shopId={shop.id} t={t} />
         </section>
 
         {deals.length > 0 && (
           <>
             <div className="h-2 bg-slate-50" />
             <section className="px-4 py-4">
-              <h2 className="text-[15px] font-bold text-slate-900">Deal options</h2>
+              <h2 className="text-[15px] font-bold text-slate-900">{t('Deal options')}</h2>
               <ul className="mt-3 space-y-3">
                 {deals.map(({ icon: Icon, title, detail }) => (
                   <li key={title} className="flex gap-3">
@@ -613,13 +624,13 @@ function Listing({ productId }) {
           <>
             <div className="h-2 bg-slate-50" />
             <section className="px-4 py-4">
-              <h2 className="text-[15px] font-bold text-slate-900">Description</h2>
+              <h2 className="text-[15px] font-bold text-slate-900">{t('Description')}</h2>
               <p className={`mt-2 text-[15px] leading-relaxed text-slate-700 whitespace-pre-line break-words ${longText && !showFullText ? 'line-clamp-6' : ''}`}>
                 {description}
               </p>
               {longText && (
                 <button type="button" onClick={() => setShowFullText((v) => !v)} className="mt-2 text-sm font-semibold" style={{ color: BRAND_COLOR }}>
-                  {showFullText ? 'Show less' : 'Read more'}
+                  {showFullText ? t('Show less') : t('Read more')}
                 </button>
               )}
             </section>
@@ -631,8 +642,8 @@ function Listing({ productId }) {
             <div className="h-2 bg-slate-50" />
             <section className="py-4">
               <div className="px-4 flex items-center justify-between">
-                <h2 className="text-[15px] font-bold text-slate-900">More from {shop.name}</h2>
-                <Link to={storeUrl(shop.slug)} className="text-sm font-semibold" style={{ color: BRAND_COLOR }}>See all</Link>
+                <h2 className="text-[15px] font-bold text-slate-900">{t('More from {name}', { name: shop.name })}</h2>
+                <Link to={storeUrl(shop.slug)} className="text-sm font-semibold" style={{ color: BRAND_COLOR }}>{t('See all')}</Link>
               </div>
               <div className="mt-3 flex gap-3 overflow-x-auto px-4 pb-1" style={hideScrollbar}>
                 {more.map((m) => (
@@ -656,40 +667,40 @@ function Listing({ productId }) {
               className="flex-1 h-12 rounded-xl border-2 text-[15px] font-semibold inline-flex items-center justify-center gap-2"
               style={{ borderColor: BRAND_COLOR, color: BRAND_COLOR }}
             >
-              <Pencil className="w-4 h-4" /> Edit listing
+              <Pencil className="w-4 h-4" />{' '}{t('Edit listing')}
             </Link>
             <Link
               to={storeUrl(shop.slug)}
               className="flex-1 h-12 rounded-xl text-white text-[15px] font-semibold inline-flex items-center justify-center gap-2"
               style={{ background: BRAND_GRADIENT }}
             >
-              <Store className="w-4 h-4" /> View in shop
+              <Store className="w-4 h-4" />{' '}{t('View in shop')}
             </Link>
           </div>
         ) : (
           <div className="max-w-2xl mx-auto px-3 py-2 flex items-center gap-1" data-testid="buyer-bar">
             <BarIconButton
-              label={like.liked ? 'Unlike this listing' : 'Like this listing'}
+              label={like.liked ? t('Unlike this listing') : t('Like this listing')}
               pressed={like.liked}
               onClick={toggleLike}
-              caption={like.liked ? 'Liked' : 'Like'}
+              caption={like.liked ? t('Liked') : t('Like')}
               captionColor={like.liked ? '#be123c' : '#334155'}
             >
               <Heart className="w-[23px] h-[23px]" fill={like.liked ? LIKE_RED : 'none'} color={like.liked ? LIKE_RED : '#334155'} aria-hidden="true" />
             </BarIconButton>
-            <BarIconButton label="Chat with the seller" onClick={openChat} caption="Chat">
+            <BarIconButton label={t('Chat with the seller')} onClick={openChat} caption={t('Chat')}>
               <MessageCircle className="w-[23px] h-[23px]" aria-hidden="true" />
             </BarIconButton>
             {item.sold_out ? (
               <span className="ml-1 flex-1 h-12 rounded-[14px] bg-slate-100 text-slate-500 text-[15px] font-semibold inline-flex items-center justify-center">
-                Sold out
+                {t('Sold out')}
               </span>
             ) : (
               <>
                 <button
                   type="button"
                   onClick={addToCart}
-                  aria-label="Add to cart"
+                  aria-label={t('Add to cart')}
                   className="ml-1 w-[60px] h-12 flex-shrink-0 rounded-[14px] flex items-center justify-center active:scale-95 transition-transform"
                   style={{ background: 'rgb(var(--color-primary, 59 130 246) / 0.14)', color: BRAND_COLOR }}
                 >
@@ -701,7 +712,7 @@ function Listing({ productId }) {
                   className="ml-1 flex-1 min-w-0 h-12 rounded-[14px] text-white flex flex-col items-center justify-center leading-tight active:scale-[0.98] transition-transform"
                   style={{ background: BRAND_GRADIENT }}
                 >
-                  <span className="text-[15px] font-bold">Buy now</span>
+                  <span className="text-[15px] font-bold">{t('Buy now')}</span>
                   <span className="text-[11px] font-medium">{priceText}</span>
                 </button>
               </>
@@ -739,7 +750,8 @@ function Listing({ productId }) {
         priceText={priceText}
         shopName={shop.name}
         image={images[0]}
-        onCopied={(copied) => (copied ? showNotice('Link copied') : toast.info(shareUrl))}
+        onCopied={(copied) => (copied ? showNotice(t('Link copied')) : toast.info(shareUrl))}
+        t={t}
       />
       <ItemOptionsSheet
         open={!!optionsMode}

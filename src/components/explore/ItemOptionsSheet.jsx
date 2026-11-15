@@ -6,11 +6,13 @@ import {
   chooseLabel, combineChoices, isMultiChoice, isPicked, isRequiredChoice, missingChoices, normaliseVariants, pickOption,
 } from '@/lib/itemOptions';
 import { MAX_LINE_QUANTITY } from '@/lib/shopCart';
+import { useAppText } from '@/lib/appText';
 
 // Choosing an item's options (size, add-ons), a special request and how many, before
 // it goes into the cart (mode 'cart') or straight to checkout (mode 'buy'). The same
 // rules as the shop page's item screen (see itemOptions.js).
 export default function ItemOptionsSheet({ open, mode, item, currency, image, onClose, onConfirm }) {
+  const { t, language } = useAppText('explore');
   const groups = useMemo(() => normaliseVariants(item?.variants, item?.price), [item]);
   const [picks, setPicks] = useState({});
   const [notes, setNotes] = useState('');
@@ -26,7 +28,14 @@ export default function ItemOptionsSheet({ open, mode, item, currency, image, on
   const variant = combineChoices(picks);
   const unit = (Number(item?.price) || 0) + (variant?.price_modifier || 0);
   const missing = missingChoices(groups, picks);
-  const verb = mode === 'buy' ? 'Buy now' : 'Add to cart';
+  const verb = mode === 'buy' ? t('Buy now') : t('Add to cart');
+  // "Choose a size" in English (lib/itemOptions.js); in Indonesian the seller's own group name.
+  const choose = (group) => {
+    if (language !== 'id') return chooseLabel(group);
+    const name = String(group?.name || '').trim();
+    return name ? t('Choose {name}', { name: groupName(name) }) : t('Choose an option');
+  };
+  const groupName = (name) => (name === 'Options' ? t('Options') : name);
 
   const confirm = () => {
     if (missing.length) return;
@@ -41,7 +50,7 @@ export default function ItemOptionsSheet({ open, mode, item, currency, image, on
       className="w-full h-[50px] rounded-[14px] text-[15px] font-bold disabled:cursor-default"
       style={missing.length ? { background: '#e2e8f0', color: '#475569' } : { background: BRAND_GRADIENT, color: '#fff' }}
     >
-      {missing.length ? chooseLabel(missing[0]) : `${verb} · ${formatPrice(unit * quantity, currency)}`}
+      {missing.length ? choose(missing[0]) : `${verb} · ${formatPrice(unit * quantity, currency)}`}
     </button>
   );
 
@@ -53,7 +62,7 @@ export default function ItemOptionsSheet({ open, mode, item, currency, image, on
           <p id="item-options-title" className="text-[15px] font-semibold text-slate-900 leading-snug line-clamp-2 break-words">{item?.name}</p>
           <p className="mt-1 text-lg font-bold text-slate-900">{formatPrice(unit, currency)}</p>
         </div>
-        <button type="button" onClick={onClose} aria-label="Close" className="w-11 h-11 -mt-1.5 -mr-2.5 rounded-full flex items-center justify-center text-slate-700 hover:bg-slate-50 flex-shrink-0">
+        <button type="button" onClick={onClose} aria-label={t('Close')} className="w-11 h-11 -mt-1.5 -mr-2.5 rounded-full flex items-center justify-center text-slate-700 hover:bg-slate-50 flex-shrink-0">
           <X className="w-[22px] h-[22px]" />
         </button>
       </div>
@@ -61,13 +70,13 @@ export default function ItemOptionsSheet({ open, mode, item, currency, image, on
       {groups.map((group, gi) => {
         const multi = isMultiChoice(group);
         const required = isRequiredChoice(group);
-        const name = String(group?.name || '').trim() || (multi ? 'Add-ons' : 'Options');
+        const name = groupName(String(group?.name || '').trim()) || (multi ? t('Add-ons') : t('Options'));
         const headingId = `item-option-group-${gi}`;
         return (
           <div key={gi} className="mt-4" role="group" aria-labelledby={headingId}>
             <p id={headingId} className="mb-2 text-sm font-bold text-slate-900">
               {name}{' '}
-              <span className="text-xs font-medium text-slate-500">{multi ? 'Choose any' : required ? 'Choose 1 · Required' : 'Choose 1'}</span>
+              <span className="text-xs font-medium text-slate-500">{multi ? t('Choose any') : required ? t('Choose 1 · Required') : t('Choose 1')}</span>
             </p>
             <div className="grid grid-cols-2 gap-2">
               {(group.options || []).map((option, oi) => {
@@ -95,7 +104,7 @@ export default function ItemOptionsSheet({ open, mode, item, currency, image, on
 
       <div className="mt-4">
         <label htmlFor="item-special-request" className="block mb-2 text-sm font-bold text-slate-900">
-          Special request <span className="text-xs font-medium text-slate-500">optional</span>
+          {t('Special request')}{' '}<span className="text-xs font-medium text-slate-500">{t('optional')}</span>
         </label>
         <textarea
           id="item-special-request"
@@ -103,17 +112,17 @@ export default function ItemOptionsSheet({ open, mode, item, currency, image, on
           maxLength={500}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="e.g. No onions, extra spicy"
+          placeholder={t('e.g. No onions, extra spicy')}
           className="w-full px-3 py-2.5 rounded-xl border-[1.5px] border-slate-200 text-sm text-slate-900 resize-none outline-none focus:border-slate-400"
         />
       </div>
 
       <div className="mt-3.5 flex items-center justify-between">
-        <span id="item-quantity-label" className="text-sm font-bold text-slate-900">Quantity</span>
+        <span id="item-quantity-label" className="text-sm font-bold text-slate-900">{t('Quantity')}</span>
         <div role="group" aria-labelledby="item-quantity-label" className="flex items-center h-10 rounded-full border border-slate-200">
           <button
             type="button"
-            aria-label="One less"
+            aria-label={t('One less')}
             onClick={() => setQuantity((q) => Math.max(1, q - 1))}
             disabled={quantity <= 1}
             className="w-11 h-10 flex items-center justify-center text-slate-700 disabled:text-slate-300"
@@ -123,7 +132,7 @@ export default function ItemOptionsSheet({ open, mode, item, currency, image, on
           <span className="min-w-[22px] text-center text-[15px] font-semibold text-slate-900" aria-live="polite">{quantity}</span>
           <button
             type="button"
-            aria-label="One more"
+            aria-label={t('One more')}
             onClick={() => setQuantity((q) => Math.min(MAX_LINE_QUANTITY, q + 1))}
             disabled={quantity >= MAX_LINE_QUANTITY}
             className="w-11 h-10 flex items-center justify-center text-slate-700 disabled:text-slate-300"

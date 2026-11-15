@@ -3,6 +3,7 @@ import { Search } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { DidYouMean } from '@/components/ui-custom/NoMatches';
 import { BRAND_GRADIENT } from '@/components/explore/shared';
+import { useAppText } from '@/lib/appText';
 
 // A search on Explore that found nothing (UX states, 6; Alvin approved it, 9 Nov 2026). The
 // listings live on Sellio's server, so explore_suggest finds there the likely spelling ("Did you
@@ -20,6 +21,7 @@ export async function exploreSuggest(search, kind = null) {
 }
 
 export default function ExploreNoResults({ search, kind = null, onSearch, onShowAll }) {
+  const { t } = useAppText('explore');
   const [hint, setHint] = useState({ for: null, suggestion: null, popular: [] });
 
   useEffect(() => {
@@ -39,16 +41,16 @@ export default function ExploreNoResults({ search, kind = null, onSearch, onShow
       <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
         <Search className="w-6 h-6" aria-hidden="true" />
       </div>
-      <p className="text-base font-semibold text-slate-900 break-words">No results for “{search}”</p>
+      <p className="text-base font-semibold text-slate-900 break-words">{t('No results for “{search}”', { search })}</p>
       <p className="mt-1 text-sm text-slate-500 min-h-[20px]" aria-live="polite">
         {!ready ? ' ' : suggestion
-          ? <DidYouMean suggestion={suggestion} onPick={onSearch} />
-          : 'Check the spelling, or try fewer words.'}
+          ? <DidYouMean suggestion={suggestion} onPick={onSearch} t={t} />
+          : t('Check the spelling, or try fewer words.')}
       </p>
 
       {popular.length > 0 && (
         <div className="mt-5" data-testid="explore-popular">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Popular on Sellio</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{t('Popular on Sellio')}</p>
           <div className="mt-2 flex flex-wrap justify-center gap-2">
             {popular.map((name) => (
               <button
@@ -73,7 +75,7 @@ export default function ExploreNoResults({ search, kind = null, onSearch, onShow
             className="h-11 max-w-full truncate px-6 rounded-full text-sm font-semibold text-white active:scale-95 transition-transform"
             style={{ background: BRAND_GRADIENT }}
           >
-            Search “{suggestion}”
+            {t('Search “{suggestion}”', { suggestion })}
           </button>
         )}
         <button
@@ -81,7 +83,7 @@ export default function ExploreNoResults({ search, kind = null, onSearch, onShow
           onClick={onShowAll}
           className="h-10 px-5 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50"
         >
-          Show everything
+          {t('Show everything')}
         </button>
       </div>
     </div>

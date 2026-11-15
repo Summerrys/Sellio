@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { SellioLoadingMark } from './AppLoader';
+import { englishText } from '@/lib/appText';
 
 // A page's loading state (Alvin, 7 Nov 2026): grey placeholder shapes in the page's own
 // layout, with Sellio's small logo and bouncing dots over them (the full-screen loader's
@@ -11,6 +12,8 @@ import { SellioLoadingMark } from './AppLoader';
 // shapes' sweep, the logo's pulse, and the older skeletons a page wraps in it (AppLoader's
 // .sellio-shimmer, Tailwind's animate-pulse). Still loading after 12 seconds: a Reload offer
 // under the mark, as on the full-screen loader.
+// t: the t of the screen that shows it (lib/appText.js); English without one, so a store page
+// never loads the app's words.
 const STYLE_ID = 'sellio-loading-shapes-css';
 
 const CSS = `
@@ -56,7 +59,7 @@ export function Shape({ w = '100%', h = 12, r = 8, className = '', style }) {
   return <div className={`sellio-shape ${className}`} style={{ width: w, height: h, borderRadius: r, flexShrink: 0, ...style }} />;
 }
 
-export default function LoadingShapes({ children, label = 'Loading', className = '', style, slowAfterMs = 12000 }) {
+export default function LoadingShapes({ children, label, className = '', style, slowAfterMs = 12000, t = englishText }) {
   injectCss();
   const [slow, setSlow] = useState(false);
   useEffect(() => {
@@ -69,7 +72,7 @@ export default function LoadingShapes({ children, label = 'Loading', className =
     <div
       role="status"
       aria-busy="true"
-      aria-label={label}
+      aria-label={label ?? t('Loading')}
       data-testid="loading-shapes"
       className={`sellio-loading ${className}`}
       style={{ position: 'relative', ...style }}
@@ -80,8 +83,8 @@ export default function LoadingShapes({ children, label = 'Loading', className =
           <span className="sellio-loading-mark" data-testid="loading-mark"><SellioLoadingMark /></span>
           {slow && (
             <span className="sellio-loading-slow">
-              <span>This is taking longer than usual.</span>
-              <button type="button" onClick={() => window.location.reload()}>Reload</button>
+              <span>{t('This is taking longer than usual.')}</span>
+              <button type="button" onClick={() => window.location.reload()}>{t('Reload')}</button>
             </span>
           )}
         </div>,

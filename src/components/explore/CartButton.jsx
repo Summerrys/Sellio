@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart } from 'lucide-react';
 import { useCartCount } from '@/lib/shopCart';
+import { englishText, useAppText } from '@/lib/appText';
 
 // The cart icon (Explore's header, a listing's header) and its number: everything in
 // this phone's carts, from every shop.
@@ -16,15 +17,20 @@ export function CartBadge({ count, look = 'round' }) {
   return <span aria-hidden="true" className={className}>{count > 99 ? '99+' : count}</span>;
 }
 
-export const cartLabel = (count) => (count > 0 ? `Cart, ${count} ${count === 1 ? 'item' : 'items'}` : 'Cart');
+// t: the screen's own (lib/appText.js); English without it.
+export const cartLabel = (count, t = englishText) => {
+  if (!(count > 0)) return t('Cart');
+  return count === 1 ? t('Cart, 1 item') : t('Cart, {count} items', { count });
+};
 
 export default function CartLink({ className = '' }) {
+  const { t } = useAppText('explore');
   const count = useCartCount();
   return (
     <Link
       to="/explore/cart"
-      aria-label={cartLabel(count)}
-      title="Cart"
+      aria-label={cartLabel(count, t)}
+      title={t('Cart')}
       className={`relative inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md text-slate-700 hover:bg-slate-100 ${className}`}
     >
       <ShoppingCart className="w-5 h-5" />

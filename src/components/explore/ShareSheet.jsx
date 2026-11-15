@@ -3,6 +3,7 @@ import { X, MessageCircle, Send, Link2, Mail, MoreHorizontal } from 'lucide-reac
 import { isNativeApp } from '@/lib/nativeApp';
 import BottomSheet from './BottomSheet';
 import { ItemImage } from './shared';
+import { englishText } from '@/lib/appText';
 
 // "Share to": a listing's link straight into WhatsApp, Telegram, Messenger (phones only),
 // Facebook or an email, copied, or (where the phone offers it) any other app.
@@ -12,6 +13,7 @@ import { ItemImage } from './shared';
 // place and the app hands it to the phone, asking "Open External Link?" first: WhatsApp,
 // Telegram or Facebook opens. Email links go to the mail app. The app blocks any other
 // kind of link (fb-messenger:), so Messenger isn't offered there.
+// t: the t of the screen that opens it (lib/appText.js); English without one.
 
 const PHONE = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
 
@@ -52,9 +54,9 @@ function Target({ href, newTab = false, onClick, label, color, background, icon:
   return <button type="button" onClick={onClick} className={className}>{inner}</button>;
 }
 
-export default function ShareSheet({ open, onClose, url, title, priceText, shopName, image, onCopied }) {
+export default function ShareSheet({ open, onClose, url, title, priceText, shopName, image, onCopied, t = englishText }) {
   const enc = encodeURIComponent;
-  const text = `${title}${priceText ? ` · ${priceText}` : ''} on Sellio`;
+  const text = priceText ? t('{title} · {price} on Sellio', { title, price: priceText }) : t('{title} on Sellio', { title });
   const canShareMore = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
   const inApp = isNativeApp();
 
@@ -112,8 +114,8 @@ export default function ShareSheet({ open, onClose, url, title, priceText, shopN
   return (
     <BottomSheet open={open} onClose={onClose} labelledBy="share-sheet-title">
       <div className="flex items-center">
-        <h2 id="share-sheet-title" className="flex-1 text-base font-bold text-slate-900">Share to</h2>
-        <button type="button" onClick={onClose} aria-label="Close" className="w-11 h-11 -mr-2.5 rounded-full flex items-center justify-center text-slate-700 hover:bg-slate-50">
+        <h2 id="share-sheet-title" className="flex-1 text-base font-bold text-slate-900">{t('Share to')}</h2>
+        <button type="button" onClick={onClose} aria-label={t('Close')} className="w-11 h-11 -mr-2.5 rounded-full flex items-center justify-center text-slate-700 hover:bg-slate-50">
           <X className="w-[22px] h-[22px]" />
         </button>
       </div>
@@ -132,9 +134,9 @@ export default function ShareSheet({ open, onClose, url, title, priceText, shopN
           <Target href={`fb-messenger://share/?link=${enc(url)}`} onClick={openAfterClosing} label="Messenger" background="#7c3aed" color="#fff" icon={MessengerIcon} />
         )}
         <Target href={`https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`} {...site} label="Facebook" background="#1d4ed8" color="#fff" icon={FacebookIcon} />
-        <Target onClick={copy} label="Copy link" background="#f1f5f9" color="#334155" icon={Link2} />
-        <Target href={`mailto:?subject=${enc(`${title} on Sellio`)}&body=${enc(`${text}\n${url}`)}`} onClick={openAfterClosing} label="Email" background="#f1f5f9" color="#334155" icon={Mail} />
-        {canShareMore && <Target onClick={more} label="More" background="#f1f5f9" color="#334155" icon={MoreHorizontal} />}
+        <Target onClick={copy} label={t('Copy link')} background="#f1f5f9" color="#334155" icon={Link2} />
+        <Target href={`mailto:?subject=${enc(t('{title} on Sellio', { title }))}&body=${enc(`${text}\n${url}`)}`} onClick={openAfterClosing} label="Email" background="#f1f5f9" color="#334155" icon={Mail} />
+        {canShareMore && <Target onClick={more} label={t('More')} background="#f1f5f9" color="#334155" icon={MoreHorizontal} />}
       </div>
     </BottomSheet>
   );

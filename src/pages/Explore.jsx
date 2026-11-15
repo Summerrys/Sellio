@@ -13,7 +13,7 @@ import CartLink from '@/components/explore/CartButton';
 import { useRatingSummaries } from '@/lib/ratings';
 import { RatingPill } from '@/components/ratings/RatingParts';
 import { useSell } from '@/lib/sell';
-import { listingUrl, ExploreDesktopTabs } from '@/components/explore/shared';
+import { listingUrl, ExploreDesktopTabs, timeAgo } from '@/components/explore/shared';
 import { applyPageMeta, SITE } from '@/lib/pageMeta';
 import LoadingShapes from '@/components/ui-custom/LoadingShapes';
 import { onReconnect, useOnline } from '@/lib/network';
@@ -22,6 +22,7 @@ import OfflineNote, { listNoteWords } from '@/components/ui-custom/OfflineNote';
 import ExploreNoResults from '@/components/explore/ExploreNoResults';
 import { SuggestionList, useExploreSuggestions, useSuggestionKeys } from '@/components/explore/ExploreSuggestions';
 import { formatMoney } from '@/lib/money';
+import { useAppText, N_ } from '@/lib/appText';
 
 // Sellio Explore: a public, Carousell-style feed of items from Sellio shops.
 // Anyone can browse without an account; tapping an item opens its listing page. Data comes from the explore_feed / explore_shops RPCs, which only
@@ -35,11 +36,11 @@ const NATIVE_ANDROID = typeof window !== 'undefined' && /Android/i.test(window.n
 const PAGE_SIZE = 24;
 
 const KINDS = [
-  { key: 'all', label: 'All' },
-  { key: 'food', label: 'Food & drinks' },
-  { key: 'goods', label: 'Goods' },
-  { key: 'home', label: 'Home sellers' },
-  { key: 'merchants', label: 'Merchants' },
+  { key: 'all', label: N_('All') },
+  { key: 'food', label: N_('Food & drinks') },
+  { key: 'goods', label: N_('Goods') },
+  { key: 'home', label: N_('Home sellers') },
+  { key: 'merchants', label: N_('Merchants') },
 ];
 
 const hideScrollbar = { scrollbarWidth: 'none', msOverflowStyle: 'none' };
@@ -51,33 +52,16 @@ function formatPrice(amount, currency) {
   return formatMoney(value, currency);
 }
 
-function timeAgo(iso) {
-  if (!iso) return '';
-  const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-  if (seconds < 60) return 'Just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes} min ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return days === 1 ? '1 day ago' : `${days} days ago`;
-  const weeks = Math.floor(days / 7);
-  if (days < 30) return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
-  const months = Math.floor(days / 30);
-  if (days < 365) return months === 1 ? '1 month ago' : `${months} months ago`;
-  const years = Math.floor(days / 365);
-  return years === 1 ? '1 year ago' : `${years} years ago`;
-}
-
 const storeUrl = (slug) => `/store/${encodeURIComponent(slug)}`;
 const rowKey = (row) => row.product_id || row.shop_id;
 
+// Marked here (N_), shown through t().
 function industryLabel(industry) {
   const value = String(industry || '').toLowerCase();
-  if (/f.?b|cafe|restaurant|food|beverage/.test(value)) return 'Food & drinks';
-  if (/retail|fashion|electronics/.test(value)) return 'Retail';
-  if (/service|beauty|wellness|health|education/.test(value)) return 'Services';
-  return 'Merchant';
+  if (/f.?b|cafe|restaurant|food|beverage/.test(value)) return N_('Food & drinks');
+  if (/retail|fashion|electronics/.test(value)) return N_('Retail');
+  if (/service|beauty|wellness|health|education/.test(value)) return N_('Services');
+  return N_('Merchant');
 }
 
 function ShopAvatar({ name, logo, size = 24 }) {
@@ -114,23 +98,28 @@ const LIKE_RED = '#e11d48';
 // shows its count with a plain heart and no button (they can't like their own). Nothing
 // shows until its likes are known.
 function CardHeart({ item, signedIn, onNeedSignIn }) {
+  const { t } = useAppText('explore');
   const state = useKnownLike(item.product_id);
   if (!state) return null;
   const { likes, liked, own } = state;
   if (own) {
     if (!likes) return null;
     return (
-      <span className="flex-shrink-0 self-start mt-[5px] mr-2.5 inline-flex items-center gap-1 text-xs font-semibold text-slate-500" data-testid="card-likes" aria-label={`${likesText(likes)} on your listing`}>
+      <span className="flex-shrink-0 self-start mt-[5px] mr-2.5 inline-flex items-center gap-1 text-xs font-semibold text-slate-500" data-testid="card-likes" aria-label={t('{likes} on your listing', { likes: likesText(likes, t) })}>
         <Heart className="w-[18px] h-[18px]" fill="none" color="#94a3b8" aria-hidden="true" />
         {likes}
       </span>
     );
   }
+  const named = { name: item.product_name, likes: likes ? likesText(likes, t) : '' };
+  const heartLabel = likes
+    ? (liked ? t('Unlike {name} ({likes})', named) : t('Like {name} ({likes})', named))
+    : (liked ? t('Unlike {name}', named) : t('Like {name}', named));
   const tap = () => {
     if (!signedIn) { onNeedSignIn(item.product_id); return; }
     toggleKnownLike(item.product_id).catch((e) => {
       if (needsSignIn(e)) onNeedSignIn(item.product_id);
-      else toast.error(likeErrorMessage(e));
+      else toast.error(likeErrorMessage(e, { t }));
     });
   };
   return (
@@ -138,7 +127,7 @@ function CardHeart({ item, signedIn, onNeedSignIn }) {
       type="button"
       onClick={tap}
       aria-pressed={liked}
-      aria-label={`${liked ? 'Unlike' : 'Like'} ${item.product_name}${likes ? ` (${likesText(likes)})` : ''}`}
+      aria-label={heartLabel}
       data-testid="card-heart"
       className="flex-shrink-0 self-start -mt-1.5 mr-0.5 h-10 min-w-[40px] px-2 rounded-full inline-flex items-center justify-center gap-1 text-xs font-semibold active:scale-90 transition-transform"
       style={{ color: liked ? '#be123c' : '#64748b' }}
@@ -152,6 +141,7 @@ function CardHeart({ item, signedIn, onNeedSignIn }) {
 // The card opens the listing anywhere but its heart (a button can't sit inside a link,
 // so the price row is a second link to the same listing, left out of the Tab order).
 function ItemCard({ item, rating = null, signedIn = false, onNeedSignIn }) {
+  const { t } = useAppText('explore');
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = item.image_url && !imageFailed;
   const hasDiscount = item.compare_at_price != null && Number(item.compare_at_price) > Number(item.price);
@@ -165,7 +155,7 @@ function ItemCard({ item, rating = null, signedIn = false, onNeedSignIn }) {
             <p className="text-xs font-semibold text-slate-800 truncate">{item.shop_name}</p>
             <p className="text-[11px] text-slate-400 leading-tight flex items-center gap-1 whitespace-nowrap">
               {rating && <><RatingPill summary={rating} size={11} variant="bare" /><span aria-hidden="true">·</span></>}
-              <span className="truncate">{timeAgo(item.listed_at)}</span>
+              <span className="truncate">{timeAgo(item.listed_at, t)}</span>
             </p>
           </div>
         </div>
@@ -191,7 +181,7 @@ function ItemCard({ item, rating = null, signedIn = false, onNeedSignIn }) {
           )}
           {item.shop_type === 'individual' && (
             <span className="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/90 text-slate-700 shadow-sm">
-              Home seller
+              {t('Home seller')}
             </span>
           )}
         </div>
@@ -233,6 +223,7 @@ function Thumb({ src }) {
 
 // One card per paid merchant: its storefront, not a flood of its items.
 function MerchantCard({ shop, rating = null }) {
+  const { t } = useAppText('explore');
   const images = (shop.preview_images || []).filter(Boolean).slice(0, 4);
   const count = Number(shop.item_count) || 0;
   return (
@@ -246,11 +237,11 @@ function MerchantCard({ shop, rating = null }) {
           <p className="text-sm font-bold text-slate-900 truncate">{shop.shop_name}</p>
           <p className="text-xs text-slate-500 flex items-center gap-1 flex-wrap">
             {rating && <><RatingPill summary={rating} size={12} /><span aria-hidden="true">·</span></>}
-            <span>{industryLabel(shop.industry)} · {count} {count === 1 ? 'item' : 'items'}</span>
+            <span>{t(industryLabel(shop.industry))} · {count === 1 ? t('1 item') : t('{count} items', { count })}</span>
           </p>
         </div>
         <span className="text-xs font-semibold text-slate-700 inline-flex items-center whitespace-nowrap group-hover:text-slate-900">
-          Visit store <ChevronRight className="w-4 h-4" />
+          {t('Visit store')}{' '}<ChevronRight className="w-4 h-4" />
         </span>
       </div>
       <div className="grid grid-cols-4 gap-1 px-3 pb-3">
@@ -289,6 +280,7 @@ function SkeletonGrid() {
 const FOLD_EASE = 'cubic-bezier(0.2, 0, 0, 1)';
 
 function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, hasShop }) {
+  const { t } = useAppText('explore');
   const [scrolled, setScrolled] = useState(false);
   // Suggestions while typing (ExploreSuggestions), under the search box while it has the focus.
   // A pick, Enter or Escape closes the list until something else is typed.
@@ -350,7 +342,8 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
     }
   };
 
-  const pickedLabel = KINDS.find((k) => k.key === kind)?.label;
+  const picked = KINDS.find((k) => k.key === kind)?.label;
+  const pickedLabel = picked ? t(picked) : '';
   return (
     <>
       {/* Sticky, and its height never changes: the categories only slide (transform), so
@@ -364,15 +357,15 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
               {/* In the app, Sellio's home is this page: the logo stays here instead of
                   reloading it and adding a second copy to Back. Websites keep the home link. */}
               {isNativeApp() ? (
-                <Link to="/explore" replace aria-label="Sellio home" className="flex items-center gap-2">
+                <Link to="/explore" replace aria-label={t('Sellio home')} className="flex items-center gap-2">
                   <img src={LOGO_URL} alt="Sellio" className="h-10 w-auto object-contain" />
                 </Link>
               ) : (
-                <a href="/" aria-label="Sellio home" className="flex items-center gap-2">
+                <a href="/" aria-label={t('Sellio home')} className="flex items-center gap-2">
                   <img src={LOGO_URL} alt="Sellio" className="h-10 w-auto object-contain" />
                 </a>
               )}
-              <span className="text-sm font-semibold text-slate-400 md:hidden">Explore</span>
+              <span className="text-sm font-semibold text-slate-400 md:hidden">{t('Explore')}</span>
               <ExploreDesktopTabs />
               <div className="ml-auto flex items-center gap-2">
                 {signedIn ? (
@@ -381,21 +374,21 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
                     to={hasShop ? '/Dashboard' : '/Account'}
                     className="h-9 px-3 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 inline-flex items-center gap-1.5 hover:bg-slate-50"
                   >
-                    <Store className="w-4 h-4" /> {hasShop ? 'My shop' : 'My account'}
+                    <Store className="w-4 h-4" /> {hasShop ? t('My shop') : t('My account')}
                   </Link>
                   <ShopBell />
                   </>
                 ) : (
                   <>
                     <Link to="/Auth" className="h-9 px-3 rounded-full text-sm font-semibold text-slate-700 inline-flex items-center hover:bg-slate-50">
-                      Log in
+                      {t('Log in')}
                     </Link>
                     <Link
                       to="/join"
                       className="h-9 px-4 rounded-full text-sm font-semibold text-white inline-flex items-center"
                       style={{ background: BRAND_GRADIENT }}
                     >
-                      Sign up
+                      {t('Sign up')}
                     </Link>
                   </>
                 )}
@@ -405,7 +398,7 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
               its 44px tap area overhangs the row's padding, so the row keeps its height. */}
           <div className="relative max-w-6xl mx-auto px-3 sm:px-4 pb-2 flex items-center gap-1">
             <label className="relative block flex-1 min-w-0">
-              <span className="sr-only">Search Sellio Explore</span>
+              <span className="sr-only">{t('Search Sellio Explore')}</span>
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 ref={searchRef}
@@ -420,7 +413,7 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
                 aria-expanded={showList}
                 aria-controls={showList ? listId : undefined}
                 aria-activedescendant={showList && keys.active >= 0 ? `${listId}-${keys.active}` : undefined}
-                placeholder="Search for an item or shop"
+                placeholder={t('Search for an item or shop')}
                 enterKeyHint="search"
                 className={`w-full h-[38px] pl-9 ${query ? 'pr-[76px]' : 'pr-11'} rounded-[10px] bg-slate-100 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none focus:bg-white focus:ring-2 focus:ring-pink-200 [&::-webkit-search-cancel-button]:hidden`}
               />
@@ -428,7 +421,7 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
                 <button
                   type="button"
                   onClick={() => onQuery('')}
-                  aria-label="Clear search"
+                  aria-label={t('Clear search')}
                   className="absolute right-1.5 top-1/2 w-7 h-7 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200"
                   style={{ transform: `translate3d(${folded ? -36 : 0}px, -50%, 0)`, transition: `transform 220ms ${FOLD_EASE}` }}
                 >
@@ -440,7 +433,7 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
                 onClick={openCategories}
                 tabIndex={folded ? 0 : -1}
                 aria-hidden={folded ? undefined : true}
-                aria-label={kind === 'all' ? 'Show categories' : `Show categories (${pickedLabel} picked)`}
+                aria-label={kind === 'all' ? t('Show categories') : t('Show categories ({pickedLabel} picked)', { pickedLabel })}
                 className="absolute right-1 top-1/2 w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-slate-700"
                 style={{
                   transform: `translate3d(0, -50%, 0) scale(${folded ? 1 : 0.6})`,
@@ -472,7 +465,7 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
           }}
         >
           <div className="max-w-6xl mx-auto">
-            <div className="flex gap-2 overflow-x-auto px-3 sm:px-4 pb-2" style={hideScrollbar} role="tablist" aria-label="Filter listings">
+            <div className="flex gap-2 overflow-x-auto px-3 sm:px-4 pb-2" style={hideScrollbar} role="tablist" aria-label={t('Filter listings')}>
               {KINDS.map(({ key, label }) => {
                 const active = kind === key;
                 return (
@@ -485,7 +478,7 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
                     className={`h-[30px] px-3.5 rounded-full text-sm font-semibold whitespace-nowrap border transition-colors ${active ? 'text-white border-transparent' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
                     style={active ? { background: BRAND_GRADIENT } : undefined}
                   >
-                    {label}
+                    {t(label)}
                   </button>
                 );
               })}
@@ -498,6 +491,7 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
 }
 
 export default function Explore() {
+  const { t } = useAppText('explore');
   const { appUser } = useAppUser() || {};
   const signedIn = !!appUser;
   const hasShop = !!appUser?.tenant_id;
@@ -528,7 +522,7 @@ export default function Explore() {
   useLikesFor(itemsKind === 'merchants' ? [] : items.map((i) => i.product_id), appUser?.id || null);
   const signInToLike = useCallback((productId) => {
     rememberReturnPath(`/explore?like=${encodeURIComponent(productId)}`);
-    toast.info('Log in to like listings.');
+    toast.info(t('Log in to like listings.'));
     navigate('/Auth');
   }, [navigate]);
 
@@ -541,15 +535,15 @@ export default function Explore() {
     const rest = params.toString();
     navigate({ search: rest ? `?${rest}` : '' }, { replace: true });
     setListingLike(productId, true)
-      .then(() => toast.success('Liked. Find it in Me › My likes.'))
-      .catch((e) => { if (!needsSignIn(e)) toast.error(likeErrorMessage(e)); });
+      .then(() => toast.success(t('Liked. Find it in Me › My likes.')))
+      .catch((e) => { if (!needsSignIn(e)) toast.error(likeErrorMessage(e, { t })); });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     markExploreHome();
     return applyPageMeta({
-      title: 'Explore shops and items · Sellio',
-      description: 'Browse shops and home sellers on Sellio, and order from them directly.',
+      title: t('Explore shops and items · Sellio'),
+      description: t('Browse shops and home sellers on Sellio, and order from them directly.'),
       canonical: `${SITE}/explore`,
     });
   }, []);
@@ -664,8 +658,9 @@ export default function Explore() {
   }, [hasMore, loadMore]);
 
   const filtered = !!search || kind !== 'all';
-  const kindLabel = kind === 'merchants' ? 'Merchants on Sellio' : KINDS.find((k) => k.key === kind)?.label;
-  const heading = search ? `Results for “${search}”` : kind === 'all' ? 'Fresh finds' : kindLabel;
+  const picked = KINDS.find((k) => k.key === kind)?.label;
+  const kindLabel = kind === 'merchants' ? t('Merchants on Sellio') : (picked ? t(picked) : '');
+  const heading = search ? t('Results for “{search}”', { search }) : kind === 'all' ? t('Fresh finds') : kindLabel;
   const sellHref = hasShop ? '/explore/listings?new=1' : '/join';
 
   return (
@@ -683,7 +678,7 @@ export default function Explore() {
       <main className="max-w-6xl mx-auto px-2 sm:px-4 pb-32">
         {!filtered && shops.length > 0 && (
           <section className="pt-2.5 mb-3" aria-labelledby="explore-shops-heading">
-            <h2 id="explore-shops-heading" className="text-[15px] font-bold text-slate-900 mb-2 px-1 sm:px-0">Shops on Sellio</h2>
+            <h2 id="explore-shops-heading" className="text-[15px] font-bold text-slate-900 mb-2 px-1 sm:px-0">{t('Shops on Sellio')}</h2>
             <div className="flex gap-3.5 overflow-x-auto -mx-2 px-3 sm:-mx-4 sm:px-4 pb-1" style={hideScrollbar}>
               {shops.map((shop) => (
                 <Link key={shop.shop_id} to={storeUrl(shop.shop_slug)} className="w-[66px] flex-shrink-0 flex flex-col items-center gap-1 text-center">
@@ -691,7 +686,7 @@ export default function Explore() {
                   <span className="text-xs font-semibold text-slate-800 w-full truncate">{shop.shop_name}</span>
                   {ratings[shop.shop_id]
                     ? <span className="-mt-0.5"><RatingPill summary={ratings[shop.shop_id]} size={11} /></span>
-                    : <span className="text-[11px] text-slate-500 -mt-0.5">{shop.item_count} {Number(shop.item_count) === 1 ? 'item' : 'items'}</span>}
+                    : <span className="text-[11px] text-slate-500 -mt-0.5">{Number(shop.item_count) === 1 ? t('1 item') : t('{count} items', { count: shop.item_count })}</span>}
                 </Link>
               ))}
             </div>
@@ -701,26 +696,26 @@ export default function Explore() {
         <section aria-labelledby="explore-feed-heading" className={!filtered && shops.length > 0 ? '' : 'pt-2.5'}>
           <h2 id="explore-feed-heading" className="text-[15px] font-bold text-slate-900 mb-2 px-1 sm:px-0">{heading}</h2>
 
-          {status === 'loading' && <LoadingShapes label="Loading listings"><SkeletonGrid /></LoadingShapes>}
+          {status === 'loading' && <LoadingShapes label={t('Loading listings')} t={t}><SkeletonGrid /></LoadingShapes>}
 
           {/* Shown without a fresh load: when the listings are from, and what still works. */}
           {status === 'ready' && items.length > 0 && feedAt && (!online || feedKept) && (
             <OfflineNote className="mb-2.5" {...listNoteWords({
-              online, what: 'listings', at: feedAt,
-              offlineText: 'You can look through them. Opening a listing or ordering needs the internet.',
-              failedText: 'Check your connection, then try again.',
-            })} action={online ? { label: 'Try again', onClick: () => setReloadKey((k) => k + 1) } : undefined} />
+              online, what: t('listings'), at: feedAt,
+              offlineText: t('You can look through them. Opening a listing or ordering needs the internet.'),
+              failedText: t('Check your connection, then try again.'),
+            }, undefined, t)} action={online ? { label: t('Try again'), onClick: () => setReloadKey((k) => k + 1) } : undefined} />
           )}
 
           {status === 'error' && (
             <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
-              <p className="text-sm text-slate-600">{online ? 'We couldn’t load listings just now.' : 'You’re offline, so listings can’t load just now. They’ll load when you’re back online.'}</p>
+              <p className="text-sm text-slate-600">{online ? t('We couldn’t load listings just now.') : t('You’re offline, so listings can’t load just now. They’ll load when you’re back online.')}</p>
               <button
                 type="button"
                 onClick={() => setReloadKey((k) => k + 1)}
                 className="mt-3 h-9 px-4 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 inline-flex items-center gap-1.5 hover:bg-slate-50"
               >
-                <RefreshCw className="w-4 h-4" /> Try again
+                <RefreshCw className="w-4 h-4" />{' '}{t('Try again')}
               </button>
             </div>
           )}
@@ -739,20 +734,20 @@ export default function Explore() {
             <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
               {filtered ? (
                 <>
-                  <p className="text-sm text-slate-600">Nothing matches yet.</p>
+                  <p className="text-sm text-slate-600">{t('Nothing matches yet.')}</p>
                   <button
                     type="button"
                     onClick={() => { setQuery(''); setKind('all'); }}
                     className="mt-3 h-9 px-4 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                   >
-                    Show everything
+                    {t('Show everything')}
                   </button>
                 </>
               ) : (
                 <>
-                  <p className="text-sm text-slate-600">No listings yet. Be the first to sell on Sellio.</p>
+                  <p className="text-sm text-slate-600">{t('No listings yet. Be the first to sell on Sellio.')}</p>
                   <Link to={sellHref} className="mt-3 h-9 px-4 rounded-full text-sm font-semibold text-white inline-flex items-center" style={{ background: BRAND_GRADIENT }}>
-                    Start selling
+                    {t('Start selling')}
                   </Link>
                 </>
               )}
@@ -779,7 +774,7 @@ export default function Explore() {
                     disabled={loadingMore}
                     className="h-10 px-5 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700 inline-flex items-center gap-2 hover:bg-slate-50 disabled:opacity-60"
                   >
-                    {loadingMore && <Loader2 className="w-4 h-4 animate-spin" />} Show more
+                    {loadingMore && <Loader2 className="w-4 h-4 animate-spin" />}{' '}{t('Show more')}
                   </button>
                 </div>
               )}
@@ -789,7 +784,7 @@ export default function Explore() {
 
         {/* The same footer as the ordering page. Privacy and Terms are under Me. */}
         <footer className="mt-12" style={{ textAlign: 'center', padding: '16px 0 24px', color: '#c8d0dc', fontSize: 9, letterSpacing: '0.03em' }}>
-          Powered by{' '}
+          {t('Powered by')}{' '}
           <span style={{ fontWeight: 700, background: 'linear-gradient(90deg, #fb923c, #e0449a, #8b2fc9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
             Sellio
           </span>
@@ -803,7 +798,7 @@ export default function Explore() {
         className="fixed right-5 z-40 h-12 pl-4 pr-5 rounded-full text-white font-semibold text-[15px] hidden md:inline-flex items-center gap-1.5 shadow-lg shadow-black/20 active:scale-95 transition-transform"
         style={{ background: BRAND_GRADIENT, bottom: NATIVE_ANDROID ? '20px' : 'calc(20px + env(safe-area-inset-bottom, 0px))' }}
       >
-        <Plus className="w-5 h-5" /> Sell
+        <Plus className="w-5 h-5" />{' '}{t('Sell')}
       </Link>
       <ExploreTabBar active="home" />
     </div>

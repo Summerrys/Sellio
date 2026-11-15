@@ -1031,7 +1031,7 @@ export default function Orders() {
 
           {/* Orders list */}
           {isLoading ? (
-            <LoadingShapes label={t('Loading orders')}><SkeletonList count={4} lines={3} imageSize={0} /></LoadingShapes>
+            <LoadingShapes label={t('Loading orders')} t={t}><SkeletonList count={4} lines={3} imageSize={0} /></LoadingShapes>
           ) : filteredOrders.length === 0 ? (
             <div>
               <OrdersEmpty

@@ -10,6 +10,7 @@ import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
 import ShopBell from './ShopBell';
 import { BRAND_GRADIENT, ExploreTabHeader, ItemImage, formatPrice, listingUrl, timeAgo } from './shared';
 import LoadingShapes from '@/components/ui-custom/LoadingShapes';
+import { useAppText } from '@/lib/appText';
 
 // A seller's own items: Explore → Listings, and the Listings tab of a free shop. The
 // seller manages them here (the Manage listings tools); someone without access to the
@@ -30,9 +31,10 @@ function Prompt({ title, text, children }) {
 
 // Orders sit at the top of Listings (they used to have their own tab).
 export function OrdersButton() {
+  const { t } = useAppText('explore');
   return (
     <Link to="/Orders" className="h-9 px-3 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700 inline-flex items-center gap-1.5 hover:bg-slate-50">
-      <ClipboardList className="w-4 h-4" /> Orders
+      <ClipboardList className="w-4 h-4" />{' '}{t('Orders')}
     </Link>
   );
 }
@@ -51,6 +53,7 @@ function ListingsSkeleton() {
 }
 
 export function MyListingsContent({ tenantId, signedIn, returnPath }) {
+  const { t } = useAppText('explore');
   const [state, setState] = useState({ status: 'loading', rows: [], currency: 'SGD' });
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -81,42 +84,42 @@ export function MyListingsContent({ tenantId, signedIn, returnPath }) {
 
   if (!signedIn) {
     return (
-      <Prompt title="Sell on Sellio" text="Log in to see your listings, or open a free shop in a minute.">
-        <Link to="/Auth" onClick={() => rememberReturnPath(returnPath)} className="h-10 px-4 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 inline-flex items-center">Log in</Link>
-        <Link to="/join" className="h-10 px-4 rounded-full text-sm font-semibold text-white inline-flex items-center" style={{ background: BRAND_GRADIENT }}>Start selling</Link>
+      <Prompt title={t('Sell on Sellio')} text={t('Log in to see your listings, or open a free shop in a minute.')}>
+        <Link to="/Auth" onClick={() => rememberReturnPath(returnPath)} className="h-10 px-4 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 inline-flex items-center">{t('Log in')}</Link>
+        <Link to="/join" className="h-10 px-4 rounded-full text-sm font-semibold text-white inline-flex items-center" style={{ background: BRAND_GRADIENT }}>{t('Start selling')}</Link>
       </Prompt>
     );
   }
   if (!tenantId) {
     return (
-      <Prompt title="No shop yet" text="Open a free shop to list your first item.">
-        <Link to="/join" className="h-10 px-4 rounded-full text-sm font-semibold text-white inline-flex items-center" style={{ background: BRAND_GRADIENT }}>Start selling</Link>
+      <Prompt title={t('No shop yet')} text={t('Open a free shop to list your first item.')}>
+        <Link to="/join" className="h-10 px-4 rounded-full text-sm font-semibold text-white inline-flex items-center" style={{ background: BRAND_GRADIENT }}>{t('Start selling')}</Link>
       </Prompt>
     );
   }
-  if (state.status === 'loading') return <LoadingShapes label="Loading your listings"><ListingsSkeleton /></LoadingShapes>;
+  if (state.status === 'loading') return <LoadingShapes label={t('Loading your listings')} t={t}><ListingsSkeleton /></LoadingShapes>;
   if (state.status === 'error') {
     return (
       <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
-        <p className="text-sm text-slate-600">We couldn't load your listings just now.</p>
+        <p className="text-sm text-slate-600">{t('We couldn\'t load your listings just now.')}</p>
         <button type="button" onClick={() => setReloadKey((k) => k + 1)} className="mt-3 h-9 px-4 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 inline-flex items-center gap-1.5">
-          <RefreshCw className="w-4 h-4" /> Try again
+          <RefreshCw className="w-4 h-4" />{' '}{t('Try again')}
         </button>
       </div>
     );
   }
   if (!state.rows.length) {
     return (
-      <Prompt title="Nothing listed yet" text="Add a photo, a name and a price. It shows on Explore straight away.">
+      <Prompt title={t('Nothing listed yet')} text={t('Add a photo, a name and a price. It shows on Explore straight away.')}>
         <Link to="/Products?new=1" className="h-10 px-4 rounded-full text-sm font-semibold text-white inline-flex items-center gap-1.5" style={{ background: BRAND_GRADIENT }}>
-          <Plus className="w-4 h-4" /> Add a listing
+          <Plus className="w-4 h-4" />{' '}{t('Add a listing')}
         </Link>
       </Prompt>
     );
   }
   return (
     <>
-      <p className="text-sm text-slate-500 mb-3">{state.rows.length} {state.rows.length === 1 ? 'listing' : 'listings'}</p>
+      <p className="text-sm text-slate-500 mb-3">{state.rows.length === 1 ? t('1 listing') : t('{count} listings', { count: state.rows.length })}</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {state.rows.map((p) => {
           const hidden = p.is_active === false;
@@ -127,14 +130,14 @@ export function MyListingsContent({ tenantId, signedIn, returnPath }) {
                 <ItemImage src={p.image_url} name={p.name} className={`w-full h-full text-4xl ${hidden ? 'opacity-50' : ''}`} />
                 {(hidden || soldOut) && (
                   <span className="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/95 text-slate-700 shadow-sm">
-                    {hidden ? 'Hidden' : 'Sold out'}
+                    {hidden ? t('Hidden') : t('Sold out')}
                   </span>
                 )}
               </div>
               <div className="px-2.5 pt-2 pb-3">
                 <p className="text-sm text-slate-800 leading-snug line-clamp-2 min-h-[2.5rem]">{p.name}</p>
                 <p className="mt-1 text-sm font-bold text-slate-900">{formatPrice(p.price, state.currency)}</p>
-                <p className="text-[11px] text-slate-400">{timeAgo(p.created_date)}</p>
+                <p className="text-[11px] text-slate-400">{timeAgo(p.created_date, t)}</p>
               </div>
             </Link>
           );
@@ -145,6 +148,7 @@ export function MyListingsContent({ tenantId, signedIn, returnPath }) {
 }
 
 export default function ExploreListings() {
+  const { t, textKey } = useAppText('explore');
   const { appUser } = useAppUser() || {};
   const tenantId = appUser?.tenant_id || null;
   const { user, tenantUser, tenantId: shopId, noStore, isOwner, hasPermission } = useTenant();
@@ -154,13 +158,13 @@ export default function ExploreListings() {
 
   useEffect(() => {
     const previous = document.title;
-    document.title = 'My listings · Sellio';
+    document.title = `${t('My listings')} · Sellio`;
     return () => { document.title = previous; };
-  }, []);
+  }, [textKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <ExploreTabHeader title="My listings" shopMenu right={tenantId ? <><OrdersButton /><ShopBell /></> : null} />
+      <ExploreTabHeader title={t('My listings')} shopMenu right={tenantId ? <><OrdersButton /><ShopBell /></> : null} />
       <main className="max-w-6xl mx-auto px-4 pt-4" style={{ paddingBottom: TAB_BAR_SPACE }}>
         {canManage ? <Products embedded />
           : shopLoading ? <ListingsSkeleton />

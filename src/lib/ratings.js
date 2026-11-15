@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { deviceKey } from '@/lib/deviceKey';
+import { N_ } from '@/lib/appText';
 
 // Shop ratings (Supabase: shop_ratings and its functions). Buyers rate a shop after a
 // completed order: 1–5 stars and an optional comment, shown on the shop's page as
@@ -11,7 +12,8 @@ import { deviceKey } from '@/lib/deviceKey';
 // A shop can't be rated from a phone its owner or staff use (lib/deviceKey), and a rating
 // that looks suspicious waits, not counted, until a moderator keeps or removes it.
 
-export const STAR_WORDS = ['', 'Terrible', 'Not good', 'Okay', 'Good', 'Great'];
+// Words a screen shows through its t() (lib/appText.js).
+export const STAR_WORDS = ['', N_('Terrible'), N_('Not good'), N_('Okay'), N_('Good'), N_('Great')];
 export const STAR_COLOR = '#f59e0b';
 export const NOTE_MAX = 300;
 
@@ -92,7 +94,7 @@ export async function rateOrder(orderId, stars, note, notePublic = false) {
   });
   if (error) {
     const signIn = error.hint === 'sign_in' || (error.code === '42501' && /permission denied/i.test(error.message || ''));
-    throw new RatingError(signIn ? 'Log in to rate your order.' : (error.message || 'Your rating couldn\'t be saved. Please try again.'), signIn ? 'sign_in' : error.hint);
+    throw new RatingError(signIn ? N_('Log in to rate your order.') : (error.message || N_('Your rating couldn\'t be saved. Please try again.')), signIn ? 'sign_in' : error.hint);
   }
   return data;
 }
@@ -132,7 +134,7 @@ export async function shopRatings(shopId, offset = 0, limit = 30) {
 export async function removeMyComment(orderId) {
   const supabase = await getSupabase();
   const { error } = await supabase.rpc('remove_my_rating_comment', { p_order_id: orderId });
-  if (error) throw new RatingError(error.message || 'Couldn’t remove it. Please try again.', error.hint);
+  if (error) throw new RatingError(error.message || N_('Couldn’t remove it. Please try again.'), error.hint);
 }
 
 // "Alicia T.": how a buyer's name shows with a public comment (the server's rule).
@@ -151,11 +153,11 @@ export async function shopComments(shopId, offset = 0, limit = 10) {
 }
 
 export const REPORT_REASONS = [
-  ['abuse', 'Rude, hateful or harassing'],
-  ['personal_info', 'Shares someone’s personal details'],
-  ['spam', 'Spam or advertising'],
-  ['not_genuine', 'Not a real experience with this shop'],
-  ['other', 'Something else'],
+  ['abuse', N_('Rude, hateful or harassing')],
+  ['personal_info', N_('Shares someone’s personal details')],
+  ['spam', N_('Spam or advertising')],
+  ['not_genuine', N_('Not a real experience with this shop')],
+  ['other', N_('Something else')],
 ];
 
 // { hidden } — whether the comment is now hidden while Sellio reviews it.
@@ -164,7 +166,7 @@ export async function reportComment(ratingId, reason, details) {
   const { data, error } = await supabase.rpc('report_rating_comment', { p_rating_id: ratingId, p_reason: reason, p_details: details || null });
   if (error) {
     const signIn = error.hint === 'sign_in' || (error.code === '42501' && /permission denied/i.test(error.message || ''));
-    throw new RatingError(signIn ? 'Log in to report a comment.' : (error.message || 'Couldn’t send the report. Please try again.'), signIn ? 'sign_in' : error.hint);
+    throw new RatingError(signIn ? N_('Log in to report a comment.') : (error.message || N_('Couldn’t send the report. Please try again.')), signIn ? 'sign_in' : error.hint);
   }
   return data || {};
 }
@@ -219,6 +221,33 @@ export const HOLD_REASONS = {
   shared_phone: 'Another account that rated this shop uses the same phone',
   new_account_burst: 'Part of a burst of five-star ratings from new accounts',
 };
+
+// What rate_order_v3, remove_my_rating_comment and report_rating_comment say to people (their
+// raise … hint = …), word for word: a translated screen shows a RatingError through its t().
+export const DATABASE_SAYS = [
+  N_("Please keep it respectful: rude or hateful words can't be posted publicly."),
+  N_("Public comments can't include addresses, postal codes, block or unit numbers. Take them out, or keep your comment private."),
+  N_("Public comments can't include phone numbers, emails, links or social media handles. Take them out, or keep your comment private."),
+  N_("Public comments can't include NRIC or FIN numbers. Please take it out."),
+  N_("You can rate this order once it's done."),
+  N_("This order can't be rated."),
+  N_('Your note can be up to 300 characters.'),
+  N_('This order was placed with another account.'),
+  N_('This order was rated from another account.'),
+  N_("You can't rate your own shop."),
+  N_("You've rated a lot today. Try again tomorrow."),
+  N_("You can't rate this shop from a phone that's used to run it."),
+  N_('Choose from 1 to 5 stars.'),
+  N_('This order is too old to rate.'),
+  N_('Ratings can be changed for 30 days.'),
+  N_("This rating isn't yours."),
+  N_('Log in first.'),
+  N_('Keep it to 300 characters.'),
+  N_("This comment isn't shown any more."),
+  N_('This is your own comment. You can change or remove it from your order.'),
+  N_("You've reported a lot today. Try again tomorrow."),
+  N_("Choose why you're reporting it."),
+];
 
 // "4.8" for a rating number.
 export const ratingText = (value) => (value == null || Number.isNaN(Number(value)) ? '' : Number(value).toFixed(1));

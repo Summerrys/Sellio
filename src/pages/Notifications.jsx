@@ -184,7 +184,7 @@ export default function Notifications() {
 
       <div className="min-w-0 space-y-2">
         {loading ? (
-          <LoadingShapes label={t('Loading notifications')}><ListShapes rows={6} picture="round" side={false} /></LoadingShapes>
+          <LoadingShapes label={t('Loading notifications')} t={t}><ListShapes rows={6} picture="round" side={false} /></LoadingShapes>
         ) : !notifications.length ? (
           <NotificationsEmpty />
         ) : filteredNotifications.length === 0 ? (

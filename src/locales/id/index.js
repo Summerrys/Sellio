@@ -3,7 +3,10 @@
 // GLOSSARY.md.
 import signup from './signup.json';
 import shop from './shop.json';
+import explore from './explore.json';
 
 // signup: sign-up and onboarding. shop: Dashboard, Orders, Counter, Kitchen, Products, Settings
-// and what they open (a phrase both show has the same Indonesian in both).
-export const ID_GROUPS = { signup, shop };
+// and what they open. explore: Explore, listings, the cart, My purchases, My likes, Me, chats
+// and ratings (its screens use useAppText('explore'): English until it's in LIVE_GROUPS).
+// A phrase two groups show has the same Indonesian in both.
+export const ID_GROUPS = { signup, shop, explore };

@@ -463,7 +463,7 @@ export default function Tables() {
 
         {/* Tables display */}
         {isLoading ? (
-          <LoadingShapes label={appT('Loading tables')}><TableShapes /></LoadingShapes>
+          <LoadingShapes label={appT('Loading tables')} t={appT}><TableShapes /></LoadingShapes>
         ) : filteredTables.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 16px' }} data-testid="tables-empty">
             <QrCode style={{ width: '48px', height: '48px', color: '#cbd5e1', margin: '0 auto 12px' }} />

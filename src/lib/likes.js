@@ -3,6 +3,7 @@
 // shows on Explore, not your own shop's, at most 300 new likes a day. Unliking always works.
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { getSupabase } from '@/lib/supabaseClient';
+import { englishText, N_ } from '@/lib/appText';
 
 async function call(name, args) {
   const supabase = await getSupabase();
@@ -106,13 +107,18 @@ export const myLikedListings = (offset = 0, limit = 40) =>
 export const needsSignIn = (error) => error?.hint === 'sign_in';
 
 // The database's own wording for problems people can act on; a plain fallback otherwise.
+// t: a translated screen's own (lib/appText.js); the database's words are among its phrases.
 const FRIENDLY = new Set(['not_found', 'own_listing', 'rate_limited']);
-export function likeErrorMessage(error, fallback = 'Couldn’t update your like. Check your connection and try again.') {
-  if (FRIENDLY.has(error?.hint) && error?.message) return error.message;
-  return fallback;
+const DATABASE_SAYS = new Set([ // set_listing_like's messages, word for word
+  N_("This listing isn't available."), N_("You can't like your own listing."), N_("You've liked a lot today. Try again tomorrow."),
+  N_('Log in to like listings.'),
+]);
+export function likeErrorMessage(error, { t = englishText, fallback } = {}) {
+  if (FRIENDLY.has(error?.hint) && error?.message) return DATABASE_SAYS.has(error.message) ? t(error.message) : error.message;
+  return fallback ?? t('Couldn’t update your like. Check your connection and try again.');
 }
 
-export const likesText = (n) => {
+export const likesText = (n, t = englishText) => {
   const count = Number(n) || 0;
-  return `${count} ${count === 1 ? 'like' : 'likes'}`;
+  return count === 1 ? t('1 like') : t('{count} likes', { count });
 };

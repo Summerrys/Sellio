@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search } from 'lucide-react';
+import { englishText } from '@/lib/appText';
 
 // A search or filter that found nothing (UX state 6): what was looked for, why nothing
 // shows, and one next step (as OrdersEmpty does for Orders).
@@ -23,18 +24,16 @@ export default function NoMatches({ icon: Icon = Search, title, text, actionLabe
 }
 
 // "Did you mean kaya toast?", the spelling a tap away (lib/searchSuggest.js finds it).
-export function DidYouMean({ suggestion, onPick }) {
-  return (
-    <span data-testid="did-you-mean">
-      Did you mean{' '}
-      <button
-        type="button"
-        onClick={() => onPick(suggestion)}
-        className="font-bold text-violet-700 underline underline-offset-[3px] decoration-violet-300 hover:text-violet-800"
-      >
-        {suggestion}
-      </button>
-      ?
-    </span>
+// t: the t of the screen that shows it (lib/appText.js); English without one.
+export function DidYouMean({ suggestion, onPick, t = englishText }) {
+  const pick = (
+    <button
+      type="button"
+      onClick={() => onPick(suggestion)}
+      className="font-bold text-violet-700 underline underline-offset-[3px] decoration-violet-300 hover:text-violet-800"
+    >
+      {suggestion}
+    </button>
   );
+  return <span data-testid="did-you-mean">{t('Did you mean {suggestion}?', { suggestion: pick })}</span>;
 }

@@ -7,6 +7,7 @@ import { rememberReturnPath } from '@/lib/authNavigation';
 import { likeErrorMessage, myLikedListings, needsSignIn, setListingLike } from '@/lib/likes';
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
 import { BRAND_GRADIENT, ExploreTabHeader, ItemImage, formatPrice, listingUrl } from './shared';
+import { useAppText } from '@/lib/appText';
 
 // Me → My likes: the listings this buyer has liked (the heart on a listing), newest
 // first. The heart on each takes it off the list again.
@@ -15,19 +16,21 @@ const PAGE = 40;
 const LIKE_RED = '#e11d48';
 
 function SignInCard() {
+  const { t } = useAppText('explore');
   return (
     <section className="bg-white rounded-2xl border border-slate-100 p-6 text-center" data-testid="likes-signin">
       <Heart className="w-8 h-8 mx-auto text-slate-300" />
-      <p className="mt-3 text-base font-bold text-slate-900">Your likes</p>
-      <p className="mt-1 text-sm text-slate-500">Log in to keep the listings you like in one place.</p>
+      <p className="mt-3 text-base font-bold text-slate-900">{t('Your likes')}</p>
+      <p className="mt-1 text-sm text-slate-500">{t('Log in to keep the listings you like in one place.')}</p>
       <Link to="/Auth" onClick={() => rememberReturnPath('/explore/likes')} className="mt-4 h-10 px-5 rounded-full text-sm font-semibold text-white inline-flex items-center" style={{ background: BRAND_GRADIENT }}>
-        Log in
+        {t('Log in')}
       </Link>
     </section>
   );
 }
 
 function LikedCard({ row, onUnlike }) {
+  const { t } = useAppText('explore');
   const off = !row.available;
   return (
     <div className="relative bg-white rounded-2xl border border-slate-100 overflow-hidden" data-testid="liked-card">
@@ -39,14 +42,14 @@ function LikedCard({ row, onUnlike }) {
           <span className="block text-[13px] leading-snug text-slate-900 line-clamp-2 break-words">{row.product_name}</span>
           <span className="block mt-1 text-sm font-bold text-slate-900">{formatPrice(row.price, row.currency)}</span>
           <span className="block mt-0.5 text-xs text-slate-500 truncate">
-            {off ? 'Not available now' : row.sold_out ? `Sold out · ${row.shop_name}` : row.shop_name}
+            {off ? t('Not available now') : row.sold_out ? t('Sold out · {shop}', { shop: row.shop_name }) : row.shop_name}
           </span>
         </span>
       </Link>
       <button
         type="button"
         onClick={() => onUnlike(row)}
-        aria-label={`Unlike ${row.product_name}`}
+        aria-label={t('Unlike {name}', { name: row.product_name })}
         className="absolute top-1.5 right-1.5 w-10 h-10 rounded-full flex items-center justify-center"
         style={{ background: 'rgba(255,255,255,0.94)', boxShadow: '0 1px 6px rgba(15,23,42,0.18)' }}
       >
@@ -57,6 +60,7 @@ function LikedCard({ row, onUnlike }) {
 }
 
 export default function ExploreLikes() {
+  const { t, textKey } = useAppText('explore');
   const { appUser } = useAppUser() || {};
   const [rows, setRows] = useState([]);
   const [state, setState] = useState('loading'); // loading | ready | error | signin
@@ -66,9 +70,9 @@ export default function ExploreLikes() {
 
   useEffect(() => {
     const previous = document.title;
-    document.title = 'My likes · Sellio';
+    document.title = `${t('My likes')} · Sellio`;
     return () => { document.title = previous; };
-  }, []);
+  }, [textKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!appUser) { setState('signin'); return undefined; }
@@ -108,7 +112,7 @@ export default function ExploreLikes() {
       await setListingLike(row.product_id, true);
       reload();
     } catch (e) {
-      toast.error(likeErrorMessage(e, 'Couldn’t put it back. Like it again from its listing.'));
+      toast.error(likeErrorMessage(e, { t, fallback: t('Couldn’t put it back. Like it again from its listing.') }));
     }
   };
 
@@ -116,18 +120,18 @@ export default function ExploreLikes() {
     setRows((prev) => prev.filter((r) => r.product_id !== row.product_id));
     try {
       await setListingLike(row.product_id, false);
-      toast('Removed from My likes', { action: { label: 'Undo', onClick: () => relike(row) } });
+      toast(t('Removed from My likes'), { action: { label: t('Undo'), onClick: () => relike(row) } });
     } catch (e) {
       reload();
       if (needsSignIn(e)) setState('signin');
-      else toast.error(likeErrorMessage(e));
+      else toast.error(likeErrorMessage(e, { t }));
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-50" data-testid="likes-page">
       <ExploreTabHeader
-        title={<>My likes{state === 'ready' && rows.length > 0 && <span className="ml-2 text-[13px] font-medium text-slate-500">{rows.length}{hasMore ? '+' : ''} {rows.length === 1 && !hasMore ? 'listing' : 'listings'}</span>}</>}
+        title={<>{t('My likes')}{state === 'ready' && rows.length > 0 && <span className="ml-2 text-[13px] font-medium text-slate-500">{hasMore ? t('{count}+ listings', { count: rows.length }) : rows.length === 1 ? t('1 listing') : t('{count} listings', { count: rows.length })}</span>}</>}
       />
       <main className="max-w-3xl mx-auto px-3 pt-3" style={{ paddingBottom: TAB_BAR_SPACE }}>
         {state === 'signin' && <SignInCard />}
@@ -136,9 +140,9 @@ export default function ExploreLikes() {
         )}
         {state === 'error' && (
           <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
-            <p className="text-sm text-slate-600">We couldn’t load your likes just now.</p>
+            <p className="text-sm text-slate-600">{t('We couldn’t load your likes just now.')}</p>
             <button type="button" onClick={reload} className="mt-3 h-9 px-4 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 inline-flex items-center gap-1.5">
-              <RefreshCw className="w-4 h-4" /> Try again
+              <RefreshCw className="w-4 h-4" />{' '}{t('Try again')}
             </button>
           </div>
         )}
@@ -147,10 +151,10 @@ export default function ExploreLikes() {
             <span className="mx-auto w-14 h-14 rounded-full bg-rose-50 flex items-center justify-center">
               <Heart className="w-[26px] h-[26px]" color={LIKE_RED} />
             </span>
-            <p className="mt-3.5 text-base font-bold text-slate-900">No likes yet</p>
-            <p className="mt-1 text-sm text-slate-500">Tap the heart on any listing to keep it here.</p>
+            <p className="mt-3.5 text-base font-bold text-slate-900">{t('No likes yet')}</p>
+            <p className="mt-1 text-sm text-slate-500">{t('Tap the heart on any listing to keep it here.')}</p>
             <Link to="/explore" className="mt-5 h-10 px-5 rounded-full text-sm font-semibold text-white inline-flex items-center" style={{ background: BRAND_GRADIENT }}>
-              Browse Explore
+              {t('Browse Explore')}
             </Link>
           </section>
         )}
@@ -161,7 +165,7 @@ export default function ExploreLikes() {
             </div>
             {hasMore && (
               <button type="button" onClick={loadMore} disabled={loadingMore} className="mt-3 w-full h-10 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700 inline-flex items-center justify-center gap-1.5">
-                {loadingMore && <Loader2 className="w-4 h-4 animate-spin" />} Show more
+                {loadingMore && <Loader2 className="w-4 h-4 animate-spin" />}{' '}{t('Show more')}
               </button>
             )}
           </>

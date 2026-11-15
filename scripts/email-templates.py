@@ -19,11 +19,6 @@ mail scanner that opens the link is much less likely to use it up, on Android it
 app (sellio.sg/Join and /Auth are app links), and a link to a closed account opens the
 closed-account screen. The link to copy is the button's own link.
 
-Alvin, 15 Nov 2026 ("OK. Proceed." to the server-text step): the reset email is in English and
-Bahasa Indonesia, each line with its Indonesian under it. Supabase sends one template to
-everyone, whatever their language, and the reset email is the one a person may need before
-they can open the app at all.
-
 Run: python3 scripts/email-templates.py
 """
 from pathlib import Path
@@ -75,9 +70,8 @@ TEMPLATES = [
     {
         'file': 'reset-password.html',
         'dashboard': 'Reset Password',
-        'lang': 'en',
-        'subject': 'Reset your Sellio password / Atur ulang kata sandi Sellio',
-        'preheader': 'Choose a new password for your Sellio account. · Buat kata sandi baru untuk akun Sellio Anda.',
+        'subject': 'Reset your Sellio password',
+        'preheader': 'Choose a new password for your Sellio account.',
         'icon': f'{SITE}/branding/email-icon-key.png',
         'heading': 'Reset your password',
         'paragraphs': [
@@ -88,45 +82,15 @@ TEMPLATES = [
         'link': f'{SITE}/Auth?type=recovery&amp;token_hash={{{{ .TokenHash }}}}',
         'warning': 'This link expires in <strong>1 hour</strong>. If you didn’t request a password reset, '
                    'you can safely ignore this email — your password will not change.',
-        # Bahasa Indonesia, under each English line (the glossary's words: kata sandi, tautan).
-        'id': {
-            'heading': 'Atur ulang kata sandi Anda',
-            'greeting': 'Halo,',
-            'paragraphs': [
-                f'Kami menerima permintaan untuk mengatur ulang kata sandi akun Sellio Anda, <strong style="color:{INK};">{{{{ .Email }}}}</strong>. '
-                'Ketuk tombol di bawah untuk membuat kata sandi baru.',
-            ],
-            'button': 'Atur ulang kata sandi',
-            'warning': 'Tautan ini berlaku selama <strong>1 jam</strong>. Jika Anda tidak meminta pengaturan ulang kata sandi, '
-                       'abaikan saja email ini — kata sandi Anda tidak akan berubah.',
-            'signoff': 'Salam,<br><strong style="color:{INK};">Tim Sellio</strong>',
-            'copy': 'Tombol tidak berfungsi? Salin dan tempel tautan ini ke browser Anda:',
-            'help': 'Butuh bantuan?',
-        },
     },
 ]
 
 
 def page(t):
     text = f'font-family:{FONT};'
-    second = t.get('id')  # Bahasa Indonesia under the English, for a bilingual email
     paragraphs = '\n'.join(
         f'<p style="margin:0 0 16px 0;{text}font-size:15px;line-height:24px;color:{BODY};">{p}</p>'
         for p in t['paragraphs'])
-    if second:
-        paragraphs += '\n' + '\n'.join(
-            f'<p lang="id" style="margin:0 0 16px 0;{text}font-size:15px;line-height:24px;color:{BODY};">{p}</p>'
-            for p in second['paragraphs'])
-    heading_id = (f'\n<p lang="id" style="margin:6px 0 0 0;{text}font-size:16px;line-height:24px;font-weight:600;color:{BODY};">{second["heading"]}</p>'
-                  if second else '')
-    greeting = 'Hi there,' + (f' <span lang="id" style="font-weight:400;color:{BODY};">/ {second["greeting"]}</span>' if second else '')
-    button = t['button'] + (f'<br><span lang="id" style="font-size:13px;line-height:18px;font-weight:500;">{second["button"]}</span>' if second else '')
-    warning = t['warning'] + (f'<br><span lang="id">{second["warning"]}</span>' if second else '')
-    signoff = 'Cheers,<br><strong style="color:{INK};">The Sellio Team</strong>'.replace('{INK}', INK)
-    if second:
-        signoff += f'<br><br><span lang="id">{second["signoff"].replace("{INK}", INK)}</span>'
-    copy = 'Button not working? Copy and paste this link into your browser:' + (f'<br><span lang="id">{second["copy"]}</span>' if second else '')
-    help_text = 'Need help?' + (f' / <span lang="id">{second["help"]}</span>' if second else '')
     return f'''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -147,28 +111,28 @@ def page(t):
 </td></tr>
 <tr><td align="center" style="padding:32px 36px 4px 36px;">
 <img src="{t['icon']}" width="64" height="64" alt="" style="display:block;border:0;outline:none;">
-<h1 style="margin:20px 0 0 0;{text}font-size:24px;line-height:32px;font-weight:700;color:{INK};">{t['heading']}</h1>{heading_id}
+<h1 style="margin:20px 0 0 0;{text}font-size:24px;line-height:32px;font-weight:700;color:{INK};">{t['heading']}</h1>
 </td></tr>
 <tr><td style="padding:28px 36px 0 36px;">
-<p style="margin:0 0 16px 0;{text}font-size:15px;line-height:24px;font-weight:700;color:{INK};">{greeting}</p>
+<p style="margin:0 0 16px 0;{text}font-size:15px;line-height:24px;font-weight:700;color:{INK};">Hi there,</p>
 {paragraphs}
 <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:8px auto 0 auto;">
 <tr><td align="center" bgcolor="{BUTTON_SOLID}" style="border-radius:12px;background-color:{BUTTON_SOLID};background-image:{BUTTON};">
-<a href="{t['link']}" target="_blank" style="display:inline-block;padding:14px 32px;{text}font-size:15px;line-height:20px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:12px;">{button}</a>
+<a href="{t['link']}" target="_blank" style="display:inline-block;padding:14px 32px;{text}font-size:15px;line-height:20px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:12px;">{t['button']}</a>
 </td></tr>
 </table>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0 0 0;">
 <tr><td style="background-color:{WARN_BG};border:1px solid {WARN_LINE};border-radius:10px;padding:12px 16px;">
-<p style="margin:0;{text}font-size:12px;line-height:18px;color:{WARN_INK};">⚠️ {warning}</p>
+<p style="margin:0;{text}font-size:12px;line-height:18px;color:{WARN_INK};">⚠️ {t['warning']}</p>
 </td></tr>
 </table>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:28px 0 0 0;"><div style="border-top:1px solid {LINE};height:1px;line-height:1px;font-size:1px;">&nbsp;</div></td></tr></table>
-<p style="margin:24px 0 0 0;{text}font-size:15px;line-height:24px;color:{BODY};">{signoff}</p>
-<p style="margin:20px 0 6px 0;{text}font-size:12px;line-height:18px;color:{MUTED};">{copy}</p>
+<p style="margin:24px 0 0 0;{text}font-size:15px;line-height:24px;color:{BODY};">Cheers,<br><strong style="color:{INK};">The Sellio Team</strong></p>
+<p style="margin:20px 0 6px 0;{text}font-size:12px;line-height:18px;color:{MUTED};">Button not working? Copy and paste this link into your browser:</p>
 <p style="margin:0 0 28px 0;{text}font-size:11px;line-height:17px;color:{LINK};word-break:break-all;"><a href="{t['link']}" target="_blank" style="color:{LINK};text-decoration:underline;word-break:break-all;">{t['link']}</a></p>
 </td></tr>
 <tr><td style="padding:16px 32px 24px 32px;border-top:1px solid {LINE};">
-<p style="margin:0;{text}font-size:11px;line-height:18px;color:{MUTED};text-align:center;">Sent by <strong>Sellio</strong> · Powered by Apptelier<br>{help_text} <a href="mailto:{SUPPORT}" style="color:{FOOTER_LINK};text-decoration:none;">{SUPPORT}</a></p>
+<p style="margin:0;{text}font-size:11px;line-height:18px;color:{MUTED};text-align:center;">Sent by <strong>Sellio</strong> · Powered by Apptelier<br>Need help? <a href="mailto:{SUPPORT}" style="color:{FOOTER_LINK};text-decoration:none;">{SUPPORT}</a></p>
 </td></tr>
 </table>
 </td></tr>

@@ -82,7 +82,7 @@ export default function BottomTabBar({ tabs, sell, center, hideFrom = 'lg', bott
   const { t } = useAppText();
   const [first, second, third, fourth] = tabs;
   const middle = sell
-    ? { ...sell, label: t('Sell'), icon: Plus, ariaLabel: 'Sell — add a listing', dataTour: 'sell-shortcut' }
+    ? { ...sell, label: t('Sell'), icon: Plus, ariaLabel: t('Sell — add a listing'), dataTour: 'sell-shortcut' }
     : center || null;
   return (
     <nav

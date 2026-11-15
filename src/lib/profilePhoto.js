@@ -1,6 +1,7 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { getSupabase, SUPABASE_URL } from '@/lib/supabaseClient';
 import { shrinkImage, LONG_CACHE } from '@/lib/imageShrink';
+import { N_ } from '@/lib/appText';
 
 // A person's profile photo (Alvin, 10 Nov 2026): their Google photo by default, or one they chose,
 // or none (the letter). Sellio's server says which (my_profile_photo) and changes it
@@ -11,7 +12,8 @@ import { shrinkImage, LONG_CACHE } from '@/lib/imageShrink';
 export const PROFILE_PHOTO_MAX_SIDE = 512; // shown at up to 84px
 const BUCKET = 'profile-photos';
 const USABLE = /^image\/(jpeg|png|webp)$/;
-export const PHOTO_TYPE_MESSAGE = 'This photo can’t be used. Please choose a JPG, PNG or WebP photo.';
+// Phrases (lib/appText.js): a translated screen shows them through its t (showError does).
+export const PHOTO_TYPE_MESSAGE = N_('This photo can’t be used. Please choose a JPG, PNG or WebP photo.');
 
 const answers = new Map(); // account (lower-case email) → my_profile_photo's answer
 const asking = new Map(); // account → the request on its way
@@ -85,13 +87,13 @@ export async function uploadProfilePhoto(email, file) {
   const supabase = await getSupabase();
   const answer = answers.get(keyFor(email)) || await loadProfilePhoto(email, { fresh: true });
   const folder = answer?.folder;
-  if (!folder) throw new Error('Please sign in again to change your photo.');
+  if (!folder) throw new Error(N_('Please sign in again to change your photo.'));
   const ext = photo.type === 'image/png' ? 'png' : photo.type === 'image/webp' ? 'webp' : 'jpg';
   const path = `${folder}/${Date.now()}.${ext}`;
   const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, photo.blob, {
     contentType: photo.type, cacheControl: LONG_CACHE, upsert: false,
   });
-  if (uploadError) throw new Error('Couldn’t upload the photo. Please try again.');
+  if (uploadError) throw new Error(N_('Couldn’t upload the photo. Please try again.'));
   const { data, error } = await supabase.rpc('set_profile_photo', { p_choice: 'upload', p_path: path });
   if (error) {
     await removeOld(supabase, path);

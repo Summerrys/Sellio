@@ -15,13 +15,15 @@ import {
   BRAND_COLOR, BRAND_GRADIENT, BOTTOM_INSET, ShopAvatar, ItemImage, formatPrice, listingUrl, storeUrl,
 } from '@/components/explore/shared';
 import ZoomableImage from '@/components/ui-custom/ZoomableImage';
+import { useAppText, N_ } from '@/lib/appText';
 
 // One chat about a listing, for its buyer or for the shop.
 // variant 'page': full screen (Explore, phones). 'pane': fills its box (workspace).
 // With no conversationId and a productId, it's the buyer's first message: the chat
 // starts when it's sent (onCreated gets the new chat's id).
 
-const QUICK_REPLIES = ['Is this still available?', 'Can I collect it today?', 'Do you deliver?'];
+// In the buyer's language (the message goes as it reads on their screen).
+const QUICK_REPLIES = [N_('Is this still available?'), N_('Can I collect it today?'), N_('Do you deliver?')];
 const POLL_MS = 5000;
 
 const byId = (a, b) => a.id - b.id;
@@ -31,15 +33,16 @@ function mergeById(list, incoming) {
   return [...map.values()].sort(byId);
 }
 
-function dayLabel(iso) {
+// t, locale: the screen's own (lib/appText.js).
+function dayLabel(iso, t, locale) {
   const d = new Date(iso);
   const today = new Date();
   const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return 'Today';
-  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  return d.toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', ...(d.getFullYear() !== today.getFullYear() ? { year: 'numeric' } : {}) });
+  if (d.toDateString() === today.toDateString()) return t('Today');
+  if (d.toDateString() === yesterday.toDateString()) return t('Yesterday');
+  return d.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short', ...(d.getFullYear() !== today.getFullYear() ? { year: 'numeric' } : {}) });
 }
-const clock = (iso) => new Date(iso).toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' });
+const clock = (iso, locale) => new Date(iso).toLocaleTimeString(locale, { hour: locale === 'id-ID' ? '2-digit' : 'numeric', minute: '2-digit' });
 
 function headFromItem(data) {
   return {
@@ -72,8 +75,7 @@ function useNow(ms = 30000) {
 }
 
 // Under the name: "Online" (green) or when they were last on Sellio, then who they are.
-function PresenceLine({ presence, rest }) {
-  const online = presence === 'Online';
+function PresenceLine({ presence, online = false, rest }) {
   return (
     <span className="flex items-center gap-1.5 text-xs text-slate-500 min-w-0" data-testid="chat-presence">
       {online && <span aria-hidden="true" className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: ONLINE_GREEN }} />}
@@ -87,11 +89,12 @@ function PresenceLine({ presence, rest }) {
 }
 
 function ImageViewer({ src, onClose }) {
+  const { t } = useAppText('explore');
   useBackToClose(true, onClose);
   return (
-    <div role="dialog" aria-modal="true" aria-label="Photo" className="fixed inset-0 z-[70] bg-black flex flex-col" data-pull-refresh-block>
+    <div role="dialog" aria-modal="true" aria-label={t('Photo')} className="fixed inset-0 z-[70] bg-black flex flex-col" data-pull-refresh-block>
       <div className="flex justify-end px-3" style={{ paddingTop: 'env(safe-area-inset-top, 0px)', height: 'calc(56px + env(safe-area-inset-top, 0px))' }}>
-        <button type="button" onClick={onClose} aria-label="Close photo" autoFocus className="w-10 h-10 mt-2 rounded-full flex items-center justify-center text-white hover:bg-white/10">
+        <button type="button" onClick={onClose} aria-label={t('Close photo')} autoFocus className="w-10 h-10 mt-2 rounded-full flex items-center justify-center text-white hover:bg-white/10">
           <X className="w-6 h-6" />
         </button>
       </div>
@@ -104,13 +107,14 @@ function ImageViewer({ src, onClose }) {
 }
 
 function PhotoBubble({ src, onOpen }) {
+  const { t } = useAppText('explore');
   const [loaded, setLoaded] = useState(false);
-  if (!src) return <div className="w-48 h-48 rounded-2xl bg-slate-200 animate-pulse" aria-label="Loading photo" />;
+  if (!src) return <div className="w-48 h-48 rounded-2xl bg-slate-200 animate-pulse" aria-label={t('Loading photo')} />;
   return (
-    <button type="button" onClick={() => onOpen(src)} aria-label="Open photo" className="block rounded-2xl overflow-hidden bg-slate-200">
+    <button type="button" onClick={() => onOpen(src)} aria-label={t('Open photo')} className="block rounded-2xl overflow-hidden bg-slate-200">
       <img
         src={src}
-        alt="Photo"
+        alt={t('Photo')}
         onLoad={() => setLoaded(true)}
         className={`block max-w-[min(240px,65vw)] max-h-[320px] object-cover ${loaded ? '' : 'min-w-[12rem] min-h-[12rem]'}`}
       />
@@ -119,6 +123,7 @@ function PhotoBubble({ src, onOpen }) {
 }
 
 export default function ChatThread({ conversationId = null, productId = null, variant = 'page', onBack, onCreated }) {
+  const { t, locale } = useAppText('explore');
   const queryClient = useQueryClient();
   const { loading: userLoading, user } = useChatUser();
   const [status, setStatus] = useState('loading'); // loading | ready | missing | own | error | signed_out
@@ -259,7 +264,7 @@ export default function ChatThread({ conversationId = null, productId = null, va
       setMessages(messagesRef.current);
       setHasMore(!!res.has_more);
     } catch {
-      toast.error("Couldn't load earlier messages.");
+      toast.error(t('Couldn\'t load earlier messages.'));
     } finally {
       setLoadingOlder(false);
     }
@@ -286,7 +291,7 @@ export default function ChatThread({ conversationId = null, productId = null, va
       // Sent: Sellio may offer alerts for the reply (PushPrompt decides).
       offerPushAlerts('chat');
     } catch (err) {
-      const message = chatErrorMessage(err);
+      const message = chatErrorMessage(err, { t });
       setPending((list) => list.map((p) => (p.tempId === item.tempId ? { ...p, status: 'failed', error: message } : p)));
       toast.error(message);
     }
@@ -295,7 +300,7 @@ export default function ChatThread({ conversationId = null, productId = null, va
   const queue = (body, file = null) => {
     const text = (body || '').trim();
     if (!text && !file) return;
-    if (text.length > 2000) { toast.error('Messages can be up to 2,000 characters.'); return; }
+    if (text.length > 2000) { toast.error(t('Messages can be up to 2,000 characters.')); return; }
     const item = {
       tempId: `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       body: text || null,
@@ -328,7 +333,7 @@ export default function ChatThread({ conversationId = null, productId = null, va
   const isBuyer = head?.my_role === 'buyer';
   const title = head ? (isBuyer ? head.shop_name : head.buyer_name) : '';
   const now = useNow();
-  const presence = head ? lastSeenText(head, now) : '';
+  const presence = head ? lastSeenText(head, now, t, locale) : '';
   const lastMine = [...messages].reverse().find((m) => m.from_me);
   const seen = !!(lastMine && head?.other_read_at && new Date(head.other_read_at) >= new Date(lastMine.created_at));
 
@@ -346,7 +351,7 @@ export default function ChatThread({ conversationId = null, productId = null, va
     <header className="bg-white border-b border-slate-100 flex-shrink-0" style={isPage ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : undefined}>
       <div className="h-14 px-2 flex items-center gap-2">
         {onBack && (
-          <button type="button" onClick={onBack} aria-label="Back" className="w-10 h-10 rounded-full flex items-center justify-center text-slate-700 hover:bg-slate-100">
+          <button type="button" onClick={onBack} aria-label={t('Back')} className="w-10 h-10 rounded-full flex items-center justify-center text-slate-700 hover:bg-slate-100">
             <ArrowLeft className="w-5 h-5" />
           </button>
         )}
@@ -357,7 +362,7 @@ export default function ChatThread({ conversationId = null, productId = null, va
                 <ShopAvatar name={head.shop_name} logo={head.shop_logo_url} size={36} />
                 <span className="min-w-0">
                   <span className="block text-[15px] font-bold text-slate-900 truncate">{title}</span>
-                  <PresenceLine presence={presence} rest="Seller" />
+                  <PresenceLine presence={presence} online={!!head.online} rest={t('Seller')} />
                 </span>
               </Link>
             ) : (
@@ -365,7 +370,7 @@ export default function ChatThread({ conversationId = null, productId = null, va
                 <ShopAvatar name={head.buyer_name} logo={null} size={36} />
                 <span className="min-w-0">
                   <span className="block text-[15px] font-bold text-slate-900 truncate">{title}</span>
-                  <PresenceLine presence={presence} rest={`Buyer · ${head.shop_name}`} />
+                  <PresenceLine presence={presence} online={!!head.online} rest={t('Buyer · {shop}', { shop: head.shop_name })} />
                 </span>
               </div>
             )
@@ -380,15 +385,15 @@ export default function ChatThread({ conversationId = null, productId = null, va
         {header}
         <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
           <MessageCircle className="w-10 h-10 text-slate-300" />
-          <p className="mt-3 text-base font-semibold text-slate-900">Log in to chat</p>
-          <p className="mt-1 text-sm text-slate-500">Message sellers about their listings.</p>
+          <p className="mt-3 text-base font-semibold text-slate-900">{t('Log in to chat')}</p>
+          <p className="mt-1 text-sm text-slate-500">{t('Message sellers about their listings.')}</p>
           <Link
             to="/Auth"
             onClick={() => rememberReturnPath(`${window.location.pathname}${window.location.search}`)}
             className="mt-4 h-10 px-5 rounded-full text-sm font-semibold text-white inline-flex items-center"
             style={{ background: BRAND_GRADIENT }}
           >
-            Log in
+            {t('Log in')}
           </Link>
         </div>
       </>,
@@ -406,9 +411,9 @@ export default function ChatThread({ conversationId = null, productId = null, va
 
   if (status !== 'ready') {
     const text = {
-      missing: ["This chat isn't available", 'The listing may have been removed.'],
-      own: ['This is your listing', 'Buyers will message you here about it.'],
-      error: ["We couldn't load this chat", 'Check your connection and try again.'],
+      missing: [t("This chat isn't available"), t('The listing may have been removed.')],
+      own: [t('This is your listing'), t('Buyers will message you here about it.')],
+      error: [t("We couldn't load this chat"), t('Check your connection and try again.')],
     }[status];
     return shell(
       <>
@@ -417,7 +422,7 @@ export default function ChatThread({ conversationId = null, productId = null, va
           <p className="text-base font-semibold text-slate-900">{text[0]}</p>
           <p className="mt-1 text-sm text-slate-500">{text[1]}</p>
           {status === 'error' && (
-            <button type="button" onClick={() => window.location.reload()} className="mt-4 h-10 px-4 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700">Try again</button>
+            <button type="button" onClick={() => window.location.reload()} className="mt-4 h-10 px-4 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700">{t('Try again')}</button>
           )}
         </div>
       </>,
@@ -429,7 +434,7 @@ export default function ChatThread({ conversationId = null, productId = null, va
   messages.forEach((m, i) => {
     const day = new Date(m.created_at).toDateString();
     if (day !== lastDay) {
-      rows.push(<div key={`d-${m.id}`} className="text-center my-3"><span className="text-[11px] font-semibold text-slate-500 bg-slate-200/70 rounded-full px-2.5 py-1">{dayLabel(m.created_at)}</span></div>);
+      rows.push(<div key={`d-${m.id}`} className="text-center my-3"><span className="text-[11px] font-semibold text-slate-500 bg-slate-200/70 rounded-full px-2.5 py-1">{dayLabel(m.created_at, t, locale)}</span></div>);
       lastDay = day;
     }
     const next = messages[i + 1];
@@ -452,7 +457,7 @@ export default function ChatThread({ conversationId = null, productId = null, va
         )}
         {endOfRun && (
           <span className="mt-1 px-1 text-[11px] text-slate-400">
-            {clock(m.created_at)}{mine && m.id === lastMine?.id && seen ? ' · Seen' : ''}
+            {clock(m.created_at, locale)}{mine && m.id === lastMine?.id && seen ? ` · ${t('Seen')}` : ''}
           </span>
         )}
       </div>,
@@ -480,9 +485,9 @@ export default function ChatThread({ conversationId = null, productId = null, va
             {head.listing_available ? (
               <>
                 <span className="font-bold text-slate-900">{formatPrice(head.price, head.currency)}</span>
-                {head.sold_out && <span className="ml-2 text-xs font-semibold text-red-600">Sold out</span>}
+                {head.sold_out && <span className="ml-2 text-xs font-semibold text-red-600">{t('Sold out')}</span>}
               </>
-            ) : <span className="text-xs text-slate-500">No longer available</span>}
+            ) : <span className="text-xs text-slate-500">{t('No longer available')}</span>}
           </p>
         </div>
         {head.listing_available && head.product_id && (
@@ -492,11 +497,11 @@ export default function ChatThread({ conversationId = null, productId = null, va
               className="h-9 px-4 rounded-full text-sm font-semibold text-white inline-flex items-center flex-shrink-0"
               style={{ background: BRAND_GRADIENT }}
             >
-              Buy
+              {t('Buy')}
             </Link>
           ) : (
             <Link to={listingUrl(head.product_id)} className="h-9 px-3 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 inline-flex items-center flex-shrink-0">
-              View
+              {t('View')}
             </Link>
           )
         )}
@@ -506,13 +511,13 @@ export default function ChatThread({ conversationId = null, productId = null, va
         {hasMore && (
           <div className="flex justify-center my-2">
             <button type="button" onClick={loadOlder} disabled={loadingOlder} className="h-8 px-3 rounded-full bg-white border border-slate-200 text-xs font-semibold text-slate-600 inline-flex items-center gap-1.5 disabled:opacity-60">
-              {loadingOlder && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Show earlier messages
+              {loadingOlder && <Loader2 className="w-3.5 h-3.5 animate-spin" />}{' '}{t('Show earlier messages')}
             </button>
           </div>
         )}
         {!messages.length && !pending.length && (
           <div className="text-center text-sm text-slate-500 mt-10 px-6">
-            {isBuyer ? `Ask ${head.shop_name} about this listing.` : 'No messages yet.'}
+            {isBuyer ? t('Ask {shop_name} about this listing.', { shop_name: head.shop_name }) : t('No messages yet.')}
           </div>
         )}
         {rows}
@@ -530,15 +535,15 @@ export default function ChatThread({ conversationId = null, productId = null, va
               </div>
             )}
             {p.status === 'sending' ? (
-              <span className="mt-1 px-1 text-[11px] text-slate-400">Sending…</span>
+              <span className="mt-1 px-1 text-[11px] text-slate-400">{t('Sending…')}</span>
             ) : (
               <span className="mt-1 px-1 text-[11px] text-red-600 inline-flex items-center gap-2">
-                Not sent
+                {t('Not sent')}
                 <button type="button" onClick={() => deliver(p)} className="font-semibold inline-flex items-center gap-1 underline underline-offset-2">
-                  <RotateCcw className="w-3 h-3" /> Retry
+                  <RotateCcw className="w-3 h-3" />{' '}{t('Retry')}
                 </button>
                 <button type="button" onClick={() => setPending((list) => list.filter((x) => x.tempId !== p.tempId))} className="font-semibold underline underline-offset-2">
-                  Remove
+                  {t('Remove')}
                 </button>
               </span>
             )}
@@ -552,11 +557,11 @@ export default function ChatThread({ conversationId = null, productId = null, va
             <button
               key={text}
               type="button"
-              onClick={() => { setDraft(text); input.current?.focus(); }}
+              onClick={() => { setDraft(t(text)); input.current?.focus(); }}
               className="h-9 px-3.5 rounded-full border bg-white text-sm font-medium whitespace-nowrap"
               style={{ borderColor: BRAND_COLOR, color: BRAND_COLOR }}
             >
-              {text}
+              {t(text)}
             </button>
           ))}
         </div>
@@ -568,7 +573,7 @@ export default function ChatThread({ conversationId = null, productId = null, va
         style={{ paddingBottom: isPage ? `calc(8px + ${BOTTOM_INSET})` : '8px' }}
       >
         <PhotoPickerControl
-          label="Send a photo"
+          label={t('Send a photo')}
           onFile={(file) => queue('', file)}
           className="w-11 h-11 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 flex-shrink-0"
         >
@@ -581,14 +586,14 @@ export default function ChatThread({ conversationId = null, productId = null, va
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKeyDown}
           maxLength={2000}
-          placeholder="Write a message"
-          aria-label="Message"
+          placeholder={t('Write a message')}
+          aria-label={t('Message')}
           enterKeyHint={fineMouse ? 'send' : 'enter'}
           className="flex-1 min-w-0 resize-none rounded-2xl bg-slate-100 px-4 py-[11px] text-[15px] leading-[22px] text-slate-900 placeholder:text-slate-400 outline-none focus:bg-white focus:ring-2 focus:ring-slate-200"
         />
         <button
           type="submit"
-          aria-label="Send"
+          aria-label={t('Send')}
           disabled={!draft.trim()}
           className="w-11 h-11 rounded-full flex items-center justify-center text-white flex-shrink-0 disabled:opacity-40 active:scale-95 transition-transform"
           style={{ background: BRAND_GRADIENT }}

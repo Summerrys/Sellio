@@ -14,6 +14,7 @@ import { ProfileAvatar, ProfilePhotoEditor } from '@/components/profile/ProfileP
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
 import ShopBell from './ShopBell';
 import { BRAND_GRADIENT, ExploreTabHeader, LOGO_URL } from './shared';
+import { useAppText } from '@/lib/appText';
 
 // Me — the one Me tab for everyone (a free shop's bar opens this same page): the account,
 // what they've bought (My purchases), the shop (its link, the Dashboard, Settings) and
@@ -44,6 +45,7 @@ function Row({ to, href, icon: Icon, label, detail, onClick, pulse = false }) {
 }
 
 export default function ExploreMe() {
+  const { t, textKey } = useAppText('explore');
   const { appUser, clearAppUser } = useAppUser() || {};
   const { user, tenant, hasPermission, isOwner, subscription, noStore } = useTenant();
   const [signingOut, setSigningOut] = useState(false);
@@ -57,33 +59,37 @@ export default function ExploreMe() {
   const hasShop = !!appUser?.tenant_id && !noStore;
   // The shop's ratings (its staff who see orders): "4.8 from 12 buyers".
   const canSeeRatings = hasShop && !!tenant?.id && hasPermission('orders.view');
-  const [ratingLine, setRatingLine] = useState(null);
+  const [ratings, setRatings] = useState(null); // the overview, or 'failed'
   useEffect(() => {
     if (!canSeeRatings) return undefined;
     let cancelled = false;
-    shopRatingOverview(tenant.id).then((o) => {
-      if (cancelled) return;
-      const count = Number(o?.rating_count) || 0;
-      setRatingLine(count ? `${ratingText(o.rating)} from ${count} ${count === 1 ? 'buyer' : 'buyers'}${o.last_7_days ? ` · ${o.last_7_days} this week` : ''}` : 'No ratings yet');
-    }).catch(() => { if (!cancelled) setRatingLine('See what buyers think'); });
+    shopRatingOverview(tenant.id).then((o) => { if (!cancelled) setRatings(o || {}); })
+      .catch(() => { if (!cancelled) setRatings('failed'); });
     return () => { cancelled = true; };
   }, [canSeeRatings, tenant?.id]);
+  let ratingLine = null;
+  if (ratings === 'failed') ratingLine = t('See what buyers think');
+  else if (ratings) {
+    const count = Number(ratings.rating_count) || 0;
+    const vars = { rating: ratingText(ratings.rating), count, week: ratings.last_7_days };
+    if (!count) ratingLine = t('No ratings yet');
+    else if (count === 1) ratingLine = ratings.last_7_days ? t('{rating} from 1 buyer · {week} this week', vars) : t('{rating} from 1 buyer', vars);
+    else ratingLine = ratings.last_7_days ? t('{rating} from {count} buyers · {week} this week', vars) : t('{rating} from {count} buyers', vars);
+  }
 
   // My purchases: "2 on the way".
-  const [purchasesLine, setPurchasesLine] = useState(null);
+  const [onTheWay, setOnTheWay] = useState(null);
   useEffect(() => {
     if (!appUser) return undefined;
     let cancelled = false;
-    purchaseSummary().then((s) => {
-      if (cancelled) return;
-      const ongoing = Number(s?.ongoing) || 0;
-      setPurchasesLine(ongoing ? `${ongoing} on the way` : 'Orders you’ve placed and where they’re at');
-    }).catch(() => { if (!cancelled) setPurchasesLine('Orders you’ve placed and where they’re at'); });
+    purchaseSummary().then((s) => { if (!cancelled) setOnTheWay(Number(s?.ongoing) || 0); })
+      .catch(() => { if (!cancelled) setOnTheWay(0); });
     return () => { cancelled = true; };
   }, [appUser]);
+  const purchasesLine = onTheWay ? t('{count} on the way', { count: onTheWay }) : null;
 
   // Sellio's moderators: ratings on hold and reported comments waiting for them.
-  const [moderation, setModeration] = useState(null);
+  const [toCheck, setToCheck] = useState(null); // { held, reported } for a moderator
   useEffect(() => {
     if (!appUser) return undefined;
     let cancelled = false;
@@ -91,18 +97,25 @@ export default function ExploreMe() {
       if (!yes || cancelled) return;
       const count = (load) => load(0, 100).then((list) => list.length).catch(() => null);
       const [held, reported] = await Promise.all([count(ratingReviewQueue), count(moderationQueue)]);
-      if (cancelled) return;
-      const parts = [held ? `${held} on hold` : '', reported ? `${reported} reported comment${reported === 1 ? '' : 's'}` : ''].filter(Boolean);
-      setModeration(held == null && reported == null ? 'Ratings on hold and reported comments' : parts.length ? parts.join(' · ') : 'Nothing to check');
+      if (!cancelled) setToCheck({ held, reported });
     });
     return () => { cancelled = true; };
   }, [appUser]);
+  let moderation = null;
+  if (toCheck) {
+    const { held, reported } = toCheck;
+    const parts = [
+      held ? t('{count} on hold', { count: held }) : '',
+      reported ? (reported === 1 ? t('1 reported comment') : t('{count} reported comments', { count: reported })) : '',
+    ].filter(Boolean);
+    moderation = held == null && reported == null ? t('Ratings on hold and reported comments') : parts.length ? parts.join(' · ') : t('Nothing to check');
+  }
 
   useEffect(() => {
     const previous = document.title;
-    document.title = 'Me · Sellio';
+    document.title = `${t('Me')} · Sellio`;
     return () => { document.title = previous; };
-  }, []);
+  }, [textKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const signOut = async () => {
     setSigningOut(true);
@@ -114,7 +127,7 @@ export default function ExploreMe() {
     window.location.replace('/explore'); // no Back into the signed-in page
   };
 
-  const name = appUser?.full_name || appUser?.email?.split('@')[0] || 'Sellio user';
+  const name = appUser?.full_name || appUser?.email?.split('@')[0] || t('Sellio user');
   const contact = appUser?.email && !/@sellio\.app$/i.test(appUser.email) ? appUser.email : appUser?.phone || '';
   const storeUrl = hasShop && tenant?.slug ? `https://sellio.sg/store/${tenant.slug}` : null;
   // The onboarding tour's last stop (Settings) is here.
@@ -141,7 +154,7 @@ export default function ExploreMe() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <ExploreTabHeader title="Me" right={<ShopBell />} />
+      <ExploreTabHeader title={t('Me')} right={<ShopBell />} />
       <main className="max-w-xl mx-auto px-4 pt-4" style={{ paddingBottom: TAB_BAR_SPACE }}>
         {appUser ? (
           <>
@@ -155,7 +168,7 @@ export default function ExploreMe() {
                 <span className="min-w-0 flex-1">
                   <span className="block text-base font-bold text-slate-900 truncate">{name}</span>
                   {contact && <span className="block text-sm text-slate-500 truncate">{contact}</span>}
-                  <span className="block text-xs font-semibold mt-0.5" style={{ color: 'rgb(var(--color-primary, 59 130 246))' }}>Profile, password and account</span>
+                  <span className="block text-xs font-semibold mt-0.5" style={{ color: 'rgb(var(--color-primary, 59 130 246))' }}>{t('Profile, password and account')}</span>
                 </span>
                 <ChevronRight className="w-4 h-4 text-slate-300" />
               </button>
@@ -174,7 +187,7 @@ export default function ExploreMe() {
                 <p className="text-sm font-semibold flex items-center gap-1.5"><Store className="w-4 h-4" /> {tenant?.name}</p>
                 <div className="mt-2 flex items-center gap-2">
                   <span className="flex-1 min-w-0 truncate text-sm text-white/90">{storeUrl.replace('https://', '')}</span>
-                  <button type="button" onClick={copyLink} aria-label="Copy your shop link" className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <button type="button" onClick={copyLink} aria-label={t('Copy your shop link')} className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
                     {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   </button>
                 </div>
@@ -182,13 +195,13 @@ export default function ExploreMe() {
             )}
 
             <section className="mt-4 bg-white rounded-2xl border border-slate-100 overflow-hidden">
-              <Row to="/explore/purchases" icon={ShoppingBag} label="My purchases" detail={purchasesLine || 'Orders you’ve placed and where they’re at'} />
+              <Row to="/explore/purchases" icon={ShoppingBag} label={t('My purchases')} detail={purchasesLine || t('Orders you’ve placed and where they’re at')} />
               <div className="border-t border-slate-100">
-                <Row to="/explore/likes" icon={Heart} label="My likes" detail="Listings you’ve liked" />
+                <Row to="/explore/likes" icon={Heart} label={t('My likes')} detail={t('Listings you’ve liked')} />
               </div>
               {moderation && (
                 <div className="border-t border-slate-100">
-                  <Row to="/moderation" icon={Flag} label="Ratings to check" detail={moderation} />
+                  <Row to="/moderation" icon={Flag} label={t('Ratings to check')} detail={moderation} />
                 </div>
               )}
             </section>
@@ -196,17 +209,17 @@ export default function ExploreMe() {
             <section className="mt-4 bg-white rounded-2xl border border-slate-100 overflow-hidden divide-y divide-slate-100">
               {hasShop ? (
                 <>
-                  <Row to="/Dashboard" icon={LayoutDashboard} label="My shop" detail={tenant ? `Dashboard, orders and ${itemWords(tenant.seller_type).products}` : 'Dashboard and orders'} />
-                  {canSeeRatings && <Row to="/Ratings" icon={Star} label="Ratings" detail={ratingLine || 'What buyers think of your shop'} />}
+                  <Row to="/Dashboard" icon={LayoutDashboard} label={t('My shop')} detail={tenant ? t('Dashboard, orders and {products}', { products: itemWords(tenant.seller_type, t).products }) : t('Dashboard and orders')} />
+                  {canSeeRatings && <Row to="/Ratings" icon={Star} label={t('Ratings')} detail={ratingLine || t('What buyers think of your shop')} />}
                   {hasPermission('settings.view') && (
-                    <Row to="/TenantSettings" icon={Settings} label="Settings" detail="Shop details, payments, selling, theme" pulse={settingsPulse} />
+                    <Row to="/TenantSettings" icon={Settings} label={t('Settings')} detail={t('Shop details, payments, selling, theme')} pulse={settingsPulse} />
                   )}
-                  {tenant?.slug && <Row to={`/store/${encodeURIComponent(tenant.slug)}`} icon={Store} label="Your shop page" detail="See your shop as buyers do" />}
+                  {tenant?.slug && <Row to={`/store/${encodeURIComponent(tenant.slug)}`} icon={Store} label={t('Your shop page')} detail={t('See your shop as buyers do')} />}
                 </>
               ) : (
                 <>
-                  <Row to="/join" icon={Store} label="Start selling" detail="Open a free shop" />
-                  <Row to="/Account" icon={UserRound} label="Account" />
+                  <Row to="/join" icon={Store} label={t('Start selling')} detail={t('Open a free shop')} />
+                  <Row to="/Account" icon={UserRound} label={t('Account')} />
                 </>
               )}
             </section>
@@ -214,11 +227,11 @@ export default function ExploreMe() {
         ) : (
           <section className="bg-white rounded-2xl border border-slate-100 p-6 text-center">
             <img src={LOGO_URL} alt="Sellio" className="h-12 w-auto mx-auto object-contain" />
-            <p className="mt-3 text-base font-bold text-slate-900">Buy and sell on Sellio</p>
-            <p className="mt-1 text-sm text-slate-500">Log in to chat with sellers and keep track of your listings.</p>
+            <p className="mt-3 text-base font-bold text-slate-900">{t('Buy and sell on Sellio')}</p>
+            <p className="mt-1 text-sm text-slate-500">{t('Log in to chat with sellers and keep track of your listings.')}</p>
             <div className="mt-4 flex justify-center gap-2">
-              <Link to="/Auth" onClick={() => rememberReturnPath('/explore/me')} className="h-10 px-5 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 inline-flex items-center">Log in</Link>
-              <Link to="/join" onClick={() => rememberReturnPath('/explore/me')} className="h-10 px-5 rounded-full text-sm font-semibold text-white inline-flex items-center" style={{ background: BRAND_GRADIENT }}>Sign up</Link>
+              <Link to="/Auth" onClick={() => rememberReturnPath('/explore/me')} className="h-10 px-5 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 inline-flex items-center">{t('Log in')}</Link>
+              <Link to="/join" onClick={() => rememberReturnPath('/explore/me')} className="h-10 px-5 rounded-full text-sm font-semibold text-white inline-flex items-center" style={{ background: BRAND_GRADIENT }}>{t('Sign up')}</Link>
             </div>
           </section>
         )}
@@ -230,20 +243,20 @@ export default function ExploreMe() {
             disabled={signingOut}
             className="mt-4 w-full h-12 rounded-2xl bg-white border border-slate-100 text-[15px] font-semibold text-rose-600 inline-flex items-center justify-center gap-2 disabled:opacity-60"
           >
-            {signingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />} Sign out
+            {signingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}{' '}{t('Sign out')}
           </button>
         )}
         {appUser && (
           <p className="mt-2 text-center">
-            <Link to="/delete-account" className="inline-block py-2 text-xs text-slate-400 underline underline-offset-2 hover:text-rose-600">Delete account</Link>
+            <Link to="/delete-account" className="inline-block py-2 text-xs text-slate-400 underline underline-offset-2 hover:text-rose-600">{t('Delete account')}</Link>
           </p>
         )}
 
         {/* Opened inside the app (no reload); "Back to Sellio" there returns here. */}
         <p className="mt-5 text-center text-xs text-slate-500">
-          <Link to="/privacy" className="inline-block py-2 underline underline-offset-2 hover:text-slate-700">Privacy</Link>
+          <Link to="/privacy" className="inline-block py-2 underline underline-offset-2 hover:text-slate-700">{t('Privacy')}</Link>
           <span aria-hidden="true" className="mx-2">·</span>
-          <Link to="/terms" className="inline-block py-2 underline underline-offset-2 hover:text-slate-700">Terms</Link>
+          <Link to="/terms" className="inline-block py-2 underline underline-offset-2 hover:text-slate-700">{t('Terms')}</Link>
         </p>
       </main>
       <ExploreTabBar active="me" />

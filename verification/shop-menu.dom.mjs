@@ -215,7 +215,7 @@ try {
   assert.match(layout, /useBackToClose\(mobileOpen && \(workspaceShown \|\| exploreShopMenu\), \(\) => setMobileOpen\(false\)\);/);
   assert.match(layout, /<ShopMenuContext\.Provider value=\{exploreShopMenu \? openShopMenu : null\}>[\s\S]*?\{exploreShopMenu && mobileOpen && menuDrawer\(true\)\}[\s\S]*?<AccountProfileModal[\s\S]*?onOpenPricing=\{\(\) => setShowPricingModal\(true\)\}[\s\S]*?<PricingModal open=\{showPricingModal\}/);
   for (const [file, title] of [['src/components/explore/ExploreChats.jsx', 'Chats'], ['src/components/explore/ExploreListings.jsx', 'My listings']]) {
-    assert.match(await readFile(path.join(process.cwd(), file), 'utf8'), new RegExp(`<ExploreTabHeader title="${title}" shopMenu `), `${file}: shopMenu`);
+    assert.match(await readFile(path.join(process.cwd(), file), 'utf8'), new RegExp(`<ExploreTabHeader title=\\{t\\('${title}'\\)\\} shopMenu `), `${file}: shopMenu`);
   }
   passed('Back closes it on Explore too; its profile and plan windows are there; Chats and Listings ask for the button');
 

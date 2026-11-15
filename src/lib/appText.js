@@ -207,13 +207,23 @@ const version = () => state.version;
 // In a component: const { t } = useAppText(); the component shows the new language as soon as
 // it changes. Words kept in useMemo or useState need textKey among their inputs, which changes
 // whenever the language or the loaded words do.
-export function useAppText() {
+//
+// A screen of a group that isn't switched on yet names it: useAppText('explore'). It shows
+// English then, but in a reviewer's preview, so nobody sees it half translated (a phrase that a
+// live group has would otherwise show in Indonesian among English ones). Once the group is in
+// LIVE_GROUPS, it shows like any other. Shared pieces don't call this: they take the t of the
+// screen that shows them.
+export function groupShown(group) {
+  return !group || state.preview || LIVE_GROUPS.includes(group);
+}
+export function useAppText(group) {
   useSyncExternalStore(subscribe, version, version);
-  const language = appLanguage();
+  const shown = groupShown(group);
+  const language = shown ? appLanguage() : 'en';
   return {
-    t: appT,
+    t: shown ? appT : englishText,
     language,
-    locale: appLocale(),
+    locale: language === 'id' ? 'id-ID' : 'en-SG',
     available: appLanguageAvailable(),
     preview: state.preview,
     textKey: `${language}:${language === 'id' ? state.catalogFor : ''}`,

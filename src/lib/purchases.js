@@ -1,4 +1,5 @@
 import { getSupabase } from '@/lib/supabaseClient';
+import { N_ } from '@/lib/appText';
 
 // "My purchases": the signed-in buyer's orders from every shop (Supabase: my_purchases,
 // my_purchase_summary, cancel_my_order, claim_my_orders). An order is theirs when it
@@ -29,11 +30,20 @@ export class PurchaseError extends Error {
   constructor(message, hint) { super(message); this.hint = hint || null; }
 }
 
+// cancel_my_order's words to people (its raise … hint = …), word for word: a translated screen
+// shows a PurchaseError through its t() (showError does).
+export const DATABASE_SAYS = [
+  N_('The seller has already accepted this order. Chat with them to change it.'),
+  N_('Please contact the shop to cancel this order.'),
+  N_("This order isn't available."),
+  N_('Log in to manage your orders.'),
+];
+
 export async function cancelMyOrder(orderId) {
   try {
     return await rpc('cancel_my_order', { p_order_id: orderId });
   } catch (e) {
-    throw new PurchaseError(e?.message || 'Couldn’t cancel the order. Please try again.', e?.hint);
+    throw new PurchaseError(e?.message || N_('Couldn’t cancel the order. Please try again.'), e?.hint);
   }
 }
 

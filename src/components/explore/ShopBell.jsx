@@ -5,6 +5,7 @@ import { useAppUser } from '@/lib/AppUserContext';
 import { useChatUnread } from '@/lib/chat';
 import { useBusinessBar } from '@/components/navigation/MerchantTabBar';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import { useAppText } from '@/lib/appText';
 
 // The notification bell on Explore's tabs, for anyone logged in: a shop's orders, chats
 // and ratings (the same bell as My shop), and a buyer's news about their purchases.
@@ -24,13 +25,14 @@ export default function ShopBell({ withChat = true }) {
 }
 
 function ChatsButton() {
+  const { t } = useAppText('explore');
   const unread = useChatUnread(true);
   const count = (Number(unread.buying) || 0) + (Number(unread.selling) || 0);
   return (
     <Link
       to="/explore/chats"
-      aria-label={`Chats${count ? `, ${count} unread` : ''}`}
-      title="Chats"
+      aria-label={count ? t('Chats, {count} unread', { count }) : t('Chats')}
+      title={t('Chats')}
       className="relative inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md text-slate-700 hover:bg-slate-100"
     >
       <MessageCircle className="w-5 h-5" />

@@ -4,6 +4,7 @@ import { House, LayoutGrid, MessageCircle, CircleUserRound } from 'lucide-react'
 import { useAppUser } from '@/lib/AppUserContext';
 import { useChatUnread } from '@/lib/chat';
 import { useSell } from '@/lib/sell';
+import { useAppText } from '@/lib/appText';
 import BottomTabBar from '@/components/navigation/BottomTabBar';
 import MerchantTabBar, { useBusinessBar } from '@/components/navigation/MerchantTabBar';
 import { BOTTOM_INSET } from './shared';
@@ -24,6 +25,7 @@ export function markExploreHome() {
 }
 
 export default function ExploreTabBar({ active }) {
+  const { t } = useAppText('explore');
   const navigate = useNavigate();
   const { appUser } = useAppUser() || {};
   const hasShop = !!appUser?.tenant_id;
@@ -66,10 +68,10 @@ export default function ExploreTabBar({ active }) {
       bottomInset={BOTTOM_INSET}
       sell={hasShop ? { to: '/explore/listings?new=1', onClick: (event) => { event.preventDefault(); openSell(); } } : { to: '/join' }}
       tabs={[
-        tab('home', 'Home', House, '/explore'),
-        tab('listings', 'Listings', LayoutGrid, '/explore/listings'),
-        tab('chats', 'Chat', MessageCircle, '/explore/chats', { badge: chatCount }),
-        tab('me', 'Me', CircleUserRound, '/explore/me'),
+        tab('home', t('Home'), House, '/explore'),
+        tab('listings', t('Listings'), LayoutGrid, '/explore/listings'),
+        tab('chats', t('Chat'), MessageCircle, '/explore/chats', { badge: chatCount }),
+        tab('me', t('Me'), CircleUserRound, '/explore/me'),
       ]}
     />
   );

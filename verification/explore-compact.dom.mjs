@@ -190,7 +190,7 @@ try {
   passed('Bottom bar: icons and words in a darker grey (not black), slightly larger icons');
 
   const me = await read('src/components/explore/ExploreMe.jsx');
-  const signOutAt = me.indexOf('Sign out\n');
+  const signOutAt = me.indexOf("{t('Sign out')}"); // the words through t() since group 3 (16 Nov 2026)
   assert.ok(signOutAt > 0 && me.indexOf('<Link to="/privacy"') > signOutAt && me.indexOf('<Link to="/terms"') > signOutAt);
   assert.doesNotMatch(me, /<Row to="\/privacy"/);
   passed('Me: Privacy and Terms are text links after Sign out');

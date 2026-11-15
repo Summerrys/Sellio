@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { isBase44Shell } from '@/lib/nativeApp';
 import { ShopMenuButton } from '@/components/navigation/ShopMenu';
 import { formatMoney } from '@/lib/money';
-import { N_, englishText } from '@/lib/appText';
+import { N_, englishText, useAppText } from '@/lib/appText';
 import ExploreChatCount from './ExploreChatCount';
 
 // Shared by Explore, its listing pages and chats.
@@ -106,10 +106,11 @@ export function ItemImage({ src, name, className = '', rounded = '' }) {
 
 // Explore's four tabs as header links on wider screens, where the bottom bar is hidden.
 // Chat carries the unread count, as the bottom bar's Chat does on phones (ExploreChatCount).
-const DESKTOP_TABS = [['/explore', 'Home'], ['/explore/listings', 'Listings'], ['/explore/chats', 'Chat'], ['/explore/me', 'Me']];
+const DESKTOP_TABS = [['/explore', N_('Home')], ['/explore/listings', N_('Listings')], ['/explore/chats', N_('Chat')], ['/explore/me', N_('Me')]];
 export function ExploreDesktopTabs() {
+  const { t } = useAppText('explore');
   return (
-    <nav aria-label="Explore" className="hidden md:flex items-center gap-1">
+    <nav aria-label={t('Explore')} className="hidden md:flex items-center gap-1">
       {DESKTOP_TABS.map(([to, label]) => (
         <NavLink
           key={to}
@@ -117,7 +118,7 @@ export function ExploreDesktopTabs() {
           end={to === '/explore'}
           className={({ isActive }) => `h-9 px-3 rounded-full text-sm font-semibold inline-flex items-center gap-1.5 ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50'}`}
         >
-          {label}
+          {t(label)}
           {to === '/explore/chats' && <ExploreChatCount />}
         </NavLink>
       ))}

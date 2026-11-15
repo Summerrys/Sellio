@@ -374,7 +374,7 @@ export default function Dashboard() {
       )}
 
       {loading && (
-        <LoadingShapes label={t('Loading your dashboard')}><DashboardShapes /></LoadingShapes>
+        <LoadingShapes label={t('Loading your dashboard')} t={t}><DashboardShapes /></LoadingShapes>
       )}
       {/* Mounted while loading (so the cards load their numbers), shown when all are in. */}
       <div hidden={loading} data-testid="dashboard-content" className="space-y-6">

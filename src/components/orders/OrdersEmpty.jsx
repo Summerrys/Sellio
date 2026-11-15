@@ -64,7 +64,7 @@ export default function OrdersEmpty({
       text = foundElsewhere === 1 ? t('One order with another status matches.') : t('{count} orders with other statuses match.', { count: foundElsewhere });
       action = <button type="button" onClick={onSeeAll} className={GHOST}>{t('Search all orders')}</button>;
     } else if (suggestion) {
-      text = <DidYouMean suggestion={suggestion} onPick={onSearch} />;
+      text = <DidYouMean suggestion={suggestion} onPick={onSearch} t={t} />;
       action = <button type="button" onClick={() => onSearch(suggestion)} className={`${GHOST} max-w-full truncate`}>{t('Search “{suggestion}”', { suggestion })}</button>;
     } else {
       text = isShop

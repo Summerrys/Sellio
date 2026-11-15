@@ -9,6 +9,7 @@ import { useBackToClose } from '@/lib/useBackToClose';
 import { BRAND_COLOR, ShopAvatar, ItemImage } from '@/components/explore/shared';
 import BottomSheet from '@/components/explore/BottomSheet';
 import LoadingShapes from '@/components/ui-custom/LoadingShapes';
+import { useAppText } from '@/lib/appText';
 
 // A list of chats. box: 'all' | 'buying' | 'selling'; tenantId narrows selling chats to one
 // shop (the workspace); archived: the person's Archived chats. Each row links to hrefFor(chat).
@@ -30,14 +31,14 @@ async function loadChats(box, tenantId, archived) {
   return (await chatList(box, tenantId, { archived })) || [];
 }
 
-function shortTime(iso) {
+function shortTime(iso, locale) {
   if (!iso) return '';
   const d = new Date(iso);
   const now = new Date();
-  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' });
+  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString(locale, { hour: locale === 'id-ID' ? '2-digit' : 'numeric', minute: '2-digit' });
   const days = (now - d) / 86400000;
-  if (days < 7) return d.toLocaleDateString('en-SG', { weekday: 'short' });
-  return d.toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
+  if (days < 7) return d.toLocaleDateString(locale, { weekday: 'short' });
+  return d.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
 }
 
 export function useChatList(box, tenantId = null, enabled = true, archived = false) {
@@ -77,6 +78,7 @@ function ChatAvatar({ chat, size }) {
 }
 
 export function ChatRow({ chat, href, selected = false, showBox = false, onOptions = null, finePointer = false }) {
+  const { t, locale } = useAppText('explore');
   const buying = chat.box === 'buying';
   const who = whoFor(chat);
   const unread = Number(chat.unread) || 0;
@@ -94,20 +96,20 @@ export function ChatRow({ chat, href, selected = false, showBox = false, onOptio
           <div className="flex items-baseline gap-2">
             <p className={`flex-1 min-w-0 truncate text-[15px] ${unread ? 'font-bold text-slate-900' : 'font-semibold text-slate-800'}`}>
               {who}
-              {chat.online && <span className="sr-only"> (online)</span>}
+              {chat.online && <span className="sr-only">{' '}{t('(online)')}</span>}
             </p>
             <span className={`text-[11px] flex-shrink-0 ${unread ? 'font-semibold' : 'text-slate-400'}`} style={unread ? { color: BRAND_COLOR } : undefined}>
-              {shortTime(chat.last_message_at)}
+              {shortTime(chat.last_message_at, locale)}
             </span>
           </div>
           <p className="text-xs text-slate-500 truncate">
-            {showBox && <span className="font-semibold text-slate-400">{buying ? 'Buying · ' : 'Selling · '}</span>}
+            {showBox && <span className="font-semibold text-slate-400">{buying ? t('Buying') : t('Selling')} · </span>}
             {chat.product_name}
           </p>
           <div className="flex items-center gap-2">
             <p className={`flex-1 min-w-0 truncate text-sm ${unread ? 'font-semibold text-slate-900' : 'text-slate-500'}`}>
-              {chat.from_me && <span className="text-slate-400 font-normal">You: </span>}
-              {preview ?? <span className="inline-flex items-center gap-1 align-middle"><ImageIcon className="w-3.5 h-3.5" /> Photo</span>}
+              {chat.from_me && <span className="text-slate-400 font-normal">{t('You:')}{' '}</span>}
+              {preview ?? <span className="inline-flex items-center gap-1 align-middle"><ImageIcon className="w-3.5 h-3.5" />{' '}{t('Photo')}</span>}
             </p>
             {unread > 0 && (
               <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-bold leading-5 text-center flex-shrink-0">
@@ -122,7 +124,7 @@ export function ChatRow({ chat, href, selected = false, showBox = false, onOptio
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOptions(); }}
-          aria-label={`Options for your chat with ${who}`}
+          aria-label={t('Options for your chat with {who}', { who })}
           data-testid="chat-options"
           className="mr-2 w-9 h-9 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 flex-shrink-0"
         >
@@ -131,7 +133,7 @@ export function ChatRow({ chat, href, selected = false, showBox = false, onOptio
       ) : (
         // Phones: swipe or press and hold; a screen reader gets this button instead.
         <button type="button" onClick={onOptions} className="sr-only" data-testid="chat-options">
-          Options for your chat with {who}
+          {t('Options for your chat with {who}', { who })}
         </button>
       ))}
     </div>
@@ -275,6 +277,7 @@ function SheetOption({ icon: Icon, label, hint = '', danger = false, onClick }) 
 
 // Delete asks first, and says exactly what goes (it can't be undone).
 function DeleteChatDialog({ chat, onCancel, onConfirm }) {
+  const { t } = useAppText('explore');
   const open = !!chat;
   const cancelRef = useRef(null);
   useBackToClose(open, onCancel);
@@ -301,17 +304,21 @@ function DeleteChatDialog({ chat, onCancel, onConfirm }) {
         <span className="mx-auto w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center">
           <Trash2 className="w-5 h-5" />
         </span>
-        <h2 id="delete-chat-title" className="mt-3 text-[17px] font-extrabold text-slate-900">Delete this chat?</h2>
+        <h2 id="delete-chat-title" className="mt-3 text-[17px] font-extrabold text-slate-900">{t('Delete this chat?')}</h2>
         <p id="delete-chat-text" className="mt-2 text-[13.5px] leading-relaxed text-slate-500">
-          Your chat with <b className="text-slate-900">{who}</b>
-          {chat.product_name ? <> about <b className="text-slate-900">{chat.product_name}</b></> : null}
-          , with its messages and photos, goes from your chats. {who} keeps their copy. If either of you writes again, it starts fresh.
+          {chat.product_name
+            ? t('Your chat with {who} about {product}, with its messages and photos, goes from your chats. {name} keeps their copy. If either of you writes again, it starts fresh.', {
+              who: <b className="text-slate-900">{who}</b>, product: <b className="text-slate-900">{chat.product_name}</b>, name: who,
+            })
+            : t('Your chat with {who}, with its messages and photos, goes from your chats. {name} keeps their copy. If either of you writes again, it starts fresh.', {
+              who: <b className="text-slate-900">{who}</b>, name: who,
+            })}
         </p>
         <button type="button" onClick={() => onConfirm(chat)} data-testid="delete-chat-confirm" className="mt-4 w-full h-11 rounded-xl bg-rose-600 text-white text-sm font-bold">
-          Delete chat
+          {t('Delete chat')}
         </button>
         <button type="button" ref={cancelRef} onClick={onCancel} className="mt-2 w-full h-11 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-800">
-          Cancel
+          {t('Cancel')}
         </button>
       </div>
     </div>,
@@ -320,27 +327,29 @@ function DeleteChatDialog({ chat, onCancel, onConfirm }) {
 }
 
 function ArchivedEntry({ href, count }) {
+  const { t } = useAppText('explore');
   return (
     <Link to={href} data-testid="archived-chats-row" className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 active:bg-slate-100">
       <span className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center flex-shrink-0">
         <Archive className="w-5 h-5" />
       </span>
-      <span className="flex-1 text-[15px] font-semibold text-slate-800">Archived</span>
+      <span className="flex-1 text-[15px] font-semibold text-slate-800">{t('Archived')}</span>
       <span className={`text-sm ${count.unread ? 'font-bold' : 'font-semibold text-slate-500'}`} style={count.unread ? { color: BRAND_COLOR } : undefined}>
         {count.chats}
-        {count.unread > 0 && <span className="sr-only"> ({count.unread} with new messages)</span>}
+        {count.unread > 0 && <span className="sr-only">{' '}{t('({unread} with new messages)', { unread: count.unread })}</span>}
       </span>
     </Link>
   );
 }
 
 function ArchivedNote({ finePointer }) {
+  const { t } = useAppText('explore');
   return (
     <div className="mx-3 mt-3 mb-1 px-3 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-xs leading-relaxed flex gap-2" data-testid="archived-note">
       <Info className="w-4 h-4 flex-shrink-0 mt-px" />
       <span>
-        New messages leave a chat here.{' '}
-        {finePointer ? 'Use the ⋯ on a chat to move it back to Chats.' : 'Swipe a chat left, or press and hold it, to move it back to Chats.'}
+        {t('New messages leave a chat here.')}{' '}
+        {finePointer ? t('Use the ⋯ on a chat to move it back to Chats.') : t('Swipe a chat left, or press and hold it, to move it back to Chats.')}
       </span>
     </div>
   );
@@ -349,6 +358,7 @@ function ArchivedNote({ finePointer }) {
 export default function ChatInbox({
   box, tenantId = null, hrefFor, selectedId = null, emptyText, archived = false, archivedHref = null, onRemoved = null,
 }) {
+  const { t } = useAppText('explore');
   const queryClient = useQueryClient();
   const { data, status, refetch, isFetching } = useChatList(box, tenantId, true, archived);
   const unread = useChatUnread(!archived && !!archivedHref);
@@ -372,14 +382,17 @@ export default function ChatInbox({
     try {
       await chatArchive(chat.id, toArchived);
       if (!undo) {
-        toast(toArchived ? 'Chat archived' : 'Moved back to Chats', {
-          action: { label: 'Undo', onClick: () => move(chat, !toArchived, { undo: true }) },
+        toast(toArchived ? t('Chat archived') : t('Moved back to Chats'), {
+          action: { label: t('Undo'), onClick: () => move(chat, !toArchived, { undo: true }) },
         });
       }
     } catch (err) {
-      toast.error(chatErrorMessage(err, toArchived
-        ? "Couldn't archive that chat. Check your connection and try again."
-        : "Couldn't move that chat back. Check your connection and try again."));
+      toast.error(chatErrorMessage(err, {
+        t,
+        fallback: toArchived
+          ? t("Couldn't archive that chat. Check your connection and try again.")
+          : t("Couldn't move that chat back. Check your connection and try again."),
+      }));
     } finally {
       refresh();
     }
@@ -392,9 +405,9 @@ export default function ChatInbox({
     try {
       await chatDelete(chat.id);
       onRemoved?.(chat.id);
-      toast('Chat deleted');
+      toast(t('Chat deleted'));
     } catch (err) {
-      toast.error(chatErrorMessage(err, "Couldn't delete that chat. Check your connection and try again."));
+      toast.error(chatErrorMessage(err, { t, fallback: t("Couldn't delete that chat. Check your connection and try again.") }));
     } finally {
       refresh();
     }
@@ -414,15 +427,15 @@ export default function ChatInbox({
               <ChatAvatar chat={menuChat} size={38} />
               <div className="min-w-0">
                 <p id="chat-options-title" className="text-sm font-bold text-slate-900 truncate">{whoFor(menuChat)}</p>
-                <p className="text-xs text-slate-500 truncate">{menuChat.box === 'buying' ? 'Buying' : 'Selling'} · {menuChat.product_name}</p>
+                <p className="text-xs text-slate-500 truncate">{menuChat.box === 'buying' ? t('Buying') : t('Selling')} · {menuChat.product_name}</p>
               </div>
             </div>
             {archived
-              ? <SheetOption icon={ArchiveRestore} label="Move back to Chats" onClick={() => move(menuChat, false)} />
-              : <SheetOption icon={Archive} label="Archive chat" hint="Moves to Archived" onClick={() => move(menuChat, true)} />}
-            <SheetOption icon={Trash2} label="Delete chat" danger onClick={() => askDelete(menuChat)} />
+              ? <SheetOption icon={ArchiveRestore} label={t('Move back to Chats')} onClick={() => move(menuChat, false)} />
+              : <SheetOption icon={Archive} label={t('Archive chat')} hint={t('Moves to Archived')} onClick={() => move(menuChat, true)} />}
+            <SheetOption icon={Trash2} label={t('Delete chat')} danger onClick={() => askDelete(menuChat)} />
             <button type="button" onClick={closeMenu} className="mt-3 w-full h-12 rounded-xl bg-slate-100 text-[15px] font-bold text-slate-700">
-              Cancel
+              {t('Cancel')}
             </button>
           </div>
         )}
@@ -433,7 +446,7 @@ export default function ChatInbox({
 
   if (status === 'pending') {
     return (
-      <LoadingShapes label="Loading chats">
+      <LoadingShapes label={t('Loading chats')} t={t}>
         <div className="divide-y divide-slate-100">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
@@ -450,9 +463,9 @@ export default function ChatInbox({
   if (status === 'error') {
     return (
       <div className="p-8 text-center">
-        <p className="text-sm text-slate-600">We couldn't load your chats just now.</p>
+        <p className="text-sm text-slate-600">{t('We couldn\'t load your chats just now.')}</p>
         <button type="button" onClick={() => refetch()} disabled={isFetching} className="mt-3 h-9 px-4 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 inline-flex items-center gap-1.5 disabled:opacity-60">
-          <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} /> Try again
+          <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />{' '}{t('Try again')}
         </button>
       </div>
     );
@@ -480,10 +493,10 @@ export default function ChatInbox({
         {showArchivedEntry && <ArchivedEntry href={archivedHref} count={archivedTotals} />}
         {data.map((chat) => {
           const actions = archived
-            ? [{ key: 'unarchive', label: 'Move back to Chats', icon: ArchiveRestore, color: '#475569', width: ACTION_WIDTH * 2, onSelect: () => move(chat, false) }]
+            ? [{ key: 'unarchive', label: t('Move back to Chats'), icon: ArchiveRestore, color: '#475569', width: ACTION_WIDTH * 2, onSelect: () => move(chat, false) }]
             : [
-              { key: 'archive', label: 'Archive', icon: Archive, color: '#64748b', onSelect: () => move(chat, true) },
-              { key: 'delete', label: 'Delete', icon: Trash2, color: '#e11d48', onSelect: () => askDelete(chat) },
+              { key: 'archive', label: t('Archive'), icon: Archive, color: '#64748b', onSelect: () => move(chat, true) },
+              { key: 'delete', label: t('Delete'), icon: Trash2, color: '#e11d48', onSelect: () => askDelete(chat) },
             ];
           return (
             <SwipeRow
