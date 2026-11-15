@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { Fragment, useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Eye, ShoppingCart } from 'lucide-react';
+import { Clock, Eye, ShoppingCart } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { forgetCheckout, submitCheckout } from '@/lib/mobileCheckout';
 import { isOffline, useOnline } from '@/lib/network';
@@ -20,7 +20,9 @@ import { handOverBackStep, useBackToClose } from '@/lib/useBackToClose';
 import { likeErrorMessage, needsSignIn, setListingLike, toggleKnownLike, useLikesFor } from '@/lib/likes';
 import { toast } from 'sonner';
 import { ShopCheckout, ShopOrderDetails, ShopOrderHistory } from '@/components/shop/ShopStorefront';
-import { shopT } from '@/lib/shopSelling';
+import { shopMethod, shopT } from '@/lib/shopSelling';
+import OrderTracker from '@/components/storefront/OrderTracker';
+import OrderPlacedCheck from '@/components/storefront/OrderPlacedCheck';
 import { isNativeApp } from '@/lib/nativeApp';
 import { rememberReturnPath } from '@/lib/authNavigation';
 import { fetchRatingSummaries, forgetRatingSummary, isSignedIn, myOrderRatings } from '@/lib/ratings';
@@ -47,11 +49,15 @@ const dismissPrompt = (orderId) => {
 
 const STATUS_COLORS = {
   pending: { bg: '#fef3c7', color: '#92400e' },
-  preparing: { bg: '#dbeafe', color: '#1e40af' },
+  confirmed: { bg: '#dbeafe', color: '#1e40af' },
+  preparing: { bg: '#ede9fe', color: '#5b21b6' },
   ready: { bg: '#d1fae5', color: '#065f46' },
+  served: { bg: '#d1fae5', color: '#065f46' },
   completed: { bg: '#f1f5f9', color: '#475569' },
   cancelled: { bg: '#fee2e2', color: '#991b1b' },
 };
+// The words for a status in Your orders (it used to show the database's own: "pending").
+const STATUS_WORD = { pending: 'pillWaiting', confirmed: 'stepAccepted', preparing: 'stepPreparing', ready: 'stepReady', served: 'pillServed', completed: 'pillDone', cancelled: 'pillCancelled' };
 
 function StorefrontInner() {
   const { tenantSlug, tableId } = useParams();
@@ -1072,14 +1078,14 @@ function StorefrontInner() {
           <div onClick={() => setShowOrderHistory(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '20px 20px 0 0', padding: '20px 16px', maxHeight: '80vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <p style={{ fontWeight: 700, fontSize: 17, margin: 0 }}>Order History</p>
+              <p style={{ fontWeight: 700, fontSize: 17, margin: 0 }}>{t('yourOrders')}</p>
               <button onClick={() => setShowOrderHistory(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22, lineHeight: 1 }}>✕</button>
             </div>
             {shopSelling ? (
               <ShopOrderHistory orders={orderHistory} currency={currency} lang={lang} food={isFnB} primaryColor={primaryColor} paymentQrUrl={tenant.payment_qr_url}
                 renderExtra={(order) => <OrderRateRow order={order} rating={myRatings[order.id]} onPick={(n) => pickRating(order, n)} accent={primaryColor} />} />
             ) : orderHistory.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0' }}><p style={{ fontSize: 36, margin: '0 0 8px' }}>🍽️</p><p style={{ color: '#94a3b8', fontSize: 14 }}>No orders yet</p></div>
+              <div style={{ textAlign: 'center', padding: '32px 0' }}><p style={{ fontSize: 36, margin: '0 0 8px' }}>🍽️</p><p style={{ color: '#94a3b8', fontSize: 14 }}>{t('noOrdersYet')}</p></div>
             ) : (
               orderHistory.map(order => {
                 const statusStyle = STATUS_COLORS[order.status] || STATUS_COLORS.pending;
@@ -1090,12 +1096,17 @@ function StorefrontInner() {
                         <p style={{ fontWeight: 700, fontSize: 14, margin: '0 0 2px' }}>#{order.order_number}</p>
                         <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>{new Date(order.created_date).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
                       </div>
-                      <span style={{ fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 999, background: statusStyle.bg, color: statusStyle.color }}>{order.status}</span>
+                      <span data-testid="history-status" style={{ fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 999, background: statusStyle.bg, color: statusStyle.color }}>{STATUS_WORD[order.status] ? t(STATUS_WORD[order.status]) : order.status}</span>
                     </div>
                     {(order.items || []).map((item, idx) => (
-                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b', marginBottom: 2 }}>
-                        <span>{item.name}{item.variant ? ` (${item.variant})` : ''} × {item.quantity}</span>
-                        <span style={{ fontWeight: 600 }}>{money(item.price * item.quantity)}</span>
+                      <div key={idx} style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>{item.name}{item.variant ? ` (${item.variant})` : ''} × {item.quantity}</span>
+                          <span style={{ fontWeight: 600 }}>{money(item.price * item.quantity)}</span>
+                        </div>
+                        {item.notes && (
+                          <p data-testid="history-item-note" style={{ margin: '1px 0 3px', fontSize: 11.5, color: '#475569', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{t('itemNote').replace('{note}', item.notes)}</p>
+                        )}
                       </div>
                     ))}
                     <div style={{ borderTop: '0.5px solid #e5e7eb', marginTop: 8, paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 13 }}>
@@ -1250,20 +1261,17 @@ function StorefrontInner() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#f8fafc', overflowY: 'auto' }}>
           <div style={{ padding: '40px 16px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100vh', maxWidth: 400, margin: '0 auto' }}>
 
-            {/* Success icon */}
-            <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, flexShrink: 0 }}>
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-            </div>
+            {/* The check pops in with confetti (OrderPlacedCheck.jsx). */}
+            <OrderPlacedCheck />
 
-            <p style={{ fontWeight: 800, fontSize: 24, margin: '0 0 6px', textAlign: 'center', color: '#0f172a', letterSpacing: '-0.01em' }}>{t('orderPlaced')}</p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28 }}>
-              <span style={{ fontSize: 13, color: '#64748b', fontFamily: 'monospace', fontWeight: 600 }}>#{placedOrderNumber}</span>
+            <p style={{ fontWeight: 800, fontSize: 22, margin: '0 0 12px', textAlign: 'center', color: '#0f172a', letterSpacing: '-0.01em' }}>{t('orderPlaced')}</p>
+            {/* The order number, bigger than the heading: a takeaway is collected with it. */}
+            <div data-testid="placed-order-number" style={{ width: '100%', background: 'white', borderRadius: 16, border: '1px solid #e2e8f0', padding: '12px 16px 14px', marginBottom: 16, textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#64748b', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('yourOrderNumber')}</p>
+              <p style={{ margin: '2px 0 0', fontSize: 46, lineHeight: 1.1, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em', fontVariantNumeric: 'tabular-nums' }}>#{placedOrderNumber}</p>
               {table && (
                 <>
-                  <span style={{ color: '#cbd5e1', fontSize: 12 }}>·</span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#64748b' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 14, fontWeight: 600, color: '#475569', marginTop: 6 }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="7" width="18" height="3" rx="1.5"/>
                   <line x1="7" y1="10" x2="5" y2="19"/>
@@ -1274,6 +1282,20 @@ function StorefrontInner() {
                 </>
               )}
             </div>
+
+            {lastOrder?.id && (
+              <OrderTracker
+                tenantId={tenant.id}
+                order={lastOrder}
+                homeShop={!!shopSelling}
+                kind={shopSelling ? shopMethod(lastOrder) : isDineIn ? 'table' : 'counter'}
+                packing={!!shopSelling && !isFnB}
+                shopName={tenant?.name}
+                tableName={table?.name}
+                t={t}
+                primaryColor={primaryColor}
+              />
+            )}
 
             {shopSelling && lastOrder?.fulfilment && (
               <div style={{ width: '100%', background: 'white', borderRadius: 16, border: '1px solid #e2e8f0', padding: '14px 16px', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
@@ -1296,10 +1318,19 @@ function StorefrontInner() {
                       {item.variant && (
                         <p style={{ margin: '2px 0 0', fontSize: 11, color: '#94a3b8' }}>{item.variant}</p>
                       )}
+                      {item.notes && (
+                        <p data-testid="item-note" style={{ margin: '3px 0 0', fontSize: 12, color: '#475569', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{t('itemNote').replace('{note}', item.notes)}</p>
+                      )}
                     </div>
                     <span style={{ fontSize: 13, fontWeight: 600, color: '#374151', flexShrink: 0 }}>{money(item.price * item.quantity)}</span>
                   </div>
                 ))}
+                {lastOrder?.notes && (
+                  <div data-testid="order-note" style={{ marginTop: 12, padding: '10px 12px', background: '#f8fafc', borderRadius: 10, border: '1px solid #f1f5f9' }}>
+                    <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{t('yourNote')}</p>
+                    <p style={{ margin: '3px 0 0', fontSize: 13, color: '#0f172a', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{lastOrder.notes}</p>
+                  </div>
+                )}
                 <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 12, paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{t('total')}</span>
                   <span style={{ fontSize: 16, fontWeight: 800, color: primaryColor }}>{money(lastCartTotal)}</span>
@@ -1392,6 +1423,18 @@ function StorefrontInner() {
             >
               {t('backToMenu')}
             </button>
+            <p data-testid="find-order-later" style={{ margin: '14px 4px 0', fontSize: 13, color: '#64748b', lineHeight: 1.5, textAlign: 'center' }}>
+              {t('findLater').split('{icon}').map((part, index) => (
+                <Fragment key={index}>
+                  {index > 0 && (
+                    <span aria-label={t('yourOrders')} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: 999, border: '1px solid #e2e8f0', background: 'white', verticalAlign: 'middle', margin: '0 2px' }}>
+                      <Clock size={13} color="#374151" aria-hidden="true" />
+                    </span>
+                  )}
+                  {part}
+                </Fragment>
+              ))}
+            </p>
           </div>
         </div>
       )}

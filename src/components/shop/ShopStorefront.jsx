@@ -234,9 +234,13 @@ export function ShopOrderHistory({ orders, currency, lang, food, primaryColor, p
           </span>
         </div>
         {(order.items || []).map((item, idx) => (
-          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b', marginBottom: 2 }}>
-            <span>{item.name}{item.variant ? ` (${item.variant})` : ''} × {item.quantity}</span>
-            <span style={{ fontWeight: 600 }}>{money(currency, item.price * item.quantity)}</span>
+          <div key={idx} style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>{item.name}{item.variant ? ` (${item.variant})` : ''} × {item.quantity}</span>
+              <span style={{ fontWeight: 600 }}>{money(currency, item.price * item.quantity)}</span>
+            </div>
+            {/* What the buyer asked for this item (UX state 10, 15 Nov 2026). */}
+            {item.notes && <p style={{ margin: '1px 0 3px', fontSize: 11.5, color: '#475569', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{T('itemNote').replace('{note}', item.notes)}</p>}
           </div>
         ))}
         <div style={{ margin: '8px 0' }}><ShopOrderDetails order={{ ...order, status: null }} currency={currency} lang={lang} food={food} /></div>

@@ -126,3 +126,14 @@ img.sellio-photo[data-loaded] { opacity: 1; }
 .sellio-photo-slot { transition: background-color .25s ease; }
 .sellio-photo-slot:has(> img.sellio-photo:not([data-loaded])) { background-color: #f1f5f9; }
 @media (prefers-reduced-motion: reduce) { img.sellio-photo, .sellio-photo-slot { transition: none; } }
+
+/* "Order placed!" (OrderPlacedCheck.jsx): a dot that pops into the green check inside a soft
+   ring, the tick drawn in; the confetti is OrderPlacedCheck's own. Still for people who turn
+   motion off. */
+@keyframes sellio-check-pop { 0% { transform: scale(0.12); } 55% { transform: scale(1.1); } 75% { transform: scale(0.96); } 100% { transform: scale(1); } }
+@keyframes sellio-check-ring { 0% { transform: scale(0.3); opacity: 0; } 50% { opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes sellio-check-tick { from { stroke-dashoffset: 26; } to { stroke-dashoffset: 0; } }
+.sellio-check-pop { animation: sellio-check-pop 560ms cubic-bezier(.3,1.4,.6,1) both; }
+.sellio-check-ring { animation: sellio-check-ring 600ms ease-out 120ms both; }
+.sellio-check-tick { stroke-dasharray: 26; animation: sellio-check-tick 320ms ease-out 330ms both; }
+@media (prefers-reduced-motion: reduce) { .sellio-check-pop, .sellio-check-ring, .sellio-check-tick { animation: none; } }
