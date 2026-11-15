@@ -1,12 +1,12 @@
 // Bahasa Indonesia for the owner app, one file per group of screens (src/lib/appText.js loads
 // this only for people who see Indonesian). English phrase -> Indonesian; the words follow
-// GLOSSARY.md.
+// GLOSSARY.md. Every language's index.js exports its groups as GROUPS.
 import signup from './signup.json';
 import shop from './shop.json';
 import explore from './explore.json';
 
 // signup: sign-up and onboarding. shop: Dashboard, Orders, Counter, Kitchen, Products, Settings
 // and what they open. explore: Explore, listings, the cart, My purchases, My likes, Me, chats
-// and ratings (its screens use useAppText('explore'): English until it's in LIVE_GROUPS).
+// and ratings (its screens use useAppText('explore'): English until it's in LIVE_GROUPS.id).
 // A phrase two groups show has the same Indonesian in both.
-export const ID_GROUPS = { signup, shop, explore };
+export const GROUPS = { signup, shop, explore };

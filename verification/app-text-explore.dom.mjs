@@ -6,6 +6,9 @@
 // the shared pieces staying English where a store page shows them.
 // Run: node verification/app-text-explore.dom.mjs   (jsdom installed in /tmp/sellio-verification)
 process.env.TZ = 'UTC';
+// The language under test: Indonesian, or 中文 / Malay (APP_TEXT_LANGUAGE=zh|ms, as
+// app-text-explore-zh.dom.mjs and app-text-explore-ms.dom.mjs run it): the same screens, no English left.
+const L = process.env.APP_TEXT_LANGUAGE || 'id';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { build } from 'esbuild';
@@ -121,7 +124,7 @@ await writeFile(entry, [
   "export { default as exploreCatalog } from '@/locales/id/explore.json';",
   "export { default as shopCatalog } from '@/locales/id/shop.json';",
   "export { default as signupCatalog } from '@/locales/id/signup.json';",
-  "export { ID_GROUPS } from '@/locales/id/index.js';",
+  "export { GROUPS as ID_GROUPS } from '@/locales/id/index.js';",
   "export { default as Explore } from '@/pages/Explore';",
   "export { default as ListingPage } from '@/components/explore/ListingPage';",
   "export { default as ExploreCart } from '@/components/explore/ExploreCart';",
@@ -174,7 +177,7 @@ const mock = { name: 'app-text-explore-fixtures', setup(b) {
 const outfile = path.join(tmp, 'bundle.mjs');
 await build({ entryPoints: [entry], outfile, bundle: true, packages: 'external', format: 'esm', platform: 'node', jsx: 'automatic',
   alias: { '@': path.join(process.cwd(), 'src') }, plugins: [mock], logLevel: 'silent', loader: { '.js': 'jsx' } });
-const local = path.join(process.cwd(), '.app-text-explore.mjs');
+const local = path.join(process.cwd(), `.app-text-explore-${L}.mjs`);
 await copyFile(outfile, local);
 const app = await import(pathToFileURL(local));
 const { appText, exploreCatalog, shopCatalog, signupCatalog } = app;
@@ -222,16 +225,20 @@ const checkScreen = (host, what, mustShow = []) => {
   const said = [shown, ...labels(host)].join(' | ').replaceAll('sellio.sg/listing/p-nasi', ''); // addresses are data
   assert.ok(shown.length > 0, `${what}: something on screen`);
   assert.ok(!/\[object Object\]|undefined|NaN/.test(said), `${what}: no "[object Object]", "undefined" or "NaN": ${said}`);
-  assert.deepEqual(englishParts.filter((part) => said.includes(part)), [], `${what}: English left on the Indonesian screen`);
-  assert.deepEqual(said.match(ENGLISH_WORDS) || [], [], `${what}: English words on the Indonesian screen: ${said}`);
-  for (const words of mustShow) assert.ok(said.includes(words), `${what} shows "${words}": ${said}`);
+  assert.deepEqual(englishParts.filter((part) => said.includes(part)), [], `${what}: English left on the ${L} screen`);
+  assert.deepEqual(said.match(ENGLISH_WORDS) || [], [], `${what}: English words on the ${L} screen: ${said}`);
+  // The words each screen must show are the Indonesian ones; in 中文 and Malay the screens are
+  // checked for English left on them (their catalogs: app-text.dom.mjs).
+  if (L === 'id') for (const words of mustShow) assert.ok(said.includes(words), `${what} shows "${words}": ${said}`);
   return shown;
 };
 
 try {
+  let page;
+  if (L === 'id') {
   // 1. The catalog
   assert.deepEqual(Object.keys(app.ID_GROUPS), ['signup', 'shop', 'explore'], 'Group 3 has its own file');
-  assert.ok(!appText.LIVE_GROUPS.includes('explore'), 'Group 3 waits for its sign-off: not live yet');
+  assert.ok(!appText.LIVE_GROUPS.id.includes('explore'), 'Group 3 waits for its sign-off: not live yet');
   const blanks = (s) => (s.match(/\{[a-zA-Z0-9_]+\}/g) || []).sort().join(',');
   const notIndonesian = /\b(kamu|kau|sila|percuma|kedai|kata laluan|telefon|bimbit|troli|anda)\b/;
   let shared = 0;
@@ -251,7 +258,7 @@ try {
   await appText.appTextReady();
   assert.equal(appT('Save'), 'Simpan', 'The live groups’ words are loaded');
   assert.equal(appT('Fresh finds'), 'Fresh finds', 'Group 3’s words aren’t loaded for everyone yet');
-  let page = await mount(h(app.ExploreNoResults, { search: 'nasgor', kind: null, onSearch() {}, onShowAll() {} }));
+  page = await mount(h(app.ExploreNoResults, { search: 'nasgor', kind: null, onSearch() {}, onShowAll() {} }));
   const hidden = visible(page.host);
   assert.ok(hidden.includes('No results for “nasgor”') && hidden.includes('Did you mean nasi goreng?') && hidden.includes('Show everything'), `English, whole: ${hidden}`);
   assert.ok(!/Tampilkan|Maksud Anda/.test(hidden), 'Not half translated: no live group’s word on a group 3 screen');
@@ -261,11 +268,12 @@ try {
   assert.ok(document.body.textContent.includes('This is taking longer than usual.'), 'A shared piece with no t (a store page): English, and no app words loaded for it');
   await page.unmount();
   passed('Until it’s switched on, group 3’s screens are English for everyone (whole, not half translated), while groups 1 and 2 stay Indonesian');
+  }
 
   // A reviewer's preview: every group
-  await act(async () => { await appText.resetAppTextForTests({ preview: true, choice: 'id' }); });
+  await act(async () => { await appText.resetAppTextForTests({ preview: L, choice: L }); });
   await appText.appTextReady();
-  assert.equal(appT('Fresh finds'), 'Temuan terbaru');
+  assert.equal(appT('Fresh finds'), { id: 'Temuan terbaru', zh: '新鲜好物', ms: 'Penemuan terbaharu' }[L]);
 
   // 3. Explore, signed out
   page = await mount(h(app.Explore));
@@ -355,28 +363,37 @@ try {
   page = await mount(h(app.ShareSheet, { open: true, onClose() {}, url: 'https://sellio.sg/listing/p-nasi', title: 'Nasi Goreng Spesial', priceText: 'Rp25.000', shopName: 'Warung Bu Sri', t: appT }));
   checkScreen(page.host, 'Share to', ['Bagikan ke', 'Salin tautan', 'WhatsApp', 'Telegram', 'Facebook']);
   const wa = page.host.ownerDocument.querySelector('a[href^="https://wa.me/"]')?.getAttribute('href') || '';
-  assert.ok(decodeURIComponent(wa).includes('Nasi Goreng Spesial · Rp25.000 di Sellio'), `The shared message in the sharer’s words: ${decodeURIComponent(wa)}`);
+  assert.ok(decodeURIComponent(wa).includes({ id: 'Nasi Goreng Spesial · Rp25.000 di Sellio', zh: 'Sellio 上的 Nasi Goreng Spesial · Rp25.000', ms: 'Nasi Goreng Spesial · Rp25.000 di Sellio' }[L]), `The shared message in the sharer’s words: ${decodeURIComponent(wa)}`);
   await page.unmount();
   const item = { name: 'Nasi Goreng Spesial', price: 25000, variants: [{ name: 'Level', type: 'single', options: [{ label: 'Pedas', price_modifier: 0 }, { label: 'Sedang', price_modifier: 0 }] }, { name: '', type: 'addon', options: [{ label: 'Telur', price_modifier: 5000 }] }] };
   page = await mount(h(app.ItemOptionsSheet, { open: true, mode: 'buy', item, currency: 'IDR', onClose() {}, onConfirm() {} }));
   checkScreen(page.host, 'Choosing options', ['Level', 'Pilih 1 · Wajib', 'Tambahan', 'Boleh lebih dari satu', 'Telur +Rp5.000', 'Permintaan khusus', 'opsional', 'Jumlah', 'Pilih Level']);
   await page.unmount();
-  passed('The share sheet and the options sheet in Indonesian (the shared message too)');
+  passed(`The share sheet and the options sheet in ${L} (the shared message too)`);
 
   // 10. The database's own words, through the screen's t
-  assert.equal(app.likeErrorMessage({ hint: 'own_listing', message: "You can't like your own listing." }, { t: appT }), 'Anda tidak bisa menyukai produk sendiri.');
-  assert.equal(app.likeErrorMessage({ message: 'TypeError: Failed to fetch' }, { t: appT }), 'Suka Anda tidak bisa diperbarui. Periksa koneksi Anda, lalu coba lagi.');
-  assert.equal(app.chatErrorMessage({ hint: 'rate_limited', message: "You're sending messages very quickly. Wait a moment and try again." }, { t: appT }),
-    'Anda mengirim pesan terlalu cepat. Tunggu sebentar, lalu coba lagi.');
-  assert.equal(app.explainError(new app.PurchaseError("This order isn't available.", 'not_found'), { t: appT }).description, 'Pesanan ini tidak tersedia.');
-  assert.equal(appT(new app.RatingError("You can't rate your own shop.", 'own_shop').message), 'Anda tidak bisa menilai toko sendiri.');
+  const E = {
+    id: { own: 'Anda tidak bisa menyukai produk sendiri.', offline: 'Suka Anda tidak bisa diperbarui. Periksa koneksi Anda, lalu coba lagi.',
+      fast: 'Anda mengirim pesan terlalu cepat. Tunggu sebentar, lalu coba lagi.', order: 'Pesanan ini tidak tersedia.', rate: 'Anda tidak bisa menilai toko sendiri.',
+      online: 'Online', seen: 'Terakhir dilihat kemarin pukul 06.30', likes: '1 suka' },
+    zh: { own: '您不能喜欢自己的商品。', offline: '无法更新喜欢状态。请检查网络后重试。', fast: '您发送消息太快了，请稍等再试。', order: '这张订单已无法查看。',
+      rate: '您不能为自己的店铺评分。', online: '在线', seen: '昨天 上午6:30 在线', likes: '1 人喜欢' },
+    ms: { own: 'Anda tidak boleh menyukai produk anda sendiri.', offline: 'Tidak dapat mengemas kini suka anda. Semak sambungan anda, kemudian cuba lagi.',
+      fast: 'Anda menghantar mesej terlalu cepat. Tunggu sebentar, kemudian cuba lagi.', order: 'Pesanan ini tidak tersedia.', rate: 'Anda tidak boleh menilai kedai anda sendiri.',
+      online: 'Dalam talian', seen: 'Terakhir dilihat semalam pada 6:30 PG', likes: '1 suka' },
+  }[L];
+  assert.equal(app.likeErrorMessage({ hint: 'own_listing', message: "You can't like your own listing." }, { t: appT }), E.own);
+  assert.equal(app.likeErrorMessage({ message: 'TypeError: Failed to fetch' }, { t: appT }), E.offline);
+  assert.equal(app.chatErrorMessage({ hint: 'rate_limited', message: "You're sending messages very quickly. Wait a moment and try again." }, { t: appT }), E.fast);
+  assert.equal(app.explainError(new app.PurchaseError("This order isn't available.", 'not_found'), { t: appT }).description, E.order);
+  assert.equal(appT(new app.RatingError("You can't rate your own shop.", 'own_shop').message), E.rate);
   assert.equal(app.likeErrorMessage({ hint: 'own_listing', message: "You can't like your own listing." }), "You can't like your own listing.", 'No t: English as before');
-  assert.equal(app.lastSeenText({ online: true }, new Date(), appT), 'Online');
-  assert.equal(app.lastSeenText({ last_seen_at: '2026-11-14T06:30:00Z' }, new Date('2026-11-15T09:00:00Z'), appT, 'id-ID'), 'Terakhir dilihat kemarin pukul 06.30');
+  assert.equal(app.lastSeenText({ online: true }, new Date(), appT), E.online);
+  assert.equal(app.lastSeenText({ last_seen_at: '2026-11-14T06:30:00Z' }, new Date('2026-11-15T09:00:00Z'), appT, appText.appLocale()), E.seen);
   assert.equal(app.lastSeenText({ last_seen_at: '2026-11-14T06:30:00Z' }, new Date('2026-11-15T09:00:00Z')), 'Last seen yesterday at 6:30 am');
-  assert.equal(app.likesText(1, appT), '1 suka');
+  assert.equal(app.likesText(1, appT), E.likes);
   assert.equal(app.likesText(5), '5 likes');
-  passed('What the database says (likes, chats, orders, ratings) shows in Indonesian through the screen’s t, English without it');
+  passed(`What the database says (likes, chats, orders, ratings) shows in ${L} through the screen’s t, English without it`);
 
   // 11. English stays as it was
   await act(async () => { appText.setAppLanguage('en'); });

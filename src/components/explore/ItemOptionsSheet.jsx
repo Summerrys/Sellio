@@ -29,9 +29,9 @@ export default function ItemOptionsSheet({ open, mode, item, currency, image, on
   const unit = (Number(item?.price) || 0) + (variant?.price_modifier || 0);
   const missing = missingChoices(groups, picks);
   const verb = mode === 'buy' ? t('Buy now') : t('Add to cart');
-  // "Choose a size" in English (lib/itemOptions.js); in Indonesian the seller's own group name.
+  // "Choose a size" in English (lib/itemOptions.js); in other languages the seller's own group name.
   const choose = (group) => {
-    if (language !== 'id') return chooseLabel(group);
+    if (language === 'en') return chooseLabel(group);
     const name = String(group?.name || '').trim();
     return name ? t('Choose {name}', { name: groupName(name) }) : t('Choose an option');
   };

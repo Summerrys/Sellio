@@ -111,7 +111,7 @@ function FeatureCard({ icon: Icon, label, color, onClick }) {
 }
 
 export default function Dashboard() {
-  const { t, language } = useAppText();
+  const { t, language, locale } = useAppText();
   const { tenantId, tenant, hasPermission } = useTenant();
   const dashboardTour = useProductTour('dashboard');
   const navigate = useNavigate();
@@ -269,7 +269,7 @@ export default function Dashboard() {
     return t('Good evening');
   };
 
-  const todayLabel = new Date().toLocaleDateString(language === 'id' ? 'id-ID' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  const todayLabel = new Date().toLocaleDateString(language === 'en' ? 'en-GB' : locale, { weekday: 'long', day: 'numeric', month: 'long' });
   return (
     <div className="space-y-6 pb-8">
       {/* Header */}
@@ -277,7 +277,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-xl font-bold text-slate-900 leading-snug">
             {getGreeting()}<br />
-            {tenant?.name || t('there')}!{' '}
+            {tenant?.name || t('there')}{language === 'zh' ? '！' : '!'}{' '}
               {hasPermission('dashboard.ai_assistant') && (
               <button
                 data-tour="ai-assistant-btn"

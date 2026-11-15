@@ -75,8 +75,10 @@ export function lastSeenText({ online = false, last_seen_at: lastSeenAt = null }
   const minutes = Math.floor((now - seen) / 60000);
   if (minutes < 1) return t('Last seen just now');
   if (minutes < 60) return t('Last seen {minutes} min ago', { minutes });
-  // 6:30 am in English; 06.30 in Indonesian, as the rest of the app writes times.
-  const time = seen.toLocaleTimeString(locale, { hour: locale === 'id-ID' ? '2-digit' : 'numeric', minute: '2-digit' }).toLowerCase();
+  // 6:30 am in English; 06.30 in Indonesian, as the rest of the app writes times; 上午6:30 and
+  // 6:30 PG as Intl writes them in 中文 and Malay.
+  const clock = seen.toLocaleTimeString(locale, { hour: locale === 'id-ID' ? '2-digit' : 'numeric', minute: '2-digit' });
+  const time = locale.startsWith('en') ? clock.toLowerCase() : clock;
   if (seen.toDateString() === now.toDateString()) return t('Last seen today at {time}', { time });
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);

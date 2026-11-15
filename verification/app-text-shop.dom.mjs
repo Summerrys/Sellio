@@ -5,6 +5,9 @@
 // language, and real screens in Indonesian with no English phrase left on them.
 // Run: node verification/app-text-shop.dom.mjs   (jsdom installed in /tmp/sellio-verification)
 process.env.TZ = 'UTC';
+// The language under test: Indonesian, or 中文 / Malay (APP_TEXT_LANGUAGE=zh|ms, as
+// app-text-shop-zh.dom.mjs and app-text-shop-ms.dom.mjs run it): the same screens, no English left.
+const L = process.env.APP_TEXT_LANGUAGE || 'id';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { build } from 'esbuild';
@@ -18,7 +21,7 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 const virtualConsole = new VirtualConsole();
 virtualConsole.on('jsdomError', (error) => { if (!/Not implemented: (navigation|HTMLCanvasElement|window\.scrollTo)/.test(error?.message)) console.error(error); });
 // A reviewer on the Dashboard with the preview link.
-const dom = new JSDOM('<html><head></head><body></body></html>', { url: 'https://sellio.sg/Dashboard?preview_language=id', pretendToBeVisual: true, virtualConsole });
+const dom = new JSDOM('<html><head></head><body></body></html>', { url: `https://sellio.sg/Dashboard?preview_language=${L}`, pretendToBeVisual: true, virtualConsole });
 const win = dom.window;
 for (const key of ['document', 'Element', 'HTMLElement', 'HTMLInputElement', 'HTMLButtonElement', 'DocumentFragment', 'Node', 'Event',
   'CustomEvent', 'KeyboardEvent', 'FocusEvent', 'NodeFilter', 'MouseEvent', 'MutationObserver', 'SVGElement', 'sessionStorage', 'localStorage', 'navigator', 'getComputedStyle']) {
@@ -74,7 +77,7 @@ await writeFile(entry, [
   "export { itemWords } from '@/lib/planFeatures';",
   "export { default as shopCatalog } from '@/locales/id/shop.json';",
   "export { default as signupCatalog } from '@/locales/id/signup.json';",
-  "export { ID_GROUPS } from '@/locales/id/index.js';",
+  "export { GROUPS as ID_GROUPS } from '@/locales/id/index.js';",
   "export { default as OrdersEmpty } from '@/components/orders/OrdersEmpty';",
   "export { default as OrderCard } from '@/components/orders/OrderCard';",
   "export { default as Tables } from '@/pages/Tables';",
@@ -107,7 +110,7 @@ const outfile = path.join(tmp, 'bundle.mjs');
 await build({ entryPoints: [entry], outfile, bundle: true, packages: 'external', format: 'esm', platform: 'node', jsx: 'automatic',
   alias: { '@': path.join(process.cwd(), 'src') }, plugins: [mock], logLevel: 'silent', loader: { '.js': 'jsx' } });
 // React and the rest resolve from the app (the same copies this file uses).
-const local = path.join(process.cwd(), '.app-text-shop.mjs');
+const local = path.join(process.cwd(), `.app-text-shop-${L}.mjs`);
 await copyFile(outfile, local);
 const app = await import(pathToFileURL(local));
 const { appText, shopCatalog, signupCatalog } = app;
@@ -141,13 +144,16 @@ const checkScreen = (host, what, mustShow = []) => {
   const shown = visible(host);
   assert.ok(shown.length > 0, `${what}: something on screen`);
   assert.ok(!/\[object Object\]/.test(shown), `${what}: no "[object Object]"`);
-  assert.deepEqual(englishParts.filter((part) => shown.includes(part)), [], `${what}: English left on the Indonesian screen`);
-  assert.deepEqual(shown.match(ENGLISH_WORDS) || [], [], `${what}: English words on the Indonesian screen: ${shown}`);
-  for (const words of mustShow) assert.ok(shown.includes(words), `${what} shows "${words}": ${shown}`);
+  assert.deepEqual(englishParts.filter((part) => shown.includes(part)), [], `${what}: English left on the ${L} screen`);
+  assert.deepEqual(shown.match(ENGLISH_WORDS) || [], [], `${what}: English words on the ${L} screen: ${shown}`);
+  // The words each screen must show are the Indonesian ones; in 中文 and Malay the screens are
+  // checked for English left on them (their catalogs: app-text.dom.mjs).
+  if (L === 'id') for (const words of mustShow) assert.ok(shown.includes(words), `${what} shows "${words}": ${shown}`);
   return shown;
 };
 
 try {
+  if (L === 'id') {
   // 1. The catalogs
   assert.deepEqual(Object.keys(app.ID_GROUPS), ['signup', 'shop', 'explore'], 'Group 1 (sign-up), group 2 (the shop screens) and group 3 (Explore: app-text-explore.dom.mjs)');
   const blanks = (s) => (s.match(/\{[a-zA-Z0-9_]+\}/g) || []).sort().join(',');
@@ -161,15 +167,17 @@ try {
   }
   assert.ok(shared > 100, 'Phrases both groups show (Save, Cancel, the selling settings…) are in both, so either can go live first');
   passed(`The shop catalog: ${Object.keys(shopCatalog).length} phrases (${shared} shared with sign-up, word for word), each with its blanks, formal Indonesian`);
+  }
 
   // The preview link from the Dashboard
-  assert.equal(appText.appLanguage(), 'id');
+  assert.equal(appText.appLanguage(), L);
   await appText.appTextReady();
-  assert.equal(appT('Kitchen Display'), 'Layar Dapur', 'Group 2 words load with the preview');
-  assert.equal(appT('Save'), 'Simpan');
+  assert.equal(appT('Kitchen Display'), { id: 'Layar Dapur', zh: '厨房显示屏', ms: 'Paparan Dapur' }[L], 'Group 2 words load with the preview');
+  assert.equal(appT('Save'), { id: 'Simpan', zh: '保存', ms: 'Simpan' }[L]);
 
-  // 2. Dates and times
   const at = new Date('2026-11-14T06:30:00Z'); // a Saturday, 06:30 UTC
+  if (L === 'id') {
+  // 2. Dates and times
   assert.equal(app.formatAppDate(at, 'MMM d, yyyy'), '14 Nov 2026', 'Day first');
   assert.equal(app.formatAppDate(at, 'MMM dd, yyyy HH:mm'), '14 Nov 2026 06.30', 'The 24-hour clock with a dot');
   assert.equal(app.formatAppDate(at, 'h:mm a'), '06.30');
@@ -200,6 +208,29 @@ try {
   const english = app.listNoteWords({ online: true, what: 'orders', at: loadedAt, latest: 50 }, Date.now());
   assert.match(english.title, /^Couldn’t update the orders\. Showing your latest 50 orders from \d{1,2}:\d{2} (am|pm)\.$/);
   passed('Shared helpers (time ago, item words, the offline note) in the screen’s words, English without them');
+  } else {
+    // 2. Dates and times in 中文 and Malay: as Intl writes them for zh-SG and ms-MY.
+    const D = {
+      zh: [['MMM d, yyyy', '2026年11月14日'], ['MMM dd, yyyy HH:mm', '2026年11月14日 06:30'], ['h:mm a', '上午6:30'], ['HH:mm', '06:30'], ['EEE, MMM d', '11月14日 周六'], ['MMM d, h:mm a', '11月14日 上午6:30']],
+      ms: [['MMM d, yyyy', '14 Nov 2026'], ['MMM dd, yyyy HH:mm', '14 Nov 2026, 06:30'], ['h:mm a', '6:30 PG'], ['HH:mm', '06:30'], ['EEE, MMM d', 'Sab, 14 Nov'], ['MMM d, h:mm a', '14 Nov, 6:30 PG']],
+    }[L];
+    for (const [pattern, expected] of D) assert.equal(app.formatAppDate(at, pattern), expected, `${pattern} in ${L}`);
+    assert.equal(app.formatAppDate(new Date('2026-11-14T15:05:00Z'), 'h:mm a'), { zh: '下午3:05', ms: '3:05 PTG' }[L], 'The afternoon');
+    assert.equal(app.appTimeAgo(new Date(Date.now() - 5 * 60000)), { zh: '5 分钟前', ms: '5 minit yang lalu' }[L]);
+    passed(`Dates and times in ${L}, as Intl writes them for the same language (${L === 'zh' ? '2026年11月14日, 上午6:30' : '14 Nov 2026, 6:30 PG'})`);
+
+    // 3. Shared helpers in the screen's words
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60000).toISOString();
+    assert.equal(app.timeAgo(fiveMinutesAgo), '5 min ago', 'No t: English (store pages)');
+    assert.equal(app.timeAgo(fiveMinutesAgo, appT), { zh: '5 分钟前', ms: '5 minit lalu' }[L]);
+    const item = { zh: '商品', ms: 'produk' }[L];
+    assert.deepEqual(app.itemWords('individual', appT), { zh: { Products: '商品', products: '商品', Product: '商品', product: '商品' }, ms: { Products: 'Produk', products: 'produk', Product: 'Produk', product: 'produk' } }[L]);
+    const loadedAt = new Date(Date.now() - 60000);
+    const offline = app.listNoteWords({ online: false, what: appT('orders'), at: loadedAt, offlineText: 'x', failedText: 'y' }, Date.now(), appT);
+    const clock = loadedAt.toLocaleTimeString({ zh: 'zh-SG', ms: 'ms-MY' }[L], { hour: 'numeric', minute: '2-digit' });
+    assert.equal(offline.title, { zh: `您目前离线。正在显示 ${clock} 的订单。`, ms: `Anda di luar talian. Memaparkan pesanan dari ${clock}.` }[L]);
+    passed(`Shared helpers (time ago, ${item}, the offline note) in ${L}`);
+  }
 
   // 4. Real screens in Indonesian
   let page = await mount(withQueries(h(app.OrdersEmpty, { kind: 'tab', tab: 'pending', onSeeAll() {} })));
@@ -232,7 +263,7 @@ try {
   let tags = ['halal'];
   page = await mount(h(app.TagInput, { id: 'tags', value: tags, onChange: (next) => { tags = next; } }));
   checkScreen(page.host, 'Tags', ['halal']);
-  assert.equal(page.host.querySelector('input')?.getAttribute('placeholder'), 'Tambah lagi');
+  assert.equal(page.host.querySelector('input')?.getAttribute('placeholder'), { id: 'Tambah lagi', zh: '再添加一个', ms: 'Tambah lagi' }[L]);
   await page.unmount();
 
   page = await mount(h(app.ProductFormPricing, { formData: { price: '25000', cost_price: '15000', compare_at_price: '' }, onChange() {}, currency: 'IDR' }));
@@ -256,7 +287,7 @@ try {
   checkScreen(page.host, 'A store whose plan ended', ['Langganan toko ini telah berakhir', 'Sellio dijeda untuk Warung Bu Sri.']);
   await page.unmount();
   assert.ok(!reactWarnings.some((line) => /unique "key"/.test(line)), 'Links and bold names in a sentence have keys: ' + reactWarnings.join('\n'));
-  passed('Orders, an order card, Tables, tags, pricing, variants, the trial reminder, plan and billing notices in Indonesian, with no English left');
+  passed(`Orders, an order card, Tables, tags, pricing, variants, the trial reminder, plan and billing notices in ${L}, with no English left`);
 
   // 5. Printed receipts and kitchen chits: the shop's language (an Indonesian shop prints in
   // Bahasa Indonesia, whatever the person printing picked), in plain letters a printer prints.

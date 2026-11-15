@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabaseClient';
 import { featureOn, planAllowsPermission } from '@/lib/planFeatures';
-import { noteShopCountry } from '@/lib/appText';
+import { noteShop } from '@/lib/appText';
 import { shopCountry } from '@/lib/countries';
 
 const TenantContext = createContext(null);
@@ -575,7 +575,8 @@ export function TenantProvider({ children }) {
   // (lib/appText.js): an Indonesian shop's team gets Bahasa Indonesia.
   const activeShop = tenant?.[0] || null;
   const activeShopCountry = activeShop ? shopCountry(activeShop).name : null;
-  useEffect(() => { noteShopCountry(activeShopCountry); }, [activeShopCountry]);
+  const activeShopId = activeShop?.id || null;
+  useEffect(() => { noteShop({ id: activeShopId, country: activeShopCountry }); }, [activeShopId, activeShopCountry]);
 
   const value = {
     user,

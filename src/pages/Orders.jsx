@@ -994,7 +994,9 @@ export default function Orders() {
           </div>
 
           {/* Status tabs */}
-          <div data-tour="order-tabs" className="flex w-full gap-1">
+          {/* The tabs keep their words on one line (中文 would otherwise break inside a word) and the
+              row scrolls sideways when they don't all fit. */}
+          <div data-tour="order-tabs" className="flex w-full gap-1 overflow-x-auto no-scrollbar">
             {statusTabs.map(tab => {
               const count = tab.value === 'all' ? orders.length : countFor(tab.value);
               const isActive = activeTab === tab.value;
@@ -1002,7 +1004,7 @@ export default function Orders() {
                 <button
                   key={tab.value}
                   onClick={() => setActiveTab(tab.value)}
-                  className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all active:scale-95 ${
+                  className={`flex-1 shrink-0 whitespace-nowrap flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all active:scale-95 ${
                     isActive ? 'text-white shadow-sm' : 'bg-slate-100 text-slate-600'
                   }`}
                   style={isActive ? { background: 'var(--color-primary-gradient, rgb(var(--color-primary)))' } : {}}

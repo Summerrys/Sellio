@@ -1053,8 +1053,25 @@ function visitorCountry({ zone = deviceZone(), languages = deviceLanguages() } =
   if (languages.some((language) => /^(id|in)(-|_|$)/i.test(language))) return "Indonesia";
   return null;
 }
+const APP_LANGUAGES = [
+  { code: "en", short: "EN", name: "English", locale: "en-SG" },
+  { code: "zh", short: "中文", name: "中文", locale: "zh-SG" },
+  { code: "ms", short: "MY", name: "Bahasa Melayu", locale: "ms-MY" },
+  { code: "id", short: "ID", name: "Bahasa Indonesia", locale: "id-ID" }
+];
+Object.fromEntries(APP_LANGUAGES.map(({ code, locale }) => [code, locale]));
+const LOADERS = {
+  zh: () => import("./assets/index-DdQR8nW7.js"),
+  id: () => import("./assets/index-CRj1gAi6.js")
+};
+const TRANSLATED = Object.keys(LOADERS);
 const CHOICE_KEY = "sellio_app_language";
 const PREVIEW_KEY = "sellio_app_language_preview";
+APP_LANGUAGES.map(({ code }) => code);
+function previewLanguage(value) {
+  if (value === "1" || value === true) return "id";
+  return TRANSLATED.includes(value) ? value : null;
+}
 const hasWindow = () => typeof window !== "undefined";
 function readStorage(key) {
   try {
@@ -1077,9 +1094,9 @@ function start() {
   try {
     const url = new URL(window.location.href);
     const preview = url.searchParams.get("preview_language");
-    if (preview === "id") {
-      writeStorage(PREVIEW_KEY, "1");
-      writeStorage(CHOICE_KEY, "id");
+    if (TRANSLATED.includes(preview)) {
+      writeStorage(PREVIEW_KEY, preview);
+      writeStorage(CHOICE_KEY, preview);
     } else if (preview === "off") {
       writeStorage(PREVIEW_KEY, null);
       writeStorage(CHOICE_KEY, null);
@@ -1090,7 +1107,7 @@ function start() {
     }
   } catch {
   }
-  readStorage(PREVIEW_KEY) === "1";
+  previewLanguage(readStorage(PREVIEW_KEY));
   readStorage(CHOICE_KEY);
 }
 start();

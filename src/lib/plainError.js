@@ -112,7 +112,8 @@ function duplicateText(error, say) {
   return say(IN_USE, { thing: say(FIELDS[field] || SAME_DETAILS) });
 }
 
-const sentence = (text) => (/[.!?…]$/.test(text) ? text : `${text}.`);
+// A sentence ends with its own stop: a Chinese one (。！？) too, so 中文 doesn't get an extra ".".
+const sentence = (text) => (/[.!?…。！？]$/.test(text) ? text : `${text}.`);
 
 // { kind, title, description } for an error. fallback: what to say instead of the general
 // "on Sellio's side" when nothing more is known (e.g. a print that needs the printer checked).

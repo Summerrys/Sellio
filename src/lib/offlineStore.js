@@ -112,10 +112,18 @@ if (typeof window !== 'undefined' && !window.__sellioSnapshotFlush) {
 // "3:42 pm" today, "8 Nov, 3:42 pm" another day: when what's on screen was loaded.
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const ID_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-// language 'id': the 24-hour clock and Indonesian months (14 Nov, 14.30).
+// language 'id': the 24-hour clock and Indonesian months (14 Nov, 14.30). 'zh' and 'ms': as Intl
+// writes them (下午3:42, 11月8日 下午3:42; 3:42 PTG, 8 Nov, 3:42 PTG).
+const INTL_LOCALE = { zh: 'zh-SG', ms: 'ms-MY' };
 export function loadedAtText(time, now = Date.now(), language = 'en') {
   const at = new Date(time);
   const today = new Date(now);
+  const intl = INTL_LOCALE[language];
+  if (intl) {
+    const clock = at.toLocaleTimeString(intl, { hour: 'numeric', minute: '2-digit' });
+    const sameDay = at.toDateString() === today.toDateString();
+    return sameDay ? clock : `${at.toLocaleDateString(intl, { day: 'numeric', month: 'short' })}${language === 'zh' ? ' ' : ', '}${clock}`;
+  }
   const clock = language === 'id'
     ? `${String(at.getHours()).padStart(2, '0')}.${String(at.getMinutes()).padStart(2, '0')}`
     : `${at.getHours() % 12 || 12}:${String(at.getMinutes()).padStart(2, '0')} ${at.getHours() < 12 ? 'am' : 'pm'}`;
