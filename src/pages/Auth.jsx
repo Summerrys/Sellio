@@ -335,7 +335,8 @@ export default function Auth() {
         const tokenInUrl = new URLSearchParams(window.location.search).get('token');
         const isBypass = BYPASS_EMAILS.includes((user.email || '').toLowerCase());
         // From the free sign-up (/Join, or the Sign Up tab): a new account is welcome
-        // without a plan; Join then asks for name, mobile number and password.
+        // without a plan; Join then asks for name and mobile number (and a password, but not
+        // after Google).
         const joinInUrl = new URLSearchParams(window.location.search).get('join') === '1';
 
         if (isNewAuthUser && !tokenInUrl && !isBypass && !joinInUrl) {

@@ -49,7 +49,7 @@ window.__client = {
     onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
     signUp: async (body) => { window.__calls.push(['signUp', body]); return window.__signUp || { data: {}, error: null }; },
     signInWithOtp: async (body) => { window.__calls.push(['signInWithOtp', body]); return { data: {}, error: window.__otpError || null }; },
-    updateUser: async () => ({ data: {}, error: window.__updateUserError || null }),
+    updateUser: async (body) => { window.__calls.push(['updateUser', body]); return { data: {}, error: window.__updateUserError || null }; },
     verifyOtp: async () => ({ data: {}, error: null }),
     setSession: async () => ({ error: null }),
     signOut: async () => ({ error: null }),
@@ -324,6 +324,47 @@ try {
       assert.equal(await page.locator('text=You’ll log in with this mobile number and password.').count(), 0, 'no "you’ll log in with" line (Google sign-ups too)');
       await shoot(page, '9-join-taken');
       passed('Free sign-up, the last step: every problem at once on its field (first focused), passwords that don\'t match, a number another account has (its email address a link)');
+    }
+    await page.close();
+  }
+  {
+    // Signed up with Google: the last step asks for no password (Alvin, 17 Nov 2026).
+    const google = `window.__session = { access_token: 'x.' + btoa(JSON.stringify({ amr: [{ method: 'oauth', timestamp: 1 }] })).replace(/=+$/, '') + '.y', user: { id: 'u2', email: 'mei@gmail.com', identities: [{ provider: 'google' }], app_metadata: { provider: 'google', providers: ['google'] } } }; window.__status = { email: 'mei@gmail.com', email_proven: true, setup_done: false, profile: { full_name: 'Mei Ling' } };`;
+    const page = await open('/Join', google);
+    await page.locator('#join-name').waitFor({ timeout: 10000 });
+    await shoot(page, '10-join-google');
+    if (!before) {
+      assert.equal(await page.locator('input[type="password"]').count(), 0, 'no password fields after Google');
+      assert.equal(await page.locator('#join-name').inputValue(), 'Mei Ling');
+      await page.getByRole('button', { name: 'Continue' }).click();
+      await page.waitForTimeout(400);
+      assert.equal(await text(page, '#join-phone-error'), 'Please enter a valid SG mobile number (8 digits, starting with 8 or 9).', 'the number is still needed');
+      assert.deepEqual((await calls(page, 'rpc')).filter((c) => c[1] === 'complete_account_setup'), [], 'nothing sent yet');
+      await page.locator('#join-phone').fill('91234567');
+      await page.getByRole('button', { name: 'Continue' }).click();
+      await page.waitForTimeout(600);
+      assert.deepEqual(await calls(page, 'updateUser'), [], 'no password is set');
+      assert.deepEqual((await calls(page, 'rpc')).filter((c) => c[1] === 'complete_account_setup').map((c) => c[2]), [{ p_full_name: 'Mei Ling', p_phone: '+6591234567' }]);
+      assert.deepEqual(await calls(page, 'navigate'), [['navigate', '/Account']]);
+      passed('Free sign-up after Google: name and number only (no password fields, no password set), then the account page');
+    }
+    await page.close();
+  }
+  {
+    // A link from the email: the password stays (it's how they log in).
+    const page = await open('/Join', `window.__session = { access_token: 'x.' + btoa(JSON.stringify({ amr: [{ method: 'otp', timestamp: 1 }] })).replace(/=+$/, '') + '.y', user: { id: 'u3', email: 'tan@kopi.sg', identities: [{ provider: 'email' }], app_metadata: { provider: 'email', providers: ['email'] } } }; window.__status = { email: 'tan@kopi.sg', email_proven: true, setup_done: false, profile: {} };`);
+    await page.locator('#join-name').waitFor({ timeout: 10000 });
+    if (!before) {
+      assert.equal(await page.locator('#join-password').count(), 1, 'the password field is there');
+      await page.locator('#join-name').fill('Tan');
+      await page.locator('#join-phone').fill('91234567');
+      await page.locator('#join-password').fill('sellio123');
+      await page.locator('#join-confirm').fill('sellio123');
+      await page.getByRole('button', { name: 'Continue' }).click();
+      await page.waitForTimeout(600);
+      assert.deepEqual(await calls(page, 'updateUser'), [['updateUser', { password: 'sellio123' }]], 'the password is set');
+      assert.deepEqual(await calls(page, 'navigate'), [['navigate', '/Account']]);
+      passed('Free sign-up from the email link: the password is still asked for and set');
     }
     await page.close();
   }

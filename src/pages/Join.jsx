@@ -38,6 +38,21 @@ const EMAIL_BUTTON = 'Verify my email';
 // 6 Nov 2026).
 const LINK_GONE = N_('This link no longer works: it has expired, or a newer verification email replaced it. Open the newest email from Sellio, or send a new one below.');
 
+// The account logs in with Google: it has a Google login, or this session came from Google
+// (its token's amr says oauth, as complete_account_setup reads it).
+function hasGoogleLogin(session) {
+  const user = session?.user;
+  if (user?.identities?.some((identity) => identity?.provider === 'google')) return true;
+  if (Array.isArray(user?.app_metadata?.providers) && user.app_metadata.providers.includes('google')) return true;
+  try {
+    const part = String(session?.access_token || '').split('.')[1] || '';
+    const claims = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/')));
+    return Array.isArray(claims?.amr) && claims.amr.some((entry) => entry?.method === 'oauth');
+  } catch {
+    return false;
+  }
+}
+
 function GoogleIcon() {
   return (
     <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
@@ -62,7 +77,8 @@ function Notice({ tone = 'amber', children }) {
 }
 
 // Create a Sellio account: verify the email (a link in a "verify your email" email) or use
-// Google, then name, phone and password. Afterwards the account page lets them open a free
+// Google, then name, phone and password (no password after Google: they log in with Google,
+// Alvin 17 Nov 2026). Afterwards the account page lets them open a free
 // shop or choose a business plan (Alvin, 5 Nov 2026: "verify my email", not a magic link).
 // An email that already has an account is signed in by the same link. One whose account is
 // closed (its deletion is pending) gets the closed-account screen instead: Keep my account
@@ -87,6 +103,8 @@ export default function Join() {
   const [country, setCountry] = useState(() => phoneCountryFor(visitorCountry()));
   const [showCountries, setShowCountries] = useState(false);
   const [form, setForm] = useState({ full_name: '', phone: '', password: '', confirm: '' });
+  // Signed up with Google: the last step asks for no password (Alvin, 17 Nov 2026).
+  const [googleLogin, setGoogleLogin] = useState(false);
   const [saving, setSaving] = useState(false);
   // What's wrong, on the form itself (UX state 9): { email } on the first step, { full_name,
   // phone, password, confirm } on the last, and form for what isn't one field's.
@@ -249,6 +267,8 @@ export default function Join() {
       setStage('start');
       return;
     }
+    const { data: { session } } = await supabase.auth.getSession();
+    setGoogleLogin(hasGoogleLogin(session));
     const profile = status.profile || {};
     const match = PHONE_COUNTRIES.find((c) => profile.phone?.startsWith(c.code));
     if (match) setCountry(match);
@@ -335,8 +355,10 @@ export default function Join() {
     const found = {};
     if (!name) found.full_name = t('Please enter your name.');
     if (!phone) found.phone = t('Please enter a valid {name} mobile number ({hint}).', { name: country.name, hint: t(country.hint) });
-    if (form.password.length < 6) found.password = t('Please choose a password of at least 6 characters.');
-    else if (form.password !== form.confirm) found.confirm = t('The passwords don’t match.');
+    if (!googleLogin) {
+      if (form.password.length < 6) found.password = t('Please choose a password of at least 6 characters.');
+      else if (form.password !== form.confirm) found.confirm = t('The passwords don’t match.');
+    }
     if (Object.keys(found).length) {
       setErrors(found);
       focusFirst(found, FINISH_FIELDS, (field) => `join-${field === 'full_name' ? 'name' : field}`);
@@ -346,9 +368,12 @@ export default function Join() {
     setSaving(true);
     try {
       const supabase = await getSupabase();
-      // Setting the password also signs out every other session of this account.
-      const { error: passwordError } = await supabase.auth.updateUser({ password: form.password });
-      if (passwordError && passwordError.code !== 'same_password') throw passwordError;
+      // Setting the password also signs out every other session of this account. After Google
+      // there's none to set: they log in with Google.
+      if (!googleLogin) {
+        const { error: passwordError } = await supabase.auth.updateUser({ password: form.password });
+        if (passwordError && passwordError.code !== 'same_password') throw passwordError;
+      }
       const { error } = await supabase.rpc('complete_account_setup', { p_full_name: name, p_phone: phone });
       if (error) throw error;
       await rememberProfile(supabase, accountEmail);
@@ -544,26 +569,28 @@ export default function Join() {
                 </div>
                 <FieldError id="join-phone-error">{errors.phone}</FieldError>
               </div>
-              <div>
-                <label htmlFor="join-password" className="block text-sm font-medium text-slate-700 mb-1">{t('Password')}</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input id="join-password" type="password" autoComplete="new-password" placeholder={t('At least 6 characters')} value={form.password}
-                    onChange={(e) => changeForm('password', e.target.value)} className={fieldClass(errors.password)}
-                    {...fieldProps('join-password', errors.password)} />
+              {!googleLogin && (<>
+                <div>
+                  <label htmlFor="join-password" className="block text-sm font-medium text-slate-700 mb-1">{t('Password')}</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input id="join-password" type="password" autoComplete="new-password" placeholder={t('At least 6 characters')} value={form.password}
+                      onChange={(e) => changeForm('password', e.target.value)} className={fieldClass(errors.password)}
+                      {...fieldProps('join-password', errors.password)} />
+                  </div>
+                  <FieldError id="join-password-error">{errors.password}</FieldError>
                 </div>
-                <FieldError id="join-password-error">{errors.password}</FieldError>
-              </div>
-              <div>
-                <label htmlFor="join-confirm" className="block text-sm font-medium text-slate-700 mb-1">{t('Confirm password')}</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input id="join-confirm" type="password" autoComplete="new-password" placeholder={t('Type it again')} value={form.confirm}
-                    onChange={(e) => changeForm('confirm', e.target.value)} className={fieldClass(errors.confirm)}
-                    {...fieldProps('join-confirm', errors.confirm)} />
+                <div>
+                  <label htmlFor="join-confirm" className="block text-sm font-medium text-slate-700 mb-1">{t('Confirm password')}</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input id="join-confirm" type="password" autoComplete="new-password" placeholder={t('Type it again')} value={form.confirm}
+                      onChange={(e) => changeForm('confirm', e.target.value)} className={fieldClass(errors.confirm)}
+                      {...fieldProps('join-confirm', errors.confirm)} />
+                  </div>
+                  <FieldError id="join-confirm-error">{errors.confirm}</FieldError>
                 </div>
-                <FieldError id="join-confirm-error">{errors.confirm}</FieldError>
-              </div>
+              </>)}
               <FormError>{errors.form}</FormError>
               <button type="submit" disabled={saving}
                 className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70" style={BUTTON_STYLE}>
