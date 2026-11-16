@@ -133,17 +133,59 @@ try {
     [new TypeError('Failed to fetch'), 'Could not sign in right now. Please try again.'],
     ['<html>502 Bad Gateway</html>', 'Could not sign in right now. Please try again.'],
   ];
+  // The message is on the form, not a pop-up (UX state 9): a wrong number or password under the
+  // password with both fields marked (Sellio can't say which is wrong); the rest above Login.
+  const formError = () => container.querySelector('[data-form-error]')?.textContent || null;
+  const fieldError = id => container.querySelector(`#${id}-error`)?.textContent || null;
   for (const [reply, message] of refusals) {
     reset();
     invokeReply = () => reply;
     await submit(form);
     await wait(30);
-    assert.deepEqual(globalThis.toastErrors, [message]);
+    assert.deepEqual(globalThis.toastErrors, [], 'no pop-up');
+    if (reply?.code === 'invalid') {
+      assert.equal(fieldError('auth-password'), message, 'under the password');
+      assert.equal(phone.getAttribute('aria-invalid'), 'true', 'the phone number is marked too');
+      assert.equal(password.getAttribute('aria-invalid'), 'true');
+      assert.equal(password.getAttribute('aria-describedby'), 'auth-password-error');
+      assert.equal(formError(), null);
+    } else {
+      assert.equal(formError(), message, 'above the Login button');
+      assert.equal(fieldError('auth-password'), null);
+      assert.equal(password.getAttribute('aria-invalid'), null, 'no field is marked for what is not its fault');
+    }
     assert.ok(!calls.some(c => c[0] === 'setSession'), 'No session is set when sign-in is refused');
     assert.equal(globalThis.authDestination, undefined);
     assert.equal(welcomeLeft(), null, 'no Welcome back! for a refused sign-in');
   }
-  passed('Wrong number or password, the 15-minute lock, the network limit, no connection and gateway errors each show one clear message and never sign in');
+  passed('Wrong number or password, the 15-minute lock, the network limit, no connection and gateway errors each show one clear message on the form and never sign in');
+
+  // A wrong number or password, then a new try: typing takes both marks off.
+  reset();
+  invokeReply = () => ({ ok: false, code: 'invalid' });
+  await submit(form);
+  await wait(30);
+  assert.equal(phone.getAttribute('aria-invalid'), 'true');
+  await setValue(password, 'right-password2');
+  assert.equal(phone.getAttribute('aria-invalid'), null, 'typing the password again takes both marks off');
+  assert.equal(password.getAttribute('aria-invalid'), null);
+  assert.equal(fieldError('auth-password'), null);
+  // Empty fields: said on each field, the first one focused, and nothing is sent.
+  reset();
+  await setValue(phone, '');
+  await setValue(password, '');
+  await submit(form);
+  await wait(10);
+  assert.ok(!calls.some(c => c[0] === 'invoke' || c[0] === 'request'), 'nothing is sent with empty fields');
+  assert.equal(fieldError('auth-phone'), 'Please enter your mobile number.');
+  assert.equal(fieldError('auth-password'), 'Please enter your password.');
+  assert.equal(document.activeElement, phone, 'the first field with a problem has the focus');
+  assert.deepEqual(globalThis.toastErrors, []);
+  assert.ok(form.noValidate, 'no browser pop-up bubbles');
+  await setValue(phone, '091234567');
+  assert.equal(fieldError('auth-phone'), null, 'typing takes the mark off');
+  await setValue(password, 'right-password');
+  passed('Empty fields are said on the fields (nothing is sent), the first is focused; typing takes the marks off');
 
   reset();
   await click(buttonText(container, 'Forgot password?'));
@@ -178,11 +220,20 @@ try {
     invokeReply = () => reply;
     await click(continueButton);
     await wait(20);
-    assert.deepEqual(globalThis.toastErrors, [message]);
+    assert.deepEqual(globalThis.toastErrors, [], 'no pop-up');
+    if (reply?.code === 'not_found') {
+      assert.equal(fieldError('forgot-phone'), message, 'under the phone number');
+      assert.equal(container.querySelector('#forgot-phone').getAttribute('aria-invalid'), 'true');
+      assert.equal(formError(), null);
+    } else {
+      assert.equal(formError(), message, 'above Continue');
+      assert.equal(fieldError('forgot-phone'), null);
+    }
     assert.ok(buttonText(container, 'Continue'), 'Stays on the phone step');
     assert.doesNotMatch(container.textContent, /Reset link sent!/);
   }
-  passed('Staff are told to ask their owner; unknown numbers, the reset limit and server failures show their messages');
+  await setValue(container.querySelector('#forgot-phone'), '81234568');
+  passed('Staff are told to ask their owner; unknown numbers (on the field), the reset limit and server failures show their messages on the form');
 
   reset();
   invokeReply = () => ({ ok: true, kind: 'email', masked_email: 'ow•••@example.invalid', priority_support: false });

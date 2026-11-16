@@ -22,10 +22,13 @@ import {
 } from '@/lib/accountFlow';
 import { visitorCountry } from '@/lib/countries';
 import { useAppText, N_ } from '@/lib/appText';
+import { FieldError, FormError, fieldBorder, fieldProps, focusFirst } from '@/components/ui-custom/FieldError';
 
 const LOGO_URL = '/branding/sellio-logo.webp';
 const BUTTON_STYLE = { background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' };
-const INPUT_CLASS = 'w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400';
+// A field, red when it has a problem (components/ui-custom/FieldError.jsx).
+const fieldClass = (error) => `w-full pl-9 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 ${fieldBorder(error)}`;
+const FINISH_FIELDS = ['full_name', 'phone', 'password', 'confirm'];
 const RESEND_SECONDS = 60;
 // The button in the verification email (scripts/email-templates.py). The email is in English,
 // so the hint names the button as the email shows it.
@@ -85,6 +88,11 @@ export default function Join() {
   const [showCountries, setShowCountries] = useState(false);
   const [form, setForm] = useState({ full_name: '', phone: '', password: '', confirm: '' });
   const [saving, setSaving] = useState(false);
+  // What's wrong, on the form itself (UX state 9): { email } on the first step, { full_name,
+  // phone, password, confirm } on the last, and form for what isn't one field's.
+  const [errors, setErrors] = useState({});
+  const fixField = (name) => setErrors((e) => (e[name] ? { ...e, [name]: undefined } : e));
+  const changeForm = (name, value) => { setForm((f) => ({ ...f, [name]: value })); fixField(name); };
   const started = useRef(false);
 
   useEffect(() => {
@@ -255,8 +263,15 @@ export default function Join() {
   const sendLink = async (e, to) => {
     e?.preventDefault();
     const address = (typeof to === 'string' ? to : email).trim().toLowerCase();
-    if (!isEmail(address)) { toast.error(t('Please enter a valid email address.')); return; }
-    if (isStaffLoginEmail(address)) { toast.error(t('That’s a staff login. Staff sign in with their phone number on the login page.')); return; }
+    const problem = !isEmail(address) ? t('Please enter a valid email address.')
+      : isStaffLoginEmail(address) ? t('That’s a staff login. Staff sign in with their phone number on the login page.') : '';
+    if (problem) {
+      setErrors({ email: problem });
+      if (stage === 'start') focusFirst({ email: true }, ['email'], () => 'join-email');
+      else toast.error(problem);
+      return;
+    }
+    setErrors({});
     setSending(true);
     try {
       const supabase = await getSupabase();
@@ -280,7 +295,9 @@ export default function Join() {
         setStage('sent');
         return;
       }
-      toast.error(accountErrorMessage(err));
+      // On the email screen it stays above the button; resending from the next one, a pop-up.
+      if (stage === 'start') setErrors({ form: accountErrorMessage(err) });
+      else toast.error(accountErrorMessage(err));
     } finally {
       setSending(false);
     }
@@ -315,10 +332,17 @@ export default function Join() {
     e.preventDefault();
     const name = form.full_name.trim();
     const phone = fullPhone(country, form.phone);
-    if (!name) { toast.error(t('Please enter your name.')); return; }
-    if (!phone) { toast.error(t('Please enter a valid {name} mobile number ({hint}).', { name: country.name, hint: t(country.hint) })); return; }
-    if (form.password.length < 6) { toast.error(t('Please choose a password of at least 6 characters.')); return; }
-    if (form.password !== form.confirm) { toast.error(t('The passwords don’t match.')); return; }
+    const found = {};
+    if (!name) found.full_name = t('Please enter your name.');
+    if (!phone) found.phone = t('Please enter a valid {name} mobile number ({hint}).', { name: country.name, hint: t(country.hint) });
+    if (form.password.length < 6) found.password = t('Please choose a password of at least 6 characters.');
+    else if (form.password !== form.confirm) found.confirm = t('The passwords don’t match.');
+    if (Object.keys(found).length) {
+      setErrors(found);
+      focusFirst(found, FINISH_FIELDS, (field) => `join-${field === 'full_name' ? 'name' : field}`);
+      return;
+    }
+    setErrors({});
     setSaving(true);
     try {
       const supabase = await getSupabase();
@@ -330,7 +354,18 @@ export default function Join() {
       await rememberProfile(supabase, accountEmail);
       completeAuthNavigation('/Account');
     } catch (err) {
-      toast.error(accountErrorMessage(err));
+      // On its field when the server says which (the number is taken, the name, the password).
+      const message = accountErrorMessage(err);
+      const text = `${err?.hint || ''} ${err?.code || ''} ${err?.message || ''} ${err?.details || ''}`;
+      const field = /phone_taken|phone_invalid/.test(text) || (err?.code === '23505' && /phone/i.test(text)) ? 'phone'
+        : /name_invalid/.test(text) ? 'full_name'
+          : /password should be at least|weak password|weak_password/i.test(text) ? 'password' : null;
+      if (field) {
+        setErrors({ [field]: message });
+        focusFirst({ [field]: true }, FINISH_FIELDS, (f) => `join-${f === 'full_name' ? 'name' : f}`);
+      } else {
+        setErrors({ form: message });
+      }
       setSaving(false);
     }
   };
@@ -403,10 +438,14 @@ export default function Join() {
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input id="join-email" type="email" autoComplete="email" placeholder="you@example.com" value={email}
-                      onChange={(e) => setEmail(e.target.value)} className={INPUT_CLASS} aria-describedby="join-email-hint" />
+                      onChange={(e) => { setEmail(e.target.value); setErrors({}); }} className={fieldClass(errors.email)}
+                      aria-invalid={errors.email ? 'true' : undefined}
+                      aria-describedby={errors.email ? 'join-email-error join-email-hint' : 'join-email-hint'} />
                   </div>
+                  <FieldError id="join-email-error">{errors.email}</FieldError>
                   <p id="join-email-hint" className="mt-1.5 text-xs text-slate-400">{t('We’ll email you a link to verify it’s yours.')}</p>
                 </div>
+                <FormError>{errors.form}</FormError>
                 <button type="submit" disabled={sending || !email.trim()}
                   className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70" style={BUTTON_STYLE}>
                   {sending ? t('Sending…') : t('Send verification email')}
@@ -454,7 +493,7 @@ export default function Join() {
                 className="w-full py-2.5 rounded-xl text-sm font-medium text-slate-700 border border-slate-200 bg-white hover:bg-slate-50 transition-colors disabled:opacity-60">
                 {cooldown > 0 ? t('Resend in {cooldown}s', { cooldown }) : (sending ? t('Sending…') : t('Resend verification email'))}
               </button>
-              <button type="button" onClick={() => { setStage('start'); setNotice(''); }}
+              <button type="button" onClick={() => { setStage('start'); setNotice(''); setErrors({}); }}
                 className="w-full text-xs text-orange-500 hover:text-orange-600 font-medium bg-transparent border-none cursor-pointer">
                 {t('Use a different email')}
               </button>
@@ -468,8 +507,10 @@ export default function Join() {
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input id="join-name" type="text" autoComplete="name" placeholder={t('Jane Doe')} maxLength={80} value={form.full_name}
-                    onChange={(e) => setForm({ ...form, full_name: e.target.value })} className={INPUT_CLASS} />
+                    onChange={(e) => changeForm('full_name', e.target.value)} className={fieldClass(errors.full_name)}
+                    {...fieldProps('join-name', errors.full_name)} />
                 </div>
+                <FieldError id="join-name-error">{errors.full_name}</FieldError>
               </div>
               <div>
                 <label htmlFor="join-phone" className="block text-sm font-medium text-slate-700 mb-1">{t('Mobile number')}</label>
@@ -484,7 +525,7 @@ export default function Join() {
                     {showCountries && (
                       <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 min-w-[130px]">
                         {PHONE_COUNTRIES.map((c) => (
-                          <button key={c.code} type="button" onClick={() => { setCountry(c); setShowCountries(false); }}
+                          <button key={c.code} type="button" onClick={() => { setCountry(c); setShowCountries(false); fixField('phone'); }}
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-slate-50 transition-colors text-left">
                             <span>{c.flag}</span>
                             <span className="text-slate-600">{c.name}</span>
@@ -497,27 +538,33 @@ export default function Join() {
                   <div className="relative flex-1">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input id="join-phone" type="tel" autoComplete="tel-national" placeholder={country.placeholder} value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })} className={INPUT_CLASS} />
+                      onChange={(e) => changeForm('phone', e.target.value)} className={fieldClass(errors.phone)}
+                      {...fieldProps('join-phone', errors.phone)} />
                   </div>
                 </div>
+                <FieldError id="join-phone-error">{errors.phone}</FieldError>
               </div>
               <div>
                 <label htmlFor="join-password" className="block text-sm font-medium text-slate-700 mb-1">{t('Password')}</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input id="join-password" type="password" autoComplete="new-password" placeholder={t('At least 6 characters')} value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })} className={INPUT_CLASS} />
+                    onChange={(e) => changeForm('password', e.target.value)} className={fieldClass(errors.password)}
+                    {...fieldProps('join-password', errors.password)} />
                 </div>
+                <FieldError id="join-password-error">{errors.password}</FieldError>
               </div>
               <div>
                 <label htmlFor="join-confirm" className="block text-sm font-medium text-slate-700 mb-1">{t('Confirm password')}</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input id="join-confirm" type="password" autoComplete="new-password" placeholder={t('Type it again')} value={form.confirm}
-                    onChange={(e) => setForm({ ...form, confirm: e.target.value })} className={INPUT_CLASS} />
+                    onChange={(e) => changeForm('confirm', e.target.value)} className={fieldClass(errors.confirm)}
+                    {...fieldProps('join-confirm', errors.confirm)} />
                 </div>
+                <FieldError id="join-confirm-error">{errors.confirm}</FieldError>
               </div>
-              <p className="text-xs text-slate-400">{t('You’ll log in with this mobile number and password.')}</p>
+              <FormError>{errors.form}</FormError>
               <button type="submit" disabled={saving}
                 className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70" style={BUTTON_STYLE}>
                 {saving ? t('Saving…') : t('Continue')}

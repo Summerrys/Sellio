@@ -12,7 +12,8 @@ import { noteSignInWelcome } from '@/lib/signInWelcome';
 import { googleSignInAvailable, startGoogleSignIn } from '@/lib/googleSignIn';
 import { COMPLETE_KEY, clearMobileAuth, hasMobileGoogleCompletion, isNativeAndroid } from '@/lib/mobileOAuth';
 import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
-import { SELLIO_SITE, SELLIO_WEB_ORIGINS, decideOnboardingAccess, isClosedLoginError, phoneCountryFor } from '@/lib/accountFlow';
+import { SELLIO_SITE, SELLIO_WEB_ORIGINS, accountErrorMessage, decideOnboardingAccess, isClosedLoginError, isEmail, phoneCountryFor } from '@/lib/accountFlow';
+import { FieldError, FormError, fieldBorder, fieldProps, focusFirst } from '@/components/ui-custom/FieldError';
 import { visitorCountry } from '@/lib/countries';
 import { homeFor, isStaffAccount } from '@/lib/staffAccess';
 import { callPhoneAuth } from '@/lib/phoneAuth';
@@ -85,6 +86,14 @@ const phoneSignInMessage = (result) => {
   }
 };
 
+// A refused phone sign-in, on the form (UX state 9): a wrong number or password marks both
+// fields with the message under the password (Sellio can't say which one is wrong); the rest
+// (locked, too many tries, busy) is the form's, above the Login button.
+const signInProblem = (result) => {
+  const message = phoneSignInMessage(result);
+  return Object.assign(new Error(message), { fields: result?.code === 'invalid' ? { phone: true, password: message } : null });
+};
+
 export default function Auth() {
   const { t } = useAppText();
   const { setAppUser } = useAppUser();
@@ -118,7 +127,7 @@ export default function Auth() {
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
   // Phone / browser Back in forgot password returns to sign-in, like its back arrow. Not
   // on the new-password screen, which is opened from the reset email.
-  const leaveForgotPassword = () => { setForgotMode(false); setForgotStep(1); setForgotPhone(''); setForgotStaffEmail(''); setForgotNewPassword(''); setForgotConfirmPassword(''); };
+  const leaveForgotPassword = () => { setForgotMode(false); setForgotStep(1); setForgotPhone(''); setForgotStaffEmail(''); setForgotNewPassword(''); setForgotConfirmPassword(''); setForgotErrors({}); };
   useBackToClose(forgotMode && forgotStep !== 3, leaveForgotPassword);
   // A closed account that signed in: { proof, closed } (phone, or Google in the app) or
   // { web: true } (Google on the website). See components/auth/ClosedAccount.
@@ -134,6 +143,17 @@ export default function Auth() {
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(startCountryCode);
   const [formData, setFormData] = useState({ full_name: '', email: '', phone: '', password: '' });
+  // What's wrong, on the form itself rather than in a pop-up (UX state 9, 16 Nov 2026):
+  // { full_name, phone, email, password } each a message (or true: marked beside another
+  // field's message), and form for what isn't one field's. Editing a field takes its mark off
+  // (in Login, both: a wrong number or password marks the two together).
+  const [errors, setErrors] = useState({});
+  const [forgotErrors, setForgotErrors] = useState({});
+  const fixField = (name) => setErrors((e) => {
+    if (!e[name]) return e;
+    return isLogin ? { form: e.form } : { ...e, [name]: undefined };
+  });
+  const fixForgotField = (name) => setForgotErrors((e) => (e[name] ? { ...e, [name]: undefined } : e));
 
   // On mount: check if user is already authenticated and has completed onboarding.
   // If so, redirect immediately — do NOT run invite-token validation at all.
@@ -478,6 +498,7 @@ export default function Auth() {
 
   const handleForgotStart = async () => {
     if (!forgotPhone.trim()) return;
+    setForgotErrors({});
     setForgotLoading(true);
     try {
       const cleanPhone = forgotPhone.replace(/^0+/, '');
@@ -491,9 +512,12 @@ export default function Auth() {
       if (!result) throw new Error(t('Something went wrong. Please try again.'));
 
       if (!result.ok) {
-        toast.error(result.code === 'not_found'
-          ? t('No account found for this phone number.')
-          : t('Too many reset requests. Please try again in {waitText}.', { waitText: waitText(result.retry_after_minutes) }));
+        if (result.code === 'not_found') {
+          setForgotErrors({ phone: t('No account found for this phone number.') });
+          focusFirst({ phone: true }, ['phone'], () => 'forgot-phone');
+        } else {
+          setForgotErrors({ form: t('Too many reset requests. Please try again in {waitText}.', { waitText: waitText(result.retry_after_minutes) }) });
+        }
         return;
       }
 
@@ -501,14 +525,14 @@ export default function Auth() {
 
       if (result.kind === 'staff') {
         // Staff logins have no email of their own: the shop owner resets their password.
-        toast.error(t('Staff passwords are reset by the shop owner. Please ask your owner to reset yours.'));
+        setForgotErrors({ form: t('Staff passwords are reset by the shop owner. Please ask your owner to reset yours.') });
         return;
       }
 
       setForgotMaskedEmail(result.masked_email || '');
       setForgotStep(4);
     } catch (err) {
-      toast.error(err.message || t('Something went wrong. Please try again.'));
+      setForgotErrors({ form: err.message || t('Something went wrong. Please try again.') });
     } finally {
       setForgotLoading(false);
     }
@@ -518,18 +542,19 @@ export default function Auth() {
     // Placeholder-email accounts cannot safely prove ownership with only a phone
     // number and a newly supplied email. Keep the account locked instead of exposing
     // an account-takeover path; an owner-assisted reset flow will replace this.
-    toast.error(t('This staff account needs an owner-assisted password reset. Please contact your Sellio account owner.'));
+    setForgotErrors({ form: t('This staff account needs an owner-assisted password reset. Please contact your Sellio account owner.') });
   };
 
   const handleForgotSetPassword = async () => {
-    if (!forgotNewPassword || forgotNewPassword.length < 6) {
-      toast.error(t('Password must be at least 6 characters.'));
+    const found = {};
+    if (!forgotNewPassword || forgotNewPassword.length < 6) found.password = t('Please choose a password of at least 6 characters.');
+    else if (forgotNewPassword !== forgotConfirmPassword) found.confirm = t('The passwords don’t match.');
+    if (found.password || found.confirm) {
+      setForgotErrors(found);
+      focusFirst(found, ['password', 'confirm'], (name) => `forgot-${name}`);
       return;
     }
-    if (forgotNewPassword !== forgotConfirmPassword) {
-      toast.error(t('Passwords do not match.'));
-      return;
-    }
+    setForgotErrors({});
     setForgotLoading(true);
     try {
       // Reached here via the Supabase recovery email link — a session already exists.
@@ -546,7 +571,8 @@ export default function Auth() {
       toast.success(t('Password updated successfully!'));
       setTimeout(() => { window.location.replace(`${getBaseUrl()}/Auth`); }, 800);
     } catch (err) {
-      toast.error(err.message || t('Failed to update password.'));
+      const message = accountErrorMessage(err) || t('Failed to update password.');
+      setForgotErrors(/password/i.test(String(err?.message || '')) ? { password: message } : { form: message });
     } finally {
       setForgotLoading(false);
     }
@@ -588,12 +614,42 @@ export default function Auth() {
     ));
   };
 
+  // A business sign-up the server refused, on its field when it's about one.
+  const signUpProblem = (error) => {
+    const text = `${error?.message || ''} ${error?.details || ''} ${error?.code || ''}`;
+    if (error?.code === '23505' && /phone/i.test(text)) return { phone: accountErrorMessage(error) };
+    if (/already (been )?registered|user_already_exists|email_exists/i.test(text)) {
+      return formData.email.trim()
+        ? { email: t('This email already has a Sellio account. Log in instead.') }
+        : { phone: accountErrorMessage({ hint: 'phone_taken' }) };
+    }
+    if (/password should be at least|weak password|weak_password/i.test(text)) return { password: accountErrorMessage(error) };
+    return null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const cleanPhone = formData.phone.replace(/^0+/, '');
+    // What's missing or wrong, on the fields, before anything is sent.
+    const found = {};
+    if (isLogin) {
+      if (!formData.phone.trim()) found.phone = t('Please enter your mobile number.');
+      if (!formData.password) found.password = t('Please enter your password.');
+    } else {
+      if (!formData.full_name.trim()) found.full_name = t('Please enter your name.');
+      if (!selectedCountry.validate(cleanPhone)) found.phone = t('Please enter a valid {name} mobile number ({hint}).', { name: selectedCountry.name, hint: t(selectedCountry.hint) });
+      if (formData.email.trim() && !isEmail(formData.email)) found.email = t('Please enter a valid email address.');
+      if (formData.password.length < 6) found.password = t('Please choose a password of at least 6 characters.');
+    }
+    if (Object.keys(found).length) {
+      setErrors(found);
+      focusFirst(found, ['full_name', 'phone', 'email', 'password'], (name) => `auth-${name}`);
+      return;
+    }
+    setErrors({});
     setLoading(true);
     try {
       const supabase = await getSupabase();
-      const cleanPhone = formData.phone.replace(/^0+/, '');
       const fullPhone = selectedCountry.code + cleanPhone;
 
       if (isLogin) {
@@ -609,7 +665,7 @@ export default function Auth() {
           return;
         }
         if (!result.ok || !result.session?.access_token || !result.session?.refresh_token) {
-          throw new Error(phoneSignInMessage(result));
+          throw signInProblem(result);
         }
         const { error } = await supabase.auth.setSession({
           access_token: result.session.access_token,
@@ -653,13 +709,7 @@ export default function Auth() {
         const isBypass = BYPASS_EMAILS.includes(emailToUse.toLowerCase());
 
         if (!isBypass && signupMode !== 'allowed') {
-          toast.error(t('Please purchase a plan to register.'));
-          setLoading(false);
-          return;
-        }
-
-        if (!selectedCountry.validate(cleanPhone)) {
-          toast.error(t('Invalid phone number for {name}. Expected: {hint}', { name: selectedCountry.name, hint: t(selectedCountry.hint) }));
+          setErrors({ form: t('Please purchase a plan to register.') });
           setLoading(false);
           return;
         }
@@ -702,7 +752,14 @@ export default function Auth() {
         setTimeout(() => { completeAuthNavigation(createPageUrl('Onboarding')); }, 500);
       }
     } catch (error) {
-      toast.error(error.message || t('An unexpected error occurred'));
+      const fields = error?.fields || (!isLogin && signUpProblem(error));
+      if (fields) {
+        setErrors(fields);
+        // A wrong number or password: the password is the one to type again.
+        focusFirst(fields, isLogin ? ['password', 'phone'] : ['full_name', 'phone', 'email', 'password'], (name) => `auth-${name}`);
+      } else {
+        setErrors({ form: error.message || t('An unexpected error occurred') });
+      }
     } finally {
       setLoading(false);
     }
@@ -840,7 +897,7 @@ export default function Auth() {
                                 <button
                                   key={c.code}
                                   type="button"
-                                  onClick={() => { setForgotCountry(c); setShowForgotCountryDropdown(false); }}
+                                  onClick={() => { setForgotCountry(c); setShowForgotCountryDropdown(false); fixForgotField('phone'); }}
                                   className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-slate-50 transition-colors text-left"
                                 >
                                   <span>{c.flag}</span>
@@ -854,15 +911,19 @@ export default function Auth() {
                         <div className="relative flex-1">
                           <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                           <input
+                            id="forgot-phone"
                             type="tel"
                             placeholder={forgotCountry.placeholder}
                             value={forgotPhone}
-                            onChange={(e) => setForgotPhone(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
+                            onChange={(e) => { setForgotPhone(e.target.value); fixForgotField('phone'); }}
+                            className={`w-full pl-9 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 ${fieldBorder(forgotErrors.phone)}`}
+                            {...fieldProps('forgot-phone', forgotErrors.phone)}
                           />
                         </div>
                       </div>
+                      <FieldError id="forgot-phone-error">{forgotErrors.phone}</FieldError>
                     </div>
+                    <FormError>{forgotErrors.form}</FormError>
                     <button
                       type="button"
                       onClick={handleForgotStart}
@@ -895,6 +956,7 @@ export default function Auth() {
                         />
                       </div>
                     </div>
+                    <FormError>{forgotErrors.form}</FormError>
                     <button
                       type="button"
                       onClick={handleForgotCollectEmail}
@@ -915,27 +977,34 @@ export default function Auth() {
                       <div className="relative">
                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
+                          id="forgot-password"
                           type="password"
                           placeholder={t('Min. 6 characters')}
                           value={forgotNewPassword}
-                          onChange={(e) => setForgotNewPassword(e.target.value)}
-                          className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
+                          onChange={(e) => { setForgotNewPassword(e.target.value); fixForgotField('password'); }}
+                          className={`w-full pl-9 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 ${fieldBorder(forgotErrors.password)}`}
+                          {...fieldProps('forgot-password', forgotErrors.password)}
                         />
                       </div>
+                      <FieldError id="forgot-password-error">{forgotErrors.password}</FieldError>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">{t('Confirm Password')}</label>
                       <div className="relative">
                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
+                          id="forgot-confirm"
                           type="password"
                           placeholder={t('Re-enter password')}
                           value={forgotConfirmPassword}
-                          onChange={(e) => setForgotConfirmPassword(e.target.value)}
-                          className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
+                          onChange={(e) => { setForgotConfirmPassword(e.target.value); fixForgotField('confirm'); }}
+                          className={`w-full pl-9 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 ${fieldBorder(forgotErrors.confirm)}`}
+                          {...fieldProps('forgot-confirm', forgotErrors.confirm)}
                         />
                       </div>
+                      <FieldError id="forgot-confirm-error">{forgotErrors.confirm}</FieldError>
                     </div>
+                    <FormError>{forgotErrors.form}</FormError>
                     <button
                       type="button"
                       onClick={handleForgotSetPassword}
@@ -982,7 +1051,7 @@ export default function Auth() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => { setForgotMode(false); setForgotStep(1); }}
+                      onClick={() => { setForgotMode(false); setForgotStep(1); setForgotErrors({}); }}
                       className="w-full py-2.5 rounded-xl text-sm font-medium text-slate-600 border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
                     >
                       {t('Back to Login')}
@@ -1007,14 +1076,14 @@ export default function Auth() {
             <div className="auth-gap-b flex rounded-xl p-1" style={{ background: '#fde8d8' }}>
               <button
                 type="button"
-                onClick={() => setIsLogin(true)}
+                onClick={() => { setIsLogin(true); setErrors({}); }}
                 className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${isLogin ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
               >
                 {t('Login')}
               </button>
               <button
                 type="button"
-                onClick={() => setIsLogin(false)}
+                onClick={() => { setIsLogin(false); setErrors({}); }}
                 className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${!isLogin ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
               >
                 {t('Sign Up')}
@@ -1064,22 +1133,25 @@ export default function Auth() {
 
             {/* Main form — shown for login always, or signup when allowed */}
             {showForm && !checkingToken && (
-              <form onSubmit={handleSubmit} className="auth-fields">
+              <form onSubmit={handleSubmit} className="auth-fields" noValidate>
                 {!isLogin && (
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">{t('Name *')}</label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input
+                        id="auth-full_name"
                         type="text"
                         placeholder={t('John Doe')}
                         value={formData.full_name}
-                        onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                        onChange={(e) => { setFormData({ ...formData, full_name: e.target.value }); fixField('full_name'); }}
                         readOnly={signupMode === 'allowed' && !!inviteName}
                         required
-                        className={`w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 ${signupMode === 'allowed' && !!inviteName ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
+                        className={`w-full pl-9 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 ${fieldBorder(errors.full_name)} ${signupMode === 'allowed' && !!inviteName ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
+                        {...fieldProps('auth-full_name', errors.full_name)}
                       />
                     </div>
+                    <FieldError id="auth-full_name-error">{errors.full_name}</FieldError>
                     {signupMode === 'allowed' && !!inviteName && (
                       <p className="text-xs text-slate-400 mt-1">{t('Name pre-filled from your registration.')}</p>
                     )}
@@ -1105,7 +1177,7 @@ export default function Auth() {
                             <button
                               key={c.code}
                               type="button"
-                              onClick={() => { setSelectedCountry(c); setShowCountryDropdown(false); }}
+                              onClick={() => { setSelectedCountry(c); setShowCountryDropdown(false); fixField('phone'); }}
                               className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-slate-50 transition-colors text-left"
                             >
                               <span>{c.flag}</span>
@@ -1119,15 +1191,18 @@ export default function Auth() {
                     <div className="relative flex-1">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input
+                        id="auth-phone"
                         type="tel"
                         placeholder={selectedCountry.placeholder}
                         value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        onChange={(e) => { setFormData({ ...formData, phone: e.target.value }); fixField('phone'); }}
                         required
-                        className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
+                        className={`w-full pl-9 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 ${fieldBorder(errors.phone)}`}
+                        {...fieldProps('auth-phone', errors.phone)}
                       />
                     </div>
                   </div>
+                  <FieldError id="auth-phone-error">{errors.phone}</FieldError>
                 </div>
 
                 {!isLogin && (
@@ -1138,14 +1213,17 @@ export default function Auth() {
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input
+                        id="auth-email"
                         type="email"
                         placeholder="john@example.com"
                         value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        onChange={(e) => { setFormData({ ...formData, email: e.target.value }); fixField('email'); }}
                         readOnly={signupMode === 'allowed' && !!inviteEmail}
-                        className={`w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 ${signupMode === 'allowed' && inviteEmail ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
+                        className={`w-full pl-9 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 ${fieldBorder(errors.email)} ${signupMode === 'allowed' && inviteEmail ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
+                        {...fieldProps('auth-email', errors.email)}
                       />
                     </div>
+                    <FieldError id="auth-email-error">{errors.email}</FieldError>
                     {signupMode === 'allowed' && inviteEmail && (
                       <p className="text-xs text-slate-400 mt-1">{t('Email pre-filled from your invite.')}</p>
                     )}
@@ -1159,7 +1237,7 @@ export default function Auth() {
                     {isLogin && (
                       <button
                         type="button"
-                        onClick={() => { setForgotMode(true); setForgotStep(1); }}
+                        onClick={() => { setForgotMode(true); setForgotStep(1); setForgotErrors({}); }}
                         className="text-xs text-orange-500 hover:text-orange-600 font-medium bg-transparent border-none cursor-pointer p-0"
                       >
                         {t('Forgot password?')}
@@ -1169,15 +1247,20 @@ export default function Auth() {
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
+                      id="auth-password"
                       type="password"
                       placeholder={t('Enter password')}
                       value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      onChange={(e) => { setFormData({ ...formData, password: e.target.value }); fixField('password'); }}
                       required
-                      className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
+                      className={`w-full pl-9 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 ${fieldBorder(errors.password)}`}
+                      {...fieldProps('auth-password', errors.password)}
                     />
                   </div>
+                  <FieldError id="auth-password-error">{errors.password}</FieldError>
                 </div>
+
+                <FormError>{errors.form}</FormError>
 
                 <button
                   type="submit"

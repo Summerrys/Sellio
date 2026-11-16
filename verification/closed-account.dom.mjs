@@ -392,7 +392,8 @@ try {
   otpReply = { data: {}, error: { code: 'over_email_send_rate_limit', message: 'email rate limit exceeded', status: 429 } };
   await act(async () => { page.host.querySelector('form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true })); });
   await wait(20);
-  assert.deepEqual(globalThis.toastErrors, ['We’re sending a lot of emails right now. Please try again in a few minutes.']);
+  assert.deepEqual(globalThis.toastErrors, [], 'not a pop-up (UX state 9)');
+  assert.equal(page.host.querySelector('[data-form-error]')?.textContent, 'We’re sending a lot of emails right now. Please try again in a few minutes.', 'it stays above the button');
   assert.ok(page.host.querySelector('#join-email'), 'Still on the email form');
   await page.unmount();
   otpReply = { data: {}, error: null };
