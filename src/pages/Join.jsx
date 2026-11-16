@@ -15,6 +15,7 @@ import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
 import ClosedAccount from '@/components/auth/ClosedAccount';
 import TermsLine from '@/components/auth/TermsLine';
 import AppLanguageSwitch from '@/components/ui-custom/AppLanguageSwitch';
+import JoinStall from '@/components/auth/JoinStall';
 import { callClosedAccount, closedAccountMessage } from '@/lib/closedAccount';
 import {
   PHONE_COUNTRIES, JOIN_LINK_TYPES, accountErrorMessage, appBaseUrl, emailResendWait, fullPhone, isClosedLoginError, phoneCountryFor,
@@ -410,9 +411,12 @@ export default function Join() {
       onClick={() => setShowCountries(false)}
     >
       <div className="w-full max-w-sm sm:max-w-md">
-        <div className="relative bg-white rounded-2xl shadow-xl p-8">
-          <AppLanguageSwitch className="absolute right-3 top-3 z-10" />
-          <div className="text-center mb-6">
+        {/* The first screen has the stall on top (components/auth/JoinStall.jsx): its awning sits
+            on the card's top edge. */}
+        <div className={`relative bg-white rounded-2xl shadow-xl p-8${stage === 'start' ? ' pt-0 overflow-hidden' : ''}`}>
+          <AppLanguageSwitch className={stage === 'start' ? 'absolute right-3 top-1 z-10 join-stall-language' : 'absolute right-3 top-3 z-10'} />
+          {stage === 'start' && <JoinStall />}
+          {stage !== 'start' && <div className="text-center mb-6">
             {/* In the app the logo opens Explore without reloading the app (websites keep
                 the home link). */}
             {isNativeApp() ? (
@@ -424,10 +428,6 @@ export default function Join() {
                 <img src={LOGO_URL} alt="Sellio" className="h-20 w-auto object-contain" />
               </a>
             )}
-            {stage === 'start' && (<>
-              <h1 className="text-xl font-semibold text-slate-800 mb-1">{t('Create your Sellio account')}</h1>
-              <p className="text-sm text-slate-500">{t('Free to start. Sell from home, or run your business on Sellio.')}</p>
-            </>)}
             {stage === 'sent' && (<>
               <h1 className="text-xl font-semibold text-slate-800 mb-1">{t('Check your email')}</h1>
               <p className="text-sm text-slate-500">{t('We sent a verification email to {email}.', { email: <span className="font-medium text-slate-700 break-all">{email}</span> })}</p>
@@ -440,7 +440,7 @@ export default function Join() {
               <h1 className="text-xl font-semibold text-slate-800 mb-1">{t('This is a staff login')}</h1>
               <p className="text-sm text-slate-500">{t('Staff logins belong to a store. Ask the store owner if you can’t get in.')}</p>
             </>)}
-          </div>
+          </div>}
 
           {stage === 'closed' && closedAccount && (
             <ClosedAccount

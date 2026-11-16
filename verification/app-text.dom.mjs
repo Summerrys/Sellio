@@ -322,15 +322,15 @@ try {
   // What each screen must say in the language under test.
   const S = {
     id: { signIn: ['Nomor Ponsel', 'Lupa kata sandi?', 'Masuk dengan Google', 'Dengan melanjutkan, Anda menyetujui'], forgot: 'Lupa kata sandi?',
-      reset: ['Reset Kata Sandi', 'Masukkan nomor ponsel yang terdaftar'], join: ['Buat akun Sellio Anda', 'Lanjutkan dengan Google', 'Kirim email verifikasi', 'Sudah punya akun?'],
+      reset: ['Reset Kata Sandi', 'Masukkan nomor ponsel yang terdaftar'], join: ['Buka toko Anda di Sellio', 'Jualan dari rumah', 'Kelola usaha', 'GRATIS!', 'Lanjutkan dengan Google', 'Kirim email verifikasi', 'Sudah punya akun?'],
       plans: ['sekitar Rp255.000, ditagih dalam Rupiah', 'Harga belum termasuk PPN.', 'Hingga 100 pesanan/bulan', 'Mulai Uji Coba Gratis'], progress: ['1 / 3 Selesai', 'Progres Anda'],
       industries: ['Makanan & Minuman / Kafe / Restoran', 'Ritel', 'Jasa'], colour: 'Biru Laut', table: 'Meja 3' },
     zh: { signIn: ['手机号码', '忘记密码？', '使用 Google 登录', '继续即表示您同意'], forgot: '忘记密码？',
-      reset: ['重设密码', '输入您注册的手机号码'], join: ['创建您的 Sellio 账号', '使用 Google 继续', '发送验证邮件', '已经有账号？'],
+      reset: ['重设密码', '输入您注册的手机号码'], join: ['在 Sellio 开设您的店铺', '在家开店', '经营您的生意', '免费！', '使用 Google 继续', '发送验证邮件', '已经有账号？'],
       plans: ['约 Rp255.000，以印尼盾收费', '价格未含 PPN（增值税）。', '每月最多 100 张订单', '开始免费试用'], progress: ['已完成 1 / 3', '您的进度'],
       industries: ['餐饮/咖啡馆/餐厅', '零售', '服务'], colour: '海洋蓝', table: '3号桌' },
     ms: { signIn: ['Nombor Telefon', 'Lupa kata laluan?', 'Log masuk dengan Google', 'Dengan meneruskan, anda bersetuju'], forgot: 'Lupa kata laluan?',
-      reset: ['Tetapkan Semula Kata Laluan', 'Masukkan nombor telefon berdaftar anda'], join: ['Cipta akaun Sellio anda', 'Teruskan dengan Google', 'Hantar e-mel pengesahan', 'Sudah ada akaun?'],
+      reset: ['Tetapkan Semula Kata Laluan', 'Masukkan nombor telefon berdaftar anda'], join: ['Buka kedai anda di Sellio', 'Jual dari rumah', 'Urus perniagaan', 'PERCUMA!', 'Teruskan dengan Google', 'Hantar e-mel pengesahan', 'Sudah ada akaun?'],
       plans: ['kira-kira Rp255.000, dicaj dalam Rupiah', 'Harga belum termasuk PPN (VAT).', 'Sehingga 100 pesanan/bulan', 'Mulakan Percubaan Percuma'], progress: ['1 / 3 Selesai', 'Kemajuan Anda'],
       industries: ['Makanan & Minuman / Kafe / Restoran', 'Runcit', 'Perkhidmatan'], colour: 'Biru Lautan', table: 'Meja 3' },
   }[L];

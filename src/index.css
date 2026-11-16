@@ -137,3 +137,67 @@ img.sellio-photo[data-loaded] { opacity: 1; }
 .sellio-check-ring { animation: sellio-check-ring 600ms ease-out 120ms both; }
 .sellio-check-tick { stroke-dasharray: 26; animation: sellio-check-tick 320ms ease-out 330ms both; }
 @media (prefers-reduced-motion: reduce) { .sellio-check-pop, .sellio-check-ring, .sellio-check-tick { animation: none; } }
+
+/* The free sign-up's stall (components/auth/JoinStall.jsx; Alvin, 17 Nov 2026): a striped awning
+   along the card's top edge, the stall drawn under it, the swinging Sellio sign, the stickers. */
+.join-stall { position: relative; }
+.join-stall-awning { position: relative; z-index: 2; height: 44px; filter: drop-shadow(0 4px 3px rgba(15,23,42,.1));
+  background: repeating-linear-gradient(90deg, transparent 0 22px, rgba(255,255,255,.72) 22px 44px), linear-gradient(90deg, #fb923c, #e0449a 50%, #8b5cf6); }
+.join-stall-awning::before, .join-stall-awning::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 11px; }
+.join-stall-awning::after { background: linear-gradient(90deg, #fb923c, #e0449a 50%, #8b5cf6);
+  -webkit-mask: radial-gradient(circle at 11px 0, #000 10.5px, transparent 11px) 0 0 / 44px 11px repeat-x;
+          mask: radial-gradient(circle at 11px 0, #000 10.5px, transparent 11px) 0 0 / 44px 11px repeat-x; }
+.join-stall-awning::before { background: linear-gradient(rgba(255,255,255,.72), rgba(255,255,255,.72)), linear-gradient(90deg, #fb923c, #e0449a 50%, #8b5cf6);
+  -webkit-mask: radial-gradient(circle at 33px 0, #000 10.5px, transparent 11px) 0 0 / 44px 11px repeat-x;
+          mask: radial-gradient(circle at 33px 0, #000 10.5px, transparent 11px) 0 0 / 44px 11px repeat-x; }
+.join-stall-language { border-radius: 9999px; background: rgba(255,255,255,.95); box-shadow: 0 2px 8px rgba(15,23,42,.12); padding: 0 2px; }
+.join-stall-scene { position: relative; }
+.join-stall-scene > svg { display: block; width: 100%; height: auto; overflow: visible; }
+.join-stall-sign-wrap { position: absolute; top: 0; left: 18.4%; width: 0; display: flex; justify-content: center; z-index: 1; }
+.join-stall-sign { position: relative; flex: none; margin-top: 16px; width: 64px; height: 64px; border-radius: 16px; background: #fff; display: grid; place-items: center;
+  box-shadow: 0 16px 26px -14px rgba(76,29,149,.55), 0 0 0 1px #f1f5f9; transform-origin: 50% -12px; animation: sellio-stall-swing 3.4s ease-in-out infinite alternate; }
+.join-stall-sign img { height: 40px; width: auto; -webkit-user-drag: none; user-select: none; }
+.join-stall-sign > svg { position: absolute; left: 0; top: -16px; width: 64px; height: 16px; overflow: visible; }
+@keyframes sellio-stall-swing { from { transform: rotate(-3.5deg); } to { transform: rotate(3.5deg); } }
+.join-stall-steam { fill: none; stroke: #cbd5e1; stroke-width: 2.8; stroke-linecap: round; transform-box: fill-box; transform-origin: center bottom; opacity: 0; animation: sellio-stall-steam 2.6s ease-in-out infinite; }
+.join-stall-steam.s2 { animation-delay: .7s; }
+.join-stall-steam.s3 { animation-delay: 1.4s; }
+@keyframes sellio-stall-steam { 0% { opacity: 0; transform: translateY(6px) scaleY(.7); } 35% { opacity: .9; } 100% { opacity: 0; transform: translateY(-10px) scaleY(1.1); } }
+.join-stall-spark { transform-box: fill-box; transform-origin: center; animation: sellio-stall-twinkle 2.2s ease-in-out infinite; }
+.join-stall-spark.k2 { animation-delay: .6s; }
+.join-stall-spark.k3 { animation-delay: 1.2s; }
+.join-stall-spark.k4 { animation-delay: 1.7s; }
+@keyframes sellio-stall-twinkle { 0%, 100% { opacity: .25; transform: scale(.6) rotate(0deg); } 50% { opacity: 1; transform: scale(1.1) rotate(20deg); } }
+.join-stall-bubble { transform-box: fill-box; transform-origin: 80% 100%; animation: sellio-stall-bubble 4s ease-in-out infinite; }
+@keyframes sellio-stall-bubble { 0%, 8% { opacity: 0; transform: scale(.4); } 16%, 70% { opacity: 1; transform: scale(1); } 80%, 100% { opacity: 0; transform: scale(.9); } }
+.join-stall-tick { stroke-dasharray: 18; stroke-dashoffset: 18; animation: sellio-stall-tick 4s ease-in-out infinite; }
+@keyframes sellio-stall-tick { 0%, 14% { stroke-dashoffset: 18; } 26%, 74% { stroke-dashoffset: 0; } 86%, 100% { stroke-dashoffset: 18; } }
+/* Across the counter's lower edge, hanging a little below it (Alvin: less empty under the counter). */
+.join-stall-stickers { position: absolute; left: 19%; right: 15.1%; top: 92.5%; transform: translateY(-50%); z-index: 1; pointer-events: none;
+  display: flex; justify-content: center; align-items: center; gap: .9em; font-size: calc(min(9.5px, 2.5vw) * var(--fit, 1)); }
+.join-stall-sticker { --r: 0deg; flex: none; display: inline-flex; align-items: center; gap: .3em; white-space: nowrap; padding: .4em .7em .4em .55em; border-radius: 9999px;
+  border: 1.5px solid #fff; color: #fff; font-weight: 800; line-height: 1.2; box-shadow: 0 6px 10px -7px rgba(15,23,42,.5); transform: rotate(var(--r)); }
+.join-stall-sticker svg { width: 1.2em; height: 1.2em; flex: none; }
+.join-stall-sticker.home { --r: -4deg; background: linear-gradient(135deg, #f472b6, #db2777);
+  animation: sellio-stall-slap .55s cubic-bezier(.34,1.56,.64,1) .1s both, sellio-stall-bob 2.4s ease-in-out .7s infinite; }
+.join-stall-sticker.business { --r: 3deg; background: linear-gradient(135deg, #a78bfa, #7c3aed);
+  animation: sellio-stall-slap .55s cubic-bezier(.34,1.56,.64,1) .24s both, sellio-stall-tilt 3.7s ease-in-out 1.9s infinite; }
+@keyframes sellio-stall-slap { from { opacity: 0; transform: scale(1.7) rotate(0deg); } to { opacity: 1; transform: scale(1) rotate(var(--r)); } }
+@keyframes sellio-stall-bob { 0%, 100% { transform: rotate(var(--r)) translateY(0); } 50% { transform: rotate(var(--r)) translateY(-3px); } }
+@keyframes sellio-stall-tilt { 0%, 100% { transform: rotate(var(--r)); } 30% { transform: rotate(calc(var(--r) + 3deg)); } 70% { transform: rotate(calc(var(--r) - 2deg)); } }
+.join-stall-headline { margin-top: 34px; text-align: center; }
+.join-stall-hl { position: relative; display: inline-block; }
+.join-stall-hl h1 { margin: 0; font-size: min(21px, 5.6vw); font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; color: #1e293b; text-wrap: balance; }
+.join-stall-brand { background: linear-gradient(90deg, #fb923c, #e0449a 55%, #8b5cf6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.join-stall-free { position: absolute; left: -33px; top: -45px; z-index: 1; display: inline-flex; pointer-events: none; filter: drop-shadow(0 4px 4px rgba(124,45,18,.28)); }
+.join-stall-burst { --r: -12deg; width: 42px; height: 42px; display: grid; place-items: center; text-align: center; font-size: 9.8px; font-weight: 900; letter-spacing: .02em; line-height: 1;
+  color: #7c2d12; background: #fde047; clip-path: polygon(50.0% 0.0%, 60.1% 12.3%, 75.0% 6.7%, 77.6% 22.4%, 93.3% 25.0%, 87.7% 39.9%, 100.0% 50.0%, 87.7% 60.1%, 93.3% 75.0%, 77.6% 77.6%, 75.0% 93.3%, 60.1% 87.7%, 50.0% 100.0%, 39.9% 87.7%, 25.0% 93.3%, 22.4% 77.6%, 6.7% 75.0%, 12.3% 60.1%, 0.0% 50.0%, 12.3% 39.9%, 6.7% 25.0%, 22.4% 22.4%, 25.0% 6.7%, 39.9% 12.3%); transform: rotate(var(--r));
+  animation: sellio-stall-slap .55s cubic-bezier(.34,1.56,.64,1) both, sellio-stall-pulse 2.6s ease-in-out .8s infinite; }
+/* Longer words (GRATIS!, PERCUMA!) get a bigger star, raised so it stays clear of the headline. */
+.join-stall-burst.long { width: 54px; height: 54px; margin: -15px 0 0 -9px; font-size: 8.4px; letter-spacing: 0; }
+@keyframes sellio-stall-pulse { 0%, 100% { transform: rotate(var(--r)) scale(1); } 50% { transform: rotate(calc(var(--r) + 10deg)) scale(1.08); } }
+@media (prefers-reduced-motion: reduce) {
+  .join-stall *, .join-stall *::before, .join-stall *::after { animation: none !important; }
+  .join-stall-steam { opacity: .7; }
+  .join-stall-tick { stroke-dashoffset: 0; }
+}
