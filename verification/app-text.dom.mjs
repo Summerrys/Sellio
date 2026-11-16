@@ -134,6 +134,8 @@ try {
   await appText.appTextReady();
   assert.equal(appT('Save'), { id: 'Simpan', zh: '保存', ms: 'Simpan' }[L], 'Loaded when asked for');
   assert.deepEqual(appText.LIVE_GROUPS.id, ['signup', 'shop'], 'Groups 1 and 2 are switched on for everyone (Alvin, 15 Nov 2026)');
+  assert.deepEqual([appText.LIVE_GROUPS.zh, appText.LIVE_GROUPS.ms], [['signup', 'shop', 'explore'], ['signup', 'shop', 'explore']],
+    '中文 and Malay: every group, for everyone who picks them (Alvin, 16 Nov 2026)');
   passed('A preview link: on for this device, the address cleaned up, and the words load only when a screen wants them');
 
   // 2. Blanks
@@ -204,13 +206,11 @@ try {
   page = await mount(h(React.Fragment, null, h(app.AppLanguageSwitch), h(app.AppLanguagePreviewBadge)));
   const group = page.host.querySelector('[data-testid="app-language-switch"]');
   assert.equal(group?.getAttribute('aria-label'), { id: 'Bahasa', zh: '语言', ms: 'Bahasa' }[L]);
-  // Short labels (Alvin, 16 Nov 2026: EN, 中文, MY, ID), named in full for screen readers: English,
-  // the language previewed, and Bahasa Indonesia (switched on for everyone).
+  // Short labels (Alvin, 16 Nov 2026: EN, 中文, MY, ID), named in full for screen readers: all four,
+  // switched on for everyone.
   const SHORT = { id: 'ID', zh: '中文', ms: 'MY' };
   assert.deepEqual([...page.host.querySelectorAll('[data-testid="app-language-switch"] button')].map((b) => [text(b), b.getAttribute('aria-label')]),
-    { id: [['EN', 'English'], ['ID', 'Bahasa Indonesia']],
-      zh: [['EN', 'English'], ['中文', '中文'], ['ID', 'Bahasa Indonesia']],
-      ms: [['EN', 'English'], ['MY', 'Bahasa Melayu'], ['ID', 'Bahasa Indonesia']] }[L]);
+    [['EN', 'English'], ['中文', '中文'], ['MY', 'Bahasa Melayu'], ['ID', 'Bahasa Indonesia']]);
   assert.equal(buttonNamed(SHORT[L], page.host)?.getAttribute('aria-pressed'), 'true');
   assert.equal(buttonNamed('EN', page.host)?.getAttribute('aria-pressed'), 'false');
   const badge = () => page.host.querySelector('[data-testid="app-language-preview"]');
@@ -231,18 +231,31 @@ try {
   await page.unmount();
   passed('The switch (each language in its own words) and the preview badge; ending the preview puts this device back');
 
-  // 4b. Who is offered 中文 and Malay (Alvin, 16 Nov 2026): a device previewing it, or a shop that
-  // has it first (Xie Lao Ma's: SHOP_FIRST), one tap from English; nobody else, and no auto-pick.
+  // 4b. Who is offered 中文 and Malay (Alvin, 16 Nov 2026: "there should be the EN, 中文, MY, ID for
+  // everyone"): everyone can pick them, nobody is switched to them by their phone or their shop,
+  // and Xie Lao Ma's shop still has 中文 first, one tap from English.
   await act(async () => { await appText.resetAppTextForTests({ preview: false }); });
-  assert.deepEqual(appText.availableAppLanguages(), ['en', 'id'], '中文 and Malay are not offered to everyone yet');
+  assert.deepEqual(appText.availableAppLanguages(), ['en', 'zh', 'ms', 'id'], 'EN, 中文, MY and ID for everyone');
   setPhoneLanguages(['zh-CN']);
   assert.equal(appText.appLanguage(), 'en', 'A Chinese phone stays in English: 中文 only when picked');
+  setPhoneLanguages(['ms-MY']);
+  assert.equal(appText.appLanguage(), 'en', 'A Malay phone too');
   setPhoneLanguages(['en-US']);
+  await act(async () => { await appText.resetAppTextForTests({ preview: false, choice: 'ms', shopCountry: 'Malaysia' }); });
+  assert.equal(appText.appLanguage(), 'ms', 'Someone who picked MY sees it, with no preview');
+  assert.equal(appText.isAppLanguagePreview(), false);
+  await appText.appTextReady();
+  assert.equal(appT('Kitchen Display'), 'Paparan Dapur', 'The shop screens');
+  assert.equal(appT('Fresh finds'), 'Penemuan terbaharu', 'and Explore, Me and chat');
+  await act(async () => { await appText.resetAppTextForTests({ preview: false, choice: 'zh' }); });
+  assert.equal(appText.appLanguage(), 'zh', 'Someone who picked 中文 sees it');
+  await appText.appTextReady();
+  assert.equal(appT('Kitchen Display'), '厨房显示屏');
   const xieLaoMa = Object.keys(appText.SHOP_FIRST).find((id) => appText.SHOP_FIRST[id] === 'zh');
   assert.equal(xieLaoMa, 'b95be0b8-e10b-4acd-a91d-e0e1f7469bca', "Xie Lao Ma's shop has 中文 first");
   await act(async () => { await appText.resetAppTextForTests({ preview: false, shopId: xieLaoMa, shopCountry: 'Malaysia' }); });
   assert.equal(appText.appLanguage(), 'zh', "Xie Lao Ma's team gets 中文 while they work in that shop");
-  assert.deepEqual(appText.availableAppLanguages(), ['en', 'zh', 'id']);
+  assert.deepEqual(appText.availableAppLanguages(), ['en', 'zh', 'ms', 'id']);
   await appText.appTextReady();
   assert.equal(appT('Kitchen Display'), '厨房显示屏', 'Every group of screens, not only the live ones');
   assert.equal(appText.isAppLanguagePreview(), false, 'No preview badge for them');
@@ -253,11 +266,11 @@ try {
   await page.unmount();
   localStorage.removeItem('sellio_app_language');
   await act(async () => { await appText.resetAppTextForTests({ preview: false, shopId: 'be7b5ad1-a464-4fe7-9d38-1f44873308e1', shopCountry: 'Malaysia' }); });
-  assert.equal(appText.appLanguage(), 'en', 'The Wellness shop stays as it is ("Wellness shop dont change")');
-  assert.deepEqual(appText.availableAppLanguages(), ['en', 'id']);
+  assert.equal(appText.appLanguage(), 'en', 'The Wellness shop stays in English until someone there picks another');
+  assert.deepEqual(appText.availableAppLanguages(), ['en', 'zh', 'ms', 'id'], 'and can pick EN, 中文, MY or ID, like everyone else');
   await act(async () => { await appText.resetAppTextForTests({ preview: true }); });
   assert.equal(appText.appLanguagePreview(), 'id', 'A preview stored before 中文 and Malay ("1") is an Indonesian one');
-  passed("中文 and Malay: only on a device previewing them, or in Xie Lao Ma's shop first (one tap from English); not for the Wellness shop or anyone else");
+  passed("EN, 中文, MY and ID for everyone; 中文 and Malay only when picked, but first in Xie Lao Ma's shop (one tap from English)");
 
   // 5. Real screens in Indonesian: no English phrase from the catalog left on them
   const english = [];

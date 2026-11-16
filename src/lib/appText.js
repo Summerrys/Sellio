@@ -12,8 +12,10 @@
 // scripts/check-app-text.mjs fails the build if a phrase is missing in any language.
 //
 // English stays the default. Bahasa Indonesia switches on from the phone's language first, then
-// the shop's country, then where the person is (their time zone). 中文 and Malay only when picked
-// (Alvin, 16 Nov 2026). Anyone can switch, and the choice is remembered on that device.
+// the shop's country, then where the person is (their time zone). 中文 and Malay only when picked:
+// nobody is switched by their phone or their shop (Alvin, 16 Nov 2026). Everyone can switch
+// between EN, 中文, MY and ID, on the sign-in pages and in the account panel, and the choice is
+// remembered on that device.
 import { cloneElement, isValidElement, useSyncExternalStore } from 'react';
 import { visitorCountry } from './countries.js';
 
@@ -39,10 +41,15 @@ const TRANSLATED = Object.keys(LOADERS);
 // Groups of screens that show in a language for everyone it's for; the others only in a preview
 // of that language. Bahasa Indonesia: Alvin, 15 Nov 2026: "Switch groups 1 and 2 on together"
 // (Iman's review continues in the review sheet; corrections go into the .json files). 中文 and
-// Malay wait for their reviews (Xie Lao Ma, the Wellness shop). Switch a language's groups on
-// together: a shop screen of a group that isn't on would show the phrases it shares with one
-// that is.
-export const LIVE_GROUPS = { zh: [], ms: [], id: ['signup', 'shop'] };
+// Malay: every group, for everyone who picks them (Alvin, 16 Nov 2026: "there should be the EN,
+// 中文, MY, ID for everyone"); the review sheets for Xie Lao Ma and the Wellness shop stay open
+// for corrections. Switch a language's groups on together: a shop screen of a group that isn't
+// on would show the phrases it shares with one that is.
+export const LIVE_GROUPS = {
+  zh: ['signup', 'shop', 'explore'],
+  ms: ['signup', 'shop', 'explore'],
+  id: ['signup', 'shop'],
+};
 const liveGroups = (language) => LIVE_GROUPS[language] || [];
 
 // Shops whose team gets a language before everyone else, on every screen while they work in

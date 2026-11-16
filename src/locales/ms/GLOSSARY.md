@@ -7,9 +7,9 @@ this list (Alvin, 16 Nov 2026: EN, 中文, MY, ID; no manual translation). It is
 (`src/lib/LanguageContext.jsx`) where the two meet: pesanan, troli, pembayaran, Bungkus, Ambil
 sendiri, suka, sembang.
 
-Who sees it (`src/lib/appText.js`): anyone who picks MY once it is switched on (`LIVE_GROUPS.ms`)
-and a reviewer with `?preview_language=ms`. No shop gets it first: Alvin, 16 Nov 2026, "Wellness
-shop dont change". A Malay phone does not switch the app by itself.
+Who sees it (`src/lib/appText.js`): anyone who picks MY (switched on for everyone, every group,
+16 Nov 2026: "there should be the EN, 中文, MY, ID for everyone"). No shop gets it first, and a
+Malay phone does not switch the app by itself: the Wellness shop picks it when it wants it.
 
 Style: polite and plain. "anda" for "you", lower case inside a sentence ("Anda" only to start
 one); "sila" for please; buttons are short verbs (Simpan, Teruskan). Malaysian spelling and words,

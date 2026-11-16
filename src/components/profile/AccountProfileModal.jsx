@@ -140,6 +140,7 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [deletionRequested, setDeletionRequested] = useState(false);
   const [isOpeningBilling, setIsOpeningBilling] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   // Detect if user is email/password (not OAuth)
   const isEmailUser = !user?.app_metadata?.provider || user?.app_metadata?.provider === 'email';
@@ -302,7 +303,17 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
     setConfirmToggle(null);
   };
 
-  const handleSignOut = () => {
+  // Ends this phone's Supabase sign-in first, as Me › Sign out and the sidebar's button do. Until
+  // 16 Nov 2026 this cleared only Sellio's own record (the app_session cookie), so the sign-in
+  // still on the phone took the person straight back in from the sign-in page (Alvin: Me ›
+  // Profile › Sign Out didn't sign Xie Lao Ma or Perfect Five out).
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      const supabase = await getSupabase();
+      await supabase.auth.signOut({ scope: 'local' }); // this device only
+    } catch { /* Sellio's own record is cleared below all the same */ }
     clearAppUser?.();
     window.location.replace(createPageUrl('Auth'));
   };
@@ -579,7 +590,9 @@ export default function AccountProfileModal({ open, onClose, user, subscription:
               variant="outline"
               className="w-full h-11 border-red-200 text-red-600 hover:bg-red-50"
               onClick={handleSignOut}
+              disabled={signingOut}
             >
+              {signingOut && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {t('Sign Out')}
             </Button>
             <button

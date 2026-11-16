@@ -35,7 +35,7 @@ const mocks = {
   subscription: 'export const useSubscription = () => globalThis.subscriptionState;',
   clients: [
     'const query = { select() { return query; }, eq() { return query; }, maybeSingle: async () => ({ data: null }) };',
-    'export const getSupabase = async () => ({ from: () => query, auth: { getUser: async () => ({ data: {} }) } });',
+    'export const getSupabase = async () => ({ from: () => query, auth: { getUser: async () => ({ data: {} }), signOut: async (o) => { globalThis.calls?.push("signOut:" + (o && o.scope)); return { error: null }; } } });',
     "export const SUPABASE_URL = 'https://project.example.invalid';",
   ].join('\n'),
   profile: 'export const cookieUtils = { clear() {} }; export const useAppUser = () => ({});',
@@ -196,6 +196,32 @@ try {
   delete globalThis.pushState;
   delete win.Capacitor;
   passed('Phone alerts off for Sellio: Open Settings in the row, and the row follows on coming back');
+
+  // Sign Out (Alvin, 16 Nov 2026: Me › Profile › Sign Out left Xie Lao Ma and Perfect Five signed
+  // in, because it cleared only Sellio's own record and the sign-in page took them straight back
+  // in): it ends this phone's Supabase sign-in first, then clears Sellio's record.
+  {
+    globalThis.calls = [];
+    const errors = console.error;
+    console.error = (...args) => { if (!/Not implemented: navigation/.test(String(args[0]?.message || args[0]))) errors(...args); };
+    const host = document.createElement('div'); document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(MemoryRouter, null,
+        React.createElement(AccountProfileModal, { open: true, onClose() {}, user, subscription: null,
+          clearAppUser: () => globalThis.calls.push('clearAppUser') })));
+    });
+    const signOut = [...document.body.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Sign Out');
+    assert.ok(signOut, 'Sign Out in the panel');
+    await act(async () => { signOut.click(); await new Promise((resolve) => setTimeout(resolve, 20)); });
+    assert.deepEqual(globalThis.calls, ['signOut:local', 'clearAppUser'], "this phone's sign-in ended first, then Sellio's record");
+    assert.equal(signOut.disabled, true, 'one tap: the button waits');
+    await act(async () => root.unmount());
+    host.remove();
+    console.error = errors;
+    delete globalThis.calls;
+  }
+  passed("Sign Out ends this phone's sign-in, so the sign-in page can't take the person back in");
 
   console.log(passes + ' account-panel checks passed');
 } finally {

@@ -6,10 +6,10 @@ this list (Alvin, 16 Nov 2026: EN, 中文, MY, ID; no manual translation). It is
 as Singapore and Malaysia write it, and matches the buyers' store page (`src/lib/LanguageContext.jsx`)
 where the two meet: 订单, 购物车, 结账, 下单, 外带, 自取, 喜欢, 聊天.
 
-Who sees it (`src/lib/appText.js`): anyone who picks 中文 once it is switched on (`LIVE_GROUPS.zh`),
-a reviewer with `?preview_language=zh`, and Xie Lao Ma's shop first (`SHOP_FIRST`; Alvin: "You can
-change Xie lao ma ones first though"), always one tap from English. A Chinese phone does not switch
-the app by itself.
+Who sees it (`src/lib/appText.js`): anyone who picks 中文 (switched on for everyone, every group,
+16 Nov 2026: "there should be the EN, 中文, MY, ID for everyone"), and Xie Lao Ma's shop first
+(`SHOP_FIRST`; Alvin: "You can change Xie lao ma ones first though"), always one tap from English.
+A Chinese phone does not switch the app by itself.
 
 Style: polite and plain. 您 for "you"; buttons are short verbs (保存, 继续). Full-width punctuation
 (，。？！：（）“”); a space between Chinese and Latin words or numbers (Sellio 账号, 10 件商品). Sellio,
