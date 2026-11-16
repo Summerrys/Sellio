@@ -10,8 +10,8 @@ import { useBackToClose } from '@/lib/useBackToClose';
 // is remembered on this device. Where it sits: the top corner of the sign-in and sign-up cards,
 // the header of /Account and of Me, and the account panel's Language row.
 const MENU_NAMES = { en: 'English', zh: '简体中文', ms: 'Bahasa Melayu', id: 'Bahasa Indonesia' };
-// The language in use is marked in the Login button's orange (pages/Auth.jsx); the button and the
-// other languages' codes are plain, with nothing behind them (Alvin, 16 Nov 2026).
+// The language in use is marked in the Login button's orange (pages/Auth.jsx), the others' codes in
+// a lighter tone of it; the button has no pill and the list only a light shadow (Alvin, 16 Nov 2026).
 const ORANGE = 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)';
 
 export function LanguagePicker({ up = false }) {
@@ -82,7 +82,7 @@ export function LanguagePicker({ up = false }) {
           role="menu"
           aria-label={t('Language')}
           onKeyDown={arrows}
-          className={'absolute right-0 z-[70] w-52 rounded-xl border border-slate-100 bg-white p-1 shadow-xl animate-in fade-in-0 zoom-in-95 duration-150 '
+          className={'absolute right-0 z-[70] w-52 rounded-xl bg-white p-1 shadow-[0_6px_20px_-6px_rgba(15,23,42,0.14)] animate-in fade-in-0 zoom-in-95 duration-150 '
             + (up ? 'bottom-full mb-2 origin-bottom-right slide-in-from-bottom-1' : 'top-full mt-2 origin-top-right slide-in-from-top-1')}
         >
           {choices.map(({ code, short }) => {
@@ -95,10 +95,10 @@ export function LanguagePicker({ up = false }) {
                 aria-checked={chosen}
                 lang={code}
                 onClick={() => pick(code)}
-                className={'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm outline-none transition-colors hover:bg-slate-50 focus-visible:bg-slate-100 '
+                className={'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm outline-none transition-colors hover:bg-orange-50 focus-visible:bg-orange-50 '
                   + (chosen ? 'font-semibold text-slate-900' : 'text-slate-600')}
               >
-                <span aria-hidden="true" className={'w-9 shrink-0 rounded-md py-0.5 text-center text-[11px] font-semibold ' + (chosen ? 'text-white shadow-sm' : 'text-slate-400')}
+                <span aria-hidden="true" className={'w-9 shrink-0 rounded-md py-0.5 text-center text-[11px] font-semibold ' + (chosen ? 'text-white shadow-sm' : 'bg-orange-100 text-orange-700')}
                   style={chosen ? { background: ORANGE } : undefined}>{short}</span>
                 <span className="min-w-0 flex-1 truncate">{MENU_NAMES[code]}</span>
                 {chosen && <Check aria-hidden="true" className="h-4 w-4 shrink-0" style={{ color: '#e86a1a' }} />}
