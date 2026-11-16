@@ -1,7 +1,7 @@
 // The owner app in Bahasa Indonesia, Phase 2 (Alvin, 12 Nov 2026: "proceed with phase 2"):
 // lib/appText.js and the sign-up and onboarding screens (group 1). English stays the default;
 // Indonesian shows once a group is switched on (LIVE_GROUPS: sign-up and the shop screens since
-// 15 Nov 2026) or in a reviewer's preview
+// 15 Nov 2026, Explore, Me and chat since 16 Nov 2026) or in a reviewer's preview
 // (?preview_language=id). Covers: who gets which language, {blanks} (also links and bold names),
 // the language switch and the preview badge, and real sign-up screens in Indonesian with no
 // English phrase left on them.
@@ -133,7 +133,7 @@ try {
   assert.equal(appT('Save'), 'Save', 'Nothing is downloaded until a screen uses the words (store pages never do)');
   await appText.appTextReady();
   assert.equal(appT('Save'), { id: 'Simpan', zh: '保存', ms: 'Simpan' }[L], 'Loaded when asked for');
-  assert.deepEqual(appText.LIVE_GROUPS.id, ['signup', 'shop'], 'Groups 1 and 2 are switched on for everyone (Alvin, 15 Nov 2026)');
+  assert.deepEqual(appText.LIVE_GROUPS.id, ['signup', 'shop', 'explore'], 'Groups 1 and 2 are on for everyone (Alvin, 15 Nov 2026), and group 3 (16 Nov 2026)');
   assert.deepEqual([appText.LIVE_GROUPS.zh, appText.LIVE_GROUPS.ms], [['signup', 'shop', 'explore'], ['signup', 'shop', 'explore']],
     '中文 and Malay: every group, for everyone who picks them (Alvin, 16 Nov 2026)');
   passed('A preview link: on for this device, the address cleaned up, and the words load only when a screen wants them');
@@ -204,21 +204,45 @@ try {
   await act(async () => { await appText.resetAppTextForTests({ preview: L, choice: L }); });
   localStorage.setItem('sellio_app_language_preview', L); localStorage.setItem('sellio_app_language', L);
   page = await mount(h(React.Fragment, null, h(app.AppLanguageSwitch), h(app.AppLanguagePreviewBadge)));
+  // One button with the language in use (Alvin, 16 Nov 2026: EN, 中文, MY, ID); the others open
+  // from it and fold away again once one is picked ("make it collapsible for others").
   const group = page.host.querySelector('[data-testid="app-language-switch"]');
-  assert.equal(group?.getAttribute('aria-label'), { id: 'Bahasa', zh: '语言', ms: 'Bahasa' }[L]);
-  // Short labels (Alvin, 16 Nov 2026: EN, 中文, MY, ID), named in full for screen readers: all four,
-  // switched on for everyone.
+  const WORD = { id: 'Bahasa', zh: '语言', ms: 'Bahasa' }[L];
   const SHORT = { id: 'ID', zh: '中文', ms: 'MY' };
-  assert.deepEqual([...page.host.querySelectorAll('[data-testid="app-language-switch"] button')].map((b) => [text(b), b.getAttribute('aria-label')]),
-    [['EN', 'English'], ['中文', '中文'], ['MY', 'Bahasa Melayu'], ['ID', 'Bahasa Indonesia']]);
-  assert.equal(buttonNamed(SHORT[L], page.host)?.getAttribute('aria-pressed'), 'true');
-  assert.equal(buttonNamed('EN', page.host)?.getAttribute('aria-pressed'), 'false');
+  const languageButton = () => group.querySelector('button[aria-haspopup="menu"]');
+  const menu = () => group.querySelector('[role="menu"]');
+  const shows = () => text(languageButton().querySelector('[lang]'));
+  assert.equal(shows(), SHORT[L], 'Folded: only the language in use');
+  assert.equal(text(languageButton()), `${WORD}: ${SHORT[L]}`, 'Read out with what it is for');
+  assert.equal(languageButton().getAttribute('title'), { id: 'Bahasa Indonesia', zh: '中文', ms: 'Bahasa Melayu' }[L]);
+  assert.equal(languageButton().getAttribute('aria-expanded'), 'false');
+  assert.equal(menu(), null, 'The others are folded away');
+  await click(languageButton(), 'the language button');
+  assert.equal(languageButton().getAttribute('aria-expanded'), 'true');
+  assert.equal(menu()?.getAttribute('aria-label'), WORD);
+  // All four, in order, each named in itself (MY reads as Bahasa Melayu), the one in use ticked.
+  const items = () => [...menu().querySelectorAll('[role="menuitemradio"]')];
+  assert.deepEqual(items().map((b) => [b.getAttribute('lang'), text(b.querySelector('span')), text(b.querySelectorAll('span')[1]), b.getAttribute('aria-checked')]),
+    [['en', 'EN', 'English', 'false'], ['zh', '中文', '简体中文', String(L === 'zh')], ['ms', 'MY', 'Bahasa Melayu', String(L === 'ms')], ['id', 'ID', 'Bahasa Indonesia', String(L === 'id')]]);
+  assert.equal(document.activeElement?.getAttribute('lang'), L, 'Open: the language in use has the focus');
+  document.activeElement.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  assert.equal(document.activeElement?.getAttribute('lang'), { zh: 'ms', ms: 'id', id: 'en' }[L], 'Arrow keys move through the list (and wrap)');
+  document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await act(async () => {});
+  assert.equal(menu(), null, 'Escape folds it away');
+  assert.equal(document.activeElement, languageButton(), 'and the focus goes back to the button');
+  await click(languageButton(), 'the language button');
+  document.body.dispatchEvent(new window.Event('pointerdown', { bubbles: true }));
+  await act(async () => {});
+  assert.equal(menu(), null, 'A tap anywhere else folds it away');
+  await click(languageButton(), 'the language button');
   const badge = () => page.host.querySelector('[data-testid="app-language-preview"]');
   const badgeWords = () => [text(badge()?.querySelector('span')), text(badge()?.querySelector('button'))];
   assert.deepEqual(badgeWords(), { id: ['Pratinjau Bahasa Indonesia', 'Akhiri pratinjau'], zh: ['中文预览', '结束预览'], ms: ['Pratonton Bahasa Melayu', 'Tamatkan pratonton'] }[L]);
   const languageBefore = appText.appLanguage();
-  await click(buttonNamed('EN', page.host), 'EN');
-  assert.equal(buttonNamed('EN', page.host)?.getAttribute('aria-pressed'), 'true');
+  await click(items().find((b) => b.getAttribute('lang') === 'en'), 'English');
+  assert.equal(menu(), null, 'Picking one folds the others away');
+  assert.equal(shows(), 'EN', 'and the button shows it');
   assert.equal(localStorage.getItem('sellio_app_language'), 'en', 'The choice is remembered');
   assert.deepEqual(badgeWords(), [{ id: 'Indonesian preview', zh: 'Chinese preview', ms: 'Malay preview' }[L], 'End preview'], 'Still a preview, in English now');
   assert.notEqual(languageBefore, appText.appLanguage());
@@ -229,7 +253,7 @@ try {
   assert.equal(localStorage.getItem('sellio_app_language_preview'), null);
   assert.equal(localStorage.getItem('sellio_app_language'), null);
   await page.unmount();
-  passed('The switch (each language in its own words) and the preview badge; ending the preview puts this device back');
+  passed('The language button: folded to the language in use, opens all four (each in its own words; keys, Escape, a tap elsewhere), folds again once one is picked; the preview badge, and ending the preview puts this device back');
 
   // 4b. Who is offered 中文 and Malay (Alvin, 16 Nov 2026: "there should be the EN, 中文, MY, ID for
   // everyone"): everyone can pick them, nobody is switched to them by their phone or their shop,
@@ -260,8 +284,10 @@ try {
   assert.equal(appT('Kitchen Display'), '厨房显示屏', 'Every group of screens, not only the live ones');
   assert.equal(appText.isAppLanguagePreview(), false, 'No preview badge for them');
   page = await mount(h(app.AppLanguageSwitch));
-  await click(buttonNamed('EN', page.host), 'EN');
-  assert.equal(appText.appLanguage(), 'en', 'One tap back to English');
+  assert.equal(text(page.host.querySelector('button[aria-haspopup="menu"] [lang]')), '中文', 'Their button shows 中文');
+  await click(page.host.querySelector('button[aria-haspopup="menu"]'), 'the language button');
+  await click(page.host.querySelector('[role="menuitemradio"][lang="en"]'), 'English');
+  assert.equal(appText.appLanguage(), 'en', 'Two taps back to English');
   assert.equal(localStorage.getItem('sellio_app_language'), 'en', 'and it stays their choice on this device');
   await page.unmount();
   localStorage.removeItem('sellio_app_language');
@@ -270,7 +296,7 @@ try {
   assert.deepEqual(appText.availableAppLanguages(), ['en', 'zh', 'ms', 'id'], 'and can pick EN, 中文, MY or ID, like everyone else');
   await act(async () => { await appText.resetAppTextForTests({ preview: true }); });
   assert.equal(appText.appLanguagePreview(), 'id', 'A preview stored before 中文 and Malay ("1") is an Indonesian one');
-  passed("EN, 中文, MY and ID for everyone; 中文 and Malay only when picked, but first in Xie Lao Ma's shop (one tap from English)");
+  passed("EN, 中文, MY and ID for everyone; 中文 and Malay only when picked, but first in Xie Lao Ma's shop (two taps from English)");
 
   // 5. Real screens in Indonesian: no English phrase from the catalog left on them
   const english = [];
@@ -295,15 +321,15 @@ try {
   await act(async () => { await appText.resetAppTextForTests({ preview: L, choice: L }); });
   // What each screen must say in the language under test.
   const S = {
-    id: { signIn: ['Nomor Ponsel', 'Lupa kata sandi?', 'Masuk dengan Google', 'Dengan melanjutkan, Anda menyetujui', 'EN', 'ID'], forgot: 'Lupa kata sandi?',
+    id: { signIn: ['Nomor Ponsel', 'Lupa kata sandi?', 'Masuk dengan Google', 'Dengan melanjutkan, Anda menyetujui'], forgot: 'Lupa kata sandi?',
       reset: ['Reset Kata Sandi', 'Masukkan nomor ponsel yang terdaftar'], join: ['Buat akun Sellio Anda', 'Lanjutkan dengan Google', 'Kirim email verifikasi', 'Sudah punya akun?'],
       plans: ['sekitar Rp255.000, ditagih dalam Rupiah', 'Harga belum termasuk PPN.', 'Hingga 100 pesanan/bulan', 'Mulai Uji Coba Gratis'], progress: ['1 / 3 Selesai', 'Progres Anda'],
       industries: ['Makanan & Minuman / Kafe / Restoran', 'Ritel', 'Jasa'], colour: 'Biru Laut', table: 'Meja 3' },
-    zh: { signIn: ['手机号码', '忘记密码？', '使用 Google 登录', '继续即表示您同意', 'EN', '中文', 'ID'], forgot: '忘记密码？',
+    zh: { signIn: ['手机号码', '忘记密码？', '使用 Google 登录', '继续即表示您同意'], forgot: '忘记密码？',
       reset: ['重设密码', '输入您注册的手机号码'], join: ['创建您的 Sellio 账号', '使用 Google 继续', '发送验证邮件', '已经有账号？'],
       plans: ['约 Rp255.000，以印尼盾收费', '价格未含 PPN（增值税）。', '每月最多 100 张订单', '开始免费试用'], progress: ['已完成 1 / 3', '您的进度'],
       industries: ['餐饮/咖啡馆/餐厅', '零售', '服务'], colour: '海洋蓝', table: '3号桌' },
-    ms: { signIn: ['Nombor Telefon', 'Lupa kata laluan?', 'Log masuk dengan Google', 'Dengan meneruskan, anda bersetuju', 'EN', 'MY', 'ID'], forgot: 'Lupa kata laluan?',
+    ms: { signIn: ['Nombor Telefon', 'Lupa kata laluan?', 'Log masuk dengan Google', 'Dengan meneruskan, anda bersetuju'], forgot: 'Lupa kata laluan?',
       reset: ['Tetapkan Semula Kata Laluan', 'Masukkan nombor telefon berdaftar anda'], join: ['Cipta akaun Sellio anda', 'Teruskan dengan Google', 'Hantar e-mel pengesahan', 'Sudah ada akaun?'],
       plans: ['kira-kira Rp255.000, dicaj dalam Rupiah', 'Harga belum termasuk PPN (VAT).', 'Sehingga 100 pesanan/bulan', 'Mulakan Percubaan Percuma'], progress: ['1 / 3 Selesai', 'Kemajuan Anda'],
       industries: ['Makanan & Minuman / Kafe / Restoran', 'Runcit', 'Perkhidmatan'], colour: 'Biru Lautan', table: 'Meja 3' },
@@ -312,6 +338,12 @@ try {
   page = await mount(h(MemoryRouter, null, h(app.Auth)));
   let shown = checkScreen(page.host, 'Sign in');
   for (const words of S.signIn) assert.ok(shown.includes(words), `Sign in shows "${words}": ${shown}`);
+  // The language button sits in the card's top corner, above the logo (Alvin, 16 Nov 2026: "Find
+  // a good spot"), folded to the language in use.
+  const corner = page.host.querySelector('.auth-card > .absolute [data-testid="app-language-switch"]');
+  assert.ok(corner, 'Sign in: the language button is in the card\'s corner');
+  assert.equal(text(corner.querySelector('button[aria-haspopup="menu"] [lang]')), { id: 'ID', zh: '中文', ms: 'MY' }[L]);
+  assert.ok(corner.compareDocumentPosition(page.host.querySelector('img[alt="Sellio"]')) & window.Node.DOCUMENT_POSITION_FOLLOWING, 'before the logo');
   await click(buttonNamed(S.forgot, page.host), S.forgot);
   shown = checkScreen(page.host, 'Forgot password');
   for (const words of S.reset) assert.ok(shown.includes(words), `Forgot password shows "${words}": ${shown}`);
@@ -320,6 +352,7 @@ try {
   page = await mount(h(MemoryRouter, null, h(app.Join)));
   shown = checkScreen(page.host, 'Create an account');
   for (const words of S.join) assert.ok(shown.includes(words), `Create an account shows "${words}": ${shown}`);
+  assert.ok(page.host.querySelector('.relative > .absolute [data-testid="app-language-switch"]'), 'Create an account: the language button in the card\'s corner');
   await page.unmount();
 
   setPhoneLanguages(['id-ID']); // an Indonesian phone: Indonesian plans (in the language picked)

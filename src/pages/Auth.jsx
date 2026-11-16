@@ -788,7 +788,7 @@ export default function Auth() {
       >
         {/* Auth card — always visible */}
         <div className="w-full max-w-sm sm:max-w-md max-h-full overflow-y-auto">
-          <div className="auth-card bg-white rounded-2xl shadow-xl px-8">
+          <div className="auth-card relative bg-white rounded-2xl shadow-xl px-8">
             {closedAccount ? (
               <ClosedAccount {...closedAccount} onBack={() => setClosedAccount(null)} />
             ) : forgotMode ? (
@@ -992,6 +992,8 @@ export default function Auth() {
               </div>
             ) : (
             <>
+            {/* The language, in the card's top corner (Alvin, 16 Nov 2026: "Find a good spot") */}
+            <AppLanguageSwitch className="absolute right-3 top-3 z-10" />
             {/* Header */}
             <div className="auth-gap-b text-center">
               <div className="auth-logo-gap flex items-center justify-center">
@@ -1312,7 +1314,6 @@ export default function Auth() {
                 <TermsLine />
               </p>
             )}
-            <AppLanguageSwitch className="mt-2" />
             </>
             )}
           </div>

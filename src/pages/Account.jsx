@@ -176,6 +176,7 @@ export default function Account() {
         </div>
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-xs text-slate-500 truncate hidden sm:inline">{status.email}</span>
+          <AppLanguageSwitch />
           <button type="button" onClick={() => signOut()} className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 px-3 py-2 rounded-lg hover:bg-white/70">
             <LogOut className="w-3.5 h-3.5" />{' '}{t('Sign out')}
           </button>
@@ -278,7 +279,6 @@ export default function Account() {
           <span aria-hidden="true" className="mx-2">·</span>
           <Link to="/delete-account" className="font-medium text-slate-500 underline underline-offset-2">{t('Delete my account')}</Link>
         </p>
-        <AppLanguageSwitch />
       </main>
 
       {showPlans && <AuthPricingModal onClose={() => setShowPlans(false)} prefilledEmail={status.email} />}

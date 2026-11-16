@@ -239,7 +239,7 @@ try {
   if (L === 'id') {
   // 1. The catalog
   assert.deepEqual(Object.keys(app.ID_GROUPS), ['signup', 'shop', 'explore'], 'Group 3 has its own file');
-  assert.ok(!appText.LIVE_GROUPS.id.includes('explore'), 'Group 3 waits for its sign-off: not live yet');
+  assert.ok(appText.LIVE_GROUPS.id.includes('explore'), 'Group 3 is switched on (Alvin, 16 Nov 2026: "Yes turn it on")');
   const blanks = (s) => (s.match(/\{[a-zA-Z0-9_]+\}/g) || []).sort().join(',');
   const notIndonesian = /\b(kamu|kau|sila|percuma|kedai|kata laluan|telefon|bimbit|troli|anda)\b/;
   let shared = 0;
@@ -254,21 +254,22 @@ try {
   assert.ok(shared > 40, 'Phrases group 3 shares with the live groups (Try again, Log in…) have the same words');
   passed(`The explore catalog: ${Object.keys(exploreCatalog).length} phrases, each with its blanks, formal Indonesian, the same words as the live groups (${shared} shared)`);
 
-  // 2. The group switch: an Indonesian phone sees groups 1 and 2 in Indonesian, group 3 in English
+  // 2. Switched on: an Indonesian phone sees group 3 in Indonesian too, with no preview
   assert.equal(appText.appLanguage(), 'id', 'An Indonesian phone gets Bahasa Indonesia');
+  assert.equal(appText.isAppLanguagePreview(), false);
   await appText.appTextReady();
-  assert.equal(appT('Save'), 'Simpan', 'The live groups’ words are loaded');
-  assert.equal(appT('Fresh finds'), 'Fresh finds', 'Group 3’s words aren’t loaded for everyone yet');
+  assert.equal(appT('Save'), 'Simpan', 'Groups 1 and 2');
+  assert.equal(appT('Fresh finds'), 'Temuan terbaru', 'and group 3, for everyone');
   page = await mount(h(app.ExploreNoResults, { search: 'nasgor', kind: null, onSearch() {}, onShowAll() {} }));
-  const hidden = visible(page.host);
-  assert.ok(hidden.includes('No results for “nasgor”') && hidden.includes('Did you mean nasi goreng?') && hidden.includes('Show everything'), `English, whole: ${hidden}`);
-  assert.ok(!/Tampilkan|Maksud Anda/.test(hidden), 'Not half translated: no live group’s word on a group 3 screen');
+  const live = visible(page.host);
+  assert.ok(live.includes('Tidak ada hasil untuk “nasgor”') && live.includes('Maksud Anda nasi goreng?') && live.includes('Tampilkan semua'), `Indonesian, whole: ${live}`);
+  assert.ok(!/No results|Did you mean|Show everything/.test(live), 'No English left on it');
   await page.unmount();
   page = await mount(h(app.LoadingShapes, { label: 'x', slowAfterMs: 1 }));
   await settle(40);
   assert.ok(document.body.textContent.includes('This is taking longer than usual.'), 'A shared piece with no t (a store page): English, and no app words loaded for it');
   await page.unmount();
-  passed('Until it’s switched on, group 3’s screens are English for everyone (whole, not half translated), while groups 1 and 2 stay Indonesian');
+  passed('Switched on: group 3’s screens are Indonesian for everyone Indonesian, whole, with no preview; a shared piece with no t (a store page) stays English');
   }
 
   // A reviewer's preview: every group

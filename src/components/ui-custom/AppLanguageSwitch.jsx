@@ -1,44 +1,128 @@
-import React from 'react';
-import { Globe } from 'lucide-react';
+import React, { useEffect, useId, useRef, useState } from 'react';
+import { Check, ChevronDown, Globe } from 'lucide-react';
 import { useAppText, APP_LANGUAGES, N_ } from '@/lib/appText';
+import { useBackToClose } from '@/lib/useBackToClose';
 
-// The owner app's language (lib/appText.js). Shown once there is something to switch to: a
-// language with a group of screens signed off, a reviewer's preview, or a shop that has a
-// language first. Short labels in the store page's order (Alvin, 16 Nov 2026: EN, 中文, MY, ID),
-// each named in full in its own language for screen readers; the choice is remembered on this
-// device. A language joins the switch once the app has it.
-function Choices({ label }) {
-  const { language, languages, setLanguage } = useAppText();
-  const choices = APP_LANGUAGES.filter(({ code }) => languages.includes(code)).map(({ code, short, name }) => [code, short, name]);
+// The owner app's language (lib/appText.js): one small button with the language in use (Alvin,
+// 16 Nov 2026: EN, 中文, MY, ID, in that order), which opens the others and folds them away again
+// once one is picked (Alvin, 16 Nov 2026: "when selected a language, make it collapsible for
+// others"). The open list names each language in itself, so MY reads as Bahasa Melayu; the choice
+// is remembered on this device. Where it sits: the top corner of the sign-in and sign-up cards,
+// the header of /Account and of Me, and the account panel's Language row.
+const MENU_NAMES = { en: 'English', zh: '简体中文', ms: 'Bahasa Melayu', id: 'Bahasa Indonesia' };
+
+export function LanguagePicker({ up = false }) {
+  const { t, language, languages, setLanguage } = useAppText();
+  const [open, setOpen] = useState(false);
+  const box = useRef(null);
+  const button = useRef(null);
+  const menuId = useId();
+  // The phone's Back closes the list rather than leaving the page.
+  useBackToClose(open, () => setOpen(false));
+
+  // A tap anywhere else folds it away; Escape too, back to the button.
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (event) => { if (!box.current?.contains(event.target)) setOpen(false); };
+    const escape = (event) => { if (event.key === 'Escape') { setOpen(false); button.current?.focus(); } };
+    document.addEventListener('pointerdown', away, true);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', away, true);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [open]);
+
+  // Once open, the language in use has the focus, so arrows and Enter work at once.
+  useEffect(() => {
+    if (open) box.current?.querySelector('[role="menuitemradio"][aria-checked="true"]')?.focus({ preventScroll: true });
+  }, [open]);
+
+  const choices = APP_LANGUAGES.filter(({ code }) => languages.includes(code));
+  const current = choices.find(({ code }) => code === language) || APP_LANGUAGES[0];
+  const pick = (code) => {
+    setOpen(false);
+    if (code !== language) setLanguage(code);
+    button.current?.focus({ preventScroll: true });
+  };
+  const arrows = (event) => {
+    const items = [...(box.current?.querySelectorAll('[role="menuitemradio"]') || [])];
+    const at = items.indexOf(document.activeElement);
+    const to = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: items.length - 1 }[event.key];
+    if (to === undefined || !items.length) return;
+    event.preventDefault();
+    items[(to + items.length) % items.length].focus();
+  };
+
   return (
-    <div role="group" aria-label={label} data-testid="app-language-switch"
-      className="inline-flex items-center gap-0.5 rounded-full border border-slate-200 bg-white p-0.5 text-xs">
-      <Globe aria-hidden="true" className="ml-1.5 mr-0.5 h-3.5 w-3.5 text-slate-400" />
-      {choices.map(([code, short, name]) => (
-        <button key={code} type="button" lang={code} aria-pressed={language === code} onClick={() => setLanguage(code)} aria-label={name} title={name}
-          className={'rounded-full px-2.5 py-1 font-semibold transition-colors ' + (language === code ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100')}>
-          {short}
-        </button>
-      ))}
+    <div ref={box} data-testid="app-language-switch" className="relative inline-block text-left">
+      <button
+        ref={button}
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
+        title={current.name}
+        onClick={() => setOpen((was) => !was)}
+        className={'inline-flex h-9 items-center gap-1.5 rounded-full border bg-white pl-2.5 pr-2 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 '
+          + (open ? 'border-slate-300' : 'border-slate-200')}
+      >
+        <Globe aria-hidden="true" className="h-3.5 w-3.5 text-slate-400" />
+        {/* Read out as "Language: EN", the words on the button with what they're for. */}
+        <span className="sr-only">{t('Language')}: </span>
+        <span lang={current.code}>{current.short}</span>
+        <ChevronDown aria-hidden="true" className={'h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ' + (open ? 'rotate-180' : '')} />
+      </button>
+      {open && (
+        <div
+          id={menuId}
+          role="menu"
+          aria-label={t('Language')}
+          onKeyDown={arrows}
+          className={'absolute right-0 z-[70] w-52 rounded-xl border border-slate-100 bg-white p-1 shadow-xl animate-in fade-in-0 zoom-in-95 duration-150 '
+            + (up ? 'bottom-full mb-2 origin-bottom-right slide-in-from-bottom-1' : 'top-full mt-2 origin-top-right slide-in-from-top-1')}
+        >
+          {choices.map(({ code, short }) => {
+            const chosen = code === language;
+            return (
+              <button
+                key={code}
+                type="button"
+                role="menuitemradio"
+                aria-checked={chosen}
+                lang={code}
+                onClick={() => pick(code)}
+                className={'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm outline-none transition-colors hover:bg-slate-50 focus-visible:bg-slate-100 '
+                  + (chosen ? 'font-semibold text-slate-900' : 'text-slate-600')}
+              >
+                <span aria-hidden="true" className={'w-9 shrink-0 rounded-md py-0.5 text-center text-[11px] font-semibold ' + (chosen ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500')}>{short}</span>
+                <span className="min-w-0 flex-1 truncate">{MENU_NAMES[code]}</span>
+                {chosen && <Check aria-hidden="true" className="h-4 w-4 shrink-0 text-slate-900" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
-// Centred under a form: the sign-in, sign-up and /Account pages.
-export default function AppLanguageSwitch({ className = '' }) {
-  const { t, available } = useAppText();
+// The picker wherever a page places it (className positions it): the corner of the sign-in and
+// sign-up cards, the /Account header.
+export default function AppLanguageSwitch({ className = '', up = false }) {
+  const { available } = useAppText();
   if (!available) return null;
-  return <div className={'flex justify-center ' + className}><Choices label={t('Language')} /></div>;
+  return <div className={className}><LanguagePicker up={up} /></div>;
 }
 
-// A row in the account panel's preferences.
+// A row in the account panel's preferences; near the panel's foot, so the list opens upwards.
 export function AppLanguageRow() {
   const { t, available } = useAppText();
   if (!available) return null;
   return (
     <div className="flex items-center justify-between gap-3">
       <p className="text-sm text-slate-700">{t('Language')}</p>
-      <Choices label={t('Language')} />
+      <LanguagePicker up />
     </div>
   );
 }

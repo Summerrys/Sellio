@@ -13,6 +13,7 @@ import PricingModal from '@/components/subscription/PricingModal';
 import { ProfileAvatar, ProfilePhotoEditor } from '@/components/profile/ProfilePhoto';
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
 import ShopBell from './ShopBell';
+import AppLanguageSwitch from '@/components/ui-custom/AppLanguageSwitch';
 import { BRAND_GRADIENT, ExploreTabHeader, LOGO_URL } from './shared';
 import { useAppText } from '@/lib/appText';
 
@@ -154,7 +155,7 @@ export default function ExploreMe() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <ExploreTabHeader title={t('Me')} right={<ShopBell />} />
+      <ExploreTabHeader title={t('Me')} right={<><AppLanguageSwitch /><ShopBell /></>} />
       <main className="max-w-xl mx-auto px-4 pt-4" style={{ paddingBottom: TAB_BAR_SPACE }}>
         {appUser ? (
           <>

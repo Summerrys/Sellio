@@ -39,8 +39,9 @@ const LOADERS = {
 const TRANSLATED = Object.keys(LOADERS);
 
 // Groups of screens that show in a language for everyone it's for; the others only in a preview
-// of that language. Bahasa Indonesia: Alvin, 15 Nov 2026: "Switch groups 1 and 2 on together"
-// (Iman's review continues in the review sheet; corrections go into the .json files). 中文 and
+// of that language. Bahasa Indonesia: Alvin, 15 Nov 2026: "Switch groups 1 and 2 on together",
+// and group 3 (Explore, Me and chat) on 16 Nov 2026: "Yes turn it on" (Iman's review continues in
+// the review sheet; corrections go into the .json files). 中文 and
 // Malay: every group, for everyone who picks them (Alvin, 16 Nov 2026: "there should be the EN,
 // 中文, MY, ID for everyone"); the review sheets for Xie Lao Ma and the Wellness shop stay open
 // for corrections. Switch a language's groups on together: a shop screen of a group that isn't
@@ -48,7 +49,7 @@ const TRANSLATED = Object.keys(LOADERS);
 export const LIVE_GROUPS = {
   zh: ['signup', 'shop', 'explore'],
   ms: ['signup', 'shop', 'explore'],
-  id: ['signup', 'shop'],
+  id: ['signup', 'shop', 'explore'],
 };
 const liveGroups = (language) => LIVE_GROUPS[language] || [];
 

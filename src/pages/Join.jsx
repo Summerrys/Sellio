@@ -350,7 +350,8 @@ export default function Join() {
       onClick={() => setShowCountries(false)}
     >
       <div className="w-full max-w-sm sm:max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="relative bg-white rounded-2xl shadow-xl p-8">
+          <AppLanguageSwitch className="absolute right-3 top-3 z-10" />
           <div className="text-center mb-6">
             {/* In the app the logo opens Explore without reloading the app (websites keep
                 the home link). */}
@@ -534,7 +535,6 @@ export default function Join() {
           {stage !== 'closed' && <p className="mt-5 text-center text-[11px] leading-relaxed text-slate-400">
             <TermsLine />
           </p>}
-          <AppLanguageSwitch className="mt-3" />
         </div>
       </div>
     </div>

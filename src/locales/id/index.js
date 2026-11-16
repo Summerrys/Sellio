@@ -7,6 +7,6 @@ import explore from './explore.json';
 
 // signup: sign-up and onboarding. shop: Dashboard, Orders, Counter, Kitchen, Products, Settings
 // and what they open. explore: Explore, listings, the cart, My purchases, My likes, Me, chats
-// and ratings (its screens use useAppText('explore'): English until it's in LIVE_GROUPS.id).
+// and ratings (its screens use useAppText('explore'); in LIVE_GROUPS.id since 16 Nov 2026).
 // A phrase two groups show has the same Indonesian in both.
 export const GROUPS = { signup, shop, explore };
