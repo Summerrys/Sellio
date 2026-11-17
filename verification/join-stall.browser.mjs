@@ -4,7 +4,7 @@
 // food; "Sell from home" and "Run your business" across the counter's lower edge, inside its ends
 // and clear of FREE! and the headline; FREE! inside its
 // star and clear of the headline; no emoji; the whole card on a regular phone's screen; still for a
-// phone set to reduce motion; and the other screens (check your email) keep their usual top.
+// phone set to reduce motion; and the next screen (check your email) keeps the awning, not the stall.
 //
 //   node verification/join-stall.browser.mjs <folder with playwright(-core)> [screenshot folder]
 // The page is built from src with stand-ins for Supabase (as in form-errors.browser.mjs).
@@ -241,14 +241,14 @@ try {
     for (const name of ['sellio-stall-swing', 'sellio-stall-steam', 'sellio-stall-tick', 'sellio-stall-bubble', 'sellio-stall-twinkle', 'sellio-stall-bob', 'sellio-stall-tilt', 'sellio-stall-pulse']) {
       assert.ok(moving.includes(name), `${name} runs`);
     }
-    // The next screen keeps its usual top: the logo and "Check your email", no stall.
+    // The next screen has the awning and step 1 of 3, not the stall (signup-screens.browser.mjs).
     await page.locator('#join-email').fill('mei@kopi.sg');
     await page.getByRole('button', { name: 'Send verification email' }).click();
     await page.getByRole('heading', { name: 'Check your email' }).waitFor();
     assert.equal(await page.locator('[data-testid="join-stall"]').count(), 0, 'no stall after sending');
-    assert.equal(await page.locator('img[src="/branding/sellio-logo.webp"]').count(), 1, 'the logo is back');
+    assert.equal(await page.locator('.join-stall-awning').count(), 1, 'the awning stays');
     await shoot(page, 'sent-en');
-    passed('Moving as designed (sign, steam, tick, +1, sparkles, the two stickers each its own way, FREE!), and the next screen keeps its usual top');
+    passed('Moving as designed (sign, steam, tick, +1, sparkles, the two stickers each its own way, FREE!); the next screen keeps the awning, without the stall');
     await page.close();
   }
   assert.deepEqual(errors, [], 'no errors on the pages');

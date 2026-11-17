@@ -211,8 +211,8 @@ try {
   await wait(20);
   assert.deepEqual(authCalls, [['signInWithOtp', { email: 'owner@kopi.sg', options: { emailRedirectTo: 'https://sellio.sg/Join', shouldCreateUser: true } }]]);
   assert.match(page.host.textContent, /Check your email/);
-  assert.match(page.host.textContent, /We sent a verification email to owner@kopi\.sg/);
-  assert.match(page.host.textContent, /Tap Verify my email in the newest email from Sellio, on this device, to continue\./);
+  assert.match(page.host.textContent, /We sent a link to owner@kopi\.sg/);
+  assert.match(page.host.textContent, /Not there\? Check your spam folder\./);
   assert.deepEqual(globalThis.toastErrors, []);
   await page.unmount();
   passed('Join: Start again deletes it with the same link, then Sign up again emails a new sign-up link to the same address');
@@ -383,7 +383,7 @@ try {
   assert.deepEqual(authCalls, [['signInWithOtp', { email: 'me@kopi.sg', options: { emailRedirectTo: 'https://sellio.sg/Join', shouldCreateUser: true } }]]);
   assert.deepEqual(globalThis.toastErrors, []);
   assert.match(page.host.textContent, /Check your email/);
-  assert.match(page.host.textContent, /We sent a verification email to me@kopi\.sg/);
+  assert.match(page.host.textContent, /We sent a link to me@kopi\.sg/);
   assert.match(page.host.textContent, /No new email was sent: one went to this address less than a minute ago\. Open the newest email from Sellio\./);
   assert.ok(buttonText(page.host, 'Resend in 13s')?.disabled, 'Resend waits out the time Supabase gave');
 

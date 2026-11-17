@@ -201,10 +201,11 @@ try {
   const sources = Object.fromEntries(await Promise.all([
     'src/pages/Account.jsx', 'src/pages/UserManagement.jsx',
   ].map(async (file) => [file, await readFile(path.join(app, file), 'utf8')])));
-  assert.match(sources['src/pages/Account.jsx'], /\{!businessReady && \(\s*<Card icon=\{Briefcase\} iconClass="bg-purple-50 text-purple-600" title=\{t\('Run my business'\)\} badge=\{t\('Paid plans'\)\}>/, 'Run my business shows in the app too');
-  assert.match(sources['src/pages/Account.jsx'], /\{sellsPlans\(\) \? \(\s*<button type="button" onClick=\{\(\) => setShowPlans\(true\)\}/, 'See plans wherever plans are sold');
+  assert.match(sources['src/pages/Account.jsx'], /\{!businessReady && \(\s*<ChoiceCard tone="biz" icon=\{Store\} title=\{t\('Run my business'\)\}/, 'Run my business shows in the app too');
+  assert.match(sources['src/pages/Account.jsx'], /onClick=\{sellsPlans\(\) \? \(\) => setShowPlans\(true\) : undefined\}/, 'the plans open wherever plans are sold');
+  assert.match(sources['src/pages/Account.jsx'], /\{!sellsPlans\(\) && <span className="[^"]*">\{PLANS_ON_WEBSITE\}<\/span>\}/, 'in the apps the card says plans are on the website');
   assert.match(sources['src/pages/UserManagement.jsx'], /Upgrade to Pro for unlimited roles\./);
-  passed('Run my business and Upgrade to Pro show in the apps; See plans wherever plans are sold');
+  passed('Run my business and Upgrade to Pro show in the apps; Run my business opens the plans wherever plans are sold');
 
   // No second free trial (Alvin, 5 Nov 2026): a shop that exists gets the plans without a trial,
   // wherever its plan window opens (the account panel, Settings, Products, Reports, Sell).

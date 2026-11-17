@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mail, User, Phone, Lock, ChevronDown, AlertCircle, Check } from 'lucide-react';
+import { Mail, User, Phone, Lock, ChevronDown, AlertCircle, ArrowRight, BadgeCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { isNativeApp } from '@/lib/nativeApp';
@@ -16,6 +16,9 @@ import ClosedAccount from '@/components/auth/ClosedAccount';
 import TermsLine from '@/components/auth/TermsLine';
 import AppLanguageSwitch from '@/components/ui-custom/AppLanguageSwitch';
 import JoinStall from '@/components/auth/JoinStall';
+import SignUpSteps from '@/components/auth/SignUpSteps';
+import EmailSentArt from '@/components/auth/EmailSentArt';
+import { markAccountWelcome } from '@/lib/accountWelcome';
 import { callClosedAccount, closedAccountMessage } from '@/lib/closedAccount';
 import {
   PHONE_COUNTRIES, JOIN_LINK_TYPES, accountErrorMessage, appBaseUrl, emailResendWait, fullPhone, isClosedLoginError, phoneCountryFor,
@@ -32,8 +35,11 @@ const fieldClass = (error) => `w-full pl-9 pr-4 py-2.5 border rounded-xl text-sm
 const FINISH_FIELDS = ['full_name', 'phone', 'password', 'confirm'];
 const RESEND_SECONDS = 60;
 // The button in the verification email (scripts/email-templates.py). The email is in English,
-// so the hint names the button as the email shows it.
+// so the envelope on "Check your email" shows the button as the email does.
 const EMAIL_BUTTON = 'Verify my email';
+// The screens with the awning on the card's top edge (Alvin, 17 Nov 2026): the first one (the
+// stall), Check your email and Set up your account. Staff and closed accounts keep the logo.
+const AWNING_STAGES = ['start', 'sent', 'finish'];
 // Each new verification email replaces the one before, and Gmail groups them (same sender and
 // subject) into one conversation, so an older link is easy to tap by mistake (Alvin's test,
 // 6 Nov 2026).
@@ -378,6 +384,7 @@ export default function Join() {
       const { error } = await supabase.rpc('complete_account_setup', { p_full_name: name, p_phone: phone });
       if (error) throw error;
       await rememberProfile(supabase, accountEmail);
+      markAccountWelcome(); // the account page's first visit: welcome, step 3 of 3
       completeAuthNavigation('/Account');
     } catch (err) {
       // On its field when the server says which (the number is taken, the name, the password).
@@ -411,12 +418,38 @@ export default function Join() {
       onClick={() => setShowCountries(false)}
     >
       <div className="w-full max-w-sm sm:max-w-md">
-        {/* The first screen has the stall on top (components/auth/JoinStall.jsx): its awning sits
-            on the card's top edge. */}
-        <div className={`relative bg-white rounded-2xl shadow-xl p-8${stage === 'start' ? ' pt-0 overflow-hidden' : ''}`}>
-          <AppLanguageSwitch className={stage === 'start' ? 'absolute right-3 top-1 z-10 join-stall-language' : 'absolute right-3 top-3 z-10'} />
+        {/* The first screen has the stall on top (components/auth/JoinStall.jsx); it and the next
+            two have the awning on the card's top edge, then where they are (1, 2 of 3). */}
+        <div className={`relative bg-white rounded-2xl shadow-xl p-8${AWNING_STAGES.includes(stage) ? ' pt-0 overflow-hidden' : ''}`}>
+          <AppLanguageSwitch className={AWNING_STAGES.includes(stage) ? 'absolute right-3 top-1 z-10 join-stall-language' : 'absolute right-3 top-3 z-10'} />
           {stage === 'start' && <JoinStall />}
-          {stage !== 'start' && <div className="text-center mb-6">
+          {(stage === 'sent' || stage === 'finish') && (
+            <>
+              <div className="join-stall-awning -mx-8" aria-hidden="true" />
+              <SignUpSteps step={stage === 'sent' ? 1 : 2} />
+            </>
+          )}
+          {stage === 'sent' && (
+            <div className="text-center mb-5">
+              <EmailSentArt button={EMAIL_BUTTON} />
+              <h1 className="text-[22px] leading-tight font-extrabold tracking-tight text-slate-800">{t('Check your email')}</h1>
+              <p className="mt-1.5 text-sm text-slate-500">{t('We sent a link to {email}', { email: <span className="font-semibold text-slate-800 [overflow-wrap:anywhere]">{email}</span> })}</p>
+              <p className="mt-2 text-xs text-slate-400">{t('Not there? Check your spam folder.')}</p>
+            </div>
+          )}
+          {stage === 'finish' && (
+            <div className="text-center mb-5">
+              <p className="mx-auto mb-3 flex w-fit max-w-full items-center justify-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700" data-testid="join-verified">
+                {googleLogin ? <span className="flex-shrink-0"><GoogleIcon /></span> : <BadgeCheck className="w-4 h-4 flex-shrink-0" aria-hidden="true" />}
+                <span className="min-w-0 [overflow-wrap:anywhere]">{googleLogin
+                  ? t('Signed in with Google: {email}', { email: accountEmail })
+                  : t('{email} is verified', { email: accountEmail })}</span>
+              </p>
+              <h1 className="text-[22px] leading-tight font-extrabold tracking-tight text-slate-800">{t('Set up your account')}</h1>
+              <p className="mt-1.5 text-sm text-slate-500">{t('A few details and you’re in.')}</p>
+            </div>
+          )}
+          {!AWNING_STAGES.includes(stage) && <div className="text-center mb-6">
             {/* In the app the logo opens Explore without reloading the app (websites keep
                 the home link). */}
             {isNativeApp() ? (
@@ -428,14 +461,6 @@ export default function Join() {
                 <img src={LOGO_URL} alt="Sellio" className="h-20 w-auto object-contain" />
               </a>
             )}
-            {stage === 'sent' && (<>
-              <h1 className="text-xl font-semibold text-slate-800 mb-1">{t('Check your email')}</h1>
-              <p className="text-sm text-slate-500">{t('We sent a verification email to {email}.', { email: <span className="font-medium text-slate-700 break-all">{email}</span> })}</p>
-            </>)}
-            {stage === 'finish' && (<>
-              <h1 className="text-xl font-semibold text-slate-800 mb-1">{t('Set up your account')}</h1>
-              <p className="text-sm text-slate-500 break-all">{accountEmail}</p>
-            </>)}
             {stage === 'staff' && (<>
               <h1 className="text-xl font-semibold text-slate-800 mb-1">{t('This is a staff login')}</h1>
               <p className="text-sm text-slate-500">{t('Staff logins belong to a store. Ask the store owner if you can’t get in.')}</p>
@@ -506,14 +531,6 @@ export default function Join() {
 
           {stage === 'sent' && (
             <div className="space-y-4">
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center">
-                  <Check className="w-7 h-7 text-green-500" />
-                </div>
-                <p className="text-xs text-slate-500 text-center leading-relaxed">
-                  {t('Tap {button} in the newest email from Sellio, on this device, to continue. It can take a minute to arrive; check your spam folder too.', { button: <span className="font-semibold text-slate-700">{EMAIL_BUTTON}</span> })}
-                </p>
-              </div>
               <button type="button" onClick={sendLink} disabled={sending || cooldown > 0}
                 className="w-full py-2.5 rounded-xl text-sm font-medium text-slate-700 border border-slate-200 bg-white hover:bg-slate-50 transition-colors disabled:opacity-60">
                 {cooldown > 0 ? t('Resend in {cooldown}s', { cooldown }) : (sending ? t('Sending…') : t('Resend verification email'))}
@@ -594,7 +611,7 @@ export default function Join() {
               <FormError>{errors.form}</FormError>
               <button type="submit" disabled={saving}
                 className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70" style={BUTTON_STYLE}>
-                {saving ? t('Saving…') : t('Continue')}
+                <span className="inline-flex items-center justify-center gap-2">{saving ? t('Saving…') : t('Continue')}{!saving && <ArrowRight className="w-4 h-4" aria-hidden="true" />}</span>
               </button>
             </form>
           )}
