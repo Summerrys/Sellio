@@ -51,6 +51,7 @@ const Indonesia$1 = "Indonesia";
 const Language$1 = "Bahasa";
 const Close$2 = "Tutup";
 const More$2 = "Lainnya";
+const Email = "Email";
 const signup = {
   "Welcome!": "Selamat datang!",
   "Let's get you started": "Ayo mulai",
@@ -84,10 +85,6 @@ const signup = {
   "Create a free account": "Buat akun gratis",
   or,
   "see business plans": "lihat paket usaha",
-  "Create a free Sellio account: sell from home for free, or choose a business plan.": "Buat akun Sellio gratis: jualan dari rumah secara gratis, atau pilih paket usaha.",
-  "Create a free Sellio account to sell from home for free.": "Buat akun Sellio gratis untuk jualan dari rumah secara gratis.",
-  "Create my free account": "Buat akun gratis saya",
-  "Business plans (7-day free trial)": "Paket usaha (uji coba gratis 7 hari)",
   "Terms and Conditions": "Syarat dan Ketentuan",
   "Privacy Policy": "Kebijakan Privasi",
   "This invite link is invalid or has expired.": "Tautan undangan ini tidak valid atau sudah kedaluwarsa.",
@@ -144,7 +141,6 @@ const signup = {
   "Back to Login": "Kembali ke halaman masuk",
   "Continue with Google": "Lanjutkan dengan Google",
   "Redirecting…": "Mengalihkan…",
-  "Already have an account?": "Sudah punya akun?",
   "Log in": "Masuk",
   "We’ll email you a link to verify it’s yours.": "Kami akan mengirim tautan ke email Anda untuk memastikan email itu milik Anda.",
   "Please enter a valid email address.": "Silakan masukkan alamat email yang valid.",
@@ -672,7 +668,23 @@ const signup = {
   "7-day free trial": "Uji coba gratis 7 hari",
   "Your shop": "Toko Anda",
   "on Sellio": "di Sellio",
-  "Opening soon": "Segera buka"
+  "Opening soon": "Segera buka",
+  "That’s a staff login. Staff log in with their mobile number and password.": "Itu login staf. Staf masuk dengan nomor ponsel dan kata sandi.",
+  "No new code was sent: one went to this address less than a minute ago. Use the code in the newest email from Sellio.": "Tidak ada kode baru yang dikirim: kode terakhir dikirim ke alamat ini kurang dari semenit yang lalu. Gunakan kode di email terbaru dari Sellio.",
+  "There’s no Sellio account with this email.": "Tidak ada akun Sellio dengan email ini.",
+  "That code isn’t right, or it has expired. Check the newest email from Sellio, or send a new code.": "Kode itu salah atau sudah kedaluwarsa. Periksa email terbaru dari Sellio, atau kirim kode baru.",
+  "Please enter the 6-digit code from the email.": "Silakan masukkan kode 6 digit dari email.",
+  "Too many tries. Please wait a few minutes and try again.": "Terlalu banyak percobaan. Silakan tunggu beberapa menit dan coba lagi.",
+  "Your account is open again. Send a new code to log in.": "Akun Anda sudah dibuka kembali. Kirim kode baru untuk masuk.",
+  "Log in to your Sellio account.": "Masuk ke akun Sellio Anda.",
+  "Log in with": "Masuk dengan",
+  Email,
+  "We’ll email you a 6-digit code. No password needed.": "Kami akan mengirim kode 6 digit ke email Anda. Tanpa kata sandi.",
+  "Email me a code": "Kirim kode ke email saya",
+  "Code sent to {email}": "Kode dikirim ke {email}",
+  "Enter the 6-digit code": "Masukkan kode 6 digit",
+  "Resend code in {time}": "Kirim ulang kode dalam {time}",
+  "Resend code": "Kirim ulang kode"
 };
 const Dashboard = "Dasbor";
 const Categories = "Kategori";

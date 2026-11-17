@@ -51,6 +51,7 @@ const Indonesia$1 = "印尼";
 const Language$1 = "语言";
 const Close$2 = "关闭";
 const More$2 = "更多";
+const Email = "邮箱";
 const signup = {
   "Welcome!": "欢迎！",
   "Let's get you started": "马上开始吧",
@@ -84,10 +85,6 @@ const signup = {
   "Create a free account": "创建免费账号",
   or,
   "see business plans": "查看商业方案",
-  "Create a free Sellio account: sell from home for free, or choose a business plan.": "创建免费的 Sellio 账号：在家免费卖东西，或选择商业方案。",
-  "Create a free Sellio account to sell from home for free.": "创建免费的 Sellio 账号，在家免费卖东西。",
-  "Create my free account": "创建我的免费账号",
-  "Business plans (7-day free trial)": "商业方案（7 天免费试用）",
   "Terms and Conditions": "条款与条件",
   "Privacy Policy": "隐私政策",
   "This invite link is invalid or has expired.": "此邀请链接无效或已过期。",
@@ -144,7 +141,6 @@ const signup = {
   "Back to Login": "返回登录",
   "Continue with Google": "使用 Google 继续",
   "Redirecting…": "正在跳转…",
-  "Already have an account?": "已经有账号？",
   "Log in": "登录",
   "We’ll email you a link to verify it’s yours.": "我们会发送链接到这个邮箱，确认它是您的。",
   "Please enter a valid email address.": "请输入有效的邮箱地址。",
@@ -672,7 +668,23 @@ const signup = {
   "7-day free trial": "7 天免费试用",
   "Your shop": "您的店铺",
   "on Sellio": "在 Sellio",
-  "Opening soon": "即将开业"
+  "Opening soon": "即将开业",
+  "That’s a staff login. Staff log in with their mobile number and password.": "那是员工账号。员工请用手机号码和密码登录。",
+  "No new code was sent: one went to this address less than a minute ago. Use the code in the newest email from Sellio.": "没有发送新验证码：不到一分钟前已经发了一个到这个地址。请使用 Sellio 最新那封邮件里的验证码。",
+  "There’s no Sellio account with this email.": "没有使用这个邮箱的 Sellio 账号。",
+  "That code isn’t right, or it has expired. Check the newest email from Sellio, or send a new code.": "验证码不对，或已过期。请查看 Sellio 最新的邮件，或重新发送验证码。",
+  "Please enter the 6-digit code from the email.": "请输入邮件里的 6 位验证码。",
+  "Too many tries. Please wait a few minutes and try again.": "尝试次数太多。请稍等几分钟再试。",
+  "Your account is open again. Send a new code to log in.": "您的账号已重新开启。请重新发送验证码以登录。",
+  "Log in to your Sellio account.": "登录您的 Sellio 账号。",
+  "Log in with": "登录方式",
+  Email,
+  "We’ll email you a 6-digit code. No password needed.": "我们会发送 6 位验证码到您的邮箱，无需密码。",
+  "Email me a code": "发送验证码到我的邮箱",
+  "Code sent to {email}": "验证码已发送至 {email}",
+  "Enter the 6-digit code": "输入 6 位验证码",
+  "Resend code in {time}": "{time} 后可重新发送验证码",
+  "Resend code": "重新发送验证码"
 };
 const Dashboard = "概览";
 const Categories = "分类";

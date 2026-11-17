@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mail, User, Phone, Lock, ChevronDown, AlertCircle, ArrowRight, BadgeCheck } from 'lucide-react';
 import { toast } from 'sonner';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { isNativeApp } from '@/lib/nativeApp';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { getSupabase } from '@/lib/supabaseClient';
@@ -90,17 +90,21 @@ function Notice({ tone = 'amber', children }) {
 // An email that already has an account is signed in by the same link. One whose account is
 // closed (its deletion is pending) gets the closed-account screen instead: Keep my account
 // (open again and carry on) or Start again (deleted, then sign up afresh).
-export default function Join() {
+// The first screen has Login / Sign Up on it (Alvin, 17 Nov 2026): it is also the login page's
+// Sign Up tab (embedded: inside /Auth, no emailed link to read; onLogin goes back to its Login
+// tab, initialEmail fills in the address). On /Join, Login opens the login page.
+export default function Join({ embedded = false, onLogin = null, initialEmail = '' } = {}) {
   const { t } = useAppText();
   const { setAppUser } = useAppUser();
-  const [stage, setStage] = useState('loading'); // loading | start | sent | finish | staff | closed
+  const navigate = useNavigate();
+  const [stage, setStage] = useState(embedded ? 'start' : 'loading'); // loading | start | sent | finish | staff | closed
   // Phone / browser Back from "check your email" returns to the email form, like
   // "Use a different email".
   useBackToClose(stage === 'sent', () => { setStage('start'); setNotice(''); });
   const [closedAccount, setClosedAccount] = useState(null); // { proof, closed, email }
   const leaveClosedAccount = () => { setClosedAccount(null); setStage('start'); };
   useBackToClose(stage === 'closed', leaveClosedAccount);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(initialEmail);
   const [notice, setNotice] = useState('');
   const [sending, setSending] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -132,6 +136,12 @@ export default function Join() {
     (async () => {
       try {
         const supabase = await getSupabase();
+        // The login page's Sign Up tab shows at once; someone already signed in goes on.
+        if (embedded) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) await continueSignedIn(supabase);
+          return;
+        }
         const link = readEmailLink(window.location.search, window.location.hash);
         if (link.error) {
           window.history.replaceState(window.history.state, '', window.location.pathname);
@@ -403,6 +413,9 @@ export default function Join() {
     }
   };
 
+  // Login / Sign Up: Login is the login page (its Login tab when this is its Sign Up tab).
+  const goLogin = () => (onLogin ? onLogin() : navigate('/Auth', { replace: true }));
+
   const signOut = async () => {
     const supabase = await getSupabase();
     await supabase.auth.signOut({ scope: 'local' }); // this device only
@@ -422,7 +435,15 @@ export default function Join() {
             two have the awning on the card's top edge, then where they are (1, 2 of 3). */}
         <div className={`relative bg-white rounded-2xl shadow-xl p-8${AWNING_STAGES.includes(stage) ? ' pt-0 overflow-hidden' : ''}`}>
           <AppLanguageSwitch className={AWNING_STAGES.includes(stage) ? 'absolute right-3 top-1 z-10 join-stall-language' : 'absolute right-3 top-3 z-10'} />
-          {stage === 'start' && <JoinStall />}
+          {stage === 'start' && (
+            <>
+              <JoinStall />
+              <div className="auth-tabs mb-4">
+                <button type="button" aria-pressed="false" onClick={goLogin}>{t('Login')}</button>
+                <button type="button" aria-pressed="true">{t('Sign Up')}</button>
+              </div>
+            </>
+          )}
           {(stage === 'sent' || stage === 'finish') && (
             <>
               <div className="join-stall-awning -mx-8" aria-hidden="true" />
@@ -522,10 +543,6 @@ export default function Join() {
                   {t('Cancel Google sign-in')}
                 </button>
               )}
-              <p className="mt-5 text-center text-sm text-slate-500">
-                {t('Already have an account?')}{' '}
-                <a href="/Auth" className="font-semibold text-orange-500 hover:text-orange-600">{t('Log in')}</a>
-              </p>
             </>
           )}
 

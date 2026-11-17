@@ -15,7 +15,9 @@ const SIGN_LOGO = '/branding/sellio-logo-sign.webp';
 // beside the stall; and "Open your shop on Sellio" with a FREE! sticker. No emoji: drawn icons.
 // The styles and motion are in index.css (.join-stall); a phone set to reduce motion keeps it
 // still. The card around it has no top padding, so the awning sits on its top edge.
-export default function JoinStall() {
+// The login page has the same stall (Alvin, 17 Nov 2026): without the two stickers
+// (stickers={false}), and its own heading in place of "Open your shop on Sellio" (children).
+export default function JoinStall({ stickers: showStickers = true, children = null }) {
   const { t, language } = useAppText();
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const stickers = useRef(null);
@@ -24,7 +26,7 @@ export default function JoinStall() {
   // smaller rather than spill past its ends.
   useLayoutEffect(() => {
     const row = stickers.current;
-    if (!row) return undefined;
+    if (!row || !showStickers) return undefined;
     const fit = () => {
       row.style.setProperty('--fit', '1');
       const items = [...row.children];
@@ -37,7 +39,7 @@ export default function JoinStall() {
     const watch = typeof ResizeObserver === 'function' ? new ResizeObserver(fit) : null;
     watch?.observe(row);
     return () => watch?.disconnect();
-  }, [language]);
+  }, [language, showStickers]);
 
   const free = t('FREE!');
   const sign = (
@@ -118,17 +120,21 @@ export default function JoinStall() {
             <a href="/" className={signClass} aria-label={t('Sellio home')}>{sign}</a>
           )}
         </div>
-        <div ref={stickers} className="join-stall-stickers" data-testid="join-stall-stickers">
-          <span className="join-stall-sticker home"><House aria-hidden="true" strokeWidth={2.5} />{t('Sell from home')}</span>
-          <span className="join-stall-sticker business"><Store aria-hidden="true" strokeWidth={2.5} />{t('Run your business')}</span>
-        </div>
+        {showStickers && (
+          <div ref={stickers} className="join-stall-stickers" data-testid="join-stall-stickers">
+            <span className="join-stall-sticker home"><House aria-hidden="true" strokeWidth={2.5} />{t('Sell from home')}</span>
+            <span className="join-stall-sticker business"><Store aria-hidden="true" strokeWidth={2.5} />{t('Run your business')}</span>
+          </div>
+        )}
       </div>
-      <div className="join-stall-headline px-8">
-        <div className="join-stall-hl">
-          <span className="join-stall-free"><span className={`join-stall-burst${free.length > 5 ? ' long' : ''}`}>{free}</span></span>
-          <h1>{t('Open your shop on {name}', { name: <span className="join-stall-brand">Sellio</span> })}</h1>
+      {children || (
+        <div className="join-stall-headline px-8">
+          <div className="join-stall-hl">
+            <span className="join-stall-free"><span className={`join-stall-burst${free.length > 5 ? ' long' : ''}`}>{free}</span></span>
+            <h1>{t('Open your shop on {name}', { name: <span className="join-stall-brand">Sellio</span> })}</h1>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

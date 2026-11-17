@@ -321,16 +321,19 @@ try {
   await act(async () => { await appText.resetAppTextForTests({ preview: L, choice: L }); });
   // What each screen must say in the language under test.
   const S = {
-    id: { signIn: ['Nomor Ponsel', 'Lupa kata sandi?', 'Masuk dengan Google', 'Dengan melanjutkan, Anda menyetujui'], forgot: 'Lupa kata sandi?',
-      reset: ['Reset Kata Sandi', 'Masukkan nomor ponsel yang terdaftar'], join: ['Buka toko Anda di Sellio', 'Jualan dari rumah', 'Kelola usaha', 'GRATIS!', 'Lanjutkan dengan Google', 'Kirim email verifikasi', 'Sudah punya akun?'],
+    id: { signIn: ['Selamat datang kembali!', 'Masuk ke akun Sellio Anda.', 'Nomor ponsel', 'Lupa kata sandi?', 'Masuk dengan Google', 'Dengan melanjutkan, Anda menyetujui'], forgot: 'Lupa kata sandi?',
+      phone: 'Nomor ponsel', email: 'Email', emailAsk: ['Kami akan mengirim kode 6 digit ke email Anda. Tanpa kata sandi.', 'Kirim kode ke email saya'],
+      reset: ['Reset Kata Sandi', 'Masukkan nomor ponsel yang terdaftar'], join: ['Buka toko Anda di Sellio', 'Jualan dari rumah', 'Kelola usaha', 'GRATIS!', 'Lanjutkan dengan Google', 'Kirim email verifikasi', 'Masuk', 'Daftar'],
       plans: ['sekitar Rp255.000, ditagih dalam Rupiah', 'Harga belum termasuk PPN.', 'Hingga 100 pesanan/bulan', 'Mulai Uji Coba Gratis'], progress: ['1 / 3 Selesai', 'Progres Anda'],
       industries: ['Makanan & Minuman / Kafe / Restoran', 'Ritel', 'Jasa'], colour: 'Biru Laut', table: 'Meja 3' },
-    zh: { signIn: ['手机号码', '忘记密码？', '使用 Google 登录', '继续即表示您同意'], forgot: '忘记密码？',
-      reset: ['重设密码', '输入您注册的手机号码'], join: ['在 Sellio 开设您的店铺', '在家开店', '经营您的生意', '免费！', '使用 Google 继续', '发送验证邮件', '已经有账号？'],
+    zh: { signIn: ['欢迎回来！', '登录您的 Sellio 账号。', '手机号码', '忘记密码？', '使用 Google 登录', '继续即表示您同意'], forgot: '忘记密码？',
+      phone: '手机号码', email: '邮箱', emailAsk: ['我们会发送 6 位验证码到您的邮箱，无需密码。', '发送验证码到我的邮箱'],
+      reset: ['重设密码', '输入您注册的手机号码'], join: ['在 Sellio 开设您的店铺', '在家开店', '经营您的生意', '免费！', '使用 Google 继续', '发送验证邮件', '登录', '注册'],
       plans: ['约 Rp255.000，以印尼盾收费', '价格未含 PPN（增值税）。', '每月最多 100 张订单', '开始免费试用'], progress: ['已完成 1 / 3', '您的进度'],
       industries: ['餐饮/咖啡馆/餐厅', '零售', '服务'], colour: '海洋蓝', table: '3号桌' },
-    ms: { signIn: ['Nombor Telefon', 'Lupa kata laluan?', 'Log masuk dengan Google', 'Dengan meneruskan, anda bersetuju'], forgot: 'Lupa kata laluan?',
-      reset: ['Tetapkan Semula Kata Laluan', 'Masukkan nombor telefon berdaftar anda'], join: ['Buka kedai anda di Sellio', 'Jual dari rumah', 'Urus perniagaan', 'PERCUMA!', 'Teruskan dengan Google', 'Hantar e-mel pengesahan', 'Sudah ada akaun?'],
+    ms: { signIn: ['Selamat kembali!', 'Log masuk ke akaun Sellio anda.', 'Nombor telefon bimbit', 'Lupa kata laluan?', 'Log masuk dengan Google', 'Dengan meneruskan, anda bersetuju'], forgot: 'Lupa kata laluan?',
+      phone: 'Nombor telefon bimbit', email: 'E-mel', emailAsk: ['Kami akan menghantar kod 6 digit ke e-mel anda. Tiada kata laluan diperlukan.', 'Hantar kod ke e-mel saya'],
+      reset: ['Tetapkan Semula Kata Laluan', 'Masukkan nombor telefon berdaftar anda'], join: ['Buka kedai anda di Sellio', 'Jual dari rumah', 'Urus perniagaan', 'PERCUMA!', 'Teruskan dengan Google', 'Hantar e-mel pengesahan', 'Log Masuk', 'Daftar'],
       plans: ['kira-kira Rp255.000, dicaj dalam Rupiah', 'Harga belum termasuk PPN (VAT).', 'Sehingga 100 pesanan/bulan', 'Mulakan Percubaan Percuma'], progress: ['1 / 3 Selesai', 'Kemajuan Anda'],
       industries: ['Makanan & Minuman / Kafe / Restoran', 'Runcit', 'Perkhidmatan'], colour: 'Biru Lautan', table: 'Meja 3' },
   }[L];
@@ -338,12 +341,17 @@ try {
   page = await mount(h(MemoryRouter, null, h(app.Auth)));
   let shown = checkScreen(page.host, 'Sign in');
   for (const words of S.signIn) assert.ok(shown.includes(words), `Sign in shows "${words}": ${shown}`);
-  // The language button sits in the card's top corner, above the logo (Alvin, 16 Nov 2026: "Find
-  // a good spot"), folded to the language in use.
+  // The language button sits in the card's top corner, on the awning above the stall (Alvin, 16
+  // and 17 Nov 2026), folded to the language in use.
   const corner = page.host.querySelector('.auth-card > .absolute [data-testid="app-language-switch"]');
   assert.ok(corner, 'Sign in: the language button is in the card\'s corner');
   assert.equal(text(corner.querySelector('button[aria-haspopup="menu"] [lang]')), { id: 'ID', zh: '中文', ms: 'MY' }[L]);
-  assert.ok(corner.compareDocumentPosition(page.host.querySelector('img[alt="Sellio"]')) & window.Node.DOCUMENT_POSITION_FOLLOWING, 'before the logo');
+  assert.ok(corner.compareDocumentPosition(page.host.querySelector('[data-testid="join-stall"]')) & window.Node.DOCUMENT_POSITION_FOLLOWING, 'before the stall');
+  // Log in with an email: the address and the 6-digit code it sends, in the language.
+  await click(buttonNamed(S.email, page.host), S.email);
+  shown = checkScreen(page.host, 'Log in with an email');
+  for (const words of S.emailAsk) assert.ok(shown.includes(words), `Log in with an email shows "${words}": ${shown}`);
+  await click(buttonNamed(S.phone, page.host), S.phone);
   await click(buttonNamed(S.forgot, page.host), S.forgot);
   shown = checkScreen(page.host, 'Forgot password');
   for (const words of S.reset) assert.ok(shown.includes(words), `Forgot password shows "${words}": ${shown}`);

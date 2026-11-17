@@ -5,14 +5,19 @@ emails, and they live in the Supabase dashboard, not in the database, so they ar
 hand (Alvin, 5 Nov 2026: a professional "Verify my email" email, not Supabase's "Your Magic
 Link").
 
-Supabase dashboard → Authentication → Emails → Templates. For each template below: set the
-Subject, paste the file's whole contents into the message body (Source), and Save.
+Supabase dashboard → Authentication → Emails → Templates. For each template below: paste the
+subject file's line into Subject, paste the file's whole contents into the message body
+(Source), and Save.
 
-| Template in the dashboard | Subject                                      | File                       |
-|---------------------------|----------------------------------------------|----------------------------|
-| Magic Link                | [Sellio] Please verify your email address    | `verify-email.html`        |
-| Confirm signup            | [Sellio] Please verify your email address    | `verify-email-signup.html` |
-| Reset Password            | Reset your Sellio password                   | `reset-password.html`      |
+| Template in the dashboard | Subject (paste)                      | File                       |
+|---------------------------|--------------------------------------|----------------------------|
+| Magic Link                | `verify-email.subject.txt`           | `verify-email.html`        |
+| Confirm signup            | `verify-email-signup.subject.txt`    | `verify-email-signup.html` |
+| Reset Password            | `reset-password.subject.txt`         | `reset-password.html`      |
+
+The Magic Link subject and body each have two versions (Go template `{{ if eq .RedirectTo
+"https://sellio.sg/Auth" }}…{{ else }}…{{ end }}`): the login page's sign-in code, or the
+verify email. Paste them whole, `{{ … }}` included.
 
 Who gets which:
 
@@ -21,6 +26,13 @@ Who gets which:
   Link template to a new address too, not Confirm signup. An address that already has an
   account is signed in by the same link; one whose account is closed gets the closed-account
   screen (Keep my account / Start again).
+- **Your sign-in code** (the Magic Link template too, Alvin 17 Nov 2026): "Email me a code" on
+  the login page (Auth, Email). The login page asks Supabase for the email with
+  https://sellio.sg/Auth as its redirect, which picks this version: the 6-digit code
+  (`{{ .Token }}`) to type in, in the subject and the email, and no link. Supabase's Email
+  OTP Length must stay 6 (Authentication → Sign In / Providers → Email): the login page has
+  six boxes. A closed account's code opens the closed-account screen (its code's hash is the
+  same as the link's token_hash).
 - **Confirm signup**: the same email, only sent if "Confirm email" is ever turned on.
 - **Reset Password**: Forgot password (phone sign-in), sent to the account's email.
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Phone, Lock, User, Mail, ChevronDown, Check, AlertCircle } from 'lucide-react';
+import { Phone, Lock, User, Mail, ChevronDown, Check, AlertCircle, ArrowRight, BadgeCheck, Clock } from 'lucide-react';
 import { getSupabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { createPageUrl } from '../utils';
@@ -12,7 +12,10 @@ import { noteSignInWelcome } from '@/lib/signInWelcome';
 import { googleSignInAvailable, startGoogleSignIn } from '@/lib/googleSignIn';
 import { COMPLETE_KEY, clearMobileAuth, hasMobileGoogleCompletion, isNativeAndroid } from '@/lib/mobileOAuth';
 import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
-import { SELLIO_SITE, SELLIO_WEB_ORIGINS, accountErrorMessage, decideOnboardingAccess, isClosedLoginError, isEmail, phoneCountryFor } from '@/lib/accountFlow';
+import {
+  SELLIO_SITE, SELLIO_WEB_ORIGINS, accountErrorMessage, decideOnboardingAccess, emailResendWait, isClosedLoginError, isEmail, isExpiredLinkError,
+  isStaffLoginEmail, nextStepFor, phoneCountryFor,
+} from '@/lib/accountFlow';
 import { FieldError, FormError, fieldBorder, fieldProps, focusFirst } from '@/components/ui-custom/FieldError';
 import { visitorCountry } from '@/lib/countries';
 import { homeFor, isStaffAccount } from '@/lib/staffAccess';
@@ -21,6 +24,10 @@ import { callClosedAccount, closedAccountMessage } from '@/lib/closedAccount';
 import ClosedAccount from '@/components/auth/ClosedAccount';
 import TermsLine from '@/components/auth/TermsLine';
 import AppLanguageSwitch from '@/components/ui-custom/AppLanguageSwitch';
+import JoinStall from '@/components/auth/JoinStall';
+import CodeBoxes from '@/components/auth/CodeBoxes';
+import { emailCodeTokenHash } from '@/lib/sha224';
+import Join from './Join';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { isCapacitorApp, outsideLinkProps, sellsPlans, PLANS_ON_WEBSITE } from '@/lib/nativeApp';
 import { useAppText, N_, appT } from '@/lib/appText';
@@ -94,6 +101,16 @@ const signInProblem = (result) => {
   return Object.assign(new Error(message), { fields: result?.code === 'invalid' ? { phone: true, password: message } : null });
 };
 
+// Log in with an email code (Alvin, 17 Nov 2026): "Email me a code" has Supabase email a 6-digit
+// code to an account's address (no new accounts here), and typing it in signs them in. This
+// redirect picks the Magic Link email's code version (scripts/email-templates.py,
+// LOGIN_REDIRECT), whichever Sellio address the login page is on; no link is followed.
+const LOGIN_CODE_REDIRECT = `${SELLIO_SITE}/Auth`;
+const CODE_LENGTH = 6; // Supabase's Email OTP Length (Authentication → Sign In / Providers → Email)
+const RESEND_SECONDS = 60;
+const resendTime = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+const BUTTON_STYLE = { background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' };
+
 export default function Auth() {
   const { t } = useAppText();
   const { setAppUser } = useAppUser();
@@ -154,6 +171,39 @@ export default function Auth() {
     return isLogin ? { form: e.form } : { ...e, [name]: undefined };
   });
   const fixForgotField = (name) => setForgotErrors((e) => (e[name] ? { ...e, [name]: undefined } : e));
+
+  // The Login tab: a mobile number and password, or an email code (method). The code goes to
+  // codeSentTo; until then the email is asked for.
+  const [method, setMethod] = useState('phone');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [codeSentTo, setCodeSentTo] = useState('');
+  const [code, setCode] = useState('');
+  const [codeCooldown, setCodeCooldown] = useState(0);
+  const [codeNotice, setCodeNotice] = useState('');
+  const [emailBusy, setEmailBusy] = useState(false);
+  // Sign Up from the login's "Create a free account": the sign-up starts with that email.
+  const [signUpEmail, setSignUpEmail] = useState('');
+  const codeStage = isLogin && method === 'email' && Boolean(codeSentTo);
+  const chooseMethod = (next) => { setMethod(next); setErrors({}); };
+  const goSignUp = (address = '') => { setSignUpEmail(address); setIsLogin(false); setErrors({}); };
+  const differentEmail = () => {
+    setCodeSentTo(''); setCode(''); setCodeNotice(''); setErrors({});
+    setTimeout(() => document.getElementById('auth-login-email')?.focus(), 0);
+  };
+  // Phone / browser Back from the code returns to the email, like "Use a different email". Once
+  // the code has signed them in, its Back step goes before the next page opens (leavingCode), so
+  // Back from that page doesn't land on this one again.
+  const [leavingCode, setLeavingCode] = useState(false);
+  useBackToClose(codeStage && !leavingCode, () => { setCodeSentTo(''); setCode(''); setCodeNotice(''); setErrors({}); });
+  useEffect(() => {
+    if (codeCooldown <= 0) return undefined;
+    const timer = setTimeout(() => setCodeCooldown((left) => left - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [codeCooldown]);
+  // The code's boxes take the focus when they appear (the phone's keyboard opens on them).
+  useEffect(() => {
+    if (codeStage) document.getElementById('auth-code')?.focus();
+  }, [codeStage]);
 
   // On mount: check if user is already authenticated and has completed onboarding.
   // If so, redirect immediately — do NOT run invite-token validation at all.
@@ -766,6 +816,181 @@ export default function Auth() {
     }
   };
 
+  // Signed in with an email code: the account's profile for this device, then where it belongs,
+  // as after a phone sign-in. An account that hasn't finished signing up goes on to finish it
+  // (Join).
+  const finishEmailSignIn = async (supabase, address) => {
+    const { data: rows } = await supabase
+      .from('app_users')
+      .select('id, email, full_name, role, onboarding_completed, tenant_id, phone')
+      .eq('email', address)
+      .limit(1);
+    const appUserRow = rows?.[0] || null;
+    if (appUserRow) {
+      let tenantId = appUserRow.tenant_id;
+      if (!tenantId) {
+        const { data: tuRows } = await supabase
+          .from('tenant_users')
+          .select('tenant_id')
+          .eq('user_email', appUserRow.email)
+          .eq('status', 'active')
+          .limit(1);
+        tenantId = tuRows?.[0]?.tenant_id || null;
+      }
+      setAppUser({ ...appUserRow, tenant_id: tenantId });
+    }
+    let destination;
+    if (appUserRow?.onboarding_completed) {
+      destination = homeFor(appUserRow);
+    } else {
+      const { data: status } = await supabase.rpc('my_account_status');
+      destination = !appUserRow || nextStepFor(status) === 'finish' ? '/Join' : await landingWithoutShop(supabase, appUserRow);
+    }
+    destination = accountDeletionDestination(destination);
+    welcomeBackOn(destination);
+    completeAuthNavigation(destination);
+  };
+
+  // "Email me a code", and Resend: Supabase emails a code to an account's address (no new
+  // accounts from the login page).
+  const sendLoginCode = async (e, again = false) => {
+    e?.preventDefault?.();
+    const address = (again ? codeSentTo : loginEmail).trim().toLowerCase();
+    const problem = !isEmail(address) ? t('Please enter a valid email address.')
+      : isStaffLoginEmail(address) ? t('That’s a staff login. Staff log in with their mobile number and password.') : '';
+    if (problem) {
+      setErrors({ loginEmail: problem });
+      focusFirst({ loginEmail: true }, ['loginEmail'], () => 'auth-login-email');
+      return;
+    }
+    setErrors({});
+    setCodeNotice('');
+    setEmailBusy(true);
+    try {
+      const supabase = await getSupabase();
+      const { error } = await supabase.auth.signInWithOtp({
+        email: address,
+        options: { shouldCreateUser: false, emailRedirectTo: LOGIN_CODE_REDIRECT },
+      });
+      if (error) throw error;
+      setLoginEmail(address);
+      setCodeSentTo(address);
+      setCode('');
+      setCodeCooldown(RESEND_SECONDS);
+    } catch (err) {
+      // This address was emailed less than a minute ago: that email's code is the one that works.
+      const wait = emailResendWait(err);
+      if (wait !== null) {
+        setLoginEmail(address);
+        setCodeSentTo(address);
+        setCodeCooldown(Math.max(1, wait));
+        setCodeNotice(t('No new code was sent: one went to this address less than a minute ago. Use the code in the newest email from Sellio.'));
+        return;
+      }
+      // No Sellio account has this address (Supabase: "Signups not allowed for otp").
+      if (err?.code === 'otp_disabled' || /signups not allowed/i.test(String(err?.message || ''))) {
+        setCodeSentTo('');
+        setErrors({ loginEmail: t('There’s no Sellio account with this email.'), noAccount: true });
+        focusFirst({ loginEmail: true }, ['loginEmail'], () => 'auth-login-email');
+        return;
+      }
+      setErrors({ form: accountErrorMessage(err) });
+    } finally {
+      setEmailBusy(false);
+    }
+  };
+
+  // A closed account (its deletion is pending): Supabase refused the code without using it up.
+  // The code's token_hash is what the email's link would carry, so the closed-account server
+  // finds the account by it, as for Join's link (closed_account_by_email_link).
+  const openCodeClosedAccount = async (address, token) => {
+    const proof = { emailTokenHash: emailCodeTokenHash(address, token), emailLinkType: 'magiclink' };
+    const reply = await callClosedAccount({ action: 'status', ...proof });
+    if (reply?.ok && reply.closed) {
+      setClosedAccount({ proof, closed: reply.closed, email: typeof reply.email === 'string' && reply.email ? reply.email : address });
+      return;
+    }
+    if (reply?.code === 'link_invalid' || reply?.code === 'invalid') {
+      setCode('');
+      setErrors({ code: t('That code isn’t right, or it has expired. Check the newest email from Sellio, or send a new code.') });
+      return;
+    }
+    setErrors({ form: reply ? closedAccountMessage(reply) : t('Can’t reach Sellio. Check your connection and try again.') });
+  };
+
+  const checkLoginCode = async (e, typed) => {
+    e?.preventDefault?.();
+    if (emailBusy) return;
+    const token = String(typed ?? code).replace(/\D/g, '');
+    if (token.length !== CODE_LENGTH) {
+      setErrors({ code: t('Please enter the 6-digit code from the email.') });
+      document.getElementById('auth-code')?.focus();
+      return;
+    }
+    setErrors({});
+    setEmailBusy(true);
+    let leaving = false;
+    try {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase.auth.verifyOtp({ email: codeSentTo, token, type: 'email' });
+      if (isClosedLoginError(error)) {
+        await openCodeClosedAccount(codeSentTo, token);
+        return;
+      }
+      if (isExpiredLinkError(error)) {
+        setCode('');
+        setErrors({ code: t('That code isn’t right, or it has expired. Check the newest email from Sellio, or send a new code.') });
+        setTimeout(() => document.getElementById('auth-code')?.focus(), 0);
+        return;
+      }
+      if (error?.status === 429 || error?.code === 'over_request_rate_limit') {
+        setErrors({ form: t('Too many tries. Please wait a few minutes and try again.') });
+        return;
+      }
+      if (error) throw error;
+      leaving = true;
+      setLeavingCode(true);
+      await new Promise((resolve) => setTimeout(resolve, 120)); // the Back step goes first
+      await finishEmailSignIn(supabase, data?.session?.user?.email || data?.user?.email || codeSentTo);
+    } catch (err) {
+      leaving = false;
+      setLeavingCode(false);
+      setErrors({ form: accountErrorMessage(err) });
+    } finally {
+      if (!leaving) setEmailBusy(false);
+    }
+  };
+
+  // The six boxes: the last digit checks the code straight away.
+  const typeCode = (next) => {
+    setCode(next);
+    if (errors.code || errors.form) setErrors({});
+    if (next.length === CODE_LENGTH && !emailBusy) checkLoginCode(null, next);
+  };
+
+  // Keep my account is done (a code's closed account): the account is open again, and the same
+  // code (Supabase didn't use it up while the account was closed) now signs them in.
+  const continueAfterCodeRestore = async () => {
+    const proof = closedAccount?.proof;
+    setClosedAccount(null);
+    setEmailBusy(true);
+    try {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase.auth.verifyOtp({ token_hash: proof?.emailTokenHash, type: proof?.emailLinkType || 'magiclink' });
+      if (error) {
+        setCodeSentTo('');
+        setCode('');
+        setErrors({ form: t('Your account is open again. Send a new code to log in.') });
+        setEmailBusy(false);
+        return;
+      }
+      await finishEmailSignIn(supabase, data?.session?.user?.email || data?.user?.email || codeSentTo);
+    } catch (err) {
+      setErrors({ form: accountErrorMessage(err) });
+      setEmailBusy(false);
+    }
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('type') === 'recovery') {
@@ -803,8 +1028,6 @@ export default function Auth() {
     }
   }, []);
 
-  // Determine if we should show the pricing wall (signup tab, no token, not bypass)
-  const showPricingWall = !isLogin && signupMode === 'pricing_wall';
   // Sellio's apps don't sell plans (sellsPlans) and the iPhone app has no Google sign-in yet.
   const plansSold = sellsPlans();
   const googleOffered = googleSignInAvailable();
@@ -817,38 +1040,53 @@ export default function Auth() {
     return <AppLoader visible={true} />;
   }
 
+  // Sign Up (no paid invite in the link): the free sign-up's first step straight away, its email
+  // and Google (Alvin, 17 Nov 2026). It is Join's own first screen, with Login / Sign Up on it, so
+  // the email it sends, Check your email and the rest work as on /Join.
+  if (!isLogin && !urlToken && !closedAccount && !forgotMode) {
+    return <Join embedded initialEmail={signUpEmail} onLogin={() => { setIsLogin(true); setErrors({}); }} />;
+  }
+
+  // A closed account found by an email code: Continue signs in with the same code's link.
+  const codeClosedAccount = Boolean(closedAccount?.proof?.emailTokenHash);
+
   return (
     <>
       <style>{`
         .orange-scroll::-webkit-scrollbar { width: 4px; }
         .orange-scroll::-webkit-scrollbar-track { background: transparent; }
         .orange-scroll::-webkit-scrollbar-thumb { background: #fe7824; border-radius: 4px; }
-        /* The card fits the screen without scrolling: spacing and the logo shrink on
-           shorter screens (phones, the Android app, 720px laptops). Each value is given
-           twice so phones without dvh support keep today's sizes. */
-        .auth-card { padding-top: 32px; padding-bottom: 32px; padding-top: clamp(20px, 3.5dvh, 32px); padding-bottom: clamp(20px, 3.5dvh, 32px); }
-        .auth-gap-b { margin-bottom: 24px; margin-bottom: clamp(12px, 2.6dvh, 24px); }
-        .auth-gap-y { margin-top: 16px; margin-bottom: 16px; margin-top: clamp(10px, 2dvh, 16px); margin-bottom: clamp(10px, 2dvh, 16px); }
-        .auth-gap-t { margin-top: 20px; margin-top: clamp(12px, 2.2dvh, 20px); }
-        .auth-fields > * + * { margin-top: 16px; margin-top: clamp(10px, 1.8dvh, 16px); }
-        /* The logo image has empty space above (15%) and below (25%) the artwork;
-           trim most of it so the visible logo stays the same size. */
-        .auth-logo { height: 112px; margin-top: -15px; margin-bottom: -22px;
-          height: clamp(64px, 13dvh, 112px);
-          margin-top: calc(clamp(64px, 13dvh, 112px) * -0.13);
-          margin-bottom: calc(clamp(64px, 13dvh, 112px) * -0.2); }
-        .auth-logo-gap { margin-bottom: 12px; margin-bottom: clamp(6px, 1.2dvh, 12px); }
       `}</style>
       <div
-        className="h-[100dvh] w-full flex flex-col items-center justify-center p-4 overflow-hidden"
+        className="min-h-[100dvh] w-full flex flex-col items-center justify-center p-4"
         style={{ background: 'radial-gradient(ellipse at top left, #faeee6 0%, #fdf6f2 30%, #ffffff 60%, #fdf4f0 100%)' }}
         onClick={() => setShowCountryDropdown(false)}
       >
-        {/* Auth card — always visible */}
-        <div className="w-full max-w-sm sm:max-w-md max-h-full overflow-y-auto">
-          <div className="auth-card relative bg-white rounded-2xl shadow-xl px-8">
+        <div className="w-full max-w-sm sm:max-w-md">
+          {/* The sign-up's card (Alvin, 17 Nov 2026): the awning on its top edge and, on Login,
+              the stall with the swinging Sellio sign (components/auth/JoinStall.jsx), without
+              the sign-up's stickers, and "Welcome back!". */}
+          <div className="auth-card relative bg-white rounded-2xl shadow-xl p-8 pt-0 overflow-hidden" data-testid="auth-card">
+            <AppLanguageSwitch className="absolute right-3 top-1 z-10 join-stall-language" />
+            {closedAccount || forgotMode ? (
+              <div className="join-stall-awning -mx-8 mb-6" aria-hidden="true" />
+            ) : (
+              <JoinStall stickers={false}>
+                <div className="join-stall-welcome px-8">
+                  <h1>{isLogin ? t('Welcome back!') : t('Welcome!')}</h1>
+                  <p>{isLogin ? t('Log in to your Sellio account.') : t('Let\'s get you started')}</p>
+                </div>
+              </JoinStall>
+            )}
             {closedAccount ? (
-              <ClosedAccount {...closedAccount} onBack={() => setClosedAccount(null)} />
+              <ClosedAccount
+                {...closedAccount}
+                onBack={() => setClosedAccount(null)}
+                {...(codeClosedAccount ? {
+                  onRestored: continueAfterCodeRestore,
+                  onStartOver: () => { const address = closedAccount.email || codeSentTo; setClosedAccount(null); goSignUp(address); },
+                } : {})}
+              />
             ) : forgotMode ? (
               <div>
                 {/* Back button + title */}
@@ -1062,34 +1300,20 @@ export default function Auth() {
               </div>
             ) : (
             <>
-            {/* The language, in the card's top corner (Alvin, 16 Nov 2026: "Find a good spot") */}
-            <AppLanguageSwitch className="absolute right-3 top-3 z-10" />
-            {/* Header */}
-            <div className="auth-gap-b text-center">
-              <div className="auth-logo-gap flex items-center justify-center">
-                <img src="/branding/sellio-logo.webp" alt="Sellio" className="auth-logo w-auto object-contain" />
-              </div>
-              <p className="text-xl font-semibold text-slate-800 mb-0.5">{t('Welcome!')}</p>
-              <p className="text-sm text-slate-500">{t('Let\'s get you started')}</p>
+            {/* Login / Sign Up (Sign Up is the free sign-up's first step, above, unless a paid
+                invite's link brought them here) */}
+            <div className="auth-tabs mb-4">
+              <button type="button" aria-pressed={isLogin} onClick={() => { setIsLogin(true); setErrors({}); }}>{t('Login')}</button>
+              <button type="button" aria-pressed={!isLogin} onClick={() => goSignUp()}>{t('Sign Up')}</button>
             </div>
 
-            {/* Tab Toggle */}
-            <div className="auth-gap-b flex rounded-xl p-1" style={{ background: '#fde8d8' }}>
-              <button
-                type="button"
-                onClick={() => { setIsLogin(true); setErrors({}); }}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${isLogin ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
-              >
-                {t('Login')}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setIsLogin(false); setErrors({}); }}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${!isLogin ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
-              >
-                {t('Sign Up')}
-              </button>
-            </div>
+            {/* Login: a mobile number and password, or a code emailed to them (Alvin, 17 Nov 2026) */}
+            {isLogin && (
+              <div className="auth-how mb-4" role="group" aria-label={t('Log in with')}>
+                <button type="button" aria-pressed={method === 'phone'} onClick={() => chooseMethod('phone')}><Phone aria-hidden="true" />{t('Mobile number')}</button>
+                <button type="button" aria-pressed={method === 'email'} onClick={() => chooseMethod('email')}><Mail aria-hidden="true" />{t('Email')}</button>
+              </div>
+            )}
 
             {/* Invalid token message */}
             {showInvalidToken && (
@@ -1132,9 +1356,9 @@ export default function Auth() {
               </div>
             )}
 
-            {/* Main form — shown for login always, or signup when allowed */}
-            {showForm && !checkingToken && (
-              <form onSubmit={handleSubmit} className="auth-fields" noValidate>
+            {/* The mobile number and password (Login), or a paid invite's sign-up */}
+            {showForm && !checkingToken && (!isLogin || method === 'phone') && (
+              <form onSubmit={handleSubmit} className="auth-fields space-y-4" noValidate>
                 {!isLogin && (
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">{t('Name *')}</label>
@@ -1160,11 +1384,12 @@ export default function Auth() {
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('Phone Number *')}</label>
+                  <label htmlFor="auth-phone" className="block text-sm font-medium text-slate-700 mb-1">{isLogin ? t('Mobile number') : t('Phone Number *')}</label>
                   <div className="flex gap-2">
                     <div className="relative" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
+                        aria-label={t('Country code')}
                         onClick={() => setShowCountryDropdown(!showCountryDropdown)}
                         className="flex items-center gap-1.5 px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white hover:bg-slate-50 transition-colors whitespace-nowrap"
                       >
@@ -1234,7 +1459,7 @@ export default function Auth() {
                 <div>
                   {/* "Forgot password?" sits on the label's line (saves a row) */}
                   <div className="flex items-center justify-between gap-3 mb-1">
-                    <label className="block text-sm font-medium text-slate-700">{t('Password *')}</label>
+                    <label htmlFor="auth-password" className="block text-sm font-medium text-slate-700">{isLogin ? t('Password') : t('Password *')}</label>
                     {isLogin && (
                       <button
                         type="button"
@@ -1267,9 +1492,78 @@ export default function Auth() {
                   type="submit"
                   disabled={loading}
                   className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70"
-                  style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
+                  style={BUTTON_STYLE}
                 >
                   {loading ? t('Please wait...') : isLogin ? t('Login') : t('Sign Up')}
+                </button>
+              </form>
+            )}
+
+            {/* Login with an email: the address, then the 6-digit code from the email */}
+            {isLogin && method === 'email' && !codeSentTo && (
+              <form onSubmit={sendLoginCode} className="space-y-4" noValidate>
+                <div>
+                  <label htmlFor="auth-login-email" className="block text-sm font-medium text-slate-700 mb-1">{t('Email')}</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" aria-hidden="true" />
+                    <input
+                      id="auth-login-email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="you@example.com"
+                      value={loginEmail}
+                      onChange={(e) => { setLoginEmail(e.target.value); setErrors({}); }}
+                      className={`w-full pl-9 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 ${fieldBorder(errors.loginEmail)}`}
+                      aria-invalid={errors.loginEmail ? 'true' : undefined}
+                      aria-describedby={errors.loginEmail ? 'auth-login-email-error auth-login-email-hint' : 'auth-login-email-hint'}
+                    />
+                  </div>
+                  <FieldError id="auth-login-email-error">{errors.loginEmail}</FieldError>
+                  {errors.noAccount && (
+                    <button type="button" onClick={() => goSignUp(loginEmail.trim().toLowerCase())}
+                      className="mt-1.5 text-xs font-semibold text-orange-600 underline underline-offset-2 hover:text-orange-700">
+                      {t('Create a free account')}
+                    </button>
+                  )}
+                  <p id="auth-login-email-hint" className="mt-1.5 text-xs text-slate-400">{t('We’ll email you a 6-digit code. No password needed.')}</p>
+                </div>
+                <FormError>{errors.form}</FormError>
+                <button type="submit" disabled={emailBusy || !loginEmail.trim()}
+                  className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70" style={BUTTON_STYLE}>
+                  <span className="inline-flex items-center justify-center gap-2">
+                    {emailBusy ? t('Sending…') : t('Email me a code')}{!emailBusy && <ArrowRight className="w-4 h-4" aria-hidden="true" />}
+                  </span>
+                </button>
+              </form>
+            )}
+            {codeStage && (
+              <form onSubmit={checkLoginCode} className="space-y-3" noValidate data-testid="login-code-form">
+                <p className="mx-auto flex w-fit max-w-full items-center justify-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700" data-testid="login-code-sent">
+                  <BadgeCheck className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                  <span className="min-w-0 [overflow-wrap:anywhere]">{t('Code sent to {email}', { email: codeSentTo })}</span>
+                </p>
+                {codeNotice && (
+                  <p role="status" className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs leading-relaxed text-amber-800">{codeNotice}</p>
+                )}
+                <div>
+                  <label htmlFor="auth-code" className="block text-center text-sm font-medium text-slate-700">{t('Enter the 6-digit code')}</label>
+                  <CodeBoxes id="auth-code" value={code} onChange={typeCode} error={errors.code} busy={emailBusy} />
+                  <div className="flex justify-center"><FieldError id="auth-code-error">{errors.code}</FieldError></div>
+                  <p className="mt-2 text-center text-xs text-slate-400">{t('Not there? Check your spam folder.')}</p>
+                </div>
+                <FormError>{errors.form}</FormError>
+                <button type="submit" disabled={emailBusy}
+                  className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-70" style={BUTTON_STYLE}>
+                  {emailBusy ? t('Please wait...') : t('Log in')}
+                </button>
+                <button type="button" onClick={(e) => sendLoginCode(e, true)} disabled={emailBusy || codeCooldown > 0}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-slate-700 border border-slate-200 bg-white hover:bg-slate-50 transition-colors disabled:text-slate-400 disabled:hover:bg-white">
+                  <Clock className="w-4 h-4" aria-hidden="true" />
+                  {codeCooldown > 0 ? t('Resend code in {time}', { time: resendTime(codeCooldown) }) : t('Resend code')}
+                </button>
+                <button type="button" onClick={differentEmail}
+                  className="block mx-auto pt-1 text-xs font-semibold text-orange-500 hover:text-orange-600">
+                  {t('Use a different email')}
                 </button>
               </form>
             )}
@@ -1277,7 +1571,7 @@ export default function Auth() {
             {/* Google signup option — shown on signup tab when token is valid */}
             {!isLogin && signupMode === 'allowed' && !checkingToken && googleOffered && (
               <>
-                <div className="auth-gap-y flex items-center gap-3">
+                <div className="my-4 flex items-center gap-3">
                   <div className="flex-1 h-px bg-slate-200" />
                   <span className="text-xs text-slate-400 font-medium">{t('or sign up with')}</span>
                   <div className="flex-1 h-px bg-slate-200" />
@@ -1310,34 +1604,6 @@ export default function Auth() {
               </>
             )}
 
-            {/* Sign Up: a free Sellio account first; business plans (pay first) one tap away */}
-            {showPricingWall && !checkingToken && (
-              <div className="text-center py-4">
-                <p className="text-sm text-slate-500 mb-4">
-                  {plansSold
-                    ? t('Create a free Sellio account: sell from home for free, or choose a business plan.')
-                    : t('Create a free Sellio account to sell from home for free.')}
-                </p>
-                <a
-                  href="/Join"
-                  className="block w-full py-2.5 rounded-xl text-white text-sm font-semibold"
-                  style={{ background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' }}
-                >
-                  {t('Create my free account')}
-                </a>
-                {plansSold ? (
-                  <button
-                    onClick={() => setShowPricingModal(true)}
-                    className="w-full mt-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
-                  >
-                    {t('Business plans (7-day free trial)')}
-                  </button>
-                ) : (
-                  <p className="mt-3 text-sm text-slate-500">{PLANS_ON_WEBSITE}</p>
-                )}
-              </div>
-            )}
-
             {googleLoading && isNativeAndroid() && (
               <button type="button" className="w-full min-h-11 mt-3 text-sm underline"
                 style={{ color: 'var(--primary)' }}
@@ -1346,10 +1612,10 @@ export default function Auth() {
               </button>
             )}
 
-            {/* Divider + Google — login tab always, signup tab only when no token (pricing wall) */}
-            {!checkingToken && googleOffered && (isLogin || showPricingWall) && (
+            {/* Divider + Google — on Login (not while typing an emailed code) */}
+            {!checkingToken && googleOffered && isLogin && !codeStage && (
               <>
-                <div className="auth-gap-y flex items-center gap-3">
+                <div className="my-4 flex items-center gap-3">
                   <div className="flex-1 h-px bg-slate-200" />
                   <span className="text-xs text-slate-400 font-medium">{t('or continue with')}</span>
                   <div className="flex-1 h-px bg-slate-200" />
@@ -1380,7 +1646,7 @@ export default function Auth() {
                     <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-amber-800">
                       {t('There’s no Sellio account for this Google email yet.')}{' '}
-                      <a href="/Join" style={{ fontWeight: 600, color: '#d97706', textDecoration: 'underline' }}>{t('Create a free account')}</a>
+                      <button type="button" onClick={() => goSignUp()} style={{ fontWeight: 600, color: '#d97706', textDecoration: 'underline' }}>{t('Create a free account')}</button>
                       {plansSold && (
                         <>
                           {' '}{t('or')}{' '}
@@ -1394,7 +1660,7 @@ export default function Auth() {
             )}
 
             {!checkingToken && (
-              <p className="auth-gap-t text-center text-[11px] leading-relaxed text-slate-400">
+              <p className="mt-5 text-center text-[11px] leading-relaxed text-slate-400">
                 <TermsLine />
               </p>
             )}

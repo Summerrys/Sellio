@@ -67,10 +67,13 @@ const callbackModule = await load('src/components/auth/MobileOAuthReturn.jsx'); 
 const googleModule = await load('src/lib/googleSignIn.js'); loaded.push(googleModule.local);
 const authModule = await load('src/pages/Auth.jsx'); loaded.push(authModule.local);
 const splashModule = await load('src/pages/Splash.jsx'); loaded.push(splashModule.local);
+// In a router, as in the app (the login page's stall links home with the router's Link there).
+const { MemoryRouter: PageRouter } = await import('react-router-dom');
 const mount = async Component => {
   const container = document.createElement('div'); document.body.appendChild(container);
   const root = createRoot(container);
-  await act(async () => { root.render(React.createElement(Component)); });
+  const page = React.createElement(Component);
+  await act(async () => { root.render(Component.ownRouter ? page : React.createElement(PageRouter, null, page)); });
   return { container, close: async () => { await act(async () => root.unmount()); container.remove(); } };
 };
 let passes = 0;
@@ -193,6 +196,7 @@ try {
       React.createElement(Route, { path: '/Auth', element: React.createElement(Destination) }),
     ));
   }
+  LegacySplashEntry.ownRouter = true;
   const legacy = await mount(LegacySplashEntry);
   assert.equal(legacy.container.textContent, '/Auth?type=recovery&token=invite-fixture#recovery-fixture');
   await legacy.close();
@@ -225,10 +229,11 @@ try {
   passed('Completed Google returns preserve existing staff roles, welcome them back, and route free signups to Join');
 
   {
-    // A brand-new Google account (a bypass email needs no invite) is not "back".
+    // A brand-new Google account (from the free sign-up, ?join=1) is not "back".
     reset(); win.ReactNativeWebView = { postMessage() {} };
+    location.search = '?join=1';
     win.sessionStorage.setItem(COMPLETE_KEY, JSON.stringify({ origin: location.origin, createdAt: Date.now() }));
-    const fresh = { id: 'new-profile', email: 'alvin.leeyq@gmail.com', role: 'admin', tenant_id: null, onboarding_completed: false };
+    const fresh = { id: 'new-profile', email: 'new-owner@example.invalid', role: 'admin', tenant_id: null, onboarding_completed: false };
     let rows = [];
     const chain = { select() { return this; }, eq() { return this; }, limit: async () => ({ data: rows }),
       insert: async () => { rows = [fresh]; return { error: null }; }, single: async () => ({ data: fresh, error: null }),
@@ -242,7 +247,7 @@ try {
     globalThis.authDestination = undefined;
     const auth = await mount(authModule.module.default);
     await act(async () => {});
-    assert.equal(globalThis.authDestination, '/Onboarding');
+    assert.equal(globalThis.authDestination, '/Join');
     assert.equal(welcomeLeft(), null);
     await auth.close();
   }

@@ -259,3 +259,28 @@ button.account-choice, a.account-choice { cursor: pointer; }
   .email-sent-tick-mark { stroke-dashoffset: 0; }
   .sellio-confetti { display: none; }
 }
+
+/* The login page (Alvin, 17 Nov 2026): the sign-up's card. Its heading under the stall
+   ("Welcome back!"), Login / Sign Up (also on the sign-up's first screen), Mobile number /
+   Email, and the email code's six boxes: one real field (paste, the phone's code suggestion,
+   Backspace) drawn as boxes. */
+.join-stall-welcome { padding-top: 18px; text-align: center; }
+.join-stall-welcome h1 { margin: 0; font-size: min(21px, 5.6vw); font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; color: #1e293b; text-wrap: balance; }
+.join-stall-welcome p { margin: 4px 0 0; font-size: 14px; color: #64748b; }
+.auth-tabs { display: flex; padding: 4px; border-radius: 12px; background: #fde8d8; }
+.auth-tabs button { flex: 1; padding: 8px; border-radius: 9px; font-size: 14px; font-weight: 500; color: #64748b; transition: background-color .15s, color .15s; }
+.auth-tabs button[aria-pressed="true"] { background: #fff; color: #0f172a; box-shadow: 0 1px 2px rgba(15,23,42,.08); }
+.auth-how { display: flex; gap: 6px; }
+.auth-how button { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 8px; border: 1px solid #e2e8f0; border-radius: 9999px;
+  background: #fff; font-size: 13px; font-weight: 600; color: #64748b; transition: background-color .15s, border-color .15s, color .15s; }
+.auth-how button svg { width: 14px; height: 14px; flex: none; }
+.auth-how button[aria-pressed="true"] { border-color: #fb923c; background: #fff7ed; color: #c2410c; }
+.login-code { position: relative; width: 100%; max-width: 275px; margin: 6px auto 0; }
+.login-code-boxes { display: flex; gap: 7px; }
+.login-code-box { flex: 1 1 0; min-width: 0; height: 48px; display: grid; place-items: center; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff;
+  font: 700 20px Inter, system-ui, sans-serif; color: #1e293b; transition: border-color .15s, box-shadow .15s; }
+.login-code-box.on { border-color: #fb923c; box-shadow: 0 0 0 2px #fdba74; }
+.login-code.bad .login-code-box { border-color: #f87171; background: #fef6f6; }
+.login-code.bad .login-code-box.on { box-shadow: 0 0 0 2px #fecaca; }
+.login-code-input { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; background: transparent; opacity: 0;
+  font-size: 16px; color: transparent; caret-color: transparent; cursor: text; }

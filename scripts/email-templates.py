@@ -13,6 +13,12 @@ accounts at once here, so it sends its "Magic Link" template for new and existin
 alike (and "Confirm signup" only if "Confirm email" is ever turned on). Both templates are the
 same verify email; only the link's type differs.
 
+Alvin, 17 Nov 2026: log in with an email code. The login page's "Email me a code" sends the
+same Magic Link template with https://sellio.sg/Auth as its redirect (src/pages/Auth.jsx,
+LOGIN_CODE_REDIRECT), so the template has two versions: for that redirect a sign-in email with
+the 6-digit code ({{ .Token }}) and no link, otherwise the verify email. The subject has the
+same two versions (Supabase reads subjects as templates too).
+
 The links go straight to sellio.sg with the link's token (token_hash), not through Supabase
 first: Join and Auth exchange it there (verifyOtp), so the email shows Sellio's own address, a
 mail scanner that opens the link is much less likely to use it up, on Android it opens Sellio's
@@ -45,6 +51,9 @@ WARN_INK = '#92400e'
 SITE = 'https://sellio.sg'
 LOGO = f'{SITE}/branding/sellio-logo-email.png'   # 144x168, shown at 55x64
 SUPPORT = 'sellio@apptelier.sg'
+CODE_BG = '#fff7ed'
+CODE_LINE = '#fed7aa'
+MONO = "'SF Mono',Menlo,Consolas,'Courier New',monospace"
 
 VERIFY = {
     'subject': '[Sellio] Please verify your email address',
@@ -62,9 +71,33 @@ VERIFY = {
                'you can safely ignore this email.',
 }
 
+# The login page's email code (Alvin, 17 Nov 2026): the code to type in, no link (the login
+# page asked for a code, and a link would sign in wherever the email is opened).
+LOGIN_REDIRECT = f'{SITE}/Auth'
+SIGN_IN_CODE = {
+    'subject': '[Sellio] Your sign-in code is {{ .Token }}',
+    'title': 'Your Sellio sign-in code',
+    'preheader': 'Your Sellio sign-in code is {{ .Token }}. It expires in 1 hour.',
+    'icon': f'{SITE}/branding/email-icon-key.png',
+    'heading': 'Your sign-in code',
+    'paragraphs': [
+        f'Use this code to log in to Sellio as <strong style="color:{INK};">{{{{ .Email }}}}</strong>. '
+        'Type it on the login page, where you asked for it.',
+    ],
+    'code': '{{ .Token }}',
+    'warning': 'This code expires in <strong>1 hour</strong>. Never share it: Sellio will never ask you for it. '
+               'If you didn’t try to log in, you can safely ignore this email.',
+}
+
+
+def by_redirect(login, other):
+    # One template, two emails: the login page's code, or the other (Go template).
+    return f'{{{{ if eq .RedirectTo "{LOGIN_REDIRECT}" }}}}{login}{{{{ else }}}}{other}{{{{ end }}}}'
+
+
 TEMPLATES = [
     {**VERIFY, 'file': 'verify-email.html', 'dashboard': 'Magic Link',
-     'link': f'{SITE}/Join?token_hash={{{{ .TokenHash }}}}&amp;type=magiclink'},
+     'link': f'{SITE}/Join?token_hash={{{{ .TokenHash }}}}&amp;type=magiclink', 'login_code': SIGN_IN_CODE},
     {**VERIFY, 'file': 'verify-email-signup.html', 'dashboard': 'Confirm signup',
      'link': f'{SITE}/Join?token_hash={{{{ .TokenHash }}}}&amp;type=signup'},
     {
@@ -86,6 +119,28 @@ TEMPLATES = [
 ]
 
 
+def action(t, text):
+    if 'code' in t:
+        # The code, big and spaced out, in a soft orange box (copies as the digits alone).
+        return f'''<table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:8px auto 0 auto;">
+<tr><td align="center" bgcolor="{CODE_BG}" style="border-radius:14px;background-color:{CODE_BG};border:1px solid {CODE_LINE};padding:16px 20px 16px 30px;">
+<span style="font-family:{MONO};font-size:34px;line-height:40px;font-weight:700;letter-spacing:10px;color:{INK};">{t['code']}</span>
+</td></tr>
+</table>'''
+    return f'''<table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:8px auto 0 auto;">
+<tr><td align="center" bgcolor="{BUTTON_SOLID}" style="border-radius:12px;background-color:{BUTTON_SOLID};background-image:{BUTTON};">
+<a href="{t['link']}" target="_blank" style="display:inline-block;padding:14px 32px;{text}font-size:15px;line-height:20px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:12px;">{t['button']}</a>
+</td></tr>
+</table>'''
+
+
+def copy_link(t, text):
+    if 'code' in t:
+        return '<div style="height:28px;line-height:28px;font-size:0;">&nbsp;</div>'
+    return f'''<p style="margin:20px 0 6px 0;{text}font-size:12px;line-height:18px;color:{MUTED};">Button not working? Copy and paste this link into your browser:</p>
+<p style="margin:0 0 28px 0;{text}font-size:11px;line-height:17px;color:{LINK};word-break:break-all;"><a href="{t['link']}" target="_blank" style="color:{LINK};text-decoration:underline;word-break:break-all;">{t['link']}</a></p>'''
+
+
 def page(t):
     text = f'font-family:{FONT};'
     paragraphs = '\n'.join(
@@ -98,7 +153,7 @@ def page(t):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
-<title>{t['subject']}</title>
+<title>{t.get('title', t['subject'])}</title>
 </head>
 <body style="margin:0;padding:0;background-color:{PAGE};{text}-webkit-text-size-adjust:100%;">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">{t['preheader']}</div>
@@ -116,11 +171,7 @@ def page(t):
 <tr><td style="padding:28px 36px 0 36px;">
 <p style="margin:0 0 16px 0;{text}font-size:15px;line-height:24px;font-weight:700;color:{INK};">Hi there,</p>
 {paragraphs}
-<table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:8px auto 0 auto;">
-<tr><td align="center" bgcolor="{BUTTON_SOLID}" style="border-radius:12px;background-color:{BUTTON_SOLID};background-image:{BUTTON};">
-<a href="{t['link']}" target="_blank" style="display:inline-block;padding:14px 32px;{text}font-size:15px;line-height:20px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:12px;">{t['button']}</a>
-</td></tr>
-</table>
+{action(t, text)}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0 0 0;">
 <tr><td style="background-color:{WARN_BG};border:1px solid {WARN_LINE};border-radius:10px;padding:12px 16px;">
 <p style="margin:0;{text}font-size:12px;line-height:18px;color:{WARN_INK};">⚠️ {t['warning']}</p>
@@ -128,8 +179,7 @@ def page(t):
 </table>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:28px 0 0 0;"><div style="border-top:1px solid {LINE};height:1px;line-height:1px;font-size:1px;">&nbsp;</div></td></tr></table>
 <p style="margin:24px 0 0 0;{text}font-size:15px;line-height:24px;color:{BODY};">Cheers,<br><strong style="color:{INK};">The Sellio Team</strong></p>
-<p style="margin:20px 0 6px 0;{text}font-size:12px;line-height:18px;color:{MUTED};">Button not working? Copy and paste this link into your browser:</p>
-<p style="margin:0 0 28px 0;{text}font-size:11px;line-height:17px;color:{LINK};word-break:break-all;"><a href="{t['link']}" target="_blank" style="color:{LINK};text-decoration:underline;word-break:break-all;">{t['link']}</a></p>
+{copy_link(t, text)}
 </td></tr>
 <tr><td style="padding:16px 32px 24px 32px;border-top:1px solid {LINE};">
 <p style="margin:0;{text}font-size:11px;line-height:18px;color:{MUTED};text-align:center;">Sent by <strong>Sellio</strong> · Powered by Apptelier<br>Need help? <a href="mailto:{SUPPORT}" style="color:{FOOTER_LINK};text-decoration:none;">{SUPPORT}</a></p>
@@ -144,14 +194,19 @@ def page(t):
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
-    keep = {t['file'] for t in TEMPLATES}
-    for old in OUT.glob('*.html'):
+    keep = {t['file'] for t in TEMPLATES} | {t['file'].replace('.html', '.subject.txt') for t in TEMPLATES}
+    for old in [*OUT.glob('*.html'), *OUT.glob('*.subject.txt')]:
         if old.name not in keep:
             old.unlink()
             print('removed', old.relative_to(ROOT))
     for t in TEMPLATES:
-        (OUT / t['file']).write_text(page(t), encoding='utf-8')
-        print('wrote', (OUT / t['file']).relative_to(ROOT), '-', t['dashboard'], '-', t['subject'])
+        body, subject = page(t), t['subject']
+        if 'login_code' in t:
+            body = by_redirect(page(t['login_code']), body)
+            subject = by_redirect(t['login_code']['subject'], subject)
+        (OUT / t['file']).write_text(body, encoding='utf-8')
+        (OUT / t['file'].replace('.html', '.subject.txt')).write_text(subject + '\n', encoding='utf-8')
+        print('wrote', (OUT / t['file']).relative_to(ROOT), '-', t['dashboard'], '-', subject)
 
 
 if __name__ == '__main__':
