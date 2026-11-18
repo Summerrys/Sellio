@@ -1,6 +1,6 @@
 // The login page as designed (Alvin, 17 Nov 2026), in Chrome as a phone, on the real pages: the
 // sign-up's card (the awning, the stall without its stickers, "Welcome back!"), Login / Sign Up,
-// and Mobile number / Email. Email: the address (a wrong one, a staff login, one with no
+// and Mobile No. / Email. Email: the address (a wrong one, a staff login, one with no
 // account and its way to sign up), "Email me a code" (no new accounts, the redirect that picks
 // the code email), the six boxes (typing, a pasted code, a wrong or expired code, the last
 // digit checking it), Resend's wait, Back and "Use a different email", the sign-in, and a
@@ -172,7 +172,13 @@ try {
     assert.equal(await page.locator('.join-stall-burst').count(), 0, 'no FREE!');
     assert.equal(await text(page, '.join-stall-welcome p'), 'Log in to your Sellio account.');
     assert.deepEqual(await pressed(page, '.auth-tabs'), ['true:Login', 'false:Sign Up']);
-    assert.deepEqual(await pressed(page, '.auth-how'), ['true:Mobile number', 'false:Email']);
+    assert.deepEqual(await pressed(page, '.auth-how'), ['true:Mobile No.', 'false:Email']);
+    // No pills (Alvin, 18 Nov 2026): the one in use is underlined, in Sellio's orange.
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('.auth-how button')].map((b) => {
+      const button = getComputedStyle(b);
+      const label = getComputedStyle(b.querySelector('.auth-how-label'));
+      return [button.borderTopWidth, button.backgroundColor, label.borderBottomWidth, label.borderBottomColor];
+    })), [['0px', 'rgba(0, 0, 0, 0)', '2px', 'rgb(251, 146, 60)'], ['0px', 'rgba(0, 0, 0, 0)', '2px', 'rgba(0, 0, 0, 0)']]);
     assert.equal(await text(page, 'label[for="auth-phone"]'), 'Mobile number');
     assert.equal(await text(page, 'label[for="auth-password"]'), 'Password');
     assert.equal(await page.getByRole('button', { name: 'Forgot password?' }).count(), 1);
@@ -180,11 +186,11 @@ try {
     assert.equal(await page.locator('img[src="/branding/sellio-logo.webp"]').count(), 0, 'the old logo header is gone');
     assert.ok(await cardBottom(page) <= 844, 'on one screen');
     await shoot(page, 'login-1-phone');
-    passed('Login: the sign-up card (awning, the stall without its stickers, "Welcome back!"), Login / Sign Up, Mobile number / Email, the number and password, Forgot password?, Google, on one screen');
+    passed('Login: the sign-up card (awning, the stall without its stickers, "Welcome back!"), Login / Sign Up, Mobile No. / Email (no pills, the one in use underlined), the number and password, Forgot password?, Google, on one screen');
 
     // ── Email: the address ──────────────────────────────────────────────────────────────────
     await page.getByRole('button', { name: 'Email', exact: true }).click();
-    assert.deepEqual(await pressed(page, '.auth-how'), ['false:Mobile number', 'true:Email']);
+    assert.deepEqual(await pressed(page, '.auth-how'), ['false:Mobile No.', 'true:Email']);
     assert.equal(await page.locator('#auth-phone').count(), 0);
     assert.equal(await text(page, '#auth-login-email-hint'), 'We’ll email you a 6-digit code. No password needed.');
     assert.equal(await page.getByRole('button', { name: 'Email me a code' }).isDisabled(), true, 'nothing to send yet');
@@ -220,7 +226,7 @@ try {
     assert.equal(new URL(page.url()).pathname, '/Auth', 'still the login page');
     await page.getByRole('button', { name: 'Login', exact: true }).click();
     await page.getByRole('heading', { name: 'Welcome back!' }).waitFor();
-    assert.deepEqual(await pressed(page, '.auth-how'), ['false:Mobile number', 'true:Email'], 'back where they were');
+    assert.deepEqual(await pressed(page, '.auth-how'), ['false:Mobile No.', 'true:Email'], 'back where they were');
     passed('Email: the address (checked first: a wrong one, a staff login); no account for it says so, and "Create a free account" opens Sign Up with it; Login comes back');
 
     // ── The code ────────────────────────────────────────────────────────────────────────────

@@ -684,7 +684,8 @@ const signup = {
   "Code sent to {email}": "Kod dihantar ke {email}",
   "Enter the 6-digit code": "Masukkan kod 6 digit",
   "Resend code in {time}": "Hantar semula kod dalam {time}",
-  "Resend code": "Hantar semula kod"
+  "Resend code": "Hantar semula kod",
+  "Mobile No.": "No. Telefon"
 };
 const Dashboard = "Papan Pemuka";
 const Categories = "Kategori";

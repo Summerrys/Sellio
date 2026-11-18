@@ -684,7 +684,8 @@ const signup = {
   "Code sent to {email}": "验证码已发送至 {email}",
   "Enter the 6-digit code": "输入 6 位验证码",
   "Resend code in {time}": "{time} 后可重新发送验证码",
-  "Resend code": "重新发送验证码"
+  "Resend code": "重新发送验证码",
+  "Mobile No.": "手机号"
 };
 const Dashboard = "概览";
 const Categories = "分类";

@@ -1307,11 +1307,16 @@ export default function Auth() {
               <button type="button" aria-pressed={!isLogin} onClick={() => goSignUp()}>{t('Sign Up')}</button>
             </div>
 
-            {/* Login: a mobile number and password, or a code emailed to them (Alvin, 17 Nov 2026) */}
+            {/* Login: a mobile number and password, or a code emailed to them (Alvin, 17 Nov 2026);
+                no pills, the one in use underlined (18 Nov) */}
             {isLogin && (
               <div className="auth-how mb-4" role="group" aria-label={t('Log in with')}>
-                <button type="button" aria-pressed={method === 'phone'} onClick={() => chooseMethod('phone')}><Phone aria-hidden="true" />{t('Mobile number')}</button>
-                <button type="button" aria-pressed={method === 'email'} onClick={() => chooseMethod('email')}><Mail aria-hidden="true" />{t('Email')}</button>
+                <button type="button" aria-pressed={method === 'phone'} onClick={() => chooseMethod('phone')}>
+                  <Phone aria-hidden="true" /><span className="auth-how-label">{t('Mobile No.')}</span>
+                </button>
+                <button type="button" aria-pressed={method === 'email'} onClick={() => chooseMethod('email')}>
+                  <Mail aria-hidden="true" /><span className="auth-how-label">{t('Email')}</span>
+                </button>
               </div>
             )}
 
