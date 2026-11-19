@@ -1065,12 +1065,13 @@ export default function Auth() {
         <div className="w-full max-w-sm sm:max-w-md">
           {/* The sign-up's card (Alvin, 17 Nov 2026): the awning on its top edge and, on Login,
               the stall with the swinging Sellio sign (components/auth/JoinStall.jsx), without
-              the sign-up's stickers, and "Welcome back!". */}
+              the sign-up's stickers, and "Welcome back!". Its counter changes every 4 seconds,
+              as Sign Up's does (rotate; Alvin, 20 Nov 2026). */}
           <div className="auth-card relative bg-white rounded-2xl shadow-xl p-8 pt-0 overflow-hidden" data-testid="auth-card">
             {closedAccount || forgotMode ? (
               <div className="join-stall-awning -mx-8 mb-6" aria-hidden="true" />
             ) : (
-              <JoinStall stickers={false}>
+              <JoinStall stickers={false} rotate>
                 <div className="join-stall-welcome px-8">
                   <h1>{isLogin ? t('Welcome back!') : t('Welcome!')}</h1>
                   <p>{isLogin ? t('Log in to your Sellio account.') : t('Let\'s get you started')}</p>

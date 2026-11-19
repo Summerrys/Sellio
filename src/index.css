@@ -195,7 +195,7 @@ img.sellio-photo[data-loaded] { opacity: 1; }
 /* Longer words (GRATIS!, PERCUMA!) get a bigger star, raised so it stays clear of the headline. */
 .join-stall-burst.long { width: 54px; height: 54px; margin: -15px 0 0 -9px; font-size: 8.4px; letter-spacing: 0; }
 @keyframes sellio-stall-pulse { 0%, 100% { transform: rotate(var(--r)) scale(1); } 50% { transform: rotate(calc(var(--r) + 10deg)) scale(1.08); } }
-/* Sign Up's counter (JoinStall rotate, Alvin 19 Nov 2026): three sets, 4 s each, in step with the
+/* The counter on Login and Sign Up (JoinStall rotate, Alvin 19 and 20 Nov 2026): three sets, 4 s each, in step with the
    phone's order (its tick and "+1" run every 4 s from the same start). A set fades in, its three
    things pop up one after another, and it gives way to the next. */
 .join-stall-set { opacity: 0; animation: sellio-stall-set 12s linear infinite both; }

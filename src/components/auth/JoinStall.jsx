@@ -49,8 +49,8 @@ function OnCounter({ x, scale = 1, order = 1, children }) {
   );
 }
 
-// Sign Up's counter changes every 4 seconds, in step with the phone's order (Alvin, 19 Nov 2026:
-// "proceed with the rotating counter"): the bowl's set, home bakes, then handmade things,
+// The counter changes every 4 seconds, in step with the phone's order (Alvin, 19 Nov 2026:
+// "proceed with the rotating counter"; on Login too, 20 Nov): the bowl's set, home bakes, then handmade things,
 // so sellers who don't cook see themselves too. Each set spans the counter as the first does (x 114
 // to 244), clear of the sign's swing on a small phone: the loaf is drawn a touch smaller for that.
 const BAKES = [
@@ -121,7 +121,8 @@ const SETS = [['now', NOW], ['bakes', BAKES], ['handmade', HANDMADE]];
 // still. The card around it has no top padding, so the awning sits on its top edge.
 // The login page has the same stall (Alvin, 17 Nov 2026): without the two stickers
 // (stickers={false}), and its own heading in place of "Open your shop on Sellio" (children). Its
-// counter keeps the first set; Sign Up's changes every 4 seconds (rotate).
+// counter changes every 4 seconds as Sign Up's does (rotate; Alvin, 20 Nov 2026: "Login is not
+// rotating"); without rotate the counter keeps the first set.
 export default function JoinStall({ stickers: showStickers = true, rotate = false, children = null }) {
   const { t, language } = useAppText();
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, '');

@@ -1,6 +1,6 @@
 // The login page as designed (Alvin, 17 Nov 2026), in Chrome as a phone, on the real pages: the
-// sign-up's card (the awning, the stall without its stickers, its counter staying on the bowl
-// with chopsticks, the cupcake and the jar, "Welcome back!"), Login / Sign Up,
+// sign-up's card (the awning, the stall without its stickers, its counter changing as Sign Up's
+// does, the bowl with chopsticks first, "Welcome back!"), Login / Sign Up,
 // and Mobile No. / Email. Email: the address (a wrong one, a staff login, one with no
 // account and its way to sign up), "Email me a code" (no new accounts, the redirect that picks
 // the code email), the six boxes (typing, a pasted code, a wrong or expired code, the last
@@ -226,21 +226,30 @@ try {
     assert.equal(await page.locator('[data-testid="join-stall"]').count(), 1, 'the stall');
     assert.equal(await page.locator('[data-testid="join-stall-stickers"]').count(), 0, 'no stickers on Login');
     assert.equal(await page.locator('.join-stall-burst').count(), 0, 'no FREE!');
-    // Login's counter stays on the bowl (now with chopsticks), the cupcake and the jar (Alvin, 19
-    // Nov 2026): no sets, nothing popping; Sign Up's changes (join-stall.browser.mjs).
+    // Login's counter changes as Sign Up's does (Alvin, 20 Nov 2026: "Login is not rotating"):
+    // the same three sets, 4 s each (their timing and layout: join-stall.browser.mjs). Looked at
+    // 1.6 s in, everything paused there, when the first set (the bowl with chopsticks) is up.
     const counter = await page.evaluate(() => {
+      const moving = document.getAnimations();
+      moving.forEach((a) => { a.pause(); a.currentTime = 1600; });
       const stall = document.querySelector('[data-testid="join-stall"]');
       const box = (e) => e.getBoundingClientRect();
       const chopsticks = stall.querySelector('.join-stall-chopsticks');
       const cupcake = stall.querySelectorAll('.join-stall-pop')[1];
-      return {
-        sets: stall.querySelectorAll('.join-stall-set').length, things: stall.querySelectorAll('.join-stall-pop').length,
-        popping: document.getAnimations().some((a) => a.animationName === 'sellio-stall-pop'),
+      const sets = [...stall.querySelectorAll('.join-stall-set')];
+      const seen = {
+        sets: sets.map((s) => s.dataset.set), things: stall.querySelectorAll('.join-stall-pop').length,
+        showing: sets.filter((s) => getComputedStyle(s).opacity === '1').map((s) => s.dataset.set),
+        cycle: moving.filter((a) => a.animationName === 'sellio-stall-set').map((a) => [a.effect.getTiming().duration, a.effect.getTiming().delay]).sort((a, b) => a[1] - b[1]),
         chopsticksInBowl: Boolean(chopsticks?.closest('.join-stall-pop')?.querySelector('.join-stall-steam')),
         chopsticksClear: chopsticks ? Math.round(box(cupcake).left - box(chopsticks).right) : null,
       };
+      moving.forEach((a) => a.play());
+      return seen;
     });
-    assert.deepEqual([counter.sets, counter.things, counter.popping], [0, 3, false], 'one set on Login, still');
+    assert.deepEqual([counter.sets, counter.things], [['now', 'bakes', 'handmade'], 9], 'Login: the three sets');
+    assert.deepEqual(counter.showing, ['now'], 'the bowl\'s set first');
+    assert.deepEqual(counter.cycle, [[12000, 0], [12000, 4000], [12000, 8000]], 'a set every 4 s');
     assert.ok(counter.chopsticksInBowl, 'the steaming bowl has its chopsticks');
     assert.ok(counter.chopsticksClear >= 1, `the chopsticks clear of the cupcake (${counter.chopsticksClear}px)`);
     assert.equal(await text(page, '.join-stall-welcome p'), 'Log in to your Sellio account.');
@@ -261,7 +270,7 @@ try {
     rowAsDesigned(await languageRow(page), 'Login');
     await shoot(page, 'login-1-phone');
     await listOpens(page, 'Login', 'login-1b-language');
-    passed('Login: the sign-up card (awning, the stall without its stickers, its counter still, the bowl with chopsticks, "Welcome back!"), Login / Sign Up in the middle with the language at the far right (no pill; its list opens on top), Mobile No. / Email (no pills, the one in use underlined), the number and password, Forgot password?, Google, on one screen');
+    passed('Login: the sign-up card (awning, the stall without its stickers, its counter changing every 4 s as Sign Up\'s, the bowl with chopsticks, "Welcome back!"), Login / Sign Up in the middle with the language at the far right (no pill; its list opens on top), Mobile No. / Email (no pills, the one in use underlined), the number and password, Forgot password?, Google, on one screen');
 
     // ── Email: the address ──────────────────────────────────────────────────────────────────
     await page.getByRole('button', { name: 'Email', exact: true }).click();
@@ -448,7 +457,7 @@ try {
     await page.locator('#auth-full_name').waitFor({ timeout: 15000 });
     assert.equal(await page.locator('[data-testid="join-stall"]').count(), 1);
     assert.equal(await page.locator('[data-testid="join-stall-stickers"]').count(), 0);
-    assert.equal(await page.locator('[data-testid="join-stall"] .join-stall-set').count(), 0, 'its counter stays');
+    assert.equal(await page.locator('[data-testid="join-stall"] .join-stall-set').count(), 3, 'its counter changes');
     assert.equal(await page.locator('#join-email').count(), 0, 'not the free sign-up');
     assert.equal(await page.locator('#auth-email').inputValue(), 'boss@kopi.sg');
     assert.deepEqual(await pressed(page, '.auth-tabs'), ['false:Login', 'true:Sign Up']);
