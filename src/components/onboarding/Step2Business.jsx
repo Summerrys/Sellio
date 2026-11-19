@@ -11,6 +11,7 @@ import { ArrowRight, ArrowLeft, MapPin, Clock } from 'lucide-react';
 import { generateThemeVariables } from '../theme/themeUtils';
 import { DEFAULT_COLORS, getThemeCSSColors } from '@/lib/themeConstants';
 import TimePicker from './TimePicker';
+import AddressMap from '@/components/ui-custom/AddressMap';
 import { useAppText, N_ } from '@/lib/appText';
 
 
@@ -126,6 +127,17 @@ export default function Step2Business({ formData, updateFormData, nextStep, prev
             <p className="text-xs text-red-500 mt-1">{t(errors.address.message)}</p>
           )}
         </div>
+        {/* The address on Google's map as it's typed, as in Settings and a home seller's collection
+            address (Alvin, 20 Nov 2026). It becomes the store page's address (complete-onboarding
+            saves it as the shop's address); the country picked in step 1 is added when the
+            address doesn't say it. */}
+        <AddressMap
+          address={watch('address')}
+          country={formData.country}
+          title={t('Map of your store address')}
+          hint={t('Shown on your store page. Check the pin; wrong spot? Add the postal code.')}
+          testId="branch-address-map"
+        />
 
         {/* Operating Hours */}
         <div className="rounded-lg sm:rounded-xl p-3 sm:p-5" style={{ background: `linear-gradient(white, white) padding-box, ${themeColor} border-box`, border: '1px solid transparent' }}>
