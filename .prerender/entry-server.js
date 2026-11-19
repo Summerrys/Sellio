@@ -2466,13 +2466,16 @@ const sections$1 = [
       /* @__PURE__ */ jsx("h3", { children: "Account and profile information" }),
       /* @__PURE__ */ jsx("p", { children: "We may collect your name, email address, phone number, sign-in details, profile preferences, account role, merchant membership and onboarding information. Authentication credentials are handled through our authentication services; we do not display your password to merchants or other users." }),
       /* @__PURE__ */ jsx("h3", { children: "Merchant and storefront information" }),
-      /* @__PURE__ */ jsx("p", { children: "Merchants may provide business names, contact details, branch information, logos, banners, themes, product or service listings, descriptions, prices, categories, stock information, table details, operating settings and other material used to run or display a storefront." }),
+      /* @__PURE__ */ jsx("p", { children: "Merchants may provide business names, contact details, addresses (including a home seller's collection address), branch information, logos, banners, themes, product or service listings, descriptions, prices, categories, stock information, table details, operating settings and other material used to run or display a storefront." }),
       /* @__PURE__ */ jsx("h3", { children: "Orders and customer information" }),
       /* @__PURE__ */ jsx("p", { children: "When an order is placed or managed, Sellio may process order items, quantities, prices, fulfilment status, table or takeaway details, payment method or payment status, customer name and any contact or order information submitted for that transaction." }),
+      /* @__PURE__ */ jsx("h3", { children: "Messages, photos and ratings" }),
+      /* @__PURE__ */ jsx("p", { children: "If you use chat in Sellio, we store the messages and images you send so they can be shown to you and the people you are chatting with. We also store the photos you upload, such as product photos, logos and banners, and the star ratings buyers give a shop, along with any comments they add." }),
       /* @__PURE__ */ jsx("h3", { children: "Billing information" }),
       /* @__PURE__ */ jsx("p", { children: "Merchant plan purchases and subscription management are processed through Stripe. We receive billing records such as the plan, subscription status, billing period, currency, transaction identifiers and limited payment status information. Stripe, rather than Sellio, handles full card details." }),
       /* @__PURE__ */ jsx("h3", { children: "Device, usage and support information" }),
       /* @__PURE__ */ jsx("p", { children: "We may receive IP address, browser and device type, operating system, referring page, app activity, error and security logs, cookie identifiers, language and interface preferences, and information you provide when asking for support." }),
+      /* @__PURE__ */ jsx("p", { children: "The Sellio apps also register a push notification token for your device so we can send you order and message alerts. A storefront keeps a random device identifier with the orders placed from your device, so those orders can be shown back to you and the shop can recognise repeat customers. We do not use these identifiers for advertising." }),
       /* @__PURE__ */ jsx("h3", { children: "AI feature inputs" }),
       /* @__PURE__ */ jsx("p", { children: "If you use Sellio AI features, we process the prompts, product images, business questions and related context you submit so the requested result can be generated. Please do not submit confidential, sensitive or unnecessary personal information to an AI feature." })
     ] })
@@ -2671,8 +2674,8 @@ function Privacy() {
       intro: "This policy explains what Sellio collects, why we use it, when it may be shared and the choices available to merchants, staff and storefront customers.",
       description: "Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and your privacy rights.",
       path: "/privacy",
-      lastUpdated: "12 November 2026",
-      dateModified: "2026-11-12",
+      lastUpdated: "20 November 2026",
+      dateModified: "2026-11-20",
       sections: sections$1
     }
   );

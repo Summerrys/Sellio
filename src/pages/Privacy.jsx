@@ -21,13 +21,16 @@ const sections = [
         <h3>Account and profile information</h3>
         <p>We may collect your name, email address, phone number, sign-in details, profile preferences, account role, merchant membership and onboarding information. Authentication credentials are handled through our authentication services; we do not display your password to merchants or other users.</p>
         <h3>Merchant and storefront information</h3>
-        <p>Merchants may provide business names, contact details, branch information, logos, banners, themes, product or service listings, descriptions, prices, categories, stock information, table details, operating settings and other material used to run or display a storefront.</p>
+        <p>Merchants may provide business names, contact details, addresses (including a home seller&apos;s collection address), branch information, logos, banners, themes, product or service listings, descriptions, prices, categories, stock information, table details, operating settings and other material used to run or display a storefront.</p>
         <h3>Orders and customer information</h3>
         <p>When an order is placed or managed, Sellio may process order items, quantities, prices, fulfilment status, table or takeaway details, payment method or payment status, customer name and any contact or order information submitted for that transaction.</p>
+        <h3>Messages, photos and ratings</h3>
+        <p>If you use chat in Sellio, we store the messages and images you send so they can be shown to you and the people you are chatting with. We also store the photos you upload, such as product photos, logos and banners, and the star ratings buyers give a shop, along with any comments they add.</p>
         <h3>Billing information</h3>
         <p>Merchant plan purchases and subscription management are processed through Stripe. We receive billing records such as the plan, subscription status, billing period, currency, transaction identifiers and limited payment status information. Stripe, rather than Sellio, handles full card details.</p>
         <h3>Device, usage and support information</h3>
         <p>We may receive IP address, browser and device type, operating system, referring page, app activity, error and security logs, cookie identifiers, language and interface preferences, and information you provide when asking for support.</p>
+        <p>The Sellio apps also register a push notification token for your device so we can send you order and message alerts. A storefront keeps a random device identifier with the orders placed from your device, so those orders can be shown back to you and the shop can recognise repeat customers. We do not use these identifiers for advertising.</p>
         <h3>AI feature inputs</h3>
         <p>If you use Sellio AI features, we process the prompts, product images, business questions and related context you submit so the requested result can be generated. Please do not submit confidential, sensitive or unnecessary personal information to an AI feature.</p>
       </>
@@ -204,8 +207,8 @@ export default function Privacy() {
       intro="This policy explains what Sellio collects, why we use it, when it may be shared and the choices available to merchants, staff and storefront customers."
       description="Read Sellio's Privacy Policy for merchants, staff and customers, including accounts, storefronts, orders, cookies, subscriptions and your privacy rights."
       path="/privacy"
-      lastUpdated="12 November 2026"
-      dateModified="2026-11-12"
+      lastUpdated="20 November 2026"
+      dateModified="2026-11-20"
       sections={sections}
     />
   );
