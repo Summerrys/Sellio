@@ -685,7 +685,8 @@ const signup = {
   "Enter the 6-digit code": "Masukkan kod 6 digit",
   "Resend code in {time}": "Hantar semula kod dalam {time}",
   "Resend code": "Hantar semula kod",
-  "Mobile No.": "No. Telefon"
+  "Mobile No.": "No. Telefon",
+  "Use a different account": "Guna akaun lain"
 };
 const Dashboard = "Papan Pemuka";
 const Categories = "Kategori";

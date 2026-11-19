@@ -685,7 +685,8 @@ const signup = {
   "Enter the 6-digit code": "Masukkan kode 6 digit",
   "Resend code in {time}": "Kirim ulang kode dalam {time}",
   "Resend code": "Kirim ulang kode",
-  "Mobile No.": "No. Ponsel"
+  "Mobile No.": "No. Ponsel",
+  "Use a different account": "Gunakan akun lain"
 };
 const Dashboard = "Dasbor";
 const Categories = "Kategori";

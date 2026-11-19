@@ -19,6 +19,12 @@ export function googleSignInAvailable(browser = window) {
   return true;
 }
 
+// Google asks which account every time (prompt=select_account), so someone signed in to Google
+// in this browser can still pick another account, or add one (Alvin, 20 Nov 2026: after Google,
+// "it stays as that account"). Sellio's own app uses Android's account picker instead, which
+// forgets the account picked when they sign out (nativeGoogle.js).
+const askWhichAccount = (options) => ({ ...options, queryParams: { prompt: 'select_account', ...options.queryParams } });
+
 // Resolves { cancelled: true } when the person closes Google's account picker in the app
 // (the page stays as it was); otherwise the page moves on to finish the sign-in.
 export async function startGoogleSignIn(options, browser = window) {
@@ -40,7 +46,7 @@ export async function startGoogleSignIn(options, browser = window) {
   // A browser: Supabase's usual Google redirect.
   if (!isNativeAndroid(browser)) {
     const client = await getSupabase();
-    const { error } = await client.auth.signInWithOAuth({ provider: 'google', options });
+    const { error } = await client.auth.signInWithOAuth({ provider: 'google', options: askWhichAccount(options) });
     if (error) throw error;
     return { mobile: false };
   }
@@ -56,7 +62,7 @@ export async function startGoogleSignIn(options, browser = window) {
     const client = getMobileOAuthClient();
     const { data, error } = await client.auth.signInWithOAuth({
       provider: 'google',
-      options: { ...options, redirectTo, skipBrowserRedirect: true },
+      options: { ...askWhichAccount(options), redirectTo, skipBrowserRedirect: true },
     });
     if (error || !data?.url) throw error || new Error('Could not open Google sign-in.');
     const url = new URL(data.url);

@@ -685,7 +685,8 @@ const signup = {
   "Enter the 6-digit code": "输入 6 位验证码",
   "Resend code in {time}": "{time} 后可重新发送验证码",
   "Resend code": "重新发送验证码",
-  "Mobile No.": "手机号"
+  "Mobile No.": "手机号",
+  "Use a different account": "使用其他账号"
 };
 const Dashboard = "概览";
 const Categories = "分类";

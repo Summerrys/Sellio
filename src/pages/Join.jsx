@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Mail, User, Phone, Lock, ChevronDown, AlertCircle, ArrowRight, BadgeCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link, useNavigate } from 'react-router-dom';
-import { isNativeApp } from '@/lib/nativeApp';
+import { isNativeApp, appPlatform } from '@/lib/nativeApp';
 import { useBackToClose } from '@/lib/useBackToClose';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
@@ -117,6 +117,7 @@ export default function Join({ embedded = false, onLogin = null, initialEmail = 
   // Signed up with Google: the last step asks for no password (Alvin, 17 Nov 2026).
   const [googleLogin, setGoogleLogin] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [switching, setSwitching] = useState(false);
   // What's wrong, on the form itself (UX state 9): { email } on the first step, { full_name,
   // phone, password, confirm } on the last, and form for what isn't one field's.
   const [errors, setErrors] = useState({});
@@ -422,6 +423,30 @@ export default function Join({ embedded = false, onLogin = null, initialEmail = 
     window.location.replace('/Auth');
   };
 
+  // "Use a different account" on Your details (Alvin, 20 Nov 2026: signed in with Google, "it
+  // stays as that account"): sign out on this device and start again on the first screen. In the
+  // Android app this also forgets the Google account picked in Android's account picker
+  // (nativeGoogle.js), finished before the page reloads; on the website Google asks which account
+  // every time (googleSignIn.js). If the sign-out can't reach Supabase, the session stays, so the
+  // page says so instead of reloading into the same account.
+  const differentAccount = async () => {
+    setSwitching(true);
+    try {
+      const supabase = await getSupabase();
+      const { error } = await supabase.auth.signOut({ scope: 'local' }); // this device only
+      if (error) throw error;
+      if (appPlatform() === 'android') {
+        const { signOutNativeGoogle } = await import('@/lib/nativeGoogle');
+        await signOutNativeGoogle();
+      }
+      try { localStorage.removeItem('app_user'); } catch { /* storage unavailable */ }
+      window.location.replace('/Join');
+    } catch (err) {
+      toast.error(accountErrorMessage(err));
+      setSwitching(false);
+    }
+  };
+
   if (stage === 'loading') return <AppLoader visible={true} />;
 
   return (
@@ -472,6 +497,10 @@ export default function Join({ embedded = false, onLogin = null, initialEmail = 
                   ? t('Signed in with Google: {email}', { email: accountEmail })
                   : t('{email} is verified', { email: accountEmail })}</span>
               </p>
+              <button type="button" onClick={differentAccount} disabled={switching} data-testid="join-different-account"
+                className="block mx-auto -mt-1 mb-3 text-xs font-semibold text-orange-500 hover:text-orange-600 disabled:text-slate-400">
+                {t('Use a different account')}
+              </button>
               <h1 className="text-[22px] leading-tight font-extrabold tracking-tight text-slate-800">{t('Set up your account')}</h1>
               <p className="mt-1.5 text-sm text-slate-500">{t('A few details and you’re in.')}</p>
             </div>

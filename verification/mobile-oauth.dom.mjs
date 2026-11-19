@@ -136,9 +136,10 @@ try {
   let regularRequest;
   globalThis.appClient = { auth: { signInWithOAuth: async request => { regularRequest = request; return { error: null }; } } };
   await googleModule.module.startGoogleSignIn({ redirectTo: location.origin + '/Auth?join=1' });
-  assert.deepEqual(regularRequest, { provider: 'google', options: { redirectTo: location.origin + '/Auth?join=1' } });
+  // Google asks which account every time, so someone can pick another one (Alvin, 20 Nov 2026).
+  assert.deepEqual(regularRequest, { provider: 'google', options: { redirectTo: location.origin + '/Auth?join=1', queryParams: { prompt: 'select_account' } } });
   assert.equal(globalThis.mobileReads, 0);
-  passed('Ordinary browser Google sign-in keeps its original redirect and client');
+  passed('Ordinary browser Google sign-in keeps its original redirect and client, and Google asks which account');
 
   reset();
   win.ReactNativeWebView = { postMessage() {} };
@@ -153,6 +154,7 @@ try {
   await googleModule.module.startGoogleSignIn({ redirectTo: location.origin + '/Auth?token=paid-invite',
     queryParams: { login_hint: 'fixture@example.invalid' } });
   assert.equal(nativeRequest.options.skipBrowserRedirect, true);
+  assert.deepEqual(nativeRequest.options.queryParams, { prompt: 'select_account', login_hint: 'fixture@example.invalid' }, 'Google asks which account, the invite\'s address suggested');
   assert.equal(new URL(nativeRequest.options.redirectTo).searchParams.get(CALLBACK_PARAM), '1');
   assert.equal(new URL(nativeRequest.options.redirectTo).searchParams.has('token'), false);
   assert.equal(globalThis.clientReads, 0);

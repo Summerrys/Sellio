@@ -43,15 +43,20 @@ const chain = (result) => {
 };
 window.__client = {
   auth: {
-    getSession: async () => ({ data: { session: window.__session || null } }),
-    getUser: async () => ({ data: { user: window.__session?.user || null } }),
+    // Signed out (this tab, across reloads): no session any more.
+    getSession: async () => ({ data: { session: sessionStorage.getItem('__signedOut') ? null : window.__session || null } }),
+    getUser: async () => ({ data: { user: sessionStorage.getItem('__signedOut') ? null : window.__session?.user || null } }),
     onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
     signUp: async (body) => { window.__calls.push(['signUp', body]); return window.__signUp || { data: {}, error: null }; },
     signInWithOtp: async (body) => { window.__calls.push(['signInWithOtp', body]); return { data: {}, error: window.__otpError || null }; },
     updateUser: async (body) => { window.__calls.push(['updateUser', body]); return { data: {}, error: window.__updateUserError || null }; },
     verifyOtp: async () => ({ data: {}, error: null }),
     setSession: async () => ({ error: null }),
-    signOut: async () => ({ error: null }),
+    signOut: async (options) => {
+      if (window.__signOutError) return { error: window.__signOutError };
+      sessionStorage.setItem('__signedOut', JSON.stringify(options || {}));
+      return { error: null };
+    },
   },
   rpc: (name, args) => {
     window.__calls.push(['rpc', name, args]);
@@ -186,6 +191,7 @@ try {
     assert.equal(await page.locator('#join-password').count(), 1);
     assert.ok(await cardBottom(page) <= 844, 'on one screen');
     assert.equal(await page.locator('[data-testid="app-language-switch"]').count(), 0, 'flow-2-details: no language button (picked on the first screen)');
+    assert.equal(await page.locator('[data-testid="join-different-account"]').textContent(), 'Use a different account');
     await shoot(page, 'flow-2-details');
     await page.locator('#join-name').fill('Tan');
     await page.locator('#join-phone').fill('91234567');
@@ -204,7 +210,21 @@ try {
     assert.equal(await page.locator('input[type="password"]').count(), 0);
     assert.equal(await page.locator('[data-testid="app-language-switch"]').count(), 0, 'flow-2-details-google: no language button (picked on the first screen)');
     await shoot(page, 'flow-2-details-google');
-    passed('Set up your account: step 2 of 3 (1 ticked), "…is verified" or "Signed in with Google" (no password), and the account page is told to say welcome');
+    // "Use a different account" (Alvin, 20 Nov 2026): if this device can't sign out, it says so
+    // and stays; otherwise it signs out on this device only and starts again on the first screen.
+    await page.evaluate(() => { window.__signOutError = { message: 'Failed to fetch' }; });
+    await page.getByRole('button', { name: 'Use a different account' }).click();
+    await page.locator('[data-sonner-toast]').first().waitFor({ timeout: 5000 });
+    assert.equal(await page.locator('#join-name').count(), 1, 'still on Your details');
+    assert.equal(await page.getByRole('button', { name: 'Use a different account' }).isEnabled(), true, 'ready to try again');
+    await page.evaluate(() => { window.__signOutError = null; });
+    await page.getByRole('button', { name: 'Use a different account' }).click();
+    await page.waitForURL((url) => url.pathname === '/Join');
+    await page.locator('#join-email').waitFor({ timeout: 10000 });
+    assert.equal(await page.evaluate(() => sessionStorage.getItem('__signedOut')), '{"scope":"local"}', 'signed out on this device only');
+    assert.equal(await page.locator('[data-testid="join-verified"]').count(), 0, 'nobody signed in');
+    assert.equal(await page.getByRole('button', { name: 'Continue with Google' }).count(), 1, 'Google again, to pick another account');
+    passed('Set up your account: step 2 of 3 (1 ticked), "…is verified" or "Signed in with Google" (no password), and the account page is told to say welcome; "Use a different account" signs out on this device and starts again (and says so when it can\'t)');
     await page.close();
   }
 
