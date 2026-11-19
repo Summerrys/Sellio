@@ -1,11 +1,12 @@
 // The login page as designed (Alvin, 17 Nov 2026), in Chrome as a phone, on the real pages: the
-// sign-up's card (the awning, the stall without its stickers, "Welcome back!"), Login / Sign Up,
+// sign-up's card (the awning, the stall without its stickers, its counter staying on the bowl
+// with chopsticks, the cupcake and the jar, "Welcome back!"), Login / Sign Up,
 // and Mobile No. / Email. Email: the address (a wrong one, a staff login, one with no
 // account and its way to sign up), "Email me a code" (no new accounts, the redirect that picks
 // the code email), the six boxes (typing, a pasted code, a wrong or expired code, the last
 // digit checking it), Resend's wait, Back and "Use a different email", the sign-in, and a
 // closed account's code (its token_hash sent to the closed-account server). Sign Up: the free
-// sign-up's first step straight away, on /Auth and /Join alike. A paid invite's sign-up and
+// sign-up's first step straight away (its counter changing), on /Auth and /Join alike. A paid invite's sign-up and
 // Forgot password in the same card. Every language on a small phone.
 //
 //   node verification/login-page.browser.mjs <folder with playwright(-core)> [screenshot folder]
@@ -170,6 +171,23 @@ try {
     assert.equal(await page.locator('[data-testid="join-stall"]').count(), 1, 'the stall');
     assert.equal(await page.locator('[data-testid="join-stall-stickers"]').count(), 0, 'no stickers on Login');
     assert.equal(await page.locator('.join-stall-burst').count(), 0, 'no FREE!');
+    // Login's counter stays on the bowl (now with chopsticks), the cupcake and the jar (Alvin, 19
+    // Nov 2026): no sets, nothing popping; Sign Up's changes (join-stall.browser.mjs).
+    const counter = await page.evaluate(() => {
+      const stall = document.querySelector('[data-testid="join-stall"]');
+      const box = (e) => e.getBoundingClientRect();
+      const chopsticks = stall.querySelector('.join-stall-chopsticks');
+      const cupcake = stall.querySelectorAll('.join-stall-pop')[1];
+      return {
+        sets: stall.querySelectorAll('.join-stall-set').length, things: stall.querySelectorAll('.join-stall-pop').length,
+        popping: document.getAnimations().some((a) => a.animationName === 'sellio-stall-pop'),
+        chopsticksInBowl: Boolean(chopsticks?.closest('.join-stall-pop')?.querySelector('.join-stall-steam')),
+        chopsticksClear: chopsticks ? Math.round(box(cupcake).left - box(chopsticks).right) : null,
+      };
+    });
+    assert.deepEqual([counter.sets, counter.things, counter.popping], [0, 3, false], 'one set on Login, still');
+    assert.ok(counter.chopsticksInBowl, 'the steaming bowl has its chopsticks');
+    assert.ok(counter.chopsticksClear >= 1, `the chopsticks clear of the cupcake (${counter.chopsticksClear}px)`);
     assert.equal(await text(page, '.join-stall-welcome p'), 'Log in to your Sellio account.');
     assert.deepEqual(await pressed(page, '.auth-tabs'), ['true:Login', 'false:Sign Up']);
     assert.deepEqual(await pressed(page, '.auth-how'), ['true:Mobile No.', 'false:Email']);
@@ -186,7 +204,7 @@ try {
     assert.equal(await page.locator('img[src="/branding/sellio-logo.webp"]').count(), 0, 'the old logo header is gone');
     assert.ok(await cardBottom(page) <= 844, 'on one screen');
     await shoot(page, 'login-1-phone');
-    passed('Login: the sign-up card (awning, the stall without its stickers, "Welcome back!"), Login / Sign Up, Mobile No. / Email (no pills, the one in use underlined), the number and password, Forgot password?, Google, on one screen');
+    passed('Login: the sign-up card (awning, the stall without its stickers, its counter still, the bowl with chopsticks, "Welcome back!"), Login / Sign Up, Mobile No. / Email (no pills, the one in use underlined), the number and password, Forgot password?, Google, on one screen');
 
     // ── Email: the address ──────────────────────────────────────────────────────────────────
     await page.getByRole('button', { name: 'Email', exact: true }).click();
@@ -340,6 +358,7 @@ try {
     await page.locator('#join-email').waitFor();
     await page.waitForTimeout(1500);
     assert.equal(await page.locator('[data-testid="join-stall-stickers"]').count(), 1, 'the stickers');
+    assert.equal(await page.locator('[data-testid="join-stall"] .join-stall-set').count(), 3, 'its counter changes');
     assert.match(await text(page, '.join-stall-hl h1'), /^Open your shop on Sellio$/);
     assert.deepEqual(await pressed(page, '.auth-tabs'), ['false:Login', 'true:Sign Up']);
     assert.equal(await page.getByRole('button', { name: 'Send verification email' }).count(), 1);
@@ -352,7 +371,7 @@ try {
     await page.getByRole('heading', { name: 'Check your email' }).waitFor();
     assert.deepEqual((await calls(page, 'signInWithOtp'))[0][1], { email: 'new@kopi.sg', options: { emailRedirectTo: 'https://sellio.sg/Join', shouldCreateUser: true } }, 'the verify email, as on /Join');
     assert.equal(new URL(page.url()).pathname, '/Auth');
-    passed('Sign Up: the free sign-up\'s first step straight away (the stall with its stickers, Open your shop on Sellio, the email, Google), on one screen; it sends the verify email and goes on to Check your email');
+    passed('Sign Up: the free sign-up\'s first step straight away (the stall with its stickers and changing counter, Open your shop on Sellio, the email, Google), on one screen; it sends the verify email and goes on to Check your email');
     await page.close();
   }
   {
@@ -371,6 +390,7 @@ try {
     await page.locator('#auth-full_name').waitFor({ timeout: 15000 });
     assert.equal(await page.locator('[data-testid="join-stall"]').count(), 1);
     assert.equal(await page.locator('[data-testid="join-stall-stickers"]').count(), 0);
+    assert.equal(await page.locator('[data-testid="join-stall"] .join-stall-set').count(), 0, 'its counter stays');
     assert.equal(await page.locator('#join-email').count(), 0, 'not the free sign-up');
     assert.equal(await page.locator('#auth-email').inputValue(), 'boss@kopi.sg');
     assert.deepEqual(await pressed(page, '.auth-tabs'), ['false:Login', 'true:Sign Up']);

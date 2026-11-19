@@ -196,10 +196,34 @@ img.sellio-photo[data-loaded] { opacity: 1; }
 /* Longer words (GRATIS!, PERCUMA!) get a bigger star, raised so it stays clear of the headline. */
 .join-stall-burst.long { width: 54px; height: 54px; margin: -15px 0 0 -9px; font-size: 8.4px; letter-spacing: 0; }
 @keyframes sellio-stall-pulse { 0%, 100% { transform: rotate(var(--r)) scale(1); } 50% { transform: rotate(calc(var(--r) + 10deg)) scale(1.08); } }
+/* Sign Up's counter (JoinStall rotate, Alvin 19 Nov 2026): three sets, 4 s each, in step with the
+   phone's order (its tick and "+1" run every 4 s from the same start). A set fades in, its three
+   things pop up one after another, and it gives way to the next. */
+.join-stall-set { opacity: 0; animation: sellio-stall-set 12s linear infinite both; }
+.join-stall-set.n2 { animation-delay: 4s; }
+.join-stall-set.n3 { animation-delay: 8s; }
+.join-stall-set .join-stall-pop { transform-box: fill-box; transform-origin: center bottom; animation: sellio-stall-pop 12s linear infinite both; }
+.join-stall-set .join-stall-pop.p2 { animation-delay: .1s; }
+.join-stall-set .join-stall-pop.p3 { animation-delay: .2s; }
+.join-stall-set.n2 .join-stall-pop { animation-delay: 4s; }
+.join-stall-set.n2 .join-stall-pop.p2 { animation-delay: 4.1s; }
+.join-stall-set.n2 .join-stall-pop.p3 { animation-delay: 4.2s; }
+.join-stall-set.n3 .join-stall-pop { animation-delay: 8s; }
+.join-stall-set.n3 .join-stall-pop.p2 { animation-delay: 8.1s; }
+.join-stall-set.n3 .join-stall-pop.p3 { animation-delay: 8.2s; }
+@keyframes sellio-stall-set { 0% { opacity: 0; } 1.5% { opacity: 1; } 31.8% { opacity: 1; } 33.3%, 100% { opacity: 0; } }
+/* The pop shrinks back once its set has gone (33.5%), so a thing that pops a little later (.p2, .p3)
+   doesn't show full-size for that moment when its set comes round again. */
+@keyframes sellio-stall-pop { 0% { transform: scale(.4); } 2.5% { transform: scale(1.08); } 3.5%, 33.4% { transform: scale(1); } 33.5%, 100% { transform: scale(.4); } }
+/* The candle's flame, in the handmade set. */
+.join-stall-flame { transform-box: fill-box; transform-origin: center bottom; animation: sellio-stall-flame 1.6s ease-in-out infinite; }
+@keyframes sellio-stall-flame { 0%, 100% { transform: scale(1, 1); } 30% { transform: scale(.92, 1.08); } 60% { transform: scale(1.05, .94); } }
 @media (prefers-reduced-motion: reduce) {
   .join-stall *, .join-stall *::before, .join-stall *::after { animation: none !important; }
   .join-stall-steam { opacity: .7; }
   .join-stall-tick { stroke-dashoffset: 0; }
+  /* The counter stays on its first set. */
+  .join-stall-set.n1 { opacity: 1; }
 }
 
 /* The screens after the sign-up's first one (Alvin, 17 Nov 2026): where they are (SignUpSteps),

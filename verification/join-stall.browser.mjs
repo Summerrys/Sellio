@@ -1,10 +1,13 @@
 // The free sign-up's stall (components/auth/JoinStall.jsx; Alvin, 17 Nov 2026, "J"), in Chrome as
 // a phone, on the real Join page, in English, 中文, Bahasa Indonesia and Malay: the awning on the
-// card's top edge; the counter and the food centred; the Sellio sign going home and clear of the
-// food; "Sell from home" and "Run your business" across the counter's lower edge, inside its ends
-// and clear of FREE! and the headline; FREE! inside its
-// star and clear of the headline; no emoji; the whole card on a regular phone's screen; still for a
-// phone set to reduce motion; and the next screen (check your email) keeps the awning, not the stall.
+// card's top edge; the counter centred; on it three sets in turn, 4 seconds each in step with the
+// phone's order (Alvin, 19 Nov 2026: the steaming bowl, now with chopsticks, the cupcake and the jar;
+// home bakes; handmade things), each centred, standing on the counter, its things apart and clear
+// of the Sellio sign (at either end of its swing) and the phone; the sign going home; "Sell from
+// home" and "Run your business" across the counter's lower edge, inside its ends and clear of FREE!
+// and the headline; FREE! inside its star and clear of the headline; no emoji; the whole card on a
+// regular phone's screen; still for a phone set to reduce motion, on the first set; and the next
+// screen (check your email) keeps the awning, not the stall.
 //
 //   node verification/join-stall.browser.mjs <folder with playwright(-core)> [screenshot folder]
 // The page is built from src with stand-ins for Supabase (as in form-errors.browser.mjs).
@@ -142,7 +145,6 @@ try {
     const at = (x) => svg.left + x * k;
     const counter = { left: at(54), right: at(304), top: svg.top + 100 * k, bottom: svg.top + 134 * k };
     const sign = stall.querySelector('.join-stall-sign');
-    const s = sign.getBoundingClientRect();
     const stickers = [...stall.querySelectorAll('.join-stall-sticker')].map((e) => e.getBoundingClientRect());
     const burst = stall.querySelector('.join-stall-burst');
     const b = burst.getBoundingClientRect();
@@ -156,8 +158,7 @@ try {
     return {
       awningOnTop: Math.round(awning.top - c.top), awningFull: Math.round(awning.width - c.width),
       counterCentre: Math.round((counter.left + counter.right) / 2 - (c.left + c.right) / 2),
-      foodCentre: Math.round((at(114) + at(244)) / 2 - (c.left + c.right) / 2),
-      signClear: Math.round(at(114) - s.right), signHref: sign.getAttribute('href'), signLabel: sign.getAttribute('aria-label'),
+      signHref: sign.getAttribute('href'), signLabel: sign.getAttribute('aria-label'),
       stickersIn: stickers.map((r) => [Math.round(r.left - counter.left), Math.round(counter.right - r.right)]),
       stickersApart: stickers.length === 2 ? Math.round(stickers[1].left - stickers[0].right) : null,
       stickersBelowCounter: stickers.map((r) => Math.round(r.bottom - counter.bottom)),
@@ -170,6 +171,46 @@ try {
       emoji: /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(stall.textContent),
     };
   });
+  // The counter's sets. Every animation in the stall starts as the page opens, so `seek` puts them
+  // all at a moment after that, paused: 1.6 s into a set's 4 s it has popped up and the phone's "+1"
+  // shows. Only the set in view is measured: the others wait shrunk, ready to pop.
+  const SETS = ['now', 'bakes', 'handmade'];
+  const seek = (page, seconds) => page.evaluate((ms) => {
+    document.getAnimations().forEach((a) => { a.pause(); a.currentTime = ms; });
+  }, seconds * 1000);
+  const counter = (page) => page.evaluate(() => {
+    const stall = document.querySelector('[data-testid="join-stall"]');
+    const card = stall.closest('.rounded-2xl').getBoundingClientRect();
+    const svg = stall.querySelector('.join-stall-scene > svg').getBoundingClientRect();
+    const counterTop = svg.top + 100 * (svg.width / 358);
+    // The sign at both ends of its swing.
+    const sign = stall.querySelector('.join-stall-sign');
+    const swing = document.getAnimations().find((a) => a.effect?.target === sign);
+    const was = swing.currentTime;
+    const signRight = Math.max(...[0, 3400].map((ms) => { swing.currentTime = ms; return sign.getBoundingClientRect().right; }));
+    swing.currentTime = was;
+    const phone = stall.querySelector('.join-stall-phone').getBoundingClientRect();
+    const bubble = stall.querySelector('.join-stall-bubble');
+    return {
+      plusOne: Number(getComputedStyle(bubble).opacity),
+      sets: [...stall.querySelectorAll('.join-stall-set')].map((set) => {
+        const things = [...set.querySelectorAll('.join-stall-pop')];
+        const r = things.map((e) => e.getBoundingClientRect());
+        const left = Math.min(...r.map((b) => b.left));
+        const right = Math.max(...r.map((b) => b.right));
+        return {
+          name: set.dataset.set, count: things.length, opacity: Number(getComputedStyle(set).opacity),
+          centre: Math.round((left + right) / 2 - (card.left + card.right) / 2),
+          standing: r.map((b) => Math.round(b.bottom - counterTop)),
+          apart: r.slice(1).map((b, i) => Math.round(b.left - r[i].right)),
+          signClear: Math.round(left - signRight), phoneClear: Math.round(phone.left - right),
+          popped: things.every((e) => ['none', 'matrix(1, 0, 0, 1, 0, 0)'].includes(getComputedStyle(e).transform)),
+          chopsticks: set.querySelectorAll('.join-stall-chopsticks').length,
+        };
+      }),
+    };
+  });
+
   const LANGUAGES = { en: ['Open your shop on Sellio', 'FREE!', 'Sell from home'], zh: ['在 Sellio 开设您的店铺', '免费！', '在家开店'], id: ['Buka toko Anda di Sellio', 'GRATIS!', 'Jualan dari rumah'], ms: ['Buka kedai anda di Sellio', 'PERCUMA!', 'Jual dari rumah'] };
   for (const [language, [headline, free, home]] of Object.entries(LANGUAGES)) {
     for (const [w, h] of [[390, 844], [360, 740]]) {
@@ -188,8 +229,7 @@ try {
       assert.equal(await page.locator('.join-stall-sticker.home').textContent(), home, where);
       assert.equal(m.awningOnTop, 0, `${where}: the awning sits on the card's top edge`);
       assert.ok(Math.abs(m.awningFull) <= 1, `${where}: the awning spans the card`);
-      assert.ok(Math.abs(m.counterCentre) <= 1 && Math.abs(m.foodCentre) <= 1, `${where}: the counter and the food are centred`);
-      assert.ok(m.signClear >= 6, `${where}: the sign is clear of the bowl (${m.signClear}px)`);
+      assert.ok(Math.abs(m.counterCentre) <= 1, `${where}: the counter is centred`);
       assert.equal(m.signHref, '/', `${where}: on a website the sign goes home`);
       if (language === 'en') assert.equal(m.signLabel, 'Sellio home'); else assert.ok(m.signLabel && m.signLabel !== 'Sellio home', `${where}: the sign's name is translated`);
       m.stickersIn.forEach(([left, right], i) => assert.ok(left >= 0 && right >= -1, `${where}: sticker ${i + 1} on the counter (${left}, ${right})`));
@@ -204,9 +244,27 @@ try {
       if (language !== 'zh' || w === 390) assert.equal(m.lines, 1, `${where}: the headline on one line`);
       if (w === 390) assert.ok(m.cardBottom <= h, `${where}: the whole card on a regular phone's screen (${m.cardBottom})`);
       if (w === 390) await shoot(page, `stall-${language}`);
+      for (const [n, seconds] of [1.6, 5.6, 9.6, 13.6].entries()) {
+        await seek(page, seconds);
+        const { sets, plusOne } = await counter(page);
+        const showing = n % 3;
+        assert.deepEqual(sets.map((x) => [x.name, x.count]), SETS.map((name) => [name, 3]), `${where}: three sets of three`);
+        assert.deepEqual(sets.map((x) => x.opacity), SETS.map((x, i) => (i === showing ? 1 : 0)), `${where} at ${seconds}s: ${SETS[showing]} on the counter`);
+        assert.equal(plusOne, 1, `${where} at ${seconds}s: the phone's "+1" shows with it`);
+        const x = sets[showing];
+        const what = `${where}, ${x.name}`;
+        assert.ok(x.popped, `${what}: popped up`);
+        assert.ok(Math.abs(x.centre) <= 1, `${what}: centred on the counter (${x.centre})`);
+        assert.ok(x.standing.every((d) => Math.abs(d) <= 1), `${what}: standing on the counter (${x.standing})`);
+        assert.ok(x.apart.every((d) => d >= 1), `${what}: its things apart (${x.apart})`);
+        assert.ok(x.signClear >= 6, `${what}: clear of the sign at either end of its swing (${x.signClear}px)`);
+        assert.ok(x.phoneClear >= 20, `${what}: clear of the phone (${x.phoneClear}px)`);
+        assert.equal(x.chopsticks, x.name === 'now' ? 1 : 0, `${what}: the bowl has its chopsticks`);
+        if (w === 390 && language === 'en' && n < 3) await shoot(page, `stall-en-${x.name}`);
+      }
       await page.close();
     }
-    passed(`${language}: the awning on top, counter and food centred, the sign clear and going home, the stickers on the counter, "${free}" in its star and clear of the headline, no emoji`);
+    passed(`${language}: the awning on top, the counter centred, its three sets in turn with the phone's "+1" (each centred, standing on it, clear of the sign and the phone; the bowl's chopsticks), the sign going home, the stickers on the counter, "${free}" in its star and clear of the headline, no emoji`);
   }
 
   // ── A small phone; Reduce motion ─────────────────────────────────────────────────────────
@@ -222,12 +280,14 @@ try {
       running: document.getAnimations().filter((a) => a.effect?.target?.closest?.('[data-testid="join-stall"]')).length,
       tick: getComputedStyle(document.querySelector('.join-stall-tick')).strokeDashoffset,
       steam: getComputedStyle(document.querySelector('.join-stall-steam')).opacity,
+      sets: [...document.querySelectorAll('.join-stall-set')].map((s) => getComputedStyle(s).opacity),
     }));
     assert.equal(still.running, 0, 'nothing moves');
     assert.equal(still.tick, '0px', 'the tick is drawn');
     assert.equal(still.steam, '0.7', 'the steam shows');
+    assert.deepEqual(still.sets, ['1', '0', '0'], 'the counter stays on its first set');
     await shoot(page, 'stall-en-small-still');
-    passed('A phone set to reduce motion: the stall is still, with its tick and steam showing');
+    passed('A phone set to reduce motion: the stall is still, on its first set, with its tick and steam showing');
     await page.close();
   }
   {
@@ -238,8 +298,29 @@ try {
     await page.locator('[data-testid="join-stall"]').waitFor();
     await page.waitForTimeout(400);
     const moving = await page.evaluate(() => document.getAnimations().filter((a) => a.effect?.target?.closest?.('[data-testid="join-stall"]') && a.playState === 'running').map((a) => a.animationName));
-    for (const name of ['sellio-stall-swing', 'sellio-stall-steam', 'sellio-stall-tick', 'sellio-stall-bubble', 'sellio-stall-twinkle', 'sellio-stall-bob', 'sellio-stall-tilt', 'sellio-stall-pulse']) {
+    for (const name of ['sellio-stall-swing', 'sellio-stall-steam', 'sellio-stall-tick', 'sellio-stall-bubble', 'sellio-stall-twinkle', 'sellio-stall-bob', 'sellio-stall-tilt', 'sellio-stall-pulse', 'sellio-stall-set', 'sellio-stall-pop', 'sellio-stall-flame']) {
       assert.ok(moving.includes(name), `${name} runs`);
+    }
+    // The counter: 12 s round, a set every 4 s, the same 4 s as the phone's tick and "+1".
+    const timing = await page.evaluate(() => {
+      const of = (name) => document.getAnimations().filter((a) => a.animationName === name)
+        .map((a) => { const t = a.effect.getTiming(); return [a.effect.target.dataset.set || a.effect.target.getAttribute('class'), t.duration, t.delay, t.iterations]; })
+        .sort((a, b) => a[2] - b[2]);
+      return { sets: of('sellio-stall-set'), tick: of('sellio-stall-tick'), plusOne: of('sellio-stall-bubble') };
+    });
+    assert.deepEqual(timing.sets, [['now', 12000, 0, Infinity], ['bakes', 12000, 4000, Infinity], ['handmade', 12000, 8000, Infinity]], 'a set every 4 s');
+    assert.deepEqual(timing.tick, [['join-stall-tick', 4000, 0, Infinity]], 'the phone ticks every 4 s from the start');
+    assert.deepEqual(timing.plusOne, [['join-stall-bubble', 4000, 0, Infinity]], 'its "+1" too');
+    // When a set comes round again its things pop up in turn: none shows full-size before its pop.
+    for (const [n, seconds] of [12.1, 16.1, 20.1].entries()) {
+      await seek(page, seconds);
+      const set = await page.evaluate((i) => {
+        const s = document.querySelectorAll('.join-stall-set')[i];
+        const scale = (e) => { const t = getComputedStyle(e).transform; return t === 'none' ? 1 : Number(new DOMMatrix(t).a.toFixed(2)); };
+        return { opacity: Number(getComputedStyle(s).opacity), scales: [...s.querySelectorAll('.join-stall-pop')].map(scale) };
+      }, n);
+      assert.ok(set.opacity > 0.3, `${SETS[n]} coming in at ${seconds}s (${set.opacity})`);
+      assert.ok(set.scales[0] > set.scales[1] && set.scales[1] >= set.scales[2] && set.scales[2] < 0.5, `${SETS[n]} at ${seconds}s: its things pop up in turn (${set.scales})`);
     }
     // The next screen has the awning and step 1 of 3, not the stall (signup-screens.browser.mjs).
     await page.locator('#join-email').fill('mei@kopi.sg');
@@ -248,7 +329,7 @@ try {
     assert.equal(await page.locator('[data-testid="join-stall"]').count(), 0, 'no stall after sending');
     assert.equal(await page.locator('.join-stall-awning').count(), 1, 'the awning stays');
     await shoot(page, 'sent-en');
-    passed('Moving as designed (sign, steam, tick, +1, sparkles, the two stickers each its own way, FREE!); the next screen keeps the awning, without the stall');
+    passed('Moving as designed (sign, steam, tick, +1, sparkles, the two stickers each its own way, FREE!, the counter\'s sets every 4 s with the phone\'s order, the candle\'s flame); the next screen keeps the awning, without the stall');
     await page.close();
   }
   assert.deepEqual(errors, [], 'no errors on the pages');

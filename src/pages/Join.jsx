@@ -431,13 +431,14 @@ export default function Join({ embedded = false, onLogin = null, initialEmail = 
       onClick={() => setShowCountries(false)}
     >
       <div className="w-full max-w-sm sm:max-w-md">
-        {/* The first screen has the stall on top (components/auth/JoinStall.jsx); it and the next
-            two have the awning on the card's top edge, then where they are (1, 2 of 3). */}
+        {/* The first screen has the stall on top (components/auth/JoinStall.jsx), its counter
+            changing every 4 seconds (rotate); it and the next two have the awning on the card's
+            top edge, then where they are (1, 2 of 3). */}
         <div className={`relative bg-white rounded-2xl shadow-xl p-8${AWNING_STAGES.includes(stage) ? ' pt-0 overflow-hidden' : ''}`}>
           <AppLanguageSwitch className={AWNING_STAGES.includes(stage) ? 'absolute right-3 top-1 z-10 join-stall-language' : 'absolute right-3 top-3 z-10'} />
           {stage === 'start' && (
             <>
-              <JoinStall />
+              <JoinStall rotate />
               <div className="auth-tabs mb-4">
                 <button type="button" aria-pressed="false" onClick={goLogin}>{t('Login')}</button>
                 <button type="button" aria-pressed="true">{t('Sign Up')}</button>
