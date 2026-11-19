@@ -148,6 +148,61 @@ try {
   const calls = (page, kind) => page.evaluate((k) => window.__calls.filter((c) => c[0] === k), kind);
 
   const english = "try { localStorage.setItem('sellio_app_language', 'en'); } catch {}";
+  // The Login / Sign Up row (Alvin, 19 Nov 2026): the tabs in the middle of the card, the language
+  // at its far right, no pill. Measured on what is drawn: the globe, the code and the arrow.
+  const languageRow = (page) => page.evaluate(() => {
+    const card = document.querySelector('.rounded-2xl.shadow-xl').getBoundingClientRect();
+    const tabs = document.querySelector('.auth-tabs-row > .auth-tabs').getBoundingClientRect();
+    const holder = document.querySelector('.auth-tabs-row > .auth-tabs-language');
+    const button = holder?.querySelector('[data-testid="app-language-switch"] button[aria-haspopup="menu"]');
+    if (!button) return { inRow: false, count: document.querySelectorAll('[data-testid="app-language-switch"]').length };
+    const parts = [...button.querySelectorAll('svg, span[lang]')].map((e) => e.getBoundingClientRect());
+    const seen = { l: Math.min(...parts.map((b) => b.left)), r: Math.max(...parts.map((b) => b.right)), t: Math.min(...parts.map((b) => b.top)), b: Math.max(...parts.map((b) => b.bottom)) };
+    const plain = (e) => { const s = getComputedStyle(e); return s.backgroundColor === 'rgba(0, 0, 0, 0)' && s.boxShadow === 'none' && s.borderTopWidth === '0px'; };
+    return {
+      inRow: true, count: document.querySelectorAll('[data-testid="app-language-switch"]').length,
+      centre: Math.round(((tabs.left + tabs.right) / 2 - (card.left + card.right) / 2) * 10) / 10,
+      edge: Math.round(card.right - seen.r), gap: Math.round(seen.l - tabs.right),
+      level: Math.round((seen.t + seen.b) / 2 - (tabs.top + tabs.bottom) / 2),
+      plain: plain(holder) && plain(button),
+      cut: [...document.querySelectorAll('.auth-tabs-row .auth-tabs button')].filter((b) => b.scrollWidth > b.clientWidth + 1 || b.getBoundingClientRect().right > tabs.right + 0.5).map((b) => b.textContent),
+      wide: document.documentElement.scrollWidth > window.innerWidth,
+    };
+  });
+  const rowAsDesigned = (m, where, { centred = true } = {}) => {
+    assert.ok(m.inRow, `${where}: the language at the end of the Login / Sign Up row`);
+    assert.equal(m.count, 1, `${where}: one language button`);
+    if (centred) assert.ok(Math.abs(m.centre) <= 1, `${where}: Login / Sign Up in the middle of the card (${m.centre}px off)`);
+    assert.ok(m.edge >= 10 && m.edge <= 14, `${where}: the language at the card's far right (its arrow ${m.edge}px in)`);
+    assert.ok(m.gap >= 6, `${where}: clear of Login / Sign Up (${m.gap}px)`);
+    assert.ok(Math.abs(m.level) <= 1, `${where}: level with Login / Sign Up (${m.level}px)`);
+    assert.ok(m.plain, `${where}: no pill`);
+    assert.deepEqual(m.cut, [], `${where}: Login and Sign Up whole`);
+    assert.equal(m.wide, false, `${where}: nothing wider than the screen`);
+  };
+  // Its list opens in full over the card, on top of what's under it, and folds away again.
+  const listOpens = async (page, where, picture = '') => {
+    await page.locator('.auth-tabs-language button[aria-haspopup="menu"]').click();
+    await page.locator('[data-testid="app-language-switch"] [role="menu"]').waitFor();
+    await page.waitForTimeout(250);
+    const list = await page.evaluate(() => {
+      const card = document.querySelector('.rounded-2xl.shadow-xl').getBoundingClientRect();
+      const menu = document.querySelector('[data-testid="app-language-switch"] [role="menu"]');
+      const r = menu.getBoundingClientRect();
+      const items = [...menu.querySelectorAll('[role="menuitemradio"]')];
+      return {
+        inside: r.left >= card.left && r.right <= card.right && r.bottom <= card.bottom,
+        onTop: items.every((item) => { const b = item.getBoundingClientRect(); return menu.contains(document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2)); }),
+        items: items.length,
+      };
+    });
+    assert.deepEqual(list, { inside: true, onTop: true, items: 4 }, `${where}: the list of languages opens in full, on top`);
+    if (picture) await shoot(page, picture);
+    await page.keyboard.press('Escape');
+    await page.locator('[data-testid="app-language-switch"] [role="menu"]').waitFor({ state: 'detached' });
+    await page.evaluate(() => document.activeElement?.blur());
+  };
+
   async function screen(address, setup = '', { width = 390, height = 844 } = {}) {
     const page = await context.newPage();
     await page.setViewportSize({ width, height });
@@ -203,8 +258,10 @@ try {
     assert.equal(await page.getByRole('button', { name: 'Sign in with Google' }).count(), 1);
     assert.equal(await page.locator('img[src="/branding/sellio-logo.webp"]').count(), 0, 'the old logo header is gone');
     assert.ok(await cardBottom(page) <= 844, 'on one screen');
+    rowAsDesigned(await languageRow(page), 'Login');
     await shoot(page, 'login-1-phone');
-    passed('Login: the sign-up card (awning, the stall without its stickers, its counter still, the bowl with chopsticks, "Welcome back!"), Login / Sign Up, Mobile No. / Email (no pills, the one in use underlined), the number and password, Forgot password?, Google, on one screen');
+    await listOpens(page, 'Login', 'login-1b-language');
+    passed('Login: the sign-up card (awning, the stall without its stickers, its counter still, the bowl with chopsticks, "Welcome back!"), Login / Sign Up in the middle with the language at the far right (no pill; its list opens on top), Mobile No. / Email (no pills, the one in use underlined), the number and password, Forgot password?, Google, on one screen');
 
     // ── Email: the address ──────────────────────────────────────────────────────────────────
     await page.getByRole('button', { name: 'Email', exact: true }).click();
@@ -345,6 +402,7 @@ try {
     ], 'the code\'s token_hash, as Supabase Auth makes it (sha224 of the address and the code)');
     assert.match(await page.locator('[data-testid="closed-account"]').textContent(), /Kopi Corner/);
     assert.equal(await page.locator('[data-testid="join-stall"]').count(), 0, 'the awning only');
+    assert.equal(await page.locator('[data-testid="app-language-switch"]').count(), 0, 'no language button: it was picked on Login');
     await shoot(page, 'login-5-closed');
     passed('A closed account\'s code opens the closed-account screen: the code\'s token_hash goes to the closed-account server, as Join\'s link does; a wrong code is said under the boxes');
     await page.close();
@@ -394,8 +452,9 @@ try {
     assert.equal(await page.locator('#join-email').count(), 0, 'not the free sign-up');
     assert.equal(await page.locator('#auth-email').inputValue(), 'boss@kopi.sg');
     assert.deepEqual(await pressed(page, '.auth-tabs'), ['false:Login', 'true:Sign Up']);
+    rowAsDesigned(await languageRow(page), 'A paid invite\'s sign-up');
     await shoot(page, 'signup-2-invite');
-    passed('A paid invite\'s link: its sign-up (name, number, email, password) in the same card');
+    passed('A paid invite\'s link: its sign-up (name, number, email, password) in the same card, the language at the end of its Login / Sign Up row');
     await page.close();
   }
   {
@@ -404,8 +463,9 @@ try {
     await page.getByText('Reset Password', { exact: true }).waitFor();
     assert.equal(await page.locator('.join-stall-awning').count(), 1);
     assert.equal(await page.locator('[data-testid="join-stall"]').count(), 0);
+    assert.equal(await page.locator('[data-testid="app-language-switch"]').count(), 0, 'no language button: it was picked on Login');
     await shoot(page, 'login-6-forgot');
-    passed('Forgot password: the same card, its awning on top');
+    passed('Forgot password: the same card, its awning on top, no language button');
     await page.close();
   }
 
@@ -420,6 +480,7 @@ try {
     await page.locator('.auth-how').waitFor({ timeout: 10000 });
     await page.waitForTimeout(900);
     assert.deepEqual(await fits(page), { wide: false, cut: [] }, `${language}: login fits`);
+    rowAsDesigned(await languageRow(page), `${language}, 360px: Login`);
     await shoot(page, `small-${language}-login`);
     await page.locator('.auth-how button').nth(1).click();
     await page.locator('#auth-login-email').fill('mei.ling@gmail.com');
@@ -430,7 +491,20 @@ try {
     await shoot(page, `small-${language}-code`);
     await page.close();
   }
-  passed('On a 360-pixel phone in English, Bahasa Indonesia, 中文 and Bahasa Melayu: nothing wider than the screen, the tabs, the two ways in and the six boxes fit');
+  passed('On a 360-pixel phone in English, Bahasa Indonesia, 中文 and Bahasa Melayu: nothing wider than the screen, the tabs (in the middle, the language at the far right), the two ways in and the six boxes fit');
+  // A regular phone in every language, and the narrowest (320px): there the tabs give up the room
+  // on their left, so they aren't in the middle, but the rest holds.
+  for (const language of ['en', 'id', 'zh', 'ms']) {
+    for (const [width, height] of [[390, 844], [320, 640]]) {
+      const page = await screen('/Auth', `localStorage.setItem('sellio_app_language', '${language}');`, { width, height });
+      await page.locator('.auth-how').waitFor({ timeout: 10000 });
+      await page.waitForTimeout(500);
+      rowAsDesigned(await languageRow(page), `${language}, ${width}px: Login`, { centred: width > 320 });
+      if (width === 320) await shoot(page, `narrow-${language}-login`);
+      await page.close();
+    }
+  }
+  passed('Every language on a regular phone: Login / Sign Up in the middle, the language at the far right; on a 320-pixel phone it all still fits');
   assert.deepEqual(errors, [], 'no errors on the pages');
 } finally {
   await browser.close();

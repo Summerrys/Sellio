@@ -7,8 +7,10 @@ import { useBackToClose } from '@/lib/useBackToClose';
 // 16 Nov 2026: EN, 中文, MY, ID, in that order), which opens the others and folds them away again
 // once one is picked (Alvin, 16 Nov 2026: "when selected a language, make it collapsible for
 // others"). The open list names each language in itself, so MY reads as Bahasa Melayu; the choice
-// is remembered on this device. Where it sits: the top corner of the sign-in and sign-up cards,
-// the header of /Account and of Me, and the account panel's Language row.
+// is remembered on this device. Where it sits: the far right of the Login / Sign Up row on the
+// sign-in and sign-up cards (Alvin, 19 Nov 2026; the screens after those have none, as it was
+// picked there), the corner of the sign-up's screens without the awning, the header of Me, and
+// the account panel's Language row.
 const MENU_NAMES = { en: 'English', zh: '简体中文', ms: 'Bahasa Melayu', id: 'Bahasa Indonesia' };
 // The language in use is marked in the Login button's orange (pages/Auth.jsx), the others' codes in
 // a lighter tone of it; the button has no pill and the list only a light shadow (Alvin, 16 Nov 2026).
@@ -111,8 +113,8 @@ export function LanguagePicker({ up = false }) {
   );
 }
 
-// The picker wherever a page places it (className positions it): the corner of the sign-in and
-// sign-up cards, the /Account header.
+// The picker wherever a page places it (className positions it): the Login / Sign Up row
+// (.auth-tabs-language), the corner of the sign-up's screens without the awning.
 export default function AppLanguageSwitch({ className = '', up = false }) {
   const { available } = useAppText();
   if (!available) return null;

@@ -211,6 +211,60 @@ try {
     };
   });
 
+  // The Login / Sign Up row (Alvin, 19 Nov 2026): the tabs in the middle of the card, the language
+  // at its far right, no pill. Measured on what is drawn: the globe, the code and the arrow.
+  const languageRow = (page) => page.evaluate(() => {
+    const card = document.querySelector('.rounded-2xl.shadow-xl').getBoundingClientRect();
+    const tabs = document.querySelector('.auth-tabs-row > .auth-tabs').getBoundingClientRect();
+    const holder = document.querySelector('.auth-tabs-row > .auth-tabs-language');
+    const button = holder?.querySelector('[data-testid="app-language-switch"] button[aria-haspopup="menu"]');
+    if (!button) return { inRow: false, count: document.querySelectorAll('[data-testid="app-language-switch"]').length };
+    const parts = [...button.querySelectorAll('svg, span[lang]')].map((e) => e.getBoundingClientRect());
+    const seen = { l: Math.min(...parts.map((b) => b.left)), r: Math.max(...parts.map((b) => b.right)), t: Math.min(...parts.map((b) => b.top)), b: Math.max(...parts.map((b) => b.bottom)) };
+    const plain = (e) => { const s = getComputedStyle(e); return s.backgroundColor === 'rgba(0, 0, 0, 0)' && s.boxShadow === 'none' && s.borderTopWidth === '0px'; };
+    return {
+      inRow: true, count: document.querySelectorAll('[data-testid="app-language-switch"]').length,
+      centre: Math.round(((tabs.left + tabs.right) / 2 - (card.left + card.right) / 2) * 10) / 10,
+      edge: Math.round(card.right - seen.r), gap: Math.round(seen.l - tabs.right),
+      level: Math.round((seen.t + seen.b) / 2 - (tabs.top + tabs.bottom) / 2),
+      plain: plain(holder) && plain(button),
+      cut: [...document.querySelectorAll('.auth-tabs-row .auth-tabs button')].filter((b) => b.scrollWidth > b.clientWidth + 1 || b.getBoundingClientRect().right > tabs.right + 0.5).map((b) => b.textContent),
+      wide: document.documentElement.scrollWidth > window.innerWidth,
+    };
+  });
+  const rowAsDesigned = (m, where, { centred = true } = {}) => {
+    assert.ok(m.inRow, `${where}: the language at the end of the Login / Sign Up row`);
+    assert.equal(m.count, 1, `${where}: one language button`);
+    if (centred) assert.ok(Math.abs(m.centre) <= 1, `${where}: Login / Sign Up in the middle of the card (${m.centre}px off)`);
+    assert.ok(m.edge >= 10 && m.edge <= 14, `${where}: the language at the card's far right (its arrow ${m.edge}px in)`);
+    assert.ok(m.gap >= 6, `${where}: clear of Login / Sign Up (${m.gap}px)`);
+    assert.ok(Math.abs(m.level) <= 1, `${where}: level with Login / Sign Up (${m.level}px)`);
+    assert.ok(m.plain, `${where}: no pill`);
+    assert.deepEqual(m.cut, [], `${where}: Login and Sign Up whole`);
+    assert.equal(m.wide, false, `${where}: nothing wider than the screen`);
+  };
+  // Its list opens in full over the card, on top of what's under it, and folds away again.
+  const listOpens = async (page, where) => {
+    await page.locator('.auth-tabs-language button[aria-haspopup="menu"]').click();
+    await page.locator('[data-testid="app-language-switch"] [role="menu"]').waitFor();
+    await page.waitForTimeout(250);
+    const list = await page.evaluate(() => {
+      const card = document.querySelector('.rounded-2xl.shadow-xl').getBoundingClientRect();
+      const menu = document.querySelector('[data-testid="app-language-switch"] [role="menu"]');
+      const r = menu.getBoundingClientRect();
+      const items = [...menu.querySelectorAll('[role="menuitemradio"]')];
+      return {
+        inside: r.left >= card.left && r.right <= card.right && r.bottom <= card.bottom,
+        onTop: items.every((item) => { const b = item.getBoundingClientRect(); return menu.contains(document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2)); }),
+        items: items.length,
+      };
+    });
+    assert.deepEqual(list, { inside: true, onTop: true, items: 4 }, `${where}: the list of languages opens in full, on top`);
+    await page.keyboard.press('Escape');
+    await page.locator('[data-testid="app-language-switch"] [role="menu"]').waitFor({ state: 'detached' });
+    await page.evaluate(() => document.activeElement?.blur());
+  };
+
   const LANGUAGES = { en: ['Open your shop on Sellio', 'FREE!', 'Sell from home'], zh: ['在 Sellio 开设您的店铺', '免费！', '在家开店'], id: ['Buka toko Anda di Sellio', 'GRATIS!', 'Jualan dari rumah'], ms: ['Buka kedai anda di Sellio', 'PERCUMA!', 'Jual dari rumah'] };
   for (const [language, [headline, free, home]] of Object.entries(LANGUAGES)) {
     for (const [w, h] of [[390, 844], [360, 740]]) {
@@ -243,7 +297,9 @@ try {
       assert.equal(m.emoji, false, `${where}: no emoji`);
       if (language !== 'zh' || w === 390) assert.equal(m.lines, 1, `${where}: the headline on one line`);
       if (w === 390) assert.ok(m.cardBottom <= h, `${where}: the whole card on a regular phone's screen (${m.cardBottom})`);
+      rowAsDesigned(await languageRow(page), `${where}: Sign Up`);
       if (w === 390) await shoot(page, `stall-${language}`);
+      if (w === 390 && language === 'en') await listOpens(page, `${where}: Sign Up`);
       for (const [n, seconds] of [1.6, 5.6, 9.6, 13.6].entries()) {
         await seek(page, seconds);
         const { sets, plusOne } = await counter(page);
@@ -264,7 +320,7 @@ try {
       }
       await page.close();
     }
-    passed(`${language}: the awning on top, the counter centred, its three sets in turn with the phone's "+1" (each centred, standing on it, clear of the sign and the phone; the bowl's chopsticks), the sign going home, the stickers on the counter, "${free}" in its star and clear of the headline, no emoji`);
+    passed(`${language}: Login / Sign Up in the middle with the language at the far right (no pill), the awning on top, the counter centred, its three sets in turn with the phone's "+1" (each centred, standing on it, clear of the sign and the phone; the bowl's chopsticks), the sign going home, the stickers on the counter, "${free}" in its star and clear of the headline, no emoji`);
   }
 
   // ── A small phone; Reduce motion ─────────────────────────────────────────────────────────

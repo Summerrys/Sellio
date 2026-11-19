@@ -150,7 +150,6 @@ img.sellio-photo[data-loaded] { opacity: 1; }
 .join-stall-awning::before { background: linear-gradient(rgba(255,255,255,.72), rgba(255,255,255,.72)), linear-gradient(90deg, #fb923c, #e0449a 50%, #8b5cf6);
   -webkit-mask: radial-gradient(circle at 33px 0, #000 10.5px, transparent 11px) 0 0 / 44px 11px repeat-x;
           mask: radial-gradient(circle at 33px 0, #000 10.5px, transparent 11px) 0 0 / 44px 11px repeat-x; }
-.join-stall-language { border-radius: 9999px; background: rgba(255,255,255,.95); box-shadow: 0 2px 8px rgba(15,23,42,.12); padding: 0 2px; }
 .join-stall-scene { position: relative; }
 .join-stall-scene > svg { display: block; width: 100%; height: auto; overflow: visible; }
 .join-stall-sign-wrap { position: absolute; top: 0; left: 18.4%; width: 0; display: flex; justify-content: center; z-index: 1; }
@@ -294,6 +293,17 @@ button.account-choice, a.account-choice { cursor: pointer; }
 .auth-tabs { display: flex; padding: 4px; border-radius: 12px; background: #fde8d8; }
 .auth-tabs button { flex: 1; padding: 8px; border-radius: 9px; font-size: 14px; font-weight: 500; color: #64748b; transition: background-color .15s, color .15s; }
 .auth-tabs button[aria-pressed="true"] { background: #fff; color: #0f172a; box-shadow: 0 1px 2px rgba(15,23,42,.08); }
+/* The language goes at the far right of the Login / Sign Up row, with Login / Sign Up in the middle
+   of the card (Alvin, 19 Nov 2026: "push it to the extreme right ... and the login/signup center
+   them"), no pill. The button sits in the card's padding, its arrow 12px in from the edge; the tabs
+   keep 84px clear from both edges, room for the widest code (中文), so they stay in the middle
+   whatever the language. A label too long to share the tabs equally keeps its length (Malay's
+   "Log Masuk" on a small phone). On a very narrow card the tabs give up the room on their left. */
+.auth-tabs-row { position: relative; }
+.auth-tabs-row .auth-tabs { margin-inline: 52px; }
+.auth-tabs-row .auth-tabs button { flex: 1 1 0; min-width: max-content; white-space: nowrap; }
+.auth-tabs-language { position: absolute; z-index: 10; top: 0; bottom: 0; right: -26px; display: flex; align-items: center; }
+@media (max-width: 349px) { .auth-tabs-row .auth-tabs { margin-left: 0; } }
 /* Mobile No. / Email (Alvin, 18 Nov 2026): no pills; the one in use is underlined. */
 .auth-how { display: flex; justify-content: center; gap: 32px; }
 .auth-how button { display: inline-flex; align-items: center; gap: 6px; padding: 4px 2px; border: 0; background: none;

@@ -168,10 +168,11 @@ try {
     assert.doesNotMatch(text, /on this device|newest email/, 'no "open it on this device" instructions');
     assert.equal(await page.getByRole('button', { name: /Resend in \d+s/ }).isDisabled(), true, 'Resend waits');
     assert.ok(await cardBottom(page) <= 844, 'on one screen');
+    assert.equal(await page.locator('[data-testid="app-language-switch"]').count(), 0, 'flow-1-sent: no language button (picked on the first screen)');
     await shoot(page, 'flow-1-sent');
     await page.getByRole('button', { name: 'Use a different email' }).click();
     await page.locator('[data-testid="join-stall"]').waitFor();
-    passed('Check your email: the awning, step 1 of 3, the envelope with its sent tick, the link and the spam hint, Resend waiting; Use a different email goes back');
+    passed('Check your email: no language button (picked on the first screen), the awning, step 1 of 3, the envelope with its sent tick, the link and the spam hint, Resend waiting; Use a different email goes back');
     await page.close();
   }
 
@@ -184,6 +185,7 @@ try {
     assert.equal(await page.locator('[data-testid="join-verified"]').textContent(), 'tan@kopi.sg is verified');
     assert.equal(await page.locator('#join-password').count(), 1);
     assert.ok(await cardBottom(page) <= 844, 'on one screen');
+    assert.equal(await page.locator('[data-testid="app-language-switch"]').count(), 0, 'flow-2-details: no language button (picked on the first screen)');
     await shoot(page, 'flow-2-details');
     await page.locator('#join-name').fill('Tan');
     await page.locator('#join-phone').fill('91234567');
@@ -200,6 +202,7 @@ try {
     await page.locator('#join-name').waitFor({ timeout: 10000 });
     assert.equal(await page.locator('[data-testid="join-verified"]').textContent(), 'Signed in with Google: mei@gmail.com');
     assert.equal(await page.locator('input[type="password"]').count(), 0);
+    assert.equal(await page.locator('[data-testid="app-language-switch"]').count(), 0, 'flow-2-details-google: no language button (picked on the first screen)');
     await shoot(page, 'flow-2-details-google');
     passed('Set up your account: step 2 of 3 (1 ticked), "…is verified" or "Signed in with Google" (no password), and the account page is told to say welcome');
     await page.close();
@@ -221,6 +224,7 @@ try {
     assert.equal(await page.locator('a.account-choice').getAttribute('href'), '/explore');
     assert.ok(await cardBottom(page) <= 844, 'on one screen');
     await page.waitForTimeout(800);
+    assert.equal(await page.locator('[data-testid="app-language-switch"]').count(), 0, 'flow-3-account: no language button (picked on the first screen)');
     await shoot(page, 'flow-3-account');
     // Name your shop, then Back: still the welcome and step 3, but no second confetti.
     await page.getByRole('button', { name: /Sell from home/ }).click();
@@ -256,6 +260,7 @@ try {
     assert.equal(await page.locator('.shop-name-sign-name').textContent(), 'Mei’s Home Bakes', 'the sign shows it as it’s typed');
     assert.equal(await page.locator('#shop-name-error').count(), 0, 'typing takes the problem off');
     assert.ok(await cardBottom(page) <= 844, 'on one screen');
+    assert.equal(await page.locator('[data-testid="app-language-switch"]').count(), 0, 'flow-3b-name: no language button (picked on the first screen)');
     await shoot(page, 'flow-3b-name');
     await page.getByRole('button', { name: 'Back' }).click();
     await page.getByRole('button', { name: /Sell from home/ }).click();

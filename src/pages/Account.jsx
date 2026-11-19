@@ -9,7 +9,6 @@ import AppLoader from '@/components/ui-custom/AppLoader';
 import AuthPricingModal from '@/components/auth/AuthPricingModal';
 import { accountErrorMessage, nextStepFor } from '@/lib/accountFlow';
 import { useAppText } from '@/lib/appText';
-import AppLanguageSwitch from '@/components/ui-custom/AppLanguageSwitch';
 import SignUpSteps from '@/components/auth/SignUpSteps';
 import ShopNameStall from '@/components/auth/ShopNameStall';
 import { FieldError, FormError, fieldBorder, fieldProps } from '@/components/ui-custom/FieldError';
@@ -194,7 +193,6 @@ export default function Account() {
               ))}
             </div>
           )}
-          <AppLanguageSwitch className="absolute right-3 top-1 z-10 join-stall-language" />
 
           {freeOpen ? (
             <form onSubmit={openFreeShop} noValidate data-testid="shop-name-form">

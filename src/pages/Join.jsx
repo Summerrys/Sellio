@@ -433,15 +433,20 @@ export default function Join({ embedded = false, onLogin = null, initialEmail = 
       <div className="w-full max-w-sm sm:max-w-md">
         {/* The first screen has the stall on top (components/auth/JoinStall.jsx), its counter
             changing every 4 seconds (rotate); it and the next two have the awning on the card's
-            top edge, then where they are (1, 2 of 3). */}
+            top edge, then where they are (1, 2 of 3). The language is at the far right of the
+            first screen's Login / Sign Up row (Alvin, 19 Nov 2026); the next two have none, as
+            it was picked there, and the screens without the awning keep it in the corner. */}
         <div className={`relative bg-white rounded-2xl shadow-xl p-8${AWNING_STAGES.includes(stage) ? ' pt-0 overflow-hidden' : ''}`}>
-          <AppLanguageSwitch className={AWNING_STAGES.includes(stage) ? 'absolute right-3 top-1 z-10 join-stall-language' : 'absolute right-3 top-3 z-10'} />
+          {!AWNING_STAGES.includes(stage) && <AppLanguageSwitch className="absolute right-3 top-3 z-10" />}
           {stage === 'start' && (
             <>
               <JoinStall rotate />
-              <div className="auth-tabs mb-4">
-                <button type="button" aria-pressed="false" onClick={goLogin}>{t('Login')}</button>
-                <button type="button" aria-pressed="true">{t('Sign Up')}</button>
+              <div className="auth-tabs-row mb-4">
+                <div className="auth-tabs">
+                  <button type="button" aria-pressed="false" onClick={goLogin}>{t('Login')}</button>
+                  <button type="button" aria-pressed="true">{t('Sign Up')}</button>
+                </div>
+                <AppLanguageSwitch className="auth-tabs-language" />
               </div>
             </>
           )}

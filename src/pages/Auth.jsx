@@ -1067,7 +1067,6 @@ export default function Auth() {
               the stall with the swinging Sellio sign (components/auth/JoinStall.jsx), without
               the sign-up's stickers, and "Welcome back!". */}
           <div className="auth-card relative bg-white rounded-2xl shadow-xl p-8 pt-0 overflow-hidden" data-testid="auth-card">
-            <AppLanguageSwitch className="absolute right-3 top-1 z-10 join-stall-language" />
             {closedAccount || forgotMode ? (
               <div className="join-stall-awning -mx-8 mb-6" aria-hidden="true" />
             ) : (
@@ -1301,10 +1300,15 @@ export default function Auth() {
             ) : (
             <>
             {/* Login / Sign Up (Sign Up is the free sign-up's first step, above, unless a paid
-                invite's link brought them here) */}
-            <div className="auth-tabs mb-4">
-              <button type="button" aria-pressed={isLogin} onClick={() => { setIsLogin(true); setErrors({}); }}>{t('Login')}</button>
-              <button type="button" aria-pressed={!isLogin} onClick={() => goSignUp()}>{t('Sign Up')}</button>
+                invite's link brought them here), in the middle, and the language at the row's far
+                right (Alvin, 19 Nov 2026; index.css .auth-tabs-row). Reset password and the closed
+                account have none: they come after Login, where the language was picked. */}
+            <div className="auth-tabs-row mb-4">
+              <div className="auth-tabs">
+                <button type="button" aria-pressed={isLogin} onClick={() => { setIsLogin(true); setErrors({}); }}>{t('Login')}</button>
+                <button type="button" aria-pressed={!isLogin} onClick={() => goSignUp()}>{t('Sign Up')}</button>
+              </div>
+              <AppLanguageSwitch className="auth-tabs-language" />
             </div>
 
             {/* Login: a mobile number and password, or a code emailed to them (Alvin, 17 Nov 2026);

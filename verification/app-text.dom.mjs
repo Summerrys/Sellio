@@ -341,12 +341,13 @@ try {
   page = await mount(h(MemoryRouter, null, h(app.Auth)));
   let shown = checkScreen(page.host, 'Sign in');
   for (const words of S.signIn) assert.ok(shown.includes(words), `Sign in shows "${words}": ${shown}`);
-  // The language button sits in the card's top corner, on the awning above the stall (Alvin, 16
-  // and 17 Nov 2026), folded to the language in use.
-  const corner = page.host.querySelector('.auth-card > .absolute [data-testid="app-language-switch"]');
-  assert.ok(corner, 'Sign in: the language button is in the card\'s corner');
+  // The language button sits at the far right of the Login / Sign Up row (Alvin, 19 Nov 2026),
+  // folded to the language in use; the only one on the card.
+  const corner = page.host.querySelector('.auth-tabs-row > .auth-tabs-language [data-testid="app-language-switch"]');
+  assert.ok(corner, 'Sign in: the language button is at the end of the Login / Sign Up row');
+  assert.equal(page.host.querySelectorAll('[data-testid="app-language-switch"]').length, 1, 'Sign in: one language button');
   assert.equal(text(corner.querySelector('button[aria-haspopup="menu"] [lang]')), { id: 'ID', zh: '中文', ms: 'MY' }[L]);
-  assert.ok(corner.compareDocumentPosition(page.host.querySelector('[data-testid="join-stall"]')) & window.Node.DOCUMENT_POSITION_FOLLOWING, 'before the stall');
+  assert.ok(page.host.querySelector('.auth-tabs-row > .auth-tabs').compareDocumentPosition(corner) & window.Node.DOCUMENT_POSITION_FOLLOWING, 'after Login / Sign Up');
   // Log in with an email: the address and the 6-digit code it sends, in the language.
   await click(buttonNamed(S.email, page.host), S.email);
   shown = checkScreen(page.host, 'Log in with an email');
@@ -355,12 +356,14 @@ try {
   await click(buttonNamed(S.forgot, page.host), S.forgot);
   shown = checkScreen(page.host, 'Forgot password');
   for (const words of S.reset) assert.ok(shown.includes(words), `Forgot password shows "${words}": ${shown}`);
+  assert.equal(page.host.querySelector('[data-testid="app-language-switch"]'), null, 'Forgot password: no language button (it was picked on Login)');
   await page.unmount();
 
   page = await mount(h(MemoryRouter, null, h(app.Join)));
   shown = checkScreen(page.host, 'Create an account');
   for (const words of S.join) assert.ok(shown.includes(words), `Create an account shows "${words}": ${shown}`);
-  assert.ok(page.host.querySelector('.relative > .absolute [data-testid="app-language-switch"]'), 'Create an account: the language button in the card\'s corner');
+  assert.ok(page.host.querySelector('.auth-tabs-row > .auth-tabs-language [data-testid="app-language-switch"]'), 'Create an account: the language button at the end of the Login / Sign Up row');
+  assert.equal(page.host.querySelectorAll('[data-testid="app-language-switch"]').length, 1, 'Create an account: one language button');
   await page.unmount();
 
   setPhoneLanguages(['id-ID']); // an Indonesian phone: Indonesian plans (in the language picked)
