@@ -15,6 +15,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { allowanceLine, allowanceSpent, lastSuggestion, functionErrorMessage } from '@/lib/aiAllowance';
 import { formatMoney } from '@/lib/money';
 import { useAppText, appT } from '@/lib/appText';
+import { reportUsedPhotos } from '@/lib/samplePhotos';
 
 // An error whose message is meant for the person (from our own functions).
 const friendlyError = (message) => Object.assign(new Error(message), { friendly: true });
@@ -124,6 +125,17 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
 
   const handleAccept = async () => {
     if (!currentPhoto) return;
+    // Unsplash's API guidelines (Alvin, 20 Nov 2026: credit the photographers): the photo is shown
+    // from Unsplash's own address, never copied; Unsplash is told it was used (findProductImage,
+    // with the key); and the photographer is credited with it (products.image_credits).
+    if (currentPhoto.url && currentPhoto.credit) {
+      reportUsedPhotos({ tenantId, photos: [currentPhoto] });
+      onResult(currentPhoto.url, currentPhoto.credit);
+      setPhotos([]);
+      setQuery('');
+      setCurrentIndex(0);
+      return;
+    }
     setUploading(true);
     try {
       // Ping Unsplash download endpoint (their API policy requirement — silent)
@@ -276,7 +288,7 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
   );
 }
 
-function AIProductAssistantComponent({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange, onAdditionalImagesChange, additionalImagesOnOpen, onImageDelete, onCategoriesRefresh, currentProductName }, ref) {
+function AIProductAssistantComponent({ onApply, tenantId, businessType, currency, categories, currentImageUrl, onImageChange, onImageCredit, onAdditionalImagesChange, additionalImagesOnOpen, onImageDelete, onCategoriesRefresh, currentProductName }, ref) {
    const { t } = useAppText();
    const [step, setStep] = useState(currentImageUrl ? 'image_only' : 'idle');
    const [preview, setPreview] = useState(currentImageUrl || null);
@@ -744,7 +756,8 @@ function AIProductAssistantComponent({ onApply, tenantId, businessType, currency
                 tenantId={tenantId}
                 allowance={allowance}
                 onSearched={refreshAllowance}
-                onResult={(imageUrl) => {
+                onResult={(imageUrl, credit) => {
+                  if (credit) onImageCredit?.(imageUrl, credit);
                   reportCover(imageUrl);
                   setPreview(imageUrl);
                   setStep('image_only');

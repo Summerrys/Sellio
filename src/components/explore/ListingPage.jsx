@@ -21,6 +21,8 @@ import {
   ShopAvatar, ItemImage, storeUrl, listingUrl, chatUrl, newChatUrl, goBack,
 } from './shared';
 import ZoomableImage from '@/components/ui-custom/ZoomableImage';
+import { SampleTag, PhotoCredit } from '@/components/ui-custom/PhotoCredit';
+import { creditFor } from '@/lib/samplePhotos';
 import { applyPageMeta, SITE, snippet } from '@/lib/pageMeta';
 import LoadingShapes from '@/components/ui-custom/LoadingShapes';
 import { useAppText, N_ } from '@/lib/appText';
@@ -177,7 +179,7 @@ function PhotoViewer({ images, start, name, onClose }) {
   );
 }
 
-function Gallery({ images, name, onOpen }) {
+function Gallery({ images, name, onOpen, credits }) {
   const { t } = useAppText('explore');
   const scroller = useRef(null);
   const [index, setIndex] = useState(0);
@@ -230,6 +232,11 @@ function Gallery({ images, name, onOpen }) {
             </button>
           </div>
         </>
+      )}
+      {/* A sample photo (Unsplash): marked, and its photographer credited, with links */}
+      {creditFor(credits, images[index]) && <SampleTag style={{ left: 12, bottom: 34 }} />}
+      {creditFor(credits, images[index]) && (
+        <div className="bg-white px-4 pt-1.5"><PhotoCredit credit={creditFor(credits, images[index])} /></div>
       )}
     </div>
   );
@@ -524,7 +531,7 @@ function Listing({ productId }) {
 
       <div className="max-w-2xl mx-auto bg-white" style={{ paddingBottom: `calc(88px + ${BOTTOM_INSET})` }}>
         <div ref={galleryRef}>
-          <Gallery images={images} name={item.name} onOpen={setViewerAt} />
+          <Gallery images={images} name={item.name} onOpen={setViewerAt} credits={item.image_credits} />
         </div>
 
         {isOwn && state.data.visible === false && (

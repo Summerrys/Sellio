@@ -39,7 +39,8 @@ import ImageEditModal from '@/components/onboarding/ImageEditModal';
 import DeleteProductsSheet from '../components/products/DeleteProductsSheet';
 import { planMove, withSortOrders } from '@/lib/productOrder';
 import Celebrate from '@/components/ui-custom/Celebrate';
-import { ScanReviewList, ScanItemSheet, DescriptionsStrip, groupScanItems, SCAN_REVIEW_CSS } from '@/components/products/ScanReview';
+import { ScanReviewList, ScanItemSheet, DescriptionsStrip, PhotosStrip, groupScanItems, SCAN_REVIEW_CSS } from '@/components/products/ScanReview';
+import { useSamplePhotoFinder, samplePicture, findSamplePhotos, reportUsedPhotos, SEARCH_FAILED } from '@/lib/samplePhotos';
 import useDescriptionWriter from '@/lib/useDescriptionWriter';
 import { describeItems, CANT_WRITE } from '@/lib/menuDescriptions';
 
@@ -97,6 +98,8 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
   // What the last save added: how many, and each section with its count, in the menu's order.
   const [saved, setSaved] = useState({ count: 0, sections: [] });
   const writer = useDescriptionWriter({ tenantId, setItems: setScannedItems });
+  // A sample photo (Unsplash, credited) for each item without a picture, found one by one.
+  const photoFinder = useSamplePhotoFinder({ tenantId, setItems: setScannedItems });
   const activeScan = useRef({ id: 0, controller: null });
   // The photo as sent and the full photo (for cutting pictures and the editor).
   const scanPhoto = useRef(null);
@@ -112,11 +115,13 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
   }, []);
 
   const resetWriter = writer.reset;
+  const resetPhotos = photoFinder.reset;
   const cancelScan = useCallback(() => {
     activeScan.current.id += 1;
     activeScan.current.controller?.abort();
     resetWriter();
-  }, [resetWriter]);
+    resetPhotos();
+  }, [resetWriter, resetPhotos]);
   const handleClose = () => {
     if (saving) return;
     cancelScan();
@@ -125,6 +130,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
   useBackToClose(open, handleClose);
 
   const startWriter = writer.start;
+  const startPhotos = photoFinder.start;
   const handleScan = useCallback(async file => {
     if (!file) return;
     cancelScan();
@@ -179,6 +185,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
       // order (describeMenuItems).
       startWriter(groupScanItems(items).flatMap((section) => section.items).filter((item) => !item.description));
       // Each item's own picture, cut from the full photo.
+      const cut = new Set();
       if (prepared.full) {
         for (const item of items) {
           const rect = fullPhotoRect(item.photo, prepared, prepared.full);
@@ -186,15 +193,20 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
           const picture = await cutPicture(prepared.full.img, rect);
           if (picture) keepUrl(picture.url);
           if (!current()) return;
-          if (picture) setScannedItems(prev => prev.map(p => (p._id === item._id && !p.picture ? { ...p, picture: { ...picture, rect, sized: true } } : p)));
+          if (picture) {
+            cut.add(item._id);
+            setScannedItems(prev => prev.map(p => (p._id === item._id && !p.picture ? { ...p, picture: { ...picture, rect, sized: true } } : p)));
+          }
         }
       }
+      // Then a sample photo for each item the menu had no picture of, in the menu's order.
+      startPhotos(groupScanItems(items).flatMap((section) => section.items).filter((item) => !cut.has(item._id)));
     } catch (err) {
       if (current() && err.name !== 'AbortError') { setError(err.message || t('Scan failed. Please try again.')); setRetakeOnly(!!err.photo); }
     } finally {
       if (current()) setScanning(false);
     }
-  }, [cancelScan, releasePhotos, startWriter, tenantId]);
+  }, [cancelScan, releasePhotos, startWriter, startPhotos, tenantId]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -235,6 +247,28 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
       if (still()) showError(e, t('Couldn’t write a description'), { t, fallback: appT(CANT_WRITE) });
     } finally {
       setRewritingId(null);
+    }
+  };
+
+  // A sample photo chosen in the item's editor; removing one keeps the finder from putting another.
+  const chooseSample = (id, photo) => setScannedItems(prev => prev.map(i => (i._id === id ? { ...i, picture: samplePicture(photo), _noSample: false } : i)));
+  const removePhoto = (id) => setScannedItems(prev => prev.map(i => (i._id === id ? { ...i, picture: null, _noSample: true } : i)));
+  const findSamples = async (id) => {
+    const item = scannedItems.find(i => i._id === id);
+    if (!item?.name?.trim()) return;
+    const still = sameScan();
+    updateItem(id, '_photo', 'waiting');
+    try {
+      const photos = await findSamplePhotos({ tenantId, query: item.name });
+      if (!still()) return;
+      setScannedItems(prev => prev.map(i => (i._id === id
+        ? { ...i, _photo: undefined, samples: photos, ...(photos.length && !i.picture ? { picture: samplePicture(photos[0]), _noSample: false } : {}) }
+        : i)));
+      if (!photos.length) toast.message(t('No sample photos found for this name.'));
+    } catch (e) {
+      if (!still()) return;
+      updateItem(id, '_photo', undefined);
+      showError(e, t('Couldn’t find sample photos'), { t, fallback: appT(SEARCH_FAILED) });
     }
   };
 
@@ -287,6 +321,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
     // Descriptions still being written stop here: the one being typed is kept whole, those
     // still waiting stay blank.
     const finished = writer.stop();
+    photoFinder.stop();
     const items = scannedItems.map(item => (finished && item._id === finished.id && item._desc !== 'own' ? { ...item, description: finished.text } : item));
     // In the order shown: sections in the menu's order, each with its items.
     const selected = groupScanItems(items.filter(i => i._selected)).flatMap(section => section.items);
@@ -336,7 +371,9 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
         price: typedPrice(item.price),
         description: String(item.description || '').trim() || null,
         category_id: catMap[String(item.category || '').trim().toLowerCase()] || null,
-        image_url: photoUrls[item._id] || item.image_url || null,
+        // A sample photo is shown from Unsplash, with its photographer's credit (never copied).
+        image_url: photoUrls[item._id] || item.picture?.sample?.url || item.image_url || null,
+        image_credits: !photoUrls[item._id] && item.picture?.sample ? { [item.picture.sample.url]: item.picture.sample.credit } : null,
         slug: item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now() + Math.random().toString(36).slice(2, 5),
         is_active: true,
         variants: cleanScannedOptions(item.variants),
@@ -347,6 +384,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
       if (insertedProducts?.length) {
         await supabase.from('inventory_items').insert(insertedProducts.map(p => ({ tenant_id: tenantId, product_id: p.id, current_stock: 0, low_stock_threshold: 5, par_level: 0, unit: 'pcs' })));
       }
+      reportUsedPhotos({ tenantId, photos: selected.map(i => i.picture?.sample).filter(Boolean) });
       const sections = groupScanItems(selected).filter(section => section.name).map(section => ({ name: section.name, count: section.items.length }));
       setSaved({ count: selected.length, sections });
       setSheet(null);
@@ -407,6 +445,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
         </div>
 
         {step === 'review' && <DescriptionsStrip progress={writer.progress} drafts={drafts} onStop={writer.stop} onRetry={restartWriter} />}
+        {step === 'review' && <PhotosStrip progress={photoFinder.progress} samples={scannedItems.filter(i => i.picture?.sample).length} onStop={photoFinder.stop} />}
 
         {/* Body */}
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: step === 'review' ? 0 : 20 }}>
@@ -465,7 +504,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
                 canEditPhoto={item => !!(fullPhoto || item.picture)}
                 onToggle={toggleItem}
                 onOpen={(id, focus) => setSheet({ id, focus: focus || 'name' })}
-                onPhoto={id => setPhotoEditor({ id, mode: 'auto' })}
+                onPhoto={id => (scannedItems.find(i => i._id === id)?.picture?.sample ? setSheet({ id, focus: 'name' }) : setPhotoEditor({ id, mode: 'auto' }))}
                 onRename={renameSection}
               />
             </>
@@ -536,7 +575,9 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
           onPhotoFile={file => pictureFromFile(sheetItem._id, file)}
           onEditPhoto={() => setPhotoEditor({ id: sheetItem._id, mode: 'auto' })}
           onBoxOnMenu={() => setPhotoEditor({ id: sheetItem._id, mode: 'menu' })}
-          onRemovePhoto={() => updateItem(sheetItem._id, 'picture', null)}
+          onRemovePhoto={() => removePhoto(sheetItem._id)}
+          onUseSample={photo => chooseSample(sheetItem._id, photo)}
+          onFindSamples={() => findSamples(sheetItem._id)}
           onRemove={() => { removeItem(sheetItem._id); setSheet(null); }}
           onClose={() => setSheet(null)}
         />

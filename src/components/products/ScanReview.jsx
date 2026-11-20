@@ -6,6 +6,7 @@ import { useBackToClose } from '@/lib/useBackToClose';
 import { formatMoney, currencyPrefix } from '@/lib/money';
 import { typedPrice } from '@/lib/menuScan';
 import NativeCameraScanControl from '@/components/ui-custom/NativeCameraScanControl';
+import { PhotoCredit } from '@/components/ui-custom/PhotoCredit';
 import PhotoPickerControl from '@/components/ui-custom/PhotoPickerControl';
 
 // Scan Menu's review, redesigned (Alvin, 20 Nov 2026: the category squeezed beside the price, the
@@ -101,6 +102,35 @@ export function DescriptionsStrip({ progress, drafts, onStop, onRetry }) {
   return null;
 }
 
+// Under the descriptions' strip while sample photos are found, then once they're in.
+export function PhotosStrip({ progress, samples, onStop }) {
+  const { t } = useAppText();
+  if (progress.status === 'finding') {
+    return (
+      <div data-testid="scan-finding-photos" role="status" aria-live="polite" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px 8px 20px', background: '#eff6ff', borderBottom: '1px solid #dbeafe', flexShrink: 0 }}>
+        <Camera size={15} color="#1d4ed8" aria-hidden="true" />
+        <p style={{ margin: 0, flex: 1, fontSize: 13, lineHeight: '18px', fontWeight: 600, color: '#1e40af' }}>{t('Finding sample photos · {done} of {total}', { done: progress.done, total: progress.total })}</p>
+        <button type="button" onClick={onStop} style={{ border: 'none', background: 'none', padding: '6px 4px', fontSize: 13, fontWeight: 600, color: '#1e40af', cursor: 'pointer' }}>{t('Stop')}</button>
+      </div>
+    );
+  }
+  if (progress.status === 'failed') {
+    return (
+      <div data-testid="scan-photos-failed" role="status" aria-live="polite" style={{ padding: '8px 16px 8px 20px', background: '#fffbeb', borderBottom: '1px solid #fde68a', fontSize: 12.5, lineHeight: '17px', color: '#92400e', flexShrink: 0 }}>
+        {t('Sample photos stopped: {reason}', { reason: progress.error })}
+      </div>
+    );
+  }
+  if ((progress.status === 'done' || progress.status === 'stopped') && samples > 0) {
+    return (
+      <div data-testid="scan-photos-added" role="status" aria-live="polite" style={{ padding: '8px 16px 8px 20px', background: '#f0fdf4', borderBottom: '1px solid #dcfce7', fontSize: 12.5, lineHeight: '17px', color: '#166534', flexShrink: 0 }}>
+        {samples === 1 ? t('1 sample photo added. Customers see it marked “Sample photo”, with the photographer’s credit.') : t('{count} sample photos added. Customers see each marked “Sample photo”, with the photographer’s credit.', { count: samples })}
+      </div>
+    );
+  }
+  return null;
+}
+
 function PriceButton({ item, currency, pricesAsked, onClick, size = 'row' }) {
   const { t } = useAppText();
   const price = typedPrice(item.price);
@@ -167,12 +197,17 @@ function optionsText(variants) {
 function PhotoTile({ item, size, canEdit, onClick, label, testId = 'scan-item-photo' }) {
   const { t } = useAppText();
   const fromMenu = !!(item.picture && (item.picture.rect || item.picture.fromMenu));
+  const badge = fromMenu ? t('Menu') : item.picture?.sample ? t('Sample') : null;
+  if (!item.picture && item._photo === 'waiting') {
+    return <div className="sellio-scan-pulse" data-testid="scan-photo-waiting" aria-hidden="true" style={{ width: size, height: size, borderRadius: size > 80 ? 14 : 12, background: '#e9eef5', flexShrink: 0 }} />;
+  }
   if (item.picture) {
     return (
       <button type="button" data-testid={testId} aria-label={label} disabled={!canEdit} onClick={onClick}
         style={{ position: 'relative', width: size, height: size, padding: 0, border: 'none', borderRadius: size > 80 ? 14 : 12, overflow: 'hidden', flexShrink: 0, cursor: canEdit ? 'pointer' : 'default', background: '#f1f5f9' }}>
-        <img src={item.picture.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-        {fromMenu && <span style={{ position: 'absolute', left: 4, bottom: 4, padding: '1px 5px', borderRadius: 6, background: 'rgba(15,23,42,.78)', color: '#ffffff', fontSize: 10, lineHeight: '14px', fontWeight: 600 }}>{t('Menu')}</span>}
+        {/* A sample shows Unsplash's small size here (the tile is at most 112 px); the product keeps the full one. */}
+        <img src={item.picture.sample?.thumb || item.picture.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        {badge && <span style={{ position: 'absolute', left: 4, bottom: 4, padding: '1px 5px', borderRadius: 6, background: 'rgba(15,23,42,.78)', color: '#ffffff', fontSize: 10, lineHeight: '14px', fontWeight: 600 }}>{badge}</span>}
       </button>
     );
   }
@@ -273,7 +308,7 @@ const PHOTO_OPTION = { height: 36, boxSizing: 'border-box', border: '1px solid #
 
 // One item's editor (screen 3): photo, name, price, section, description (Rewrite asks the AI
 // again), and Remove from scan. Changes apply as they're made; Done or Back closes it.
-export function ScanItemSheet({ item, items, currency, pricesAsked, focus, hasMenuPhoto, rewriting, onChange, onDescription, onRewrite, onPhotoFile, onEditPhoto, onBoxOnMenu, onRemovePhoto, onRemove, onClose }) {
+export function ScanItemSheet({ item, items, currency, pricesAsked, focus, hasMenuPhoto, rewriting, onChange, onDescription, onRewrite, onPhotoFile, onEditPhoto, onBoxOnMenu, onRemovePhoto, onUseSample, onFindSamples, onRemove, onClose }) {
   const { t } = useAppText();
   const ids = useId();
   const titleId = `${ids}-title`;
@@ -310,14 +345,37 @@ export function ScanItemSheet({ item, items, currency, pricesAsked, focus, hasMe
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <p style={{ margin: 0, ...FIELD_LABEL }}>{t('Photo')}</p>
             <div style={{ display: 'flex', gap: 12 }}>
-              <PhotoTile item={item} size={112} canEdit={hasMenuPhoto || !!item.picture} onClick={onEditPhoto} label={t('Photo for {name}', { name })} testId="scan-edit-photo" />
+              <PhotoTile item={item} size={112} canEdit={!item.picture?.sample && (hasMenuPhoto || !!item.picture)} onClick={onEditPhoto} label={t('Photo for {name}', { name })} testId="scan-edit-photo" />
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <NativeCameraScanControl label={t('Take a photo')} action={t('Take a photo')} onFile={pick} onError={(message) => toast.message(message)} style={PHOTO_OPTION}>{t('Take a photo')}</NativeCameraScanControl>
                 <PhotoPickerControl label={t('Choose from phone')} onFile={pick} style={PHOTO_OPTION}>{t('Choose from phone')}</PhotoPickerControl>
                 {hasMenuPhoto && <button type="button" onClick={onBoxOnMenu} style={PHOTO_OPTION}>{t('Box it on the menu photo')}</button>}
+                {!item.samples?.length && item._photo !== 'waiting' && <button type="button" onClick={onFindSamples} disabled={!item.name?.trim()} style={PHOTO_OPTION}>{t('Find sample photos')}</button>}
                 {item.picture && <button type="button" onClick={onRemovePhoto} style={{ ...PHOTO_OPTION, color: '#b91c1c' }}>{t('Remove photo')}</button>}
               </div>
             </div>
+            {(item.samples?.length > 0 || item._photo === 'waiting') && (
+              <div data-testid="scan-samples" style={{ border: '1px solid #e2e8f0', borderRadius: 14, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <p style={{ margin: 0, ...FIELD_LABEL }}>{t('Sample photos')}</p>
+                {item._photo === 'waiting' ? (
+                  <p style={{ margin: 0, fontSize: 13, color: '#64748b' }}>{t('Finding sample photos…')}</p>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8 }}>
+                    {item.samples.map((photo, i) => {
+                      const chosen = item.picture?.url === photo.url;
+                      return (
+                        <button key={photo.id || photo.url} type="button" onClick={() => onUseSample(photo)} aria-pressed={chosen} aria-label={t('Use sample photo {number}', { number: i + 1 })}
+                          style={{ aspectRatio: '1', padding: 0, borderRadius: 10, overflow: 'hidden', border: chosen ? '2px solid rgb(var(--color-primary))' : '1px solid #e2e8f0', background: '#f1f5f9', cursor: 'pointer' }}>
+                          <img src={photo.thumb} alt={photo.alt} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {item.picture?.sample && <PhotoCredit credit={item.picture.sample.credit} />}
+                <p style={{ margin: 0, fontSize: 12, lineHeight: '17px', color: '#475569' }}>{t('A sample shows a similar dish, not yours. Customers see it marked “Sample photo”, with the photographer’s credit.')}</p>
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

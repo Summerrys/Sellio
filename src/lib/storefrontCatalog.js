@@ -11,6 +11,7 @@ export const STOREFRONT_PRODUCT_FIELDS = [
   'compare_at_price',
   'image_url',
   'images',
+  'image_credits',
   'category_id',
   'is_featured',
   'is_active',

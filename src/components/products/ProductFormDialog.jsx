@@ -5,7 +5,7 @@ import { handOverBackStep } from '@/lib/useBackToClose';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { X, ChevronDown, ChevronUp, Loader2, Trash2, PackagePlus, Eye } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Loader2, Trash2, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { explainError } from '@/lib/plainError';
@@ -89,11 +89,10 @@ const saveNewCategory = async (supabase, tenantId, typedName) => {
 };
 import PriceDisplay from './PriceDisplay';
 import ProductFormPricing from './ProductFormPricing';
-import ProductFormInventory from './ProductFormInventory';
 import ProductFormVariants from './ProductFormVariants';
 import AIProductAssistant, { cleanupDeletedImages } from './AIProductAssistant';
+import { keepCredits } from '@/lib/samplePhotos';
 import StockAdjustmentPanel from '../inventory/StockAdjustmentPanel';
-import { Pencil, Plus } from 'lucide-react';
 import { useAppText, appT } from '@/lib/appText';
 
 const VARIANT_TYPE_MAP = {
@@ -391,6 +390,8 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
           variants: formData.variants,
           image_url: formData.image_url || null,
           images: formData.images || [],
+          // Credits only for the photos still used (a sample photo replaced takes its credit along).
+          image_credits: keepCredits(formData.image_credits, [formData.image_url, ...(formData.images || [])]),
           tenant_id: tenantId,
           price: parseFloat(formData.price) || 0,
           cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
@@ -416,6 +417,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
         const { sku, ...rest } = formData;
         const payload = {
           ...rest,
+          image_credits: keepCredits(formData.image_credits, [formData.image_url, ...(formData.images || [])]),
           tags,
           slug: toSlug(formData.name),
           tenant_id: tenantId,
@@ -581,6 +583,7 @@ export default function ProductFormDialog({ open, onOpenChange, product, tenantI
               if (url) uploadedImagesRef.current.add(url);
               update({ image_url: url });
             }}
+            onImageCredit={(url, credit) => setFormData(prev => ({ ...prev, image_credits: { ...(prev.image_credits || {}), [url]: credit } }))}
             onAdditionalImagesChange={(images) => {
               if (images?.length) {
                 images.forEach(url => uploadedImagesRef.current.add(url));

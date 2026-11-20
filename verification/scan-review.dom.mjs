@@ -118,8 +118,16 @@ const storage = { uploads: [], removed: [], failUploads: false };
 // What the save reads first (the shop's highest item number), and the answer it gets.
 const reads = [];
 let lastItem = { data: [], error: null };
+// findProductImage (sample photos): none found unless a test says otherwise.
+const invoked = [];
+let photosFor = () => ({ data: null, error: { context: { status: 404 } } });
 globalThis.__client = {
   auth: { getSession: async () => ({ data: { session: { access_token: 'owner-token' } } }) },
+  functions: { invoke: async (name, { body }) => {
+    invoked.push({ name, body });
+    if (name !== 'findProductImage') return { data: null, error: { message: 'unknown function' } };
+    return body.action === 'use' ? { data: { used: body.downloadLocations.length }, error: null } : photosFor(body);
+  } },
   from: (table) => ({
     insert: (rows) => {
       writes.push({ table, rows });
@@ -148,7 +156,7 @@ globalThis.__client = {
     remove: async (paths) => { storage.removed.push(...paths); return { error: null }; },
   }) },
 };
-const reset = () => { described.length = 0; describe = (body) => ({ descriptions: body.items.map(() => null) }); requests.length = 0; writes.length = 0; reads.length = 0; lastItem = { data: [], error: null }; cuts.length = 0; storage.uploads = []; storage.removed = []; storage.failUploads = false; revoked.length = 0; };
+const reset = () => { invoked.length = 0; photosFor = () => ({ data: null, error: { context: { status: 404 } } }); described.length = 0; describe = (body) => ({ descriptions: body.items.map(() => null) }); requests.length = 0; writes.length = 0; reads.length = 0; lastItem = { data: [], error: null }; cuts.length = 0; storage.uploads = []; storage.removed = []; storage.failUploads = false; revoked.length = 0; };
 
 const roots = [];
 async function open(props = {}) {
@@ -553,6 +561,16 @@ try {
   // ── 8. One by one: typed out, Stop, a failure and Try again, adding while writing ──────
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const wait = (ms) => act(async () => { await sleep(ms); });
+  // Waits for what's on screen rather than for a time (typing runs on timers; a busy machine is slow).
+  const until = async (what, ms = 5000) => {
+    const end = Date.now() + ms;
+    while (!what()) {
+      if (Date.now() > end) throw new Error('timed out waiting');
+      await act(async () => { await sleep(10); });
+    }
+  };
+  // Long words take about 14 steps (~0.6 s) to type: time to act while one is being typed.
+  const words = (name) => `Hot ${name.toLowerCase()} here, pulled and poured twice for a frothy top.`;
   dom.window.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} }); // the phone allows motion
   const drinks = ['Kopi', 'Teh', 'Milo', 'Bandung', 'Kopi C', 'Teh C', 'Milo Dinosaur', 'Horlicks'].map((name) => ({ name, price: 2, category: 'Drinks', variants: [] }));
   const gate = [];
@@ -574,13 +592,14 @@ try {
     await click(button(view.container, /^Done$/));
   };
   await typeOwn('Milo', 'Iced chocolate malt.');
-  await act(async () => { gate[0].resolve({ descriptions: gate[0].body.items.map((i) => `Hot ${i.name.toLowerCase()} here.`) }); await sleep(60); });
+  await act(async () => { gate[0].resolve({ descriptions: gate[0].body.items.map((i) => words(i.name)) }); await sleep(20); });
+  await until(() => byTest(view.container, 'scan-item-writing').length === 1);
   assert.equal(byTest(view.container, 'scan-item-writing').length, 1, 'one typed at a time');
   assert.match(text(byTest(view.container, 'scan-item-writing')[0]), /^Writing…Ho/);
-  assert.ok(text(byTest(view.container, 'scan-item-writing')[0]).length < 'Writing…Hot kopi here.'.length, 'typed out bit by bit');
+  assert.ok(text(byTest(view.container, 'scan-item-writing')[0]).length < `Writing…${words('Kopi')}`.length, 'typed out bit by bit');
   assert.equal(gate.length, 2, 'the next ones are asked for while these are typed');
-  await wait(400);
-  assert.deepEqual(descriptionOf('Kopi'), ['Hot kopi here.', true]);
+  await until(() => descriptionOf('Kopi')?.[1] === true);
+  assert.deepEqual(descriptionOf('Kopi'), [words('Kopi'), true]);
   // ... and for the one being typed: the typing stops there.
   const writingName = () => text(byTest(view.container, 'scan-item-writing')[0]?.closest('[data-testid="scan-item"]')?.querySelector('[data-testid="scan-item-name"]'));
   assert.equal(writingName(), 'Teh', 'Teh is being typed');
@@ -591,7 +610,7 @@ try {
   await click(button(view.container, /^Stop$/));
   const written = byTest(view.container, 'ai-draft').length;
   assert.equal(written, 2, 'Kopi, and Bandung put whole');
-  assert.deepEqual(descriptionOf('Bandung'), ['Hot bandung here.', true]);
+  assert.deepEqual(descriptionOf('Bandung'), [words('Bandung'), true]);
   assert.equal(byTest(view.container, 'scan-item-waiting').length + byTest(view.container, 'scan-item-writing').length, 0, 'nothing waits after Stop');
   assert.equal(described[1].signal.aborted, true, 'the next ones aren\'t waited for');
   assert.equal(text(byTest(view.container, 'scan-written')[0]), `${written} descriptions written. Check the ones marked AI draft.`);
@@ -608,7 +627,7 @@ try {
   assert.equal(byTest(view.container, 'scan-item-waiting').length, 0, 'none left waiting');
   describe = (body) => ({ descriptions: body.items.map((i) => `${i.name}, made fresh.`) });
   await click(button(view.container, /^Try again$/));
-  await wait(900);
+  await until(() => descriptionOf('Teh')?.[1] === true);
   assert.deepEqual([descriptionOf('Kopi'), descriptionOf('Teh')], [['Kopi, made fresh.', true], ['Teh, made fresh.', true]]);
   assert.equal(text(byTest(view.container, 'scan-written')[0]), '2 descriptions written. Check the ones marked AI draft.');
   await closeAll();
@@ -680,6 +699,81 @@ try {
   await closeAll();
   delete globalThis.__shrink;
   passed('photos in an item\'s editor: marked when from the menu; Remove photo; Box it on the menu photo; Take a photo or Choose from phone, made item-photo size and uploaded');
+
+  // ── 10. Sample photos (Unsplash), found one by one, credited, never copied ─────────────
+  reset();
+  photo = { base64: 'cGhvdG8=', mediaType: 'image/jpeg', width: 2236, height: 1677, full: FULL };
+  answer = { items: [
+    { name: 'Chicken Rice', price: 5.5, category: 'Mains', variants: [], photo: [100, 50, 300, 250] },
+    { name: 'Laksa', price: 6, category: 'Mains', variants: [] },
+    { name: 'Teh Tarik', price: 2, category: 'Drinks', variants: [] },
+  ], count: 3, imageWidth: 2236, imageHeight: 1677 };
+  const sample = (q, n) => ({
+    id: `${q}-${n}`, url: `https://images.unsplash.com/${q}-${n}?w=1080`, previewUrl: `https://images.unsplash.com/${q}-${n}?w=400`, alt: q,
+    downloadLocation: `https://api.unsplash.com/photos/${q}-${n}/download?ixid=x`,
+    credit: { source: 'unsplash', name: `Photographer ${n}`, profile: `https://unsplash.com/@p${n}?utm_source=sellio&utm_medium=referral`, photo: `https://unsplash.com/photos/${q}-${n}?utm_source=sellio&utm_medium=referral` },
+  });
+  photosFor = (body) => ({ data: { photos: [1, 2, 3].map((n) => sample(body.query.split(' ')[0].toLowerCase(), n)) }, error: null });
+  view = await open({ categories: [] });
+  await settle(10);
+  assert.deepEqual(invoked.filter((c) => !c.body.action).map((c) => [c.body.query, c.body.tenantId]), [['Laksa', 'shop-1'], ['Teh Tarik', 'shop-1']], 'one search each, in the menu\'s order; none for the item with its own picture on the menu');
+  const tile = (name) => byTest(view.container, 'scan-item').find((r) => text(r.querySelector('[data-testid="scan-item-name"]')) === name).querySelector('[data-testid="scan-item-photo"]');
+  assert.deepEqual([text(tile('Chicken Rice')), tile('Laksa').querySelector('img').getAttribute('src'), text(tile('Laksa'))], ['Menu', 'https://images.unsplash.com/laksa-1?w=400', 'Sample'], 'shown from Unsplash (its small size in the tile), marked Sample');
+  assert.equal(text(byTest(view.container, 'scan-photos-added')[0]), '2 sample photos added. Customers see each marked “Sample photo”, with the photographer’s credit.');
+  // Its editor: the photos found, the one shown, and its photographer credited.
+  await click(tile('Laksa'));
+  const samplesBox = () => byTest(view.container, 'scan-samples')[0];
+  assert.deepEqual([...samplesBox().querySelectorAll('button[aria-label^="Use sample photo"]')].map((b) => b.getAttribute('aria-pressed')), ['true', 'false', 'false'], 'tapping a sample opens the item (a sample is never cropped or copied)');
+  assert.equal(text(samplesBox().querySelector('[data-testid="photo-credit"]')), 'Sample photo · Photo by Photographer 1 on Unsplash');
+  assert.deepEqual([...samplesBox().querySelectorAll('[data-testid="photo-credit"] a')].map((a) => a.getAttribute('href')), ['https://unsplash.com/@p1?utm_source=sellio&utm_medium=referral', 'https://unsplash.com/?utm_source=sellio&utm_medium=referral']);
+  await click(samplesBox().querySelectorAll('button[aria-label^="Use sample photo"]')[1]);
+  assert.equal(text(samplesBox().querySelector('[data-testid="photo-credit"]')), 'Sample photo · Photo by Photographer 2 on Unsplash');
+  await click(button(view.container, /^Done$/));
+  // Removed: stays removed.
+  await click(button(view.container, /^Edit Teh Tarik$/));
+  await click(button(view.container, /^Remove photo$/));
+  await click(button(view.container, /^Done$/));
+  assert.equal(tile('Teh Tarik').querySelector('img'), null);
+  await click(button(view.container, /^Add 3 products$/));
+  assert.deepEqual(storage.uploads.map((u) => u.pathName.replace(/\/\d+-/, '/T-')), ['shop-1/products/T-chicken-rice-0.webp'], 'a sample photo is never uploaded (copied)');
+  assert.deepEqual(writes.find((w) => w.table === 'products').rows.map((p) => [p.name, p.image_url && p.image_url.replace(/\/\d+-/, '/T-'), p.image_credits]), [
+    ['Chicken Rice', 'https://files.invalid/shop-1/products/T-chicken-rice-0.webp', null],
+    ['Laksa', 'https://images.unsplash.com/laksa-2?w=1080', { 'https://images.unsplash.com/laksa-2?w=1080': sample('laksa', 2).credit }],
+    ['Teh Tarik', null, null],
+  ], 'saved with Unsplash\'s address and the photographer\'s credit');
+  await settle();
+  assert.deepEqual(invoked.filter((c) => c.body.action === 'use').map((c) => [c.body.tenantId, c.body.downloadLocations]), [['shop-1', ['https://api.unsplash.com/photos/laksa-2/download?ixid=x']]], 'Unsplash is told of the photo used');
+  await closeAll();
+  // A search refused (too many this hour) says so; the rest stay without one.
+  reset();
+  photosFor = () => ({ data: null, error: { context: { status: 429, clone() { return this; }, json: async () => ({ error: 'Too many image searches this hour. Please try again later.' }) } } });
+  view = await open({ categories: [] });
+  await settle(10);
+  assert.equal(text(byTest(view.container, 'scan-photos-failed')[0]), 'Sample photos stopped: Too many image searches this hour. Please try again later.');
+  assert.equal(byTest(view.container, 'scan-photo-waiting').length, 0);
+  assert.equal(invoked.filter((c) => !c.body.action).length, 1, 'no more searches after a refusal');
+  await closeAll();
+  // A photo chosen while its sample is still being looked for: the sample doesn't replace it.
+  reset();
+  answer = { items: [{ name: 'Laksa', price: 6, category: 'Mains', variants: [] }], count: 1, imageWidth: 2236, imageHeight: 1677 };
+  let release;
+  photosFor = (body) => new Promise((resolve) => { release = () => resolve({ data: { photos: [sample('laksa', 1)] }, error: null }); });
+  globalThis.__shrink = async () => ({ blob: new window.Blob(['small'], { type: 'image/webp' }), type: 'image/webp', ext: 'webp' });
+  view = await open({ categories: [] });
+  await click(button(view.container, /^Edit Laksa$/));
+  const picker = byTest(view.container, 'scan-edit')[0].querySelector('input[type="file"][aria-label="Choose from phone"]');
+  await act(async () => {
+    Object.defineProperty(picker, 'files', { configurable: true, value: [new window.File(['mine'], 'mine.jpg', { type: 'image/jpeg' })] });
+    picker.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await settle();
+  await act(async () => { release(); await next(); });
+  await settle();
+  assert.match(byTest(view.container, 'scan-edit-photo')[0].querySelector('img').getAttribute('src'), /^blob:/, 'the shop\'s own photo stays');
+  assert.equal(byTest(view.container, 'scan-samples')[0].querySelectorAll('button[aria-pressed="true"]').length, 0, 'the sample is offered, not used');
+  delete globalThis.__shrink;
+  await closeAll();
+  passed('sample photos: one search per item without its own picture, in the menu\'s order; shown from Unsplash, marked Sample; another chosen in its editor with its photographer credited; removed stays removed; saved credited and never uploaded; Unsplash told of its use; a refusal stops the rest');
 } finally {
   await closeAll().catch(() => {});
   await rm(temporary, { recursive: true, force: true });

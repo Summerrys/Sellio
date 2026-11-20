@@ -1761,5 +1761,18 @@
   "{count} items in {sections} sections, in your menu’s order": "{sections} 个分类中的 {count} 件商品，按菜单顺序排列",
   "Add 1 product": "添加 1 件商品",
   "Add {count} products": "添加 {count} 件商品",
-  "Couldn’t write a description": "无法撰写描述"
+  "Couldn’t write a description": "无法撰写描述",
+  "Finding sample photos · {done} of {total}": "正在查找示例照片 · {done}/{total}",
+  "Sample photos stopped: {reason}": "示例照片已停止：{reason}",
+  "1 sample photo added. Customers see it marked “Sample photo”, with the photographer’s credit.": "已添加 1 张示例照片。顾客会看到“示例照片”标记和摄影师署名。",
+  "{count} sample photos added. Customers see each marked “Sample photo”, with the photographer’s credit.": "已添加 {count} 张示例照片。顾客会看到每张都有“示例照片”标记和摄影师署名。",
+  "Find sample photos": "查找示例照片",
+  "Sample photos": "示例照片",
+  "Finding sample photos…": "正在查找示例照片…",
+  "Use sample photo {number}": "使用示例照片 {number}",
+  "A sample shows a similar dish, not yours. Customers see it marked “Sample photo”, with the photographer’s credit.": "示例照片展示的是类似的菜品，并非您的实物。顾客会看到“示例照片”标记和摄影师署名。",
+  "Sample photo": "示例照片",
+  "Photo by {name} on {site}": "照片由 {name} 拍摄，来自 {site}",
+  "No sample photos found for this name.": "没有找到这个名称的示例照片。",
+  "Couldn’t find sample photos": "无法查找示例照片"
 }

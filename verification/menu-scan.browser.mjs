@@ -5,7 +5,10 @@
 //     middle is the colour drawn at the middle of that dish's picture);
 //   • tapping a photo opens the photo editor on the whole menu with that picture boxed: Cancel
 //     there changes nothing; the box moved onto another picture gives that picture, at the
-//     photo's own pixels, and opens there next time; a photo chosen instead opens on its own.
+//     photo's own pixels, and opens there next time; a photo chosen instead opens on its own;
+//   • the items with no picture on the menu get a sample photo, hotlinked (as Unsplash requires)
+//     from another site: found one by one, shown marked Sample, and in an item's editor the photos
+//     found as square tiles, five a row, with the photographer's credit, all on the screen.
 // The real ScanMenuDialog (src/pages/Products.jsx) and ImageEditModal, on a menu drawn in the
 // page, with a stand-in for scanMenu that answers with the pictures' real places.
 //
@@ -97,7 +100,30 @@ window.fetch = async (url, options) => {
   };
   return { ok: true, text: async () => '   ' + JSON.stringify(answer) };
 };
+// findProductImage: sample photos (Unsplash's are hotlinked from images.unsplash.com; here from
+// images.unsplash.test, which the test serves), each with its photographer's credit.
+window.__searched = [];
+window.__used = [];
+const sample = (query, n) => {
+  const slug = query.toLowerCase().replace(/[^a-z]+/g, '-');
+  return {
+    id: slug + '-' + n, alt: query,
+    url: 'https://images.unsplash.test/photo-' + slug + '-' + n + '?w=1080',
+    previewUrl: 'https://images.unsplash.test/photo-' + slug + '-' + n + '?w=400',
+    downloadLocation: 'https://api.unsplash.com/photos/' + slug + '-' + n + '/download',
+    credit: { source: 'unsplash', name: 'Photographer ' + n, profile: 'https://unsplash.com/@p' + n + '?utm_source=sellio&utm_medium=referral', photo: 'https://unsplash.com/photos/' + slug + '-' + n + '?utm_source=sellio&utm_medium=referral' },
+  };
+};
 window.__client = {
+  functions: {
+    invoke: async (name, { body }) => {
+      if (name !== 'findProductImage') return { data: null, error: { context: { status: 404 } } };
+      if (body.action === 'use') { window.__used = window.__used.concat(body.downloadLocations); return { data: { used: body.downloadLocations.length }, error: null }; }
+      window.__searched.push(body.query);
+      await new Promise((r) => setTimeout(r, 120));
+      return { data: { photos: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => sample(body.query, n)) }, error: null };
+    },
+  },
   auth: { getSession: async () => ({ data: { session: { access_token: 'owner' } } }) },
   from: () => ({ insert: () => ({ select: async () => ({ data: [], error: null }) }) }),
   storage: { from: () => ({ upload: async () => ({ error: null }), getPublicUrl: (p) => ({ data: { publicUrl: 'https://files.invalid/' + p } }), remove: async () => ({ error: null }) }) },
@@ -163,9 +189,20 @@ try {
 <body><div id="root"></div><script>window.__realFetch = window.fetch.bind(window);</script><script type="module">${js}</script></body></html>`;
 
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: 'en-SG' });
-  await context.route('**/*', (route) => (new URL(route.request().url()).hostname === 'scan.test'
-    ? route.fulfill({ status: 200, contentType: 'text/html', body: html })
-    : route.abort()));
+  // The sample photos: one colour each, at the size asked for (w=400 is Unsplash's small size).
+  const COLOURS = ['#c2410c', '#15803d', '#1d4ed8', '#a16207', '#7e22ce', '#be123c', '#0f766e', '#4d7c0f', '#9a3412', '#334155'];
+  const samplesServed = [];
+  await context.route('**/*', (route) => {
+    const url = new URL(route.request().url());
+    if (url.hostname === 'scan.test') return route.fulfill({ status: 200, contentType: 'text/html', body: html });
+    if (url.hostname === 'images.unsplash.test') {
+      samplesServed.push(url.pathname + url.search);
+      const n = Number(url.pathname.match(/-(\d+)$/)?.[1] || 1);
+      const [w, h] = url.searchParams.get('w') === '400' ? [400, 300] : [1080, 810];
+      return route.fulfill({ status: 200, contentType: 'image/svg+xml', body: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="100%" height="100%" fill="${COLOURS[(n - 1) % COLOURS.length]}"/></svg>` });
+    }
+    return route.abort();
+  });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -188,18 +225,21 @@ try {
   // 2. The review: each dish's picture, cut from the full photo at its place.
   await page.tap('#open-scan');
   await page.waitForSelector('[data-testid="scan-item"]', { timeout: 20000 });
-  await page.waitForFunction(() => [...document.querySelectorAll('[data-testid="scan-item-photo"] img')].filter((i) => i.complete && i.naturalWidth > 0).length === 3, null, { timeout: 20000 });
+  const SAMPLE_HOST = 'https://images.unsplash.test/';
+  await page.waitForFunction((host) => [...document.querySelectorAll('[data-testid="scan-item-photo"] img')].filter((i) => !i.src.startsWith(host) && i.complete && i.naturalWidth > 0).length === 3, SAMPLE_HOST, { timeout: 20000 });
   const sent = await page.evaluate(() => window.__sent);
   assert.equal(sent.version, 2);
   assert.deepEqual([sent.imageWidth, sent.imageHeight], checks.expected);
-  // Each photo in the review: its size, and the colours at its middle and its corner.
-  const pictures = () => page.evaluate(() => [...document.querySelectorAll('[data-testid="scan-item-photo"]')].map((button) => {
+  // Each photo in the review: its size, and the colours at its middle and its corner (a sample
+  // is from another site, so the page can't read its colours).
+  const pictures = () => page.evaluate((host) => [...document.querySelectorAll('[data-testid="scan-item-photo"]')].map((button) => {
     const img = button.querySelector('img');
     if (!img || !img.complete || !img.naturalWidth) return null;
+    if (img.src.startsWith(host)) return { sample: img.getAttribute('src') };
     const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
     const g = c.getContext('2d'); g.drawImage(img, 0, 0);
     return { size: [img.naturalWidth, img.naturalHeight], middle: [...g.getImageData(Math.floor(c.width / 2), Math.floor(c.height / 2), 1, 1).data].slice(0, 3), corner: [...g.getImageData(4, 4, 1, 1).data].slice(0, 3) };
-  }));
+  }), SAMPLE_HOST);
   const near = (a, b, tolerance) => a.every((v, k) => Math.abs(v - b[k]) <= tolerance);
   const FRAME = [231, 229, 228];
   const middles = (await pictures()).slice(0, 3);
@@ -211,6 +251,30 @@ try {
   });
   await shoot('1-review.png');
   passed('each dish\'s picture is cut from the full photo exactly at its place');
+
+  // 2b. Sample photos for the items with no picture on the menu: one by one, in the menu's order.
+  await page.waitForSelector('[data-testid="scan-photos-added"]', { timeout: 15000 });
+  assert.deepEqual(await page.evaluate(() => window.__searched), ['Kopi', 'Teh Tarik', 'Iced Lemon Tea'], 'a search for each item without a picture, one by one, in the menu\'s order');
+  assert.equal(await page.textContent('[data-testid="scan-photos-added"]'), '3 sample photos added. Customers see each marked “Sample photo”, with the photographer’s credit.');
+  const DRINKS = ['Kopi', 'Teh Tarik', 'Iced Lemon Tea'];
+  await page.waitForFunction((names) => names.every((name) => { const img = document.querySelector(`[aria-label="Photo for ${name}"] img`); return img && img.complete && img.naturalWidth > 0; }), DRINKS, { timeout: 15000 });
+  const tiles = await page.evaluate((names) => names.map((name) => {
+    const tile = document.querySelector(`[aria-label="Photo for ${name}"]`);
+    const badge = tile.querySelector('span');
+    const t = tile.getBoundingClientRect();
+    const b = badge.getBoundingClientRect();
+    return { src: tile.querySelector('img').getAttribute('src'), loaded: tile.querySelector('img').naturalWidth, badge: badge.textContent, size: [t.width, t.height], badgeInside: b.left >= t.left && b.right <= t.right && b.top >= t.top && b.bottom <= t.bottom };
+  }), DRINKS);
+  assert.deepEqual(tiles.map((t) => t.src), ['https://images.unsplash.test/photo-kopi-1?w=400', 'https://images.unsplash.test/photo-teh-tarik-1?w=400', 'https://images.unsplash.test/photo-iced-lemon-tea-1?w=400'], 'each item\'s first sample, hotlinked at the small size');
+  tiles.forEach((t, i) => {
+    assert.equal(t.loaded, 400, `${DRINKS[i]}: the photo shows`);
+    assert.equal(t.badge, 'Sample', `${DRINKS[i]}: marked Sample`);
+    assert.deepEqual(t.size, [64, 64], `${DRINKS[i]}: the tile keeps its size`);
+    assert.ok(t.badgeInside, `${DRINKS[i]}: the mark is on the photo`);
+  });
+  assert.deepEqual(samplesServed.filter((u) => u.includes('w=1080')), [], 'the full size isn\'t loaded in the review');
+  await shoot('1b-sample-photos.png');
+  passed('items with no picture on the menu get a sample photo, one by one in the menu\'s order, hotlinked and marked Sample');
 
   // 3. A price is needed before saving.
   await page.click('text=Add 6 Products');
@@ -231,11 +295,47 @@ try {
   assert.equal(await page.evaluate(() => document.activeElement?.dataset?.testid), 'scan-edit-price', 'opened on the price');
   await page.keyboard.type('2.2');
   assert.equal(await page.inputValue('[data-testid="scan-edit"] textarea'), 'Teh Tarik, as served at our stall.');
+  // Its sample photos: square tiles, five a row, the one shown marked, its photographer credited.
+  const samples = () => page.evaluate(() => {
+    const box = document.querySelector('[data-testid="scan-edit"] [data-testid="scan-samples"]');
+    const sheet = document.querySelector('[data-testid="scan-edit"]').getBoundingClientRect();
+    const buttons = [...box.querySelectorAll('button[aria-label^="Use sample photo"]')];
+    const credit = box.querySelector('[data-testid="photo-credit"]');
+    const c = credit.getBoundingClientRect();
+    return {
+      count: buttons.length,
+      pressed: buttons.map((b) => b.getAttribute('aria-pressed') === 'true'),
+      rows: [...new Set(buttons.map((b) => Math.round(b.getBoundingClientRect().top)))].length,
+      square: buttons.every((b) => { const r = b.getBoundingClientRect(); return r.width > 40 && Math.abs(r.width - r.height) <= 1; }),
+      inside: buttons.every((b) => { const r = b.getBoundingClientRect(); return r.left >= sheet.left && r.right <= sheet.right; }),
+      loaded: buttons.every((b) => { const img = b.querySelector('img'); return img.complete && img.naturalWidth === 400; }),
+      credit: credit.textContent,
+      creditInside: c.left >= sheet.left && c.right <= sheet.right && credit.scrollWidth <= credit.clientWidth,
+      links: [...credit.querySelectorAll('a')].map((a) => [a.textContent, a.getAttribute('href'), a.getAttribute('target')]),
+      photo: document.querySelector('[data-testid="scan-edit-photo"] img').getAttribute('src'),
+    };
+  });
+  await page.waitForFunction(() => [...document.querySelectorAll('[data-testid="scan-samples"] button img')].every((img) => img.complete && img.naturalWidth > 0));
+  let found = await samples();
+  assert.deepEqual([found.count, found.rows, found.square, found.inside, found.loaded], [10, 2, true, true, true], `ten samples, square, five a row, on the sheet: ${JSON.stringify(found)}`);
+  assert.deepEqual(found.pressed, [true, false, false, false, false, false, false, false, false, false]);
+  assert.equal(found.credit, 'Sample photo · Photo by Photographer 1 on Unsplash');
+  assert.ok(found.creditInside, 'the credit fits the sheet');
+  assert.deepEqual(found.links, [['Photographer 1', 'https://unsplash.com/@p1?utm_source=sellio&utm_medium=referral', '_blank'], ['Unsplash', 'https://unsplash.com/?utm_source=sellio&utm_medium=referral', '_blank']]);
+  const editorBox = await page.locator('[data-testid="scan-edit"]').boundingBox();
+  assert.ok(editorBox.y >= 0 && editorBox.y + editorBox.height <= 844.5, `with its samples, the editor still fits the screen: ${JSON.stringify(editorBox)}`);
+  await page.click('[aria-label="Use sample photo 3"]');
+  found = await samples();
+  assert.equal(found.photo, 'https://images.unsplash.test/photo-teh-tarik-3?w=400', 'the sample tapped is the item\'s photo');
+  assert.deepEqual(found.pressed.map((p, i) => (p ? i + 1 : 0)).filter(Boolean), [3]);
+  assert.equal(found.credit, 'Sample photo · Photo by Photographer 3 on Unsplash', 'credited to its photographer');
+  await page.evaluate(() => document.querySelector('[data-testid="scan-samples"]').scrollIntoView({ block: 'end' }));
   await shoot('2b-item-editor.png');
   await page.click('[data-testid="scan-edit"] button:has-text("Done")');
   assert.equal(await page.locator('[data-testid="scan-edit"]').count(), 0);
   assert.equal((await page.textContent('[aria-label^="Price of Teh Tarik"]')).trim(), 'S$2.20');
-  passed('descriptions are written for the items the menu printed none for; an item\'s editor opens on its price and fits the screen');
+  assert.equal(await page.getAttribute('[aria-label="Photo for Teh Tarik"] img', 'src'), 'https://images.unsplash.test/photo-teh-tarik-3?w=400', 'the list shows the sample chosen');
+  passed('descriptions are written for the items the menu printed none for; an item\'s editor opens on its price, shows its sample photos (square, five a row) with the photographer credited, and fits the screen');
 
   // 4. The photo editor, on the whole menu, with the picture boxed.
   const EDITOR = 'div.fixed.inset-0';

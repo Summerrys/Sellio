@@ -1761,5 +1761,18 @@
   "{count} items in {sections} sections, in your menu’s order": "{count} item dalam {sections} bagian, sesuai urutan menu Anda",
   "Add 1 product": "Tambahkan 1 produk",
   "Add {count} products": "Tambahkan {count} produk",
-  "Couldn’t write a description": "Tidak bisa menulis deskripsi"
+  "Couldn’t write a description": "Tidak bisa menulis deskripsi",
+  "Finding sample photos · {done} of {total}": "Mencari foto contoh · {done} dari {total}",
+  "Sample photos stopped: {reason}": "Foto contoh dihentikan: {reason}",
+  "1 sample photo added. Customers see it marked “Sample photo”, with the photographer’s credit.": "1 foto contoh ditambahkan. Pelanggan melihatnya ditandai “Foto contoh”, dengan kredit fotografernya.",
+  "{count} sample photos added. Customers see each marked “Sample photo”, with the photographer’s credit.": "{count} foto contoh ditambahkan. Pelanggan melihat masing-masing ditandai “Foto contoh”, dengan kredit fotografernya.",
+  "Find sample photos": "Cari foto contoh",
+  "Sample photos": "Foto contoh",
+  "Finding sample photos…": "Mencari foto contoh…",
+  "Use sample photo {number}": "Pakai foto contoh {number}",
+  "A sample shows a similar dish, not yours. Customers see it marked “Sample photo”, with the photographer’s credit.": "Foto contoh menunjukkan hidangan serupa, bukan milik Anda. Pelanggan melihatnya ditandai “Foto contoh”, dengan kredit fotografernya.",
+  "Sample photo": "Foto contoh",
+  "Photo by {name} on {site}": "Foto oleh {name} di {site}",
+  "No sample photos found for this name.": "Tidak ada foto contoh untuk nama ini.",
+  "Couldn’t find sample photos": "Tidak bisa mencari foto contoh"
 }

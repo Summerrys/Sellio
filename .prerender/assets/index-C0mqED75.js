@@ -2676,7 +2676,20 @@ const shop = {
   "{count} items in {sections} sections, in your menu’s order": "{count} item dalam {sections} bahagian, mengikut susunan menu anda",
   "Add 1 product": "Tambah 1 produk",
   "Add {count} products": "Tambah {count} produk",
-  "Couldn’t write a description": "Tidak dapat menulis penerangan"
+  "Couldn’t write a description": "Tidak dapat menulis penerangan",
+  "Finding sample photos · {done} of {total}": "Mencari foto contoh · {done} daripada {total}",
+  "Sample photos stopped: {reason}": "Foto contoh dihentikan: {reason}",
+  "1 sample photo added. Customers see it marked “Sample photo”, with the photographer’s credit.": "1 foto contoh ditambah. Pelanggan melihatnya bertanda “Foto contoh”, bersama kredit jurugambar.",
+  "{count} sample photos added. Customers see each marked “Sample photo”, with the photographer’s credit.": "{count} foto contoh ditambah. Pelanggan melihat setiap satu bertanda “Foto contoh”, bersama kredit jurugambar.",
+  "Find sample photos": "Cari foto contoh",
+  "Sample photos": "Foto contoh",
+  "Finding sample photos…": "Mencari foto contoh…",
+  "Use sample photo {number}": "Guna foto contoh {number}",
+  "A sample shows a similar dish, not yours. Customers see it marked “Sample photo”, with the photographer’s credit.": "Foto contoh menunjukkan hidangan yang serupa, bukan hidangan anda. Pelanggan melihatnya bertanda “Foto contoh”, bersama kredit jurugambar.",
+  "Sample photo": "Foto contoh",
+  "Photo by {name} on {site}": "Foto oleh {name} di {site}",
+  "No sample photos found for this name.": "Tiada foto contoh ditemui untuk nama ini.",
+  "Couldn’t find sample photos": "Tidak dapat mencari foto contoh"
 };
 const All = "Semua";
 const Goods = "Barangan";

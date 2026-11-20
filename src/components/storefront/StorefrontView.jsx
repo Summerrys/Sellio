@@ -33,6 +33,8 @@ import ZoomableImage from '@/components/ui-custom/ZoomableImage';
 import {
   MenuPhoto, MenuPhotosProvider, PhotoProgress, PhotosOffNote, createPhotoTracker, initialPhotosOff, rememberPhotos, useMenuPhotos,
 } from './MenuPhotos';
+import { SampleTag, PhotoCredit } from '@/components/ui-custom/PhotoCredit';
+import { creditFor } from '@/lib/samplePhotos';
 import { didYouMean } from '@/lib/searchSuggest';
 import { formatMoney } from '@/lib/money';
 
@@ -1459,7 +1461,7 @@ function GridCard({ product, currency, primaryColor, storefrontConfig, showStock
       {!photosOff && (
         <div className="sellio-photo-slot" style={{ position: 'relative' }}>
           {product.image_url
-            ? <MenuPhoto src={product.image_url} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover' }} />
+            ? <><MenuPhoto src={product.image_url} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover' }} />{creditFor(product.image_credits, product.image_url) && <SampleTag />}</>
             : <div style={{ width: '100%', aspectRatio: '1', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: sfType(32) }}>🛍️</div>
           }
           {isOutOfStock && showStockBadge && (
@@ -1634,6 +1636,7 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
               ? <img key={activeImage} src={activeImage} alt="" decoding="async" className="sellio-photo" style={{ width: '100%', aspectRatio: '1/1', objectFit: 'contain', background: '#f8f9fa', borderRadius: '20px 20px 0 0', display: 'block' }} />
               : <div style={{ width: '100%', aspectRatio: '1/1', background: '#f8f9fa', borderRadius: '20px 20px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: sfType(48) }}>🛍️</div>
             }
+            {creditFor(product.image_credits, activeImage) && <SampleTag style={{ left: 10, bottom: allImages.length > 1 ? 26 : 10 }} />}
             {/* Swipe dots */}
             {allImages.length > 1 && (
               <div style={{ position: 'absolute', bottom: 10, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 5 }}>
@@ -1644,6 +1647,8 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
             )}
           </div>
 
+          {/* A sample photo: the photographer's credit, with links (Unsplash's guideline) */}
+          {creditFor(product.image_credits, activeImage) && <PhotoCredit credit={creditFor(product.image_credits, activeImage)} style={{ padding: '6px 16px 0' }} />}
           {/* Thumbnails */}
           {allImages.length > 1 && (
             <div style={{ padding: '8px 16px', display: 'flex', gap: 8, overflowX: 'auto', borderBottom: '0.5px solid #e5e7eb' }}>
