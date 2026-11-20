@@ -2766,6 +2766,9 @@ const Great = "Sangat baik";
 const Okay = "Cukup";
 const Terrible = "Sangat buruk";
 const Online = "Online";
+const Speed = "Kecepatan";
+const Ordering = "Pemesanan";
+const Design = "Tampilan";
 const explore = {
   All,
   "Food & drinks": "Makanan & minuman",
@@ -3287,7 +3290,32 @@ const explore = {
   "Please contact the shop to cancel this order.": "Silakan hubungi toko untuk membatalkan pesanan ini.",
   "This order isn't available.": "Pesanan ini tidak tersedia.",
   "Log in to manage your orders.": "Masuk untuk mengelola pesanan Anda.",
-  "Couldn’t cancel the order. Please try again.": "Pesanan tidak bisa dibatalkan. Silakan coba lagi."
+  "Couldn’t cancel the order. Please try again.": "Pesanan tidak bisa dibatalkan. Silakan coba lagi.",
+  "App feedback": "Masukan aplikasi",
+  "How people rate the Sellio app": "Penilaian pengguna untuk aplikasi Sellio",
+  "1 low rating to look at": "1 penilaian rendah untuk ditinjau",
+  "{count} low ratings to look at": "{count} penilaian rendah untuk ditinjau",
+  "How’s Sellio working for you?": "Bagaimana pengalaman Anda dengan Sellio?",
+  "Tap a star. Your rating goes straight to the Sellio team.": "Ketuk bintang. Penilaian Anda langsung dikirim ke tim Sellio.",
+  "Love it": "Suka sekali",
+  "Maybe later": "Nanti saja",
+  "Thanks. What could be better?": "Terima kasih. Apa yang bisa kami perbaiki?",
+  "Pick anything that applies.": "Pilih semua yang sesuai.",
+  "Ease of use": "Kemudahan penggunaan",
+  Speed,
+  Ordering,
+  Design,
+  "Something’s broken": "Ada yang rusak",
+  "Tell us more": "Ceritakan lebih lanjut",
+  "What happened, and what would help?": "Apa yang terjadi, dan apa yang bisa membantu?",
+  "You can contact me about this": "Anda boleh menghubungi saya soal ini",
+  "We’ll use your account’s phone number or email.": "Kami akan menggunakan nomor ponsel atau email akun Anda.",
+  "Send feedback": "Kirim masukan",
+  "Thanks, that really helps": "Terima kasih, ini sangat membantu",
+  "The Sellio team reads every message. If you said we can contact you, we’ll get back to you.": "Tim Sellio membaca setiap pesan. Jika Anda mengizinkan kami menghubungi Anda, kami akan menghubungi Anda kembali.",
+  "Glad it’s working for you!": "Senang Sellio bermanfaat untuk Anda!",
+  "Would you leave that rating on Google Play too? It helps other shops find Sellio.": "Maukah Anda memberi penilaian yang sama di Google Play juga? Ini membantu toko lain menemukan Sellio.",
+  "Rate on Google Play": "Beri nilai di Google Play"
 };
 const GROUPS = { signup, shop, explore };
 export {

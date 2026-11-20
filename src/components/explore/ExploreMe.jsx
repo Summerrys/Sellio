@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Store, LayoutDashboard, Settings, UserRound, LogOut, ChevronRight, Loader2, Copy, Check, Star, ShoppingBag, Flag, Heart } from 'lucide-react';
+import { Store, LayoutDashboard, Settings, UserRound, LogOut, ChevronRight, Loader2, Copy, Check, Star, ShoppingBag, Flag, Heart, MessageSquareHeart } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { useTenant } from '@/components/tenant/TenantContext';
@@ -8,6 +8,7 @@ import { rememberReturnPath } from '@/lib/authNavigation';
 import { amIModerator, moderationQueue, ratingReviewQueue, ratingText, shopRatingOverview } from '@/lib/ratings';
 import { itemWords } from '@/lib/planFeatures';
 import { purchaseSummary } from '@/lib/purchases';
+import { amISellioAdmin, feedbackSummary } from '@/lib/appFeedback';
 import AccountProfileModal from '@/components/profile/AccountProfileModal';
 import PricingModal from '@/components/subscription/PricingModal';
 import { ProfileAvatar, ProfilePhotoEditor } from '@/components/profile/ProfilePhoto';
@@ -102,6 +103,22 @@ export default function ExploreMe() {
     });
     return () => { cancelled = true; };
   }, [appUser]);
+  // Sellio's admins: how people rate the Sellio app (Admin → Feedback), and 1–3★ ones not done yet.
+  const [appFeedback, setAppFeedback] = useState(null); // { lowOpen } for an admin
+  useEffect(() => {
+    if (!appUser) return undefined;
+    let cancelled = false;
+    amISellioAdmin().then(async (yes) => {
+      if (!yes || cancelled) return;
+      const lowOpen = await feedbackSummary().then((s) => Number(s?.low_open) || 0).catch(() => null);
+      if (!cancelled) setAppFeedback({ lowOpen });
+    });
+    return () => { cancelled = true; };
+  }, [appUser]);
+  const feedbackLine = !appFeedback ? null
+    : appFeedback.lowOpen === 1 ? t('1 low rating to look at')
+      : appFeedback.lowOpen > 1 ? t('{count} low ratings to look at', { count: appFeedback.lowOpen })
+        : t('How people rate the Sellio app');
   let moderation = null;
   if (toCheck) {
     const { held, reported } = toCheck;
@@ -203,6 +220,11 @@ export default function ExploreMe() {
               {moderation && (
                 <div className="border-t border-slate-100">
                   <Row to="/moderation" icon={Flag} label={t('Ratings to check')} detail={moderation} />
+                </div>
+              )}
+              {feedbackLine && (
+                <div className="border-t border-slate-100">
+                  <Row to="/admin/feedback" icon={MessageSquareHeart} label={t('App feedback')} detail={feedbackLine} pulse={appFeedback.lowOpen > 0} />
                 </div>
               )}
             </section>

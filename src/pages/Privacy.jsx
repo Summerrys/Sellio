@@ -25,7 +25,7 @@ const sections = [
         <h3>Orders and customer information</h3>
         <p>When an order is placed or managed, Sellio may process order items, quantities, prices, fulfilment status, table or takeaway details, payment method or payment status, customer name and any contact or order information submitted for that transaction.</p>
         <h3>Messages, photos and ratings</h3>
-        <p>If you use chat in Sellio, we store the messages and images you send so they can be shown to you and the people you are chatting with. We also store the photos you upload, such as product photos, logos and banners, and the star ratings buyers give a shop, along with any comments they add.</p>
+        <p>If you use chat in Sellio, we store the messages and images you send so they can be shown to you and the people you are chatting with. We also store the photos you upload, such as product photos, logos and banners, and the star ratings buyers give a shop, along with any comments they add. If you rate the Sellio app itself when the app asks, we keep your stars, anything you write, whether we may contact you about it, and your app version and language, with your account (or, if you are not signed in, your device&apos;s random identifier, so we only ask once).</p>
         <h3>Billing information</h3>
         <p>Merchant plan purchases and subscription management are processed through Stripe. We receive billing records such as the plan, subscription status, billing period, currency, transaction identifiers and limited payment status information. Stripe, rather than Sellio, handles full card details.</p>
         <h3>Device, usage and support information</h3>

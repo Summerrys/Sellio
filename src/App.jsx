@@ -16,7 +16,7 @@ import LaunchSplash from '@/components/ui-custom/LaunchSplash';
 import SignInWelcome from '@/components/auth/SignInWelcome';
 import { AppLanguagePreviewBadge } from '@/components/ui-custom/AppLanguageSwitch';
 import { startLaunch } from '@/lib/appLaunch';
-import { isNativeApp as inSellioApp } from '@/lib/nativeApp';
+import { appPlatform, isNativeApp as inSellioApp } from '@/lib/nativeApp';
 import { alertsKind } from '@/lib/pushAlerts';
 import PushPrompt from '@/components/notifications/PushPrompt';
 import OfflineKeeper from '@/components/ui-custom/OfflineKeeper';
@@ -44,6 +44,8 @@ const ExploreModeration = lazy(() => import('@/components/explore/ExploreModerat
 const ExploreCart = lazy(() => import('@/components/explore/ExploreCart'));
 const ExploreLikes = lazy(() => import('@/components/explore/ExploreLikes'));
 const ShopRatings = lazy(() => import('@/components/ratings/ShopRatingsPage'));
+const AppFeedbackInbox = lazy(() => import('@/components/feedback/AppFeedbackInbox'));
+const AppRatingPrompt = lazy(() => import('@/components/feedback/AppRatingPrompt'));
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -164,6 +166,7 @@ const AuthenticatedApp = () => {
         <Route path="/explore/cart" element={<LayoutWrapper currentPageName="Explore"><ExploreCart /></LayoutWrapper>} />
         <Route path="/explore/likes" element={<LayoutWrapper currentPageName="Explore"><ExploreLikes /></LayoutWrapper>} />
         <Route path="/moderation" element={<LayoutWrapper currentPageName="Explore"><ExploreModeration /></LayoutWrapper>} />
+        <Route path="/admin/feedback" element={<LayoutWrapper currentPageName="Explore"><AppFeedbackInbox /></LayoutWrapper>} />
         <Route path="/store/:tenantSlug" element={<Storefront />} />
         <Route path="/order/:tenantSlug/:tableId" element={<Storefront />} />
         <Route path="*" element={<PageNotFound />} />
@@ -209,6 +212,9 @@ function App() {
         {/* Sellio's question before the phone's or browser's about alerts (the Android app, and
             browsers that can show them: src/lib/pushAlerts.js). */}
         {alertsKind() && <PushPrompt />}
+        {/* "How's Sellio working for you?": once, on the third day someone opens the Android app
+            (src/lib/appFeedback.js). Admin → Feedback (/admin/feedback) reads the answers. */}
+        {appPlatform() === 'android' && <Suspense fallback={null}><AppRatingPrompt /></Suspense>}
         <LaunchSplash />
         </AppRefreshProvider>
       </QueryClientProvider>
