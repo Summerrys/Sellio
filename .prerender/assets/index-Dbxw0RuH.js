@@ -901,6 +901,7 @@ const Stop = "停止";
 const Rename = "重命名";
 const Section = "分类";
 const Rewrite = "重写";
+const Gallery = "相册";
 const shop = {
   Dashboard,
   "Manage listings": "管理商品",
@@ -2680,7 +2681,10 @@ const shop = {
   "Photos from {site}": "照片来自 {site}",
   "A sample photo couldn’t be saved, so its item has no photo yet.": "有 1 张示例照片无法保存，因此该商品暂时没有照片。",
   "{count} sample photos couldn’t be saved, so those items have no photo yet.": "有 {count} 张示例照片无法保存，因此这些商品暂时没有照片。",
-  "Couldn’t save the sample photos. Please try again.": "无法保存示例照片，请重试。"
+  "Couldn’t save the sample photos. Please try again.": "无法保存示例照片，请重试。",
+  Gallery,
+  "Menu photo": "菜单照片",
+  "Tap the photo to adjust it.": "点按照片即可调整。"
 };
 const All = "全部";
 const Goods = "商品";

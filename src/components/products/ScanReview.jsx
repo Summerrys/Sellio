@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { Camera, MoreHorizontal, Sparkles, Check, X, ImageIcon, Loader2 } from 'lucide-react';
+import { Camera, MoreHorizontal, Sparkles, Check, X, ImageIcon, Loader2, Scan, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppText } from '@/lib/appText';
 import { useBackToClose } from '@/lib/useBackToClose';
@@ -308,7 +308,15 @@ export function ScanReviewList({ items, currency, pricesAsked, canEditPhoto, onT
 
 const FIELD_LABEL = { fontSize: 13, lineHeight: '18px', fontWeight: 600, color: '#334155' };
 const FIELD = { height: 44, boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: 10, padding: '0 12px', fontSize: 15, color: '#0f172a', background: '#ffffff', width: '100%' };
-const PHOTO_OPTION = { height: 36, boxSizing: 'border-box', border: '1px solid #e2e8f0', borderRadius: 10, background: '#ffffff', fontSize: 13, fontWeight: 600, color: '#334155', textAlign: 'left', padding: '0 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', width: '100%' };
+// The item editor's photo (Alvin, 20 Nov 2026, option 2 of the mockups): where a photo comes from
+// as three small buttons in one row (camera, gallery, the menu photo), an × on the photo to take it
+// away, and the sample photos as one row to swipe.
+// A label too long for a narrow phone goes on two lines ("Menu / photo" at 360 px).
+const PHOTO_SOURCE = { height: 58, minWidth: 0, boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: 10, background: '#ffffff', padding: '0 1px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, fontSize: 11, lineHeight: '13px', fontWeight: 600, color: '#334155', textAlign: 'center', cursor: 'pointer' };
+// A 40 px place to tap, showing a 28 px round ×, over the photo's top right corner.
+const REMOVE_PHOTO = { position: 'absolute', top: -12, right: -12, width: 40, height: 40, padding: 0, border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' };
+const REMOVE_DOT = { width: 28, height: 28, borderRadius: 14, background: '#ffffff', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(15,23,42,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#334155' };
+const SAMPLE_TILE = 58;
 
 // One item's editor (screen 3): photo, name, price, section, description (Rewrite asks the AI
 // again), and Remove from scan. Changes apply as they're made; Done or Back closes it.
@@ -346,40 +354,69 @@ export function ScanItemSheet({ item, items, currency, pricesAsked, focus, hasMe
         </div>
 
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px 20px 8px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <p style={{ margin: 0, ...FIELD_LABEL }}>{t('Photo')}</p>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <PhotoTile item={item} size={112} canEdit={!item.picture?.sample && (hasMenuPhoto || !!item.picture)} onClick={onEditPhoto} label={t('Photo for {name}', { name })} testId="scan-edit-photo" />
-              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <NativeCameraScanControl label={t('Take a photo')} action={t('Take a photo')} onFile={pick} onError={(message) => toast.message(message)} style={PHOTO_OPTION}>{t('Take a photo')}</NativeCameraScanControl>
-                <PhotoPickerControl label={t('Choose from phone')} onFile={pick} style={PHOTO_OPTION}>{t('Choose from phone')}</PhotoPickerControl>
-                {hasMenuPhoto && <button type="button" onClick={onBoxOnMenu} style={PHOTO_OPTION}>{t('Box it on the menu photo')}</button>}
-                {!item.samples?.length && item._photo !== 'waiting' && <button type="button" onClick={onFindSamples} disabled={!item.name?.trim()} style={PHOTO_OPTION}>{t('Find sample photos')}</button>}
-                {item.picture && <button type="button" onClick={onRemovePhoto} style={{ ...PHOTO_OPTION, color: '#b91c1c' }}>{t('Remove photo')}</button>}
+            <div style={{ display: 'flex', gap: 14 }}>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <PhotoTile item={item} size={112} canEdit={!item.picture?.sample && (hasMenuPhoto || !!item.picture)} onClick={onEditPhoto} label={t('Photo for {name}', { name })} testId="scan-edit-photo" />
+                {item.picture && (
+                  <button type="button" onClick={onRemovePhoto} aria-label={t('Remove photo')} data-testid="scan-remove-photo" style={REMOVE_PHOTO}>
+                    <span style={REMOVE_DOT}><X size={15} strokeWidth={2.4} aria-hidden="true" /></span>
+                  </button>
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 10 }}>
+                <div data-testid="scan-photo-sources" style={{ display: 'grid', gridTemplateColumns: `repeat(${hasMenuPhoto ? 3 : 2}, minmax(0, 1fr))`, gap: 8 }}>
+                  <NativeCameraScanControl label={t('Take a photo')} action={t('Take a photo')} onFile={pick} onError={(message) => toast.message(message)} style={PHOTO_SOURCE}>
+                    <Camera size={19} strokeWidth={1.9} aria-hidden="true" /><span>{t('Camera')}</span>
+                  </NativeCameraScanControl>
+                  <PhotoPickerControl label={t('Choose from phone')} onFile={pick} style={PHOTO_SOURCE}>
+                    <ImageIcon size={19} strokeWidth={1.9} aria-hidden="true" /><span>{t('Gallery')}</span>
+                  </PhotoPickerControl>
+                  {hasMenuPhoto && (
+                    <button type="button" onClick={onBoxOnMenu} aria-label={t('Box it on the menu photo')} style={PHOTO_SOURCE}>
+                      <Scan size={19} strokeWidth={1.9} aria-hidden="true" /><span>{t('Menu photo')}</span>
+                    </button>
+                  )}
+                </div>
+                {item.picture?.sample ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <p style={{ margin: 0, fontSize: 13, lineHeight: '18px', fontWeight: 600, color: '#0f172a' }}>{t('Sample photo')}</p>
+                    <PhotoCredit credit={item.picture.sample.credit} tag={false} style={{ fontSize: 12 }} />
+                  </div>
+                ) : item.picture ? (
+                  <p style={{ margin: 0, fontSize: 12, lineHeight: '16px', color: '#64748b' }}>{t('Tap the photo to adjust it.')}</p>
+                ) : null}
               </div>
             </div>
-            {(item.samples?.length > 0 || item._photo === 'waiting') && (
-              <div data-testid="scan-samples" style={{ border: '1px solid #e2e8f0', borderRadius: 14, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <p style={{ margin: 0, ...FIELD_LABEL }}>{t('Sample photos')}</p>
+            {item._photo === 'waiting' || item.samples?.length > 0 ? (
+              <div data-testid="scan-samples" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                  <p style={{ margin: 0, ...FIELD_LABEL }}>{t('Sample photos')}</p>
+                  <PhotosFrom style={{ textAlign: 'right' }} />
+                </div>
                 {item._photo === 'waiting' ? (
                   <p style={{ margin: 0, fontSize: 13, color: '#64748b' }}>{t('Finding sample photos…')}</p>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8 }}>
+                  <div data-testid="scan-sample-row" style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '0 -20px', padding: '2px 20px', scrollbarWidth: 'none' }}>
                     {item.samples.map((photo, i) => {
                       const chosen = item.picture?.url === photo.url;
                       return (
                         <button key={photo.id || photo.url} type="button" onClick={() => onUseSample(photo)} aria-pressed={chosen} aria-label={t('Use sample photo {number}', { number: i + 1 })}
-                          style={{ aspectRatio: '1', padding: 0, borderRadius: 10, overflow: 'hidden', border: chosen ? '2px solid rgb(var(--color-primary))' : '1px solid #e2e8f0', background: '#f1f5f9', cursor: 'pointer' }}>
+                          style={{ width: SAMPLE_TILE, height: SAMPLE_TILE, flexShrink: 0, boxSizing: 'border-box', padding: 0, borderRadius: 10, overflow: 'hidden', border: chosen ? '2px solid rgb(var(--color-primary))' : '1px solid #e2e8f0', background: '#f1f5f9', cursor: 'pointer' }}>
                           <img src={photo.thumb} alt={photo.alt} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                         </button>
                       );
                     })}
                   </div>
                 )}
-                <PhotosFrom />
-                {item.picture?.sample && <PhotoCredit credit={item.picture.sample.credit} />}
-                <p style={{ margin: 0, fontSize: 12, lineHeight: '17px', color: '#475569' }}>{t('A sample shows a similar dish, not yours. Customers see it marked “Sample photo”, with the photographer’s credit.')}</p>
+                <p style={{ margin: 0, fontSize: 12, lineHeight: '16px', color: '#64748b' }}>{t('A sample shows a similar dish, not yours. Customers see it marked “Sample photo”, with the photographer’s credit.')}</p>
               </div>
+            ) : (
+              <button type="button" onClick={onFindSamples} disabled={!item.name?.trim()}
+                style={{ height: 40, border: '1px dashed #cbd5e1', borderRadius: 10, background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#334155', cursor: 'pointer', opacity: item.name?.trim() ? 1 : 0.5 }}>
+                <Search size={16} aria-hidden="true" />{t('Find sample photos')}
+              </button>
             )}
           </div>
 

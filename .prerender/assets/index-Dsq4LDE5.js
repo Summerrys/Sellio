@@ -901,6 +901,7 @@ const Stop = "Berhenti";
 const Rename = "Ganti nama";
 const Section = "Bagian";
 const Rewrite = "Tulis ulang";
+const Gallery = "Galeri";
 const shop = {
   Dashboard,
   "Manage listings": "Kelola produk",
@@ -2680,7 +2681,10 @@ const shop = {
   "Photos from {site}": "Foto dari {site}",
   "A sample photo couldn’t be saved, so its item has no photo yet.": "Satu foto contoh tidak bisa disimpan, jadi itemnya belum punya foto.",
   "{count} sample photos couldn’t be saved, so those items have no photo yet.": "{count} foto contoh tidak bisa disimpan, jadi item-item tersebut belum punya foto.",
-  "Couldn’t save the sample photos. Please try again.": "Foto contoh tidak bisa disimpan. Silakan coba lagi."
+  "Couldn’t save the sample photos. Please try again.": "Foto contoh tidak bisa disimpan. Silakan coba lagi.",
+  Gallery,
+  "Menu photo": "Foto menu",
+  "Tap the photo to adjust it.": "Ketuk foto untuk menyesuaikannya."
 };
 const All = "Semua";
 const Goods = "Barang";

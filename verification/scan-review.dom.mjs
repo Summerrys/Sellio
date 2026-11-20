@@ -9,8 +9,8 @@
 //   • the menu's order: new sections after the shop's own, items numbered (sort_order) in
 //     the order printed after the shop's highest number.
 //   • the review redesigned (20 Nov 2026): sections in the menu's order with Rename; an item's
-//     editor (price, name, section, Remove from scan, photos: Remove, Box it on the menu photo,
-//     Take a photo or Choose from phone); saved in the order shown;
+//     editor (price, name, section, Remove from scan, photos: the × on the photo, and Camera,
+//     Gallery and Menu photo in one row, Alvin 20 Nov 2026); saved in the order shown;
 //   • descriptions for items the menu printed none for, written by AI (describeMenuItems) six
 //     at a time in the menu's order and typed out one by one, marked AI draft; Stop, failures
 //     and Try again, Rewrite / Write one, the shop's own words, adding while they're written.
@@ -662,9 +662,20 @@ try {
   await click(button(view.container, /^Edit Chicken Rice$/));
   const editPhoto = () => byTest(view.container, 'scan-edit-photo')[0];
   assert.ok(editPhoto().querySelector('img'));
-  await click(button(view.container, /^Remove photo$/));
+  // Where a photo comes from: one row of three (Alvin, 20 Nov 2026: option 2).
+  const sources = byTest(view.container, 'scan-photo-sources')[0];
+  assert.deepEqual([...sources.children].map((c) => [text(c), c.querySelector('input')?.getAttribute('aria-label') || c.getAttribute('aria-label')]), [
+    ['Camera', 'Take a photo'], ['Gallery', 'Choose from phone'], ['Menu photo', 'Box it on the menu photo'],
+  ]);
+  assert.equal(text(byTest(view.container, 'scan-edit')[0]).includes('Tap the photo to adjust it.'), true, 'its own photo: tap it to adjust');
+  // Remove: the × on the photo.
+  const remove = byTest(view.container, 'scan-remove-photo')[0];
+  assert.equal(remove.getAttribute('aria-label'), 'Remove photo');
+  await click(remove);
   assert.equal(editPhoto().querySelector('img'), null);
   assert.equal(text(editPhoto()), 'No photo yet');
+  assert.equal(byTest(view.container, 'scan-remove-photo').length, 0, 'no photo, no ×');
+  assert.ok(button(view.container, /^Find sample photos$/), 'no samples yet: Find sample photos');
   // Box it on the menu photo: the photo editor on the whole menu, at the AI's box.
   await click(button(view.container, /^Box it on the menu photo$/));
   assert.ok([...document.body.querySelectorAll('h3')].some((h) => text(h) === 'Photo for Chicken Rice'));
@@ -700,7 +711,7 @@ try {
   assert.deepEqual(writes.find((w) => w.table === 'products').rows.map((p) => [p.name, p.image_url && p.image_url.replace(/\/\d+-/, '/T-')]), [['Chicken Rice', null], ['Laksa', 'https://files.invalid/shop-1/products/T-laksa-1.webp']]);
   await closeAll();
   delete globalThis.__shrink;
-  passed('photos in an item\'s editor: marked when from the menu; Remove photo; Box it on the menu photo; Take a photo or Choose from phone, made item-photo size and uploaded');
+  passed('photos in an item\'s editor: marked when from the menu; Camera, Gallery and Menu photo in one row; the × removes it; Box it on the menu photo; Take a photo or Choose from phone, made item-photo size and uploaded');
 
   // ── 10. Sample photos (Pixabay), found one by one, credited, copied when saved ───────────
   reset();
@@ -727,12 +738,16 @@ try {
   // Its editor: the photos found, the one shown, and its photographer credited.
   await click(tile('Laksa'));
   const samplesBox = () => byTest(view.container, 'scan-samples')[0];
+  const credit = () => byTest(view.container, 'scan-edit')[0].querySelector('[data-testid="photo-credit"]');
   assert.deepEqual([...samplesBox().querySelectorAll('button[aria-label^="Use sample photo"]')].map((b) => b.getAttribute('aria-pressed')), ['true', 'false', 'false'], 'tapping a sample opens the item (a sample is never cropped or copied)');
-  assert.equal(text(samplesBox().querySelector('[data-testid="photo-credit"]')), 'Sample photo · Photo by Photographer 1 on Pixabay');
-  assert.deepEqual([...samplesBox().querySelectorAll('[data-testid="photo-credit"] a')].map((a) => a.getAttribute('href')), ['https://pixabay.com/users/p1-1/', 'https://pixabay.com/']);
+  assert.equal(byTest(view.container, 'scan-sample-row')[0].children.length, 3, 'the samples in one row');
+  assert.equal(text(credit().previousElementSibling), 'Sample photo', 'beside the photo: "Sample photo"');
+  assert.equal(text(credit()), 'Photo by Photographer 1 on Pixabay', 'and its photographer');
+  assert.deepEqual([...credit().querySelectorAll('a')].map((a) => a.getAttribute('href')), ['https://pixabay.com/users/p1-1/', 'https://pixabay.com/']);
   assert.equal(text(samplesBox().querySelector('[data-testid="photos-from"]')), 'Photos from Pixabay');
+  assert.ok(byTest(view.container, 'scan-remove-photo')[0], 'a sample can be removed with the × too');
   await click(samplesBox().querySelectorAll('button[aria-label^="Use sample photo"]')[1]);
-  assert.equal(text(samplesBox().querySelector('[data-testid="photo-credit"]')), 'Sample photo · Photo by Photographer 2 on Pixabay');
+  assert.equal(text(credit()), 'Photo by Photographer 2 on Pixabay');
   await click(button(view.container, /^Done$/));
   // Removed: stays removed.
   await click(button(view.container, /^Edit Teh Tarik$/));

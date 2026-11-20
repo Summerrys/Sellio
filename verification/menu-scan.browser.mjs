@@ -9,8 +9,10 @@
 //   • the items with no picture on the menu get a sample photo from Pixabay, shown from Pixabay's
 //     address while choosing (copied into the shop's photos only when saved; scan-review.dom.mjs
 //     checks that): found one by one, shown marked Sample with "Photos from Pixabay", and in an
-//     item's editor the photos found as square tiles, five a row, with the photographer's credit
-//     and "Photos from Pixabay", all on the screen.
+//     item's editor (Alvin, 20 Nov 2026: option 2) the photo with an × to remove it, Camera,
+//     Gallery and Menu photo in one row beside it, "Sample photo" and the photographer's credit
+//     under them, and the photos found as one row of square tiles to swipe, with "Photos from
+//     Pixabay", all on the screen.
 // The real ScanMenuDialog (src/pages/Products.jsx) and ImageEditModal, on a menu drawn in the
 // page, with a stand-in for scanMenu that answers with the pictures' real places.
 //
@@ -305,20 +307,33 @@ try {
   assert.equal(await page.inputValue('[data-testid="scan-edit"] textarea'), 'Teh Tarik, as served at our stall.');
   // Its sample photos: square tiles, five a row, the one shown marked, its photographer credited.
   const samples = () => page.evaluate(() => {
-    const box = document.querySelector('[data-testid="scan-edit"] [data-testid="scan-samples"]');
-    const sheet = document.querySelector('[data-testid="scan-edit"]').getBoundingClientRect();
+    const editor = document.querySelector('[data-testid="scan-edit"]');
+    const box = editor.querySelector('[data-testid="scan-samples"]');
+    const row = box.querySelector('[data-testid="scan-sample-row"]');
+    const sheet = editor.getBoundingClientRect();
+    const r = row.getBoundingClientRect();
     const buttons = [...box.querySelectorAll('button[aria-label^="Use sample photo"]')];
-    const credit = box.querySelector('[data-testid="photo-credit"]');
+    const credit = editor.querySelector('[data-testid="photo-credit"]');
     const c = credit.getBoundingClientRect();
     const from = box.querySelector('[data-testid="photos-from"]');
     const f = from.getBoundingClientRect();
+    const photo = editor.querySelector('[data-testid="scan-edit-photo"]').getBoundingClientRect();
+    const x = editor.querySelector('[data-testid="scan-remove-photo"] span').getBoundingClientRect();
+    const sources = [...editor.querySelector('[data-testid="scan-photo-sources"]').children];
     return {
       count: buttons.length,
       pressed: buttons.map((b) => b.getAttribute('aria-pressed') === 'true'),
       rows: [...new Set(buttons.map((b) => Math.round(b.getBoundingClientRect().top)))].length,
-      square: buttons.every((b) => { const r = b.getBoundingClientRect(); return r.width > 40 && Math.abs(r.width - r.height) <= 1; }),
-      inside: buttons.every((b) => { const r = b.getBoundingClientRect(); return r.left >= sheet.left && r.right <= sheet.right; }),
+      square: buttons.every((b) => { const q = b.getBoundingClientRect(); return q.width === 58 && q.height === 58; }),
+      inside: r.left >= sheet.left && r.right <= sheet.right,
+      swipes: row.scrollWidth > row.clientWidth && getComputedStyle(row).overflowX === 'auto',
+      firstFive: buttons.slice(0, 5).every((b) => { const q = b.getBoundingClientRect(); return q.left >= sheet.left && q.right <= sheet.right; }),
       loaded: buttons.every((b) => { const img = b.querySelector('img'); return img.complete && img.naturalWidth === 640; }),
+      sources: sources.map((el) => el.textContent),
+      sourcesRow: [...new Set(sources.map((el) => Math.round(el.getBoundingClientRect().top)))].length === 1,
+      sourcesFit: sources.every((el) => { const q = el.getBoundingClientRect(); const label = el.querySelector('span'); return q.left >= photo.right && q.right <= sheet.right && label.scrollWidth <= label.clientWidth + 0.5 && label.getBoundingClientRect().right <= q.right; }),
+      xOnCorner: x.width === 28 && Math.abs((x.left + x.width / 2) - photo.right) <= 8 && Math.abs((x.top + x.height / 2) - photo.top) <= 8 && x.right <= sheet.right,
+      title: credit.previousElementSibling?.textContent,
       from: from.textContent,
       fromInside: f.left >= sheet.left && f.right <= sheet.right && from.scrollWidth <= from.clientWidth,
       credit: credit.textContent,
@@ -329,9 +344,12 @@ try {
   });
   await page.waitForFunction(() => [...document.querySelectorAll('[data-testid="scan-samples"] button img')].every((img) => img.complete && img.naturalWidth > 0));
   let found = await samples();
-  assert.deepEqual([found.count, found.rows, found.square, found.inside, found.loaded], [10, 2, true, true, true], `ten samples, square, five a row, on the sheet: ${JSON.stringify(found)}`);
+  assert.deepEqual([found.count, found.rows, found.square, found.inside, found.swipes, found.firstFive, found.loaded], [10, 1, true, true, true, true, true], `ten samples, square, in one row to swipe, five on the screen: ${JSON.stringify(found)}`);
   assert.deepEqual(found.pressed, [true, false, false, false, false, false, false, false, false, false]);
-  assert.equal(found.credit, 'Sample photo · Photo by Photographer 1 on Pixabay');
+  assert.deepEqual([found.sources, found.sourcesRow, found.sourcesFit], [['Camera', 'Gallery', 'Menu photo'], true, true], `where a photo comes from: one row of three beside the photo, each label whole: ${JSON.stringify(found)}`);
+  assert.ok(found.xOnCorner, `the × sits on the photo's top right corner: ${JSON.stringify(found)}`);
+  assert.equal(found.title, 'Sample photo');
+  assert.equal(found.credit, 'Photo by Photographer 1 on Pixabay');
   assert.ok(found.creditInside, 'the credit fits the sheet');
   assert.deepEqual(found.links, [['Photographer 1', 'https://pixabay.com/users/p1-1/', '_blank'], ['Pixabay', 'https://pixabay.com/', '_blank']]);
   assert.deepEqual([found.from, found.fromInside], ['Photos from Pixabay', true], 'the samples say where they\'re from, on the sheet');
@@ -341,15 +359,32 @@ try {
   found = await samples();
   assert.equal(found.photo, 'https://pixabay.test/get/teh-tarik-3_640.jpg', 'the sample tapped is the item\'s photo');
   assert.deepEqual(found.pressed.map((p, i) => (p ? i + 1 : 0)).filter(Boolean), [3]);
-  assert.equal(found.credit, 'Sample photo · Photo by Photographer 3 on Pixabay', 'credited to its photographer');
-  await page.evaluate(() => document.querySelector('[data-testid="scan-samples"]').scrollIntoView({ block: 'end' }));
+  assert.equal(found.credit, 'Photo by Photographer 3 on Pixabay', 'credited to its photographer');
+  await page.evaluate(() => { document.querySelector('[data-testid="scan-sample-row"]').scrollLeft = 0; document.querySelector('[data-testid="scan-edit"] [data-testid="scan-photo-sources"]').scrollIntoView({ block: 'center' }); });
   await shoot('2b-item-editor.png');
+  // A narrow phone (360 px): the three still fit beside the photo, a long label on two lines.
+  await page.setViewportSize({ width: 360, height: 780 });
+  const narrow = await page.evaluate(() => {
+    const editor = document.querySelector('[data-testid="scan-edit"]');
+    const photo = editor.querySelector('[data-testid="scan-edit-photo"]').getBoundingClientRect();
+    const sheet = editor.getBoundingClientRect();
+    return [...editor.querySelector('[data-testid="scan-photo-sources"]').children].map((el) => {
+      const q = el.getBoundingClientRect();
+      const label = el.querySelector('span').getBoundingClientRect();
+      const icon = el.querySelector('svg').getBoundingClientRect();
+      return { fits: q.left >= photo.right && q.right <= sheet.right && label.left >= q.left && label.right <= q.right && icon.top >= q.top && label.bottom <= q.bottom, lines: Math.round(label.height / 13) };
+    });
+  });
+  assert.ok(narrow.every((b) => b.fits), `at 360 px each button holds its icon and label: ${JSON.stringify(narrow)}`);
+  assert.ok(narrow.every((b) => b.lines <= 2), `at most two lines: ${JSON.stringify(narrow)}`);
+  await shoot('2c-item-editor-360.png');
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.click('[data-testid="scan-edit"] button:has-text("Done")');
   assert.equal(await page.locator('[data-testid="scan-edit"]').count(), 0);
   assert.equal((await page.textContent('[aria-label^="Price of Teh Tarik"]')).trim(), 'S$2.20');
   assert.equal(await page.getAttribute('[aria-label="Photo for Teh Tarik"] img', 'src'), 'https://pixabay.test/get/teh-tarik-3_640.jpg', 'the list shows the sample chosen');
   assert.deepEqual(await page.evaluate(() => window.__kept), [], 'still nothing copied: only saving copies');
-  passed('descriptions are written for the items the menu printed none for; an item\'s editor opens on its price, shows its sample photos (square, five a row) with the photographer credited and "Photos from Pixabay", and fits the screen');
+  passed('descriptions are written for the items the menu printed none for; an item\'s editor opens on its price, shows Camera, Gallery and Menu photo in one row, the × on the photo, its sample photos in one row to swipe with the photographer credited and "Photos from Pixabay", and fits the screen');
 
   // 4. The photo editor, on the whole menu, with the picture boxed.
   const EDITOR = 'div.fixed.inset-0';

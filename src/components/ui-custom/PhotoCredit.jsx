@@ -14,7 +14,8 @@ export function SampleTag({ style }) {
   );
 }
 
-export function PhotoCredit({ credit, style }) {
+// tag: false leaves out "Sample photo · " (where it's said already, as a title above).
+export function PhotoCredit({ credit, style, tag = true }) {
   const { t } = useAppText();
   if (!credit?.name) return null;
   const link = (href, text) => (href
@@ -23,7 +24,7 @@ export function PhotoCredit({ credit, style }) {
   const site = creditSite(credit);
   return (
     <p data-testid="photo-credit" style={{ margin: 0, fontSize: 11.5, lineHeight: '16px', color: '#64748b', ...style }}>
-      {t('Sample photo')} · {t('Photo by {name} on {site}', { name: link(credit.profile, credit.name), site: link(site.href, site.name) })}
+      {tag && <>{t('Sample photo')} · </>}{t('Photo by {name} on {site}', { name: link(credit.profile, credit.name), site: link(site.href, site.name) })}
     </p>
   );
 }
