@@ -25,6 +25,15 @@ export function keepCredits(credits, urls) {
   return Object.keys(kept).length ? kept : null;
 }
 
+// What to say when a photo search fails: the function's own words for a refusal (too many this
+// hour, the month's searches used, no access), plain words when something broke. A 5xx carries
+// the technical reason (on 20 Nov 2026, "Unsplash API error: 401": Unsplash refused the key),
+// which is for the logs, not the merchant.
+export async function photoSearchError(error) {
+  const fallback = appT(SEARCH_FAILED);
+  return Number(error?.context?.status) >= 500 ? fallback : functionErrorMessage(error, fallback);
+}
+
 // Up to 5 photos for `query`: { id, url, thumb, alt, credit, downloadLocation }. None found: [].
 // Throws an Error to show (a friendly one from the function, or plain words).
 export async function findSamplePhotos({ tenantId, query, page = 1 }) {
@@ -32,7 +41,7 @@ export async function findSamplePhotos({ tenantId, query, page = 1 }) {
   const { data, error } = await supabase.functions.invoke('findProductImage', { body: { query: String(query || '').slice(0, 100), page, tenantId } });
   if (error) {
     if (error?.context?.status === 404) return [];
-    throw Object.assign(new Error(await functionErrorMessage(error, appT(SEARCH_FAILED))), { friendly: true });
+    throw Object.assign(new Error(await photoSearchError(error)), { friendly: true });
   }
   return (Array.isArray(data?.photos) ? data.photos : [])
     .filter((photo) => photo?.url && photo?.credit?.name)

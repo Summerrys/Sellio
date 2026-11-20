@@ -94,9 +94,16 @@ try {
   assert.deepEqual(await lib.findSamplePhotos({ tenantId: 'shop-1', query: 'xyz' }), [], 'none found');
   answer = () => ({ data: null, error: { context: { status: 429, clone() { return this; }, json: async () => ({ error: 'Too many image searches this hour. Please try again later.' }) } } });
   await assert.rejects(lib.findSamplePhotos({ tenantId: 'shop-1', query: 'laksa' }), (e) => e.friendly && e.message === 'Too many image searches this hour. Please try again later.');
+  answer = () => ({ data: null, error: { context: { status: 403, clone() { return this; }, json: async () => ({ error: 'You do not have access to image search.' }) } } });
+  await assert.rejects(lib.findSamplePhotos({ tenantId: 'shop-1', query: 'laksa' }), (e) => e.message === 'You do not have access to image search.');
   answer = () => ({ data: null, error: { context: { status: 500, clone() { return this; }, json: async () => { throw new Error('not JSON'); } } } });
   await assert.rejects(lib.findSamplePhotos({ tenantId: 'shop-1', query: 'laksa' }), (e) => e.message === 'Search failed. Please try again.');
-  passed('the search: photos with their credit, none found, a refusal in its own words, else plain words');
+  // Something broke (20 Nov 2026: Unsplash refused the key): its technical reason isn't shown.
+  answer = () => ({ data: null, error: { context: { status: 500, clone() { return this; }, json: async () => ({ error: 'Unsplash API error: 401' }) } } });
+  await assert.rejects(lib.findSamplePhotos({ tenantId: 'shop-1', query: 'laksa' }), (e) => e.friendly && e.message === 'Search failed. Please try again.');
+  assert.equal(await lib.photoSearchError({ context: { status: 502, clone() { return this; }, json: async () => ({ error: 'upstream' }) } }), 'Search failed. Please try again.');
+  assert.equal(await lib.photoSearchError(new Error('Failed to send a request to the Edge Function')), 'Search failed. Please try again.', 'offline: plain words');
+  passed('the search: photos with their credit, none found, a refusal in its own words, anything that broke in plain words (never the technical reason)');
 
   // ── 4. Unsplash told of the photos used ────────────────────────────────────────────────
   calls.length = 0;

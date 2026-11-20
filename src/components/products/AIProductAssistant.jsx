@@ -15,7 +15,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { allowanceLine, allowanceSpent, lastSuggestion, functionErrorMessage } from '@/lib/aiAllowance';
 import { formatMoney } from '@/lib/money';
 import { useAppText, appT } from '@/lib/appText';
-import { reportUsedPhotos } from '@/lib/samplePhotos';
+import { reportUsedPhotos, photoSearchError } from '@/lib/samplePhotos';
 
 // An error whose message is meant for the person (from our own functions).
 const friendlyError = (message) => Object.assign(new Error(message), { friendly: true });
@@ -71,7 +71,7 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
       const { data, error } = await supabase.functions.invoke('findProductImage', {
         body: { query: q, page: targetPage, tenantId },
       });
-      if (error) throw friendlyError(await functionErrorMessage(error, appT('Search failed. Please try again.')));
+      if (error) throw friendlyError(await photoSearchError(error));
       if (data?.photos?.length > 0) {
         setPhotos(data.photos);
         setCurrentIndex(0);
@@ -105,7 +105,7 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
         const { data, error } = await supabase.functions.invoke('findProductImage', {
           body: { query: lastQuery, page: nextPage, tenantId },
         });
-        if (error) throw friendlyError(await functionErrorMessage(error, appT('Search failed. Please try again.')));
+        if (error) throw friendlyError(await photoSearchError(error));
         if (data?.photos?.length > 0) {
           setPhotos(data.photos);
           setCurrentIndex(0);
