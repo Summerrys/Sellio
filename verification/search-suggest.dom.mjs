@@ -99,7 +99,7 @@ const stubs = {
   pull: 'export default function PullToRefresh({ children }) { return children; }',
   likes: 'export const useKnownLike = () => null;',
   edges: 'export const extractBannerEdgeAssets = async () => null; export const isValidBannerEdgeColor = () => false;',
-  catalog: 'export const applyCanonicalProductOrder = (q) => q;',
+  catalog: 'export const applyCanonicalProductOrder = (q) => q; export const nextSortOrder = () => 1;',
   subscription: 'export const useSubscription = () => ({ maxProducts: null });',
   grid: 'export default function ProductGrid({ products }) { return globalThis.__h("div", { "data-testid": "product-grid" }, products.map((p) => globalThis.__h("p", { key: p.id }, p.name))); }',
   select: [

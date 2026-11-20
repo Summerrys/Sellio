@@ -5,7 +5,9 @@
 //   • nothing found says why; a long menu read only in part says so;
 //   • an item's own picture on the menu becomes its photo (cut from the full photo at the
 //     box's place), is uploaded with it, and can be changed or deleted in the photo editor;
-//     a failed upload saves nothing and leaves no photo behind.
+//     a failed upload saves nothing and leaves no photo behind;
+//   • the menu's order: new sections after the shop's own, items numbered (sort_order) in
+//     the order printed after the shop's highest number.
 // Run from the app root: node verification/scan-review.dom.mjs /tmp/sellio-verification
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -79,6 +81,9 @@ globalThis.fetch = async (url, options) => {
 };
 const writes = [];
 const storage = { uploads: [], removed: [], failUploads: false };
+// What the save reads first (the shop's highest item number), and the answer it gets.
+const reads = [];
+let lastItem = { data: [], error: null };
 globalThis.__client = {
   auth: { getSession: async () => ({ data: { session: { access_token: 'owner-token' } } }) },
   from: (table) => ({
@@ -87,6 +92,16 @@ globalThis.__client = {
       if (table === 'products') return { select: async () => ({ data: rows.map((row, i) => ({ ...row, id: 'p-' + i })), error: null }) };
       if (table === 'categories') return { select: () => ({ single: async () => ({ data: { id: 'cat-' + rows.name, name: rows.name }, error: null }) }) };
       return Promise.resolve({ error: null });
+    },
+    select: (columns) => {
+      const query = { table, columns, eq: [], order: [], limit: null };
+      reads.push(query);
+      const chain = {
+        eq: (column, value) => { query.eq.push([column, value]); return chain; },
+        order: (column, options) => { query.order.push([column, options?.ascending]); return chain; },
+        limit: async (n) => { query.limit = n; return table === 'products' ? lastItem : { data: [], error: null }; },
+      };
+      return chain;
     },
   }),
   storage: { from: () => ({
@@ -99,7 +114,7 @@ globalThis.__client = {
     remove: async (paths) => { storage.removed.push(...paths); return { error: null }; },
   }) },
 };
-const reset = () => { requests.length = 0; writes.length = 0; cuts.length = 0; storage.uploads = []; storage.removed = []; storage.failUploads = false; revoked.length = 0; };
+const reset = () => { requests.length = 0; writes.length = 0; reads.length = 0; lastItem = { data: [], error: null }; cuts.length = 0; storage.uploads = []; storage.removed = []; storage.failUploads = false; revoked.length = 0; };
 
 const roots = [];
 async function open(props = {}) {
@@ -294,21 +309,39 @@ try {
     { name: 'Kopi', price: 1.8, category: 'drinks', variants: [] },
   ], count: 5 };
   view = await open({ categories: [{ id: 'cat-specials', name: 'Specials', sort_order: 1 }, { id: 'cat-drinks', name: 'Drinks', sort_order: 4 }, { id: 'cat-old', name: 'Old', sort_order: null }] });
+  lastItem = { data: [{ sort_order: 7 }], error: null }; // the shop's items go up to 7
   await click(button(view.container, /^Add 5 Products$/));
+  assert.deepEqual(reads, [{ table: 'products', columns: 'sort_order', eq: [['tenant_id', 'shop-1']], order: [['sort_order', false]], limit: 1 }], 'the shop\'s highest item number, read first');
   assert.deepEqual(writes.filter((w) => w.table === 'categories').map((w) => [w.rows.name, w.rows.sort_order]), [['Menu and Prices', 5], ['Beverages', 6]],
     'new sections after the shop\'s highest (4), in the menu\'s order');
-  assert.deepEqual(writes.find((w) => w.table === 'products').rows.map((p) => [p.name, p.category_id]), [
-    ['Grilled Chicken Caesar Salad', 'cat-Menu and Prices'], ['Classic Club Sandwich', 'cat-Menu and Prices'],
-    ['Soft Drinks', 'cat-Beverages'], ['Iced Tea', 'cat-Beverages'], ['Kopi', 'cat-drinks'],
-  ], 'saved in the menu\'s order, "drinks" into the shop\'s own Drinks');
+  assert.deepEqual(writes.find((w) => w.table === 'products').rows.map((p) => [p.name, p.category_id, p.sort_order]), [
+    ['Grilled Chicken Caesar Salad', 'cat-Menu and Prices', 8], ['Classic Club Sandwich', 'cat-Menu and Prices', 9],
+    ['Soft Drinks', 'cat-Beverages', 10], ['Iced Tea', 'cat-Beverages', 11], ['Kopi', 'cat-drinks', 12],
+  ], 'items numbered in the menu\'s order after the shop\'s highest (7); "drinks" into the shop\'s own Drinks');
   await closeAll();
   reset();
   view = await open({ categories: [] });
-  await click(button(view.container, /^Add 5 Products$/));
+  // A deselected item takes no number: the rest stay one after another.
+  await click(view.container.querySelectorAll('input[type="checkbox"]')[1]);
+  await click(button(view.container, /^Add 4 Products$/));
   assert.deepEqual(writes.filter((w) => w.table === 'categories').map((w) => [w.rows.name, w.rows.sort_order]), [['Menu and Prices', 1], ['Beverages', 2], ['drinks', 3]],
     'a shop with no sections: 1, 2, 3 in the menu\'s order');
+  assert.deepEqual(writes.find((w) => w.table === 'products').rows.map((p) => [p.name, p.sort_order]),
+    [['Grilled Chicken Caesar Salad', 1], ['Soft Drinks', 2], ['Iced Tea', 3], ['Kopi', 4]], 'a shop with no items: from 1');
   await closeAll();
-  passed('the menu\'s order: new sections go after the shop\'s own, in the order printed');
+  // The highest number can't be read: nothing is saved, no photo is uploaded, and it says so.
+  reset();
+  answer = { items: [{ name: 'Chicken Rice', price: 5.5, category: 'Mains', variants: [], photo: [100, 50, 300, 250] }], count: 1, imageWidth: 2236, imageHeight: 1677 };
+  photo = { base64: 'cGhvdG8=', mediaType: 'image/jpeg', width: 2236, height: 1677, full: FULL };
+  view = await open({ categories: [] });
+  assert.equal(cuts.length, 1, 'it has a picture to upload');
+  lastItem = { data: null, error: { message: 'Network request failed' } };
+  await click(button(view.container, /^Add 1 Products$/));
+  assert.deepEqual([writes.length, storage.uploads.length], [0, 0], 'no section, item or photo');
+  assert.ok(view.container.querySelector('[role="alert"]'), 'the problem is shown');
+  assert.match(text(view.container), /items found — review before saving/, 'still on the review, to try again');
+  await closeAll();
+  passed('the menu\'s order: new sections go after the shop\'s own, and items are numbered in the order printed after the shop\'s highest');
 } finally {
   await closeAll().catch(() => {});
   await rm(temporary, { recursive: true, force: true });

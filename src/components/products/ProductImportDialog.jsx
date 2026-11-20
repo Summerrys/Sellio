@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, CheckCircle, AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppText, appT } from '@/lib/appText';
+import { nextSortOrder } from '@/lib/storefrontCatalog';
 
 const toSlug = (str) => (str || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -155,6 +156,15 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
     const categoryCache = {};
     (initialCategories || []).forEach(c => { categoryCache[c.name.toLowerCase()] = c.id; });
 
+    // The file's order (20 Nov 2026): rows are numbered after the shop's highest number (they
+    // used to come out in reverse, newest first), and new categories go after the shop's own.
+    let nextCategoryOrder = nextSortOrder(initialCategories);
+    let firstItemOrder = 1;
+    const { data: lastItem, error: orderError } = await supabase.from('products').select('sort_order')
+      .eq('tenant_id', tenantId).order('sort_order', { ascending: false }).limit(1);
+    if (orderError) console.warn('Import: could not read the last item\'s place:', orderError.message);
+    else firstItemOrder = nextSortOrder(lastItem);
+
     for (let i = 0; i < validRows.length; i++) {
       const { row } = validRows[i];
       try {
@@ -169,7 +179,7 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
             // Create new category
             const { data: newCat } = await supabase
               .from('categories')
-              .insert({ tenant_id: tenantId, name: catName, slug: toSlug(catName), is_active: true })
+              .insert({ tenant_id: tenantId, name: catName, slug: toSlug(catName), is_active: true, sort_order: nextCategoryOrder++ })
               .select('id')
               .single();
             if (newCat?.id) {
@@ -208,6 +218,7 @@ export default function ProductImportDialog({ open, onOpenChange, tenantId, cate
           images: row.additional_images
             ? row.additional_images.split(';').filter(img => img?.trim())
             : [],
+          sort_order: firstItemOrder + i,
         };
         // Only include sku if provided — let trigger auto-generate if blank
         if (row.sku?.trim()) payload.sku = row.sku.trim();

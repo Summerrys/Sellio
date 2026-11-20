@@ -23,13 +23,22 @@ export const STOREFRONT_PRODUCT_FIELDS = [
 
 export const STOREFRONT_CATEGORY_FIELDS = 'id, name, slug, sort_order';
 
-// One canonical order for Products management, Design Store preview and the
-// public storefront. New products appear first; the ID tiebreaker makes rows
-// deterministic even when an import creates several products simultaneously.
+// One canonical order for Products management, the Counter, Design Store preview
+// and the public storefront: the menu's own order first (sort_order: a scanned
+// menu or an imported list numbers its items in their order, 20 Nov 2026), then
+// new products first (an item added on its own is 0, so it stays at the top of
+// its section, as before). The ID tiebreaker makes rows deterministic.
 export function applyCanonicalProductOrder(query) {
   return query
+    .order('sort_order', { ascending: true })
     .order('created_date', { ascending: false })
     .order('id', { ascending: true });
+}
+
+// The number after the highest sort_order in `rows` (none: 1), for items added in
+// a list's own order (a scanned menu, an imported file).
+export function nextSortOrder(rows) {
+  return (rows || []).reduce((max, row) => Math.max(max, Number(row?.sort_order) || 0), 0) + 1;
 }
 
 export async function fetchStorefrontCatalog(supabase, tenantId) {

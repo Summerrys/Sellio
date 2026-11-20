@@ -27,7 +27,7 @@ import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { isShopTenant } from '@/lib/shopSelling';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
 import LoadingShapes from '@/components/ui-custom/LoadingShapes';
-import { applyCanonicalProductOrder } from '@/lib/storefrontCatalog';
+import { applyCanonicalProductOrder, nextSortOrder } from '@/lib/storefrontCatalog';
 import { useSubscription } from '@/hooks/useSubscription';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
 import { sellsPlans } from '@/lib/nativeApp';
@@ -222,6 +222,13 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
     const uploaded = [];
     try {
       const supabase = await getSupabase();
+      // Items in the menu's order: numbered after the shop's highest number, so a second photo
+      // of a long menu follows the first. Saved in one go they all have the same time, so the
+      // lists showed them in a random order (20 Nov 2026).
+      const { data: lastItem, error: orderError } = await supabase.from('products').select('sort_order')
+        .eq('tenant_id', tenantId).order('sort_order', { ascending: false }).limit(1);
+      if (orderError) throw orderError;
+      const firstItemOrder = nextSortOrder(lastItem);
       // The photos first: a product is only saved with its photo in place.
       const photoUrls = {};
       for (const item of selected) {
@@ -243,7 +250,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
       // New sections go after the shop's own, in the menu's order (as the Categories page adds
       // one). They used to be saved at 0, so the lists sorted them by name: "Beverages" above
       // the mains printed before it (20 Nov 2026).
-      let nextCategoryOrder = categories.reduce((max, c) => Math.max(max, c.sort_order || 0), 0) + 1;
+      let nextCategoryOrder = nextSortOrder(categories);
       for (const catName of uniqueCats) {
         if (!catMap[catName.toLowerCase()]) {
           const slug = catName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now();
@@ -251,7 +258,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
           if (newCat) catMap[catName.toLowerCase()] = newCat.id;
         }
       }
-      const productRows = selected.map(item => ({
+      const productRows = selected.map((item, index) => ({
         tenant_id: tenantId,
         name: item.name,
         price: typedPrice(item.price),
@@ -261,6 +268,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
         slug: item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now() + Math.random().toString(36).slice(2, 5),
         is_active: true,
         variants: cleanScannedOptions(item.variants),
+        sort_order: firstItemOrder + index,
       }));
       const { data: insertedProducts, error: prodError } = await supabase.from('products').insert(productRows).select();
       if (prodError) throw prodError;

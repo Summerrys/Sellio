@@ -302,11 +302,16 @@ try {
   const catalogWrites = [];
   globalThis.__sellioTestClient = {
     auth: { getSession: async () => ({ data: { session: { access_token: 'scan-test-fixture' } } }) },
-    from: table => ({ insert: rows => {
-      catalogWrites.push({ table, rows });
-      if (table === 'products') return { select: async () => ({ data: rows.map((row, i) => ({ ...row, id: 'fixture-product-' + i })), error: null }) };
-      return Promise.resolve({ error: null });
-    } }),
+    from: table => ({
+      insert: rows => {
+        catalogWrites.push({ table, rows });
+        if (table === 'products') return { select: async () => ({ data: rows.map((row, i) => ({ ...row, id: 'fixture-product-' + i })), error: null }) };
+        return Promise.resolve({ error: null });
+      },
+      // The save reads the shop's highest item number first (none yet): items keep the menu's
+      // order (scan-review.dom.mjs).
+      select: () => { const chain = { eq: () => chain, order: () => chain, limit: async () => ({ data: [], error: null }) }; return chain; },
+    }),
   };
   const scanRequests = [];
   let scanFails = true;
@@ -346,6 +351,7 @@ try {
   assert.equal(catalogWrites[0].table, 'products');
   assert.equal(catalogWrites[0].rows.length, 1);
   assert.equal(catalogWrites[0].rows[0].tenant_id, 'scan-fixture');
+  assert.equal(catalogWrites[0].rows[0].sort_order, 1, 'the first of the menu in a shop with no items');
   assert.equal(catalogWrites[1].table, 'inventory_items');
   assert.match(scan.container.textContent, /Products Added/);
   passed('Accepted capture auto-extracts; authenticated review, retries, quotas and explicit import remain intact');
