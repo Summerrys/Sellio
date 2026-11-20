@@ -147,8 +147,13 @@ try {
   await search(view, 'Laksa');
   assert.deepEqual(globalThis.__toasts.at(-1), ['error', 'Search failed. Please try again.'], 'something broke: plain words, not "Pixabay API error: 429"');
   assert.ok(!globalThis.__toasts.some((t) => /API error/.test(String(t[1]))), 'the technical reason is never shown');
+  // Pixabay busy (findProductImage v27: Sellio's 100 searches a minute): the app's own words.
+  searchAnswer = () => ({ data: null, error: { context: { status: 429, clone() { return this; }, json: async () => ({ error: 'English from the server', code: 'busy', retryAfter: 30 }) } } });
+  view = await mount();
+  await search(view, 'Laksa');
+  assert.deepEqual(globalThis.__toasts.at(-1), ['error', 'Pixabay is busy. Please try again in a minute.'], 'Pixabay busy: said in the app\'s words (and language)');
   assert.deepEqual([uploads.length, fetched.length], [0, 0]);
-  passed('a search refused says so in the function\'s words; one that broke (Pixabay refusing) in plain words');
+  passed('a search refused says so in the function\'s words; one that broke (Pixabay refusing) in plain words; Pixabay busy in the app\'s own words');
 } finally {
   for (const { root, client } of roots) {
     try { await act(async () => root.unmount()); } catch { /* already gone */ }

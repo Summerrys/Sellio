@@ -797,6 +797,45 @@ try {
   assert.equal(byTest(view.container, 'scan-photo-waiting').length, 0);
   assert.equal(invoked.filter((c) => !c.body.action).length, 1, 'no more searches after a refusal');
   await closeAll();
+  // Pixabay busy (findProductImage v27: Sellio's 100 searches a minute): the review waits as long
+  // as it's told, says so, and carries on with the same item; busy 4 times running, it stops and
+  // says why; Stop while waiting stops it.
+  const busy = () => ({ data: null, error: { context: { status: 429, clone() { return this; }, json: async () => ({ error: 'Pixabay is busy. Please try again in a minute.', code: 'busy', retryAfter: 1 }) } } });
+  const later = (ms) => act(async () => { await new Promise((resolve) => setTimeout(resolve, ms)); });
+  reset();
+  let busyTimes = 1;
+  photosFor = (body) => (busyTimes-- > 0 ? busy() : { data: { photos: [1, 2, 3].map((n) => sample(body.query.split(' ')[0].toLowerCase(), n)) }, error: null });
+  view = await open({ categories: [] });
+  await settle(10);
+  const finding = () => byTest(view.container, 'scan-finding-photos')[0];
+  assert.equal(finding()?.getAttribute('data-waiting'), 'true', 'waiting for Pixabay');
+  assert.equal(text(finding().querySelector('p')), 'Waiting for Pixabay · 0 of 2');
+  assert.equal(text(finding().querySelector('[data-testid="photos-from"]')), 'Photos from Pixabay');
+  assert.equal(byTest(view.container, 'scan-photo-waiting').length, 2, 'its items still shown as being looked for');
+  await later(1200);
+  await settle(10);
+  assert.deepEqual(invoked.filter((c) => !c.body.action).map((c) => c.body.query), ['Laksa', 'Laksa', 'Teh Tarik'], 'the same item asked again after the wait, then the rest');
+  assert.equal(text(byTest(view.container, 'scan-photos-added')[0].firstChild), '2 sample photos added. Customers see each marked “Sample photo”, with the photographer’s credit.');
+  await closeAll();
+  reset();
+  photosFor = busy;
+  view = await open({ categories: [] });
+  await later(3800);
+  await settle(10);
+  assert.equal(text(byTest(view.container, 'scan-photos-failed')[0]), 'Sample photos stopped: Pixabay is busy. Please try again in a minute.');
+  assert.equal(invoked.filter((c) => !c.body.action).length, 4, 'asked 4 times (3 waits), then stopped');
+  assert.equal(byTest(view.container, 'scan-photo-waiting').length, 0);
+  await closeAll();
+  reset();
+  photosFor = busy;
+  view = await open({ categories: [] });
+  await settle(10);
+  await click(finding().querySelector('button'));
+  await later(1500);
+  await settle(10);
+  assert.equal(invoked.filter((c) => !c.body.action).length, 1, 'stopped while waiting: not asked again');
+  assert.deepEqual([byTest(view.container, 'scan-finding-photos').length, byTest(view.container, 'scan-photos-failed').length, byTest(view.container, 'scan-photo-waiting').length], [0, 0, 0]);
+  await closeAll();
   // The menu reader's words for a dish (scanMenu v22 photo_search) go with its search as `hint`;
   // renamed, the new name goes alone (Alvin, 20 Nov 2026: hawker dishes, cafe dishes alike).
   reset();
@@ -837,7 +876,7 @@ try {
   assert.equal(byTest(view.container, 'scan-samples')[0].querySelectorAll('button[aria-pressed="true"]').length, 0, 'the sample is offered, not used');
   delete globalThis.__shrink;
   await closeAll();
-  passed('sample photos: one search per item without its own picture, in the menu\'s order; shown from Pixabay while choosing ("Photos from Pixabay"), marked Sample; another chosen in its editor with its photographer credited; removed stays removed; copied into the shop\'s photos when saved, saved with the copy and its credit; one that couldn\'t be copied leaves its item without a photo, said; a copying that failed saves nothing; a refusal stops the rest');
+  passed('sample photos: one search per item without its own picture, in the menu\'s order; shown from Pixabay while choosing ("Photos from Pixabay"), marked Sample; another chosen in its editor with its photographer credited; removed stays removed; copied into the shop\'s photos when saved, saved with the copy and its credit; one that couldn\'t be copied leaves its item without a photo, said; a copying that failed saves nothing; a refusal stops the rest; Pixabay busy: waited for and carried on (stops after 4, or when told)');
 } finally {
   await closeAll().catch(() => {});
   await rm(temporary, { recursive: true, force: true });

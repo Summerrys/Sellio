@@ -109,7 +109,7 @@ try {
   assert.equal(data.count, 5);
   assert.equal(data.reason, undefined);
   assert.equal(data.imageWidth, 2236);
-  assert.ok(lines.some((l) => /5 items \(4 with a price, 2 with a picture\)/.test(l)), lines.join('\n'));
+  assert.ok(lines.some((l) => /5 items \(4 with a price, 2 with a picture, 0 with photo words\)/.test(l)), lines.join('\n')); // v22 also counts photo words
   const sent = ai.requests.at(-1).body;
   assert.equal(sent.model, 'claude-opus-5-5');
   assert.equal(sent.max_tokens, 16000);

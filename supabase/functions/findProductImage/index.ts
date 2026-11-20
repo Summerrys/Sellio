@@ -1,5 +1,18 @@
-// findProductImage - v26 (Pixabay: the menu's own words for a dish, more dishes, best matches
-// first). Deploy with verify_jwt: true.
+// findProductImage - v27 (Pixabay, paced: photos copied two at a time, waiting when it says so).
+// Deploy with verify_jwt: true.
+//
+// v27, Alvin 20 Nov 2026 ("proceed"): when his 22-item Cafelicious scan was saved (v25), the
+// copying asked Pixabay for 8 photos at once, then 8 more a second later: the second 8 were all
+// turned away (429) and saved without a photo. Pixabay answers too many requests with 429 (images
+// and searches alike; searches: 100 a minute for Sellio as a whole). Now:
+//   - keep: photos are fetched two at a time, a moment apart; a 429 makes every fetch of the call
+//     wait (Retry-After or X-RateLimit-Reset when Pixabay says, else 1, 2, 4 s, at most 10 s) and
+//     the photo is fetched again, up to KEEP_TRIES times, within KEEP_DEADLINE_MS. Photos still
+//     turned away come back in `busy`, with retryAfter (the app sends them again once);
+//   - search: a 429 with the minute's window about to reset (5 s or less) is waited out and asked
+//     once more; otherwise, or again 429, the answer is 429 { code: 'busy', retryAfter } (seconds)
+//     and the month's search is given back. The app's Scan Menu waits that long and carries on.
+// Everything else is v26.
 //
 // v26, Alvin 20 Nov 2026: "enhance the keyword searches ... so that it encompasses all possible
 // food choices as well as for the hawker or even the F&B line" (after v25, his re-scan still had
@@ -50,8 +63,10 @@
 //
 // { action: 'keep', tenantId, photos: [{ id, url }] }: copies each photo (1 to 8 Pixabay image
 // addresses, from a search's keepUrl) into product-images/<store>/products/<id>-<time>.<ext> and
-// answers { kept: [{ from, url }] } with the copies made (one that couldn't be fetched or saved is
-// left out). The same access check as a search; 300 a person an hour; no search is used up.
+// answers { kept: [{ from, url }], busy: [url], retryAfter? } with the copies made and the photos
+// Pixabay still turned away for coming too fast, to send again in retryAfter seconds (one that
+// couldn't be fetched or saved otherwise is in neither). The same access check as a search; 300 a
+// person an hour; no search is used up.
 //
 // Who may search, as before: signed in, an active member with products.create or products.edit of
 // an open store (ai_authorized_store); 150 searches a person an hour; a store's monthly allowance
@@ -68,6 +83,16 @@ const SEARCHES_PER_PERSON_PER_HOUR = 150;
 const KEEPS_PER_PERSON_PER_HOUR = 300;
 const MAX_QUERY_CHARS = 100;
 const MAX_KEEP_AT_ONCE = 8;
+// v27: Pixabay's pace (see the top).
+export const KEEP_AT_A_TIME = 2;
+export const KEEP_GAP_MS = 250;
+export const KEEP_TRIES = 4;
+const KEEP_DEADLINE_MS = 60_000;
+const MAX_WAIT_MS = 10_000;
+const SEARCH_WAIT_MAX_S = 5;
+const BUSY_RETRY_S = 20;
+// Waiting, and the clock (tests replace them).
+export const timing = { sleep: (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)), now: () => Date.now() };
 export const MAX_ASKS = 6;
 const PER_PAGE = 5;
 export const PIXABAY_PER_ASK = 30; // 6 sets of 5 from one answer
@@ -1010,15 +1035,43 @@ export function rankHits(hits: any[], words: string) {
     .map(({ hit }) => hit);
 }
 
+// v27: Pixabay turned a search away (429): try again in `retryAfter` seconds.
+export class PixabayBusy extends Error {
+  retryAfter: number;
+  constructor(retryAfter: number) {
+    super(`Pixabay API error: 429 (busy for ${retryAfter} s)`);
+    this.retryAfter = retryAfter;
+  }
+}
+
+// Seconds Pixabay asks to wait (Retry-After, else what's left of its minute), or null.
+function pixabayWait(res: Response): number | null {
+  for (const header of ['retry-after', 'x-ratelimit-reset']) {
+    const seconds = Number(res.headers.get(header));
+    if (res.headers.has(header) && Number.isFinite(seconds) && seconds > 0) return Math.ceil(seconds);
+  }
+  return null;
+}
+
 // Up to 30 photos from Pixabay for the words, best matches first (never logs the address: it
-// carries the key).
-async function askPixabay(attempt: Attempt) {
+// carries the key). Turned away (429) with its minute about to reset: asked once more after it;
+// else PixabayBusy.
+async function askPixabay(attempt: Attempt, again = false): Promise<any[]> {
   const key = pixabayKey();
   if (!key) throw new Error('Pixabay key missing: set the PIXABAY_API_KEY secret');
   const params = new URLSearchParams({ key, q: attempt.words, lang: attempt.lang, image_type: 'photo', safesearch: 'true', per_page: String(PIXABAY_PER_ASK), page: '1' });
   if (attempt.category === 'food') params.set('category', 'food');
   const res = await fetch(`https://pixabay.com/api/?${params}`, { signal: AbortSignal.timeout(10000) });
-  console.log(`findProductImage v26: Pixabay ${res.status} for "${attempt.words}" (${attempt.lang}, ${attempt.category}), rate limit ${res.headers.get('x-ratelimit-limit')}/min, ${res.headers.get('x-ratelimit-remaining')} left`);
+  console.log(`findProductImage v27: Pixabay ${res.status} for "${attempt.words}" (${attempt.lang}, ${attempt.category}), rate limit ${res.headers.get('x-ratelimit-limit')}/min, ${res.headers.get('x-ratelimit-remaining')} left`);
+  if (res.status === 429) {
+    await res.body?.cancel();
+    const wait = pixabayWait(res);
+    if (!again && wait != null && wait <= SEARCH_WAIT_MAX_S) {
+      await timing.sleep(wait * 1000 + 250);
+      return askPixabay(attempt, true);
+    }
+    throw new PixabayBusy(wait ?? BUSY_RETRY_S);
+  }
   if (res.status === 400) {
     const text = await res.text().catch(() => '');
     if (/out of valid range/i.test(text)) return [];
@@ -1042,7 +1095,7 @@ async function findPhotos(admin: any, attempt: Attempt, asked: { count: number }
     if (error) throw error;
     if (hit && Date.now() - Date.parse(hit.fetched_at) < DAY_MS && Array.isArray(hit.photos)) return hit.photos;
   } catch (e) {
-    console.warn('findProductImage v26: searches store not read:', (e as Error).message);
+    console.warn('findProductImage v27: searches store not read:', (e as Error).message);
   }
   if (asked.count >= MAX_ASKS) return null;
   asked.count++;
@@ -1054,7 +1107,7 @@ async function findPhotos(admin: any, attempt: Attempt, asked: { count: number }
       await admin.from('photo_search_cache').delete().lt('fetched_at', new Date(Date.now() - DAY_MS).toISOString());
     }
   } catch (e) {
-    console.warn('findProductImage v26: search not stored:', (e as Error).message);
+    console.warn('findProductImage v27: search not stored:', (e as Error).message);
   }
   return photos;
 }
@@ -1081,27 +1134,57 @@ async function keepPhotos(req: Request, body: any) {
   if (quotaError) throw quotaError;
   if (!withinQuota) return json({ error: 'Too many photos this hour. Please try again later.' }, 429);
 
-  const kept = await Promise.all(photos.map(async ({ id, url }: { id: string; url: string }) => {
-    try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-      if (!res.ok) { console.warn(`findProductImage v26: ${id} not fetched (${res.status})`); return null; }
-      const type = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-      if (!/^image\/(jpeg|png|webp)$/.test(type)) { console.warn(`findProductImage v26: ${id} is not a photo (${type})`); return null; }
-      const bytes = new Uint8Array(await res.arrayBuffer());
-      if (!bytes.length || bytes.length > MAX_PHOTO_BYTES) { console.warn(`findProductImage v26: ${id} size ${bytes.length}`); return null; }
-      const ext = type === 'image/png' ? 'png' : type === 'image/webp' ? 'webp' : 'jpg';
-      const path = `${storeId}/products/${id}-${Date.now()}-${crypto.randomUUID().slice(0, 6)}.${ext}`;
-      const { error } = await admin.storage.from(BUCKET).upload(path, bytes, { contentType: type, cacheControl: LONG_CACHE, upsert: false });
-      if (error) { console.warn(`findProductImage v26: ${id} not saved:`, error.message); return null; }
-      return { from: url, url: admin.storage.from(BUCKET).getPublicUrl(path).data.publicUrl };
-    } catch (e) {
-      console.warn(`findProductImage v26: ${id} not kept:`, (e as Error).message);
-      return null;
+  // v27: two at a time, a moment apart; a 429 holds every fetch of this call (notBefore).
+  const started = timing.now();
+  let notBefore = 0;
+  const keepOne = async ({ id, url }: { id: string; url: string }): Promise<{ from: string; url: string } | 'busy' | null> => {
+    for (let tries = 0; tries < KEEP_TRIES; tries++) {
+      const wait = notBefore - timing.now();
+      if (wait > 0) await timing.sleep(wait);
+      if (timing.now() - started > KEEP_DEADLINE_MS) break;
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+        if (res.status === 429) {
+          await res.body?.cancel();
+          const ms = Math.min((pixabayWait(res) ?? 2 ** tries) * 1000, MAX_WAIT_MS);
+          notBefore = Math.max(notBefore, timing.now() + ms);
+          console.warn(`findProductImage v27: ${id} turned away (429), fetching again in ${ms} ms`);
+          continue;
+        }
+        if (!res.ok) { await res.body?.cancel(); console.warn(`findProductImage v27: ${id} not fetched (${res.status})`); return null; }
+        const type = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+        if (!/^image\/(jpeg|png|webp)$/.test(type)) { await res.body?.cancel(); console.warn(`findProductImage v27: ${id} is not a photo (${type})`); return null; }
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        if (!bytes.length || bytes.length > MAX_PHOTO_BYTES) { console.warn(`findProductImage v27: ${id} size ${bytes.length}`); return null; }
+        const ext = type === 'image/png' ? 'png' : type === 'image/webp' ? 'webp' : 'jpg';
+        const path = `${storeId}/products/${id}-${Date.now()}-${crypto.randomUUID().slice(0, 6)}.${ext}`;
+        const { error } = await admin.storage.from(BUCKET).upload(path, bytes, { contentType: type, cacheControl: LONG_CACHE, upsert: false });
+        if (error) { console.warn(`findProductImage v27: ${id} not saved:`, error.message); return null; }
+        return { from: url, url: admin.storage.from(BUCKET).getPublicUrl(path).data.publicUrl };
+      } catch (e) {
+        console.warn(`findProductImage v27: ${id} not kept:`, (e as Error).message);
+        return null;
+      }
     }
-  }));
-  const copies = kept.filter(Boolean);
-  console.log(`findProductImage v26: kept ${copies.length} of ${photos.length} photos for store ${storeId}`);
-  return json({ kept: copies });
+    console.warn(`findProductImage v27: ${id} still turned away`);
+    return 'busy';
+  };
+  const results: ({ from: string; url: string } | 'busy' | null)[] = new Array(photos.length).fill(null);
+  let next = 0;
+  const worker = async (lane: number) => {
+    if (lane) await timing.sleep(KEEP_GAP_MS * lane);
+    while (next < photos.length) {
+      const index = next++;
+      results[index] = await keepOne(photos[index]);
+      if (next < photos.length) await timing.sleep(KEEP_GAP_MS);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(KEEP_AT_A_TIME, photos.length) }, (_, lane) => worker(lane)));
+  const copies = results.filter((r): r is { from: string; url: string } => !!r && r !== 'busy');
+  const busy = photos.filter((_: unknown, i: number) => results[i] === 'busy').map((p: { url: string }) => p.url);
+  console.log(`findProductImage v27: kept ${copies.length} of ${photos.length} photos for store ${storeId}${busy.length ? `, ${busy.length} turned away` : ''}`);
+  // retryAfter: seconds before the app sends the busy ones again (what's left of the last wait).
+  return json(busy.length ? { kept: copies, busy, retryAfter: Math.max(1, Math.ceil((notBefore - timing.now()) / 1000)) } : { kept: copies, busy });
 }
 
 Deno.serve(async (req) => {
@@ -1171,19 +1254,23 @@ Deno.serve(async (req) => {
     }
     const named = hint ? `"${query}" (${hint})` : `"${query}"`;
     if (!found) {
-      console.log(`findProductImage v26: ${named}: nothing found (${plan.map((a) => `${a.words} [${a.lang}, ${a.category}]`).join(' > ') || 'no words'}; asked Pixabay ${asked.count})`);
+      console.log(`findProductImage v27: ${named}: nothing found (${plan.map((a) => `${a.words} [${a.lang}, ${a.category}]`).join(' > ') || 'no words'}; asked Pixabay ${asked.count})`);
       return json({ error: 'No images found for this keyword' }, 404);
     }
-    console.log(`findProductImage v26: ${named} -> "${found.attempt.words}" (${found.attempt.lang}, ${found.attempt.category}) set ${found.page}: ${found.photos.length} photos (asked Pixabay ${asked.count})`);
+    console.log(`findProductImage v27: ${named} -> "${found.attempt.words}" (${found.attempt.lang}, ${found.attempt.category}) set ${found.page}: ${found.photos.length} photos (asked Pixabay ${asked.count})`);
     return json({ photos: found.photos, keyword: found.attempt.words, page: found.page });
   } catch (error) {
-    console.error('findProductImage v26 error:', error);
+    console.error('findProductImage v27 error:', error);
     if (giveBackSearch) {
       try {
         await giveBackSearch();
       } catch (refundError) {
         console.error('findProductImage: could not give the search back:', (refundError as Error).message);
       }
+    }
+    // v27: Pixabay busy (Sellio's 100 a minute): the app waits retryAfter seconds.
+    if (error instanceof PixabayBusy) {
+      return json({ error: 'Pixabay is busy. Please try again in a minute.', code: 'busy', retryAfter: error.retryAfter }, 429);
     }
     return json({ error: (error as Error).message }, 500);
   }

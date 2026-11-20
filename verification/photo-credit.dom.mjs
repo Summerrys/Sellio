@@ -145,6 +145,29 @@ try {
   await assert.rejects(lib.keepSamplePhotos({ tenantId: 'shop-1', photos: used.slice(0, 1) }), (e) => e.friendly && e.message === 'Couldn’t save the sample photos. Please try again.');
   await assert.rejects(lib.keepSamplePhotos({ tenantId: 'shop-1', photos: used.slice(0, 1), fallback: 'Try another one.' }), (e) => e.message === 'Try another one.');
   passed('the photos used are copied into the shop\'s photos, 8 at a time, each once; one that couldn\'t be is left out; a refusal in its own words, a failure in plain words');
+
+  // ── 5. Pixabay busy (findProductImage v27; 20 Nov 2026: 8 of the 22 photos of Alvin's scan) ──
+  // A search turned away: `busy`, when to try again, and plain words in the app's own language.
+  answer = () => ({ data: null, error: { context: { status: 429, clone() { return this; }, json: async () => ({ error: 'Pixabay is busy. Please try again in a minute.', code: 'busy', retryAfter: 40 }) } } });
+  await assert.rejects(lib.findSamplePhotos({ tenantId: 'shop-1', query: 'laksa' }), (e) => e.friendly && e.busy === true && e.retryAfter === 40 && e.message === 'Pixabay is busy. Please try again in a minute.');
+  assert.equal(await lib.photoSearchError({ context: { status: 429, clone() { return this; }, json: async () => ({ error: 'English from the server', code: 'busy', retryAfter: 5 }) } }), 'Pixabay is busy. Please try again in a minute.', 'the app\'s own words (translated), not the server\'s');
+  answer = () => ({ data: null, error: { context: { status: 429, clone() { return this; }, json: async () => ({ error: 'Too many image searches this hour. Please try again later.' }) } } });
+  await assert.rejects(lib.findSamplePhotos({ tenantId: 'shop-1', query: 'laksa' }), (e) => !e.busy && e.message === 'Too many image searches this hour. Please try again later.', 'our own hourly cap isn\'t Pixabay being busy');
+  // Photos turned away when copying: sent once more after the wait asked for; still turned away: left out.
+  calls.length = 0;
+  let round = 0;
+  answer = (body) => {
+    round += 1;
+    const turnedAway = body.photos.filter((p) => (round === 1 ? ['pixabay-1', 'pixabay-2'] : ['pixabay-2']).includes(p.id)).map((p) => p.url);
+    return { data: { kept: body.photos.filter((p) => !turnedAway.includes(p.url)).map((p) => ({ from: p.url, url: `https://files.invalid/shop-1/products/${p.id}.jpg` })), busy: turnedAway, ...(turnedAway.length ? { retryAfter: 1 } : {}) }, error: null };
+  };
+  const startedAt = Date.now();
+  const copies = await lib.keepSamplePhotos({ tenantId: 'shop-1', photos: used.slice(0, 4) });
+  const tookMs = Date.now() - startedAt;
+  assert.deepEqual(calls.map((c) => c.body.photos.map((p) => p.id)), [['pixabay-0', 'pixabay-1', 'pixabay-2', 'pixabay-3'], ['pixabay-1', 'pixabay-2']], 'the turned-away ones sent once more, no more');
+  assert.ok(tookMs >= 950 && tookMs < 5000, `after the wait asked for (1 s): ${tookMs} ms`);
+  assert.deepEqual([...copies.keys()].sort(), ['https://pixabay.com/get/p0_1280.jpg', 'https://pixabay.com/get/p1_1280.jpg', 'https://pixabay.com/get/p3_1280.jpg'], 'the second time lucky; the one turned away again left out');
+  passed('Pixabay busy: a search says so in the app\'s own words, with when to try again; photos turned away are sent once more after the wait, then left out');
 } finally {
   await rm(temporary, { recursive: true, force: true });
   dom.window.close();

@@ -2719,7 +2719,9 @@ const shop = {
   "Menu photo": "Foto menu",
   "Tap the photo to adjust it.": "Ketuk foto untuk menyesuaikannya.",
   "Referral code (optional)": "Kode referal (opsional)",
-  "{who} referred you": "{who} mengajak Anda"
+  "{who} referred you": "{who} mengajak Anda",
+  "Pixabay is busy. Please try again in a minute.": "Pixabay sedang sibuk. Silakan coba lagi dalam semenit.",
+  "Waiting for Pixabay · {done} of {total}": "Menunggu Pixabay · {done} dari {total}"
 };
 const All = "Semua";
 const Goods = "Barang";

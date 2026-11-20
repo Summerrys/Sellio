@@ -2719,7 +2719,9 @@ const shop = {
   "Menu photo": "菜单照片",
   "Tap the photo to adjust it.": "点按照片即可调整。",
   "Referral code (optional)": "推荐码（选填）",
-  "{who} referred you": "{who} 推荐了您"
+  "{who} referred you": "{who} 推荐了您",
+  "Pixabay is busy. Please try again in a minute.": "Pixabay 正忙，请一分钟后再试。",
+  "Waiting for Pixabay · {done} of {total}": "正在等待 Pixabay · {done}/{total}"
 };
 const All = "全部";
 const Goods = "商品";

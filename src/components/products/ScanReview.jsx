@@ -105,12 +105,15 @@ export function DescriptionsStrip({ progress, drafts, onStop, onRetry }) {
 // Under the descriptions' strip while sample photos are found, then once they're in.
 export function PhotosStrip({ progress, samples, onStop }) {
   const { t } = useAppText();
-  if (progress.status === 'finding') {
+  if (progress.status === 'finding' || progress.status === 'waiting') {
+    // Waiting: Pixabay turned a search away for coming too fast; it carries on when told to.
     return (
-      <div data-testid="scan-finding-photos" role="status" aria-live="polite" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px 8px 20px', background: '#eff6ff', borderBottom: '1px solid #dbeafe', flexShrink: 0 }}>
+      <div data-testid="scan-finding-photos" data-waiting={progress.status === 'waiting' ? 'true' : undefined} role="status" aria-live="polite" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px 8px 20px', background: '#eff6ff', borderBottom: '1px solid #dbeafe', flexShrink: 0 }}>
         <Camera size={15} color="#1d4ed8" aria-hidden="true" />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 13, lineHeight: '18px', fontWeight: 600, color: '#1e40af' }}>{t('Finding sample photos · {done} of {total}', { done: progress.done, total: progress.total })}</p>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: '18px', fontWeight: 600, color: '#1e40af' }}>{progress.status === 'waiting'
+            ? t('Waiting for Pixabay · {done} of {total}', { done: progress.done, total: progress.total })
+            : t('Finding sample photos · {done} of {total}', { done: progress.done, total: progress.total })}</p>
           <PhotosFrom style={{ color: '#1e40af' }} />
         </div>
         <button type="button" onClick={onStop} style={{ border: 'none', background: 'none', padding: '6px 4px', fontSize: 13, fontWeight: 600, color: '#1e40af', cursor: 'pointer' }}>{t('Stop')}</button>

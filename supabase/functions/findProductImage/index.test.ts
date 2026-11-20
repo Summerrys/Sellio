@@ -5,7 +5,8 @@
 // even motorbikes" (v24 searched "classic club"); then "enhance the keyword searches ... so that
 // it encompasses all possible food choices as well as for the hawker or even the F&B line" (v26:
 // Scan Menu's own words for a dish, more dishes, Malay names in English, best matches first).
-// The names below are from his menu scans.
+// The names below are from his menu scans. v27: Pixabay turning requests away (429): 8 of the 22
+// photos of his Cafelicious scan weren't saved.
 import { deepStrictEqual as assertEquals, match as assertMatch, ok as assert } from 'node:assert/strict';
 
 const URL_ = 'https://proj.supabase.co';
@@ -39,8 +40,15 @@ function reset() {
     pixabay: (u: URL) => found(u.searchParams.get('q')!),
     images: (u: string) => (u.includes('missing') ? { status: 404 } : { status: 200, type: 'image/jpeg', bytes: new Uint8Array([255, 216, 255, 1, 2, 3]) }),
     uploads: [] as { path: string; type: string | null; size: number }[],
+    fetching: 0,
+    mostAtOnce: 0,
   });
+  clock = 0;
+  slept.length = 0;
 }
+// v27: waiting and the clock are the function's `timing`: a clock that moves only when it waits.
+let clock = 0;
+const slept: number[] = [];
 const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
   new Response(body === undefined ? null : JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 
@@ -85,17 +93,24 @@ const standIn = (async (input: Request | URL | string, init?: RequestInit) => {
     const answer = state.pixabay(url);
     return answer.status === 200
       ? json(answer.body, 200, { 'X-RateLimit-Limit': '100', 'X-RateLimit-Remaining': '99' })
-      : new Response(answer.text || '', { status: answer.status });
+      : new Response(answer.text || '', { status: answer.status, headers: answer.headers || {} });
   }
   if (/^https:\/\/(cdn\.)?pixabay\.com\/(get|photo)\//.test(req.url)) {
+    // How many photos are being fetched at once (v27: never more than KEEP_AT_A_TIME).
+    state.fetching++;
+    state.mostAtOnce = Math.max(state.mostAtOnce, state.fetching);
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    state.fetching--;
     const image = state.images(req.url);
-    return image.status === 200 ? new Response(image.bytes, { status: 200, headers: { 'Content-Type': image.type } }) : new Response('nope', { status: image.status });
+    return image.status === 200 ? new Response(image.bytes, { status: 200, headers: { 'Content-Type': image.type } }) : new Response('nope', { status: image.status, headers: image.headers || {} });
   }
   throw new Error(`unexpected fetch ${req.method} ${req.url}`);
 }) as typeof fetch;
 globalThis.fetch = standIn;
 
-const { searchPlan, MAX_ASKS, PIXABAY_PER_ASK, tagScore, rankHits, malayEnglish, LOCAL_DISHES } = await import('./index.ts');
+const { searchPlan, MAX_ASKS, PIXABAY_PER_ASK, tagScore, rankHits, malayEnglish, LOCAL_DISHES, timing, KEEP_AT_A_TIME, KEEP_GAP_MS, KEEP_TRIES } = await import('./index.ts');
+timing.now = () => clock;
+timing.sleep = async (ms: number) => { slept.push(ms); clock += ms; await new Promise((resolve) => setTimeout(resolve, 0)); };
 
 const call = (body: unknown, token = 'user-token') => handler(new Request('https://fn.example/findProductImage', {
   method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body),
@@ -239,11 +254,11 @@ test('A later set with nothing: set 1', async () => {
 
 test('Pixabay refusing, or no key: the month\'s search given back, 500 with the reason (for the logs)', async () => {
   reset();
-  state.pixabay = () => ({ status: 429, text: 'Too many requests' });
+  state.pixabay = () => ({ status: 400, text: '[ERROR 400] "key" is invalid.' });
   let res = await call({ query: 'laksa', page: 1, tenantId: 'store-1' });
   let data = await res.json();
   assertEquals(res.status, 500);
-  assertMatch(data.error, /Pixabay API error: 429/);
+  assertMatch(data.error, /Pixabay API error: 400/);
   assertEquals(state.refunds, 1);
   reset();
   Deno.env.delete('PIXABAY_API_KEY');
@@ -338,6 +353,108 @@ test('The hint is sent by Scan Menu: searched first; one that isn\'t text is lef
   res = await call({ query: 'Carrot Cake', hint: { evil: true }, page: 1, tenantId: 'store-1' });
   data = await res.json();
   assertEquals([res.status, data.keyword], [200, 'carrot cake']);
+});
+
+test('v27 Search: Pixabay busy with its minute about to reset: waited out and asked once more', async () => {
+  reset();
+  let turnedAway = 0;
+  state.pixabay = (u: URL) => (turnedAway++ ? found(u.searchParams.get('q')!) : { status: 429, text: 'API rate limit exceeded', headers: { 'X-RateLimit-Limit': '100', 'X-RateLimit-Remaining': '0', 'X-RateLimit-Reset': '3' } });
+  const res = await call({ query: 'Laksa', page: 1, tenantId: 'store-1' });
+  const data = await res.json();
+  assertEquals([res.status, data.photos.length], [200, 2]);
+  assertEquals(asked().length, 2, 'asked once more');
+  assertEquals(new Set(asked()).size, 1, 'the same words');
+  assertEquals(slept, [3250], 'the 3 s left of its minute, and a moment');
+  assertEquals(state.refunds, 0);
+});
+
+test('v27 Search: Pixabay busy for longer, or again: 429 busy with when to try again; the month\'s search given back', async () => {
+  reset();
+  state.pixabay = () => ({ status: 429, text: 'API rate limit exceeded', headers: { 'X-RateLimit-Reset': '40' } });
+  let res = await call({ query: 'Laksa', page: 1, tenantId: 'store-1' });
+  let data = await res.json();
+  assertEquals([res.status, data.code, data.retryAfter], [429, 'busy', 40]);
+  assertEquals(data.error, 'Pixabay is busy. Please try again in a minute.');
+  assertEquals([asked().length, slept.length, state.refunds], [1, 0, 1], 'not waited for: the app waits');
+  assert(!state.cache.size, 'nothing kept for the day');
+  // Busy again after the short wait: busy (asked twice, no more).
+  reset();
+  state.pixabay = () => ({ status: 429, text: 'API rate limit exceeded', headers: { 'X-RateLimit-Reset': '2' } });
+  res = await call({ query: 'Laksa', page: 1, tenantId: 'store-1' });
+  data = await res.json();
+  assertEquals([res.status, data.code, data.retryAfter, asked().length], [429, 'busy', 2, 2]);
+  // Pixabay not saying how long: 20 s.
+  reset();
+  state.pixabay = () => ({ status: 429, text: 'API rate limit exceeded' });
+  res = await call({ query: 'Laksa', page: 1, tenantId: 'store-1' });
+  data = await res.json();
+  assertEquals([res.status, data.code, data.retryAfter, asked().length], [429, 'busy', 20, 1]);
+});
+
+test(`v27 Keep: ${KEEP_AT_A_TIME} photos at a time, a moment apart (Alvin's 22: the second 8 at once were all turned away)`, async () => {
+  reset();
+  const photos = Array.from({ length: 8 }, (_, i) => ({ id: `pixabay-${2000 + i}`, url: `https://pixabay.com/get/k${i}_1280.jpg` }));
+  const res = await call({ action: 'keep', tenantId: 'store-1', photos });
+  const data = await res.json();
+  assertEquals([res.status, data.kept.length, data.busy, 'retryAfter' in data], [200, 8, [], false]);
+  assertEquals(state.mostAtOnce, KEEP_AT_A_TIME, 'never more at once');
+  assert(slept.filter((ms) => ms === KEEP_GAP_MS).length >= 6, 'a moment between photos');
+  assertEquals(data.kept.map((k: any) => k.from), photos.map((p) => p.url), 'in the order sent');
+});
+
+test('v27 Keep: a photo turned away (429) is fetched again after the wait Pixabay asks for (else 1, 2, 4 s), and every fetch waits', async () => {
+  reset();
+  const tries = new Map<string, number>();
+  state.images = (u: string) => {
+    const n = (tries.get(u) || 0) + 1;
+    tries.set(u, n);
+    if (u.includes('k0_') && n <= 2) return { status: 429 };
+    if (u.includes('k1_') && n === 1) return { status: 429, headers: { 'Retry-After': '3' } };
+    return { status: 200, type: 'image/jpeg', bytes: new Uint8Array([255, 216, 255, 9]) };
+  };
+  const photos = Array.from({ length: 4 }, (_, i) => ({ id: `pixabay-${3000 + i}`, url: `https://pixabay.com/get/k${i}_1280.jpg` }));
+  const res = await call({ action: 'keep', tenantId: 'store-1', photos });
+  const data = await res.json();
+  assertEquals([res.status, data.kept.length, data.busy], [200, 4, []]);
+  assertEquals([tries.get(photos[0].url), tries.get(photos[1].url)], [3, 2], 'fetched again');
+  assert(slept.some((ms) => ms > 0 && ms <= 1000), 'waited before its second try');
+  assert(slept.some((ms) => ms >= 1500), 'waited longer the next time, or as Pixabay asked (3 s)');
+  assertEquals(state.uploads.length, 4);
+});
+
+test('v27 Keep: the wait is what Pixabay says (Retry-After, else what\'s left of its minute), else 1 s, then 2 s', async () => {
+  for (const [headers, waits] of [
+    [[{ 'Retry-After': '3' }], [3000]],
+    [[{ 'X-RateLimit-Reset': '5' }], [5000]],
+    [[{}, {}], [1000, 2000]],
+    [[{ 'Retry-After': '45' }], [10000]],
+  ] as [Record<string, string>[], number[]][]) {
+    reset();
+    let n = 0;
+    state.images = () => (n < headers.length ? { status: 429, headers: headers[n++] } : { status: 200, type: 'image/jpeg', bytes: new Uint8Array([255, 216, 255, 9]) });
+    const data = await (await call({ action: 'keep', tenantId: 'store-1', photos: [{ id: 'pixabay-6000', url: 'https://pixabay.com/get/w0_1280.jpg' }] })).json();
+    assertEquals([data.kept.length, slept], [1, waits], JSON.stringify(headers));
+  }
+});
+
+test(`v27 Keep: still turned away after ${KEEP_TRIES} tries: back in \`busy\` with when to send it again; the others kept`, async () => {
+  reset();
+  state.images = (u: string) => (u.includes('k2_') ? { status: 429, headers: { 'Retry-After': '30' } } : { status: 200, type: 'image/jpeg', bytes: new Uint8Array([255, 216, 255, 9]) });
+  const photos = Array.from({ length: 3 }, (_, i) => ({ id: `pixabay-${4000 + i}`, url: `https://pixabay.com/get/k${i}_1280.jpg` }));
+  const res = await call({ action: 'keep', tenantId: 'store-1', photos });
+  const data = await res.json();
+  assertEquals([res.status, data.kept.map((k: any) => k.from), data.busy], [200, [photos[0].url, photos[1].url], [photos[2].url]]);
+  assertEquals(state.calls.filter((c: any) => c.url.includes('k2_')).length, KEEP_TRIES);
+  assert(!slept.some((ms) => ms > 10_000), 'never more than 10 s at a time');
+  assert(Number.isInteger(data.retryAfter) && data.retryAfter >= 1 && data.retryAfter <= 10, `retryAfter ${data.retryAfter}`);
+  // Turned away all along: after a minute, the rest aren't fetched at all (back in busy).
+  reset();
+  state.images = () => ({ status: 429, headers: { 'Retry-After': '10' } });
+  const many = Array.from({ length: 8 }, (_, i) => ({ id: `pixabay-${5000 + i}`, url: `https://pixabay.com/get/m${i}_1280.jpg` }));
+  const again = await (await call({ action: 'keep', tenantId: 'store-1', photos: many })).json();
+  assertEquals([again.kept.length, again.busy.length], [0, 8]);
+  assert(state.calls.filter((c: any) => c.url.includes('/get/m')).length < 8 * KEEP_TRIES, 'not every try made: a minute at most');
+  assertEquals(state.uploads.length, 0);
 });
 
 test('Keep: the photo copied into the store\'s product photos; one that can\'t be fetched left out; no search used', async () => {
