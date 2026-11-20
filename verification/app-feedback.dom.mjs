@@ -475,8 +475,20 @@ try {
   assert.equal(calls.filter((c) => c.name === 'app_feedback_admin_list').at(-1).args.p_include_test, true);
   assert.equal(calls.filter((c) => c.name === 'am_i_sellio_admin').length, 1, 'the admin check once');
   assert.equal(calls.filter((c) => c.name === 'app_feedback_admin_note_device').length, 1);
+  // Preview the question: as people see it, sending nothing.
+  await click(buttonNamed('Preview the question (sends nothing)'));
+  assert.equal(text(document.querySelector('[role="dialog"] #app-rating-title')), 'How’s Sellio working for you?');
+  await click(starButton(2));
+  await click(buttonNamed('Speed'));
+  await click(buttonNamed('Send feedback'));
+  await settle();
+  assert.equal(document.querySelector('[data-testid="app-rating"]').dataset.step, 'sent');
+  await click(buttonNamed('Done'));
+  assert.equal(document.querySelector('[data-testid="app-rating"]'), null, 'closed');
+  assert.equal(submits().length, 0, 'nothing sent');
+  assert.equal(localStorage.getItem('sellio_app_feedback_done'), null, 'and still asked for real later');
   await close();
-  passed('Admin → Feedback: the summary, filters, tags, Contact (only when they said yes) and Mark done; the phone is tagged for tests');
+  passed('Admin → Feedback: the summary, filters, tags, Contact (only when they said yes) and Mark done; the phone is tagged for tests; Preview the question sends nothing');
 
   useAdminServer(); admin = false;
   globalThis.appUserState = { appUser: { email: 'mei@bakes.sg' } };

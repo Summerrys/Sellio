@@ -8,13 +8,15 @@ import { outsideLinkProps } from '@/lib/nativeApp';
 import { whatsappLink } from '@/lib/shopSelling';
 import { FEEDBACK_TOPICS, amISellioAdmin, feedbackList, feedbackSummary, markFeedback, noteTestPhone } from '@/lib/appFeedback';
 import ExploreTabBar, { TAB_BAR_SPACE } from '@/components/explore/ExploreTabBar';
+import { AppRatingSheet } from './AppRatingPrompt';
 import { timeAgo } from '@/components/explore/shared';
 
 // /admin/feedback — Admin → Feedback: how people rate the Sellio app (lib/appFeedback.js), for
 // Sellio's admins (app.is_sellio_admin(): the account, checked by the database). 1–3 star ratings
 // also send the admins a push alert. Opening this page on a phone tags everything sent from that
 // phone as a test (Alvin tries the app on test accounts on his own phone), so tests stay out of
-// the numbers unless "Show tests" is on. English only: it's for Sellio's own team.
+// the numbers unless "Show tests" is on. Preview the question shows it as people see it (in the
+// app's language), sending nothing. English only: it's for Sellio's own team.
 
 const PAGE = 50;
 const PURPLE = '#8b2fc9';
@@ -187,6 +189,7 @@ export default function AppFeedbackInbox() {
   const [more, setMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [previewing, setPreviewing] = useState(false);
 
   useEffect(() => {
     const previous = document.title;
@@ -295,6 +298,14 @@ export default function AppFeedbackInbox() {
               <Bell className="w-4 h-4 flex-shrink-0" style={{ color: PURPLE }} />
               <span>Each 1–3★ rating sends Sellio’s admins a push alert.</span>
             </div>
+            <button
+              type="button"
+              onClick={() => setPreviewing(true)}
+              className="w-full h-10 rounded-xl border bg-white text-sm font-semibold"
+              style={{ borderColor: PURPLE, color: '#6b21a8' }}
+            >
+              Preview the question (sends nothing)
+            </button>
             <Summary summary={summary} />
             {extras.length > 0 && <p className="m-0 px-1 text-xs text-slate-500">{extras.join(' · ')}</p>}
             <div role="group" aria-label="Filter by rating" className="flex gap-2 overflow-x-auto -mx-5 px-5 pb-0.5" style={{ scrollbarWidth: 'none' }}>
@@ -339,6 +350,7 @@ export default function AppFeedbackInbox() {
         )}
       </main>
       <ExploreTabBar active="me" />
+      {previewing && <AppRatingSheet open preview account={account} onClose={() => setPreviewing(false)} />}
     </div>
   );
 }

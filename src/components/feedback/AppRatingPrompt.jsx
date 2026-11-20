@@ -130,8 +130,8 @@ const quietButton = 'w-full h-12 mt-1 rounded-xl bg-transparent text-base font-s
 
 // The question and what follows it. account: whose answer it is ('' when signed out). Every way
 // out counts as the answer (Maybe later, Skip, or closing it with Back or a tap outside), so it
-// isn't asked again.
-export function AppRatingSheet({ open, account = '', onClose }) {
+// isn't asked again. preview: an admin trying it from Admin → Feedback; nothing is sent or kept.
+export function AppRatingSheet({ open, account = '', onClose, preview = false }) {
   const { t, language } = useAppText('explore');
   const signedIn = !!account;
   const [step, setStep] = useState('ask'); // ask | low | five | sent
@@ -145,11 +145,11 @@ export function AppRatingSheet({ open, account = '', onClose }) {
 
   // The answer, sent once (a failed Send feedback can be sent again).
   const answer = useCallback((what) => {
-    if (answered.current) return Promise.resolve(null);
+    if (answered.current || preview) return Promise.resolve(null);
     answered.current = true;
     noteAnswered(account);
     return sendAppFeedback({ ...what, language });
-  }, [account, language]);
+  }, [account, language, preview]);
   const answerQuietly = (what) => { answer(what).catch(() => {}); };
 
   const pick = (n) => {
