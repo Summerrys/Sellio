@@ -106,6 +106,10 @@ try {
   const found = await lib.findSamplePhotos({ tenantId: 'shop-1', query: 'Laksa '.repeat(30) });
   assert.deepEqual(calls.at(-1), { name: 'findProductImage', body: { query: 'Laksa '.repeat(30).slice(0, 100), page: 1, tenantId: 'shop-1' } }, 'the name (at most 100 characters), for this shop');
   assert.deepEqual(found, [{ id: 'pixabay-1', url: 'https://pixabay.com/get/a_640.jpg', thumb: 'https://pixabay.com/get/a_640.jpg', keepUrl: 'https://pixabay.com/get/a_1280.jpg', alt: 'laksa', credit: pixabay }], 'only photos that can be credited and copied');
+  await lib.findSamplePhotos({ tenantId: 'shop-1', query: 'Carrot Cake', hint: '  fried radish cake ' });
+  assert.deepEqual(calls.at(-1).body, { query: 'Carrot Cake', page: 1, tenantId: 'shop-1', hint: 'fried radish cake' }, 'Scan Menu\'s words for the dish go with it');
+  await lib.findSamplePhotos({ tenantId: 'shop-1', query: 'Carrot Cake', hint: '   ' });
+  assert.deepEqual(calls.at(-1).body, { query: 'Carrot Cake', page: 1, tenantId: 'shop-1' }, 'no words: no hint');
   answer = () => ({ data: null, error: { context: { status: 404 } } });
   assert.deepEqual(await lib.findSamplePhotos({ tenantId: 'shop-1', query: 'xyz' }), [], 'none found');
   answer = () => ({ data: null, error: { context: { status: 429, clone() { return this; }, json: async () => ({ error: 'Too many image searches this hour. Please try again later.' }) } } });

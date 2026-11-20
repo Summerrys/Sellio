@@ -1,8 +1,11 @@
 // deno test supabase/functions/findProductImage/index.test.ts
 // (from the app root: deno test --no-config --allow-all supabase/functions/findProductImage/index.test.ts)
-// findProductImage v25 with stand-ins for Supabase and Pixabay (fetch is replaced: nothing leaves
+// findProductImage v26 with stand-ins for Supabase and Pixabay (fetch is replaced: nothing leaves
 // the machine). Alvin, 20 Nov 2026: "a classic club sandwich ... returns ... poker card club or
-// even motorbikes" (v24 searched "classic club"). The names below are from his menu scan.
+// even motorbikes" (v24 searched "classic club"); then "enhance the keyword searches ... so that
+// it encompasses all possible food choices as well as for the hawker or even the F&B line" (v26:
+// Scan Menu's own words for a dish, more dishes, Malay names in English, best matches first).
+// The names below are from his menu scans.
 import { deepStrictEqual as assertEquals, match as assertMatch, ok as assert } from 'node:assert/strict';
 
 const URL_ = 'https://proj.supabase.co';
@@ -22,7 +25,7 @@ const hit = (n: number, q: string) => ({
   webformatURL: `https://pixabay.com/get/g${n}abc_640.jpg`, largeImageURL: `https://pixabay.com/get/g${n}def_1280.jpg`,
   user_id: 77 + n, user: n === 1 ? 'Mei Lin' : 'kopi_lover',
 });
-const found = (q: string) => ({ status: 200, body: { total: 2, totalHits: 2, hits: [hit(1, q), hit(2, q)] } });
+const found = (q: string, n = 2) => ({ status: 200, body: { total: n, totalHits: n, hits: Array.from({ length: n }, (_, i) => hit(i + 1, q)) } });
 const nothing = () => ({ status: 200, body: { total: 0, totalHits: 0, hits: [] } });
 function reset() {
   Object.assign(state, {
@@ -92,7 +95,7 @@ const standIn = (async (input: Request | URL | string, init?: RequestInit) => {
 }) as typeof fetch;
 globalThis.fetch = standIn;
 
-const { searchPlan, MAX_ASKS } = await import('./index.ts');
+const { searchPlan, MAX_ASKS, PIXABAY_PER_ASK, tagScore, rankHits, malayEnglish, LOCAL_DISHES } = await import('./index.ts');
 
 const call = (body: unknown, token = 'user-token') => handler(new Request('https://fn.example/findProductImage', {
   method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body),
@@ -102,7 +105,7 @@ const asked = () => state.calls.filter((c: any) => c.url.startsWith('https://pix
   const u = new URL(c.url);
   return `${u.searchParams.get('q')} [${u.searchParams.get('category') || 'all'}]`;
 });
-const plan = (name: string) => searchPlan(name).map((a: any) => `${a.words}${a.lang === 'zh' ? ' (zh)' : ''} [${a.category}]`);
+const plan = (name: string, hint?: string) => searchPlan(name, hint).map((a: any) => `${a.words}${a.lang === 'zh' ? ' (zh)' : ''} [${a.category}]`);
 const test = (name: string, fn: () => Promise<void> | void) => Deno.test({ name, fn, sanitizeOps: false, sanitizeResources: false });
 
 test('Words: the dish at the end of the name, without menu words; Food & Drink first, then all photos, then fewer words', () => {
@@ -117,8 +120,9 @@ test('Words: the dish at the end of the name, without menu words; Food & Drink f
   assertEquals(plan('Coffee'), ['coffee [food]', 'coffee [all]']);
   assertEquals(plan('Quiche Lorraine')[0], 'quiche lorraine [food]');
   // Brackets, a side after "with" / "c/w" / "+", sizes and units, accents.
-  assertEquals(plan('Char Siew Rice (Large)')[0], 'char siew [food]');
-  assertEquals(plan('Chicken Chop c/w Fries')[0], 'chicken chop [food]');
+  assertEquals(plan('Char Siew Rice (Large)')[0], 'char siew rice [food]');
+  assertEquals(plan('Fish Fillet c/w Fries')[0], 'fish fillet [food]');
+  assertEquals(plan('Chicken Chop c/w Fries')[0], 'grilled chicken [food]', 'a chicken chop is grilled chicken (on the list)');
   assertEquals(plan('Grilled Salmon with Mashed Potato')[0], 'grilled salmon [food]');
   assertEquals(plan('Burger + Fries')[0], 'burger [food]');
   assertEquals(plan('Iced Latte 16oz')[0], 'iced latte [food]');
@@ -149,27 +153,27 @@ test('Chinese: searched in Chinese, after the rest of the name', () => {
   assertEquals(plan('Fried Rice 炒饭').slice(-2), ['炒饭 (zh) [food]', '炒饭 (zh) [all]']);
 });
 
-test('A search: the dish words in Food & Drink, 5 safe photos, the answer as the app takes it, kept a day', async () => {
+test('A search: the dish words in Food & Drink, 30 safe photos asked for, 5 a set, the answer as the app takes it, kept a day', async () => {
   reset();
   const res = await call({ query: 'Classic Club Sandwich', page: 1, tenantId: 'store-1' });
   const data = await res.json();
   assertEquals(res.status, 200);
   const calls = state.calls.filter((c: any) => c.url.startsWith('https://pixabay.com/api/')).map((c: any) => Object.fromEntries(new URL(c.url).searchParams));
-  assertEquals(calls, [{ key: 'pixabay-test-key', q: 'club sandwich', lang: 'en', image_type: 'photo', safesearch: 'true', per_page: '5', page: '1', category: 'food' }]);
+  assertEquals(calls, [{ key: 'pixabay-test-key', q: 'club sandwich', lang: 'en', image_type: 'photo', safesearch: 'true', per_page: String(PIXABAY_PER_ASK), page: '1', category: 'food' }]);
   assertEquals([data.keyword, data.page, data.photos.length], ['club sandwich', 1, 2]);
   assertEquals(data.photos[0], {
     id: 'pixabay-1001', previewUrl: 'https://pixabay.com/get/g1abc_640.jpg', keepUrl: 'https://pixabay.com/get/g1def_1280.jpg', alt: 'club sandwich, cup, drink',
     credit: { source: 'pixabay', name: 'Mei Lin', profile: 'https://pixabay.com/users/Mei%20Lin-78/', photo: 'https://pixabay.com/photos/club-sandwich-1001/' },
   });
   assert(!('url' in data.photos[0]), 'no `url`: an app from before v24 finds no photo to save');
-  assert(state.cache.has('pixabay|en|food|1|club sandwich'), 'kept a day, by language, category, set and words');
+  assert(state.cache.has('pixabay|en|food|club sandwich'), 'kept a day, by language, category and words (all 6 sets)');
   assertEquals(state.refunds, 0);
   // Within the day: from the kept answer.
   state.calls = [];
   assertEquals((await call({ query: 'classic club sandwich', page: 1, tenantId: 'store-1' })).status, 200);
   assertEquals(asked(), []);
   // A day later: Pixabay asked again.
-  state.cache.set('pixabay|en|food|1|club sandwich', { photos: [], fetched_at: new Date(Date.now() - 25 * 3600 * 1000).toISOString() });
+  state.cache.set('pixabay|en|food|club sandwich', { photos: [], fetched_at: new Date(Date.now() - 25 * 3600 * 1000).toISOString() });
   assertEquals((await call({ query: 'Classic Club Sandwich', page: 1, tenantId: 'store-1' })).status, 200);
   assertEquals(asked(), ['club sandwich [food]']);
 });
@@ -250,6 +254,90 @@ test('Pixabay refusing, or no key: the month\'s search given back, 500 with the 
   assertMatch(data.error, /PIXABAY_API_KEY/);
   assertEquals(state.refunds, 1);
   assertEquals(asked(), [], 'not asked without a key');
+});
+
+test('Scan Menu\'s words for the dish first, then the name', () => {
+  assertEquals(plan('Carrot Cake', 'fried radish cake').slice(0, 3), ['fried radish cake [food]', 'radish cake [food]', 'carrot cake [food]']);
+  assertEquals(plan('Teh C Peng', 'Iced Milk Tea').slice(0, 3), ['iced milk tea [food]', 'milk tea [food]', 'teh c peng [food]']);
+  assertEquals(plan('Classic Club Sandwich', 'classic club sandwich').slice(0, 3), ['club sandwich [food]', 'club sandwich [all]', 'sandwich [food]'], 'menu words dropped from the hint too');
+  assertEquals(plan('Kopi', 'coffee'), ['coffee [food]', 'kopi [food]']);
+  assertEquals(plan('Coffee', ''), plan('Coffee'), 'no hint: as before');
+});
+
+test('More dishes: hawker spellings, kopitiam, cafe, Asian kitchens', () => {
+  assert(Object.keys(LOCAL_DISHES).length >= 650, `${Object.keys(LOCAL_DISHES).length} dishes`);
+  for (const [name, first] of [
+    ['Char Kuey Teow', 'char kuey teow [food]'], ['Char Koay Teow (Large)', 'char koay teow [food]'], ['Bihun Goreng', 'bihun goreng [food]'],
+    ['Wanton Mee', 'wanton mee [food]'], ['Mee Goreng Mamak', 'mee goreng mamak [food]'], ['Teh O Ais Limau', 'teh o ais limau [food]'],
+    ['Brown Sugar Boba', 'brown sugar boba [food]'], ['Pad Kra Pao', 'pad kra pao [food]'], ['Pho Bo', 'pho bo [food]'], ['Banh Mi', 'banh mi [food]'],
+    ['Tonkatsu', 'tonkatsu [food]'], ['Tteokbokki', 'tteokbokki [food]'], ['Masala Dosa', 'masala dosa [food]'], ['Ayam Masak Merah', 'ayam masak merah [food]'],
+  ] as const) assertEquals(plan(name)[0], first, name);
+  // English words for them next.
+  assertEquals(plan('Char Kuey Teow')[1], 'fried noodles [food]');
+  assertEquals(plan('Pad Kra Pao')[1], 'basil chicken [food]');
+  // Names that mean something else on Pixabay: English only.
+  assertEquals(plan('Chicken Chop')[0], 'grilled chicken [food]');
+  assertEquals(plan('Long Black')[0], 'black coffee [food]');
+  assertEquals(plan('Mala Chicken')[0], 'spicy stir fry [food]');
+  assertEquals(plan('BBQ Stingray')[0], 'bbq stingray [food]');
+  assertEquals(plan('Stingray')[0], 'grilled fish [food]');
+});
+
+test('Malay and Indonesian names not on the list: in English, the words turned round', () => {
+  assertEquals(malayEnglish(['ikan', 'bakar', 'petai']), ['petai', 'grilled', 'fish']);
+  assertEquals(malayEnglish(['sup', 'sayur', 'campur']), ['mixed', 'vegetable', 'soup']);
+  assertEquals(malayEnglish(['udang', 'lada', 'hitam']), ['black', 'pepper', 'prawn'], 'two-word ones together');
+  assertEquals(malayEnglish(['jus', 'tembikai']), ['watermelon', 'juice']);
+  assertEquals(malayEnglish(['ikan', 'siakap', 'stim']), ['steamed', 'sea', 'bass', 'fish']);
+  assertEquals(malayEnglish(['mi', 'amore', 'pasta']), null, 'only one word known: not Malay');
+  assertEquals(malayEnglish(['grilled', 'fish']), null, 'English');
+  assertEquals(plan('Ikan Bakar Petai').slice(0, 2), ['ikan bakar [food]', 'grilled fish [food]'], 'a dish on the list goes by the list');
+  assertEquals(plan('Udang Lada Hitam').slice(0, 2), ['black pepper prawn [food]', 'pepper prawn [food]']);
+  assertEquals(plan('Jus Tembikai')[0], 'watermelon juice [food]');
+  assertEquals(plan('Sup Sayur Campur')[0], 'mixed vegetable soup [food]');
+});
+
+test('Best matches first: by the words in the photo\'s tags, the dish word counting most', () => {
+  const h = (id: number, tags: string, slug = 'photo') => ({ id, tags, pageURL: `https://pixabay.com/photos/${slug}-${id}/`, webformatURL: `https://pixabay.com/get/g${id}_640.jpg` });
+  const biryani = h(1, 'biryani platter, mutton lamb, kebab');
+  const meat = h(2, 'salad, meat, food');
+  const chicken = h(3, 'chicken salad, croutons, parmesan');
+  const asian = h(4, 'asian, chicken salad, food', 'asian-chicken-salad');
+  assertEquals([biryani, meat, chicken, asian].map((x) => tagScore(x, 'asian chicken salad')), [0, 3, 4, 7]);
+  assertEquals(rankHits([biryani, meat, chicken, asian], 'asian chicken salad').map((x: any) => x.id), [4, 3, 2, 1]);
+  assertEquals(tagScore(h(5, 'taco, salsa, food'), 'fish tacos'), 3, 'plurals count');
+  assertEquals(tagScore(h(6, 'discus fish, fish, aquarium'), 'fish tacos'), 1, 'not the dish');
+  assertEquals(rankHits([h(7, 'a'), h(8, 'b')], 'x').map((x: any) => x.id), [7, 8], 'equal: Pixabay\'s order');
+});
+
+test('The 6 sets come from one answer: "more photos" asks Pixabay nothing', async () => {
+  reset();
+  state.pixabay = (u: URL) => found(u.searchParams.get('q')!, 12);
+  let res = await call({ query: 'Fish Tacos', page: 1, tenantId: 'store-1' });
+  let data = await res.json();
+  assertEquals([res.status, data.page, data.photos.length, asked()], [200, 1, 5, ['fish tacos [food]']]);
+  state.calls = [];
+  res = await call({ query: 'Fish Tacos', page: 2, tenantId: 'store-1' });
+  data = await res.json();
+  assertEquals([res.status, data.page, data.photos.map((p: any) => p.id), asked()], [200, 2, ['pixabay-1006', 'pixabay-1007', 'pixabay-1008', 'pixabay-1009', 'pixabay-1010'], []]);
+  res = await call({ query: 'Fish Tacos', page: 3, tenantId: 'store-1' });
+  data = await res.json();
+  assertEquals([data.page, data.photos.length, asked()], [3, 2, []]);
+  // Past the photos found: set 1 again.
+  res = await call({ query: 'Fish Tacos', page: 4, tenantId: 'store-1' });
+  data = await res.json();
+  assertEquals([data.page, data.photos.length], [1, 5]);
+});
+
+test('The hint is sent by Scan Menu: searched first; one that isn\'t text is left out', async () => {
+  reset();
+  let res = await call({ query: 'Carrot Cake', hint: 'fried radish cake', page: 1, tenantId: 'store-1' });
+  let data = await res.json();
+  assertEquals([res.status, data.keyword, asked()], [200, 'fried radish cake', ['fried radish cake [food]']]);
+  reset();
+  res = await call({ query: 'Carrot Cake', hint: { evil: true }, page: 1, tenantId: 'store-1' });
+  data = await res.json();
+  assertEquals([res.status, data.keyword], [200, 'carrot cake']);
 });
 
 test('Keep: the photo copied into the store\'s product photos; one that can\'t be fetched left out; no search used', async () => {

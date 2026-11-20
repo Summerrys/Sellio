@@ -797,6 +797,26 @@ try {
   assert.equal(byTest(view.container, 'scan-photo-waiting').length, 0);
   assert.equal(invoked.filter((c) => !c.body.action).length, 1, 'no more searches after a refusal');
   await closeAll();
+  // The menu reader's words for a dish (scanMenu v22 photo_search) go with its search as `hint`;
+  // renamed, the new name goes alone (Alvin, 20 Nov 2026: hawker dishes, cafe dishes alike).
+  reset();
+  answer = { items: [
+    { name: 'Carrot Cake', price: 4, category: 'Mains', variants: [], photoSearch: 'fried radish cake' },
+    { name: 'Kopi', price: 1.8, category: 'Drinks', variants: [], photoSearch: '' },
+  ], count: 2, imageWidth: 2236, imageHeight: 1677 };
+  view = await open({ categories: [] });
+  await settle(10);
+  assert.deepEqual(invoked.filter((c) => !c.body.action).map((c) => c.body), [
+    { query: 'Carrot Cake', page: 1, tenantId: 'shop-1', hint: 'fried radish cake' },
+    { query: 'Kopi', page: 1, tenantId: 'shop-1' },
+  ], 'the menu\'s words for the dish with its name; none when there are none');
+  invoked.length = 0;
+  await click(button(view.container, /^Edit Carrot Cake$/));
+  await type(byTest(view.container, 'scan-edit')[0].querySelector('input:not([type="file"])'), 'Chai Tow Kway');
+  await click(button(view.container, /^Find sample photos$/));
+  await settle();
+  assert.deepEqual(invoked.filter((c) => !c.body.action).map((c) => c.body), [{ query: 'Chai Tow Kway', page: 1, tenantId: 'shop-1' }], 'renamed: the new name alone');
+  await closeAll();
   // A photo chosen while its sample is still being looked for: the sample doesn't replace it.
   reset();
   answer = { items: [{ name: 'Laksa', price: 6, category: 'Mains', variants: [] }], count: 1, imageWidth: 2236, imageHeight: 1677 };

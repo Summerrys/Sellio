@@ -46,10 +46,12 @@ export async function photoSearchError(error, fallback = appT(SEARCH_FAILED)) {
 // Up to 5 photos for `query`: { id, url, thumb, keepUrl, alt, credit }. `url` and `thumb` are
 // Pixabay's 640 px address (to show it while choosing, for up to a day); `keepUrl` its 1280 px one,
 // for keepSamplePhotos. None found: []. Throws an Error to show (a friendly one from the function,
-// or plain words).
-export async function findSamplePhotos({ tenantId, query, page = 1 }) {
+// or plain words). `hint`: Scan Menu's words for the dish (scanMenu v22 photo_search, from the
+// menu), which findProductImage v26 searches first (Alvin, 20 Nov 2026).
+export async function findSamplePhotos({ tenantId, query, page = 1, hint }) {
   const supabase = await getSupabase();
-  const { data, error } = await supabase.functions.invoke('findProductImage', { body: { query: String(query || '').slice(0, 100), page, tenantId } });
+  const words = typeof hint === 'string' ? hint.trim().slice(0, 60) : '';
+  const { data, error } = await supabase.functions.invoke('findProductImage', { body: { query: String(query || '').slice(0, 100), page, tenantId, ...(words ? { hint: words } : {}) } });
   if (error) {
     if (error?.context?.status === 404) return [];
     throw Object.assign(new Error(await photoSearchError(error)), { friendly: true });
@@ -120,7 +122,7 @@ export function useSamplePhotoFinder({ tenantId, setItems }) {
     for (const item of list) {
       let photos;
       try {
-        photos = await findSamplePhotos({ tenantId, query: item.name });
+        photos = await findSamplePhotos({ tenantId, query: item.name, hint: item.photoSearch });
       } catch (error) {
         if (!alive()) return;
         run.current += 1;

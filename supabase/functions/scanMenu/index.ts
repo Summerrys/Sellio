@@ -1,4 +1,12 @@
-// scanMenu — v21 (reads more menus). Deploy with verify_jwt: true.
+// scanMenu — v22 (names each dish for its sample photo). Deploy with verify_jwt: true.
+//
+// v22 (20 Nov 2026), Alvin: "enhance the keyword searches for those images for Pixabay so that it
+// encompasses all possible food choices as well as for the hawker or even the F&B line". Each
+// item also gets photo_search: a few plain English words a stock photo search would find it
+// with, from what the menu shows (a hawker stall's "Carrot Cake" is "fried radish cake", a
+// cafe's is "carrot cake"; "Teh C Peng" is "iced milk tea"). The app sends them with the item's
+// sample photo search (findProductImage v26 searches them first). Same AI call, a few more
+// words of answer an item. Everything else is v21.
 //
 // v21 (16 Nov 2026), after a clear menu photo at Cafelicious came back "No items found": the
 // v20 prompt kept only items with a price printed right next to them and then dropped every
@@ -85,6 +93,7 @@ export const MENU_TOOL = {
                   name: { type: 'string' },
                   price: { type: ['number', 'null'], description: 'The price for one, without the currency. null when no price is printed for the item or its section.' },
                   description: { type: 'string' },
+                  photo_search: { type: 'string', description: '2 to 4 plain English words a stock photo search would find this item with, what it is last (e.g. "fried radish cake", "iced milk tea", "club sandwich").' },
                   options: {
                     type: 'array',
                     items: {
@@ -126,7 +135,7 @@ export const MENU_TOOL = {
 
 // The answer as text, for when the fixed format can't be used (see readMenu).
 const TEXT_ANSWER = `Answer with only a JSON object in this shape, and no other words:
-{"sections": [{"title": "Coffee & Tea", "items": [{"name": "Kopi", "price": 1.8, "description": "", "options": [{"group": "Hot or iced", "addon": false, "choices": [{"label": "Hot", "extra": 0}, {"label": "Iced", "extra": 0.4}]}], "photo": [120, 340, 410, 600]}]}], "nothing_found": null, "note": ""}`;
+{"sections": [{"title": "Coffee & Tea", "items": [{"name": "Kopi", "price": 1.8, "description": "", "photo_search": "milk coffee", "options": [{"group": "Hot or iced", "addon": false, "choices": [{"label": "Hot", "extra": 0}, {"label": "Iced", "extra": 0.4}]}], "photo": [120, 340, 410, 600]}]}], "nothing_found": null, "note": ""}`;
 
 export function menuPrompt({ currency, country, width, height, asText = false }: { currency: string; country?: string | null; width?: number | null; height?: number | null; asText?: boolean }) {
   const size = width && height
@@ -143,6 +152,7 @@ Items:
 - price: the price for one, as a number without the currency: S$4.50 → 4.5, RM12 → 12, Rp 38.000 or 38K → 38000. When a price is printed for a whole section ("All drinks $3.50", or a price beside the section title), use it for each item in that section. When no price is printed for an item or its section, null. Never guess a price.
 - An item with a price for each size or kind ("Hot 1.80 / Iced 2.20", S / M / L): list it once, with the lowest price as price and one option group (e.g. "Size", "Hot or iced") whose choices have their extra over the lowest (Hot 0, Iced 0.4). Add-ons with their own price ("Add egg +1.00") are a group with addon true.
 - description: words printed under or beside the item (what's in it, how many pieces, how spicy); otherwise "".
+- photo_search: 2 to 4 plain English words a stock photo search would find this item with, what it is last, as it is served at this shop: "fried radish cake" for a hawker stall's "Carrot Cake" (a cafe's "Carrot Cake" is "carrot cake"), "iced milk tea" for "Teh C Peng", "club sandwich" for "Classic Club Sandwich", "chicken rice" for "Chicken Rice 鸡饭". Use what the menu shows (the kind of shop, the section, the item's picture) to tell which dish it is. No brand names, sizes or words like "classic" or "special".
 - photo: the box around this item's own picture on the menu: a food or drink photo that clearly belongs to this item (printed next to it or above it, or with its name or number). Only the picture, without its name or price. null when the item has no picture of its own. Never give two items the same picture, and never box decorations, logos or the background.
 
 When there is nothing to list, sections is [] and nothing_found is:
@@ -187,6 +197,12 @@ export function cleanPrice(value: unknown): number | null {
 
 export function cleanText(value: unknown, max: number) {
   return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max) : '';
+}
+
+// v22: photo_search as at most 5 plain English words (letters only), or ''.
+export function cleanPhotoWords(value: unknown) {
+  if (typeof value !== 'string') return '';
+  return value.replace(/[^A-Za-z\s'-]/g, ' ').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean).slice(0, 5).join(' ').slice(0, 60).trim();
 }
 
 // Option groups in the product editor's format: { name, type: 'other' (pick one) or 'addon'
@@ -241,6 +257,7 @@ export function menuItems(answer: any, width?: number | null, height?: number | 
         name,
         price: cleanPrice(raw?.price),
         description: cleanText(raw?.description, 500),
+        photoSearch: cleanPhotoWords(raw?.photo_search),
         category,
         variants: cleanOptions(raw?.options),
         photo,
@@ -307,14 +324,14 @@ async function readMenu({ imageContent, currency, country, width, height, newApp
     // The fixed format refused (the request itself is wrong, not the photo): asked once
     // more for the answer as text, so a change on the AI service's side never stops scans.
     if (res.status === 400) {
-      console.error('scanMenu v21: the fixed format was refused:', JSON.stringify(aiData?.error ?? aiData).slice(0, 300));
+      console.error('scanMenu v22: the fixed format was refused:', JSON.stringify(aiData?.error ?? aiData).slice(0, 300));
       asText = true;
       res = await ask(true);
       aiData = await res.json().catch(() => null);
     }
   } catch (error) {
     if ((error as Error)?.name === 'TimeoutError') {
-      console.error(`scanMenu v21: no answer after ${Date.now() - started} ms`);
+      console.error(`scanMenu v22: no answer after ${Date.now() - started} ms`);
       return { error: 'This menu is taking too long to read. Please scan half of it at a time.', reason: 'too_long' };
     }
     throw error;
@@ -332,10 +349,10 @@ async function readMenu({ imageContent, currency, country, width, height, newApp
     : cutShort ? 'too_long'
     : REASONS.includes(answer?.nothing_found) ? answer.nothing_found : 'no_items';
   const priced = items.filter((item) => item.price != null && item.price > 0);
-  console.log(`scanMenu v21: ${items.length} items (${priced.length} with a price, ${items.filter((i) => i.photo).length} with a picture), `
+  console.log(`scanMenu v22: ${items.length} items (${priced.length} with a price, ${items.filter((i) => i.photo).length} with a picture, ${items.filter((i) => i.photoSearch).length} with photo words), `
     + `tokens ${aiData?.usage?.input_tokens ?? 0}+${aiData?.usage?.output_tokens ?? 0}, stop ${aiData?.stop_reason}, ${Date.now() - started} ms${asText ? ', as text' : ''}`);
   if (!items.length) {
-    console.log('scanMenu v21: nothing found:', reason, '| note:', cleanText(answer?.note, 200), '| answer:', JSON.stringify(answer ?? aiData?.content ?? null).slice(0, 600));
+    console.log('scanMenu v22: nothing found:', reason, '| note:', cleanText(answer?.note, 200), '| answer:', JSON.stringify(answer ?? aiData?.content ?? null).slice(0, 600));
   }
   if (!newApp) {
     // An app from before v21 saves an item without a price at $0: it gets only priced items.

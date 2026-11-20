@@ -1,4 +1,21 @@
-// findProductImage - v25 (Pixabay, the dish's own words). Deploy with verify_jwt: true.
+// findProductImage - v26 (Pixabay: the menu's own words for a dish, more dishes, best matches
+// first). Deploy with verify_jwt: true.
+//
+// v26, Alvin 20 Nov 2026: "enhance the keyword searches ... so that it encompasses all possible
+// food choices as well as for the hawker or even the F&B line" (after v25, his re-scan still had
+// a biryani and a satay among "Asian Chicken Salad"'s photos). Now:
+//   - hint: a few English words for the dish from Scan Menu's reader (scanMenu v22 photo_search,
+//     from the menu's context: "fried radish cake" for a hawker stall's "Carrot Cake"), searched
+//     first (Food & Drink);
+//   - LOCAL_DISHES has about 680 dishes and drinks: hawker dishes in their many spellings
+//     (kway/kuey/koay teow, mee/mi/mie, bee hoon/bihun), Malay, Indonesian, Chinese, Indian,
+//     Thai, Vietnamese, Japanese and Korean dishes, kopitiam, cafe and bubble tea drinks;
+//   - a name in Malay or Indonesian that isn't on the list is put into English, the words turned
+//     round ("Ikan Bakar Petai" -> "petai grilled fish");
+//   - Pixabay is asked for 30 photos at a time and they're put in order of how well their tags
+//     match the words (Pixabay orders by popularity, so popular photos matching only some of the
+//     words came first); the 6 sets of 5 come from that one answer, kept a day, so "more photos"
+//     asks Pixabay nothing.
 //
 // v25, Alvin 20 Nov 2026: "a classic club sandwich in menu returns me with images from the
 // pixabay of the poker card club or even motorbikes". v24 searched the first two words of a
@@ -21,12 +38,12 @@
 //     hotlinking of images ... is not allowed"): a photo the shop uses is copied into its product
 //     photos ({ action: 'keep' }, below), and the app saves the copy;
 //   - "requests must be cached for 24 hours": each answer is kept a day in
-//     public.photo_search_cache (key "pixabay|<lang>|<food or all>|<set>|<words>");
+//     public.photo_search_cache (key "pixabay|<lang>|<food or all>|<words>": up to 30, best first);
 //   - wherever results are shown, say they're from Pixabay (the app does: "Photos from Pixabay");
 //   - 100 requests a minute for Sellio as a whole.
 // The key is the project's PIXABAY_API_KEY secret.
 //
-// A search: { query, page, tenantId } -> { photos: [{ id, previewUrl, keepUrl, alt, credit }],
+// A search: { query, page, tenantId, hint? } -> { photos: [{ id, previewUrl, keepUrl, alt, credit }],
 // keyword (the words that found them), page }. previewUrl (Pixabay's 640 px, valid for 24 hours)
 // is for showing it; keepUrl (1280 px, as long) for { action: 'keep' }. There is no `url`: an app
 // from before v24 finds no photo in the answer rather than saving an address that stops working.
@@ -53,6 +70,8 @@ const MAX_QUERY_CHARS = 100;
 const MAX_KEEP_AT_ONCE = 8;
 export const MAX_ASKS = 6;
 const PER_PAGE = 5;
+export const PIXABAY_PER_ASK = 30; // 6 sets of 5 from one answer
+const MAX_HINT_CHARS = 60;
 const SETS = 6;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
@@ -338,6 +357,456 @@ export const LOCAL_DISHES: Record<string, string> = {
   'egg tart':           'egg tart',
   'iced gem biscuits':  'biscuits',
   'yakult':             'yogurt drink',
+  // v26: Kopitiam drinks, more ways of writing them.
+  'kopi siu dai':       'milk coffee',
+  'kopi kosong':        'coffee',
+  'kopi ais':           'iced coffee',
+  'kopi o ais':         'iced black coffee',
+  'kopi susu':          'milk coffee',
+  'es kopi susu':       'iced coffee',
+  'teh ais':            'iced milk tea',
+  'teh o ais':          'iced tea',
+  'teh o limau':        'lemon tea',
+  'teh o ais limau':    'iced lemon tea',
+  'teh limau':          'lemon tea',
+  'teh tarik ais':      'iced milk tea',
+  'teh masala':         'masala tea',
+  'masala chai':        'masala tea',
+  'es teh':             'iced tea',
+  'es teh manis':       'iced tea',
+  'es jeruk':           'orange juice',
+  'air kosong':         'water',
+  'air sirap':          'rose syrup',
+  'air limau':          'lime juice',
+  'air tebu':           'sugarcane juice',
+  'air kelapa':         'coconut water',
+  'air batu campur':    'shaved ice',
+  'ais batu campur':    'shaved ice',
+  'calamansi':          'lime juice',
+  'kalamansi':          'lime juice',
+  'calamansi juice':    'lime juice',
+  'sugar cane':         'sugarcane juice',
+  'sugarcane':          'sugarcane juice',
+  'soy bean milk':      'soy milk',
+  'tau huay chui':      'soy milk',
+  'milo godzilla':      'chocolate drink',
+  'ice kacang':         'shaved ice',
+  'soya bean':          'soy milk',
+  'soybean':            'soy milk',
+  // v26: Cafe drinks.
+  'bubble tea':         'bubble tea',
+  'boba':               'bubble tea',
+  'boba milk tea':      'bubble tea',
+  'pearl milk tea':     'bubble tea',
+  'brown sugar milk tea': 'bubble tea',
+  'brown sugar boba':   'bubble tea',
+  'taro milk tea':      'bubble tea',
+  'tapioca milk tea':   'bubble tea',
+  'thai milk tea':      'thai iced tea',
+  'cha yen':            'thai iced tea',
+  'thai iced tea':      'thai iced tea',
+  'vietnamese coffee':  'vietnamese coffee',
+  'ca phe sua da':      'vietnamese coffee',
+  'long black':         'black coffee',
+  'flat white':         'latte',
+  'babyccino':          'frothy milk',
+  'dirty chai':         'chai latte',
+  'hojicha':            'roasted tea',
+  'hojicha latte':      'tea latte',
+  // v26: Rice.
+  'nasi uduk':          'coconut rice',
+  'nasi kuning':        'yellow rice',
+  'nasi kukus':         'steamed rice',
+  'nasi minyak':        'ghee rice',
+  'nasi tomato':        'tomato rice',
+  'nasi pattaya':       'omelette fried rice',
+  'nasi goreng pattaya': 'omelette fried rice',
+  'nasi goreng kampung': 'fried rice',
+  'nasi ulam':          'herb rice',
+  'cai fan':            'mixed rice',
+  'chap fan':           'mixed rice',
+  'cai png':            'mixed rice',
+  'chap chye png':      'mixed rice',
+  'char siew rice':     'roast pork rice',
+  'char siu rice':      'roast pork rice',
+  'cha siu rice':       'roast pork rice',
+  'roast chicken rice': 'chicken rice',
+  'steamed chicken rice': 'chicken rice',
+  'chicken rice ball':  'chicken rice',
+  'chicken rice balls': 'chicken rice',
+  'braised duck rice':  'duck rice',
+  'roast duck rice':    'duck rice',
+  'bo zai fan':         'claypot rice',
+  'claypot chicken rice': 'claypot rice',
+  'yang chow fried rice': 'fried rice',
+  'yangzhou fried rice': 'fried rice',
+  'khao pad':           'thai fried rice',
+  'khao phat':          'thai fried rice',
+  'khao man gai':       'chicken rice',
+  'com tam':            'broken rice',
+  'katsudon':           'pork cutlet rice',
+  'katsu don':          'pork cutlet rice',
+  'gyudon':             'beef rice bowl',
+  'oyakodon':           'chicken rice bowl',
+  'unadon':             'eel rice',
+  'unagi don':          'eel rice',
+  'chirashi':           'sashimi rice bowl',
+  'chirashi don':       'sashimi rice bowl',
+  'kaisendon':          'sashimi rice bowl',
+  'kaisen don':         'sashimi rice bowl',
+  'donburi':            'rice bowl',
+  'onigiri':            'rice ball',
+  'omurice':            'omelette rice',
+  'congee':             'rice porridge',
+  'jook':               'rice porridge',
+  'bubur ayam':         'chicken porridge',
+  'bubur lambuk':       'rice porridge',
+  'teochew porridge':   'rice porridge',
+  'century egg porridge': 'rice porridge',
+  'lemang':             'bamboo rice',
+  'zongzi':             'rice dumplings',
+  'bak chang':          'rice dumplings',
+  'ba chang':           'rice dumplings',
+  'nyonya chang':       'rice dumplings',
+  'lu rou fan':         'braised pork rice',
+  'lor bak png':        'braised pork rice',
+  // v26: Noodles, more ways of writing them.
+  'char kuey teow':     'fried noodles',
+  'char koay teow':     'fried noodles',
+  'char kwai teow':     'fried noodles',
+  'fried kway teow':    'fried noodles',
+  'fried kuey teow':    'fried noodles',
+  'ckt':                'fried noodles',
+  'kway teow':          'rice noodles',
+  'kuey teow':          'rice noodles',
+  'koay teow':          'rice noodles',
+  'kuay teow':          'rice noodles',
+  'kwetiau':            'rice noodles',
+  'kwetiau goreng':     'fried noodles',
+  'ho fun':             'rice noodles',
+  'hor fan':            'rice noodles',
+  'wat dan hor':        'rice noodles',
+  'beef hor fun':       'beef noodles',
+  'bihun':              'rice vermicelli',
+  'mihun':              'rice vermicelli',
+  'bihun goreng':       'fried vermicelli',
+  'mee hoon goreng':    'fried vermicelli',
+  'fried bee hoon':     'fried vermicelli',
+  'bee hoon goreng':    'fried vermicelli',
+  'mee kia':            'noodles',
+  'mee tai mak':        'noodles',
+  'yee mee':            'noodles',
+  'yi mian':            'noodles',
+  'ee fu noodles':      'noodles',
+  'kampua mee':         'noodles',
+  'curry mee':          'curry noodles',
+  'mee kari':           'curry noodles',
+  'mee soto':           'noodle soup',
+  'mee hailam':         'noodles',
+  'mee jawa':           'noodle soup',
+  'mee goreng mamak':   'fried noodles',
+  'mi goreng':          'fried noodles',
+  'mie goreng':         'fried noodles',
+  'indomie goreng':     'fried noodles',
+  'indomie':            'instant noodles',
+  'maggi':              'instant noodles',
+  'mie ayam':           'chicken noodles',
+  'wanton mee':         'wonton noodles',
+  'wantan mee':         'wonton noodles',
+  'won ton mee':        'wonton noodles',
+  'wanton soup':        'wonton soup',
+  'wantan soup':        'wonton soup',
+  'wanton':             'wontons',
+  'wantan':             'wontons',
+  'hae mee':            'prawn noodles',
+  'hokkien prawn mee':  'prawn noodles',
+  'hokkien char mee':   'fried noodles',
+  'fishball mee':       'fish ball noodles',
+  'fish ball mee':      'fish ball noodles',
+  'bcm':                'pork noodles',
+  'mee hoon kueh':      'noodle soup',
+  'mee hoon kway':      'noodle soup',
+  'chilli pan mee':     'noodles',
+  'lamian':             'noodle soup',
+  'dao xiao mian':      'noodle soup',
+  'zha jiang mian':     'noodles',
+  'zhajiangmian':       'noodles',
+  'jajangmyeon':        'black bean noodles',
+  'dan dan mian':       'noodles',
+  'katong laksa':       'curry noodle soup',
+  'laksa lemak':        'curry noodle soup',
+  'nyonya laksa':       'curry noodle soup',
+  'penang laksa':       'fish noodle soup',
+  'assam laksa':        'fish noodle soup',
+  'sarawak laksa':      'curry noodle soup',
+  'johor laksa':        'laksa',
+  'pho':                'noodle soup',
+  'pho bo':             'beef noodle soup',
+  'pho ga':             'chicken noodle soup',
+  'bun cha':            'grilled pork noodles',
+  'bun bo hue':         'beef noodle soup',
+  'pad see ew':         'stir fried noodles',
+  'khao soi':           'curry noodle soup',
+  'japchae':            'glass noodles',
+  'ramyeon':            'instant noodles',
+  'ramyun':             'instant noodles',
+  'naengmyeon':         'cold noodles',
+  'yakisoba':           'fried noodles',
+  // v26: Soups and stews.
+  'bkt':                'pork rib soup',
+  'dry bak kut teh':    'braised pork',
+  'kway jap':           'braised pork',
+  'fish head bee hoon': 'fish soup',
+  'tom yum goong':      'tom yum soup',
+  'tom yum kung':       'tom yum soup',
+  'tom kha':            'coconut soup',
+  'tom kha gai':        'coconut soup',
+  'bakso':              'meatball soup',
+  'soto':               'soup',
+  'rawon':              'beef soup',
+  'sop buntut':         'oxtail soup',
+  'sup ekor':           'oxtail soup',
+  'sup ayam':           'chicken soup',
+  'kimchi jjigae':      'kimchi stew',
+  'sundubu':            'tofu stew',
+  'sundubu jjigae':     'tofu stew',
+  'budae jjigae':       'sausage stew',
+  'doenjang jjigae':    'soybean stew',
+  'jjigae':             'stew',
+  'samgyetang':         'chicken soup',
+  'mala hot pot':       'hot pot',
+  'mala':               'spicy stir fry',
+  // v26: Indian.
+  'dosa':               'dosa',
+  'dosai':              'dosa',
+  'masala dosa':        'masala dosa',
+  'uttapam':            'pancake',
+  'vada':               'lentil fritters',
+  'poori':              'fried bread',
+  'roti kosong':        'flatbread',
+  'roti telur':         'egg flatbread',
+  'roti bawang':        'flatbread',
+  'roti planta':        'flatbread',
+  'roti sardin':        'flatbread',
+  'roti pisang':        'banana pancake',
+  'roti jala':          'lace pancake',
+  'roti bakar':         'toast',
+  'roti boy':           'coffee bun',
+  'garlic naan':        'naan bread',
+  'butter naan':        'naan bread',
+  'cheese naan':        'naan bread',
+  'daal':               'lentil curry',
+  'chana masala':       'chickpea curry',
+  'aloo gobi':          'potato curry',
+  'palak paneer':       'spinach curry',
+  'mutton varuval':     'mutton curry',
+  'varuval':            'curry',
+  'putu mayam':         'string hoppers',
+  'putu piring':        'rice cakes',
+  'idiyappam':          'string hoppers',
+  'kulfi':              'ice cream',
+  'payasam':            'rice pudding',
+  'kesari':             'semolina pudding',
+  // v26: Malay and Indonesian.
+  'ayam masak merah':   'chicken curry',
+  'masak merah':        'tomato curry',
+  'ayam percik':        'grilled chicken',
+  'ayam goreng berempah': 'fried chicken',
+  'ayam geprek':        'fried chicken',
+  'ayam gepuk':         'fried chicken',
+  'ayam kunyit':        'fried chicken',
+  'ikan goreng':        'fried fish',
+  'ikan asam pedas':    'fish curry',
+  'sambal udang':       'sambal prawns',
+  'udang goreng':       'fried prawns',
+  'sotong goreng':      'fried squid',
+  'kangkung belacan':   'water spinach',
+  'kangkong belacan':   'water spinach',
+  'sayur lodeh':        'vegetable curry',
+  'lodeh':              'vegetable curry',
+  'kari ayam':          'chicken curry',
+  'kari kambing':       'mutton curry',
+  'telur dadar':        'omelette',
+  'telur mata':         'fried egg',
+  'telur rebus':        'boiled egg',
+  'begedil':            'potato patties',
+  'perkedel':           'potato patties',
+  'keropok':            'crackers',
+  'keropok lekor':      'fish crackers',
+  'kerupuk':            'crackers',
+  'cucur udang':        'prawn fritters',
+  'jemput jemput':      'fritters',
+  'apam balik':         'peanut pancake',
+  'martabak':           'stuffed pancake',
+  'martabak manis':     'sweet pancake',
+  'martabak telur':     'stuffed pancake',
+  'gado gado':          'vegetable salad',
+  'pecel lele':         'fried catfish',
+  'tempe goreng':       'fried tempeh',
+  'tahu goreng':        'fried tofu',
+  'tauhu goreng':       'fried tofu',
+  'tahu telur':         'tofu omelette',
+  'gudeg':              'jackfruit curry',
+  'pempek':             'fish cake',
+  'siomay':             'dumplings',
+  'batagor':            'fried dumplings',
+  'bakwan':             'vegetable fritters',
+  'sate':               'meat skewers',
+  'sate ayam':          'chicken skewers',
+  'sate kambing':       'mutton skewers',
+  'satay ayam':         'chicken skewers',
+  'satay kambing':      'mutton skewers',
+  'ulam':               'herb salad',
+  'acar':               'pickles',
+  'achar':              'pickles',
+  'kuih':               'rice cakes',
+  'kueh':               'rice cakes',
+  'kue':                'cakes',
+  'kuih lapis':         'layer cake',
+  'kueh dadar':         'pandan crepes',
+  'kue lapis':          'layer cake',
+  'kuih dadar':         'pandan crepes',
+  'kueh salat':         'layer cake',
+  'kuih seri muka':     'layer cake',
+  'kueh tutu':          'steamed cakes',
+  'kueh bangkit':       'cookies',
+  'kuih bahulu':        'sponge cakes',
+  'bahulu':             'sponge cakes',
+  'png kueh':           'rice dumplings',
+  'kueh kosui':         'rice cakes',
+  'kuih koci':          'rice dumplings',
+  'pulut inti':         'sticky rice',
+  'pulut hitam':        'black rice pudding',
+  'bubur pulut hitam':  'black rice pudding',
+  'pengat pisang':      'banana dessert',
+  'es campur':          'shaved ice',
+  'es cendol':          'shaved ice dessert',
+  // v26: Chinese.
+  'char siu':           'roast pork',
+  'cha siu':            'roast pork',
+  'siu yuk':            'roast pork',
+  'siew yuk':           'roast pork',
+  'siew yoke':          'roast pork',
+  'char siu bao':       'steamed pork bun',
+  'cha siu bao':        'steamed pork bun',
+  'char siew pau':      'steamed pork bun',
+  'siu mai':            'pork dumplings',
+  'shumai':             'pork dumplings',
+  'har gau':            'shrimp dumplings',
+  'xlb':                'soup dumplings',
+  'jiaozi':             'dumplings',
+  'shui jiao':          'dumplings',
+  'guo tie':            'fried dumplings',
+  'you tiao':           'fried dough',
+  'youtiao':            'fried dough',
+  'you char kway':      'fried dough',
+  'yau zha gwai':       'fried dough',
+  'douhua':             'tofu pudding',
+  'tau foo fah':        'tofu pudding',
+  'tau fu fa':          'tofu pudding',
+  'tau kwa':            'fried tofu',
+  'tau pok':            'tofu puffs',
+  'lor bak':            'pork roll',
+  'loh bak':            'pork roll',
+  'cheong fun':         'rice noodle roll',
+  'har cheong gai':     'fried chicken',
+  'prawn paste chicken': 'fried chicken',
+  'kong ba pau':        'pork belly bun',
+  'kong bak pau':       'pork belly bun',
+  'gua bao':            'pork belly bun',
+  'pau':                'steamed bun',
+  'pao':                'steamed bun',
+  'big pau':            'steamed bun',
+  'dong po rou':        'braised pork belly',
+  'dongpo pork':        'braised pork belly',
+  'lor ark':            'braised duck',
+  'yu sheng':           'raw fish salad',
+  'yusheng':            'raw fish salad',
+  'lo hei':             'raw fish salad',
+  'bak kwa':            'pork jerky',
+  'bakkwa':             'pork jerky',
+  'dan tat':            'egg tart',
+  'polo bun':           'pineapple bun',
+  'bo lo bao':          'pineapple bun',
+  'tau sar piah':       'pastry',
+  'tangyuan':           'glutinous rice balls',
+  'mango pomelo sago':  'mango dessert',
+  'yang zhi gan lu':    'mango dessert',
+  'crab bee hoon':      'crab noodles',
+  'salted egg yolk prawns': 'fried prawns',
+  'bbq stingray':       'grilled fish',
+  'stingray':           'grilled fish',
+  'cereal prawn':       'fried prawns',
+  'lala':               'clams',
+  'la la':              'clams',
+  'kam heong':          'stir fry',
+  'gong gong':          'sea snails',
+  // v26: Japanese and Korean.
+  'tonkatsu':           'pork cutlet',
+  'chicken katsu':      'chicken cutlet',
+  'karaage':            'fried chicken',
+  'chicken karaage':    'fried chicken',
+  'tori karaage':       'fried chicken',
+  'ebi tempura':        'prawn tempura',
+  'ebi fry':            'fried prawns',
+  'temaki':             'sushi rolls',
+  'gunkan':             'sushi',
+  'inari':              'sushi',
+  'chawanmushi':        'steamed egg',
+  'tamagoyaki':         'omelette',
+  'tamago':             'omelette',
+  'unagi':              'grilled eel',
+  'saba':               'grilled fish',
+  'tteokbokki':         'rice cakes',
+  'topokki':            'rice cakes',
+  'ddeokbokki':         'rice cakes',
+  'kimbap':             'rice rolls',
+  'gimbap':             'rice rolls',
+  'samgyeopsal':        'pork belly',
+  'bingsu':             'shaved ice',
+  'bingsoo':            'shaved ice',
+  'pajeon':             'pancake',
+  'haemul pajeon':      'seafood pancake',
+  'dakgalbi':           'spicy chicken',
+  'galbi':              'grilled ribs',
+  'kalbi':              'grilled ribs',
+  'yangnyeom chicken':  'fried chicken',
+  'chimaek':            'fried chicken',
+  // v26: Thai and Vietnamese.
+  'pad kra pao':        'basil chicken',
+  'pad krapow':         'basil chicken',
+  'kra pao':            'basil chicken',
+  'krapow':             'basil chicken',
+  'phad kra phao':      'basil chicken',
+  'som tam':            'papaya salad',
+  'som tum':            'papaya salad',
+  'larb':               'meat salad',
+  'laab':               'meat salad',
+  'moo ping':           'pork skewers',
+  'moo kata':           'thai barbecue',
+  'mookata':            'thai barbecue',
+  'gai yang':           'grilled chicken',
+  'banh mi':            'baguette sandwich',
+  'goi cuon':           'spring rolls',
+  'cha gio':            'fried spring rolls',
+  'nem ran':            'fried spring rolls',
+  'banh xeo':           'crispy pancake',
+  'pad thai':           'thai noodles',
+  // v26: Cafes, bakeries and desserts.
+  'chicken chop':       'grilled chicken',
+  'aglio olio':         'garlic spaghetti',
+  'aglio e olio':       'garlic spaghetti',
+  'pain au chocolat':   'chocolate croissant',
+  'kouign amann':       'pastry',
+  'basque cheesecake':  'cheesecake',
+  'basque burnt cheesecake': 'cheesecake',
+  'eggs ben':           'eggs benedict',
+  'eggs benny':         'eggs benedict',
+  'acai':               'acai bowl',
+  'acai bowl':          'acai bowl',
+  'chempedak':          'jackfruit',
+  'cempedak':           'jackfruit',
+  'ice cream potong':   'ice cream bar',
 };
 
 // Local names that mean something else on Pixabay (a place, a Western dish, a word): searched in
@@ -345,6 +814,10 @@ export const LOCAL_DISHES: Record<string, string> = {
 export const ENGLISH_ONLY = new Set([
   'bandung', 'bandung peng', 'sirap bandung', 'mee bandung', 'abc', 'abc juice', 'economy rice',
   'economic rice', 'zi char', 'milo van', 'fried carrot cake', 'black carrot cake', 'white carrot cake',
+  'chicken chop', 'long black', 'babyccino', 'cai fan', 'chap fan', 'cai png', 'chap chye png', 'ckt', 'bcm', 'xlb',
+  'bkt', 'pau', 'pao', 'big pau', 'roti boy', 'maggi', 'indomie', 'mala', 'mala xiang guo', 'kue',
+  'varuval', 'ulam', 'acar', 'achar', 'lala', 'la la', 'kam heong', 'gong gong', 'stingray', 'saba',
+  'inari', 'tamago', 'unagi', 'jjigae', 'kesari',
 ]);
 
 // Words that say nothing about what an item is.
@@ -362,8 +835,65 @@ const FILLER_WORDS = new Set([
   'medium', 'large', 'big', 'mini', 'value', 'size', 'portion', 'pax', 'pcs', 'pc', 'piece',
   'pieces', 'ml', 'kg', 'gm', 'oz', 'min', 'mins', 'minute', 'minutes', 'hr', 'hrs', 'hour',
   'hours', 'carte', 'favourite', 'favorite', 'popular', 'recommended', 'must', 'try', 'limited',
-  'edition', 'seasonal', 'item', 'items',
+  'edition', 'seasonal', 'item', 'items', 'istimewa', 'spesial', 'biasa', 'jumbo', 'porsi', 'paket',
+  'tawar', 'bungkus', 'tapau', 'dabao', 'takeaway', 'serving', 'servings', 'person', 'persons', 'sharing',
 ]);
+
+// v26: Malay and Indonesian words in English, for names that aren't on LOCAL_DISHES. Two-word
+// ones first ("lada hitam"). Malay puts what the dish is first ("ikan bakar": fish, grilled), so
+// the words are turned round into English order ("grilled fish").
+export const MALAY_WORDS: Record<string, string> = {
+  'nasi': 'rice', 'pulut': 'sticky rice', 'mee': 'noodles', 'mi': 'noodles', 'mie': 'noodles',
+  'bihun': 'vermicelli', 'roti': 'bread', 'bubur': 'porridge', 'kuih': 'cake', 'kueh': 'cake',
+  'kue': 'cake', 'keropok': 'crackers', 'kerupuk': 'crackers', 'ayam': 'chicken', 'itik': 'duck',
+  'bebek': 'duck', 'daging': 'beef', 'lembu': 'beef', 'sapi': 'beef', 'kambing': 'mutton',
+  'ikan': 'fish', 'udang': 'prawn', 'sotong': 'squid', 'cumi': 'squid', 'ketam': 'crab',
+  'kepiting': 'crab', 'kerang': 'cockles', 'siput': 'snails', 'telur': 'egg', 'tauhu': 'tofu',
+  'tahu': 'tofu', 'tempe': 'tempeh', 'sayur': 'vegetable', 'sayuran': 'vegetables',
+  'siakap': 'sea bass', 'kerapu': 'grouper', 'tenggiri': 'mackerel', 'kembung': 'mackerel',
+  'bawal': 'pomfret', 'pari': 'stingray', 'patin': 'catfish', 'keli': 'catfish', 'lele': 'catfish',
+  'bilis': 'anchovies', 'teri': 'anchovies', 'kangkung': 'water spinach', 'kangkong': 'water spinach',
+  'bayam': 'spinach', 'kacang panjang': 'long beans', 'taugeh': 'bean sprouts', 'tauge': 'bean sprouts',
+  'terung': 'eggplant', 'bendi': 'okra', 'kubis': 'cabbage', 'sawi': 'mustard greens', 'labu': 'pumpkin',
+  'cendawan': 'mushroom', 'jamur': 'mushroom', 'jagung': 'corn', 'kentang': 'potato', 'ubi': 'sweet potato',
+  'keledek': 'sweet potato', 'kacang': 'peanut', 'goreng': 'fried', 'bakar': 'grilled',
+  'panggang': 'roasted', 'rebus': 'boiled', 'kukus': 'steamed', 'stim': 'steamed', 'masak': 'cooked',
+  'berempah': 'spiced', 'pedas': 'spicy', 'manis': 'sweet', 'masin': 'salty', 'masam': 'sour',
+  'asam': 'sour', 'lemak': 'coconut', 'santan': 'coconut milk', 'kari': 'curry', 'kare': 'curry',
+  'gulai': 'curry', 'sup': 'soup', 'sop': 'soup', 'soto': 'soup', 'kicap': 'soy sauce',
+  'kecap': 'soy sauce', 'tiram': 'oyster', 'lada hitam': 'black pepper', 'lada': 'pepper',
+  'halia': 'ginger', 'jahe': 'ginger', 'serai': 'lemongrass', 'kunyit': 'turmeric',
+  'belacan': 'shrimp paste', 'cili api': 'chilli', 'cili': 'chilli', 'cabai': 'chilli', 'cabe': 'chilli',
+  'bawang putih': 'garlic', 'bawang': 'onion', 'putih': 'white', 'hitam': 'black', 'merah': 'red',
+  'hijau': 'green', 'kuning': 'yellow', 'campur': 'mixed', 'susu': 'milk', 'ais': 'iced', 'es': 'iced',
+  'panas': 'hot', 'sejuk': 'cold', 'jus': 'juice', 'teh': 'tea', 'kopi': 'coffee', 'buah': 'fruit',
+  'oren': 'orange', 'jeruk': 'orange', 'epal': 'apple', 'apel': 'apple', 'tembikai': 'watermelon',
+  'semangka': 'watermelon', 'nanas': 'pineapple', 'betik': 'papaya', 'pepaya': 'papaya',
+  'mangga': 'mango', 'limau': 'lime', 'lobak': 'carrot', 'wortel': 'carrot', 'kelapa': 'coconut',
+  'pisang': 'banana', 'nangka': 'jackfruit',
+};
+// The words a Malay or Indonesian dish name starts with (what it is).
+const MALAY_HEADS = new Set([
+  'nasi', 'pulut', 'mee', 'mi', 'mie', 'bihun', 'roti', 'bubur', 'kuih', 'kueh', 'kue', 'keropok',
+  'kerupuk', 'ayam', 'itik', 'bebek', 'daging', 'lembu', 'sapi', 'kambing', 'ikan', 'udang', 'sotong',
+  'cumi', 'ketam', 'kepiting', 'kerang', 'telur', 'tauhu', 'tahu', 'tempe', 'sayur', 'sup', 'sop',
+  'soto', 'kari', 'gulai', 'teh', 'kopi', 'ais', 'es', 'jus', 'pisang', 'jagung', 'kentang', 'kangkung',
+]);
+
+// A Malay or Indonesian name in English words ("ikan bakar petai" -> petai grilled fish), or null
+// when it isn't one: it starts with what a dish is and two of its words are known.
+export function malayEnglish(words: string[]): string[] | null {
+  if (words.length < 2 || !MALAY_HEADS.has(words[0])) return null;
+  const parts: string[] = [];
+  let known = 0;
+  for (let i = 0; i < words.length; i++) {
+    const pair = MALAY_WORDS[`${words[i]} ${words[i + 1] ?? ''}`];
+    if (pair) { parts.push(pair); known += 2; i++; continue; }
+    if (MALAY_WORDS[words[i]]) known++;
+    parts.push(MALAY_WORDS[words[i]] ?? words[i]);
+  }
+  return known >= 2 ? parts.reverse().join(' ').split(' ') : null;
+}
 
 export type Attempt = { words: string; lang: 'en' | 'zh'; category: 'food' | 'all' };
 
@@ -394,13 +924,20 @@ export function localDish(text: string): { name: string; english: string } | nul
   return best ? { name: best.name, english: best.english } : null;
 }
 
-// What to look for, in order, until something is found.
-export function searchPlan(query: string): Attempt[] {
+const meaningful = (words: string[]) => words.filter((w) => w.length > 1 && !STOP_WORDS.has(w) && !FILLER_WORDS.has(w));
+
+// What to look for, in order, until something is found. `hint`: Scan Menu's words for the dish.
+export function searchPlan(query: string, hint = ''): Attempt[] {
   const plan: Attempt[] = [];
   const add = (words: string, lang: Attempt['lang'], category: Attempt['category']) => {
     const w = words.replace(/\s+/g, ' ').trim().slice(0, MAX_QUERY_CHARS);
     if (w && !plan.some((a) => a.words === w && a.lang === lang && a.category === category)) plan.push({ words: w, lang, category });
   };
+  const hinted = meaningful(nameText(String(hint || '').slice(0, MAX_HINT_CHARS)).split(' ')).slice(-4);
+  if (hinted.length) {
+    add(hinted.slice(-3).join(' '), 'en', 'food');
+    add(hinted.slice(-2).join(' '), 'en', 'food');
+  }
   const text = nameText(query);
   const local = localDish(text);
   if (local) {
@@ -408,7 +945,8 @@ export function searchPlan(query: string): Attempt[] {
     add(local.english, 'en', 'food');
     add(local.english.split(' ').slice(-1).join(' '), 'en', 'food');
   } else {
-    const words = text.split(' ').filter((w) => w.length > 1 && !STOP_WORDS.has(w) && !FILLER_WORDS.has(w));
+    const named = text.split(' ').filter(Boolean);
+    const words = meaningful(malayEnglish(named) ?? named);
     if (words.length) {
       const [last3, last2, last1] = [3, 2, 1].map((n) => words.slice(-n).join(' '));
       add(last3, 'en', 'food');
@@ -447,15 +985,40 @@ export function toPhoto(hit: any, keyword: string) {
   };
 }
 
-// One set of photos from Pixabay (never logs the address: it carries the key). A set past the
-// last is empty (Pixabay answers 400 "page is out of valid range").
-async function askPixabay(attempt: Attempt, page: number) {
+// v26: how well a Pixabay photo's tags (and the words in its page's address) match the words: a
+// point for each word found, two more when the last word (what the dish is) is, two more when
+// all of them are found together. Plurals count as the word ("tacos": taco).
+const stem = (w: string) => (w.length > 4 && w.endsWith('es') ? w.slice(0, -2) : w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w);
+export function tagScore(hit: any, words: string): number {
+  const query = words.toLowerCase().split(/\s+/).filter((w) => w.length > 1 && !STOP_WORDS.has(w)).map(stem);
+  if (!query.length) return 0;
+  const tags = String(hit?.tags || '').toLowerCase().split(',').map((t) => t.trim()).filter(Boolean);
+  const slug = typeof hit?.pageURL === 'string' ? (hit.pageURL.toLowerCase().match(/\/photos\/([a-z0-9-]+?)-\d+\/?$/)?.[1] || '') : '';
+  const phrases = [...tags, slug.replace(/-/g, ' ')].map((t) => t.split(/\s+/).filter(Boolean).map(stem).join(' '));
+  const found = new Set(phrases.flatMap((t) => t.split(' ')));
+  let score = query.filter((w) => found.has(w)).length;
+  if (found.has(query[query.length - 1])) score += 2;
+  const together = query.join(' ');
+  if (query.length > 1 && phrases.some((t) => ` ${t} `.includes(` ${together} `))) score += 2;
+  return score;
+}
+
+// Photos in order of tagScore, Pixabay's order (popularity) when equal.
+export function rankHits(hits: any[], words: string) {
+  return hits.map((hit, i) => ({ hit, i, score: tagScore(hit, words) }))
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .map(({ hit }) => hit);
+}
+
+// Up to 30 photos from Pixabay for the words, best matches first (never logs the address: it
+// carries the key).
+async function askPixabay(attempt: Attempt) {
   const key = pixabayKey();
   if (!key) throw new Error('Pixabay key missing: set the PIXABAY_API_KEY secret');
-  const params = new URLSearchParams({ key, q: attempt.words, lang: attempt.lang, image_type: 'photo', safesearch: 'true', per_page: String(PER_PAGE), page: String(page) });
+  const params = new URLSearchParams({ key, q: attempt.words, lang: attempt.lang, image_type: 'photo', safesearch: 'true', per_page: String(PIXABAY_PER_ASK), page: '1' });
   if (attempt.category === 'food') params.set('category', 'food');
   const res = await fetch(`https://pixabay.com/api/?${params}`, { signal: AbortSignal.timeout(10000) });
-  console.log(`findProductImage v25: Pixabay ${res.status} for "${attempt.words}" (${attempt.lang}, ${attempt.category}) set ${page}, rate limit ${res.headers.get('x-ratelimit-limit')}/min, ${res.headers.get('x-ratelimit-remaining')} left`);
+  console.log(`findProductImage v26: Pixabay ${res.status} for "${attempt.words}" (${attempt.lang}, ${attempt.category}), rate limit ${res.headers.get('x-ratelimit-limit')}/min, ${res.headers.get('x-ratelimit-remaining')} left`);
   if (res.status === 400) {
     const text = await res.text().catch(() => '');
     if (/out of valid range/i.test(text)) return [];
@@ -463,27 +1026,27 @@ async function askPixabay(attempt: Attempt, page: number) {
   }
   if (!res.ok) throw new Error(`Pixabay API error: ${res.status}`);
   const data = await res.json();
-  return (Array.isArray(data?.hits) ? data.hits : [])
-    .filter((hit: any) => hit?.id && typeof hit?.webformatURL === 'string' && PIXABAY_IMAGE.test(hit.webformatURL))
-    .map((hit: any) => toPhoto(hit, attempt.words));
+  const hits = (Array.isArray(data?.hits) ? data.hits : [])
+    .filter((hit: any) => hit?.id && typeof hit?.webformatURL === 'string' && PIXABAY_IMAGE.test(hit.webformatURL));
+  return rankHits(hits, attempt.words).map((hit: any) => toPhoto(hit, attempt.words));
 }
 
-// A set of photos for one attempt: from the day's searches when it was asked for in the last 24
-// hours (Pixabay's rule), else from Pixabay (while this search has asks left; null when not
-// looked for) and kept for the next day. The store of searches failing never stops a search;
-// now and then, searches over a day old are cleared out.
-async function findPhotos(admin: any, attempt: Attempt, page: number, asked: { count: number }) {
-  const cacheKey = `pixabay|${attempt.lang}|${attempt.category}|${page}|${attempt.words.toLowerCase()}`;
+// The photos for one attempt (all 6 sets, best first): from the day's searches when it was asked
+// for in the last 24 hours (Pixabay's rule), else from Pixabay (while this search has asks left;
+// null when not looked for) and kept for the next day. The store of searches failing never stops
+// a search; now and then, searches over a day old are cleared out.
+async function findPhotos(admin: any, attempt: Attempt, asked: { count: number }) {
+  const cacheKey = `pixabay|${attempt.lang}|${attempt.category}|${attempt.words.toLowerCase()}`;
   try {
     const { data: hit, error } = await admin.from('photo_search_cache').select('photos, fetched_at').eq('key', cacheKey).maybeSingle();
     if (error) throw error;
     if (hit && Date.now() - Date.parse(hit.fetched_at) < DAY_MS && Array.isArray(hit.photos)) return hit.photos;
   } catch (e) {
-    console.warn('findProductImage v25: searches store not read:', (e as Error).message);
+    console.warn('findProductImage v26: searches store not read:', (e as Error).message);
   }
   if (asked.count >= MAX_ASKS) return null;
   asked.count++;
-  const photos = await askPixabay(attempt, page);
+  const photos = await askPixabay(attempt);
   try {
     const { error } = await admin.from('photo_search_cache').upsert({ key: cacheKey, photos, fetched_at: new Date().toISOString() });
     if (error) throw error;
@@ -491,7 +1054,7 @@ async function findPhotos(admin: any, attempt: Attempt, page: number, asked: { c
       await admin.from('photo_search_cache').delete().lt('fetched_at', new Date(Date.now() - DAY_MS).toISOString());
     }
   } catch (e) {
-    console.warn('findProductImage v25: search not stored:', (e as Error).message);
+    console.warn('findProductImage v26: search not stored:', (e as Error).message);
   }
   return photos;
 }
@@ -521,23 +1084,23 @@ async function keepPhotos(req: Request, body: any) {
   const kept = await Promise.all(photos.map(async ({ id, url }: { id: string; url: string }) => {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-      if (!res.ok) { console.warn(`findProductImage v25: ${id} not fetched (${res.status})`); return null; }
+      if (!res.ok) { console.warn(`findProductImage v26: ${id} not fetched (${res.status})`); return null; }
       const type = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-      if (!/^image\/(jpeg|png|webp)$/.test(type)) { console.warn(`findProductImage v25: ${id} is not a photo (${type})`); return null; }
+      if (!/^image\/(jpeg|png|webp)$/.test(type)) { console.warn(`findProductImage v26: ${id} is not a photo (${type})`); return null; }
       const bytes = new Uint8Array(await res.arrayBuffer());
-      if (!bytes.length || bytes.length > MAX_PHOTO_BYTES) { console.warn(`findProductImage v25: ${id} size ${bytes.length}`); return null; }
+      if (!bytes.length || bytes.length > MAX_PHOTO_BYTES) { console.warn(`findProductImage v26: ${id} size ${bytes.length}`); return null; }
       const ext = type === 'image/png' ? 'png' : type === 'image/webp' ? 'webp' : 'jpg';
       const path = `${storeId}/products/${id}-${Date.now()}-${crypto.randomUUID().slice(0, 6)}.${ext}`;
       const { error } = await admin.storage.from(BUCKET).upload(path, bytes, { contentType: type, cacheControl: LONG_CACHE, upsert: false });
-      if (error) { console.warn(`findProductImage v25: ${id} not saved:`, error.message); return null; }
+      if (error) { console.warn(`findProductImage v26: ${id} not saved:`, error.message); return null; }
       return { from: url, url: admin.storage.from(BUCKET).getPublicUrl(path).data.publicUrl };
     } catch (e) {
-      console.warn(`findProductImage v25: ${id} not kept:`, (e as Error).message);
+      console.warn(`findProductImage v26: ${id} not kept:`, (e as Error).message);
       return null;
     }
   }));
   const copies = kept.filter(Boolean);
-  console.log(`findProductImage v25: kept ${copies.length} of ${photos.length} photos for store ${storeId}`);
+  console.log(`findProductImage v26: kept ${copies.length} of ${photos.length} photos for store ${storeId}`);
   return json({ kept: copies });
 }
 
@@ -550,7 +1113,8 @@ Deno.serve(async (req) => {
     const body = await req.json();
     if (body?.action === 'keep') return await keepPhotos(req, body);
     if (body?.action) return json({ error: 'Unknown action.' }, 400);
-    const { query, page: rawPage, tenantId: rawTenantId } = body;
+    const { query, page: rawPage, tenantId: rawTenantId, hint: rawHint } = body;
+    const hint = typeof rawHint === 'string' ? rawHint.slice(0, MAX_HINT_CHARS) : '';
     const tenantId = typeof rawTenantId === 'string' && rawTenantId.trim() ? rawTenantId.trim() : null;
     if (!query?.trim()) return json({ error: 'query required' }, 400);
 
@@ -593,24 +1157,27 @@ Deno.serve(async (req) => {
     // 6 sets of 5 (30 photos), then set 1 again; a later set with nothing: set 1.
     let page = parseInt(rawPage) || 1;
     page = ((page - 1) % SETS) + 1;
-    const plan = searchPlan(String(query));
+    const plan = searchPlan(String(query), hint);
     const asked = { count: 0 };
+    const lists = new Map<Attempt, any[] | null>();
     let found: { attempt: Attempt; photos: any[]; page: number } | null = null;
     for (const set of page === 1 ? [1] : [page, 1]) {
       for (const attempt of plan) {
-        const photos = await findPhotos(admin, attempt, set, asked);
-        if (photos?.length) { found = { attempt, photos, page: set }; break; }
+        if (!lists.has(attempt)) lists.set(attempt, await findPhotos(admin, attempt, asked));
+        const photos = (lists.get(attempt) || []).slice((set - 1) * PER_PAGE, set * PER_PAGE);
+        if (photos.length) { found = { attempt, photos, page: set }; break; }
       }
       if (found) break;
     }
+    const named = hint ? `"${query}" (${hint})` : `"${query}"`;
     if (!found) {
-      console.log(`findProductImage v25: "${query}": nothing found (${plan.map((a) => `${a.words} [${a.lang}, ${a.category}]`).join(' > ') || 'no words'}; asked Pixabay ${asked.count})`);
+      console.log(`findProductImage v26: ${named}: nothing found (${plan.map((a) => `${a.words} [${a.lang}, ${a.category}]`).join(' > ') || 'no words'}; asked Pixabay ${asked.count})`);
       return json({ error: 'No images found for this keyword' }, 404);
     }
-    console.log(`findProductImage v25: "${query}" -> "${found.attempt.words}" (${found.attempt.lang}, ${found.attempt.category}) set ${found.page}: ${found.photos.length} photos (asked Pixabay ${asked.count})`);
+    console.log(`findProductImage v26: ${named} -> "${found.attempt.words}" (${found.attempt.lang}, ${found.attempt.category}) set ${found.page}: ${found.photos.length} photos (asked Pixabay ${asked.count})`);
     return json({ photos: found.photos, keyword: found.attempt.words, page: found.page });
   } catch (error) {
-    console.error('findProductImage v25 error:', error);
+    console.error('findProductImage v26 error:', error);
     if (giveBackSearch) {
       try {
         await giveBackSearch();

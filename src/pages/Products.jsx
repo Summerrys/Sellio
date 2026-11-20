@@ -214,7 +214,8 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
     return () => { cancelScan(); releasePhotos(); };
   }, [open, photo, handleScan, cancelScan, releasePhotos]);
 
-  const updateItem = (id, field, value) => setScannedItems(prev => prev.map(item => item._id === id ? { ...item, [field]: value } : item));
+  // A new name: the scan's photo words (photoSearch, for the menu's name) no longer fit it.
+  const updateItem = (id, field, value) => setScannedItems(prev => prev.map(item => item._id === id ? { ...item, [field]: value, ...(field === 'name' ? { photoSearch: '' } : {}) } : item));
   const removeItem = (id) => {
     writer.release(id);
     setScannedItems(prev => prev.filter(item => item._id !== id));
@@ -259,7 +260,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
     const still = sameScan();
     updateItem(id, '_photo', 'waiting');
     try {
-      const photos = await findSamplePhotos({ tenantId, query: item.name });
+      const photos = await findSamplePhotos({ tenantId, query: item.name, hint: item.photoSearch });
       if (!still()) return;
       setScannedItems(prev => prev.map(i => (i._id === id
         ? { ...i, _photo: undefined, samples: photos, ...(photos.length && !i.picture ? { picture: samplePicture(photos[0]), _noSample: false } : {}) }
