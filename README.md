@@ -137,7 +137,8 @@ npm run dev
 
 The app talks to Sellio's Supabase project. `.env` holds its URL and public anon key; both
 are public by design (the anon key only gets what row-level security allows). Never put a
-secret in this repository: it is public. Secrets live in GitHub and Supabase secrets.
+secret in this repository: it was public until 20 November 2026, so treat its history as
+public. Secrets live in GitHub and Supabase secrets.
 
 ### Scripts
 
