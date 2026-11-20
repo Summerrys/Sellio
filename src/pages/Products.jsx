@@ -968,14 +968,15 @@ export default function Products({ embedded = false } = {}) {
             and Select all, and Delete at the bottom in place of the tab bar (it covers the tab bar,
             the raised Counter button too). The page's title and buttons step aside meanwhile, so
             nothing sits under the bar. Fixed on phones: position: sticky would need <main>'s
-            overflow-x-hidden loosened, which once made the whole page scroll sideways. */}
+            overflow-x-hidden loosened, which once made the whole page scroll sideways. margin: 0
+            because the page's space-y would push a fixed bar 24px down, off the header. */}
         {selectionMode && (
           <>
             <div className="lg:hidden" style={{ height: 48 }} aria-hidden="true" />
             <div
               data-testid="select-bar"
               className="fixed left-0 right-0 z-30 lg:static lg:rounded-xl lg:border lg:border-slate-200"
-              style={{ top: 'calc(56px + env(safe-area-inset-top, 0px))', height: 56, boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px 0 6px', background: 'white', borderBottom: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.05)' }}
+              style={{ top: 'calc(56px + env(safe-area-inset-top, 0px))', margin: 0, height: 56, boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px 0 6px', background: 'white', borderBottom: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.05)' }}
             >
               <button type="button" onClick={handleCancelSelection} aria-label={t('Stop selecting')} style={{ width: 44, height: 44, border: 'none', background: 'none', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#334155', cursor: 'pointer', flexShrink: 0 }}>
                 <X size={22} aria-hidden="true" />
@@ -1179,7 +1180,7 @@ export default function Products({ embedded = false } = {}) {
               data-testid="delete-bar"
               data-pull-refresh-block
               className="fixed left-0 right-0 bottom-0 z-40 lg:left-[var(--sidebar-width)]"
-              style={{ minHeight: 88, boxSizing: 'border-box', padding: '16px 16px', paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))', background: 'white', borderTop: '1px solid #e2e8f0', boxShadow: '0 -4px 14px rgba(15, 23, 42, 0.06)' }}
+              style={{ margin: 0, minHeight: 88, boxSizing: 'border-box', padding: '16px 16px', paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))', background: 'white', borderTop: '1px solid #e2e8f0', boxShadow: '0 -4px 14px rgba(15, 23, 42, 0.06)' }}
             >
               <button
                 type="button"

@@ -116,8 +116,10 @@ export default function useHoldToReorder({ ids, canMove = false, onMove, onHold 
       const els = list ? [...list.querySelectorAll('[data-reorder-id]')] : [];
       if (els.length !== latest.current.ids.length || !els[g.index]) { finish(); return; }
       const scrollY = page().scrollTop;
-      // Measured as drawn without the lift, so each place is where an item sits.
+      // Measured as drawn without the lift, so each place is where an item sits. The transition
+      // goes too, or the browser still reports the lifted (scaled) box while it animates back.
       const lifted = g.el.style.transform;
+      g.el.style.transition = 'none';
       g.el.style.transform = 'none';
       g.slots = els.map((el) => {
         const r = el.getBoundingClientRect();

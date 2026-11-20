@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Trash2 } from 'lucide-react';
 import { useAppText } from '@/lib/appText';
 import { useBackToClose } from '@/lib/useBackToClose';
@@ -28,7 +29,9 @@ export default function DeleteProductsSheet({ open, products = [], isListings = 
       : t('These {count} products will come off your menu, the Counter and your storefront, with their stock counts.', { count });
   }
   const close = () => { if (!busy) onCancel?.(); };
-  return (
+  // On <body>: the page's spacing (space-y) would otherwise give the cover a top margin, leaving a
+  // strip of the page above it undimmed.
+  return createPortal(
     <div
       data-pull-refresh-block
       onClick={close}
@@ -71,6 +74,7 @@ export default function DeleteProductsSheet({ open, products = [], isListings = 
           </button>
         )}
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }
