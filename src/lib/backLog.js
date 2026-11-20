@@ -1,19 +1,20 @@
 // TEMPORARY — remove once Back in the Android app is confirmed working.
 // A short record of what happens around Back (and of errors) in Sellio's Android app, for Alvin's
-// account only:
+// accounts only:
 // kept on the phone (never sent anywhere), with a small "Back log" button that copies it to paste
 // to Claude. It starts low on the left, above the bottom bar, and can be dragged anywhere on the
 // screen; it stays where it's left.
-// Also while signed out on a phone where Alvin's account has been signed in (so a sign-out and
-// the next sign-in show up); never while another account is signed in.
+// Also while signed out on a phone where one of Alvin's accounts has been signed in (so a sign-out
+// and the next sign-in show up); never while another account is signed in.
 // Nothing is recorded or shown anywhere else.
 import { isNativeApp } from './nativeApp.js';
 
-// Alvin's account, by a hash of its email: this code is public, the email needn't be.
-const OWNER_HASH = 'ff948dec1bdf0';
+// Alvin's accounts, by a hash of each email: this code is public, the emails needn't be. The
+// first one it was made for, and the account on his phone (Alvin, 20 Nov 2026).
+const OWNER_HASHES = ['ff948dec1bdf0', '9572dc8a68d1'];
 const STORE_KEY = 'sellio-back-log';
 const PLACE_KEY = 'sellio-back-log-place'; // where the button was dragged to (see showTab)
-const OWNER_PHONE_KEY = 'sellio-back-log-phone'; // Alvin's account has been signed in on this phone
+const OWNER_PHONE_KEY = 'sellio-back-log-phone'; // one of Alvin's accounts has been signed in on this phone
 const MAX_LINES = 400;
 // The chat keeps only the first 20,000 characters of a paste: the copy takes the newest lines
 // that fit.
@@ -50,7 +51,7 @@ function isOwner() {
     email = user?.email ? String(user.email).toLowerCase() : '';
   } catch { email = ''; }
   if (email) {
-    ownerSignedIn = hashText(email) === OWNER_HASH;
+    ownerSignedIn = OWNER_HASHES.includes(hashText(email));
     if (ownerSignedIn) { try { browser.localStorage.setItem(OWNER_PHONE_KEY, '1'); } catch { /* not remembered */ } }
   } else {
     // Signed out: still Alvin's phone if his account has been signed in on it.

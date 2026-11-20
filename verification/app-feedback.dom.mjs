@@ -436,7 +436,7 @@ try {
     };
   }
   localStorage.clear(); useAdminServer(); admin = true;
-  globalThis.appUserState = { appUser: { email: 'leeyq.alvin@gmail.com' } };
+  globalThis.appUserState = { appUser: { email: 'admin@example.com' } };
   globalThis.toasts = [];
   close = await show(React.createElement(AppFeedbackInbox));
   await settle(20);
