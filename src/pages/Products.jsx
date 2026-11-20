@@ -240,10 +240,14 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
       const uniqueCats = [...new Set(selected.map(i => i.category).filter(Boolean))];
       const catMap = {};
       categories.forEach(c => { catMap[c.name.toLowerCase()] = c.id; });
+      // New sections go after the shop's own, in the menu's order (as the Categories page adds
+      // one). They used to be saved at 0, so the lists sorted them by name: "Beverages" above
+      // the mains printed before it (20 Nov 2026).
+      let nextCategoryOrder = categories.reduce((max, c) => Math.max(max, c.sort_order || 0), 0) + 1;
       for (const catName of uniqueCats) {
         if (!catMap[catName.toLowerCase()]) {
           const slug = catName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now();
-          const { data: newCat } = await supabase.from('categories').insert({ tenant_id: tenantId, name: catName, slug, is_active: true }).select().single();
+          const { data: newCat } = await supabase.from('categories').insert({ tenant_id: tenantId, name: catName, slug, is_active: true, sort_order: nextCategoryOrder++ }).select().single();
           if (newCat) catMap[catName.toLowerCase()] = newCat.id;
         }
       }

@@ -280,6 +280,35 @@ try {
   assert.equal(thumbs()[0].disabled, true);
   await closeAll();
   passed('a photo sent as it is (the phone couldn\'t open it): the scan works, without pictures');
+
+  // ── 5. The menu's order ────────────────────────────────────────────────────────────────
+  // New sections go after the shop's own, in the menu's order (20 Nov 2026: they were all
+  // saved at 0, so the lists showed "Beverages" above the mains printed before it). A section
+  // the shop already has (any capitals) is used as it is, and keeps its place.
+  reset();
+  answer = { items: [
+    { name: 'Grilled Chicken Caesar Salad', price: 12.99, category: 'Menu and Prices', variants: [] },
+    { name: 'Classic Club Sandwich', price: 10.99, category: 'Menu and Prices', variants: [] },
+    { name: 'Soft Drinks', price: 2.99, category: 'Beverages', variants: [] },
+    { name: 'Iced Tea', price: 2.99, category: 'Beverages', variants: [] },
+    { name: 'Kopi', price: 1.8, category: 'drinks', variants: [] },
+  ], count: 5 };
+  view = await open({ categories: [{ id: 'cat-specials', name: 'Specials', sort_order: 1 }, { id: 'cat-drinks', name: 'Drinks', sort_order: 4 }, { id: 'cat-old', name: 'Old', sort_order: null }] });
+  await click(button(view.container, /^Add 5 Products$/));
+  assert.deepEqual(writes.filter((w) => w.table === 'categories').map((w) => [w.rows.name, w.rows.sort_order]), [['Menu and Prices', 5], ['Beverages', 6]],
+    'new sections after the shop\'s highest (4), in the menu\'s order');
+  assert.deepEqual(writes.find((w) => w.table === 'products').rows.map((p) => [p.name, p.category_id]), [
+    ['Grilled Chicken Caesar Salad', 'cat-Menu and Prices'], ['Classic Club Sandwich', 'cat-Menu and Prices'],
+    ['Soft Drinks', 'cat-Beverages'], ['Iced Tea', 'cat-Beverages'], ['Kopi', 'cat-drinks'],
+  ], 'saved in the menu\'s order, "drinks" into the shop\'s own Drinks');
+  await closeAll();
+  reset();
+  view = await open({ categories: [] });
+  await click(button(view.container, /^Add 5 Products$/));
+  assert.deepEqual(writes.filter((w) => w.table === 'categories').map((w) => [w.rows.name, w.rows.sort_order]), [['Menu and Prices', 1], ['Beverages', 2], ['drinks', 3]],
+    'a shop with no sections: 1, 2, 3 in the menu\'s order');
+  await closeAll();
+  passed('the menu\'s order: new sections go after the shop\'s own, in the order printed');
 } finally {
   await closeAll().catch(() => {});
   await rm(temporary, { recursive: true, force: true });
