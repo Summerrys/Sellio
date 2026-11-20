@@ -24,6 +24,7 @@ import PresencePing from '@/components/chat/PresencePing';
 import ConnectionStatus from '@/components/ui-custom/ConnectionStatus';
 import PermissionHelp from '@/components/ui-custom/PermissionHelp';
 import SignedOutNotice from '@/components/ui-custom/SignedOutNotice';
+import { captureReferral } from '@/lib/referral';
 
 // Pages the app never starts on load on demand, so its first download stays small.
 const LandingPage = lazy(() => import('@/components/landing/LandingPage'));
@@ -46,6 +47,9 @@ const ExploreLikes = lazy(() => import('@/components/explore/ExploreLikes'));
 const ShopRatings = lazy(() => import('@/components/ratings/ShopRatingsPage'));
 const AppFeedbackInbox = lazy(() => import('@/components/feedback/AppFeedbackInbox'));
 const AppRatingPrompt = lazy(() => import('@/components/feedback/AppRatingPrompt'));
+const Refer = lazy(() => import('./pages/Refer'));
+const ReferralInvite = lazy(() => import('./pages/ReferralInvite'));
+const DistributorTerms = lazy(() => import('./pages/DistributorTerms'));
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -80,6 +84,16 @@ function RouteIndexingGuard() {
     robots.setAttribute('content', content);
   }, [location.pathname, location.search]);
 
+  return null;
+}
+
+// Refer & earn: a link with ?ref=CODE, on any page, keeps that code for the owner's sign-up
+// (lib/referral.js). The invite page, /r/CODE, keeps its own.
+function ReferralCapture() {
+  const { search } = useLocation();
+  useEffect(() => {
+    if (/[?&]ref=/i.test(search)) captureReferral(search);
+  }, [search]);
   return null;
 }
 
@@ -167,6 +181,7 @@ const AuthenticatedApp = () => {
         <Route path="/explore/likes" element={<LayoutWrapper currentPageName="Explore"><ExploreLikes /></LayoutWrapper>} />
         <Route path="/moderation" element={<LayoutWrapper currentPageName="Explore"><ExploreModeration /></LayoutWrapper>} />
         <Route path="/admin/feedback" element={<LayoutWrapper currentPageName="Explore"><AppFeedbackInbox /></LayoutWrapper>} />
+        <Route path="/refer" element={<LayoutWrapper currentPageName="Explore"><Refer /></LayoutWrapper>} />
         <Route path="/store/:tenantSlug" element={<Storefront />} />
         <Route path="/order/:tenantSlug/:tableId" element={<Storefront />} />
         <Route path="*" element={<PageNotFound />} />
@@ -186,6 +201,7 @@ function App() {
         <AppRefreshProvider>
         <Router>
           <RouteIndexingGuard />
+          <ReferralCapture />
           {/* "You've been signed out" when Sellio's sign-in ended by itself (src/lib/signOutWatch.js). */}
           <SignedOutNotice />
           <Suspense fallback={null}>
@@ -194,6 +210,8 @@ function App() {
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/delete-account" element={<AccountDeletion />} />
+              <Route path="/r/:code" element={<ReferralInvite />} />
+              <Route path="/distributor-terms" element={<DistributorTerms />} />
               <Route path="/*" element={<AuthenticatedApp />} />
             </Routes>
           </Suspense>

@@ -54,6 +54,24 @@ export function openOutside(href) {
   else window.open(href, '_blank');
 }
 
+// An outside page that opens once something started by the tap has finished (Sellio records a
+// referral code, then Stripe's page opens). A browser opens a new tab only straight from a tap,
+// so the tab opens now, empty: go(href) sends it there, cancel() closes it. Where the tab was
+// refused, go() goes there in this one. In Sellio's apps nothing opens until go().
+export function openOutsideSoon() {
+  const tab = isNativeApp() ? null : window.open('', '_blank');
+  return {
+    go(href) {
+      if (isNativeApp()) openOutside(href);
+      else if (tab && !tab.closed) tab.location.href = href;
+      else window.location.assign(href);
+    },
+    cancel() {
+      try { tab?.close(); } catch { /* already gone */ }
+    },
+  };
+}
+
 // A place to open in a map (an address, or an area like "Tampines"). Sellio's Android app
 // hands geo: links straight to the phone, which opens its Maps app (no "Open External
 // Link?" box); the iPhone app opens Apple Maps' address, which iOS gives to the Maps app; a

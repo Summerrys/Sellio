@@ -1780,5 +1780,7 @@
   "Couldn’t save the sample photos. Please try again.": "无法保存示例照片，请重试。",
   "Gallery": "相册",
   "Menu photo": "菜单照片",
-  "Tap the photo to adjust it.": "点按照片即可调整。"
+  "Tap the photo to adjust it.": "点按照片即可调整。",
+  "Referral code (optional)": "推荐码（选填）",
+  "{who} referred you": "{who} 推荐了您"
 }

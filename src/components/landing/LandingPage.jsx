@@ -27,6 +27,7 @@ import ChapterTransition from './ChapterTransition';
 import { PLANS, landingPlans } from './landingData';
 import { INDONESIA_PAYMENT_NOTE, MULTI_OUTLET_URL, SETUP_OFFER, rupiahNote } from '@/lib/plans';
 import { usePlanRegion } from '@/lib/usePlanRegion';
+import { useKeptReferral, withReferral } from '@/lib/referral';
 import './landing.css';
 import './phase1b.css';
 import './immersive.css';
@@ -396,19 +397,36 @@ function LandingHeader() {
 
 // Visitors in Indonesia (their phone or computer's time zone or language, usePlanRegion) see
 // Indonesia's prices, with about what they come to in rupiah; the built page shows the rest's.
+// An owner who came through a distributor's link (sellio.sg/r/CODE or ?ref=CODE) keeps its code
+// for 60 days (lib/referral.js): the plan buttons carry it into Stripe's checkout, and a line over
+// the plans says so. (The built HTML has no visitor: it shows neither.)
+function referralLine(kept) {
+  const who = kept.firstName && kept.shopName ? `${kept.firstName} from ${kept.shopName}` : kept.shopName || kept.firstName;
+  return who ? `Invited by ${who} · referral code ${kept.code} applied` : `Referral code ${kept.code} applied`;
+}
+
 function PricingSection() {
   const [annual, setAnnual] = useState(false);
   const region = usePlanRegion();
   const indonesia = region === 'ID';
+  const kept = useKeptReferral();
   return (
     <section id="pricing" className="sellio-section sellio-pricing-section sellio-pricing-section--phase1b" aria-labelledby="sellio-pricing-heading">
       <div className="sellio-container">
         <div className="sellio-section-heading sellio-section-heading--center"><span className="sellio-eyebrow"><CircleDollarSign /> Start your next chapter</span><h2 id="sellio-pricing-heading">Launch your storefront.<br />Start taking orders.</h2><p>Choose the plan that fits your business. Every plan includes your own storefront, QR ordering and the Sellio counter.</p></div>
         <div className="sellio-billing-toggle" role="group" aria-label="Billing period"><button type="button" className={!annual ? 'is-active' : ''} onClick={() => setAnnual(false)}>Monthly</button><button type="button" className={annual ? 'is-active' : ''} onClick={() => setAnnual(true)}>Annual <span>2 months free</span></button></div>
+        {kept && (
+          <p
+            data-testid="landing-referral"
+            style={{ margin: '0 auto 18px', width: 'fit-content', maxWidth: '100%', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 999, background: '#ecfdf5', color: '#047857', fontSize: 14, fontWeight: 700, textAlign: 'center' }}
+          >
+            <Check style={{ width: 16, height: 16, flexShrink: 0 }} aria-hidden="true" /> {referralLine(kept)}
+          </p>
+        )}
         <div className="sellio-pricing-grid">
           {landingPlans(region).map((plan) => {
             const amount = annual ? plan.yearly : plan.monthly;
-            const href = annual ? plan.links.annual : plan.links.monthly;
+            const href = withReferral(annual ? plan.links.annual : plan.links.monthly, kept?.code, { typed: kept?.typed });
             return (
               <article key={plan.key} className={'sellio-pricing-card ' + (plan.badge ? 'is-featured' : '')} style={{ '--plan-accent': plan.accent }}>
                 {plan.badge && <span className="sellio-plan-badge">{plan.badge}</span>}

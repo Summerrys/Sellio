@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useId, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Check, X } from 'lucide-react';
+import { Check, CircleCheck, Loader2, X } from 'lucide-react';
 import TenantContext from '@/components/tenant/TenantContext';
 import { BUSINESS_PLANS, INDONESIA_PAYMENT_NOTE, RUPIAH_NOTE, approxRupiah, plansFor, rupiahAmount, shopCheckoutLink } from '@/lib/plans';
 import { formatMoney } from '@/lib/money';
@@ -9,8 +9,11 @@ import { itemWords } from '@/lib/planFeatures';
 import BottomSheet from '@/components/explore/BottomSheet';
 import PlanFootnotes from './PlanFootnotes';
 import PlansOnWebsite from './PlansOnWebsite';
-import { sellsPlans, openOutside } from '@/lib/nativeApp';
+import { sellsPlans, openOutside, openOutsideSoon } from '@/lib/nativeApp';
 import { useAppText, N_ } from '@/lib/appText';
+import {
+  attachReferral, forgetReferral, keepReferral, keptReferral, referralCode, referralCodeInfo, referralErrorMessage,
+} from '@/lib/referral';
 
 // The plan window, short (Alvin, 10 Nov 2026: "Redesign the modal with less words. Keep it short
 // and sweet"): one list of plans and one button. Each row says what's compared first (listings or
@@ -28,6 +31,11 @@ import { useAppText, N_ } from '@/lib/appText';
 // (sync_stripe_billing_state), and it goes back to a free home shop if it stops paying.
 // An Indonesian shop (12 Nov 2026) gets Indonesia's prices and links (lib/plans.js), with about
 // what they come to in rupiah.
+// Refer & earn (20 Nov 2026): a shop's first business plan (a free home shop's, or a business
+// shop's still on its free trial) can name the distributor who brought it, with their code: the
+// owner types it, or it's there already from the distributor's link (lib/referral.js). Sellio
+// records it (referral_attach) before Stripe's page opens; the shop's links still carry the
+// shop's id.
 
 const PLAN_RANK = { starter: 0, growth: 1, pro: 2 };
 const LIMITS = {
@@ -47,10 +55,70 @@ function firstPick(currentTier, personal) {
   return 'pro';
 }
 
+// The code field: empty, or a code Sellio knows (info from referral_code_info).
+function ReferralCodeField({ t, info, onApply, onRemove, error, setError }) {
+  const [typed, setTyped] = useState('');
+  const [checking, setChecking] = useState(false);
+  const inputId = useId();
+
+  const apply = async () => {
+    const code = referralCode(typed);
+    if (!code) { setError(t("That referral code isn't valid.")); return; }
+    setChecking(true);
+    setError('');
+    try {
+      const answer = await referralCodeInfo(code);
+      if (answer?.found) { onApply(answer); setTyped(''); } else setError(t("That referral code isn't valid."));
+    } catch {
+      setError(t('Couldn’t check that code. Check your connection and try again.'));
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const who = info && (info.firstName && info.shopName
+    ? t('{name} from {shop}', { name: info.firstName, shop: info.shopName })
+    : info.shopName || info.firstName);
+  return (
+    <div className="mt-3 flex flex-col gap-1.5" data-testid="plan-referral">
+      <label htmlFor={inputId} className="text-[13px] font-semibold text-slate-700">{t('Referral code (optional)')}</label>
+      <div className="flex gap-2">
+        <input
+          id={inputId}
+          value={info ? info.code : typed}
+          readOnly={!!info}
+          onChange={(e) => { setTyped(e.target.value); setError(''); }}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (!info) apply(); } }}
+          autoCapitalize="characters"
+          autoComplete="off"
+          spellCheck={false}
+          maxLength={12}
+          className="h-11 flex-1 min-w-0 rounded-xl border border-slate-300 bg-white px-3 text-[15px] font-bold uppercase tracking-[0.08em] text-slate-900 read-only:bg-slate-50"
+          data-testid="plan-referral-input"
+        />
+        {info ? (
+          <button type="button" onClick={onRemove} className="h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700">{t('Remove')}</button>
+        ) : (
+          <button type="button" onClick={apply} disabled={checking || !typed.trim()} className="h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 disabled:text-slate-400 inline-flex items-center gap-1.5">
+            {checking && <Loader2 className="w-4 h-4 animate-spin" />}{t('Apply')}
+          </button>
+        )}
+      </div>
+      {info && (
+        <p className="flex items-center gap-1.5 text-[13px] font-semibold text-emerald-700" data-testid="plan-referral-who">
+          <CircleCheck className="w-4 h-4 flex-shrink-0" />{who ? t('{who} referred you', { who }) : t('Referral code {code} applied', { code: info.code })}
+        </p>
+      )}
+      {error && <p role="alert" className="text-[13px] text-rose-700" data-testid="plan-referral-error">{error}</p>}
+    </div>
+  );
+}
+
 export default function PricingModal({ open, onOpenChange, tenantId, currentTier = null }) {
   const { t } = useAppText();
   const [billing, setBilling] = useState('monthly');
-  const shop = useContext(TenantContext)?.tenant;
+  const tenantContext = useContext(TenantContext);
+  const shop = tenantContext?.tenant;
   const isPersonalShop = shop?.seller_type === 'individual';
   const freeTrial = isPersonalShop && shop?.id === tenantId && !shop?.has_used_trial;
   const current = isPersonalShop ? null : currentTier;
@@ -65,12 +133,21 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
     && !/@sellio\.app$/i.test(shop.owner_email.trim()) ? shop.owner_email.trim() : '';
   const region = usePlanRegion(shop?.id === tenantId ? shop : null);
   const plans = plansFor(region);
+  // Refer & earn: the owner names the distributor before the shop's first payment.
+  const canAddCode = !!tenantContext?.isOwner && shop?.id === tenantId
+    && (isPersonalShop || tenantContext?.subscription?.status === 'trial');
+  const [referral, setReferral] = useState(null); // the code applied: referral_code_info's answer
+  const [codeError, setCodeError] = useState('');
+  const [attaching, setAttaching] = useState(false);
 
-  // Opened again: the first pick, the full list closed.
+  // Opened again: the first pick, the full list closed, and the code from the distributor's link.
   useEffect(() => {
     if (!open) return;
     setPicked(firstPick(current, isPersonalShop));
     setCompare(false);
+    setCodeError('');
+    const kept = keptReferral();
+    setReferral(kept ? { code: kept.code, shopName: kept.shopName, firstName: kept.firstName } : null);
   }, [open, current, isPersonalShop]);
 
   const close = () => onOpenChange?.(false);
@@ -108,9 +185,27 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
     ? (freeTrial ? t('Then {cost} If you stop paying, it goes back to a free home shop.', { cost }) : t('{cost} If you stop paying, it goes back to a free home shop.', { cost }))
     : cost;
 
-  const checkout = () => {
-    if (isCurrent) return;
-    openOutside(shopCheckoutLink(plan.key, { yearly, trial: freeTrial, tenantId, email: ownerEmail, region }));
+  const checkout = async () => {
+    if (isCurrent || attaching) return;
+    if (!canAddCode || !referral) {
+      openOutside(shopCheckoutLink(plan.key, { yearly, trial: freeTrial, tenantId, email: ownerEmail, region }));
+      return;
+    }
+    // A distributor's code: Sellio records it first, then Stripe's page opens (in the tab the tap
+    // opened, openOutsideSoon). Refused, it says why and nothing opens.
+    const outside = openOutsideSoon();
+    setAttaching(true);
+    setCodeError('');
+    try {
+      await attachReferral(tenantId, referral.code);
+    } catch (error) {
+      outside.cancel();
+      setCodeError(referralErrorMessage(error, t));
+      setAttaching(false);
+      return;
+    }
+    setAttaching(false);
+    outside.go(shopCheckoutLink(plan.key, { yearly, trial: freeTrial, tenantId, email: ownerEmail, region }));
   };
 
   const footer = (
@@ -119,11 +214,11 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
         type="button"
         data-testid="plan-checkout"
         onClick={checkout}
-        disabled={isCurrent}
-        className="w-full h-12 rounded-[13px] text-[15px] font-extrabold text-white disabled:text-slate-400"
+        disabled={isCurrent || attaching}
+        className="w-full h-12 rounded-[13px] text-[15px] font-extrabold text-white disabled:text-slate-400 inline-flex items-center justify-center gap-2"
         style={isCurrent ? { background: '#e2e8f0' } : { background: BRAND }}
       >
-        {action}
+        {attaching && <Loader2 className="w-4 h-4 animate-spin text-white" />}{action}
       </button>
       <p data-testid="plan-fine-print" className="mt-2 text-center text-[11.5px] leading-snug text-slate-400">
         {fine}
@@ -216,6 +311,17 @@ export default function PricingModal({ open, onOpenChange, tenantId, currentTier
             );
           })}
         </div>
+
+        {canAddCode && (
+          <ReferralCodeField
+            t={t}
+            info={referral}
+            onApply={(answer) => { keepReferral({ ...answer, typed: true }); setReferral({ code: answer.code, shopName: answer.shopName, firstName: answer.firstName }); }}
+            onRemove={() => { forgetReferral(); setReferral(null); setCodeError(''); }}
+            error={codeError}
+            setError={setCodeError}
+          />
+        )}
 
         <p className="mt-2 text-[11.5px] leading-snug text-slate-500">
           {t(EVERY_PLAN)}{' '}

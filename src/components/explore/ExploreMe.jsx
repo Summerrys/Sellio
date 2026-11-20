@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Store, LayoutDashboard, Settings, UserRound, LogOut, ChevronRight, Loader2, Copy, Check, Star, ShoppingBag, Flag, Heart, MessageSquareHeart } from 'lucide-react';
+import { Store, LayoutDashboard, Settings, UserRound, LogOut, ChevronRight, Loader2, Copy, Check, Star, ShoppingBag, Flag, Heart, MessageSquareHeart, Gift } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { useTenant } from '@/components/tenant/TenantContext';
@@ -9,6 +9,7 @@ import { amIModerator, moderationQueue, ratingReviewQueue, ratingText, shopRatin
 import { itemWords } from '@/lib/planFeatures';
 import { purchaseSummary } from '@/lib/purchases';
 import { amISellioAdmin, feedbackSummary } from '@/lib/appFeedback';
+import { ratePercent, referralDashboard } from '@/lib/referral';
 import AccountProfileModal from '@/components/profile/AccountProfileModal';
 import PricingModal from '@/components/subscription/PricingModal';
 import { ProfileAvatar, ProfilePhotoEditor } from '@/components/profile/ProfilePhoto';
@@ -47,7 +48,7 @@ function Row({ to, href, icon: Icon, label, detail, onClick, pulse = false }) {
 }
 
 export default function ExploreMe() {
-  const { t, textKey } = useAppText('explore');
+  const { t, textKey, locale } = useAppText('explore');
   const { appUser, clearAppUser } = useAppUser() || {};
   const { user, tenant, hasPermission, isOwner, subscription, noStore } = useTenant();
   const [signingOut, setSigningOut] = useState(false);
@@ -105,11 +106,13 @@ export default function ExploreMe() {
   }, [appUser]);
   // Sellio's admins: how people rate the Sellio app (Admin → Feedback), and 1–3★ ones not done yet.
   const [appFeedback, setAppFeedback] = useState(null); // { lowOpen } for an admin
+  const [sellioAdmin, setSellioAdmin] = useState(false);
   useEffect(() => {
     if (!appUser) return undefined;
     let cancelled = false;
     amISellioAdmin().then(async (yes) => {
       if (!yes || cancelled) return;
+      setSellioAdmin(true);
       const lowOpen = await feedbackSummary().then((s) => Number(s?.low_open) || 0).catch(() => null);
       if (!cancelled) setAppFeedback({ lowOpen });
     });
@@ -119,6 +122,23 @@ export default function ExploreMe() {
     : appFeedback.lowOpen === 1 ? t('1 low rating to look at')
       : appFeedback.lowOpen > 1 ? t('{count} low ratings to look at', { count: appFeedback.lowOpen })
         : t('How people rate the Sellio app');
+  // Refer & earn (/refer): for the owner of a business shop, once joining is open (before that,
+  // only Sellio's admins, to try it). A distributor's row shows their code.
+  const canRefer = hasShop && !!isOwner && !!tenant?.id && tenant.seller_type !== 'individual';
+  const [referral, setReferral] = useState(null); // referral_dashboard's answer
+  useEffect(() => {
+    if (!canRefer) { setReferral(null); return undefined; }
+    let cancelled = false;
+    referralDashboard(tenant.id).then((answer) => { if (!cancelled) setReferral(answer || null); })
+      .catch(() => { if (!cancelled) setReferral(null); });
+    return () => { cancelled = true; };
+  }, [canRefer, tenant?.id]);
+  const showRefer = !!referral && (referral.joined || referral.joiningOpen || sellioAdmin);
+  const referLine = !referral ? null
+    : referral.joined ? t('Your code: {code}', { code: referral.code })
+      : t('Earn {monthly} of monthly and {yearly} of yearly payments from shops you bring to Sellio', {
+        monthly: ratePercent(referral.rates?.monthly, locale), yearly: ratePercent(referral.rates?.yearly, locale),
+      });
   let moderation = null;
   if (toCheck) {
     const { held, reported } = toCheck;
@@ -210,6 +230,26 @@ export default function ExploreMe() {
                   </button>
                 </div>
               </section>
+            )}
+
+            {showRefer && (
+              <Link
+                to="/refer"
+                className="mt-4 bg-white rounded-2xl border border-purple-200 px-4 py-3.5 flex items-center gap-3 hover:bg-slate-50 active:bg-slate-100"
+                data-testid="refer-row"
+              >
+                <span className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: BRAND_GRADIENT }}>
+                  <Gift className="w-[22px] h-[22px] text-white" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="flex items-center gap-2">
+                    <span className="text-[15px] font-semibold text-slate-900">{t('Refer & earn')}</span>
+                    {!referral.joined && <span className="h-[22px] px-2 rounded-full bg-purple-50 text-purple-700 text-[11px] font-bold inline-flex items-center">{t('NEW')}</span>}
+                  </span>
+                  <span className="block text-xs text-slate-500">{referLine}</span>
+                </span>
+                <ChevronRight className="w-4 h-4 text-slate-300" />
+              </Link>
             )}
 
             <section className="mt-4 bg-white rounded-2xl border border-slate-100 overflow-hidden">

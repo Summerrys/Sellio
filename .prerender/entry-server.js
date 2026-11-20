@@ -1,9 +1,10 @@
 import { jsxs, jsx, Fragment } from "react/jsx-runtime";
-import React, { useRef, useState, useEffect, useMemo, useLayoutEffect } from "react";
+import React, { useRef, useState, useEffect, useMemo, useSyncExternalStore, useLayoutEffect } from "react";
 import { renderToString } from "react-dom/server";
 import { Sparkles, Check, MousePointer2, ChevronDown, ArrowRight, ShoppingBag, Utensils, BriefcaseBusiness, Compass, X, MapPin, MousePointerClick, ArrowLeft, Palette, Store, QrCode, Bell, Package, BarChart3, Users, BellRing, ChefHat, PackageCheck, HeartHandshake, Warehouse, Bot, ArrowUpRight, Map, Coins, MoveHorizontal, ArrowDown, Menu, ChevronRight, CircleDollarSign, ShieldCheck, Cookie } from "lucide-react";
 import { useReducedMotion, AnimatePresence, motion } from "framer-motion";
 import * as Dialog from "@radix-ui/react-dialog";
+import { createClient } from "@supabase/supabase-js";
 const SELLIO_ASSET_ROOT = "https://assets.apptelier.sg/sellio/landing".replace(/\/$/, "");
 const desktopImageRoot = "/assets/immersive-16x9";
 const mobileImageRoot = `${SELLIO_ASSET_ROOT}/images/mobile`;
@@ -1061,9 +1062,9 @@ const APP_LANGUAGES = [
 ];
 Object.fromEntries(APP_LANGUAGES.map(({ code, locale }) => [code, locale]));
 const LOADERS = {
-  zh: () => import("./assets/index-Dbxw0RuH.js"),
-  ms: () => import("./assets/index-1Ayd7gkW.js"),
-  id: () => import("./assets/index-Dsq4LDE5.js")
+  zh: () => import("./assets/index-B3fDT-he.js"),
+  ms: () => import("./assets/index-BzvPXouq.js"),
+  id: () => import("./assets/index-o8UIKJjk.js")
 };
 const TRANSLATED = Object.keys(LOADERS);
 const CHOICE_KEY = "sellio_app_language";
@@ -1561,6 +1562,115 @@ function usePlanRegion(shop = null) {
   const [visitor] = useState(() => typeof window === "undefined" ? null : visitorCountry());
   return planRegionFor(shop || { country: visitor });
 }
+const SUPABASE_URL = "https://gzktuteedbtnaxfdylyu.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6a3R1dGVlZGJ0bmF4ZmR5bHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NzY2NzIsImV4cCI6MjA5MDU1MjY3Mn0.zZL0Tyizzj3U8JTggYYKZ8BFrhDOKAzwISGNPJDAFzg";
+let supabaseInstance = null;
+let initPromise = null;
+async function initSupabase() {
+  const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      detectSessionInUrl: true,
+      persistSession: true,
+      autoRefreshToken: true
+    }
+  });
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        client.auth.getSession();
+      }
+    });
+  }
+  return client;
+}
+async function getSupabase() {
+  if (supabaseInstance) return supabaseInstance;
+  if (!initPromise) {
+    initPromise = initSupabase().then((client) => {
+      supabaseInstance = client;
+      return client;
+    });
+  }
+  return initPromise;
+}
+new Proxy({}, {
+  get(_, prop) {
+    return (...args) => getSupabase().then((client) => client[prop](...args));
+  }
+});
+const KEEP_DAYS = 60;
+const DAY_MS = 24 * 60 * 60 * 1e3;
+const KEY = "sellio_referral";
+function referralCode(raw) {
+  const code = String(raw ?? "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+  if (/^[A-HJ-NP-Z2-9]{6}$/.test(code)) return code;
+  if (/^REF[A-HJ-NP-Z2-9]{6}$/.test(code)) return code.slice(3);
+  return null;
+}
+const listeners = /* @__PURE__ */ new Set();
+let snapshot;
+function storage() {
+  try {
+    return typeof window !== "undefined" ? window.localStorage : null;
+  } catch {
+    return null;
+  }
+}
+function readKept(now = Date.now()) {
+  const store = storage();
+  if (!store) return null;
+  try {
+    const kept = JSON.parse(store.getItem(KEY) || "null");
+    const code = referralCode(kept == null ? void 0 : kept.code);
+    const savedAt = Number(kept == null ? void 0 : kept.savedAt);
+    if (!code || !Number.isFinite(savedAt) || !(now - savedAt < KEEP_DAYS * DAY_MS) || savedAt > now + DAY_MS) {
+      if (kept) store.removeItem(KEY);
+      return null;
+    }
+    return {
+      code,
+      shopName: typeof kept.shopName === "string" && kept.shopName.trim() ? kept.shopName.trim() : null,
+      firstName: typeof kept.firstName === "string" && kept.firstName.trim() ? kept.firstName.trim() : null,
+      typed: kept.typed === true,
+      savedAt
+    };
+  } catch {
+    return null;
+  }
+}
+function changed() {
+  snapshot = readKept();
+  listeners.forEach((listener) => listener());
+}
+function subscribe(listener) {
+  listeners.add(listener);
+  const onStorage = (event) => {
+    if (event.key === KEY || event.key === null) changed();
+  };
+  if (typeof window !== "undefined") window.addEventListener("storage", onStorage);
+  return () => {
+    listeners.delete(listener);
+    if (typeof window !== "undefined") window.removeEventListener("storage", onStorage);
+  };
+}
+function getSnapshot() {
+  if (snapshot === void 0) snapshot = readKept();
+  return snapshot;
+}
+function useKeptReferral() {
+  return useSyncExternalStore(subscribe, getSnapshot, () => null);
+}
+function withReferral(link, code, { typed = false } = {}) {
+  const ref = referralCode(code);
+  if (!link || !ref) return link;
+  try {
+    const url = new URL(link);
+    url.searchParams.set("client_reference_id", `${typed ? "reft" : "ref"}_${ref}`);
+    return url.toString();
+  } catch {
+    return link;
+  }
+}
 const SITE_URL$1 = "https://sellio.sg/";
 const LOGO_URL$1 = "/branding/sellio-logo.webp";
 const useBrowserLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -1872,10 +1982,15 @@ function LandingHeader() {
     }
   );
 }
+function referralLine(kept) {
+  const who = kept.firstName && kept.shopName ? `${kept.firstName} from ${kept.shopName}` : kept.shopName || kept.firstName;
+  return who ? `Invited by ${who} · referral code ${kept.code} applied` : `Referral code ${kept.code} applied`;
+}
 function PricingSection() {
   const [annual, setAnnual] = useState(false);
   const region = usePlanRegion();
   const indonesia = region === "ID";
+  const kept = useKeptReferral();
   return /* @__PURE__ */ jsx("section", { id: "pricing", className: "sellio-section sellio-pricing-section sellio-pricing-section--phase1b", "aria-labelledby": "sellio-pricing-heading", children: /* @__PURE__ */ jsxs("div", { className: "sellio-container", children: [
     /* @__PURE__ */ jsxs("div", { className: "sellio-section-heading sellio-section-heading--center", children: [
       /* @__PURE__ */ jsxs("span", { className: "sellio-eyebrow", children: [
@@ -1896,9 +2011,21 @@ function PricingSection() {
         /* @__PURE__ */ jsx("span", { children: "2 months free" })
       ] })
     ] }),
+    kept && /* @__PURE__ */ jsxs(
+      "p",
+      {
+        "data-testid": "landing-referral",
+        style: { margin: "0 auto 18px", width: "fit-content", maxWidth: "100%", display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 999, background: "#ecfdf5", color: "#047857", fontSize: 14, fontWeight: 700, textAlign: "center" },
+        children: [
+          /* @__PURE__ */ jsx(Check, { style: { width: 16, height: 16, flexShrink: 0 }, "aria-hidden": "true" }),
+          " ",
+          referralLine(kept)
+        ]
+      }
+    ),
     /* @__PURE__ */ jsx("div", { className: "sellio-pricing-grid", children: landingPlans(region).map((plan) => {
       const amount = annual ? plan.yearly : plan.monthly;
-      const href = annual ? plan.links.annual : plan.links.monthly;
+      const href = withReferral(annual ? plan.links.annual : plan.links.monthly, kept == null ? void 0 : kept.code, { typed: kept == null ? void 0 : kept.typed });
       return /* @__PURE__ */ jsxs("article", { className: "sellio-pricing-card " + (plan.badge ? "is-featured" : ""), style: { "--plan-accent": plan.accent }, children: [
         plan.badge && /* @__PURE__ */ jsx("span", { className: "sellio-plan-badge", children: plan.badge }),
         /* @__PURE__ */ jsxs("div", { className: "sellio-pricing-card__top", children: [

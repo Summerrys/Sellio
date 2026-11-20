@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Check } from 'lucide-react';
+import { X, Check, CircleCheck } from 'lucide-react';
 import { paymentLinkFor } from '@/lib/accountFlow';
 import { RUPIAH_NOTE, plansFor, rupiahAmount } from '@/lib/plans';
 import { usePlanRegion } from '@/lib/usePlanRegion';
@@ -8,6 +8,7 @@ import { useBackToClose } from '@/lib/useBackToClose';
 import { sellsPlans, outsideLinkProps } from '@/lib/nativeApp';
 import PlansOnWebsite from '@/components/subscription/PlansOnWebsite';
 import { useAppText, N_ } from '@/lib/appText';
+import { forgetReferral, keepReferral, referralCode, referralCodeInfo, useKeptReferral, withReferral } from '@/lib/referral';
 
 // Presentation only: prices, Stripe links and features come from lib/plans.js.
 const PLAN_STYLE = {
@@ -15,6 +16,87 @@ const PLAN_STYLE = {
   growth: { description: N_('For growing businesses with higher demands'), badge: N_('Most Popular') },
   pro: { description: N_('Enterprise-grade solution for maximum scalability') },
 };
+
+// A distributor's code for this sign-up (Refer & earn, lib/referral.js): the one kept from their
+// link, or one typed here ("Have a referral code?"), which takes the link's place. The plan
+// buttons carry it into Stripe's checkout (client_reference_id=ref_CODE).
+function ReferralCodeField({ t }) {
+  const kept = useKeptReferral();
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState('');
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState('');
+
+  const apply = async (event) => {
+    event.preventDefault();
+    const code = referralCode(typed);
+    if (!code) { setError(t("That referral code isn't valid.")); return; }
+    setChecking(true);
+    setError('');
+    try {
+      const info = await referralCodeInfo(code);
+      if (info?.found) {
+        keepReferral({ ...info, typed: true });
+        setTyped('');
+        setOpen(false);
+      } else {
+        setError(t("That referral code isn't valid."));
+      }
+    } catch {
+      setError(t('Couldn’t check that code. Check your connection and try again.'));
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  if (kept) {
+    const who = kept.firstName && kept.shopName ? t('{name} from {shop}', { name: kept.firstName, shop: kept.shopName }) : kept.shopName || kept.firstName;
+    return (
+      <div data-testid="signup-referral" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '4px 10px', marginBottom: 18, fontSize: 13 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 700, color: '#047857' }}>
+          <CircleCheck style={{ width: 16, height: 16 }} aria-hidden="true" />
+          {t('Referral code {code} applied', { code: kept.code })}
+        </span>
+        {who && <span style={{ color: '#64748b' }}>{t('Invited by {who}', { who })}</span>}
+        <button type="button" onClick={forgetReferral} style={{ background: 'none', border: 'none', padding: '4px 2px', fontSize: 13, fontWeight: 600, color: '#475569', textDecoration: 'underline', cursor: 'pointer' }}>
+          {t('Remove')}
+        </button>
+      </div>
+    );
+  }
+  if (!open) {
+    return (
+      <div style={{ textAlign: 'center', marginBottom: 14 }}>
+        <button type="button" onClick={() => setOpen(true)} data-testid="signup-referral-open" style={{ background: 'none', border: 'none', padding: '6px 4px', fontSize: 13, fontWeight: 600, color: '#7c3aed', cursor: 'pointer' }}>
+          {t('Have a referral code?')}
+        </button>
+      </div>
+    );
+  }
+  return (
+    <form onSubmit={apply} style={{ maxWidth: 360, margin: '0 auto 18px' }}>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          aria-label={t('Referral code')}
+          value={typed}
+          onChange={(e) => { setTyped(e.target.value); setError(''); }}
+          placeholder={t('Referral code')}
+          autoCapitalize="characters"
+          autoComplete="off"
+          spellCheck={false}
+          maxLength={12}
+          autoFocus
+          data-testid="signup-referral-input"
+          style={{ flex: 1, minWidth: 0, height: 44, padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: 12, fontSize: 15, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}
+        />
+        <button type="submit" disabled={checking} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#fff', fontSize: 14, fontWeight: 600, color: '#334155', cursor: 'pointer', opacity: checking ? 0.6 : 1 }}>
+          {t('Apply')}
+        </button>
+      </div>
+      {error && <p role="alert" style={{ marginTop: 6, fontSize: 13, color: '#be123c' }}>{error}</p>}
+    </form>
+  );
+}
 
 // prefilledEmail: a signed-in account's email, locked on the Stripe page so the
 // business plan it pays for belongs to this account. There's no shop yet, so the visitor's
@@ -24,6 +106,7 @@ export default function AuthPricingModal({ onClose, prefilledEmail = '' }) {
   const [annual, setAnnual] = useState(false);
   const region = usePlanRegion();
   const PLANS = plansFor(region).map((plan) => ({ ...plan, ...PLAN_STYLE[plan.key] }));
+  const kept = useKeptReferral();
   useBackToClose(true, onClose); // phone / browser Back closes the plans (shown only while open)
 
   return (
@@ -51,7 +134,8 @@ export default function AuthPricingModal({ onClose, prefilledEmail = '' }) {
         ) : (
         <>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', textAlign: 'center', marginBottom: 4 }}>{t('Choose a plan to get started')}</h2>
-        <p style={{ fontSize: 13, color: '#64748b', textAlign: 'center', marginBottom: 20 }}>{t('Start your 7-day free trial. No charge until trial ends.')}</p>
+        <p style={{ fontSize: 13, color: '#64748b', textAlign: 'center', marginBottom: 14 }}>{t('Start your 7-day free trial. No charge until trial ends.')}</p>
+        <ReferralCodeField t={t} />
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24 }}>
           <span onClick={() => setAnnual(false)} style={{ fontSize: 13, fontWeight: 500, color: !annual ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}>{t('Monthly')}</span>
@@ -70,7 +154,7 @@ export default function AuthPricingModal({ onClose, prefilledEmail = '' }) {
             const isGrowth = plan.key === 'growth';
             const price = annual ? plan.yearly : plan.monthly;
             const saving = plan.monthly * 12 - plan.yearly;
-            const link = paymentLinkFor(annual ? plan.links.yearly : plan.links.monthly, prefilledEmail);
+            const link = withReferral(paymentLinkFor(annual ? plan.links.yearly : plan.links.monthly, prefilledEmail), kept?.code, { typed: kept?.typed });
             return (
               <div
                 key={plan.key}

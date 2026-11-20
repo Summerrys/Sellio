@@ -293,6 +293,22 @@ Deno.test("referral: a sign-up from a distributor's link → the invite as usual
   assertEquals(referralCalls(w, "referral_record_payment").length, 0, "the trial's S$0 invoice");
 });
 
+Deno.test("referral: a code typed at sign-up (reft_) → signed up the same way, passed on as it is", async () => {
+  // The sign-up page sends a typed code as reft_CODE (20 Nov 2026); referral_note_checkout records
+  // it as typed. Here: it is a referral, not a shop's id, and reaches the database unchanged.
+  const w = world({
+    stripe: {
+      subscriptions: { sub_new: { ...subscription("sub_new", "trialing", "in_signup_first", "cus_new") } },
+      invoices: { in_signup_first: invoice("in_signup_first", "sub_new", { status: "paid", amount_due: 0, amount_paid: 0 }) },
+    },
+  });
+  const result = await send(w, event("checkout.session.completed", signupSession({ client_reference_id: "reft_ABC234" })));
+  assertEquals(result.status, 200);
+  assertEquals(w.tables.merchant_invites.length, 1, "the invite as usual");
+  assertEquals(referralCalls(w, "referral_note_checkout").map((args) => args.p_code), ["reft_ABC234"]);
+  assertEquals(referralCalls(w, "shop_checkout_check").length, 0, "not taken for a shop's id");
+});
+
 Deno.test("referral: a sign-up paid at checkout (no trial) → its first payment recorded too", async () => {
   const first = paidInvoice("in_signup_first", "sub_new", { customer: "cus_new" });
   const w = world({
