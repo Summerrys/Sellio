@@ -530,6 +530,24 @@ try {
     'Soft tacos with battered fish.', 'Changes daily', 'Chilled soft drinks, rewritten.', 'Iced Tea, as made here.',
   ], 'saved with their descriptions');
   await closeAll();
+  // Words that come back after the scan was taken again land nowhere (items are numbered from 0
+  // in every scan: the new scan's first item must not get them).
+  reset();
+  answer = { items: [{ name: 'Kopi', price: 1.8, category: 'Drinks', variants: [] }], count: 1 };
+  view = await open({ categories: [] });
+  await click(button(view.container, /^Edit Kopi$/));
+  let late;
+  describe = () => new Promise((resolve) => { late = resolve; });
+  await click(button(view.container, /^Write one$/));
+  answer = { items: [{ name: 'Teh', price: 1.5, category: 'Drinks', variants: [] }], count: 1 };
+  describe = (body) => ({ descriptions: body.items.map(() => null) });
+  await view.rerender({ photo: new window.File(['again'], 'again.jpg', { type: 'image/jpeg' }) });
+  await settle(10);
+  assert.deepEqual(byTest(view.container, 'scan-item-name').map((n) => text(n)), ['Teh']);
+  await act(async () => { late({ descriptions: ['Kopi words, too late.'] }); await next(); });
+  await settle();
+  assert.equal(descriptionOf('Teh'), 'add', 'the late words are dropped');
+  await closeAll();
   passed('descriptions: the AI writes those the menu didn\'t print, six at a time in the menu\'s order, marked AI draft; the shop\'s own words replace a draft; Rewrite and Write one ask again; a failure says so');
 
   // ── 8. One by one: typed out, Stop, a failure and Try again, adding while writing ──────

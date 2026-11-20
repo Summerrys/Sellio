@@ -215,18 +215,24 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
   };
   const renameSection = (key, name) => setScannedItems(prev => prev.map(item => (String(item.category || '').trim().toLowerCase() === key ? { ...item, category: name } : item)));
 
+  // Still the same scan? Items are numbered from 0 in each scan, so an answer that comes after
+  // the scan was closed or taken again must not land on another scan's item.
+  const sameScan = () => { const id = activeScan.current.id; return () => activeScan.current.id === id; };
+
   // Rewrite (or write one) in an item's editor: asked for on its own, an AI draft again.
   const rewrite = async (id) => {
     const item = scannedItems.find(i => i._id === id);
     if (!item?.name?.trim() || rewritingId != null) return;
+    const still = sameScan();
     writer.release(id);
     setRewritingId(id);
     try {
       const [text] = await describeItems({ tenantId, items: [item], rewrite: !!item.description?.trim() });
+      if (!still()) return;
       if (text) setScannedItems(prev => prev.map(i => (i._id === id ? { ...i, description: text, _desc: 'done', _typed: undefined } : i)));
       else toast.message(t('No description came back. Please try again.'));
     } catch (e) {
-      showError(e, t('Couldn’t write a description'), { t, fallback: appT(CANT_WRITE) });
+      if (still()) showError(e, t('Couldn’t write a description'), { t, fallback: appT(CANT_WRITE) });
     } finally {
       setRewritingId(null);
     }
@@ -236,8 +242,10 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
   // the menu photo (onMenu, crop) keeps its place, for the editor to open there next time.
   const savePicture = async (id, dataUrl, onMenu, info) => {
     if (!dataUrl) { updateItem(id, 'picture', null); return; }
+    const still = sameScan();
     try {
       const blob = await (await fetch(dataUrl)).blob();
+      if (!still()) return;
       const url = keepUrl(URL.createObjectURL(blob));
       updateItem(id, 'picture', { blob, url, type: blob.type, ext: extFor(blob.type), rect: (onMenu && info?.crop) || null });
     } catch {
@@ -246,8 +254,10 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
   };
   // A photo taken or chosen in the item's editor, at item-photo size.
   const pictureFromFile = async (id, file) => {
+    const still = sameScan();
     try {
       const shrunk = await shrinkImage(file, { maxSide: PHOTO_MAX_SIDE });
+      if (!still()) return;
       const url = keepUrl(URL.createObjectURL(shrunk.blob));
       updateItem(id, 'picture', { blob: shrunk.blob, url, type: shrunk.type, ext: shrunk.ext, rect: null, sized: true });
     } catch (err) {
